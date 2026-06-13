@@ -717,6 +717,309 @@
         }
       }
     },
+    "hudu": {
+      "clientTab": {
+        "source": "Origine: Hudu",
+        "openInHudu": "Apri in Hudu",
+        "refresh": "Aggiorna",
+        "loading": "Caricamento dati Hudu...",
+        "notConnected": "Hudu non è connesso. Un amministratore può connetterlo in Impostazioni → Integrazioni.",
+        "unmapped": "Questo cliente non è ancora mappato a un'azienda Hudu. Mappalo in Impostazioni → Integrazioni → Hudu.",
+        "unreachable": "Impossibile raggiungere Hudu. Riprova più tardi.",
+        "assetsTitle": "Asset",
+        "assetsEmpty": "Nessun asset Hudu per questa azienda.",
+        "articlesTitle": "Articoli",
+        "articlesEmpty": "Nessun articolo Hudu per questa azienda.",
+        "serial": "Seriale",
+        "folder": "Cartella"
+      },
+      "passwordsTab": {
+        "source": "Origine: Hudu",
+        "openInHudu": "Apri in Hudu",
+        "refresh": "Aggiorna",
+        "loading": "Caricamento password Hudu...",
+        "notConnected": "Hudu non è connesso. Un amministratore può connetterlo in Impostazioni → Integrazioni.",
+        "unmapped": "Questo cliente non è ancora mappato a un'azienda Hudu. Mappalo in Impostazioni → Integrazioni → Hudu.",
+        "unreachable": "Impossibile raggiungere Hudu. Riprova più tardi.",
+        "noPasswordAccess": "La chiave API Hudu non ha l'accesso alle password abilitato, quindi non è possibile elencare le password. Genera una chiave con accesso alle password nell'amministrazione di Hudu.",
+        "title": "Password",
+        "empty": "Nessuna password Hudu per questa azienda.",
+        "reveal": "Mostra",
+        "hide": "Nascondi",
+        "copy": "Copia",
+        "revealNoAccess": "La chiave API Hudu non ha l'accesso alle password abilitato.",
+        "revealNotFound": "Questa password non è stata trovata in Hudu.",
+        "revealFailed": "Impossibile mostrare la password. Riprova più tardi."
+      },
+      "assets": {
+        "title": "Asset",
+        "description": "Mappa gli asset Hudu agli asset AlgaPSA, importa quelli senza corrispondenza e recupera gli aggiornamenti da Hudu.",
+        "loading": "Caricamento mappature degli asset...",
+        "empty": "Nessun asset Hudu per questa azienda.",
+        "selectAsset": "Seleziona asset",
+        "serial": "Seriale",
+        "archivedLabel": "Archiviato",
+        "excludedHint": "Non importato (layout escluso)",
+        "buttons": {
+          "importAll": "Importa tutti quelli senza corrispondenza",
+          "importingAll": "Importazione in corso...",
+          "sync": "Sincronizza da Hudu",
+          "syncing": "Sincronizzazione in corso...",
+          "import": "Importa",
+          "importing": "Importazione in corso...",
+          "save": "Salva mappature",
+          "saving": "Salvataggio in corso...",
+          "discard": "Scarta"
+        },
+        "counters": {
+          "mapped": "mappati",
+          "suggested": "suggeriti",
+          "unmapped": "non mappati",
+          "total": "totali"
+        },
+        "table": {
+          "huduAsset": "Asset Hudu",
+          "algaAsset": "Asset AlgaPSA",
+          "status": "Stato",
+          "actions": "Azioni"
+        },
+        "status": {
+          "mapped": "Mappato",
+          "suggested": "Suggerito",
+          "unmapped": "Non mappato",
+          "pending": "In sospeso",
+          "stale": "Obsoleto"
+        },
+        "suggestion": {
+          "label": "Suggerimento",
+          "source": {
+            "serial": "Corrispondenza del seriale",
+            "exactName": "Nome esatto",
+            "fuzzyName": "Nome simile"
+          }
+        },
+        "rowActions": {
+          "unmap": "Rimuovi mappatura",
+          "revert": "Annulla modifica",
+          "dismiss": "Ignora suggerimento"
+        },
+        "pendingSummary": "Modifiche non salvate: {{total}}",
+        "sync": {
+          "summary": "Sincronizzazione completata: {{updated}} aggiornati · {{unchanged}} invariati · {{stale}} obsoleti.",
+          "rmmSkipped": "{{rmmSkipped}} gestiti da RMM saltati.",
+          "lastSynced": "Ultima sincronizzazione: {{timestamp}}"
+        },
+        "import": {
+          "summary": "Importazione completata: {{created}} creati · {{skipped}} saltati · {{failed}} non riusciti."
+        },
+        "success": {
+          "saved": "Mappature degli asset salvate: {{total}}",
+          "imported": "«{{name}}» importato da Hudu."
+        },
+        "errors": {
+          "load": "Impossibile caricare le mappature degli asset Hudu.",
+          "save": "Impossibile aggiornare la mappatura dell'asset.",
+          "import": "Impossibile importare l'asset Hudu.",
+          "importAll": "Importazione in blocco non riuscita.",
+          "serialConflict": "Il numero di serie è già in uso da «{{name}}».",
+          "sync": "Impossibile sincronizzare da Hudu.",
+          "rateLimited": "Limite di richieste Hudu raggiunto. Riprova più tardi.",
+          "unmapped": "Questo cliente non è mappato a un'azienda Hudu.",
+          "assetAlreadyMapped": "Questo asset è già mappato a un altro asset Hudu. Rimuovi prima la mappatura esistente.",
+          "huduAssetAlreadyMapped": "Questo asset Hudu è già mappato a un asset. Rimuovi prima la mappatura esistente.",
+          "mappingConflict": "Questa mappatura è in conflitto con una esistente. Aggiorna e riprova.",
+          "notFound": "Mappatura non trovata. Aggiorna e riprova."
+        },
+        "toasts": {
+          "errorTitle": "Errore di mappatura degli asset Hudu"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Documentazione Hudu",
+        "loading": "Caricamento articoli Hudu...",
+        "empty": "Nessun articolo Hudu",
+        "unreachable": "Impossibile raggiungere Hudu. Riprova più tardi."
+      },
+      "documentsTab": {
+        "title": "Articoli Hudu",
+        "source": "Origine: Hudu",
+        "searchPlaceholder": "Cerca articoli Hudu...",
+        "loading": "Caricamento articoli Hudu...",
+        "empty": "Nessun articolo Hudu trovato.",
+        "notConnected": "Hudu non è connesso. Un amministratore può connetterlo in Impostazioni → Integrazioni.",
+        "unreachable": "Impossibile raggiungere Hudu. Riprova più tardi.",
+        "articleColumn": "Articolo",
+        "clientColumn": "Cliente",
+        "companyColumn": "Azienda Hudu",
+        "updatedColumn": "Aggiornato",
+        "unmapped": "Non mappato",
+        "previous": "Precedente",
+        "next": "Successivo",
+        "pageLabel": "Pagina"
+      },
+      "mapping": {
+        "title": "Mappature delle aziende",
+        "description": "Mappa le aziende Hudu ai clienti AlgaPSA per mostrarne la documentazione.",
+        "loading": "Caricamento mappature delle aziende...",
+        "companyId": "ID",
+        "idInIntegration": "ID PSA",
+        "selectClient": "Seleziona cliente",
+        "buttons": {
+          "refresh": "Aggiorna aziende",
+          "refreshing": "Aggiornamento in corso...",
+          "save": "Salva mappature",
+          "saving": "Salvataggio in corso...",
+          "discard": "Scarta"
+        },
+        "counters": {
+          "mapped": "mappate",
+          "suggested": "suggerite",
+          "unmapped": "non mappate",
+          "total": "totali"
+        },
+        "table": {
+          "huduCompany": "Azienda Hudu",
+          "algaClient": "Cliente AlgaPSA",
+          "status": "Stato"
+        },
+        "status": {
+          "mapped": "Mappata",
+          "suggested": "Suggerita",
+          "unmapped": "Non mappata",
+          "pending": "In sospeso"
+        },
+        "suggestion": {
+          "label": "Suggerimento",
+          "source": {
+            "integrationId": "ID integrazione PSA",
+            "exactName": "Nome esatto",
+            "fuzzyName": "Nome simile"
+          }
+        },
+        "empty": {
+          "title": "Nessuna azienda Hudu ancora caricata.",
+          "hint": "Clicca su «Aggiorna aziende» per recuperare le aziende da Hudu."
+        },
+        "unmappedHint": "La documentazione viene mostrata solo per i clienti mappati. Mappa ogni azienda Hudu a un cliente AlgaPSA per abilitarla.",
+        "success": {
+          "refreshed": "Aziende Hudu aggiornate.",
+          "saved": "Mappature salvate: {{total}}"
+        },
+        "errors": {
+          "load": "Impossibile caricare le mappature delle aziende Hudu.",
+          "refresh": "Impossibile aggiornare le aziende Hudu.",
+          "save": "Impossibile aggiornare la mappatura.",
+          "clientAlreadyMapped": "Questo cliente è già mappato a un'altra azienda Hudu. Rimuovi prima la mappatura esistente.",
+          "companyAlreadyMapped": "Questa azienda Hudu è già mappata a un altro cliente. Rimuovi prima la mappatura esistente.",
+          "mappingConflict": "Questa mappatura è in conflitto con una esistente. Aggiorna e riprova.",
+          "notFound": "Mappatura non trovata. Aggiorna e riprova."
+        },
+        "toasts": {
+          "errorTitle": "Errore di mappatura Hudu"
+        },
+        "pendingSummary": "Modifiche non salvate: {{total}}",
+        "rowActions": {
+          "unmap": "Rimuovi mappatura",
+          "revert": "Annulla modifica",
+          "dismiss": "Ignora suggerimento"
+        }
+      },
+      "layoutMap": {
+        "title": "Layout degli asset",
+        "description": "Scegli come quale tipo di asset AlgaPSA viene importato ciascun layout di asset Hudu. I layout non configurati vengono importati come Sconosciuto.",
+        "loading": "Caricamento layout degli asset...",
+        "empty": "Nessun layout di asset trovato in Hudu.",
+        "suggested": "Suggerimento",
+        "table": {
+          "huduLayout": "Layout Hudu",
+          "algaAssetType": "Tipo di asset AlgaPSA"
+        },
+        "types": {
+          "workstation": "Stazione di lavoro",
+          "networkDevice": "Dispositivo di rete",
+          "server": "Server",
+          "mobileDevice": "Dispositivo mobile",
+          "printer": "Stampante",
+          "unknown": "Sconosciuto"
+        },
+        "excludeOption": "Non importare",
+        "buttons": {
+          "save": "Salva mappatura dei layout",
+          "saving": "Salvataggio in corso..."
+        },
+        "success": {
+          "saved": "Mappatura dei layout degli asset salvata."
+        },
+        "errors": {
+          "load": "Impossibile caricare i layout degli asset Hudu.",
+          "save": "Impossibile salvare la mappatura dei layout degli asset."
+        },
+        "createType": {
+          "button": "Crea tipo dal layout",
+          "creating": "Creazione...",
+          "success": "Tipo di asset creato e assegnato a questo layout.",
+          "errors": {
+            "create": "Impossibile creare un tipo di asset da questo layout.",
+            "slugConflict": "Esiste già un tipo di asset con questo nome. Selezionalo invece dall'elenco."
+          }
+        }
+      },
+      "settings": {
+        "title": "Hudu",
+        "description": "Connetti la tua istanza Hudu per mostrare la documentazione e le credenziali dei clienti all'interno di AlgaPSA.",
+        "loading": "Caricamento dello stato della connessione Hudu...",
+        "detectedInstance": "Istanza Hudu",
+        "status": {
+          "connected": "Connesso",
+          "notConnected": "Non connesso",
+          "error": "Errore"
+        },
+        "passwordAccess": {
+          "enabled": "Accesso alle password abilitato",
+          "disabled": "Accesso alle password non abilitato per questa chiave"
+        },
+        "fields": {
+          "baseUrl": {
+            "label": "URL di base",
+            "placeholder": "https://your-instance.huducloud.com"
+          },
+          "apiKey": {
+            "label": "Chiave API",
+            "placeholder": "Inserisci la tua chiave API Hudu",
+            "keepExisting": "Lascia vuoto per mantenere la chiave API attuale",
+            "writeOnlyHint": "La chiave API memorizzata non viene mai visualizzata. Lascia questo campo vuoto per continuare a utilizzarla."
+          }
+        },
+        "buttons": {
+          "test": "Verifica connessione",
+          "testing": "Verifica in corso...",
+          "connect": "Connetti",
+          "connecting": "Connessione in corso...",
+          "disconnect": "Disconnetti",
+          "disconnecting": "Disconnessione in corso..."
+        },
+        "success": {
+          "connected": "Connesso a Hudu.",
+          "testPassedWithPasswords": "Verifica della connessione Hudu riuscita. L'accesso alle password è abilitato per questa chiave.",
+          "testPassedNoPasswords": "Verifica della connessione Hudu riuscita. L'accesso alle password non è abilitato per questa chiave.",
+          "disconnected": "Connessione Hudu disconnessa."
+        },
+        "errors": {
+          "loadStatus": "Impossibile caricare lo stato della connessione Hudu.",
+          "baseUrlRequired": "L'URL di base è obbligatorio.",
+          "baseUrlFormat": "Inserisci un URL valido, ad es. https://your-instance.huducloud.com",
+          "invalidBaseUrl": "Nessuna API Hudu trovata a questo URL di base (404). Controlla l'URL di base.",
+          "unreachable": "Impossibile raggiungere Hudu a questo URL di base. Controlla l'URL e la tua rete.",
+          "invalidKey": "Hudu ha rifiutato la chiave API (401). Inserisci una chiave API valida.",
+          "testFailed": "Verifica della connessione Hudu non riuscita.",
+          "connectFailed": "Impossibile connettersi a Hudu.",
+          "disconnectFailed": "Impossibile disconnettere Hudu."
+        },
+        "toasts": {
+          "errorTitle": "Errore di connessione Hudu"
+        }
+      }
+    },
     "microsoft": {
       "settings": {
         "actions": {

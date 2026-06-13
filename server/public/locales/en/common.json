@@ -650,6 +650,10 @@
       "entityPlaceholder": "Select {{entityType}}",
       "entitySearchPlaceholder": "Search {{entityType}}...",
       "noEntities": "No {{entityType}} found"
+    },
+    "huduTab": {
+      "documentsTabLabel": "Documents",
+      "tabLabel": "Hudu"
     }
   },
   "surveys": {

@@ -24,6 +24,9 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
+import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -70,6 +73,10 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [customLocation, setCustomLocation] = useState('');
+  // F309: custom-type schema field values (assets.attributes[key]); kept
+  // across type switches per PRD D4 so re-selecting a type restores values.
+  const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
+  const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
   const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
@@ -92,6 +99,20 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   });
   
   const router = useRouter();
+
+  // F308: type select sources the tenant registry (built-ins first with their
+  // existing labels, then custom types by registry name).
+  const registryEntries = useAssetTypeRegistry(true);
+  const assetTypeOptions = useMemo(
+    () => buildAssetTypeOptions(registryEntries, t, { includeUnknown: true }),
+    [registryEntries, t]
+  );
+  const selectedCustomType = useMemo(
+    () => findCustomAssetType(registryEntries, formData.asset_type),
+    [registryEntries, formData.asset_type]
+  );
+  const customTypeFields = selectedCustomType?.fields_schema ?? [];
+
   const statusOptions = useMemo(() => (
     STATUS_OPTION_VALUES.map((value) => ({
       value,
@@ -231,6 +252,11 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         });
         setCustomLocation(data.location || '');
         setSelectedLocationId(data.location_id ?? (data.location ? 'custom' : ''));
+        setCustomAttributes(
+          data.attributes && typeof data.attributes === 'object' && !Array.isArray(data.attributes)
+            ? { ...data.attributes }
+            : {}
+        );
       } catch (error) {
         console.error('Error loading asset:', error);
         setLoadError(t('assetForm.errors.loadFailed', { defaultValue: 'Failed to load asset details' }));
@@ -903,6 +929,21 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     e.preventDefault();
     if (!asset) return;
 
+    // F309: required enforcement for custom-type schema fields, inline.
+    const attributeIssues = selectedCustomType
+      ? validateAttributesAgainstSchema(customTypeFields, customAttributes, { requireAll: true })
+      : [];
+    if (attributeIssues.length > 0) {
+      setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
+      const summary = t('assetForm.errors.validation', {
+        defaultValue: 'Please fix the highlighted fields before saving.',
+      });
+      setSaveError(summary);
+      toast.error(summary);
+      return;
+    }
+    setAttributeErrors({});
+
     setSaving(true);
     setSaveError(null);
     setFieldErrors({});
@@ -921,6 +962,11 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         // Ensure optional fields are undefined instead of empty strings
         location: formData.location?.trim() || undefined,
         serial_number: formData.serial_number?.trim() || undefined,
+        // F309/F310: submit only schema-declared keys — the server merges into
+        // assets.attributes so sibling namespaces (e.g. hudu_fields) survive.
+        attributes: selectedCustomType
+          ? pickSchemaAttributes(customTypeFields, customAttributes)
+          : undefined,
       };
 
       // Format workstation data if it exists
@@ -1256,6 +1302,24 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                       className="mt-1"
                     />
                   </div>
+                  <div>
+                    <label htmlFor="asset-type-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                      {t('assetForm.fields.assetType', { defaultValue: 'Type' })}
+                    </label>
+                    <CustomSelect
+                      id="asset-type-select"
+                      value={formData.asset_type}
+                      onValueChange={(value) => {
+                        // D4: switching type keeps attributes values — fields
+                        // not in the new schema simply stop rendering.
+                        setFormData(prev => ({ ...prev, asset_type: value }));
+                        setAttributeErrors({});
+                      }}
+                      options={assetTypeOptions}
+                      disabled={saving}
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -1302,7 +1366,33 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           </div>
         </Card>
 
-        {(asset.workstation || asset.network_device || asset.server || asset.mobile_device || asset.printer) && (
+        {selectedCustomType && customTypeFields.length > 0 && (
+          <Card id="custom-type-details" className="p-6 border border-[rgb(var(--color-border-200))]">
+            <Text size="5" weight="medium" className="block mb-6 text-[rgb(var(--color-text-900))]">
+              {t('assetForm.typeDetails.custom', {
+                defaultValue: '{{typeName}} Details',
+                typeName: selectedCustomType.name
+              })}
+            </Text>
+            <CustomTypeFieldsPanel
+              fields={customTypeFields}
+              values={customAttributes}
+              errors={attributeErrors}
+              onChange={(key, value) => {
+                setCustomAttributes(prev => ({ ...prev, [key]: value }));
+                setAttributeErrors(prev => {
+                  if (!(key in prev)) return prev;
+                  const { [key]: _removed, ...rest } = prev;
+                  return rest;
+                });
+              }}
+              idPrefix="asset-edit"
+              disabled={saving}
+            />
+          </Card>
+        )}
+
+        {formData.asset_type === asset.asset_type && (asset.workstation || asset.network_device || asset.server || asset.mobile_device || asset.printer) && (
           <Card id="type-specific-details" className="p-6 border border-[rgb(var(--color-border-200))]">
             <Text size="5" weight="medium" className="block mb-6 text-[rgb(var(--color-text-900))]">
               {asset.workstation

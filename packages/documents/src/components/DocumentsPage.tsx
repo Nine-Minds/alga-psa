@@ -17,16 +17,22 @@ import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { DocumentTemplatesSettings } from './settings';
 import { ChevronRight, Settings2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import HuduDocumentsTab from './HuduDocumentsTab';
+import { useHuduDocumentsTab } from './useHuduDocumentsTab';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 const DOCUMENT_FILTER_ENTITY_TYPES = ['client', 'contact', 'ticket', 'asset', 'project_task', 'contract', 'quote'];
 
 export default function DocumentsPage() {
+  const { t } = useTranslation('common');
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentFolder = searchParams?.get('folder') ?? null;
+  const huduDocsTab = useHuduDocumentsTab();
 
   // Use user preference for filters pane collapsed state
   const {
@@ -229,6 +235,73 @@ export default function DocumentsPage() {
   // Only use local error state - Documents.tsx handles its own error display in folder mode
   const displayError = error;
 
+  const documentsView = showDefaultFolders ? (
+    <Card className="p-6">
+      <DocumentTemplatesSettings />
+    </Card>
+  ) : (
+    <div className="flex gap-6">
+      {/* Collapsed Filters Button */}
+      {isFiltersPaneCollapsed && (
+        <div className="flex-shrink-0">
+          <CollapseToggleButton
+            id="documents-show-filters-button"
+            isCollapsed={true}
+            collapsedLabel="Show filters"
+            expandedLabel="Collapse filters"
+            expandDirection="right"
+            onClick={() => setIsFiltersPaneCollapsed(false)}
+          />
+        </div>
+      )}
+
+      {/* Left Column - Filters */}
+      {!isFiltersPaneCollapsed && (
+        <div className="w-80 relative">
+          <div className="absolute top-2 right-2 z-10">
+            <CollapseToggleButton
+              id="documents-collapse-filters-button"
+              isCollapsed={false}
+              collapsedLabel="Show filters"
+              expandedLabel="Collapse filters"
+              expandDirection="right"
+              onClick={() => setIsFiltersPaneCollapsed(true)}
+            />
+          </div>
+          <DocumentFilters
+            filters={filterInputs}
+            onFiltersChange={handleFiltersChange}
+            onClearFilters={handleClearFilters}
+            entityTypeOptions={entityTypeOptions}
+            allUsersData={allUsersData}
+            onShowAllDocuments={handleShowAllDocuments}
+            showAllDocumentsButton={true}
+          />
+        </div>
+      )}
+
+      {/* Right Column - Documents */}
+      <div className="flex-1">
+        <Card className="p-4">
+          {displayError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{displayError}</AlertDescription>
+            </Alert>
+          ) : (
+            <Documents
+              id='documents'
+              documents={[]}
+              gridColumns={3}
+              userId={currentUserId}
+              searchTermFromParent={filterInputs.searchTerm}
+              filters={filterInputs}
+            />
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+
   return (
     <UnsavedChangesProvider>
     <div className="p-6">
@@ -280,71 +353,24 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {showDefaultFolders ? (
-        <Card className="p-6">
-          <DocumentTemplatesSettings />
-        </Card>
+      {huduDocsTab.visible ? (
+        <CustomTabs
+          idPrefix="documents-page"
+          tabs={[
+            {
+              id: 'documents',
+              label: t('documents.huduTab.documentsTabLabel', 'Documents'),
+              content: documentsView,
+            },
+            {
+              id: 'hudu',
+              label: t('documents.huduTab.tabLabel', 'Hudu'),
+              content: <HuduDocumentsTab />,
+            },
+          ]}
+        />
       ) : (
-        <div className="flex gap-6">
-          {/* Collapsed Filters Button */}
-          {isFiltersPaneCollapsed && (
-            <div className="flex-shrink-0">
-              <CollapseToggleButton
-                id="documents-show-filters-button"
-                isCollapsed={true}
-                collapsedLabel="Show filters"
-                expandedLabel="Collapse filters"
-                expandDirection="right"
-                onClick={() => setIsFiltersPaneCollapsed(false)}
-              />
-            </div>
-          )}
-
-          {/* Left Column - Filters */}
-          {!isFiltersPaneCollapsed && (
-            <div className="w-80 relative">
-              <div className="absolute top-2 right-2 z-10">
-                <CollapseToggleButton
-                  id="documents-collapse-filters-button"
-                  isCollapsed={false}
-                  collapsedLabel="Show filters"
-                  expandedLabel="Collapse filters"
-                  expandDirection="right"
-                  onClick={() => setIsFiltersPaneCollapsed(true)}
-                />
-              </div>
-              <DocumentFilters
-                filters={filterInputs}
-                onFiltersChange={handleFiltersChange}
-                onClearFilters={handleClearFilters}
-                entityTypeOptions={entityTypeOptions}
-                allUsersData={allUsersData}
-                onShowAllDocuments={handleShowAllDocuments}
-                showAllDocumentsButton={true}
-              />
-            </div>
-          )}
-
-          {/* Right Column - Documents */}
-          <div className="flex-1">
-            <Card className="p-4">
-              {displayError ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{displayError}</AlertDescription>
-                </Alert>
-              ) : (
-                <Documents
-                  id='documents'
-                  documents={[]}
-                  gridColumns={3}
-                  userId={currentUserId}
-                  searchTermFromParent={filterInputs.searchTerm}
-                  filters={filterInputs}
-                />
-              )}
-            </Card>
-          </div>
-        </div>
+        documentsView
       )}
     </div>
     </UnsavedChangesProvider>

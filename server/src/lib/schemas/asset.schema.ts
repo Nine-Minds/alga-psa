@@ -99,7 +99,7 @@ const printerAssetSchema = z.object({
 // Asset schemas
 export const assetSchema = z.object({
   asset_id: z.string().uuid(),
-  asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']),
+  asset_type: z.string().min(1),
   client_id: z.string().uuid(),
   asset_tag: z.string(),
   serial_number: z.string().optional(),
@@ -195,7 +195,7 @@ export const assetMaintenanceHistorySchema = z.object({
 
 // Request schemas
 export const createAssetSchema = z.object({
-  asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']),
+  asset_type: z.string().min(1),
   client_id: z.string().uuid(),
   asset_tag: z.string(),
   name: z.string(),
@@ -248,7 +248,7 @@ export const assetQuerySchema = z.object({
   client_id: z.string().uuid().optional(),
   client_name: z.string().optional(),
   location_id: z.string().uuid().optional(),
-  asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']).optional(),
+  asset_type: z.string().optional(),
   status: z.string().optional(),
   search: z.string().optional(),
   agent_status: z.enum(['online', 'offline', 'overdue', 'unknown']).optional(),

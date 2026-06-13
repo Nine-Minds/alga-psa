@@ -1768,6 +1768,10 @@
         "label": "RMM",
         "description": "Verbind tools voor monitoring en beheer op afstand"
       },
+      "itDocumentation": {
+        "label": "IT-documentatie",
+        "description": "Verbind IT-documentatieplatformen om klantdocumentatie, assets en inloggegevens in context weer te geven."
+      },
       "communication": {
         "label": "Communicatie",
         "description": "Verbind inbox- en samenwerkingsoppervlakken voor ticketverwerking, operatorworkflows en Microsoft Teams-toegang."
@@ -1800,6 +1804,10 @@
       "rmmSetup": {
         "name": "RMM-integraties",
         "description": "Selecteer en configureer uw RMM-provider"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Verbind een Hudu-instantie om klantdocumentatie en inloggegevens te bekijken binnen AlgaPSA."
       },
       "email": {
         "name": "Inkomende e-mail",
@@ -1886,5 +1894,97 @@
   "language": {
     "selectLanguage": "Selecteer een taal",
     "languagesUpdated": "Beschikbare talen bijgewerkt"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Assets",
+      "title": "Assettypen",
+      "description": "Beheer de assettypen die beschikbaar zijn in uw assetmodule. Aangepaste typen hebben een veldschema dat hun aanmaak-/bewerkformulieren bepaalt.",
+      "loading": "Assettypen laden...",
+      "table": {
+        "name": "Naam",
+        "builtin": "Ingebouwd",
+        "slug": "Identificatie",
+        "fieldCount": "Velden",
+        "order": "Volgorde",
+        "actions": "Acties",
+        "openMenu": "Menu openen"
+      },
+      "actions": {
+        "addType": "Assettype toevoegen",
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Opslaan",
+        "create": "Aanmaken",
+        "confirmDelete": "Verwijderen"
+      },
+      "dialog": {
+        "createTitle": "Assettype toevoegen",
+        "editTitle": "Assettype bewerken",
+        "nameLabel": "Naam",
+        "namePlaceholder": "bijv. Firewall",
+        "displayOrderLabel": "Weergavevolgorde",
+        "iconLabel": "Pictogram",
+        "builtinSchemaHint": "Ingebouwde typen gebruiken vaste formulieren die door AlgaPSA worden beheerd; hun veldschema kan daarom niet worden bewerkt. U kunt het type nog wel hernoemen of het pictogram wijzigen."
+      },
+      "deleteDialog": {
+        "title": "Assettype verwijderen",
+        "message": "Hiermee wordt \"{{name}}\" permanent uit uw assettyperegister verwijderd."
+      },
+      "messages": {
+        "created": "Assettype aangemaakt",
+        "updated": "Assettype bijgewerkt",
+        "deleted": "Assettype verwijderd"
+      },
+      "errors": {
+        "fetchFailed": "Kan assettypen niet laden.",
+        "saveFailed": "Kan assettype niet opslaan.",
+        "deleteFailed": "Kan assettype niet verwijderen.",
+        "invalidName": "Voer een naam in voor dit assettype.",
+        "invalidSchema": "Het veldschema is ongeldig. Corrigeer de gemarkeerde velden en probeer het opnieuw.",
+        "reservedSlug": "De identificatie \"{{slug}}\" is gereserveerd voor een ingebouwd type. Kies een andere naam.",
+        "slugConflict": "Er bestaat al een assettype met de identificatie \"{{slug}}\".",
+        "notFound": "Dit assettype bestaat niet meer.",
+        "builtinImmutable": "Bij ingebouwde typen kunnen alleen de naam en het pictogram worden gewijzigd.",
+        "builtinUndeletable": "Ingebouwde typen kunnen niet worden verwijderd.",
+        "inUse": "Dit type wordt nog gebruikt door {{assetCount}} asset(s). Wijs die assets opnieuw toe voordat u het verwijdert.",
+        "unknown": "Er is iets misgegaan."
+      },
+      "editor": {
+        "title": "Velden",
+        "empty": "Nog geen velden. Voeg velden toe om het aanmaak-/bewerkformulier voor dit type op te bouwen.",
+        "addField": "Veld toevoegen",
+        "fieldLabel": "Label",
+        "fieldLabelPlaceholder": "bijv. Serienummer",
+        "fieldKey": "Sleutel",
+        "fieldKeyPlaceholder": "bijv. serial_number",
+        "fieldKind": "Soort",
+        "fieldRequired": "Verplicht",
+        "fieldOptions": "Opties (gescheiden door komma's)",
+        "fieldOptionsPlaceholder": "bijv. Goud, Zilver, Brons",
+        "moveUp": "Veld omhoog verplaatsen",
+        "moveDown": "Veld omlaag verplaatsen",
+        "removeField": "Veld verwijderen",
+        "kinds": {
+          "text": "Tekst",
+          "number": "Getal",
+          "date": "Datum",
+          "select": "Selectie",
+          "url": "URL",
+          "boolean": "Ja / Nee"
+        },
+        "errors": {
+          "invalidKey": "De sleutel moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en underscores bevatten.",
+          "duplicateKey": "Elke veldsleutel moet uniek zijn.",
+          "missingLabel": "Label is verplicht.",
+          "invalidKind": "Kies een geldige veldsoort.",
+          "invalidRequired": "\"Verplicht\" moet aan of uit staan.",
+          "missingOptions": "Selectievelden hebben minstens één optie nodig.",
+          "invalidOptions": "Opties mogen niet leeg zijn.",
+          "invalidField": "Dit veld is ongeldig."
+        }
+      }
+    }
   }
 }

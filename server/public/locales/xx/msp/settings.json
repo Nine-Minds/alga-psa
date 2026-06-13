@@ -1768,6 +1768,10 @@
         "label": "11111",
         "description": "11111"
       },
+      "itDocumentation": {
+        "label": "11111",
+        "description": "11111"
+      },
       "communication": {
         "label": "11111",
         "description": "11111"
@@ -1798,6 +1802,10 @@
         "description": "11111"
       },
       "rmmSetup": {
+        "name": "11111",
+        "description": "11111"
+      },
+      "hudu": {
         "name": "11111",
         "description": "11111"
       },
@@ -1886,5 +1894,97 @@
   "language": {
     "selectLanguage": "11111",
     "languagesUpdated": "11111"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "11111",
+      "title": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "table": {
+        "name": "11111",
+        "builtin": "11111",
+        "slug": "11111",
+        "fieldCount": "11111",
+        "order": "11111",
+        "actions": "11111",
+        "openMenu": "11111"
+      },
+      "actions": {
+        "addType": "11111",
+        "edit": "11111",
+        "delete": "11111",
+        "cancel": "11111",
+        "save": "11111",
+        "create": "11111",
+        "confirmDelete": "11111"
+      },
+      "dialog": {
+        "createTitle": "11111",
+        "editTitle": "11111",
+        "nameLabel": "11111",
+        "namePlaceholder": "11111",
+        "displayOrderLabel": "11111",
+        "iconLabel": "11111",
+        "builtinSchemaHint": "11111"
+      },
+      "deleteDialog": {
+        "title": "11111",
+        "message": "11111 {{name}} 11111"
+      },
+      "messages": {
+        "created": "11111",
+        "updated": "11111",
+        "deleted": "11111"
+      },
+      "errors": {
+        "fetchFailed": "11111",
+        "saveFailed": "11111",
+        "deleteFailed": "11111",
+        "invalidName": "11111",
+        "invalidSchema": "11111",
+        "reservedSlug": "11111 {{slug}} 11111",
+        "slugConflict": "11111 {{slug}} 11111",
+        "notFound": "11111",
+        "builtinImmutable": "11111",
+        "builtinUndeletable": "11111",
+        "inUse": "11111 {{assetCount}} 11111",
+        "unknown": "11111"
+      },
+      "editor": {
+        "title": "11111",
+        "empty": "11111",
+        "addField": "11111",
+        "fieldLabel": "11111",
+        "fieldLabelPlaceholder": "11111",
+        "fieldKey": "11111",
+        "fieldKeyPlaceholder": "11111",
+        "fieldKind": "11111",
+        "fieldRequired": "11111",
+        "fieldOptions": "11111",
+        "fieldOptionsPlaceholder": "11111",
+        "moveUp": "11111",
+        "moveDown": "11111",
+        "removeField": "11111",
+        "kinds": {
+          "text": "11111",
+          "number": "11111",
+          "date": "11111",
+          "select": "11111",
+          "url": "11111",
+          "boolean": "11111"
+        },
+        "errors": {
+          "invalidKey": "11111",
+          "duplicateKey": "11111",
+          "missingLabel": "11111",
+          "invalidKind": "11111",
+          "invalidRequired": "11111",
+          "missingOptions": "11111",
+          "invalidOptions": "11111",
+          "invalidField": "11111"
+        }
+      }
+    }
   }
 }

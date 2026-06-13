@@ -549,7 +549,7 @@
       "clientsLoadFailed": "Kan klanten niet laden",
       "locationsLoadFailed": "Kan locaties voor deze klant niet laden",
       "updateFailed": "Kan item niet updaten",
-      "validation": "Corrigeer de gemarkeerde velden voordat je opslaat."
+      "validation": "Corrigeer de gemarkeerde velden voordat u opslaat."
     },
     "actions": {
       "viewClient": "Klant bekijken",
@@ -601,7 +601,8 @@
       "serialNumber": "Serienummer",
       "status": "Status",
       "purchaseDate": "Aankoopdatum",
-      "warrantyEndDate": "Einddatum garantie"
+      "warrantyEndDate": "Einddatum garantie",
+      "assetType": "Type"
     },
     "placeholders": {
       "loadingClients": "Klanten laden…",
@@ -644,7 +645,8 @@
       "networkDevice": "Netwerkapparaatdetails",
       "server": "Serverdetails",
       "mobileDevice": "Gegevens van mobiele apparaten",
-      "printer": "Printerdetails"
+      "printer": "Printerdetails",
+      "custom": "{{typeName}}-details"
     }
   },
   "assetFormClient": {
@@ -924,7 +926,7 @@
       "selectType": "Selecteer type",
       "selectStatus": "Selecteer status",
       "serialNumber": "Voer het serienummer in",
-      "customLocation": "Voer een aangepaste locatie of ruimte in",
+      "customLocation": "Voer een aangepaste locatie of gebied in",
       "loadingLocations": "Locaties laden...",
       "selectClientFirst": "Selecteer eerst een klant",
       "selectLocation": "Selecteer locatie"
@@ -942,7 +944,8 @@
       "network_device": "Netwerkapparaat",
       "server": "Server",
       "mobile_device": "Mobiel apparaat",
-      "printer": "Printer"
+      "printer": "Printer",
+      "unknown": "Onbekend"
     },
     "networkDeviceTypes": {
       "switch": "Schakelaar",
@@ -1023,6 +1026,10 @@
     },
     "empty": "Geen hardwaregegevens beschikbaar",
     "emptyStorage": "Geen opslagstations gedetecteerd"
+  },
+  "huduDocumentationCard": {
+    "title": "Hudu-documentatie",
+    "syncedAt": "Laatst gesynchroniseerd vanuit Hudu: {{value}}"
   },
   "rmmVitalsPanel": {
     "title": "RMM Vitals & Connectiviteit",
@@ -1352,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "Kan ticket niet laden",
     "openTicketFailed": "Kan ticket niet openen"
+  },
+  "assetTypeBreakdown": {
+    "title": "Assets per type"
+  },
+  "customTypeDetailsPanel": {
+    "title": "{{name}}-details",
+    "values": {
+      "yes": "Ja",
+      "no": "Nee"
+    }
   }
 }

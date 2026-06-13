@@ -5,10 +5,14 @@ The Asset Management System is a comprehensive solution for managing IT assets w
 ## Core Features
 
 ### Asset Types and Classification
-- Hierarchical type system with inheritance
 - Type-specific extension tables for specialized attributes
-- Parent/child relationships with cycle prevention
-- Dedicated tables for each asset type (workstation, server, network device, etc.)
+- Dedicated tables for each built-in asset type (workstation, server, network device, etc.)
+
+Asset types are defined per tenant in an asset type registry — six built-in types
+plus any custom types a tenant adds, each with its own custom fields. An asset's
+`asset_type` column holds the type's slug. See
+[Custom Asset Types](./custom_asset_types.md) for the registry, slug rules, field
+schemas, and the Hudu import mapping.
 
 ### Asset Tracking
 - Unique asset identification

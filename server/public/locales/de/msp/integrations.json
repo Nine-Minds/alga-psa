@@ -717,6 +717,309 @@
         }
       }
     },
+    "hudu": {
+      "clientTab": {
+        "source": "Quelle: Hudu",
+        "openInHudu": "In Hudu öffnen",
+        "refresh": "Aktualisieren",
+        "loading": "Hudu-Daten werden geladen...",
+        "notConnected": "Hudu ist nicht verbunden. Ein Administrator kann die Verbindung unter Einstellungen → Integrationen herstellen.",
+        "unmapped": "Dieser Kunde ist noch keinem Hudu-Unternehmen zugeordnet. Ordnen Sie ihn unter Einstellungen → Integrationen → Hudu zu.",
+        "unreachable": "Hudu konnte nicht erreicht werden. Versuchen Sie es später erneut.",
+        "assetsTitle": "Assets",
+        "assetsEmpty": "Keine Hudu-Assets für dieses Unternehmen.",
+        "articlesTitle": "Artikel",
+        "articlesEmpty": "Keine Hudu-Artikel für dieses Unternehmen.",
+        "serial": "Seriennummer",
+        "folder": "Ordner"
+      },
+      "passwordsTab": {
+        "source": "Quelle: Hudu",
+        "openInHudu": "In Hudu öffnen",
+        "refresh": "Aktualisieren",
+        "loading": "Hudu-Passwörter werden geladen...",
+        "notConnected": "Hudu ist nicht verbunden. Ein Administrator kann die Verbindung unter Einstellungen → Integrationen herstellen.",
+        "unmapped": "Dieser Kunde ist noch keinem Hudu-Unternehmen zugeordnet. Ordnen Sie ihn unter Einstellungen → Integrationen → Hudu zu.",
+        "unreachable": "Hudu konnte nicht erreicht werden. Versuchen Sie es später erneut.",
+        "noPasswordAccess": "Für den Hudu-API-Schlüssel ist kein Passwortzugriff aktiviert, daher können Passwörter nicht aufgelistet werden. Erstellen Sie in der Hudu-Administration einen Schlüssel mit Passwortzugriff.",
+        "title": "Passwörter",
+        "empty": "Keine Hudu-Passwörter für dieses Unternehmen.",
+        "reveal": "Anzeigen",
+        "hide": "Ausblenden",
+        "copy": "Kopieren",
+        "revealNoAccess": "Für den Hudu-API-Schlüssel ist kein Passwortzugriff aktiviert.",
+        "revealNotFound": "Dieses Passwort wurde in Hudu nicht gefunden.",
+        "revealFailed": "Das Passwort konnte nicht angezeigt werden. Versuchen Sie es später erneut."
+      },
+      "assets": {
+        "title": "Assets",
+        "description": "Ordnen Sie Hudu-Assets AlgaPSA-Assets zu, importieren Sie nicht zugeordnete Assets und rufen Sie Aktualisierungen aus Hudu ab.",
+        "loading": "Asset-Zuordnungen werden geladen...",
+        "empty": "Keine Hudu-Assets für dieses Unternehmen.",
+        "selectAsset": "Asset auswählen",
+        "serial": "Seriennummer",
+        "archivedLabel": "Archiviert",
+        "excludedHint": "Nicht importiert (Layout ausgeschlossen)",
+        "buttons": {
+          "importAll": "Alle nicht zugeordneten importieren",
+          "importingAll": "Wird importiert...",
+          "sync": "Aus Hudu synchronisieren",
+          "syncing": "Wird synchronisiert...",
+          "import": "Importieren",
+          "importing": "Wird importiert...",
+          "save": "Zuordnungen speichern",
+          "saving": "Wird gespeichert...",
+          "discard": "Verwerfen"
+        },
+        "counters": {
+          "mapped": "zugeordnet",
+          "suggested": "vorgeschlagen",
+          "unmapped": "nicht zugeordnet",
+          "total": "gesamt"
+        },
+        "table": {
+          "huduAsset": "Hudu-Asset",
+          "algaAsset": "AlgaPSA-Asset",
+          "status": "Status",
+          "actions": "Aktionen"
+        },
+        "status": {
+          "mapped": "Zugeordnet",
+          "suggested": "Vorgeschlagen",
+          "unmapped": "Nicht zugeordnet",
+          "pending": "Ausstehend",
+          "stale": "Veraltet"
+        },
+        "suggestion": {
+          "label": "Vorgeschlagen",
+          "source": {
+            "serial": "Seriennummern-Übereinstimmung",
+            "exactName": "Exakter Name",
+            "fuzzyName": "Ähnlicher Name"
+          }
+        },
+        "rowActions": {
+          "unmap": "Zuordnung aufheben",
+          "revert": "Änderung rückgängig machen",
+          "dismiss": "Vorschlag verwerfen"
+        },
+        "pendingSummary": "Nicht gespeicherte Änderungen: {{total}}",
+        "sync": {
+          "summary": "Synchronisierung abgeschlossen: {{updated}} aktualisiert · {{unchanged}} unverändert · {{stale}} veraltet.",
+          "rmmSkipped": "{{rmmSkipped}} vom RMM verwaltet übersprungen.",
+          "lastSynced": "Zuletzt synchronisiert: {{timestamp}}"
+        },
+        "import": {
+          "summary": "Import abgeschlossen: {{created}} erstellt · {{skipped}} übersprungen · {{failed}} fehlgeschlagen."
+        },
+        "success": {
+          "saved": "Asset-Zuordnungen gespeichert: {{total}}",
+          "imported": "„{{name}}“ aus Hudu importiert."
+        },
+        "errors": {
+          "load": "Hudu-Asset-Zuordnungen konnten nicht geladen werden.",
+          "save": "Asset-Zuordnung konnte nicht aktualisiert werden.",
+          "import": "Hudu-Asset konnte nicht importiert werden.",
+          "importAll": "Massenimport fehlgeschlagen.",
+          "serialConflict": "Die Seriennummer wird bereits von „{{name}}“ verwendet.",
+          "sync": "Synchronisierung aus Hudu fehlgeschlagen.",
+          "rateLimited": "Hudu-Ratenlimit erreicht. Versuchen Sie es später erneut.",
+          "unmapped": "Dieser Kunde ist keinem Hudu-Unternehmen zugeordnet.",
+          "assetAlreadyMapped": "Dieses Asset ist bereits einem anderen Hudu-Asset zugeordnet. Entfernen Sie zuerst die bestehende Zuordnung.",
+          "huduAssetAlreadyMapped": "Dieses Hudu-Asset ist bereits einem Asset zugeordnet. Entfernen Sie zuerst die bestehende Zuordnung.",
+          "mappingConflict": "Diese Zuordnung steht im Konflikt mit einer bestehenden Zuordnung. Aktualisieren Sie und versuchen Sie es erneut.",
+          "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie und versuchen Sie es erneut."
+        },
+        "toasts": {
+          "errorTitle": "Hudu-Asset-Zuordnungsfehler"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Hudu-Dokumentation",
+        "loading": "Hudu-Artikel werden geladen...",
+        "empty": "Keine Hudu-Artikel",
+        "unreachable": "Hudu konnte nicht erreicht werden. Versuchen Sie es später erneut."
+      },
+      "documentsTab": {
+        "title": "Hudu-Artikel",
+        "source": "Quelle: Hudu",
+        "searchPlaceholder": "Hudu-Artikel durchsuchen...",
+        "loading": "Hudu-Artikel werden geladen...",
+        "empty": "Keine Hudu-Artikel gefunden.",
+        "notConnected": "Hudu ist nicht verbunden. Ein Administrator kann die Verbindung unter Einstellungen → Integrationen herstellen.",
+        "unreachable": "Hudu konnte nicht erreicht werden. Versuchen Sie es später erneut.",
+        "articleColumn": "Artikel",
+        "clientColumn": "Kunde",
+        "companyColumn": "Hudu-Unternehmen",
+        "updatedColumn": "Aktualisiert",
+        "unmapped": "Nicht zugeordnet",
+        "previous": "Zurück",
+        "next": "Weiter",
+        "pageLabel": "Seite"
+      },
+      "mapping": {
+        "title": "Unternehmenszuordnungen",
+        "description": "Ordnen Sie Hudu-Unternehmen AlgaPSA-Kunden zu, um deren Dokumentation anzuzeigen.",
+        "loading": "Unternehmenszuordnungen werden geladen...",
+        "companyId": "ID",
+        "idInIntegration": "PSA-ID",
+        "selectClient": "Kunde auswählen",
+        "buttons": {
+          "refresh": "Unternehmen aktualisieren",
+          "refreshing": "Wird aktualisiert...",
+          "save": "Zuordnungen speichern",
+          "saving": "Wird gespeichert...",
+          "discard": "Verwerfen"
+        },
+        "counters": {
+          "mapped": "zugeordnet",
+          "suggested": "vorgeschlagen",
+          "unmapped": "nicht zugeordnet",
+          "total": "gesamt"
+        },
+        "table": {
+          "huduCompany": "Hudu-Unternehmen",
+          "algaClient": "AlgaPSA-Kunde",
+          "status": "Status"
+        },
+        "status": {
+          "mapped": "Zugeordnet",
+          "suggested": "Vorgeschlagen",
+          "unmapped": "Nicht zugeordnet",
+          "pending": "Ausstehend"
+        },
+        "suggestion": {
+          "label": "Vorgeschlagen",
+          "source": {
+            "integrationId": "PSA-Integrations-ID",
+            "exactName": "Exakter Name",
+            "fuzzyName": "Ähnlicher Name"
+          }
+        },
+        "empty": {
+          "title": "Noch keine Hudu-Unternehmen geladen.",
+          "hint": "Klicken Sie auf „Unternehmen aktualisieren“, um Unternehmen aus Hudu abzurufen."
+        },
+        "unmappedHint": "Dokumentation wird nur für zugeordnete Kunden angezeigt. Ordnen Sie jedes Hudu-Unternehmen einem AlgaPSA-Kunden zu, um sie zu aktivieren.",
+        "success": {
+          "refreshed": "Hudu-Unternehmen aktualisiert.",
+          "saved": "Zuordnungen gespeichert: {{total}}"
+        },
+        "errors": {
+          "load": "Hudu-Unternehmenszuordnungen konnten nicht geladen werden.",
+          "refresh": "Hudu-Unternehmen konnten nicht aktualisiert werden.",
+          "save": "Zuordnung konnte nicht aktualisiert werden.",
+          "clientAlreadyMapped": "Dieser Kunde ist bereits einem anderen Hudu-Unternehmen zugeordnet. Entfernen Sie zuerst die bestehende Zuordnung.",
+          "companyAlreadyMapped": "Dieses Hudu-Unternehmen ist bereits einem anderen Kunden zugeordnet. Entfernen Sie zuerst die bestehende Zuordnung.",
+          "mappingConflict": "Diese Zuordnung steht im Konflikt mit einer bestehenden Zuordnung. Aktualisieren Sie und versuchen Sie es erneut.",
+          "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie und versuchen Sie es erneut."
+        },
+        "toasts": {
+          "errorTitle": "Hudu-Zuordnungsfehler"
+        },
+        "pendingSummary": "Nicht gespeicherte Änderungen: {{total}}",
+        "rowActions": {
+          "unmap": "Zuordnung aufheben",
+          "revert": "Änderung rückgängig machen",
+          "dismiss": "Vorschlag verwerfen"
+        }
+      },
+      "layoutMap": {
+        "title": "Asset-Layouts",
+        "description": "Wählen Sie, als welcher AlgaPSA-Asset-Typ jedes Hudu-Asset-Layout importiert wird. Nicht konfigurierte Layouts werden als Unbekannt importiert.",
+        "loading": "Asset-Layouts werden geladen...",
+        "empty": "Keine Asset-Layouts in Hudu gefunden.",
+        "suggested": "Vorgeschlagen",
+        "table": {
+          "huduLayout": "Hudu-Layout",
+          "algaAssetType": "AlgaPSA-Asset-Typ"
+        },
+        "types": {
+          "workstation": "Arbeitsplatz",
+          "networkDevice": "Netzwerkgerät",
+          "server": "Server",
+          "mobileDevice": "Mobilgerät",
+          "printer": "Drucker",
+          "unknown": "Unbekannt"
+        },
+        "excludeOption": "Nicht importieren",
+        "buttons": {
+          "save": "Layout-Zuordnung speichern",
+          "saving": "Wird gespeichert..."
+        },
+        "success": {
+          "saved": "Asset-Layout-Zuordnung gespeichert."
+        },
+        "errors": {
+          "load": "Hudu-Asset-Layouts konnten nicht geladen werden.",
+          "save": "Asset-Layout-Zuordnung konnte nicht gespeichert werden."
+        },
+        "createType": {
+          "button": "Typ aus Layout erstellen",
+          "creating": "Wird erstellt...",
+          "success": "Asset-Typ erstellt und diesem Layout zugewiesen.",
+          "errors": {
+            "create": "Aus diesem Layout konnte kein Asset-Typ erstellt werden.",
+            "slugConflict": "Ein Asset-Typ mit diesem Namen existiert bereits. Wählen Sie ihn stattdessen aus der Liste aus."
+          }
+        }
+      },
+      "settings": {
+        "title": "Hudu",
+        "description": "Verbinden Sie Ihre Hudu-Instanz, um Kundendokumentation und Zugangsdaten in AlgaPSA anzuzeigen.",
+        "loading": "Hudu-Verbindungsstatus wird geladen...",
+        "detectedInstance": "Hudu-Instanz",
+        "status": {
+          "connected": "Verbunden",
+          "notConnected": "Nicht verbunden",
+          "error": "Fehler"
+        },
+        "passwordAccess": {
+          "enabled": "Passwortzugriff aktiviert",
+          "disabled": "Passwortzugriff für diesen Schlüssel nicht aktiviert"
+        },
+        "fields": {
+          "baseUrl": {
+            "label": "Basis-URL",
+            "placeholder": "https://your-instance.huducloud.com"
+          },
+          "apiKey": {
+            "label": "API-Schlüssel",
+            "placeholder": "Geben Sie Ihren Hudu-API-Schlüssel ein",
+            "keepExisting": "Leer lassen, um den aktuellen API-Schlüssel beizubehalten",
+            "writeOnlyHint": "Der gespeicherte API-Schlüssel wird niemals angezeigt. Lassen Sie dieses Feld leer, um ihn weiterhin zu verwenden."
+          }
+        },
+        "buttons": {
+          "test": "Verbindung testen",
+          "testing": "Wird getestet...",
+          "connect": "Verbinden",
+          "connecting": "Verbindung wird hergestellt...",
+          "disconnect": "Trennen",
+          "disconnecting": "Wird getrennt..."
+        },
+        "success": {
+          "connected": "Mit Hudu verbunden.",
+          "testPassedWithPasswords": "Hudu-Verbindungstest erfolgreich. Passwortzugriff ist für diesen Schlüssel aktiviert.",
+          "testPassedNoPasswords": "Hudu-Verbindungstest erfolgreich. Passwortzugriff ist für diesen Schlüssel nicht aktiviert.",
+          "disconnected": "Hudu-Verbindung getrennt."
+        },
+        "errors": {
+          "loadStatus": "Hudu-Verbindungsstatus konnte nicht geladen werden.",
+          "baseUrlRequired": "Basis-URL ist erforderlich.",
+          "baseUrlFormat": "Geben Sie eine gültige URL ein, z. B. https://your-instance.huducloud.com",
+          "invalidBaseUrl": "Unter dieser Basis-URL wurde keine Hudu-API gefunden (404). Überprüfen Sie die Basis-URL.",
+          "unreachable": "Hudu konnte unter dieser Basis-URL nicht erreicht werden. Überprüfen Sie die URL und Ihr Netzwerk.",
+          "invalidKey": "Hudu hat den API-Schlüssel abgelehnt (401). Geben Sie einen gültigen API-Schlüssel ein.",
+          "testFailed": "Hudu-Verbindungstest fehlgeschlagen.",
+          "connectFailed": "Verbindung mit Hudu fehlgeschlagen.",
+          "disconnectFailed": "Hudu konnte nicht getrennt werden."
+        },
+        "toasts": {
+          "errorTitle": "Hudu-Verbindungsfehler"
+        }
+      }
+    },
     "microsoft": {
       "settings": {
         "actions": {

@@ -20,6 +20,7 @@ import {
   Cloud,
   Shield,
   Lock,
+  BookOpen,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
@@ -59,6 +60,26 @@ const StripeConnectionSettings = dynamic(
 );
 
 import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
+import { useHuduIntegrationEnabled } from './useHuduIntegrationEnabled';
+
+// Dynamic import for Hudu (EE feature) — `@enterprise` resolves to the real EE
+// component in EE builds and to the CE placeholder stub in CE builds.
+const HuduIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/HuduIntegrationSettings'),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading Hudu integration settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    ssr: false,
+  }
+);
 
 // Integration category definitions
 interface IntegrationCategory {
@@ -126,6 +147,8 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   const isEEAvailable = isCalendarEnterpriseEdition();
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
+  const huduGate = useHuduIntegrationEnabled();
+  const isHuduEnabled = huduGate.enabled;
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
   const visibleCategoryIds = useMemo(() => getVisibleIntegrationCategoryIds(isEEAvailable), [isEEAvailable]);
@@ -171,6 +194,21 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }
       ],
     },
+    ...(isHuduEnabled ? [{
+      id: 'it-documentation',
+      label: t('integrations.categories.itDocumentation.label'),
+      description: t('integrations.categories.itDocumentation.description'),
+      icon: BookOpen,
+      integrations: [
+        {
+          id: 'hudu',
+          name: t('integrations.items.hudu.name'),
+          description: t('integrations.items.hudu.description'),
+          component: HuduIntegrationSettings,
+          isEE: true,
+        },
+      ],
+    }] : []),
     {
       id: 'communication',
       label: t('integrations.categories.communication.label'),
@@ -298,7 +336,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled, isHuduEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {

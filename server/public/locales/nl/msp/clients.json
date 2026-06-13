@@ -187,6 +187,8 @@
     "billing": "Facturering",
     "interactions": "Interacties",
     "notes": "Opmerkingen",
+    "huduTab": "Hudu",
+    "huduPasswordsTab": "Wachtwoorden",
     "clientLocations": "Klantlocaties",
     "billingDashboard": "Factureringsdashboard",
     "clientAndContacts": "Klant & Contacten",

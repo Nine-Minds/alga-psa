@@ -650,6 +650,10 @@
       "entityPlaceholder": "11111 {{entityType}} 11111",
       "entitySearchPlaceholder": "11111 {{entityType}} 11111",
       "noEntities": "11111 {{entityType}} 11111"
+    },
+    "huduTab": {
+      "documentsTabLabel": "11111",
+      "tabLabel": "11111"
     }
   },
   "surveys": {

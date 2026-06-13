@@ -601,7 +601,8 @@
       "serialNumber": "11111",
       "status": "11111",
       "purchaseDate": "11111",
-      "warrantyEndDate": "11111"
+      "warrantyEndDate": "11111",
+      "assetType": "11111"
     },
     "placeholders": {
       "loadingClients": "11111",
@@ -644,7 +645,8 @@
       "networkDevice": "11111",
       "server": "11111",
       "mobileDevice": "11111",
-      "printer": "11111"
+      "printer": "11111",
+      "custom": "11111 {{typeName}} 11111"
     }
   },
   "assetFormClient": {
@@ -942,7 +944,8 @@
       "network_device": "11111",
       "server": "11111",
       "mobile_device": "11111",
-      "printer": "11111"
+      "printer": "11111",
+      "unknown": "11111"
     },
     "networkDeviceTypes": {
       "switch": "11111",
@@ -1023,6 +1026,10 @@
     },
     "empty": "11111",
     "emptyStorage": "11111"
+  },
+  "huduDocumentationCard": {
+    "title": "11111",
+    "syncedAt": "11111 {{value}} 11111"
   },
   "rmmVitalsPanel": {
     "title": "11111",
@@ -1352,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "11111",
     "openTicketFailed": "11111"
+  },
+  "assetTypeBreakdown": {
+    "title": "11111"
+  },
+  "customTypeDetailsPanel": {
+    "title": "11111 {{name}} 11111",
+    "values": {
+      "yes": "11111",
+      "no": "11111"
+    }
   }
 }

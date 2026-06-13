@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { ClientMaintenanceSummary, Asset } from '@alga-psa/types';
+import type { ClientMaintenanceSummary, Asset, AssetTypeRegistryEntry } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { getClientMaintenanceSummary, listAssets } from '@alga-psa/assets/actions/assetActions';
 import { loadAssetDetailDrawerData } from '@alga-psa/assets/actions/assetDrawerActions';
+import { getAssetTypes } from '@alga-psa/assets/actions/assetTypeRegistryActions';
+import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '@alga-psa/assets/lib/assetTypeDisplay';
+import { isBuiltinAssetTypeSlug } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
 import {
   Boxes,
   AlertTriangle,
@@ -34,8 +38,6 @@ interface ClientAssetsProps {
   clientId: string;
 }
 
-type AssetType = 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer';
-
 const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const { t } = useTranslation('msp/clients');
   const assetTypeOptions: SelectOption[] = [
@@ -49,6 +51,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [summary, setSummary] = useState<ClientMaintenanceSummary | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [assetTypeEntries, setAssetTypeEntries] = useState<AssetTypeRegistryEntry[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -68,6 +71,29 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     setPageSize(newPageSize);
     setCurrentPage(1);
   };
+
+  // F311: tenant registry powers custom-type labels/icons and filter options.
+  useEffect(() => {
+    let mounted = true;
+    getAssetTypes()
+      .then((entries) => {
+        if (mounted) setAssetTypeEntries(entries);
+      })
+      .catch((error) => {
+        console.error('Error loading asset types:', error);
+        if (mounted) setAssetTypeEntries([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const typeFilterOptions: SelectOption[] = [
+    ...assetTypeOptions,
+    ...(assetTypeEntries ?? [])
+      .filter((entry) => !entry.is_builtin)
+      .map((entry) => ({ value: entry.slug, label: entry.name })),
+  ];
 
   // Drawer data loading
   const loadDrawerData = useCallback(async (assetId: string, tab: AssetDrawerTab) => {
@@ -144,8 +170,16 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         return <Printer {...iconProps} />;
       case 'network_device':
         return <Network {...iconProps} />;
-      default:
+      default: {
+        const customIcon = assetTypeEntries?.find(
+          (entry) => !entry.is_builtin && entry.slug === type
+        )?.icon;
+        if (customIcon) {
+          const CustomIcon = getIconComponent(customIcon);
+          return <CustomIcon {...iconProps} />;
+        }
         return <Boxes {...iconProps} />;
+      }
     }
   };
 
@@ -155,7 +189,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         getClientMaintenanceSummary(clientId),
         listAssets({
           client_id: clientId,
-          asset_type: selectedType === 'all' ? undefined : (selectedType as AssetType),
+          asset_type: selectedType === 'all' ? undefined : selectedType,
           page: currentPage,
           limit: pageSize
         })
@@ -227,7 +261,9 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
             {getAssetTypeIcon(value)}
           </div>
           <span className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-700))]">
-            {value.split('_').map((word: string): string => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            {isBuiltinAssetTypeSlug(value)
+              ? fallbackAssetTypeLabel(value)
+              : resolveAssetTypeLabel(assetTypeEntries, value)}
           </span>
         </div>
       )
@@ -396,7 +432,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
               {t('clientTabs.assets.filterByType', { defaultValue: 'Filter by Type' })}
             </label>
             <CustomSelect
-              options={assetTypeOptions}
+              options={typeFilterOptions}
               value={selectedType}
               onValueChange={setSelectedType}
               placeholder={t('clientTabs.assets.typePlaceholder', { defaultValue: 'All asset types...' })}

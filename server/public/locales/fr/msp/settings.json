@@ -1768,6 +1768,10 @@
         "label": "RMM",
         "description": "Connectez des outils de surveillance et gestion à distance"
       },
+      "itDocumentation": {
+        "label": "Documentation IT",
+        "description": "Connectez des plateformes de documentation IT pour afficher en contexte la documentation, les actifs et les identifiants des clients."
+      },
       "communication": {
         "label": "Communication",
         "description": "Connectez des surfaces de boîte de réception et de collaboration pour le traitement des tickets, les workflows des opérateurs et l'accès à Microsoft Teams."
@@ -1800,6 +1804,10 @@
       "rmmSetup": {
         "name": "Intégrations RMM",
         "description": "Sélectionnez et configurez votre fournisseur RMM"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Connectez une instance Hudu pour consulter la documentation et les identifiants des clients dans AlgaPSA."
       },
       "email": {
         "name": "E-mail entrant",
@@ -1886,5 +1894,97 @@
   "language": {
     "selectLanguage": "Sélectionner une langue",
     "languagesUpdated": "Langues disponibles mises à jour"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Actifs",
+      "title": "Types d'actifs",
+      "description": "Gérez les types d'actifs disponibles dans votre module d'actifs. Les types personnalisés portent un schéma de champs qui pilote leurs formulaires de création/modification.",
+      "loading": "Chargement des types d'actifs...",
+      "table": {
+        "name": "Nom",
+        "builtin": "Intégré",
+        "slug": "Identifiant",
+        "fieldCount": "Champs",
+        "order": "Ordre",
+        "actions": "Actions",
+        "openMenu": "Ouvrir le menu"
+      },
+      "actions": {
+        "addType": "Ajouter un type d'actif",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "create": "Créer",
+        "confirmDelete": "Supprimer"
+      },
+      "dialog": {
+        "createTitle": "Ajouter un type d'actif",
+        "editTitle": "Modifier le type d'actif",
+        "nameLabel": "Nom",
+        "namePlaceholder": "p. ex. Pare-feu",
+        "displayOrderLabel": "Ordre d'affichage",
+        "iconLabel": "Icône",
+        "builtinSchemaHint": "Les types intégrés utilisent des formulaires fixes gérés par AlgaPSA ; leur schéma de champs ne peut donc pas être modifié. Vous pouvez toujours renommer le type ou changer son icône."
+      },
+      "deleteDialog": {
+        "title": "Supprimer le type d'actif",
+        "message": "Cela supprime définitivement \"{{name}}\" du registre des types d'actifs."
+      },
+      "messages": {
+        "created": "Type d'actif créé",
+        "updated": "Type d'actif mis à jour",
+        "deleted": "Type d'actif supprimé"
+      },
+      "errors": {
+        "fetchFailed": "Échec du chargement des types d'actifs.",
+        "saveFailed": "Échec de l'enregistrement du type d'actif.",
+        "deleteFailed": "Échec de la suppression du type d'actif.",
+        "invalidName": "Saisissez un nom pour ce type d'actif.",
+        "invalidSchema": "Le schéma de champs est invalide. Corrigez les champs mis en évidence et réessayez.",
+        "reservedSlug": "L'identifiant \"{{slug}}\" est réservé à un type intégré. Choisissez un autre nom.",
+        "slugConflict": "Un type d'actif avec l'identifiant \"{{slug}}\" existe déjà.",
+        "notFound": "Ce type d'actif n'existe plus.",
+        "builtinImmutable": "Les types intégrés ne permettent de modifier que le nom et l'icône.",
+        "builtinUndeletable": "Les types intégrés ne peuvent pas être supprimés.",
+        "inUse": "Ce type est encore utilisé par {{assetCount}} actif(s). Réaffectez ces actifs avant de le supprimer.",
+        "unknown": "Une erreur s'est produite."
+      },
+      "editor": {
+        "title": "Champs",
+        "empty": "Aucun champ pour l'instant. Ajoutez des champs pour construire le formulaire de création/modification de ce type.",
+        "addField": "Ajouter un champ",
+        "fieldLabel": "Libellé",
+        "fieldLabelPlaceholder": "p. ex. Numéro de série",
+        "fieldKey": "Clé",
+        "fieldKeyPlaceholder": "p. ex. serial_number",
+        "fieldKind": "Type",
+        "fieldRequired": "Obligatoire",
+        "fieldOptions": "Options (séparées par des virgules)",
+        "fieldOptionsPlaceholder": "p. ex. Or, Argent, Bronze",
+        "moveUp": "Déplacer le champ vers le haut",
+        "moveDown": "Déplacer le champ vers le bas",
+        "removeField": "Supprimer le champ",
+        "kinds": {
+          "text": "Texte",
+          "number": "Nombre",
+          "date": "Date",
+          "select": "Sélection",
+          "url": "URL",
+          "boolean": "Oui / Non"
+        },
+        "errors": {
+          "invalidKey": "La clé doit commencer par une lettre minuscule et ne contenir que des lettres minuscules, des chiffres et des tirets bas.",
+          "duplicateKey": "Chaque clé de champ doit être unique.",
+          "missingLabel": "Le libellé est obligatoire.",
+          "invalidKind": "Choisissez un type de champ valide.",
+          "invalidRequired": "\"Obligatoire\" doit être activé ou désactivé.",
+          "missingOptions": "Les champs de sélection nécessitent au moins une option.",
+          "invalidOptions": "Les options ne peuvent pas être vides.",
+          "invalidField": "Ce champ est invalide."
+        }
+      }
+    }
   }
 }

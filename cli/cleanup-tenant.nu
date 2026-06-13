@@ -373,12 +373,17 @@ def "main cleanup" [
         "asset_ticket_associations" "asset_document_associations" "asset_relationships"
         "asset_history" "asset_associations" "asset_software"
         "workstation_assets" "server_assets" "network_device_assets" "mobile_device_assets" "printer_assets"
+        # Asset type registry (RESTRICT FK to tenants; delete before tenants)
+        "asset_type_registry"
 
         # Software catalog
         "software_catalog"
 
         # RMM
         "rmm_alert_rules" "rmm_alerts" "rmm_organization_mappings" "rmm_integrations"
+
+        # Hudu integration (one connection row per tenant)
+        "hudu_integrations"
 
         # Survey
         "survey_responses" "survey_invitations" "survey_triggers" "survey_templates"

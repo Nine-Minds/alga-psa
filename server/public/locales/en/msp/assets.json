@@ -601,7 +601,8 @@
       "serialNumber": "Serial Number",
       "status": "Status",
       "purchaseDate": "Purchase Date",
-      "warrantyEndDate": "Warranty End Date"
+      "warrantyEndDate": "Warranty End Date",
+      "assetType": "Type"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -644,7 +645,8 @@
       "networkDevice": "Network Device Details",
       "server": "Server Details",
       "mobileDevice": "Mobile Device Details",
-      "printer": "Printer Details"
+      "printer": "Printer Details",
+      "custom": "{{typeName}} Details"
     }
   },
   "assetFormClient": {
@@ -942,7 +944,8 @@
       "network_device": "Network Device",
       "server": "Server",
       "mobile_device": "Mobile Device",
-      "printer": "Printer"
+      "printer": "Printer",
+      "unknown": "Unknown"
     },
     "networkDeviceTypes": {
       "switch": "Switch",
@@ -1023,6 +1026,10 @@
     },
     "empty": "No hardware data available",
     "emptyStorage": "No storage drives detected"
+  },
+  "huduDocumentationCard": {
+    "title": "Hudu Documentation",
+    "syncedAt": "Last synced from Hudu: {{value}}"
   },
   "rmmVitalsPanel": {
     "title": "RMM Vitals & Connectivity",
@@ -1352,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "Failed to load ticket",
     "openTicketFailed": "Failed to open ticket"
+  },
+  "assetTypeBreakdown": {
+    "title": "Assets by type"
+  },
+  "customTypeDetailsPanel": {
+    "title": "{{name}} Details",
+    "values": {
+      "yes": "Yes",
+      "no": "No"
+    }
   }
 }

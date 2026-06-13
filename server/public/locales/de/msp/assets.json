@@ -549,7 +549,7 @@
       "clientsLoadFailed": "Clients können nicht geladen werden",
       "locationsLoadFailed": "Standorte für diesen Client können nicht geladen werden",
       "updateFailed": "Das Asset konnte nicht aktualisiert werden",
-      "validation": "Bitte korrigieren Sie die markierten Felder, bevor Sie speichern."
+      "validation": "Bitte korrigieren Sie die markierten Felder vor dem Speichern."
     },
     "actions": {
       "viewClient": "Kunden ansehen",
@@ -601,7 +601,8 @@
       "serialNumber": "Seriennummer",
       "status": "Status",
       "purchaseDate": "Kaufdatum",
-      "warrantyEndDate": "Enddatum der Garantie"
+      "warrantyEndDate": "Enddatum der Garantie",
+      "assetType": "Typ"
     },
     "placeholders": {
       "loadingClients": "Kunden werden geladen…",
@@ -644,7 +645,8 @@
       "networkDevice": "Details zum Netzwerkgerät",
       "server": "Serverdetails",
       "mobileDevice": "Details zu Mobilgeräten",
-      "printer": "Druckerdetails"
+      "printer": "Druckerdetails",
+      "custom": "{{typeName}}-Details"
     }
   },
   "assetFormClient": {
@@ -924,9 +926,9 @@
       "selectType": "Typ auswählen",
       "selectStatus": "Status auswählen",
       "serialNumber": "Geben Sie die Seriennummer ein",
-      "customLocation": "Benutzerdefinierten Standort oder Bereich eingeben",
+      "customLocation": "Geben Sie einen benutzerdefinierten Ort oder Bereich ein",
       "loadingLocations": "Standorte werden geladen...",
-      "selectClientFirst": "Wählen Sie zuerst einen Kunden aus",
+      "selectClientFirst": "Wählen Sie zunächst einen Kunden aus",
       "selectLocation": "Standort auswählen"
     },
     "sections": {
@@ -942,7 +944,8 @@
       "network_device": "Netzwerkgerät",
       "server": "Server",
       "mobile_device": "Mobilgerät",
-      "printer": "Drucker"
+      "printer": "Drucker",
+      "unknown": "Unbekannt"
     },
     "networkDeviceTypes": {
       "switch": "Switch",
@@ -1023,6 +1026,10 @@
     },
     "empty": "Keine Hardwaredaten verfügbar",
     "emptyStorage": "Keine Speicherlaufwerke erkannt"
+  },
+  "huduDocumentationCard": {
+    "title": "Hudu-Dokumentation",
+    "syncedAt": "Zuletzt aus Hudu synchronisiert: {{value}}"
   },
   "rmmVitalsPanel": {
     "title": "RMM Vitalwerte und Konnektivität",
@@ -1352,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "Ticket konnte nicht geladen werden",
     "openTicketFailed": "Ticket konnte nicht geöffnet werden"
+  },
+  "assetTypeBreakdown": {
+    "title": "Assets nach Typ"
+  },
+  "customTypeDetailsPanel": {
+    "title": "{{name}}-Details",
+    "values": {
+      "yes": "Ja",
+      "no": "Nein"
+    }
   }
 }

@@ -1,0 +1,209 @@
+[
+  {
+    "id": "T301",
+    "description": "Migration up/down on plain PG: table, unique (tenant,slug), no RLS (post-20260509 architecture)",
+    "implemented": true,
+    "commitGroup": "type-registry-schema",
+    "featureIds": [
+      "F301"
+    ]
+  },
+  {
+    "id": "T302",
+    "description": "Existing tenants seeded with exactly six built-ins; onboarding path seeds a fresh tenant",
+    "implemented": true,
+    "commitGroup": "type-registry-schema",
+    "featureIds": [
+      "F302"
+    ]
+  },
+  {
+    "id": "T303",
+    "description": "fields_schema validation: bad kind/key/duplicate keys/select-without-options rejected",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "featureIds": [
+      "F303"
+    ]
+  },
+  {
+    "id": "T304",
+    "description": "Slug: generated from name, reserved slugs rejected, per-tenant uniqueness conflict typed",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "featureIds": [
+      "F304"
+    ]
+  },
+  {
+    "id": "T305",
+    "description": "Delete blocked while an asset uses the slug; allowed after re-type",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "featureIds": [
+      "F304"
+    ]
+  },
+  {
+    "id": "T306",
+    "description": "Built-in rows: schema immutable, name/icon editable",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "featureIds": [
+      "F304"
+    ]
+  },
+  {
+    "id": "T307",
+    "description": "Registry actions: 403 without asset.update (writes) / asset.read (reads); envelopes typed",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "featureIds": [
+      "F305"
+    ]
+  },
+  {
+    "id": "T308",
+    "description": "Settings page lists registry with built-ins flagged; create persists; in-use delete shows guard message",
+    "implemented": true,
+    "commitGroup": "type-management-ui",
+    "featureIds": [
+      "F306"
+    ]
+  },
+  {
+    "id": "T309",
+    "description": "Schema editor: add/remove/reorder/kind/required/options round-trip into fields_schema",
+    "implemented": true,
+    "commitGroup": "type-management-ui",
+    "featureIds": [
+      "F307"
+    ]
+  },
+  {
+    "id": "T310",
+    "description": "Type select offers built-ins + custom from registry",
+    "implemented": true,
+    "commitGroup": "asset-forms",
+    "featureIds": [
+      "F308"
+    ]
+  },
+  {
+    "id": "T311",
+    "description": "Custom type form renders schema fields, enforces required, writes attributes[key]",
+    "implemented": true,
+    "commitGroup": "asset-forms",
+    "featureIds": [
+      "F309"
+    ]
+  },
+  {
+    "id": "T312",
+    "description": "Built-in type create/edit unchanged (extension panels regression)",
+    "implemented": true,
+    "commitGroup": "asset-forms",
+    "featureIds": [
+      "F309"
+    ]
+  },
+  {
+    "id": "T313",
+    "description": "createAsset rejects unknown custom slug; accepts registered one with attributes payload",
+    "implemented": true,
+    "commitGroup": "asset-forms",
+    "featureIds": [
+      "F310"
+    ]
+  },
+  {
+    "id": "T314",
+    "description": "List/filter shows custom type labels; filtering by custom type narrows correctly",
+    "implemented": true,
+    "commitGroup": "asset-display",
+    "featureIds": [
+      "F311"
+    ]
+  },
+  {
+    "id": "T315",
+    "description": "Detail renders schema read panel for custom-type asset",
+    "implemented": true,
+    "commitGroup": "asset-display",
+    "featureIds": [
+      "F312"
+    ]
+  },
+  {
+    "id": "T316",
+    "description": "Dashboard by-type counts include custom types with labels",
+    "implemented": true,
+    "commitGroup": "dashboards-reports",
+    "featureIds": [
+      "F313"
+    ]
+  },
+  {
+    "id": "T317",
+    "description": "Report/export resolves custom labels",
+    "implemented": true,
+    "commitGroup": "dashboards-reports",
+    "featureIds": [
+      "F314"
+    ]
+  },
+  {
+    "id": "T318",
+    "description": "Layout map select includes custom types; resolver returns their slugs",
+    "implemented": true,
+    "commitGroup": "hudu-tie-in",
+    "featureIds": [
+      "F315"
+    ]
+  },
+  {
+    "id": "T319",
+    "description": "Create-from-layout: generated schema mirrors layout fields; assignment stored; idempotent slug collision handled",
+    "implemented": true,
+    "commitGroup": "hudu-tie-in",
+    "featureIds": [
+      "F316"
+    ]
+  },
+  {
+    "id": "T320",
+    "description": "Import onto generated type fills schema-keyed attributes + hudu_fields both",
+    "implemented": true,
+    "commitGroup": "hudu-tie-in",
+    "featureIds": [
+      "F317"
+    ]
+  },
+  {
+    "id": "T321",
+    "description": "i18n: keys resolve in en; 7 locales carry them; no hardcoded strings in new components",
+    "implemented": true,
+    "commitGroup": "i18n-types",
+    "featureIds": [
+      "F318"
+    ]
+  },
+  {
+    "id": "T322",
+    "description": "Existing asset suites green; hudu suites green; permissions sweep extended",
+    "implemented": true,
+    "commitGroup": "regression-types",
+    "featureIds": [
+      "F319"
+    ]
+  },
+  {
+    "id": "T323",
+    "description": "Citus chain applies the migration (distributed, colocated, no RLS)",
+    "implemented": true,
+    "commitGroup": "regression-types",
+    "featureIds": [
+      "F320"
+    ]
+  }
+]

@@ -16,13 +16,12 @@ const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'huntress',
 ]);
 
-type SupportedPlainAssetType = 'workstation' | 'server' | 'network_device' | 'mobile_device' | 'printer' | 'unknown';
-
 interface UpsertAssetByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;
   client_id?: string;
   client_external_id?: string;
-  asset_type?: SupportedPlainAssetType;
+  // Any asset_type_registry slug (built-in or custom tenant type).
+  asset_type?: string;
   name?: string;
   asset_tag?: string;
   serial_number?: string;
@@ -43,10 +42,9 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
     { name: 'client_external_id', type: 'string', required: false, description: 'External client ID to resolve' },
     {
       name: 'asset_type',
-      type: 'enum',
+      type: 'string',
       required: false,
-      description: 'Asset type for plain asset upsert',
-      enumValues: ['workstation', 'server', 'network_device', 'mobile_device', 'printer', 'unknown'],
+      description: 'Asset type slug for plain asset upsert (any registry type, built-in or custom)',
     },
     { name: 'name', type: 'string', required: false, description: 'Asset display name' },
     { name: 'asset_tag', type: 'string', required: false, description: 'Asset tag' },

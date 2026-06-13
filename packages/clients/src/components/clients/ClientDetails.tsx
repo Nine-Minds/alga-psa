@@ -82,6 +82,10 @@ import {
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
+import HuduClientTab from './HuduClientTab';
+import HuduClientPasswordsTab from './HuduClientPasswordsTab';
+import HuduClientDocumentsSection from './HuduClientDocumentsSection';
+import { useHuduClientTab } from './useHuduClientTab';
 
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
@@ -276,6 +280,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     editedClient
   );
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
+  // F070: EE + hudu-integration flag + Hudu connected + this client mapped.
+  const huduClientTab = useHuduClientTab(client.client_id);
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -1725,6 +1731,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             }) : (
               <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
             )}
+            {huduClientTab.visible && (
+              <HuduClientDocumentsSection clientId={client.client_id} />
+            )}
           </div>
         ) : null
       )
@@ -1834,7 +1843,25 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           />
         </div>
       )
-    }
+    },
+    // EE-only Hudu tabs: registered only when EE + flag + connected + mapped (F070/F080).
+    ...(huduClientTab.visible ? [{
+      id: 'hudu',
+      label: t('clientDetails.huduTab', { defaultValue: 'Hudu' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <HuduClientTab clientId={client.client_id} />
+        </div>
+      )
+    }, {
+      id: 'hudu-passwords',
+      label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <HuduClientPasswordsTab clientId={client.client_id} />
+        </div>
+      )
+    }] : [])
   ], [
     editedClient,
     internalUsers,
@@ -1870,7 +1897,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     currentUser,
     documents,
     memoizedRouter,
-    interactions
+    interactions,
+    huduClientTab.visible
   ]);
 
   const tabContent = useMemo(() => {

@@ -1,0 +1,156 @@
+[
+  {
+    "id": "T251",
+    "description": "Contract: fields[] and asset_layout_id parse from live-shape fixtures",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "featureIds": [
+      "F251"
+    ]
+  },
+  {
+    "id": "T252",
+    "description": "Import writes hudu_fields in position order + hudu_synced_at; sibling attributes keys preserved",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "featureIds": [
+      "F252"
+    ]
+  },
+  {
+    "id": "T253",
+    "description": "Sync updates hudu_fields when Hudu fields changed; row counted updated even when name/serial unchanged",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "featureIds": [
+      "F253"
+    ]
+  },
+  {
+    "id": "T254",
+    "description": "Sync leaves attributes untouched for stale/missing Hudu assets",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "featureIds": [
+      "F253"
+    ]
+  },
+  {
+    "id": "T255",
+    "description": "Asset card renders label/value rows when hudu_fields present; absent -> no card",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "featureIds": [
+      "F254"
+    ]
+  },
+  {
+    "id": "T256",
+    "description": "Card strings resolve in en + 7 locales",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "featureIds": [
+      "F255"
+    ]
+  },
+  {
+    "id": "T257",
+    "description": "normalize/resolve: 'excluded' round-trips; invalid still coerces to unknown; excluded distinct from unknown",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "featureIds": [
+      "F256"
+    ]
+  },
+  {
+    "id": "T258",
+    "description": "Settings UI offers Don't import and persists it",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "featureIds": [
+      "F257"
+    ]
+  },
+  {
+    "id": "T259",
+    "description": "Single import of excluded layout -> layout_excluded typed failure, no asset created",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "featureIds": [
+      "F258"
+    ]
+  },
+  {
+    "id": "T260",
+    "description": "Bulk import skips excluded layouts; summary {created, skipped, failed} accurate",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "featureIds": [
+      "F258"
+    ]
+  },
+  {
+    "id": "T261",
+    "description": "Manager hides Import on excluded rows; row still mappable; Import-all count excludes them",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "featureIds": [
+      "F259"
+    ]
+  },
+  {
+    "id": "T262",
+    "description": "Sync with rmm_provider set: no name/serial in updateAsset payload; hudu_fields still refreshed; rmmSkipped counted",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "featureIds": [
+      "F260"
+    ]
+  },
+  {
+    "id": "T263",
+    "description": "Sync without rmm_provider unaffected (regression)",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "featureIds": [
+      "F260"
+    ]
+  },
+  {
+    "id": "T264",
+    "description": "Import serial collision (other client, same tenant) -> serial_conflict naming existing asset; no asset created",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "featureIds": [
+      "F261"
+    ]
+  },
+  {
+    "id": "T265",
+    "description": "Bulk: mixed excluded/conflict/success -> summary rows distinguish all three",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "featureIds": [
+      "F261",
+      "F262"
+    ]
+  },
+  {
+    "id": "T266",
+    "description": "Manager renders the three-way bulk summary",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "featureIds": [
+      "F262"
+    ]
+  },
+  {
+    "id": "T267",
+    "description": "huduI18n + huduPermissions suites green post-change",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "featureIds": [
+      "F263"
+    ]
+  }
+]

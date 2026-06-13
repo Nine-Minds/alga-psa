@@ -151,7 +151,7 @@ export function ClientDevicesPage() {
     if (!response) return [];
     // by_type is computed server-side across the entire client, so the tile
     // counts stay correct regardless of paging or filters.
-    return (Object.keys(response.by_type) as Array<Asset['asset_type']>)
+    return (Object.keys(response.by_type) as Array<ClientAssetType>)
       .map((type) => ({ type, count: response.by_type[type] }))
       .filter((entry) => entry.count > 0);
   }, [response]);

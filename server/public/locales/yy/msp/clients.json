@@ -187,6 +187,8 @@
     "billing": "55555",
     "interactions": "55555",
     "notes": "55555",
+    "huduTab": "55555",
+    "huduPasswordsTab": "55555",
     "clientLocations": "55555",
     "billingDashboard": "55555",
     "clientAndContacts": "55555",

@@ -609,7 +609,8 @@
       "serialNumber": "Numer seryjny",
       "status": "Status",
       "purchaseDate": "Data zakupu",
-      "warrantyEndDate": "Data zakończenia gwarancji"
+      "warrantyEndDate": "Data zakończenia gwarancji",
+      "assetType": "Typ"
     },
     "placeholders": {
       "loadingClients": "Ładowanie klientów…",
@@ -652,7 +653,8 @@
       "networkDevice": "Szczegóły urządzenia sieciowego",
       "server": "Szczegóły serwera",
       "mobileDevice": "Szczegóły urządzenia mobilnego",
-      "printer": "Szczegóły drukarki"
+      "printer": "Szczegóły drukarki",
+      "custom": "Szczegóły: {{typeName}}"
     }
   },
   "assetFormClient": {
@@ -922,7 +924,7 @@
       "typeRequired": "Typ *",
       "status": "Status",
       "serialNumber": "Numer seryjny",
-      "customLocationOption": "Lokalizacja niestandardowa",
+      "customLocationOption": "Niestandardowa lokalizacja",
       "location": "Lokalizacja"
     },
     "placeholders": {
@@ -958,7 +960,8 @@
       "network_device": "Urządzenie sieciowe",
       "server": "Serwer",
       "mobile_device": "Urządzenie mobilne",
-      "printer": "Drukarka"
+      "printer": "Drukarka",
+      "unknown": "Nieznany"
     },
     "networkDeviceTypes": {
       "switch": "Przełącznik",
@@ -1039,6 +1042,10 @@
     },
     "empty": "Brak dostępnych danych sprzętowych",
     "emptyStorage": "Nie wykryto dysków pamięci masowej"
+  },
+  "huduDocumentationCard": {
+    "title": "Dokumentacja Hudu",
+    "syncedAt": "Ostatnia synchronizacja z Hudu: {{value}}"
   },
   "rmmVitalsPanel": {
     "title": "Parametry RMM i łączność",
@@ -1380,5 +1387,15 @@
   "crossFeature": {
     "loadTicketFailed": "Nie udało się załadować zgłoszenia",
     "openTicketFailed": "Nie udało się otworzyć zgłoszenia"
+  },
+  "assetTypeBreakdown": {
+    "title": "Zasoby według typu"
+  },
+  "customTypeDetailsPanel": {
+    "title": "Szczegóły: {{name}}",
+    "values": {
+      "yes": "Tak",
+      "no": "Nie"
+    }
   }
 }

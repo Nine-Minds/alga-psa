@@ -213,6 +213,8 @@
     "billing": "Rozliczenia",
     "interactions": "Interakcje",
     "notes": "Notatki",
+    "huduTab": "Hudu",
+    "huduPasswordsTab": "Hasła",
     "clientLocations": "Lokalizacje klientów",
     "billingDashboard": "Panel rozliczeniowy",
     "clientAndContacts": "Klient i kontakty",

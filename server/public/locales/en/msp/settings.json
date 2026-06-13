@@ -1768,6 +1768,10 @@
         "label": "RMM",
         "description": "Connect remote monitoring and management tools"
       },
+      "itDocumentation": {
+        "label": "IT Documentation",
+        "description": "Connect IT documentation platforms to surface client documentation, assets, and credentials in context."
+      },
       "communication": {
         "label": "Communication",
         "description": "Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access."
@@ -1800,6 +1804,10 @@
       "rmmSetup": {
         "name": "RMM Integrations",
         "description": "Select and configure your RMM provider"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Connect a Hudu instance to view client documentation and credentials inside AlgaPSA."
       },
       "email": {
         "name": "Inbound Email",
@@ -1886,5 +1894,97 @@
   "language": {
     "selectLanguage": "Select a language",
     "languagesUpdated": "Available languages updated"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Assets",
+      "title": "Asset Types",
+      "description": "Manage the asset types available in your asset module. Custom types carry a field schema that drives their create/edit forms.",
+      "loading": "Loading asset types...",
+      "table": {
+        "name": "Name",
+        "builtin": "Built-in",
+        "slug": "Identifier",
+        "fieldCount": "Fields",
+        "order": "Order",
+        "actions": "Actions",
+        "openMenu": "Open menu"
+      },
+      "actions": {
+        "addType": "Add Asset Type",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save",
+        "create": "Create",
+        "confirmDelete": "Delete"
+      },
+      "dialog": {
+        "createTitle": "Add Asset Type",
+        "editTitle": "Edit Asset Type",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Firewall",
+        "displayOrderLabel": "Display Order",
+        "iconLabel": "Icon",
+        "builtinSchemaHint": "Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon."
+      },
+      "deleteDialog": {
+        "title": "Delete Asset Type",
+        "message": "This permanently removes \"{{name}}\" from your asset type registry."
+      },
+      "messages": {
+        "created": "Asset type created",
+        "updated": "Asset type updated",
+        "deleted": "Asset type deleted"
+      },
+      "errors": {
+        "fetchFailed": "Failed to load asset types.",
+        "saveFailed": "Failed to save asset type.",
+        "deleteFailed": "Failed to delete asset type.",
+        "invalidName": "Enter a name for this asset type.",
+        "invalidSchema": "The field schema is invalid. Fix the highlighted fields and try again.",
+        "reservedSlug": "The identifier \"{{slug}}\" is reserved for a built-in type. Choose another name.",
+        "slugConflict": "An asset type with the identifier \"{{slug}}\" already exists.",
+        "notFound": "This asset type no longer exists.",
+        "builtinImmutable": "Built-in types only allow name and icon changes.",
+        "builtinUndeletable": "Built-in types cannot be deleted.",
+        "inUse": "This type is still used by {{assetCount}} asset(s). Reassign those assets before deleting it.",
+        "unknown": "Something went wrong."
+      },
+      "editor": {
+        "title": "Fields",
+        "empty": "No fields yet. Add fields to build the create/edit form for this type.",
+        "addField": "Add field",
+        "fieldLabel": "Label",
+        "fieldLabelPlaceholder": "e.g. Serial Number",
+        "fieldKey": "Key",
+        "fieldKeyPlaceholder": "e.g. serial_number",
+        "fieldKind": "Kind",
+        "fieldRequired": "Required",
+        "fieldOptions": "Options (comma-separated)",
+        "fieldOptionsPlaceholder": "e.g. Gold, Silver, Bronze",
+        "moveUp": "Move field up",
+        "moveDown": "Move field down",
+        "removeField": "Remove field",
+        "kinds": {
+          "text": "Text",
+          "number": "Number",
+          "date": "Date",
+          "select": "Select",
+          "url": "URL",
+          "boolean": "Yes / No"
+        },
+        "errors": {
+          "invalidKey": "Key must start with a lowercase letter and use only lowercase letters, numbers, and underscores.",
+          "duplicateKey": "Each field key must be unique.",
+          "missingLabel": "Label is required.",
+          "invalidKind": "Choose a valid field kind.",
+          "invalidRequired": "Required must be on or off.",
+          "missingOptions": "Select fields need at least one option.",
+          "invalidOptions": "Options must be non-empty values.",
+          "invalidField": "This field is invalid."
+        }
+      }
+    }
   }
 }
