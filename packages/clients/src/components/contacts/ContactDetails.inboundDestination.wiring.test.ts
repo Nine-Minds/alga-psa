@@ -38,5 +38,14 @@ describe('Contact inbound destination wiring', () => {
     expect(contactActionsSource).toContain(
       "throw new Error('FOREIGN_KEY_ERROR: The selected inbound ticket destination no longer exists');"
     );
+
+    // Regression guard (BUG-1): the validated override must be PERSISTED through
+    // ContactModel.updateContact, not silently dropped. An empty string clears it.
+    expect(contactActionsSource).toContain(
+      "(contactData as any).inbound_ticket_defaults_id === ''"
+    );
+    expect(contactActionsSource).toMatch(
+      /ContactModel\.updateContact\([\s\S]*inbound_ticket_defaults_id:[\s\S]*\}, tenant, trx\)/
+    );
   });
 });

@@ -596,6 +596,12 @@ export const updateContact = withAuth(async (
         primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
         primary_email_custom_type: contactData.primary_email_custom_type ?? undefined,
         additional_email_addresses: contactData.additional_email_addresses,
+        // Persist the validated inbound ticket destination override. An empty string
+        // clears it (null); undefined leaves it unchanged.
+        inbound_ticket_defaults_id:
+          (contactData as any).inbound_ticket_defaults_id === ''
+            ? null
+            : ((contactData as any).inbound_ticket_defaults_id ?? undefined),
         role: contactData.role ?? undefined,
         notes: contactData.notes ?? undefined,
         is_inactive: contactData.is_inactive ?? undefined,

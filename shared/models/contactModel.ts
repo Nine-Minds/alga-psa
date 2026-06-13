@@ -48,13 +48,26 @@ const emailRowInputSchema = z.object({
 
 export const contactFormSchema = z.object({
   full_name: z.string().trim().min(1, 'Full name is required'),
-  email: z.union([z.string().trim().email('Invalid email address'), z.literal(''), z.null()]).optional(),
+  // Validate with the same pattern the action/model/client all use, and surface a
+  // single clear message. A z.union([...email(), '', null]) here reported a confusing
+  // wrapped "Validation failed: email: Invalid email address" and could diverge from
+  // the regex used elsewhere, leaving users with an unhelpful error on a bad email.
+  email: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .refine(
+      (value) => value == null || value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+      { message: 'Please enter a valid email address' }
+    ),
   primary_email_canonical_type: canonicalEmailTypeSchema.nullish(),
   primary_email_custom_type: z.string().trim().min(1).nullish(),
   primary_email_custom_type_id: z.string().uuid().nullable().optional(),
   additional_email_addresses: z.array(emailRowInputSchema).optional(),
   phone_numbers: z.array(phoneRowInputSchema).optional(),
   client_id: z.string().uuid('Client ID must be a valid UUID').optional().nullable(),
+  inbound_ticket_defaults_id: z.string().uuid('Inbound ticket destination must be a valid UUID').nullable().optional(),
   role: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
@@ -673,6 +686,7 @@ export class ContactModel {
         : (validatedInput.primary_email_canonical_type ?? 'work'),
       primary_email_custom_type_id: primaryEmailCustomTypeId,
       client_id: input.client_id || null,
+      inbound_ticket_defaults_id: validatedInput.inbound_ticket_defaults_id ?? null,
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
       is_inactive: input.is_inactive || false,
