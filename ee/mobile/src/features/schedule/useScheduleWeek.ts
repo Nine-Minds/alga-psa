@@ -9,6 +9,7 @@ import {
   setCachedScheduleWeek,
 } from "../../cache/scheduleCache";
 import { logger } from "../../logging/logger";
+import { syncScheduleReminders } from "../../notifications/scheduleReminders";
 import { dateFromKey, groupEntriesByDay, weekQueryRange } from "./scheduleUtils";
 
 export function useScheduleWeek({
@@ -37,12 +38,15 @@ export function useScheduleWeek({
       const weekStart = dateFromKey(weekStartKey);
       if (!weekStart) return;
 
+      const { startIso: windowStartIso, endIso: windowEndIso } = weekQueryRange(weekStart);
+
       if (!force) {
         const cached = getCachedScheduleWeek(cacheKey);
         if (cached) {
           setEntries(cached);
           setError(null);
           setNoAccess(false);
+          void syncScheduleReminders(cached, { startIso: windowStartIso, endIso: windowEndIso });
           return;
         }
       }
@@ -51,11 +55,10 @@ export function useScheduleWeek({
       const abortController = new AbortController();
       abortRef.current = abortController;
 
-      const { startIso, endIso } = weekQueryRange(weekStart);
       const result = await listScheduleEntries(client, {
         apiKey,
-        startDate: startIso,
-        endDate: endIso,
+        startDate: windowStartIso,
+        endDate: windowEndIso,
         userId: userId ?? undefined,
         signal: abortController.signal,
       });
@@ -81,6 +84,7 @@ export function useScheduleWeek({
       setError(null);
       setNoAccess(false);
       setCachedScheduleWeek(cacheKey, next);
+      void syncScheduleReminders(next, { startIso: windowStartIso, endIso: windowEndIso });
     },
     [apiKey, cacheKey, client, t, userId, weekStartKey],
   );

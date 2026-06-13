@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 import { searchTagSuggestions, type TagSuggestion } from "../../../api/tags";
 import type { ApiClient } from "../../../api/client";
-import { getTagChipColors } from "./TagsSection";
+import { getTagChipColors } from "../../../ui/tagColors";
 
 export function TagPickerModal({
   visible,
@@ -25,7 +25,7 @@ export function TagPickerModal({
   client: ApiClient | null;
   apiKey: string;
 }) {
-  const { colors, spacing, typography } = useTheme();
+  const { mode, colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
 
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([]);
@@ -97,16 +97,14 @@ export function TagPickerModal({
     !suggestions.some((s) => s.tag_text.toLowerCase() === trimmedSearch.toLowerCase()),
   );
 
-  const fallbackChip = colors.badge.neutral;
-
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
         style={{ flex: 1, justifyContent: "flex-end" }}
       >
       <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} onPress={onClose} />
-      <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: spacing.xl, maxHeight: "70%" }}>
+      <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: spacing.xl, maxHeight: "70%", flexShrink: 1 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, paddingBottom: spacing.sm }}>
           <Text style={{ ...typography.title, color: colors.text }}>
             {t("tags.pickerTitle", { defaultValue: "Add tag" })}
@@ -192,7 +190,7 @@ export function TagPickerModal({
 
             {suggestions.map((suggestion) => {
               const applied = isApplied(suggestion.tag_text);
-              const chip = getTagChipColors(suggestion, fallbackChip);
+              const chip = getTagChipColors(suggestion, mode);
               const disabled = busy || applied;
               return (
                 <Pressable

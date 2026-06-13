@@ -13,6 +13,7 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 // Import tag models and interfaces
 import TagDefinition, { ITagDefinition } from '@alga-psa/tags/models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from '@alga-psa/tags/models/tagMapping';
+import { generateEntityColor } from '@alga-psa/tags/lib/colorUtils';
 import { ITag, TaggedEntityType } from '../../../interfaces/tag.interfaces';
 
 // Import schemas for validation
@@ -176,13 +177,17 @@ export class TagService extends BaseService {
         const { knex, tenant } = await this.getKnex();
 
         const { created, definitionToPublish } = await withTransaction(knex, async (trx) => {
+          // New definitions created without explicit colors get the same
+          // deterministic palette the web UI assigns, so tags created via the
+          // API render in color everywhere instead of falling back to grey.
+          const generated = generateEntityColor(data.tag_text);
           const tagData: Omit<ITag, 'tenant' | 'tag_id'> = {
             tag_text: data.tag_text,
             tagged_id: data.tagged_id,
             tagged_type: data.tagged_type,
             board_id: data.board_id || undefined,
-            background_color: data.background_color || undefined,
-            text_color: data.text_color || undefined
+            background_color: data.background_color || generated.background,
+            text_color: data.text_color || generated.text
           };
 
           // Get or create tag definition
@@ -429,13 +434,14 @@ export class TagService extends BaseService {
         const normalizedTag = tagText.toLowerCase().trim();
         if (!normalizedTag) continue;
 
+        const generated = generateEntityColor(normalizedTag);
         const tagData = {
           tag_text: normalizedTag,
           tagged_id: entityId,
           tagged_type: entityType,
           board_id: options.board_id || undefined,
-          background_color: options.default_colors?.background_color || undefined,
-          text_color: options.default_colors?.text_color || undefined
+          background_color: options.default_colors?.background_color || generated.background,
+          text_color: options.default_colors?.text_color || generated.text
         };
 
         // Get or create tag definition
