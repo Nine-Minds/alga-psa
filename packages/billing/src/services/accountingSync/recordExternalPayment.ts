@@ -64,7 +64,11 @@ type InvoiceRow = {
   currency_code: string | null;
 };
 
-const NON_PAYABLE_STATUSES = ['cancelled', 'draft', 'void'];
+export const NON_PAYABLE_INVOICE_STATUSES = ['cancelled', 'draft', 'void'] as const;
+
+export function isNonPayableInvoiceStatus(status: string | null | undefined): boolean {
+  return NON_PAYABLE_INVOICE_STATUSES.includes(status as (typeof NON_PAYABLE_INVOICE_STATUSES)[number]);
+}
 
 async function getInvoice(knex: Knex, tenantId: string, invoiceId: string): Promise<InvoiceRow | undefined> {
   return knex('invoices')
@@ -144,7 +148,7 @@ export async function recordExternalPayment(
     return { success: false, paymentRecorded: false, error: `Invoice not found: ${input.invoiceId}` };
   }
 
-  if (NON_PAYABLE_STATUSES.includes(invoice.status)) {
+  if (isNonPayableInvoiceStatus(invoice.status)) {
     return {
       success: false,
       paymentRecorded: false,

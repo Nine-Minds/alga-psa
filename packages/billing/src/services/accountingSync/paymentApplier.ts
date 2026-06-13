@@ -2,7 +2,12 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import type { AccountingExternalChange } from '@alga-psa/types';
 import { SyncMappingLedger } from './syncMappingLedger';
-import { recordExternalPayment, reverseExternalPayment, computeBalanceDue } from './recordExternalPayment';
+import {
+  recordExternalPayment,
+  reverseExternalPayment,
+  computeBalanceDue,
+  isNonPayableInvoiceStatus
+} from './recordExternalPayment';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncExceptionService } from './syncExceptions.types';
 
@@ -29,6 +34,12 @@ interface RecordedAllocation {
   externalInvoiceId: string;
   amountCents: number;
   algaPaymentId: string;
+}
+
+interface PaymentTargetInvoiceRow {
+  status: string;
+  total_amount: number;
+  credit_applied: number | null;
 }
 
 export interface PaymentApplierDeps {
@@ -162,6 +173,27 @@ async function applyAllocations(
   return recorded;
 }
 
+async function loadTargetInvoices(
+  deps: PaymentApplierDeps,
+  allocations: PaymentAllocation[]
+): Promise<Map<string, PaymentTargetInvoiceRow>> {
+  const rows = new Map<string, PaymentTargetInvoiceRow>();
+  const invoiceIds = [...new Set(allocations.map((allocation) => allocation.invoiceId))];
+
+  for (const invoiceId of invoiceIds) {
+    const invoiceRow = await deps.knex('invoices')
+      .where({ tenant: deps.tenantId, invoice_id: invoiceId })
+      .select('status', 'total_amount', 'credit_applied')
+      .first<PaymentTargetInvoiceRow | undefined>();
+
+    if (invoiceRow) {
+      rows.set(invoiceId, invoiceRow);
+    }
+  }
+
+  return rows;
+}
+
 export async function applyExternalPaymentChange(
   deps: PaymentApplierDeps,
   change: AccountingExternalChange
@@ -246,6 +278,47 @@ export async function applyExternalPaymentChange(
     return;
   }
 
+  const targetInvoices = await loadTargetInvoices(deps, allocations);
+  const nonPayableTargets = allocations
+    .map((allocation) => ({
+      allocation,
+      invoice: targetInvoices.get(allocation.invoiceId)
+    }))
+    .filter(({ invoice }) => isNonPayableInvoiceStatus(invoice?.status));
+
+  if (nonPayableTargets.length > 0) {
+    // Apply nothing: a payment linked to a voided/draft/cancelled invoice is an
+    // operator-facing sync exception, not a cursor-blocking applier failure.
+    deps.stats.paymentsSkipped += 1;
+    const result = await deps.exceptions.createOrUpdate({
+      type: 'accounting_sync_unmapped_payment',
+      entityType: 'external_payment',
+      entityId: change.externalId,
+      title: 'QuickBooks payment targets a non-payable invoice',
+      context: {
+        external_payment_id: change.externalId,
+        reference: paymentReference(change.payload, change.externalId),
+        reason: 'targets_non_payable_invoice',
+        targets: nonPayableTargets.map(({ allocation, invoice }) => ({
+          alga_invoice_id: allocation.invoiceId,
+          external_invoice_id: allocation.externalInvoiceId,
+          invoice_status: invoice?.status ?? null
+        })),
+        total_amount: (change.payload as any)?.TotalAmt ?? null,
+        realm: deps.targetRealm
+      }
+    });
+    if (result.created) {
+      deps.stats.exceptionsCreated += 1;
+    }
+    logger.info('[accountingSync] Skipped payment for non-payable invoice', {
+      tenantId: deps.tenantId,
+      externalPaymentId: change.externalId,
+      invoiceIds: nonPayableTargets.map(({ allocation }) => allocation.invoiceId)
+    });
+    return;
+  }
+
   // ── Double-entry guard (§7) ─────────────────────────────────────────────
   // When a NEW external payment targets an invoice that Alga already shows as
   // fully settled, flag it as an over-application drift exception rather than
@@ -254,10 +327,7 @@ export async function applyExternalPaymentChange(
   // edits to existing mappings go through the reverse-and-reapply path normally.
   if (!existing) {
     for (const allocation of allocations) {
-      const invoiceRow = await deps.knex('invoices')
-        .where({ tenant: deps.tenantId, invoice_id: allocation.invoiceId })
-        .select('status', 'total_amount', 'credit_applied')
-        .first<{ status: string; total_amount: number; credit_applied: number | null } | undefined>();
+      const invoiceRow = targetInvoices.get(allocation.invoiceId);
 
       if (!invoiceRow) {
         continue; // Invoice disappeared — let the normal path handle it

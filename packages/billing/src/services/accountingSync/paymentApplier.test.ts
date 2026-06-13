@@ -4,6 +4,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock('./recordExternalPayment', () => ({
   recordExternalPayment: vi.fn(async () => ({ success: true, paymentId: 'pay-1', paymentRecorded: true })),
   reverseExternalPayment: vi.fn(async () => ({ success: true, paymentId: 'rev-1', paymentRecorded: true })),
+  isNonPayableInvoiceStatus: (status: string | null | undefined) =>
+    status === 'cancelled' || status === 'draft' || status === 'void',
   computeBalanceDue: vi.fn(
     ({ totalAmount, creditApplied, totalPaid }: { totalAmount: number; creditApplied: number; totalPaid: number }) =>
       totalAmount - creditApplied - totalPaid
@@ -387,6 +389,142 @@ function makeKnexWithInvoice(invoiceRow: any): any {
   });
   return trx;
 }
+
+describe('paymentApplier — non-payable invoice guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(recordExternalPayment).mockResolvedValue({
+      success: true,
+      paymentId: 'pay-1',
+      paymentRecorded: true
+    });
+    vi.mocked(reverseExternalPayment).mockResolvedValue({
+      success: true,
+      paymentId: 'rev-1',
+      paymentRecorded: true
+    });
+  });
+
+  it('NEW payment targeting a cancelled mapped invoice creates an exception and does not apply', async () => {
+    const invoiceMapping = {
+      id: 'imap-1',
+      alga_entity_id: 'alga-inv-1',
+      external_entity_id: 'inv-ext-001',
+      sync_status: 'synced',
+      metadata: {}
+    };
+    const cancelledInvoice = { status: 'cancelled', total_amount: 20000, credit_applied: 0 };
+
+    const ledger = makeFakeLedger(null);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)           // credit_application echo probe
+      .mockResolvedValueOnce(null)           // payment not in ledger (NEW)
+      .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
+
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeKnexWithInvoice(cancelledInvoice),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions,
+        stats
+      },
+      makeInvoiceChange()
+    );
+
+    expect(recordExternalPayment).not.toHaveBeenCalled();
+    expect(reverseExternalPayment).not.toHaveBeenCalled();
+    expect(ledger.insert).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_unmapped_payment',
+        entityType: 'external_payment',
+        entityId: 'pay-ext-001',
+        context: expect.objectContaining({
+          reason: 'targets_non_payable_invoice',
+          targets: [
+            expect.objectContaining({
+              alga_invoice_id: 'alga-inv-1',
+              external_invoice_id: 'inv-ext-001',
+              invoice_status: 'cancelled'
+            })
+          ]
+        })
+      })
+    );
+    expect(stats.paymentsSkipped).toBe(1);
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+
+  it('edited mapped payment targeting a draft invoice creates an exception before reversing old allocations', async () => {
+    const existing = {
+      id: 'pmap-1',
+      alga_entity_id: 'old-pay-id',
+      sync_status: 'synced',
+      metadata: {
+        sync_token: '2',
+        deleted: false,
+        allocations: [
+          { invoiceId: 'alga-inv-1', externalInvoiceId: 'inv-ext-001', amountCents: 15000, algaPaymentId: 'pay-old' }
+        ]
+      }
+    };
+    const invoiceMapping = {
+      id: 'imap-1',
+      alga_entity_id: 'alga-inv-1',
+      external_entity_id: 'inv-ext-001',
+      sync_status: 'synced',
+      metadata: {}
+    };
+
+    const ledger = makeFakeLedger(existing);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)          // credit_application echo probe
+      .mockResolvedValueOnce(existing)      // existing payment mapping
+      .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
+
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeKnexWithInvoice({ status: 'draft', total_amount: 20000, credit_applied: 0 }),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions,
+        stats
+      },
+      makeInvoiceChange({ syncToken: '4' })
+    );
+
+    expect(reverseExternalPayment).not.toHaveBeenCalled();
+    expect(recordExternalPayment).not.toHaveBeenCalled();
+    expect(ledger.update).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_unmapped_payment',
+        context: expect.objectContaining({
+          reason: 'targets_non_payable_invoice',
+          targets: [
+            expect.objectContaining({
+              invoice_status: 'draft'
+            })
+          ]
+        })
+      })
+    );
+    expect(stats.paymentsSkipped).toBe(1);
+    expect(stats.paymentsReversed).toBe(0);
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+});
 
 describe('paymentApplier — over-application guard', () => {
   beforeEach(() => {
