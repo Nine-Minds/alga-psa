@@ -4,6 +4,7 @@ import {
 } from '../../../../../shared/workflow/runtime/init';
 import { getWorkflowIntegrationModuleRegistry } from '../../../../../shared/workflow/runtime';
 import { registerNinjaOneWorkflowActionsV2 } from './actions/registerNinjaOneWorkflowActions';
+import { registerRmmAlertWorkflowActionsV2 } from './actions/registerRmmAlertWorkflowActions';
 
 export * from '../../../../../shared/workflow/runtime';
 export * from '../../../../../shared/workflow/runtime/ai/aiSchema';
@@ -44,6 +45,7 @@ export { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../../../../../shared/workfl
 export function initializeWorkflowRuntimeV2(): void {
   initializeSharedWorkflowRuntimeV2();
   registerNinjaOneWorkflowActionsV2();
+  registerRmmAlertWorkflowActionsV2();
   const moduleRegistry = getWorkflowIntegrationModuleRegistry();
   if (!moduleRegistry.list().some((module) => module.groupKey === 'app:ninjaone')) {
     moduleRegistry.register({

@@ -289,14 +289,25 @@ export class TemporalJobRunner implements IJobRunner {
     });
 
     try {
-      // Check if schedule already exists
+      const scheduleSpec = this.parseScheduleSpec(interval);
+      const ianaTimeZone = (options?.metadata as { timezone?: unknown })?.timezone;
+      const spec: Record<string, unknown> = { ...scheduleSpec };
+      if (typeof ianaTimeZone === 'string' && ianaTimeZone.trim().length > 0) {
+        // @temporalio/client encodeScheduleSpec reads `timezone` and maps it to protobuf timezoneName.
+        spec.timezone = ianaTimeZone.trim();
+      }
+
+      // Upsert: callers (e.g. the RMM polling reconciler) re-invoke this with
+      // the same singletonKey when an interval changes, so an existing
+      // schedule gets its spec updated rather than being silently kept as-is.
       try {
         const existingHandle = this.client.schedule.getHandle(scheduleId);
         await existingHandle.describe();
-        // Schedule exists, return existing
-        logger.info('Recurring job schedule already exists', {
+        await existingHandle.update((prev) => ({ ...prev, spec }));
+        logger.info('Updated existing recurring job schedule', {
           scheduleId,
           jobName,
+          interval,
         });
         return {
           jobId: jobRecord.jobId,
@@ -304,15 +315,6 @@ export class TemporalJobRunner implements IJobRunner {
         };
       } catch {
         // Schedule doesn't exist, create it
-      }
-
-      // Create a new schedule
-      const scheduleSpec = this.parseScheduleSpec(interval);
-      const ianaTimeZone = (options?.metadata as { timezone?: unknown })?.timezone;
-      const spec: Record<string, unknown> = { ...scheduleSpec };
-      if (typeof ianaTimeZone === 'string' && ianaTimeZone.trim().length > 0) {
-        // @temporalio/client encodeScheduleSpec reads `timezone` and maps it to protobuf timezoneName.
-        spec.timezone = ianaTimeZone.trim();
       }
       await this.client.schedule.create({
         scheduleId,

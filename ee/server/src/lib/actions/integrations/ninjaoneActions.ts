@@ -371,6 +371,22 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
           settings: JSON.stringify(settings),
           updated_at: knex.fn.now(),
         });
+
+      // Now that the integration is inactive, converge polling jobs so the
+      // recurring alert reconciliation is cancelled immediately rather than
+      // waiting for the periodic reconciler tick.
+      try {
+        const { reconcileRmmPollingSchedules } = await import(
+          'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+        );
+        const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
+        await reconcileRmmPollingSchedules(await initializeJobRunner());
+      } catch (scheduleError) {
+        logger.warn('[NinjaOneActions] Failed to converge polling schedules on disconnect', {
+          tenant,
+          error: extractErrorInfo(scheduleError),
+        });
+      }
     }
 
     // Emit workflow v2 integration disconnected event (best-effort)
@@ -628,6 +644,9 @@ export const getNinjaOneConnectUrl = withAdvancedAssetsAccess(async (user, { ten
     csrf: csrfToken,
     timestamp: Date.now(),
   };
+  // Persisted so the OAuth callback can verify the state round-tripped from
+  // this tenant's own connect request (one-time use; the callback deletes it).
+  await secretProvider.setTenantSecret(tenant, 'ninjaone_oauth_state', csrfToken);
   const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
 
   const instanceUrl = NINJAONE_REGIONS[region];
@@ -986,40 +1005,8 @@ export const createTicketFromRmmAlert = withAdvancedAssetsAccess(async (user, { 
 
     const { knex } = await createTenantKnex();
 
-    // Get the alert with asset info
-    const alert = await knex('rmm_alerts as a')
-      .leftJoin('assets as ast', function() {
-        this.on('a.tenant', '=', 'ast.tenant')
-          .andOn('a.asset_id', '=', 'ast.asset_id');
-      })
-      .where('a.tenant', tenant)
-      .where('a.alert_id', alertId)
-      .select('a.*', 'ast.name as asset_name', 'ast.company_id')
-      .first();
-
-    if (!alert) {
-      throw new Error('Alert not found');
-    }
-
-    if (alert.ticket_id) {
-      throw new Error('Ticket already created for this alert');
-    }
-
-    // Import ticket creator dynamically to avoid circular dependencies
-    const { createTicketFromAlert } = await import('../../integrations/ninjaone/alerts/ticketCreator');
-
-    const ticket = await createTicketFromAlert(tenant, alert as RmmAlert, {
-      performedBy: user.user_id,
-    });
-
-    // Update the alert with ticket reference
-    await knex('rmm_alerts')
-      .where({ tenant, alert_id: alertId })
-      .update({
-        ticket_id: ticket.ticket_id,
-        auto_ticket_created: false, // Manual creation
-        updated_at: knex.fn.now(),
-      });
+    const { createTicketForAlertId } = await import('@alga-psa/shared/rmm/alerts');
+    const ticket = await createTicketForAlertId(knex, { tenantId: tenant, alertId });
 
     logger.info('[NinjaOneActions] Ticket created from alert', { alertId, ticketId: ticket.ticket_id });
 

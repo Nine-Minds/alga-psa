@@ -17,18 +17,17 @@ import {
   sanitizeIntegrationWebhookRawPayload,
 } from '@alga-psa/workflow-streams';
 import { NinjaOneSyncEngine } from '../sync/syncEngine';
+import { processRmmAlertEvent } from '@alga-psa/shared/rmm/alerts';
+import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
+import { mapNinjaOneWebhookToAlertEvent } from '../alerts/normalizer';
 import {
   NinjaOneWebhookPayload,
   NinjaOneActivityType,
-  NinjaOneAlertSeverity,
-  mapAlertSeverity,
-  derivePriorityFromSeverity,
 } from '../../../../interfaces/ninjaone.interfaces';
 import {
   RmmIntegration,
   RmmIntegrationSettings,
   RmmOrganizationMapping,
-  RmmAlert,
 } from '../../../../interfaces/rmm.interfaces';
 
 /**
@@ -318,14 +317,10 @@ export async function handleNinjaOneWebhook(
   // Route to appropriate handler
   const activityType = payload.activityType as NinjaOneActivityType;
 
-  // Check if this is an alert (CONDITION type with TRIGGERED status)
-  if (payload.type === 'CONDITION' && payload.status === 'TRIGGERED') {
-    return handleAlertEvent(tenantId, integration, mapping, payload);
-  }
-
-  // Check if this is an alert reset
-  if (payload.type === 'CONDITION' && payload.status === 'RESET') {
-    return handleAlertResetEvent(tenantId, integration, mapping, payload);
+  // Alert conditions (TRIGGERED / RESET / ACKNOWLEDGED) run through the
+  // provider-agnostic pipeline in @alga-psa/shared/rmm/alerts.
+  if (payload.type === 'CONDITION') {
+    return handleAlertConditionEvent(tenantId, integration, mapping, payload);
   }
 
   // Device lifecycle events
@@ -607,178 +602,43 @@ async function handleHardwareChangeEvent(
 }
 
 /**
- * Handle alert triggered event
+ * Alert condition events (TRIGGERED / RESET / ACKNOWLEDGED) run through the
+ * shared provider-agnostic pipeline: maintenance windows, rules, dedup,
+ * ticketing, and lifecycle live in @alga-psa/shared/rmm/alerts.
  */
-async function handleAlertEvent(
+async function handleAlertConditionEvent(
   tenantId: string,
   integration: RmmIntegration,
   mapping: RmmOrganizationMapping,
   payload: NinjaOneWebhookPayload
 ): Promise<WebhookProcessingResult> {
   try {
-    const { knex } = await createTenantKnex();
-    const now = new Date().toISOString();
-
-    // Find the asset if device ID is provided
-    let assetId: string | undefined;
-    if (payload.deviceId) {
-      const assetMapping = await knex('tenant_external_entity_mappings')
-        .where({
-          tenant: tenantId,
-          integration_type: 'ninjaone',
-          alga_entity_type: 'asset',
-          external_entity_id: String(payload.deviceId),
-        })
-        .first();
-      assetId = assetMapping?.alga_entity_id;
-    }
-
-    // Determine severity and priority
-    const severity = payload.severity || 'NONE';
-    const priority = payload.priority || derivePriorityFromSeverity(severity as NinjaOneAlertSeverity);
-
-    // Create or update alert record
-    const existingAlert = await knex('rmm_alerts')
-      .where({
-        tenant: tenantId,
-        integration_id: integration.integration_id,
-        external_alert_id: payload.activityId?.toString() || payload.id?.toString(),
-      })
-      .first();
-
-    let alertId: string;
-
-    if (existingAlert) {
-      // Update existing alert
-      await knex('rmm_alerts')
-        .where({ tenant: tenantId, alert_id: existingAlert.alert_id })
-        .update({
-          status: 'active',
-          updated_at: now,
-        });
-      alertId = existingAlert.alert_id;
-    } else {
-      // Create new alert
-      const [alert] = await knex('rmm_alerts')
-        .insert({
-          tenant: tenantId,
-          integration_id: integration.integration_id,
-          external_alert_id: payload.activityId?.toString() || payload.id?.toString(),
-          external_device_id: payload.deviceId?.toString(),
-          asset_id: assetId,
-          severity: mapAlertSeverity(severity as NinjaOneAlertSeverity),
-          priority,
-          activity_type: payload.activityType,
-          status: 'active',
-          message: payload.message || payload.statusCode,
-          source_data: JSON.stringify(payload),
-          triggered_at: payload.activityTime || now,
-          created_at: now,
-          updated_at: now,
-        })
-        .returning('alert_id');
-
-      alertId = alert.alert_id;
-    }
-
-    // Emit alert triggered event
-    await publishEvent({
-      eventType: 'RMM_ALERT_TRIGGERED',
-      tenant: tenantId,
-      payload: {
-        alert_id: alertId,
-        asset_id: assetId,
-        device_id: payload.deviceId?.toString(),
-        severity,
-        priority,
-        activity_type: payload.activityType,
-        message: payload.message || payload.statusCode,
-        provider: 'ninjaone',
-        triggered_at: payload.activityTime || now,
-      },
-    });
-
-    return {
-      success: true,
-      processed: true,
-      action: 'alert_created',
-      entityId: alertId,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error('Error handling alert event', {
+    const event = mapNinjaOneWebhookToAlertEvent({
       tenantId,
+      integrationId: integration.integration_id,
       payload,
-      error: message,
+      externalOrganizationId: mapping.external_organization_id,
     });
-    return { success: false, processed: false, error: message };
-  }
-}
+    if (!event) {
+      return { success: true, processed: false, action: 'alert_ignored' };
+    }
 
-/**
- * Handle alert reset event
- */
-async function handleAlertResetEvent(
-  tenantId: string,
-  integration: RmmIntegration,
-  mapping: RmmOrganizationMapping,
-  payload: NinjaOneWebhookPayload
-): Promise<WebhookProcessingResult> {
-  try {
     const { knex } = await createTenantKnex();
-    const now = new Date().toISOString();
+    const result = await processRmmAlertEvent({ knex, deps: buildRmmAlertPipelineDeps({ logger }) }, event);
 
-    // Find and update the alert
-    const alert = await knex('rmm_alerts')
-      .where({
-        tenant: tenantId,
-        integration_id: integration.integration_id,
-        external_alert_id: payload.activityId?.toString() || payload.id?.toString(),
-      })
-      .first();
-
-    if (alert) {
-      await knex('rmm_alerts')
-        .where({ tenant: tenantId, alert_id: alert.alert_id })
-        .update({
-          status: 'resolved',
-          resolved_at: now,
-          updated_at: now,
-        });
-
-      // Emit alert resolved event
-      await publishEvent({
-        eventType: 'RMM_ALERT_RESOLVED',
-        tenant: tenantId,
-        payload: {
-          alert_id: alert.alert_id,
-          asset_id: alert.asset_id,
-          device_id: payload.deviceId?.toString(),
-          provider: 'ninjaone',
-          resolved_at: now,
-        },
-      });
-
-      return {
-        success: true,
-        processed: true,
-        action: 'alert_resolved',
-        entityId: alert.alert_id,
-      };
+    for (const warning of result.warnings) {
+      logger.warn('[NinjaOne Webhook] Alert pipeline warning', { tenantId, warning });
     }
 
     return {
       success: true,
-      processed: false,
-      action: 'alert_not_found',
+      processed: result.outcome !== 'skipped',
+      action: `alert_${result.outcome}`,
+      entityId: result.alertId,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error('Error handling alert reset event', {
-      tenantId,
-      payload,
-      error: message,
-    });
+    logger.error('Error handling alert condition event', { tenantId, payload, error: message });
     return { success: false, processed: false, error: message };
   }
 }

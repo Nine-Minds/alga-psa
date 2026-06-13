@@ -33,9 +33,14 @@ export async function createHuntressTicket(
   tenantId: string,
   params: CreateHuntressTicketParams
 ): Promise<CreatedHuntressTicket> {
-  const defaultStatus = await trx('statuses')
-    .where({ tenant: tenantId, item_type: 'ticket', is_default: true })
-    .first();
+  // Statuses are board-scoped (status_type/board_id); prefer the target
+  // board's default, falling back to any tenant ticket default.
+  const defaultStatus = (await trx('statuses')
+    .where({ tenant: tenantId, status_type: 'ticket', is_default: true, board_id: params.boardId })
+    .first()) ??
+    (await trx('statuses')
+      .where({ tenant: tenantId, status_type: 'ticket', is_default: true })
+      .first());
   if (!defaultStatus) {
     throw new Error('No default ticket status configured for tenant');
   }

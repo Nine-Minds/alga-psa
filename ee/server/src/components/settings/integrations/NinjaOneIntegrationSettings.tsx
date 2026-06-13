@@ -41,6 +41,8 @@ import {
   saveNinjaOneCredentials,
   getNinjaOneCredentialsStatus,
 } from '../../../lib/actions/integrations/ninjaoneActions';
+import { getRmmIntegrationIdByProvider } from '@alga-psa/integrations/actions';
+import { RmmAlertAutomationSettings } from '@alga-psa/integrations/components/settings/integrations/RmmAlertAutomationSettings';
 import { RmmConnectionStatus } from '../../../interfaces/rmm.interfaces';
 import { NinjaOneRegion, NINJAONE_REGIONS } from '../../../interfaces/ninjaone.interfaces';
 
@@ -58,6 +60,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [orgMappingsRefreshKey, setOrgMappingsRefreshKey] = useState(0);
   const [fleetComplianceRefreshKey, setFleetComplianceRefreshKey] = useState(0);
+  const [ninjaIntegrationId, setNinjaIntegrationId] = useState<string | null>(null);
 
   // Credential management state
   const [clientId, setClientId] = useState('');
@@ -75,8 +78,14 @@ const NinjaOneIntegrationSettings: React.FC = () => {
     startRefresh(async () => {
       setIsLoading(true);
       try {
-        const result = await getNinjaOneConnectionStatus();
+        const [result, idResult] = await Promise.all([
+          getNinjaOneConnectionStatus(),
+          getRmmIntegrationIdByProvider({ provider: 'ninjaone' }),
+        ]);
         setStatus(result);
+        if (idResult.success && idResult.data?.integrationId) {
+          setNinjaIntegrationId(idResult.data.integrationId);
+        }
         setError(null);
       } catch (err) {
         console.error('Failed to load NinjaOne connection status:', err);
@@ -658,6 +667,11 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         <div className="mt-6">
           <NinjaOneComplianceDashboard refreshKey={fleetComplianceRefreshKey} />
         </div>
+      )}
+
+      {/* Alert Automation - shown when connected and integration ID is known */}
+      {isConnected && isActive && ninjaIntegrationId && (
+        <RmmAlertAutomationSettings integrationId={ninjaIntegrationId} provider="ninjaone" />
       )}
     </>
   );

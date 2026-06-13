@@ -204,12 +204,17 @@ export async function GET(request: NextRequest) {
       return failureRedirect('invalid_state');
     }
 
-    // TODO: Implement actual CSRF token validation
-    // For now, we're relying on the state parameter containing tenant info
-    console.log(`[NinjaOne Callback] Processing callback for tenant ${tenantId}`);
-
-    // 2. Get tenant-specific credentials
+    // 2. Verify the CSRF token against the value persisted when the connect
+    // URL was generated (one-time use).
     const secretProvider = await getSecretProviderInstance();
+    const expectedCsrf = await secretProvider.getTenantSecret(tenantId, 'ninjaone_oauth_state');
+    if (!expectedCsrf || expectedCsrf !== decodedStatePayload.csrf) {
+      console.error(`[NinjaOne Callback] CSRF state mismatch for tenant ${tenantId}.`);
+      return failureRedirect('invalid_state', 'Authorization state could not be verified. Please try connecting again.');
+    }
+    await secretProvider.deleteTenantSecret(tenantId, 'ninjaone_oauth_state');
+
+    console.log(`[NinjaOne Callback] Processing callback for tenant ${tenantId}`);
     const clientId = await secretProvider.getTenantSecret(tenantId, NINJAONE_CLIENT_ID_SECRET);
     const clientSecret = await secretProvider.getTenantSecret(tenantId, NINJAONE_CLIENT_SECRET_SECRET);
 
@@ -379,6 +384,18 @@ export async function GET(request: NextRequest) {
       } catch (publishError) {
         console.warn('[NinjaOne Callback] Failed to publish workflow INTEGRATION_CONNECTED event', publishError);
       }
+    }
+
+    // Converge the per-integration alert polling job immediately so a fresh
+    // connection starts polling without waiting for the periodic reconciler.
+    try {
+      const { reconcileRmmPollingSchedules } = await import(
+        'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+      );
+      const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
+      await reconcileRmmPollingSchedules(await initializeJobRunner());
+    } catch (scheduleError) {
+      console.warn('[NinjaOne Callback] Failed to converge alert polling schedule (reconciler will catch up)', scheduleError);
     }
 
     // 8. Register webhook with NinjaOne
