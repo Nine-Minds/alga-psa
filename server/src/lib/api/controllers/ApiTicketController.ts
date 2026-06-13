@@ -243,19 +243,27 @@ export class ApiTicketController extends ApiBaseController {
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
           const sort = url.searchParams.get('sort') || 'created_at';
           const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
+          const fields = (url.searchParams.get('fields') || '')
+            .split(',')
+            .map((f) => f.trim())
+            .filter(Boolean);
 
           const filters: any = { ...validatedQuery };
           delete filters.page;
           delete filters.limit;
           delete filters.sort;
           delete filters.order;
+          delete filters.fields;
 
           const knex = await getConnection(apiRequest.context.tenant);
           const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
-              this.ticketService.list({ page: sourcePage, limit: sourceLimit, filters, sort, order }, apiRequest.context),
+              this.ticketService.list(
+                { page: sourcePage, limit: sourceLimit, filters, sort, order, fields: fields.length > 0 ? fields : undefined },
+                apiRequest.context
+              ),
             authorizeRecord: (ticket) =>
               authorizeApiResourceRead({
                 knex,

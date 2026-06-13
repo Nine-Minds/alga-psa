@@ -17,7 +17,9 @@ export function Badge({
       style={{
         paddingHorizontal: theme.spacing.sm,
         paddingVertical: 4,
-        borderRadius: theme.borderRadius.full,
+        // Rounded rectangle (not a full pill) so system badges like status and
+        // priority read differently from fully-rounded tag chips.
+        borderRadius: theme.borderRadius.md,
         backgroundColor: palette.bg,
         borderWidth: 1,
         borderColor: palette.border,

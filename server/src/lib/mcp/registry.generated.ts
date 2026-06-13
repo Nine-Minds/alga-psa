@@ -993,14 +993,41 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_rbac_audit",
     "method": "get",
     "path": "/api/v1/rbac/audit",
-    "displayName": "Get RBAC audit log (not implemented)",
-    "summary": "Get RBAC audit log (not implemented)",
-    "description": "Current route returns a static 501 Not Implemented payload and does not call an RBAC controller.",
+    "displayName": "Get RBAC audit log",
+    "summary": "Get RBAC audit log",
+    "description": "Lists RBAC audit-log entries from audit_logs (roles, permissions, role_permissions, user_roles), newest first. Supports page/limit pagination and user_id, operation, table_name, record_id, start_date, and end_date filters. Gated on role:read.",
     "tags": [
       "Access Control & Users v1"
     ],
     "approvalRequired": false,
-    "parameters": []
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_roles",
@@ -5028,7 +5055,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "List assets",
     "summary": "List assets",
-    "description": "Lists assets for the authenticated tenant with pagination, sorting, and asset filters. The controller validates query parameters with assetListQuerySchema, calls requireRequestContext, queries assets filtered by assets.tenant, joins clients for client_name, computes warranty_status, and adds HATEOAS links from asset_id. In the current route wiring, the edge middleware only checks x-api-key presence and the route is not wrapped with withApiKeyAuth or ApiBaseController authentication, so req.context may be absent and produce a 500 INTERNAL_ERROR before the intended tenant-scoped list can run.",
+    "description": "Lists assets for the authenticated tenant with pagination, sorting, and asset filters. The controller validates query parameters with assetListQuerySchema, queries assets filtered by assets.tenant, joins clients for client_name, computes warranty_status, and adds HATEOAS links from asset_id. The route is authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated before the handler runs).",
     "tags": [
       "Assets"
     ],
@@ -5360,7 +5387,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before creation.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.",
     "tags": [
       "Assets"
     ],
@@ -5477,7 +5504,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/bulk-status",
     "displayName": "Bulk update asset status",
     "summary": "Bulk update asset status",
-    "description": "Updates the status field for up to 50 assets in the authenticated tenant. The controller validates asset_ids and status with bulkAssetStatusSchema, then calls AssetService.update for each asset_id with { status }. Each update is tenant-scoped by assets.asset_id and assets.tenant and publishes an ASSET_UPDATED event. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before updates.",
+    "description": "Updates the status field for up to 50 assets in the authenticated tenant. The controller validates asset_ids and status with bulkAssetStatusSchema, then calls AssetService.update for each asset_id with { status }. Each update is tenant-scoped by assets.asset_id and assets.tenant and publishes an ASSET_UPDATED event.",
     "tags": [
       "Assets"
     ],
@@ -5536,7 +5563,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/bulk-update",
     "displayName": "Bulk update assets",
     "summary": "Bulk update assets",
-    "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before updates.",
+    "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.",
     "tags": [
       "Assets"
     ],
@@ -5609,7 +5636,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/documents/{associationId}",
     "displayName": "Remove asset document association",
     "summary": "Remove asset document association",
-    "description": "Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.",
+    "description": "Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body.",
     "tags": [
       "Assets"
     ],
@@ -5634,7 +5661,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/export",
     "displayName": "Export assets",
     "summary": "Export assets",
-    "description": "Exports assets for the authenticated tenant. The controller validates assetExportQuerySchema, but currently ignores the validated filters and include flags and calls AssetService.list with default options. When format=csv or omitted, it returns text/csv with Content-Disposition attachment filename=assets.csv. When format=json or format=xlsx, it returns a JSON success envelope; xlsx generation is not implemented. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before export.",
+    "description": "Exports all assets for the authenticated tenant (paginated internally, not capped to the default list page). Optional set filters asset_types, statuses, and client_ids narrow the result; fields restricts the exported columns. format=csv (default) returns text/csv with Content-Disposition attachment filename=assets.csv; format=json returns the success envelope with the rows in data. The route is authenticated and tenant-scoped via withApiKeyRouteAuth.",
     "tags": [
       "Assets"
     ],
@@ -5644,64 +5671,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "format",
         "in": "query",
         "required": false,
-        "description": "Export format. csv returns text/csv; json and xlsx currently return the same JSON envelope.",
+        "description": "Export format. csv (default) returns text/csv as an attachment; json returns the success envelope with the rows in data.",
         "schema": {
           "type": "string",
           "enum": [
             "csv",
-            "json",
-            "xlsx"
+            "json"
           ],
-          "description": "Export format. csv returns text/csv; json and xlsx currently return the same JSON envelope."
-        }
-      },
-      {
-        "name": "include_extension_data",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by validation, but currently ignored by ApiAssetController.export.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
-        }
-      },
-      {
-        "name": "include_maintenance",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by validation, but currently ignored by ApiAssetController.export.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
-        }
-      },
-      {
-        "name": "include_documents",
-        "in": "query",
-        "required": false,
-        "description": "Accepted by validation, but currently ignored by ApiAssetController.export.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
+          "description": "Export format. csv (default) returns text/csv as an attachment; json returns the success envelope with the rows in data."
         }
       },
       {
         "name": "asset_types",
         "in": "query",
         "required": false,
-        "description": "Accepted by validation as an array, but the controller builds query values with Object.fromEntries and does not apply this filter.",
+        "description": "Filter to these asset types. Repeat the param or pass a comma-separated list.",
         "schema": {
           "type": "array",
           "items": {
@@ -5715,47 +5699,47 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "unknown"
             ]
           },
-          "description": "Accepted by validation as an array, but the controller builds query values with Object.fromEntries and does not apply this filter."
+          "description": "Filter to these asset types. Repeat the param or pass a comma-separated list."
         }
       },
       {
         "name": "statuses",
         "in": "query",
         "required": false,
-        "description": "Accepted by validation as an array, but not currently applied.",
+        "description": "Filter to these asset statuses. Repeat the param or pass a comma-separated list.",
         "schema": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Accepted by validation as an array, but not currently applied."
+          "description": "Filter to these asset statuses. Repeat the param or pass a comma-separated list."
         }
       },
       {
         "name": "client_ids",
         "in": "query",
         "required": false,
-        "description": "Accepted by validation as an array, but not currently applied.",
+        "description": "Filter to these client UUIDs. Repeat the param or pass a comma-separated list.",
         "schema": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uuid"
           },
-          "description": "Accepted by validation as an array, but not currently applied."
+          "description": "Filter to these client UUIDs. Repeat the param or pass a comma-separated list."
         }
       },
       {
         "name": "fields",
         "in": "query",
         "required": false,
-        "description": "Accepted by validation as an array, but not currently used to select export columns.",
+        "description": "Restrict exported columns to this set. Repeat the param or pass a comma-separated list.",
         "schema": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Accepted by validation as an array, but not currently used to select export columns."
+          "description": "Restrict exported columns to this set. Repeat the param or pass a comma-separated list."
         }
       }
     ],
@@ -5788,7 +5772,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/maintenance/{scheduleId}",
     "displayName": "Update asset maintenance schedule",
     "summary": "Update asset maintenance schedule",
-    "description": "Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before update.",
+    "description": "Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404.",
     "tags": [
       "Assets"
     ],
@@ -5895,7 +5879,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/maintenance/{scheduleId}",
     "displayName": "Delete asset maintenance schedule",
     "summary": "Delete asset maintenance schedule",
-    "description": "Deletes a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. The service scopes deletion by schedule_id and context.tenant and performs no existence check, so missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.",
+    "description": "Deletes a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. The service scopes deletion by schedule_id and context.tenant and performs no existence check, so missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse.",
     "tags": [
       "Assets"
     ],
@@ -5920,7 +5904,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/relationships/{relationshipId}",
     "displayName": "Delete asset relationship",
     "summary": "Delete asset relationship",
-    "description": "Deletes an asset relationship by asset_relationships.relationship_id for the authenticated tenant. The service hard-deletes rows where relationship_id and context.tenant match, publishes no event, and performs no existence check; missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.",
+    "description": "Deletes an asset relationship by asset_relationships.relationship_id for the authenticated tenant. The service hard-deletes rows where relationship_id and context.tenant match, publishes no event, and performs no existence check; missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse.",
     "tags": [
       "Assets"
     ],
@@ -5945,7 +5929,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/search",
     "displayName": "Search assets",
     "summary": "Search assets",
-    "description": "Searches tenant assets with a required query term and optional field, asset type, status, client, extension-data, and limit parameters. The service searches assets scoped to context.tenant, joins clients for client_name, and optionally loads asset-type-specific extension data per result. The response is not paginated and includes HATEOAS links for each asset; the top-level search link currently points at /api/v2/assets/search. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before search.",
+    "description": "Searches tenant assets with a required query term and optional field, asset type, status, client, extension-data, and limit parameters. The service searches assets scoped to context.tenant, joins clients for client_name, and optionally loads asset-type-specific extension data per result. The response is not paginated and includes HATEOAS links for each asset; the top-level search link currently points at /api/v2/assets/search.",
     "tags": [
       "Assets"
     ],
@@ -6084,7 +6068,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/stats",
     "displayName": "Get asset statistics",
     "summary": "Get asset statistics",
-    "description": "Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before statistics can be calculated.",
+    "description": "Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -6119,7 +6103,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "Get asset details",
     "summary": "Get asset details",
-    "description": "Returns detailed asset information for the authenticated tenant, including joined client_name, computed warranty_status, client details, type-specific extension_data, relationships, document associations, maintenance schedules, and HATEOAS links. The service first loads assets by asset_id and context.tenant, then loads related data in parallel. If the asset is not found, the controller returns a 404 error envelope. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.",
+    "description": "Returns detailed asset information for the authenticated tenant, including joined client_name, computed warranty_status, client details, type-specific extension_data, relationships, document associations, maintenance schedules, and HATEOAS links. The service first loads assets by asset_id and context.tenant, then loads related data in parallel. If the asset is not found, the controller returns a 404 error envelope.",
     "tags": [
       "Assets"
     ],
@@ -6173,7 +6157,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "Update asset",
     "summary": "Update asset",
-    "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before update.",
+    "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.",
     "tags": [
       "Assets"
     ],
@@ -6292,7 +6276,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "Delete asset",
     "summary": "Delete asset",
-    "description": "Hard-deletes an asset for the authenticated tenant. AssetService.delete first loads the asset by asset_id and context.tenant, deletes asset-type-specific extension data, deletes tenant_external_entity_mappings for the asset, deletes the assets row, and publishes ASSET_DELETED. The method overrides the BaseService softDelete configuration and does not explicitly clean every related table handled by the server-action delete path. Missing assets throw a generic Error and currently surface as 500 via handleApiError rather than 404. The controller also constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.",
+    "description": "Hard-deletes an asset for the authenticated tenant. AssetService.delete first loads the asset by asset_id and context.tenant, deletes asset-type-specific extension data, deletes tenant_external_entity_mappings for the asset, deletes the assets row, and publishes ASSET_DELETED. The method overrides the BaseService softDelete configuration and does not explicitly clean every related table handled by the server-action delete path. Missing assets throw a generic Error and currently surface as 500 via handleApiError rather than 404. The controller also constructs a JSON response with status 204, which can throw in NextResponse.",
     "tags": [
       "Assets"
     ],
@@ -6317,7 +6301,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "List asset document associations",
     "summary": "List asset document associations",
-    "description": "Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.",
+    "description": "Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -6377,7 +6361,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "Associate document with asset",
     "summary": "Associate document with asset",
-    "description": "Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.",
+    "description": "Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError.",
     "tags": [
       "Assets"
     ],
@@ -6454,7 +6438,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/history",
     "displayName": "List asset maintenance history",
     "summary": "List asset maintenance history",
-    "description": "Returns all maintenance history rows for the path asset ID in the authenticated tenant, ordered by performed_at descending. The service joins users to add performed_by_user_name and filters asset_maintenance_history by asset_id and context.tenant. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.",
+    "description": "Returns all maintenance history rows for the path asset ID in the authenticated tenant, ordered by performed_at descending. The service joins users to add performed_by_user_name and filters asset_maintenance_history by asset_id and context.tenant. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -6501,7 +6485,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/maintenance",
     "displayName": "List asset maintenance schedules",
     "summary": "List asset maintenance schedules",
-    "description": "Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.",
+    "description": "Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -6548,7 +6532,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/maintenance",
     "displayName": "Create asset maintenance schedule",
     "summary": "Create asset maintenance schedule",
-    "description": "Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.",
+    "description": "Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event.",
     "tags": [
       "Assets"
     ],
@@ -6659,7 +6643,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/maintenance/record",
     "displayName": "Record asset maintenance",
     "summary": "Record asset maintenance",
-    "description": "Inserts an asset_maintenance_history row for the path asset ID in the authenticated tenant. The request body requires maintenance_type, performed_by, and performed_at; schedule_id, duration, cost, notes, parts, and structured maintenance_data are optional. If schedule_id is supplied and a matching tenant schedule exists, the service updates that schedule last_maintenance and next_maintenance. It does not verify asset existence or performed_by before insert, does not set created_by, and publishes no event. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.",
+    "description": "Inserts an asset_maintenance_history row for the path asset ID in the authenticated tenant. The request body requires maintenance_type, performed_by, and performed_at; schedule_id, duration, cost, notes, parts, and structured maintenance_data are optional. If schedule_id is supplied and a matching tenant schedule exists, the service updates that schedule last_maintenance and next_maintenance. It does not verify asset existence or performed_by before insert, does not set created_by, and publishes no event.",
     "tags": [
       "Assets"
     ],
@@ -6768,7 +6752,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/relationships",
     "displayName": "List asset relationships",
     "summary": "List asset relationships",
-    "description": "Returns asset_relationships rows for the path asset ID in the authenticated tenant, joined with the related assets table for display fields. The service filters by asset_relationships.asset_id and context.tenant and joins related assets on matching tenant. It performs no parent asset existence check and does not filter soft-deleted related assets. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.",
+    "description": "Returns asset_relationships rows for the path asset ID in the authenticated tenant, joined with the related assets table for display fields. The service filters by asset_relationships.asset_id and context.tenant and joins related assets on matching tenant. It performs no parent asset existence check and does not filter soft-deleted related assets. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -6815,7 +6799,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/relationships",
     "displayName": "Create asset relationship",
     "summary": "Create asset relationship",
-    "description": "Creates a relationship row between the path asset ID and related_asset_id for the authenticated tenant. The request body requires related_asset_id and non-empty relationship_type. The service rejects self relationships and duplicate source/related pairs, but currently throws generic Errors for those cases, which surface as 500 rather than 400 or 409. The inserted row is returned without joined related asset details. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.",
+    "description": "Creates a relationship row between the path asset ID and related_asset_id for the authenticated tenant. The request body requires related_asset_id and non-empty relationship_type. The service rejects self relationships and duplicate source/related pairs, but currently throws generic Errors for those cases, which surface as 500 rather than 400 or 409. The inserted row is returned without joined related asset details.",
     "tags": [
       "Assets"
     ],
@@ -6873,6 +6857,862 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "data",
         "meta"
       ]
+    }
+  },
+  {
+    "id": "listAssetTickets",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/tickets",
+    "displayName": "List tickets linked to an asset",
+    "summary": "List tickets linked to an asset",
+    "description": "Returns tickets associated with the path asset ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to tickets and statuses. Results include the association relationship_type and linked_at and are ordered by ticket updated_at descending. This mirrors the asset detail UI and the assets.find_associated_tickets workflow action. The route is authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated and RLS is active) and enforces BOTH asset:read and ticket:read because the response joins ticket data. It performs no asset existence check, so a valid caller hitting a nonexistent or cross-tenant asset ID gets 200 with an empty array (tenant scoping prevents cross-tenant leakage; this is not an authorization bypass).",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetTicketRow"
+          },
+          "description": "Tickets linked to the asset via asset_associations, ordered by ticket updated_at descending. Empty when no associations exist or the asset is not found."
+        },
+        "meta": {
+          "$ref": "#/components/schemas/ApiResponseMeta"
+        }
+      },
+      "required": [
+        "success",
+        "data",
+        "meta"
+      ]
+    }
+  },
+  {
+    "id": "linkTicketToAsset",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/tickets",
+    "displayName": "Link a ticket to an asset",
+    "summary": "Link a ticket to an asset",
+    "description": "Creates an asset_associations row (entity_type=ticket) linking the path asset to the ticket in the request body. This is the same table the asset detail UI, GET /api/v1/assets/{id}/tickets, and GET /api/v1/tickets/{id}/assets read, so the link is immediately visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update (the asset associations are being mutated) plus ticket:read (the ticket is only referenced). Both the asset and the ticket must exist in the tenant (404 otherwise), and a duplicate link returns 409.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "ticket_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID to link to the asset."
+        },
+        "relationship_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional association type; defaults to affected."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes stored on asset_associations.notes."
+        }
+      },
+      "required": [
+        "ticket_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/AssetAssociationRow"
+            },
+            {
+              "description": "The inserted asset_associations row."
+            }
+          ]
+        },
+        "meta": {
+          "$ref": "#/components/schemas/ApiResponseMeta"
+        }
+      },
+      "required": [
+        "success",
+        "data",
+        "meta"
+      ]
+    }
+  },
+  {
+    "id": "listTicketAssets",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/assets",
+    "displayName": "List assets linked to a ticket",
+    "summary": "List assets linked to a ticket",
+    "description": "Returns assets associated with the path ticket ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to assets and clients. Each row includes the asset fields plus the association relationship_type, association_notes, and linked_at, ordered by link time descending. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant (RLS active); it enforces ticket:read, a per-ticket authorization-kernel check (assertTicketReadAllowed), AND asset:read because the response exposes asset records. The response uses the apiMiddleware envelope ({ data } with no top-level success field). It performs no asset existence check beyond the ticket authorization, so an authorized caller on a ticket with no linked assets gets 200 with an empty array.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/TicketAssetRow"
+          },
+          "description": "Assets linked to the ticket via asset_associations, ordered by link time descending. Empty when no associations exist or the ticket is not found."
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "linkAssetToTicket",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/assets",
+    "displayName": "Link an asset to a ticket",
+    "summary": "Link an asset to a ticket",
+    "description": "Creates an asset_associations row (entity_type=ticket) linking the asset in the request body to the path ticket. Same table GET /api/v1/tickets/{id}/assets and the asset detail UI read, so the link is visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; it enforces ticket:update plus a per-ticket authorization-kernel check (assertTicketReadAllowed) AND asset:read (the asset is referenced). The response uses the apiMiddleware envelope ({ data } with no top-level success field). Both the ticket and asset must exist (404 otherwise); a duplicate link returns 409.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID to link to the ticket."
+        },
+        "relationship_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional association type; defaults to affected."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes stored on asset_associations.notes."
+        }
+      },
+      "required": [
+        "asset_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/AssetAssociationRow"
+            },
+            {
+              "description": "The inserted asset_associations row."
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "unlinkTicketFromAsset",
+    "method": "delete",
+    "path": "/api/v1/assets/{id}/tickets/{ticketId}",
+    "displayName": "Unlink a ticket from an asset",
+    "summary": "Unlink a ticket from an asset",
+    "description": "Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update plus ticket:read. Returns 404 when no such link exists.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      },
+      {
+        "name": "ticketId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID from tickets.ticket_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID from tickets.ticket_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "unlinkAssetFromTicket",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/assets/{assetId}",
+    "displayName": "Unlink an asset from a ticket",
+    "summary": "Unlink an asset from a ticket",
+    "description": "Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. Authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; enforces ticket:update plus the per-ticket authorization check and asset:read. Returns 404 when no such link exists.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID from tickets.ticket_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID from tickets.ticket_id."
+        }
+      },
+      {
+        "name": "assetId",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_assets_id_notes",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/notes",
+    "displayName": "Get asset notes",
+    "summary": "Get asset notes",
+    "description": "Returns the BlockNote content of the asset notes document, or an empty result when no notes exist.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "document": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        },
+        "blockData": {
+          "description": "Parsed BlockNote JSON, or null when no notes exist."
+        },
+        "lastUpdated": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "put-_api_v1_assets_id_notes",
+    "method": "put",
+    "path": "/api/v1/assets/{id}/notes",
+    "displayName": "Update asset notes",
+    "summary": "Update asset notes",
+    "description": "Creates or updates the BlockNote notes document linked to the asset. Returns the document id.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "blockData": {
+          "description": "BlockNote JSON block data to store as the asset notes."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "document_id"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assets_id_notes",
+    "method": "delete",
+    "path": "/api/v1/assets/{id}/notes",
+    "displayName": "Delete asset notes",
+    "summary": "Delete asset notes",
+    "description": "Unlinks the notes document from the asset. Pass delete_document=true to also hard-delete the document and its block content.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      },
+      {
+        "name": "delete_document",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_assets_id_rmm",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/rmm",
+    "displayName": "Get cached RMM data",
+    "summary": "Get cached RMM data",
+    "description": "Returns the cached RMM device data synced from the RMM provider. Enterprise Edition feature — on Community Edition this returns null.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {},
+          "description": "Cached RMM device data, or null (always null on Community Edition)."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_rmm_reboot",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/rmm/reboot",
+    "displayName": "Reboot device via RMM",
+    "summary": "Reboot device via RMM",
+    "description": "Sends a reboot command to the RMM-managed device. Enterprise Edition feature — on Community Edition this returns { success:false } with an EE-required message.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Provider job id when the action was queued (EE)."
+        }
+      },
+      "required": [
+        "success",
+        "message"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_rmm_refresh",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/rmm/refresh",
+    "displayName": "Refresh RMM data for device",
+    "summary": "Refresh RMM data for device",
+    "description": "Triggers a single-device RMM sync and returns the refreshed data. Enterprise Edition feature — on Community Edition this returns null.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {},
+          "description": "Cached RMM device data, or null (always null on Community Edition)."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assets_id_rmm_remotecontrol",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/rmm/remote-control",
+    "displayName": "Get remote-control session URL",
+    "summary": "Get remote-control session URL",
+    "description": "Generates a remote-control URL for the device using the protocol given by the type query param. Enterprise Edition feature — on Community Edition this returns null.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      },
+      {
+        "name": "type",
+        "in": "query",
+        "required": false,
+        "description": "Remote-control protocol (default splashtop).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "splashtop",
+            "teamviewer",
+            "vnc",
+            "rdp",
+            "shell"
+          ],
+          "description": "Remote-control protocol (default splashtop)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "description": "Remote-control session URL, or null when unavailable (always null on Community Edition)."
+    }
+  },
+  {
+    "id": "post-_api_v1_assets_id_rmm_script",
+    "method": "post",
+    "path": "/api/v1/assets/{id}/rmm/script",
+    "displayName": "Run a script via RMM",
+    "summary": "Run a script via RMM",
+    "description": "Runs the script identified by scriptId on the RMM-managed device. Enterprise Edition feature — on Community Edition this returns { success:false } with an EE-required message.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "scriptId": {
+          "type": "string",
+          "description": "Provider script identifier to run on the device."
+        }
+      },
+      "required": [
+        "scriptId"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Provider job id when the action was queued (EE)."
+        }
+      },
+      "required": [
+        "success",
+        "message"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assets_id_software",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/software",
+    "displayName": "List asset software inventory",
+    "summary": "List asset software inventory",
+    "description": "Returns the paginated software inventory for the asset (from the normalized software tables), with filters for category, software_type, search, and include_uninstalled, plus a summary of totals.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      },
+      {
+        "name": "category",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "software_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "include_uninstalled",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "pagination": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assets_id_summary",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/summary",
+    "displayName": "Get asset summary metrics",
+    "summary": "Get asset summary metrics",
+    "description": "Returns computed asset metrics: health status/reason, security status/issues, warranty status and days remaining, and open ticket count.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "health_status": {
+          "type": "string",
+          "enum": [
+            "healthy",
+            "warning",
+            "critical",
+            "unknown"
+          ]
+        },
+        "health_reason": {
+          "type": "string"
+        },
+        "security_status": {
+          "type": "string",
+          "enum": [
+            "secure",
+            "at_risk",
+            "critical"
+          ]
+        },
+        "security_issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warranty_status": {
+          "type": "string",
+          "enum": [
+            "no_warranty",
+            "expired",
+            "expiring_soon",
+            "active"
+          ]
+        },
+        "warranty_days_remaining": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "open_tickets_count": {
+          "type": "number"
+        }
+      }
     }
   },
   {
@@ -11776,7 +12616,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/client-contract-lines",
     "displayName": "List client contract lines",
     "summary": "List client contract lines",
-    "description": "Lists client contract line assignments. Current implementation validates query but returns TODO stub `{ data: [], total: 0 }`. This route requires request context and can fail with `Request context not available` when not wired.",
+    "description": "Lists client contract lines — contract_lines rows that belong to client contracts (joined via contract_id), with the owning client_id and client_contract_id surfaced. Supports client_id, contract_line_id, service_category, is_active, has_custom_rate, and start/end-date-range filters plus page/limit pagination. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
     "tags": [
       "Client Contract Lines"
     ],
@@ -11983,7 +12823,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/client-contract-lines",
     "displayName": "Assign contract line to client",
     "summary": "Assign contract line to client",
-    "description": "Assigns one contract line to client using createClientContractLineSchema validation. Requires request context wiring.",
+    "description": "Assigns one contract line to a client by cloning a template line into the client contract, using createClientContractLineSchema validation. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
     "tags": [
       "Client Contract Lines"
     ],
@@ -12051,7 +12891,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/client-contract-lines/{id}",
     "displayName": "Unassign contract line from client",
     "summary": "Unassign contract line from client",
-    "description": "Deactivates the client-owned contract line assignment (current model) for provided id.",
+    "description": "Deactivates the client-owned contract line for the provided id. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
     "tags": [
       "Client Contract Lines"
     ],
@@ -12074,7 +12914,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines",
     "displayName": "List contract lines",
     "summary": "List contract lines",
-    "description": "Lists contract lines with pagination/filtering and optional include flags. Route requires x-api-key at middleware and a request context in-controller (requireRequestContext). Query parsing/validation uses contractLineListQuerySchema, then listWithOptions reads from contract_lines for the tenant context.",
+    "description": "Lists contract lines with pagination/filtering and optional include flags. Authenticated and tenant-scoped via withApiKeyRouteAuth. Query parsing/validation uses contractLineListQuerySchema, then listWithOptions reads from contract_lines for the tenant context.",
     "tags": [
       "Contract Lines"
     ],
@@ -14478,7 +15318,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-line-templates/{id}/create-contract-line",
     "displayName": "Create contract line from template",
     "summary": "Create contract line from template",
-    "description": "Creates a contract line from a template. Current controller validates body createPlanFromTemplateSchema and passes that body to service; path `{id}` is not used by service logic.",
+    "description": "Creates a contract line from a template. The template id is taken from the path `{id}` (it takes precedence over any template_id in the body), and the rest of the body is validated with createPlanFromTemplateSchema. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
     "tags": [
       "Contract Lines"
     ],
@@ -14502,7 +15342,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "template_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Used by service; current controller ignores the path id and relies on this field."
+          "description": "Optional; the template id is taken from the path {id} and overrides this field when both are present."
         },
         "contract_line_name": {
           "type": "string",
@@ -14545,7 +15385,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       "required": [
-        "template_id",
         "contract_line_name"
       ]
     },
@@ -15474,7 +16313,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/billing-analytics/overview",
     "displayName": "Get billing overview analytics",
     "summary": "Get billing overview analytics",
-    "description": "Maps to ApiContractLineController.getBillingOverviewAnalytics(). The method requires request context via requireRequestContext(req), but this route does not authenticate/set req.context in the handler. Current behavior can fail with 500 \"Request context not available\" when middleware has not injected context.",
+    "description": "Maps to ApiContractLineController.getBillingOverviewAnalytics() and returns tenant billing overview analytics. Authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated before the handler runs).",
     "tags": [
       "Billing Analytics"
     ],
@@ -15676,7 +16515,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/financial/bulk/transactions",
     "displayName": "Run bulk transaction operation",
     "summary": "Run bulk transaction operation",
-    "description": "Route validates payload but currently returns 501 Not implemented (TODO in ApiFinancialController.bulkTransactionOperations).",
+    "description": "FinancialService.bulkTransactionOperation() applies approve/reject/reverse to existing transactions (1–100 ids). reverse posts a compensating transaction linked to the original via related_transaction_id, recomputes the running balance, and syncs the client credit balance for credit-type transactions. Returns per-id results { total_requested, successful, failed, results[] }.",
     "tags": [
       "Financial"
     ],
@@ -15745,7 +16584,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/financial/bulk/credits",
     "displayName": "Run bulk credit operation",
     "summary": "Run bulk credit operation",
-    "description": "Route validates payload but currently returns 501 Not implemented (TODO in ApiFinancialController.bulkCreditOperations).",
+    "description": "FinancialService.bulkCreditOperation() applies expire/extend_expiration/transfer to existing credits (1–100 ids). expire forfeits the remaining amount via a credit_expiration transaction and reduces the client balance; extend_expiration sets a new expiration_date; transfer moves the remaining amount to parameters.target_client_id. Returns per-id results { total_requested, successful, failed, results[] }.",
     "tags": [
       "Financial"
     ],
@@ -22068,6 +22907,3984 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_financial",
+    "method": "get",
+    "path": "/api/v1/financial",
+    "displayName": "Financial API namespace root",
+    "summary": "Financial API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Use the financial sub-resources instead: /api/v1/financial/invoices, /api/v1/financial/transactions, /api/v1/financial/credits, /api/v1/financial/bulk/{invoices,transactions,credits}, and /api/v1/billing-analytics/overview.",
+    "tags": [
+      "Financial"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "get-_api_v1_kbarticles",
+    "method": "get",
+    "path": "/api/v1/kb-articles",
+    "displayName": "List knowledge base articles",
+    "summary": "List knowledge base articles",
+    "description": "List knowledge base articles with optional filtering by status, audience, type, and category. Returns paginated results with article metadata and document names.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "review",
+            "published",
+            "archived"
+          ]
+        }
+      },
+      {
+        "name": "audience",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "client",
+            "public"
+          ]
+        }
+      },
+      {
+        "name": "article_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ]
+        }
+      },
+      {
+        "name": "category_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/KbArticle"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    },
+    "examples": [
+      {
+        "name": "List published articles",
+        "request": {
+          "query": {
+            "status": "published",
+            "limit": 10
+          }
+        }
+      },
+      {
+        "name": "Search articles",
+        "request": {
+          "query": {
+            "search": "password reset"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_kbarticles",
+    "method": "post",
+    "path": "/api/v1/kb-articles",
+    "displayName": "Create a knowledge base article",
+    "summary": "Create a knowledge base article",
+    "description": "Create a new KB article. Before creating, call GET /api/v1/kb-articles/categories to find available categories. Content can be markdown text or BlockNote JSON. Articles are created in 'draft' status — call POST /api/v1/kb-articles/{id}/publish to make them visible.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "slug": {
+          "type": "string",
+          "description": "Optional; generated from the title when omitted."
+        },
+        "article_type": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ],
+          "description": "Defaults to how_to."
+        },
+        "audience": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "client",
+            "public"
+          ],
+          "description": "Defaults to internal."
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "review_cycle_days": {
+          "type": "integer"
+        },
+        "content": {
+          "type": "string",
+          "description": "Initial body content."
+        },
+        "content_format": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "blocknote"
+          ],
+          "description": "Defaults to markdown."
+        }
+      },
+      "required": [
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KbArticle"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Create a how-to article with markdown content",
+        "request": {
+          "body": {
+            "title": "How to Reset User Password",
+            "article_type": "how_to",
+            "audience": "internal",
+            "content": "# Steps\n\n1. Navigate to Settings > Users\n2. Find the user\n3. Click Reset Password\n4. The user will receive an email with a reset link",
+            "content_format": "markdown"
+          }
+        }
+      },
+      {
+        "name": "Create a troubleshooting article for clients",
+        "request": {
+          "body": {
+            "title": "VPN Connection Issues",
+            "article_type": "troubleshooting",
+            "audience": "client",
+            "content": "# Problem\n\nVPN disconnects frequently.\n\n# Solution\n\n1. Check your internet connection\n2. Restart the VPN client\n3. If the issue persists, contact support",
+            "content_format": "markdown"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_kbarticles_categories",
+    "method": "get",
+    "path": "/api/v1/kb-articles/categories",
+    "displayName": "List KB article categories",
+    "summary": "List KB article categories",
+    "description": "List available categories for KB articles. Call this before creating articles to find the right category_id.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "category_name": {
+                "type": "string"
+              },
+              "display_order": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "category_id",
+              "category_name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_kbarticles_templates",
+    "method": "get",
+    "path": "/api/v1/kb-articles/templates",
+    "displayName": "List KB article templates",
+    "summary": "List KB article templates",
+    "description": "List KB article templates. Templates provide pre-built content structures for different article types.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "article_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "template_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "article_type": {
+                "type": "string",
+                "enum": [
+                  "how_to",
+                  "faq",
+                  "troubleshooting",
+                  "reference"
+                ]
+              }
+            },
+            "required": [
+              "template_id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_kbarticles_fromticket_ticketid",
+    "method": "post",
+    "path": "/api/v1/kb-articles/from-ticket/{ticketId}",
+    "displayName": "Create a KB article from a ticket",
+    "summary": "Create a KB article from a ticket",
+    "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "ticketId",
+        "in": "path",
+        "required": true,
+        "description": "Source ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Source ticket UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KbArticle"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_kbarticles_id",
+    "method": "get",
+    "path": "/api/v1/kb-articles/{id}",
+    "displayName": "Get a knowledge base article",
+    "summary": "Get a knowledge base article",
+    "description": "Get a KB article by ID, including its document name and block content data.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "KB article UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "KB article UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KbArticle"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_kbarticles_id",
+    "method": "put",
+    "path": "/api/v1/kb-articles/{id}",
+    "displayName": "Update a knowledge base article",
+    "summary": "Update a knowledge base article",
+    "description": "Update KB article metadata (title, slug, type, audience, category, status). To update the article body content, use PUT /api/v1/kb-articles/{id}/content instead.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "KB article UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "KB article UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "slug": {
+          "type": "string"
+        },
+        "article_type": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ]
+        },
+        "audience": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "client",
+            "public"
+          ]
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "review_cycle_days": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "review",
+            "published",
+            "archived"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KbArticle"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_kbarticles_id",
+    "method": "delete",
+    "path": "/api/v1/kb-articles/{id}",
+    "displayName": "Delete a knowledge base article",
+    "summary": "Delete a knowledge base article",
+    "description": "Deletes the KB article and cascades to remove the linked document and its block content.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "KB article UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "KB article UUID."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_kbarticles_id_archive",
+    "method": "post",
+    "path": "/api/v1/kb-articles/{id}/archive",
+    "displayName": "Archive a knowledge base article",
+    "summary": "Archive a knowledge base article",
+    "description": "Sets the article status to archived and clears client visibility on the linked document. Returns the updated article.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "KB article UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "KB article UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KbArticle"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_kbarticles_id_content",
+    "method": "get",
+    "path": "/api/v1/kb-articles/{id}/content",
+    "displayName": "Get KB article content as text",
+    "summary": "Get KB article content as text",
+    "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "KB article UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "KB article UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "article_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "content": {
+              "type": "string",
+              "description": "Article body rendered as readable text."
+            }
+          },
+          "required": [
+            "content"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_kbarticles_id_content",
+    "method": "put",
+    "path": "/api/v1/kb-articles/{id}/content",
+    "displayName": "Update KB article content",
+    "summary": "Update KB article content",
+    "description": "Update the body content of a KB article. Send content as markdown (default) or BlockNote JSON. Markdown is recommended for AI-generated content.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "KB article UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "KB article UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "blocknote"
+          ],
+          "description": "Defaults to markdown."
+        }
+      },
+      "required": [
+        "content"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KbArticle"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Update content with markdown",
+        "request": {
+          "body": {
+            "content": "# Updated Article\n\nNew content goes here.",
+            "format": "markdown"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_kbarticles_id_publish",
+    "method": "post",
+    "path": "/api/v1/kb-articles/{id}/publish",
+    "displayName": "Publish a knowledge base article",
+    "summary": "Publish a knowledge base article",
+    "description": "Publish a KB article. Sets status to 'published' and auto-enables client visibility for client/public audience articles.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "KB article UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "KB article UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KbArticle"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_billing",
+    "method": "get",
+    "path": "/api/v1/billing",
+    "displayName": "Billing API namespace root",
+    "summary": "Billing API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Use /api/v1/financial/invoices, /api/v1/financial/transactions, /api/v1/financial/credits, and /api/v1/billing-analytics/overview.",
+    "tags": [
+      "Billing"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "get-_api_v1_comments",
+    "method": "get",
+    "path": "/api/v1/comments",
+    "displayName": "Comments API namespace root",
+    "summary": "Comments API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Comments are accessed per ticket: /api/v1/tickets/{id}/comments and its sub-paths.",
+    "tags": [
+      "Comments"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "get-_api_v1_documents",
+    "method": "get",
+    "path": "/api/v1/documents",
+    "displayName": "Documents API namespace root",
+    "summary": "Documents API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
+    "tags": [
+      "Documents"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "get-_api_v1_email",
+    "method": "get",
+    "path": "/api/v1/email",
+    "displayName": "Email API namespace root",
+    "summary": "Email API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Use the email provider and webhook endpoints rather than this root.",
+    "tags": [
+      "Email"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "post-_api_v1_ai_documentassist",
+    "method": "post",
+    "path": "/api/v1/ai/document-assist",
+    "displayName": "AI document assistance (streaming, EE)",
+    "summary": "AI document assistance (streaming, EE)",
+    "description": "Streams AI-generated document edits using the tenant's configured LLM provider. Enterprise Edition feature gated by the AI add-on tier and a feature flag; authenticated with the AI_DOCUMENT_API_KEY via the x-api-key header. Returns a streamed text response (501 on Community Edition).",
+    "tags": [
+      "AI"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "instruction": {
+          "type": "string",
+          "description": "What the assistant should do."
+        },
+        "documentContext": {
+          "type": "string",
+          "description": "Current document text/context."
+        },
+        "documentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tenantId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "connectedUserNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "instruction",
+        "documentContext",
+        "tenantId"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_software_search",
+    "method": "get",
+    "path": "/api/v1/software/search",
+    "displayName": "Search software across the fleet",
+    "summary": "Search software across the fleet",
+    "description": "Searches installed software across all assets in the tenant, with filters for name/publisher search, category, software_type, is_managed, is_security_relevant, and client_id. Paginated. Authenticated by the global x-api-key middleware and tenant-scoped by the underlying withAuth action (it calls the searchSoftwareFleetWide server action directly rather than using a route-level controller wrapper).",
+    "tags": [
+      "Software"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "category",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "software_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "is_managed",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "is_security_relevant",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_priorities",
+    "method": "get",
+    "path": "/api/v1/priorities",
+    "displayName": "List priorities",
+    "summary": "List priorities",
+    "description": "Lists ticket priorities for the tenant with pagination and sorting.",
+    "tags": [
+      "Priorities"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_priorities_id",
+    "method": "get",
+    "path": "/api/v1/priorities/{id}",
+    "displayName": "Get a priority",
+    "summary": "Get a priority",
+    "description": "Returns a single priority by id.",
+    "tags": [
+      "Priorities"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_extensions_install",
+    "method": "post",
+    "path": "/api/v1/extensions/install",
+    "displayName": "Install an extension (EE)",
+    "summary": "Install an extension (EE)",
+    "description": "Installs a tenant extension. Enterprise Edition feature requiring the extensions capability and the psa product; returns 501 on Community Edition.",
+    "tags": [
+      "Extensions"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Extension install/uninstall payload (handled by the EE extension service)."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_extensions_uninstall",
+    "method": "post",
+    "path": "/api/v1/extensions/uninstall",
+    "displayName": "Uninstall an extension (EE)",
+    "summary": "Uninstall an extension (EE)",
+    "description": "Uninstalls a tenant extension. Enterprise Edition feature requiring the extensions capability and the psa product; returns 501 on Community Edition.",
+    "tags": [
+      "Extensions"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Extension install/uninstall payload (handled by the EE extension service)."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_companycontractlines",
+    "method": "get",
+    "path": "/api/v1/company-contract-lines",
+    "displayName": "List company contract lines (deprecated)",
+    "summary": "List company contract lines (deprecated)",
+    "description": "Lists client contract lines (contract_lines joined to client contracts), with filters and pagination. Deprecated: use /api/v1/client-contract-lines. This path is an alias kept for backwards compatibility.",
+    "tags": [
+      "Contract Lines"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "contract_line_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_companycontractlines",
+    "method": "post",
+    "path": "/api/v1/company-contract-lines",
+    "displayName": "Assign contract line to client (deprecated)",
+    "summary": "Assign contract line to client (deprecated)",
+    "description": "Assigns a contract line to a client by cloning a template line into the client contract. Deprecated: use /api/v1/client-contract-lines. This path is an alias kept for backwards compatibility.",
+    "tags": [
+      "Contract Lines"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "client_contract_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "custom_rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "client_id",
+        "contract_line_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_companycontractlines_id",
+    "method": "delete",
+    "path": "/api/v1/company-contract-lines/{id}",
+    "displayName": "Unassign contract line (deprecated)",
+    "summary": "Unassign contract line (deprecated)",
+    "description": "Deactivates a client-owned contract line by id. Deprecated: use /api/v1/client-contract-lines. This path is an alias kept for backwards compatibility.",
+    "tags": [
+      "Contract Lines"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_accountingexports_xerocsv_clientexport",
+    "method": "get",
+    "path": "/api/v1/accounting-exports/xero-csv/client-export",
+    "displayName": "Export clients as Xero Contacts CSV",
+    "summary": "Export clients as Xero Contacts CSV",
+    "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires billing:manage.",
+    "tags": [
+      "Accounting Exports"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientIds",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated client UUIDs to limit the export.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated client UUIDs to limit the export."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_accountingexports_xerocsv_clientimport",
+    "method": "post",
+    "path": "/api/v1/accounting-exports/xero-csv/client-import",
+    "displayName": "Import Xero Contacts CSV",
+    "summary": "Import Xero Contacts CSV",
+    "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires billing:manage.",
+    "tags": [
+      "Accounting Exports"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "preview",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "createNew",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "updateExisting",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "matchBy",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_accountingexports_xerocsv_taximport",
+    "method": "post",
+    "path": "/api/v1/accounting-exports/xero-csv/tax-import",
+    "displayName": "Import Xero invoice tax CSV",
+    "summary": "Import Xero invoice tax CSV",
+    "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires billing:manage.",
+    "tags": [
+      "Accounting Exports"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "preview",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_accountingexports_batchid_download",
+    "method": "get",
+    "path": "/api/v1/accounting-exports/{batchId}/download",
+    "displayName": "Download an accounting export batch",
+    "summary": "Download an accounting export batch",
+    "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires billing_settings:update.",
+    "tags": [
+      "Accounting Exports"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "batchId",
+        "in": "path",
+        "required": true,
+        "description": "Export batch identifier.",
+        "schema": {
+          "type": "string",
+          "description": "Export batch identifier."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_projects_templates",
+    "method": "get",
+    "path": "/api/projects/templates",
+    "displayName": "List project templates",
+    "summary": "List project templates",
+    "description": "Lists the tenant project templates.",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_projects_templates",
+    "method": "post",
+    "path": "/api/projects/templates",
+    "displayName": "Create project template",
+    "summary": "Create project template",
+    "description": "Creates a project template from an existing project.",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "template_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "template_name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_projects_templates_templateid",
+    "method": "get",
+    "path": "/api/projects/templates/{templateId}",
+    "displayName": "Get a project template",
+    "summary": "Get a project template",
+    "description": "Returns a single project template by id.",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_projects_templates_templateid",
+    "method": "patch",
+    "path": "/api/projects/templates/{templateId}",
+    "displayName": "Update project template",
+    "summary": "Update project template",
+    "description": "Updates the template name, description, or category.",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "template_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_projects_templates_templateid",
+    "method": "delete",
+    "path": "/api/projects/templates/{templateId}",
+    "displayName": "Delete a project template",
+    "summary": "Delete a project template",
+    "description": "Deletes a project template by id.",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_projects_templates_templateid_apply",
+    "method": "post",
+    "path": "/api/projects/templates/{templateId}/apply",
+    "displayName": "Create project from template",
+    "summary": "Create project from template",
+    "description": "Creates a new project from the template, copying the selected parts (phases, statuses, tasks, etc.).",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "project_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "assigned_to": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "options": {
+          "$ref": "#/components/schemas/ProjectTemplateCopyOptions"
+        }
+      },
+      "required": [
+        "project_name",
+        "client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_projects_templates_templateid_duplicate",
+    "method": "post",
+    "path": "/api/projects/templates/{templateId}/duplicate",
+    "displayName": "Duplicate project template",
+    "summary": "Duplicate project template",
+    "description": "Creates a complete copy of the template and returns the new template id. No request body.",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowdefinitions",
+    "method": "get",
+    "path": "/api/workflow-definitions",
+    "displayName": "List workflow definitions",
+    "summary": "List workflow definitions",
+    "description": "Lists workflow definitions for the tenant.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowdefinitions",
+    "method": "post",
+    "path": "/api/workflow-definitions",
+    "displayName": "Create workflow definition",
+    "summary": "Create workflow definition",
+    "description": "Creates a new workflow with a draft definition.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "description": "Stable workflow key; generated when omitted."
+        },
+        "definition": {
+          "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+        },
+        "payloadSchemaMode": {
+          "type": "string",
+          "enum": [
+            "inferred",
+            "pinned"
+          ]
+        },
+        "pinnedPayloadSchemaRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowdefinitions_import",
+    "method": "post",
+    "path": "/api/workflow-definitions/import",
+    "displayName": "Import a v1 workflow bundle",
+    "summary": "Import a v1 workflow bundle",
+    "description": "Imports a legacy v1 workflow bundle. Pass force=true (query) to overwrite an existing definition.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "force",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "bundle": {
+          "description": "Legacy v1 workflow bundle document."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_workflowdefinitions_workflowid_metadata",
+    "method": "put",
+    "path": "/api/workflow-definitions/{workflowId}/metadata",
+    "displayName": "Update workflow metadata",
+    "summary": "Update workflow metadata",
+    "description": "Updates workflow metadata: key, visibility, pause state, concurrency limit, failure thresholds, and retention policy.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "isVisible": {
+          "type": "boolean"
+        },
+        "isPaused": {
+          "type": "boolean"
+        },
+        "concurrencyLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "autoPauseOnFailure": {
+          "type": "boolean"
+        },
+        "failureRateThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "failureRateMinRuns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retentionPolicyOverride": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowdefinitions_workflowid_version",
+    "method": "get",
+    "path": "/api/workflow-definitions/{workflowId}/{version}",
+    "displayName": "Get a workflow version",
+    "summary": "Get a workflow version",
+    "description": "Returns the definition document for a specific workflow version.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "version",
+        "in": "path",
+        "required": true,
+        "description": "Draft version number (coerced to a positive integer).",
+        "schema": {
+          "type": "string",
+          "description": "Draft version number (coerced to a positive integer)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_workflowdefinitions_workflowid_version",
+    "method": "put",
+    "path": "/api/workflow-definitions/{workflowId}/{version}",
+    "displayName": "Update workflow draft definition",
+    "summary": "Update workflow draft definition",
+    "description": "Replaces the draft definition for a specific version.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "version",
+        "in": "path",
+        "required": true,
+        "description": "Draft version number (coerced to a positive integer).",
+        "schema": {
+          "type": "string",
+          "description": "Draft version number (coerced to a positive integer)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+        }
+      },
+      "required": [
+        "definition"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowdefinitions_workflowid_version_publish",
+    "method": "post",
+    "path": "/api/workflow-definitions/{workflowId}/{version}/publish",
+    "displayName": "Publish a workflow version",
+    "summary": "Publish a workflow version",
+    "description": "Publishes the draft as an active version (auto-increments when the requested version is below the next expected). An optional definition in the body overrides the stored draft.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "version",
+        "in": "path",
+        "required": true,
+        "description": "Draft version number (coerced to a positive integer).",
+        "schema": {
+          "type": "string",
+          "description": "Draft version number (coerced to a positive integer)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns",
+    "method": "get",
+    "path": "/api/workflow-runs",
+    "displayName": "List workflow runs",
+    "summary": "List workflow runs",
+    "description": "Lists workflow runs for the tenant.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowruns",
+    "method": "post",
+    "path": "/api/workflow-runs",
+    "displayName": "Start a workflow run",
+    "summary": "Start a workflow run",
+    "description": "Starts a workflow execution with an optional version override and input payload (payload capped ~2MB; rate-limited per tenant).",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "workflowId": {
+          "type": "string"
+        },
+        "workflowVersion": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "sourcePayloadSchemaRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workflowId"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowruns_runid_cancel",
+    "method": "post",
+    "path": "/api/workflow-runs/{runId}/cancel",
+    "displayName": "Cancel a workflow run",
+    "summary": "Cancel a workflow run",
+    "description": "Stops the run and marks its waits as canceled.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Audit reason for the action."
+        },
+        "source": {
+          "type": "string",
+          "description": "Origin label; defaults to 'api'."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowruns_runid_replay",
+    "method": "post",
+    "path": "/api/workflow-runs/{runId}/replay",
+    "displayName": "Replay a workflow run",
+    "summary": "Replay a workflow run",
+    "description": "Re-executes the workflow from the start with a new input payload.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowruns_runid_requeue",
+    "method": "post",
+    "path": "/api/workflow-runs/{runId}/requeue",
+    "displayName": "Requeue a workflow run",
+    "summary": "Requeue a workflow run",
+    "description": "Re-initializes the run's event wait (for runs stuck awaiting an external event).",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Audit reason for the action."
+        },
+        "source": {
+          "type": "string",
+          "description": "Origin label; defaults to 'api'."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowruns_runid_resume",
+    "method": "post",
+    "path": "/api/workflow-runs/{runId}/resume",
+    "displayName": "Resume a workflow run",
+    "summary": "Resume a workflow run",
+    "description": "Resolves waiting steps and resumes a paused/waiting run.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Audit reason for the action."
+        },
+        "source": {
+          "type": "string",
+          "description": "Origin label; defaults to 'api'."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflowruns_runid_retry",
+    "method": "post",
+    "path": "/api/workflow-runs/{runId}/retry",
+    "displayName": "Retry a failed workflow run",
+    "summary": "Retry a failed workflow run",
+    "description": "Restarts a FAILED run from its last failed node.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Audit reason for the action."
+        },
+        "source": {
+          "type": "string",
+          "description": "Origin label; defaults to 'api'."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflow_events",
+    "method": "get",
+    "path": "/api/workflow/events",
+    "displayName": "List workflow events",
+    "summary": "List workflow events",
+    "description": "Lists submitted workflow events for the tenant.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_workflow_events",
+    "method": "post",
+    "path": "/api/workflow/events",
+    "displayName": "Submit a workflow event",
+    "summary": "Submit a workflow event",
+    "description": "Injects an event into the workflow runtime, correlating it to waiting runs by event name and correlation key.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "eventName": {
+          "type": "string"
+        },
+        "workflowCorrelationKey": {
+          "type": "string"
+        },
+        "correlationKey": {
+          "type": "string"
+        },
+        "payloadSchemaRef": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "eventName"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_projects_templates_categories",
+    "method": "get",
+    "path": "/api/projects/templates/categories",
+    "displayName": "List project template categories",
+    "summary": "List project template categories",
+    "description": "Lists the available project-template categories.",
+    "tags": [
+      "Project Templates"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowdefinitions_workflowid_versions",
+    "method": "get",
+    "path": "/api/workflow-definitions/{workflowId}/versions",
+    "displayName": "List workflow versions",
+    "summary": "List workflow versions",
+    "description": "Lists the versions (draft and published) of a workflow definition.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowdefinitions_workflowid_export",
+    "method": "get",
+    "path": "/api/workflow-definitions/{workflowId}/export",
+    "displayName": "Export a workflow definition",
+    "summary": "Export a workflow definition",
+    "description": "Exports the workflow definition document (JSON).",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowdefinitions_workflowid_audit",
+    "method": "get",
+    "path": "/api/workflow-definitions/{workflowId}/audit",
+    "displayName": "Get workflow audit log",
+    "summary": "Get workflow audit log",
+    "description": "Returns the audit-log entries for a workflow definition.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowdefinitions_workflowid_audit_export",
+    "method": "get",
+    "path": "/api/workflow-definitions/{workflowId}/audit/export",
+    "displayName": "Export workflow audit log",
+    "summary": "Export workflow audit log",
+    "description": "Exports the workflow definition audit log.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_deadletter",
+    "method": "get",
+    "path": "/api/workflow-runs/dead-letter",
+    "displayName": "List dead-lettered runs",
+    "summary": "List dead-lettered runs",
+    "description": "Lists runs that failed terminally and were moved to the dead-letter set.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_export",
+    "method": "get",
+    "path": "/api/workflow-runs/export",
+    "displayName": "Export workflow runs",
+    "summary": "Export workflow runs",
+    "description": "Exports workflow runs (JSON/CSV).",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_latest",
+    "method": "get",
+    "path": "/api/workflow-runs/latest",
+    "displayName": "Get latest workflow runs",
+    "summary": "Get latest workflow runs",
+    "description": "Returns the most recent workflow runs.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_summary",
+    "method": "get",
+    "path": "/api/workflow-runs/summary",
+    "displayName": "Get workflow runs summary",
+    "summary": "Get workflow runs summary",
+    "description": "Returns aggregate run metrics across the tenant.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_runid",
+    "method": "get",
+    "path": "/api/workflow-runs/{runId}",
+    "displayName": "Get a workflow run",
+    "summary": "Get a workflow run",
+    "description": "Returns a single workflow run by id.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_runid_steps",
+    "method": "get",
+    "path": "/api/workflow-runs/{runId}/steps",
+    "displayName": "Get workflow run steps",
+    "summary": "Get workflow run steps",
+    "description": "Returns the step/node states for a run.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_runid_timeline",
+    "method": "get",
+    "path": "/api/workflow-runs/{runId}/timeline",
+    "displayName": "Get workflow run timeline",
+    "summary": "Get workflow run timeline",
+    "description": "Returns the chronological event timeline for a run.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_runid_summary",
+    "method": "get",
+    "path": "/api/workflow-runs/{runId}/summary",
+    "displayName": "Get workflow run summary",
+    "summary": "Get workflow run summary",
+    "description": "Returns a summary of a single run.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_runid_audit",
+    "method": "get",
+    "path": "/api/workflow-runs/{runId}/audit",
+    "displayName": "Get workflow run audit log",
+    "summary": "Get workflow run audit log",
+    "description": "Returns the audit-log entries for a run.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_runid_audit_export",
+    "method": "get",
+    "path": "/api/workflow-runs/{runId}/audit/export",
+    "displayName": "Export workflow run audit log",
+    "summary": "Export workflow run audit log",
+    "description": "Exports the audit log for a run.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflowruns_runid_export",
+    "method": "get",
+    "path": "/api/workflow-runs/{runId}/export",
+    "displayName": "Export a workflow run",
+    "summary": "Export a workflow run",
+    "description": "Exports a single workflow run (JSON).",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflow_events_export",
+    "method": "get",
+    "path": "/api/workflow/events/export",
+    "displayName": "Export workflow events",
+    "summary": "Export workflow events",
+    "description": "Exports workflow events (JSON/CSV).",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflow_events_summary",
+    "method": "get",
+    "path": "/api/workflow/events/summary",
+    "displayName": "Get workflow events summary",
+    "summary": "Get workflow events summary",
+    "description": "Returns aggregate workflow-event metrics.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflow_events_eventid",
+    "method": "get",
+    "path": "/api/workflow/events/{eventId}",
+    "displayName": "Get a workflow event",
+    "summary": "Get a workflow event",
+    "description": "Returns a single workflow event by id.",
+    "tags": [
+      "Workflow Runs"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "eventId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflow_registry_actions",
+    "method": "get",
+    "path": "/api/workflow/registry/actions",
+    "displayName": "List workflow registry actions",
+    "summary": "List workflow registry actions",
+    "description": "Lists every action registered in the workflow runtime — the building blocks workflow definitions can invoke — including JSON Schemas for each action's input and output. Returns a bare array (no envelope).",
+    "tags": [
+      "Workflow Registry"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/WorkflowRegistryAction"
+      }
+    }
+  },
+  {
+    "id": "get-_api_workflow_registry_nodes",
+    "method": "get",
+    "path": "/api/workflow/registry/nodes",
+    "displayName": "List workflow registry node types",
+    "summary": "List workflow registry node types",
+    "description": "Lists the node types available to workflow definitions (triggers, control flow, action nodes, etc.) with each node's configuration JSON Schema and default retry policy. Returns a bare array (no envelope).",
+    "tags": [
+      "Workflow Registry"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/WorkflowRegistryNode"
+      }
+    }
+  },
+  {
+    "id": "get-_api_workflow_registry_designercatalog",
+    "method": "get",
+    "path": "/api/workflow/registry/designer-catalog",
+    "displayName": "Get the workflow designer action catalog",
+    "summary": "Get the workflow designer action catalog",
+    "description": "Returns the action catalog the workflow designer renders: registry actions and integration modules grouped into tiles, filtered to the integrations actually available to the tenant. Returns a bare array of catalog records (no envelope).",
+    "tags": [
+      "Workflow Registry"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "Catalog tile (groupKey, tileKind, actions, UI metadata)."
+      }
+    }
+  },
+  {
+    "id": "get-_api_workflow_registry_schemas_schemaref",
+    "method": "get",
+    "path": "/api/workflow/registry/schemas/{schemaRef}",
+    "displayName": "Get a workflow schema by ref",
+    "summary": "Get a workflow schema by ref",
+    "description": "Resolves a registered workflow schema reference (URL-encoded) to its JSON Schema document.",
+    "tags": [
+      "Workflow Registry"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "schemaRef",
+        "in": "path",
+        "required": true,
+        "description": "Registered schema reference; URL-encode it in the path.",
+        "schema": {
+          "type": "string",
+          "description": "Registered schema reference; URL-encode it in the path."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string",
+          "description": "The resolved schema reference."
+        },
+        "schema": {
+          "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+        }
+      },
+      "required": [
+        "ref",
+        "schema"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_projects",
+    "method": "get",
+    "path": "/api/projects",
+    "displayName": "List projects",
+    "summary": "List projects",
+    "description": "Lists all projects for the tenant. Returns a bare array of project records (no envelope); responds 403 with an error message when the caller lacks project read permission.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "Project record."
+      }
+    }
+  },
+  {
     "id": "get-_api_files_fileid_download",
     "method": "get",
     "path": "/api/files/{fileId}/download",
@@ -22845,6 +27662,86 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "delivery_id"
       ]
+    }
+  },
+  {
+    "id": "put-_api_inbound_tenantslug_webhookslug",
+    "method": "put",
+    "path": "/api/inbound/{tenantSlug}/{webhookSlug}",
+    "displayName": "PUT inbound",
+    "summary": "PUT inbound",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "inbound"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "tenantSlug",
+        "in": "path",
+        "required": true,
+        "description": "TenantSlug path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "webhookSlug",
+        "in": "path",
+        "required": true,
+        "description": "WebhookSlug path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "patch-_api_inbound_tenantslug_webhookslug",
+    "method": "patch",
+    "path": "/api/inbound/{tenantSlug}/{webhookSlug}",
+    "displayName": "PATCH inbound",
+    "summary": "PATCH inbound",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "inbound"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "tenantSlug",
+        "in": "path",
+        "required": true,
+        "description": "TenantSlug path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "webhookSlug",
+        "in": "path",
+        "required": true,
+        "description": "WebhookSlug path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
     }
   },
   {
@@ -29149,11 +34046,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+        "description": "Category UUID from service_categories.category_id or categories.category_id.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+          "description": "Category UUID from service_categories.category_id or categories.category_id."
         }
       }
     ],
@@ -29185,11 +34082,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+        "description": "Category UUID from service_categories.category_id or categories.category_id.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+          "description": "Category UUID from service_categories.category_id or categories.category_id."
         }
       }
     ],
@@ -29242,11 +34139,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+        "description": "Category UUID from service_categories.category_id or categories.category_id.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+          "description": "Category UUID from service_categories.category_id or categories.category_id."
         }
       }
     ]
@@ -29394,10 +34291,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "parent_category": {
           "type": "string",
           "format": "uuid"
-        },
-        "description": {
-          "type": "string",
-          "maxLength": 1000
         }
       },
       "required": [
@@ -29433,11 +34326,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+        "description": "Category UUID from service_categories.category_id or categories.category_id.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+          "description": "Category UUID from service_categories.category_id or categories.category_id."
         }
       }
     ],
@@ -29469,11 +34362,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+        "description": "Category UUID from service_categories.category_id or categories.category_id.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+          "description": "Category UUID from service_categories.category_id or categories.category_id."
         }
       }
     ],
@@ -29492,10 +34385,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "parent_category": {
           "type": "string",
           "format": "uuid"
-        },
-        "description": {
-          "type": "string",
-          "maxLength": 1000
         }
       }
     },
@@ -29527,11 +34416,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+        "description": "Category UUID from service_categories.category_id or categories.category_id.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+          "description": "Category UUID from service_categories.category_id or categories.category_id."
         }
       }
     ]
@@ -37759,7 +42648,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "List Tickets",
     "summary": "List tickets",
-    "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
+    "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
     "tags": [
       "Work Management v1"
     ],
@@ -38039,7 +42928,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "fields",
         "in": "query",
         "required": false,
-        "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
+        "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
         "schema": {
           "type": "string"
         }
@@ -38381,18 +43270,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_tickets_fromasset",
     "method": "get",
     "path": "/api/v1/tickets/from-asset",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Create ticket from asset (POST only)",
+    "summary": "Create ticket from asset (POST only)",
+    "description": "This path creates a ticket from an asset via POST. GET is not supported and returns 405 Method Not Allowed.",
     "tags": [
-      "tickets"
+      "Work Management v1"
     ],
     "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
+    "parameters": []
   },
   {
     "id": "post-_api_v1_tickets_fromasset",
@@ -42802,6 +47687,619 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_priorities",
+    "method": "get",
+    "path": "/api/v1/tickets/priorities",
+    "displayName": "List ticket priorities",
+    "summary": "List ticket priorities",
+    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_statuses",
+    "method": "get",
+    "path": "/api/v1/tickets/statuses",
+    "displayName": "List ticket statuses",
+    "summary": "List ticket statuses",
+    "description": "Returns board-owned ticket statuses for the tenant, optionally filtered by board_id, sorted by board then order_number.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter statuses to this board.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Filter statuses to this board."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_id_comments_commentid",
+    "method": "put",
+    "path": "/api/v1/tickets/{id}/comments/{commentId}",
+    "displayName": "Update a ticket comment",
+    "summary": "Update a ticket comment",
+    "description": "Updates the text of a comment on a ticket. Comment text must be 1–5000 visible characters.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "description": "Comment UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Comment UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "comment_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000,
+          "description": "Updated comment text (1–5000 visible chars)."
+        }
+      },
+      "required": [
+        "comment_text"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_comments_commentid_reactions",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/comments/{commentId}/reactions",
+    "displayName": "Toggle a comment reaction",
+    "summary": "Toggle a comment reaction",
+    "description": "Adds or removes the given emoji reaction on a comment for the authenticated user. Returns { added: boolean } indicating whether the reaction was added (true) or removed (false).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "description": "Comment UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Comment UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "emoji": {
+          "type": "string",
+          "description": "Emoji to toggle on the comment."
+        }
+      },
+      "required": [
+        "emoji"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_documents",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/documents",
+    "displayName": "List ticket documents",
+    "summary": "List ticket documents",
+    "description": "Returns the documents (file attachments) associated with a ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_documents",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/documents",
+    "displayName": "Upload a ticket document",
+    "summary": "Upload a ticket document",
+    "description": "Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_documents_documentid",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/documents/{documentId}",
+    "displayName": "Download a ticket document",
+    "summary": "Download a ticket document",
+    "description": "Downloads a specific document attached to a ticket as binary data with Content-Type and Content-Disposition headers.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Document UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_documents_documentid",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/documents/{documentId}",
+    "displayName": "Delete a ticket document",
+    "summary": "Delete a ticket document",
+    "description": "Removes a document from a ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Document UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_materials",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/materials",
+    "displayName": "List ticket materials",
+    "summary": "List ticket materials",
+    "description": "Returns the materials (service items/supplies) recorded against a ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_materials",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/materials",
+    "displayName": "Add a ticket material",
+    "summary": "Add a ticket material",
+    "description": "Associates a service item (material/supply) with a ticket, specifying quantity, rate, and currency. Returns the created material.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "service_id",
+        "quantity",
+        "rate",
+        "currency_code"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_quotes",
     "method": "get",
     "path": "/api/v1/quotes",
@@ -46019,7 +51517,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/user/telemetry-preferences",
     "displayName": "Get telemetry preferences",
     "summary": "Get telemetry preferences",
-    "description": "Returns telemetry preference view controlled by environment variable; requires session user.",
+    "description": "Read-only. Returns the usage-stats telemetry state, which is controlled by the ALGA_USAGE_STATS environment variable (not per-user); requires session user. There are no write verbs because the preference cannot be changed through the API.",
     "tags": [
       "Meta & Utility v1"
     ],
@@ -46074,148 +51572,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "flags": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "context": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "usageStatsEnabled": {
-          "type": "boolean"
-        },
-        "controlledBy": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "success": {
-          "type": "boolean"
-        }
-      }
-    }
-  },
-  {
-    "id": "post-_api_v1_user_telemetrypreferences",
-    "method": "post",
-    "path": "/api/v1/user/telemetry-preferences",
-    "displayName": "Set telemetry preferences (environment-controlled)",
-    "summary": "Set telemetry preferences (environment-controlled)",
-    "description": "Endpoint acknowledges request but reports environment-controlled behavior rather than persisting user preference.",
-    "tags": [
-      "Meta & Utility v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "flags": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "context": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "usageStatsEnabled": {
-          "type": "boolean"
-        },
-        "controlledBy": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "success": {
-          "type": "boolean"
-        }
-      }
-    }
-  },
-  {
-    "id": "delete-_api_v1_user_telemetrypreferences",
-    "method": "delete",
-    "path": "/api/v1/user/telemetry-preferences",
-    "displayName": "Delete telemetry preferences (environment-controlled)",
-    "summary": "Delete telemetry preferences (environment-controlled)",
-    "description": "Endpoint acknowledges request but reports environment-controlled behavior rather than deleting stored preference.",
-    "tags": [
-      "Meta & Utility v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -48921,6 +54277,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "post-_api_internal_collab_persist",
+    "method": "post",
+    "path": "/api/internal/collab/persist",
+    "displayName": "POST internal",
+    "summary": "POST internal",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "internal"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
     "id": "post-_api_internal_extclients_install_installid",
     "method": "post",
     "path": "/api/internal/ext-clients/install/{installId}",
@@ -49097,218 +54474,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "get-_api_projects",
+    "id": "get-_api_onlinemeetings_recordings_artifactid",
     "method": "get",
-    "path": "/api/projects",
-    "displayName": "GET projects",
-    "summary": "GET projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "path": "/api/online-meetings/recordings/{artifactId}",
+    "displayName": "GET online-meetings",
+    "summary": "GET online-meetings",
     "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_projects_templates",
-    "method": "get",
-    "path": "/api/projects/templates",
-    "displayName": "GET projects",
-    "summary": "GET projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_projects_templates",
-    "method": "post",
-    "path": "/api/projects/templates",
-    "displayName": "POST projects",
-    "summary": "POST projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_projects_templates_categories",
-    "method": "get",
-    "path": "/api/projects/templates/categories",
-    "displayName": "GET projects",
-    "summary": "GET projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_projects_templates_templateid",
-    "method": "get",
-    "path": "/api/projects/templates/{templateId}",
-    "displayName": "GET projects",
-    "summary": "GET projects",
-    "tags": [
-      "projects"
+      "online-meetings"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "templateId",
+        "name": "artifactId",
         "in": "path",
         "required": true,
-        "description": "TemplateId path parameter.",
+        "description": "ArtifactId path parameter.",
         "schema": {
           "type": "string"
         }
       }
     ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "patch-_api_projects_templates_templateid",
-    "method": "patch",
-    "path": "/api/projects/templates/{templateId}",
-    "displayName": "PATCH projects",
-    "summary": "PATCH projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "templateId",
-        "in": "path",
-        "required": true,
-        "description": "TemplateId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_projects_templates_templateid",
-    "method": "delete",
-    "path": "/api/projects/templates/{templateId}",
-    "displayName": "DELETE projects",
-    "summary": "DELETE projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "templateId",
-        "in": "path",
-        "required": true,
-        "description": "TemplateId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_projects_templates_templateid_apply",
-    "method": "post",
-    "path": "/api/projects/templates/{templateId}/apply",
-    "displayName": "POST projects",
-    "summary": "POST projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "templateId",
-        "in": "path",
-        "required": true,
-        "description": "TemplateId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_projects_templates_templateid_duplicate",
-    "method": "post",
-    "path": "/api/projects/templates/{templateId}/duplicate",
-    "displayName": "POST projects",
-    "summary": "POST projects",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "templateId",
-        "in": "path",
-        "required": true,
-        "description": "TemplateId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -49728,14 +54913,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "get-_api_v1_accountingexports_xerocsv_clientexport",
+    "id": "get-_api_teams_webhooks_recordings",
     "method": "get",
-    "path": "/api/v1/accounting-exports/xero-csv/client-export",
-    "displayName": "GET v1",
-    "summary": "GET v1",
+    "path": "/api/teams/webhooks/recordings",
+    "displayName": "GET teams",
+    "summary": "GET teams",
     "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "accounting-exports"
+      "teams"
     ],
     "approvalRequired": false,
     "parameters": [],
@@ -49745,14 +54930,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "post-_api_v1_accountingexports_xerocsv_clientimport",
+    "id": "post-_api_teams_webhooks_recordings",
     "method": "post",
-    "path": "/api/v1/accounting-exports/xero-csv/client-import",
-    "displayName": "POST v1",
-    "summary": "POST v1",
+    "path": "/api/teams/webhooks/recordings",
+    "displayName": "POST teams",
+    "summary": "POST teams",
     "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "accounting-exports"
+      "teams"
     ],
     "approvalRequired": false,
     "parameters": [],
@@ -49766,81 +54951,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "post-_api_v1_accountingexports_xerocsv_taximport",
-    "method": "post",
-    "path": "/api/v1/accounting-exports/xero-csv/tax-import",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting-exports"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_accountingexports_batchid_download",
+    "id": "get-_api_tickets_id_livetoken",
     "method": "get",
-    "path": "/api/v1/accounting-exports/{batchId}/download",
-    "displayName": "GET v1",
-    "summary": "GET v1",
+    "path": "/api/tickets/{id}/live-token",
+    "displayName": "GET tickets",
+    "summary": "GET tickets",
     "tags": [
-      "accounting-exports"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "batchId",
-        "in": "path",
-        "required": true,
-        "description": "BatchId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_ai_documentassist",
-    "method": "post",
-    "path": "/api/v1/ai/document-assist",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ai"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_assets_id_notes",
-    "method": "get",
-    "path": "/api/v1/assets/{id}/notes",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "assets"
+      "tickets"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -49855,832 +54972,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_assets_id_notes",
-    "method": "put",
-    "path": "/api/v1/assets/{id}/notes",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_assets_id_notes",
-    "method": "delete",
-    "path": "/api/v1/assets/{id}/notes",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_assets_id_rmm",
-    "method": "get",
-    "path": "/api/v1/assets/{id}/rmm",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_assets_id_rmm_reboot",
-    "method": "post",
-    "path": "/api/v1/assets/{id}/rmm/reboot",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_assets_id_rmm_refresh",
-    "method": "post",
-    "path": "/api/v1/assets/{id}/rmm/refresh",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_assets_id_rmm_remotecontrol",
-    "method": "get",
-    "path": "/api/v1/assets/{id}/rmm/remote-control",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_assets_id_rmm_script",
-    "method": "post",
-    "path": "/api/v1/assets/{id}/rmm/script",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_assets_id_software",
-    "method": "get",
-    "path": "/api/v1/assets/{id}/software",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_assets_id_summary",
-    "method": "get",
-    "path": "/api/v1/assets/{id}/summary",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "assets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_billing",
-    "method": "get",
-    "path": "/api/v1/billing",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "billing"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_comments",
-    "method": "get",
-    "path": "/api/v1/comments",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "comments"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_companycontractlines",
-    "method": "get",
-    "path": "/api/v1/company-contract-lines",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "company-contract-lines"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_companycontractlines",
-    "method": "post",
-    "path": "/api/v1/company-contract-lines",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "company-contract-lines"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_companycontractlines_id",
-    "method": "delete",
-    "path": "/api/v1/company-contract-lines/{id}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "tags": [
-      "company-contract-lines"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_documents",
-    "method": "get",
-    "path": "/api/v1/documents",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "documents"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_email",
-    "method": "get",
-    "path": "/api/v1/email",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "email"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_extensions_install",
-    "method": "post",
-    "path": "/api/v1/extensions/install",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_extensions_uninstall",
-    "method": "post",
-    "path": "/api/v1/extensions/uninstall",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_financial",
-    "method": "get",
-    "path": "/api/v1/financial",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "financial"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_kbarticles",
-    "method": "get",
-    "path": "/api/v1/kb-articles",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "List knowledge base articles with optional filtering by status, audience, type, and category. Returns paginated results with article metadata and document names.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "examples": [
-      {
-        "name": "List published articles",
-        "request": {
-          "query": {
-            "status": "published",
-            "limit": 10
-          }
-        }
-      },
-      {
-        "name": "Search articles",
-        "request": {
-          "query": {
-            "search": "password reset"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_kbarticles",
-    "method": "post",
-    "path": "/api/v1/kb-articles",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "Create a new KB article. Before creating, call GET /api/v1/kb-articles/categories to find available categories. Content can be markdown text or BlockNote JSON. Articles are created in 'draft' status — call POST /api/v1/kb-articles/{id}/publish to make them visible.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "examples": [
-      {
-        "name": "Create a how-to article with markdown content",
-        "request": {
-          "body": {
-            "title": "How to Reset User Password",
-            "article_type": "how_to",
-            "audience": "internal",
-            "content": "# Steps\n\n1. Navigate to Settings > Users\n2. Find the user\n3. Click Reset Password\n4. The user will receive an email with a reset link",
-            "content_format": "markdown"
-          }
-        }
-      },
-      {
-        "name": "Create a troubleshooting article for clients",
-        "request": {
-          "body": {
-            "title": "VPN Connection Issues",
-            "article_type": "troubleshooting",
-            "audience": "client",
-            "content": "# Problem\n\nVPN disconnects frequently.\n\n# Solution\n\n1. Check your internet connection\n2. Restart the VPN client\n3. If the issue persists, contact support",
-            "content_format": "markdown"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "id": "get-_api_v1_kbarticles_categories",
-    "method": "get",
-    "path": "/api/v1/kb-articles/categories",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "List available categories for KB articles. Call this before creating articles to find the right category_id.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_kbarticles_fromticket_ticketid",
-    "method": "post",
-    "path": "/api/v1/kb-articles/from-ticket/{ticketId}",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "ticketId",
-        "in": "path",
-        "required": true,
-        "description": "TicketId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_kbarticles_templates",
-    "method": "get",
-    "path": "/api/v1/kb-articles/templates",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "List KB article templates. Templates provide pre-built content structures for different article types.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_kbarticles_id",
-    "method": "get",
-    "path": "/api/v1/kb-articles/{id}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "Get a KB article by ID, including its document name and block content data.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_kbarticles_id",
-    "method": "put",
-    "path": "/api/v1/kb-articles/{id}",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "description": "Update KB article metadata (title, slug, type, audience, category, status). To update the article body content, use PUT /api/v1/kb-articles/{id}/content instead.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_kbarticles_id",
-    "method": "delete",
-    "path": "/api/v1/kb-articles/{id}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_kbarticles_id_archive",
-    "method": "post",
-    "path": "/api/v1/kb-articles/{id}/archive",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_kbarticles_id_content",
-    "method": "get",
-    "path": "/api/v1/kb-articles/{id}/content",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_kbarticles_id_content",
-    "method": "put",
-    "path": "/api/v1/kb-articles/{id}/content",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "description": "Update the body content of a KB article. Send content as markdown (default) or BlockNote JSON. Markdown is recommended for AI-generated content.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "examples": [
-      {
-        "name": "Update content with markdown",
-        "request": {
-          "body": {
-            "content": "# Updated Article\n\nNew content goes here.",
-            "format": "markdown"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_kbarticles_id_publish",
-    "method": "post",
-    "path": "/api/v1/kb-articles/{id}/publish",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "Publish a KB article. Sets status to 'published' and auto-enables client visibility for client/public audience articles.",
-    "tags": [
-      "kb-articles"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -51736,67 +56027,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "get-_api_v1_priorities",
-    "method": "get",
-    "path": "/api/v1/priorities",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "priorities"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_priorities_id",
-    "method": "get",
-    "path": "/api/v1/priorities/{id}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "priorities"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_software_search",
-    "method": "get",
-    "path": "/api/v1/software/search",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "software"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
     "id": "get-_api_v1_storage_namespaces_namespace_records",
     "method": "get",
     "path": "/api/v1/storage/namespaces/{namespace}/records",
@@ -52281,6 +56511,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_tenantmanagement_addons",
+    "method": "get",
+    "path": "/api/v1/tenant-management/addons",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "tenant-management"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
     "id": "get-_api_v1_tenantmanagement_audit",
     "method": "get",
     "path": "/api/v1/tenant-management/audit",
@@ -52527,300 +56774,24 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "get-_api_v1_tickets_priorities",
-    "method": "get",
-    "path": "/api/v1/tickets/priorities",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tickets_statuses",
-    "method": "get",
-    "path": "/api/v1/tickets/statuses",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_tickets_id_comments_commentid",
-    "method": "put",
-    "path": "/api/v1/tickets/{id}/comments/{commentId}",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "commentId",
-        "in": "path",
-        "required": true,
-        "description": "CommentId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tickets_id_comments_commentid_reactions",
+    "id": "post-_api_v1_tenantmanagement_tenants_tenantid_addons",
     "method": "post",
-    "path": "/api/v1/tickets/{id}/comments/{commentId}/reactions",
+    "path": "/api/v1/tenant-management/tenants/{tenantId}/addons",
     "displayName": "POST v1",
     "summary": "POST v1",
     "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "tickets"
+      "tenant-management"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "id",
+        "name": "tenantId",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "commentId",
-        "in": "path",
-        "required": true,
-        "description": "CommentId path parameter.",
+        "description": "TenantId path parameter.",
         "schema": {
           "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tickets_id_documents",
-    "method": "get",
-    "path": "/api/v1/tickets/{id}/documents",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tickets_id_documents",
-    "method": "post",
-    "path": "/api/v1/tickets/{id}/documents",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tickets_id_documents_documentid",
-    "method": "get",
-    "path": "/api/v1/tickets/{id}/documents/{documentId}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "documentId",
-        "in": "path",
-        "required": true,
-        "description": "DocumentId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_tickets_id_documents_documentid",
-    "method": "delete",
-    "path": "/api/v1/tickets/{id}/documents/{documentId}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "documentId",
-        "in": "path",
-        "required": true,
-        "description": "DocumentId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tickets_id_materials",
-    "method": "get",
-    "path": "/api/v1/tickets/{id}/materials",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tickets_id_materials",
-    "method": "post",
-    "path": "/api/v1/tickets/{id}/materials",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
         }
       }
     ],
@@ -52929,934 +56900,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {}
     },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowdefinitions",
-    "method": "get",
-    "path": "/api/workflow-definitions",
-    "displayName": "GET workflow-definitions",
-    "summary": "GET workflow-definitions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowdefinitions",
-    "method": "post",
-    "path": "/api/workflow-definitions",
-    "displayName": "POST workflow-definitions",
-    "summary": "POST workflow-definitions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowdefinitions_import",
-    "method": "post",
-    "path": "/api/workflow-definitions/import",
-    "displayName": "POST workflow-definitions",
-    "summary": "POST workflow-definitions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowdefinitions_workflowid_audit",
-    "method": "get",
-    "path": "/api/workflow-definitions/{workflowId}/audit",
-    "displayName": "GET workflow-definitions",
-    "summary": "GET workflow-definitions",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowdefinitions_workflowid_audit_export",
-    "method": "get",
-    "path": "/api/workflow-definitions/{workflowId}/audit/export",
-    "displayName": "GET workflow-definitions",
-    "summary": "GET workflow-definitions",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowdefinitions_workflowid_export",
-    "method": "get",
-    "path": "/api/workflow-definitions/{workflowId}/export",
-    "displayName": "GET workflow-definitions",
-    "summary": "GET workflow-definitions",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_workflowdefinitions_workflowid_metadata",
-    "method": "put",
-    "path": "/api/workflow-definitions/{workflowId}/metadata",
-    "displayName": "PUT workflow-definitions",
-    "summary": "PUT workflow-definitions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowdefinitions_workflowid_versions",
-    "method": "get",
-    "path": "/api/workflow-definitions/{workflowId}/versions",
-    "displayName": "GET workflow-definitions",
-    "summary": "GET workflow-definitions",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowdefinitions_workflowid_version",
-    "method": "get",
-    "path": "/api/workflow-definitions/{workflowId}/{version}",
-    "displayName": "GET workflow-definitions",
-    "summary": "GET workflow-definitions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "version",
-        "in": "path",
-        "required": true,
-        "description": "Version path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_workflowdefinitions_workflowid_version",
-    "method": "put",
-    "path": "/api/workflow-definitions/{workflowId}/{version}",
-    "displayName": "PUT workflow-definitions",
-    "summary": "PUT workflow-definitions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "version",
-        "in": "path",
-        "required": true,
-        "description": "Version path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowdefinitions_workflowid_version_publish",
-    "method": "post",
-    "path": "/api/workflow-definitions/{workflowId}/{version}/publish",
-    "displayName": "POST workflow-definitions",
-    "summary": "POST workflow-definitions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-definitions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "workflowId",
-        "in": "path",
-        "required": true,
-        "description": "WorkflowId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "version",
-        "in": "path",
-        "required": true,
-        "description": "Version path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns",
-    "method": "get",
-    "path": "/api/workflow-runs",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowruns",
-    "method": "post",
-    "path": "/api/workflow-runs",
-    "displayName": "POST workflow-runs",
-    "summary": "POST workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_deadletter",
-    "method": "get",
-    "path": "/api/workflow-runs/dead-letter",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_export",
-    "method": "get",
-    "path": "/api/workflow-runs/export",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_latest",
-    "method": "get",
-    "path": "/api/workflow-runs/latest",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_summary",
-    "method": "get",
-    "path": "/api/workflow-runs/summary",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_runid",
-    "method": "get",
-    "path": "/api/workflow-runs/{runId}",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_runid_audit",
-    "method": "get",
-    "path": "/api/workflow-runs/{runId}/audit",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_runid_audit_export",
-    "method": "get",
-    "path": "/api/workflow-runs/{runId}/audit/export",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowruns_runid_cancel",
-    "method": "post",
-    "path": "/api/workflow-runs/{runId}/cancel",
-    "displayName": "POST workflow-runs",
-    "summary": "POST workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_runid_export",
-    "method": "get",
-    "path": "/api/workflow-runs/{runId}/export",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowruns_runid_replay",
-    "method": "post",
-    "path": "/api/workflow-runs/{runId}/replay",
-    "displayName": "POST workflow-runs",
-    "summary": "POST workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowruns_runid_requeue",
-    "method": "post",
-    "path": "/api/workflow-runs/{runId}/requeue",
-    "displayName": "POST workflow-runs",
-    "summary": "POST workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowruns_runid_resume",
-    "method": "post",
-    "path": "/api/workflow-runs/{runId}/resume",
-    "displayName": "POST workflow-runs",
-    "summary": "POST workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflowruns_runid_retry",
-    "method": "post",
-    "path": "/api/workflow-runs/{runId}/retry",
-    "displayName": "POST workflow-runs",
-    "summary": "POST workflow-runs",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_runid_steps",
-    "method": "get",
-    "path": "/api/workflow-runs/{runId}/steps",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_runid_summary",
-    "method": "get",
-    "path": "/api/workflow-runs/{runId}/summary",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflowruns_runid_timeline",
-    "method": "get",
-    "path": "/api/workflow-runs/{runId}/timeline",
-    "displayName": "GET workflow-runs",
-    "summary": "GET workflow-runs",
-    "tags": [
-      "workflow-runs"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_events",
-    "method": "get",
-    "path": "/api/workflow/events",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_workflow_events",
-    "method": "post",
-    "path": "/api/workflow/events",
-    "displayName": "POST workflow",
-    "summary": "POST workflow",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_events_export",
-    "method": "get",
-    "path": "/api/workflow/events/export",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_events_summary",
-    "method": "get",
-    "path": "/api/workflow/events/summary",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_events_eventid",
-    "method": "get",
-    "path": "/api/workflow/events/{eventId}",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "eventId",
-        "in": "path",
-        "required": true,
-        "description": "EventId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_registry_actions",
-    "method": "get",
-    "path": "/api/workflow/registry/actions",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_registry_designercatalog",
-    "method": "get",
-    "path": "/api/workflow/registry/designer-catalog",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_registry_nodes",
-    "method": "get",
-    "path": "/api/workflow/registry/nodes",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_workflow_registry_schemas_schemaref",
-    "method": "get",
-    "path": "/api/workflow/registry/schemas/{schemaRef}",
-    "displayName": "GET workflow",
-    "summary": "GET workflow",
-    "tags": [
-      "workflow"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "schemaRef",
-        "in": "path",
-        "required": true,
-        "description": "SchemaRef path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
