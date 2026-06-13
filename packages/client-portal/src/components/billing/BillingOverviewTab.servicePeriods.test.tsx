@@ -77,6 +77,7 @@ describe('BillingOverviewTab recurring service periods', () => {
             service_period_end: '2026-02-01' as any,
           },
         ] as any}
+        quotes={[]}
         bucketUsage={[]}
         isBucketUsageLoading={false}
         isLoading={false}
@@ -124,6 +125,7 @@ describe('BillingOverviewTab recurring service periods', () => {
             currencyCode: 'USD',
           },
         ] as any}
+        quotes={[]}
         bucketUsage={[]}
         isBucketUsageLoading={false}
         isLoading={false}

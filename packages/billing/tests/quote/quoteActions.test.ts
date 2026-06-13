@@ -16,8 +16,9 @@ const currentUser = {
   roles: [],
 };
 
-const mockTrx = { scope: 'trx' };
 const mockKnex: any = vi.fn();
+// Callable so authorization lookups can run table queries on the transaction.
+const mockTrx: any = Object.assign((table: string) => mockKnex(table), { scope: 'trx' });
 mockKnex.transaction = async (handler: (trx: typeof mockTrx) => Promise<unknown>) => handler(mockTrx);
 const createTenantKnex = vi.fn();
 const hasPermissionMock = vi.fn();
@@ -34,6 +35,18 @@ const makeQuery = (result: any) => {
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
   chain.first = vi.fn(async () => result);
+  return chain;
+};
+
+// Awaitable list query for the authorization-subject lookups in quoteActions
+// (user_roles/team_members/users), which await the chain directly.
+const makeListQuery = (rows: any[]) => {
+  const chain: any = {};
+  chain.select = vi.fn(() => chain);
+  chain.where = vi.fn(() => chain);
+  chain.first = vi.fn(async () => rows[0]);
+  chain.then = (onFulfilled: any, onRejected: any) => Promise.resolve(rows).then(onFulfilled, onRejected);
+  chain.catch = (onRejected: any) => Promise.resolve(rows).catch(onRejected);
   return chain;
 };
 
@@ -75,6 +88,15 @@ vi.mock('../../src/services', () => ({
     generatePDF: (...args: any[]) => generatePDFMock(...args),
     generateAndStore: (...args: any[]) => generateAndStoreMock(...args),
   })),
+}));
+
+vi.mock('@alga-psa/documents/models', () => ({
+  Document: {
+    insert: (...args: any[]) => documentInsertMock(...args),
+  },
+  DocumentAssociation: {
+    create: (...args: any[]) => documentAssociationCreateMock(...args),
+  },
 }));
 
 vi.mock('../../src/lib/documentsHelpers', () => ({
@@ -169,6 +191,9 @@ describe('quoteActions', () => {
     mockKnex.mockImplementation((table: string) => {
       if (table === 'tenants') {
         return makeQuery({ client_name: 'Acme MSP' });
+      }
+      if (table === 'user_roles' || table === 'team_members' || table === 'users') {
+        return makeListQuery([]);
       }
       throw new Error(`Unexpected mockKnex table access: ${table}`);
     });
@@ -439,8 +464,18 @@ describe('quoteActions', () => {
     await listQuotes({ is_template: true });
     await listQuotes();
 
-    expect(Quote.listByTenant).toHaveBeenNthCalledWith(1, mockKnex, TENANT_ID, { is_template: true });
-    expect(Quote.listByTenant).toHaveBeenNthCalledWith(2, mockKnex, TENANT_ID, {});
+    expect(Quote.listByTenant).toHaveBeenNthCalledWith(
+      1,
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({ is_template: true })
+    );
+    expect(Quote.listByTenant).toHaveBeenNthCalledWith(
+      2,
+      mockKnex,
+      TENANT_ID,
+      expect.not.objectContaining({ is_template: expect.anything() })
+    );
   });
 
   it('T050e: quote templates are excluded from the normal status lifecycle', async () => {
@@ -828,7 +863,7 @@ describe('quoteActions', () => {
     const { sendQuote } = await import('../../src/actions/quoteActions');
     const result = await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
 
-    expect(generatePDFMock).toHaveBeenCalledWith({ quoteId: QUOTE_ID });
+    expect(generatePDFMock).toHaveBeenCalledWith({ quoteId: QUOTE_ID, userId: USER_ID });
     expect(sendEmailMock).toHaveBeenCalled();
     expect(Quote.update).toHaveBeenCalledWith(
       mockKnex,
@@ -1043,6 +1078,9 @@ describe('quoteActions', () => {
       if (table === 'tenants') {
         return makeQuery({ client_name: 'Acme MSP' });
       }
+      if (table === 'user_roles' || table === 'team_members' || table === 'users') {
+        return makeListQuery([]);
+      }
       throw new Error(`Unexpected mockKnex table access: ${table}`);
     });
 
@@ -1070,6 +1108,9 @@ describe('quoteActions', () => {
       }
       if (table === 'tenants') {
         return makeQuery({ client_name: 'Acme MSP' });
+      }
+      if (table === 'user_roles' || table === 'team_members' || table === 'users') {
+        return makeListQuery([]);
       }
       throw new Error(`Unexpected mockKnex table access: ${table}`);
     });

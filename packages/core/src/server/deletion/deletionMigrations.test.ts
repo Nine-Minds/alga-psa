@@ -322,8 +322,11 @@ describe('invoice_template deletion blocks on invoices and clients', () => {
   });
 });
 
-describe('asset deletion blocks on maintenance schedules', () => {
-  it('canDelete is false when asset has maintenance schedules', async () => {
+describe('asset deletion does not block on related records (cascaded by deleteAsset)', () => {
+  // Maintenance schedules and ticket-entity links used to be validation
+  // blockers; they are now cascaded inside deleteAsset, so the asset config
+  // has no blocking dependencies and validation always allows deletion.
+  it('canDelete is true even when maintenance schedules exist', async () => {
     const { trx } = makeTrx(0, { asset_maintenance_schedules: 2 });
 
     const result = await validateDeletion(
@@ -333,8 +336,9 @@ describe('asset deletion blocks on maintenance schedules', () => {
       'tenant-1'
     );
 
-    expect(result.canDelete).toBe(false);
-    expect(result.dependencies.find((d) => d.type === 'maintenance_schedule')?.count).toBe(2);
+    expect(result.canDelete).toBe(true);
+    expect(result.dependencies).toHaveLength(0);
+    expect(result.alternatives).toHaveLength(0);
   });
 
   it('history, import mappings, and import job items are cleaned up, not blockers', async () => {
@@ -348,19 +352,6 @@ describe('asset deletion blocks on maintenance schedules', () => {
     );
 
     expect(result.canDelete).toBe(true);
-  });
-
-  it('offers deactivate alternative when blocked', async () => {
-    const { trx } = makeTrx(0, { asset_maintenance_schedules: 1 });
-
-    const result = await validateDeletion(
-      trx,
-      DELETION_CONFIGS.asset,
-      'asset-1',
-      'tenant-1'
-    );
-
-    expect(result.alternatives.some((a) => a.action === 'deactivate')).toBe(true);
   });
 });
 

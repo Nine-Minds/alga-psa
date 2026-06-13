@@ -18,7 +18,7 @@ describe('client portal TicketDetails origin badge contract', () => {
 
     expect(resolvedOrigin).toBe(TICKET_ORIGINS.API);
     expect(source).toContain('<TicketOriginBadge');
-    expect(source).toContain("api: t('tickets.origin.api', 'Created via API')");
+    expect(source).toContain("api: t('origin.api', 'Created via API')");
   });
 
   it('T053: client portal TicketDetails renders all other origin badges correctly (internal/client_portal/inbound_email)', () => {
@@ -28,9 +28,9 @@ describe('client portal TicketDetails origin badge contract', () => {
     expect(getTicketOrigin({ ticket_origin: 'client_portal' })).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
     expect(getTicketOrigin({ ticket_origin: 'inbound_email' })).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
 
-    expect(source).toContain("internal: t('tickets.origin.internal', 'Created Internally')");
-    expect(source).toContain("clientPortal: t('tickets.origin.clientPortal', 'Created via Client Portal')");
-    expect(source).toContain("inboundEmail: t('tickets.origin.inboundEmail', 'Created via Inbound Email')");
+    expect(source).toContain("internal: t('origin.internal', 'Created Internally')");
+    expect(source).toContain("clientPortal: t('origin.clientPortal', 'Created via Client Portal')");
+    expect(source).toContain("inboundEmail: t('origin.inboundEmail', 'Created via Inbound Email')");
   });
 
   it('T071: existing response-state badge behavior remains unchanged in client portal ticket details', () => {

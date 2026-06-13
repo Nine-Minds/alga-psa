@@ -9,9 +9,8 @@ const source = readFileSync(
 describe('renewalsQueueActions unsnooze wiring', () => {
   it('automatically transitions elapsed snoozed work items back to pending during queue refresh', () => {
     expect(source).toContain('const getTodayDateOnly = (): string => new Date().toISOString().slice(0, 10);');
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'status') ?? false");
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false");
-    expect(source).toContain('if (hasStatusColumn && hasSnoozedUntilColumn) {');
+    expect(source).toContain("await knex('client_contracts')");
+    expect(source).toContain(".whereNotNull('snoozed_until')");
     expect(source).toContain("status: 'snoozed',");
     expect(source).toContain(".andWhereNot('status', 'completed')");
     expect(source).toContain(".andWhere('snoozed_until', '<=', getTodayDateOnly())");

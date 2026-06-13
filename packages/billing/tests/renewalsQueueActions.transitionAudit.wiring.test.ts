@@ -9,16 +9,15 @@ const source = readFileSync(
 describe('renewalsQueueActions transition audit wiring', () => {
   it('records transition metadata with actor id for renewal status mutations', () => {
     expect(source).toContain("const withActionLabel = (");
-    expect(source).toContain('last_action: actionLabel');
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'last_action') ?? false");
+    expect(source).toContain('{ ...updateData, last_action: actionLabel }');
     expect(source).toContain("withActionLabel({\n                status: 'renewing',");
-    expect(source).toContain("}, hasLastActionColumn, 'mark_renewing')");
-    expect(source).toContain("}, hasLastActionColumn, 'mark_non_renewing')");
-    expect(source).toContain("withActionLabel(sourceWorkItemUpdate, hasLastActionColumn, 'create_renewal_draft')");
-    expect(source).toContain("}, hasLastActionColumn, 'snooze')");
-    expect(source).toContain("}, hasLastActionColumn, 'assign_owner')");
-    expect(source).toContain("}, hasLastActionColumn, 'complete_after_activation')");
-    expect(source).toContain("}, hasLastActionColumn, 'complete_after_non_renewal')");
+    expect(source).toContain("}, 'mark_renewing'), actorUserId");
+    expect(source).toContain("}, 'mark_non_renewing'), actorUserId");
+    expect(source).toContain("withActionLabel(sourceWorkItemUpdate, 'create_renewal_draft'), actorUserId");
+    expect(source).toContain("}, 'snooze'), actorUserId");
+    expect(source).toContain("}, 'assign_owner'), actorUserId");
+    expect(source).toContain("}, 'complete_after_activation'), actorUserId");
+    expect(source).toContain("}, 'complete_after_non_renewal'), actorUserId");
     expect(source).toContain('withActionActor(');
   });
 });

@@ -20,6 +20,27 @@ vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: any) => {
+      let value: string = typeof opts === 'string' ? opts : (opts?.defaultValue ?? key);
+      if (opts && typeof opts === 'object') {
+        for (const [k, v] of Object.entries(opts)) {
+          if (k === 'defaultValue') continue;
+          value = value.split(`{{${k}}}`).join(String(v));
+        }
+      }
+      return value;
+    },
+    i18n: { language: 'en' },
+  }),
+  useFormatters: () => ({
+    formatCurrency: (amount: number) => `$${Number(amount).toFixed(2)}`,
+    formatDate: (date: unknown) => String(date),
+    formatNumber: (value: number) => String(value),
+  }),
+}));
+
 vi.mock('@radix-ui/themes', () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Box: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -60,8 +81,22 @@ vi.mock('../../src/actions/billingClientsActions', () => ({
   getAllClientsForBilling: (...args: any[]) => getAllClientsForBillingMock(...args),
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
-  getAllContacts: (...args: any[]) => getAllContactsMock(...args),
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getContactsForPicker: (...args: any[]) => getAllContactsMock(...args),
+  getAllUsersBasic: vi.fn().mockResolvedValue([]),
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue(new Map()),
+}));
+
+vi.mock('../../src/actions/quoteRecipientActions', () => ({
+  getQuoteRecipientContacts: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('../../src/actions/billingClientLocationActions', () => ({
+  getActiveClientLocationsForBilling: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('../../src/actions/quoteDocumentTemplates', () => ({
+  getQuoteDocumentTemplates: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../src/actions/quoteActions', () => ({
@@ -69,15 +104,19 @@ vi.mock('../../src/actions/quoteActions', () => ({
   convertQuoteToBoth: vi.fn(),
   convertQuoteToContract: vi.fn(),
   convertQuoteToInvoice: vi.fn(),
+  createQuoteRevision: vi.fn(),
   deleteQuote: vi.fn(),
+  downloadQuotePdf: vi.fn(),
   duplicateQuote: vi.fn(),
   getQuote: (...args: any[]) => getQuoteMock(...args),
   getQuoteApprovalSettings: (...args: any[]) => getQuoteApprovalSettingsMock(...args),
   getQuoteConversionPreview: vi.fn(),
   listQuoteVersions: (...args: any[]) => listQuoteVersionsMock(...args),
+  renderQuotePreview: vi.fn(),
   requestQuoteApprovalChanges: vi.fn(),
   resendQuote: vi.fn(),
   saveQuoteAsTemplate: vi.fn(),
+  sendQuote: vi.fn(),
   sendQuoteReminder: vi.fn(),
   submitQuoteForApproval: vi.fn(),
   updateQuote: vi.fn(),

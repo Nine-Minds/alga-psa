@@ -7,11 +7,10 @@ const source = readFileSync(
 );
 
 describe('renewalsQueueActions timestamp audit wiring', () => {
-  it('persists action timestamps on queue mutations when last_action_at column is available', () => {
+  it('persists action timestamps on queue mutations', () => {
     expect(source).toContain('const withActionTimestamp = (');
-    expect(source).toContain('last_action_at: actionAt');
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false");
-    expect(source).toContain('hasLastActionAtColumn');
+    expect(source).toContain('{ ...updateData, last_action_at: actionAt }');
+    expect(source).toContain('actionAt: string');
     expect(source).toContain('withActionTimestamp(');
   });
 });

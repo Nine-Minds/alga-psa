@@ -167,22 +167,26 @@ describe('deletion configs', () => {
     }
   });
 
-  it('ticket_entity_link blocker on project and asset', async () => {
-    for (const [entityType, entityKey] of [['project', 'project'], ['asset', 'asset']] as const) {
-      const dep = DELETION_CONFIGS[entityKey].dependencies.find((d) => d.type === 'ticket_entity_link');
-      expect(dep, `${entityKey} should have ticket_entity_link dep`).toBeDefined();
-      expect(dep?.table).toBe('ticket_entity_links');
-      expect(dep?.countQuery).toBeDefined();
+  it('ticket_entity_link blocker on project', async () => {
+    const dep = DELETION_CONFIGS.project.dependencies.find((d) => d.type === 'ticket_entity_link');
+    expect(dep, 'project should have ticket_entity_link dep').toBeDefined();
+    expect(dep?.table).toBe('ticket_entity_links');
+    expect(dep?.countQuery).toBeDefined();
 
-      const { trx, builder } = makeTrx();
-      await dep?.countQuery?.(trx, { tenant: 't', entityId: 'id-1' });
-      expect(trx).toHaveBeenCalledWith('ticket_entity_links');
-      expect(builder.where).toHaveBeenCalledWith({
-        tenant: 't',
-        entity_id: 'id-1',
-        entity_type: entityType
-      });
-    }
+    const { trx, builder } = makeTrx();
+    await dep?.countQuery?.(trx, { tenant: 't', entityId: 'id-1' });
+    expect(trx).toHaveBeenCalledWith('ticket_entity_links');
+    expect(builder.where).toHaveBeenCalledWith({
+      tenant: 't',
+      entity_id: 'id-1',
+      entity_type: 'project'
+    });
+  });
+
+  it('asset config has no blocking dependencies (cascaded by deleteAsset)', () => {
+    // Maintenance schedules and ticket-entity links are cascaded inside
+    // deleteAsset rather than blocking deletion validation.
+    expect(DELETION_CONFIGS.asset.dependencies).toEqual([]);
   });
 });
 

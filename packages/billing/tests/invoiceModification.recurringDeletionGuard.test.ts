@@ -52,7 +52,9 @@ vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<any>('@alga-psa/db');
   return {
     ...actual,
-    createTenantKnex: vi.fn(async () => ({ knex: {} })),
+    // knex must be callable: hardDeleteInvoice queries
+    // tenant_external_entity_mappings directly before opening the transaction.
+    createTenantKnex: vi.fn(async () => ({ knex: createMockTrx() })),
     withTransaction: vi.fn(async (_knex: any, callback: any) => callback(createMockTrx())),
   };
 });

@@ -57,7 +57,12 @@ describe('client portal dashboard visibility enforcement', () => {
           return ticketsQuery;
         }
 
-        if (table === 'projects' || table === 'invoices' || table === 'assets') {
+        if (
+          table === 'projects' ||
+          table === 'invoices' ||
+          table === 'assets' ||
+          table === 'service_request_submissions'
+        ) {
           return {
             where: vi.fn().mockReturnThis(),
             whereNull: vi.fn().mockReturnThis(),

@@ -14,7 +14,7 @@ describe('renewalsQueueActions note sanitization wiring', () => {
     expect(source).toContain(".replace(/[\\u0000-\\u001F\\u007F]/g, ' ')");
     expect(source).toContain(".replace(/\\s+/g, ' ')");
     expect(source).toContain('const trimmed = sanitizeActionNoteText(note);');
-    expect(source).toContain('hasLastActionNoteColumn && note');
-    expect(source).toContain('last_action_note: note');
+    expect(source).toContain('? { ...updateData, last_action_note: note }');
+    expect(source).toContain('return trimmed.length > 0 ? trimmed : null;');
   });
 });

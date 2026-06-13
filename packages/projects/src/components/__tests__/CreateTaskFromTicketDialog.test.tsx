@@ -1,16 +1,18 @@
 /* @vitest-environment jsdom */
 /// <reference types="@testing-library/jest-dom/vitest" />
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import CreateTaskFromTicketDialog from '../CreateTaskFromTicketDialog';
+import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
 
 const getProjectsMock = vi.fn();
 const getProjectDetailsMock = vi.fn();
 const openDrawerMock = vi.fn();
-let lastTaskQuickAddProps: any = null;
 
-vi.mock('../actions/projectActions', () => ({
+vi.mock('../../actions/projectActions', () => ({
   getProjects: (...args: unknown[]) => getProjectsMock(...args),
   getProjectDetails: (...args: unknown[]) => getProjectDetailsMock(...args)
 }));
@@ -19,26 +21,28 @@ vi.mock('@alga-psa/ui', () => ({
   useDrawer: () => ({ openDrawer: openDrawerMock, closeDrawer: vi.fn() })
 }));
 
-vi.mock('./TaskQuickAdd', () => ({
+vi.mock('../TaskQuickAdd', () => ({
   __esModule: true,
-  default: (props: any) => {
-    lastTaskQuickAddProps = props;
-    return <div data-testid="task-quick-add" />;
-  }
+  default: () => <div data-testid="task-quick-add" />
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: any) => (isOpen ? <div>{children}</div> : null),
-  DialogContent: ({ children }: any) => <div>{children}</div>
+  Dialog: ({ isOpen, children, title, footer }: any) =>
+    isOpen ? (
+      <div>
+        <div>{title}</div>
+        {children}
+        {footer}
+      </div>
+    ) : null
 }));
 
-vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  __esModule: true,
-  default: ({ id, value, options, onValueChange, disabled }: any) => (
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
+  SearchableSelect: ({ id, value, options, onChange, disabled }: any) => (
     <select
       data-testid={id}
       value={value}
-      onChange={(event) => onValueChange(event.target.value)}
+      onChange={(event) => onChange(event.target.value)}
       disabled={disabled}
     >
       <option value="" />
@@ -52,23 +56,57 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  Checkbox: ({ checked, onChange, id }: any) => (
-    <input
-      id={id}
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-    />
+  Checkbox: ({ checked, onChange, id, label }: any) => (
+    <label>
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+      />
+      {label}
+    </label>
   )
 }));
 
+function createMockTicketIntegration(
+  overrides: Partial<TicketIntegrationContextType> = {}
+): TicketIntegrationContextType {
+  return {
+    getTicketsForList: vi.fn().mockResolvedValue([]),
+    getConsolidatedTicketData: vi.fn().mockResolvedValue({}),
+    getTicketCategories: vi.fn().mockResolvedValue([]),
+    getAllBoards: vi.fn().mockResolvedValue([]),
+    openTicketInDrawer: vi.fn().mockResolvedValue(undefined),
+    renderQuickAddTicket: vi.fn().mockReturnValue(null),
+    renderCategoryPicker: vi.fn().mockReturnValue(null),
+    renderPrioritySelect: vi.fn().mockReturnValue(null),
+    deleteTicket: vi.fn(),
+    ...overrides,
+  };
+}
+
+/** Dig the TaskQuickAdd element props out of the element passed to openDrawer. */
+function getDrawerTaskQuickAddProps(): any {
+  expect(openDrawerMock).toHaveBeenCalled();
+  const drawerElement = openDrawerMock.mock.calls[openDrawerMock.mock.calls.length - 1][0];
+  // openDrawer receives <TicketIntegrationProvider><TaskQuickAdd .../></TicketIntegrationProvider>
+  return drawerElement.props.children.props;
+}
+
+afterEach(() => {
+  cleanup();
+});
+
 describe('CreateTaskFromTicketDialog', () => {
+  let mockCtx: TicketIntegrationContextType;
+
   beforeEach(() => {
-    lastTaskQuickAddProps = null;
-    openDrawerMock.mockReset();
+    vi.clearAllMocks();
+    mockCtx = createMockTicketIntegration();
     getProjectsMock.mockResolvedValue([
-      { project_id: 'project-1', project_name: 'Project One', client_id: 'client-1' },
-      { project_id: 'project-2', project_name: 'Project Two', client_id: 'client-2' }
+      { project_id: 'project-2', project_name: 'Project Two', client_id: 'client-2' },
+      { project_id: 'project-1', project_name: 'Project One', client_id: 'client-1' }
     ]);
     getProjectDetailsMock.mockResolvedValue({
       phases: [
@@ -114,36 +152,52 @@ describe('CreateTaskFromTicketDialog', () => {
     client_id: 'client-1'
   };
 
+  function renderDialog() {
+    return render(
+      <TicketIntegrationProvider value={mockCtx}>
+        <CreateTaskFromTicketDialog ticket={ticket} />
+      </TicketIntegrationProvider>
+    );
+  }
+
   it('renders project selector with projects list', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
     await waitFor(() => expect(getProjectsMock).toHaveBeenCalled());
 
-    const projectSelect = screen.getByTestId('create-task-project');
+    const projectSelect = await screen.findByTestId('create-task-project');
     expect(projectSelect).toBeInTheDocument();
-    expect(projectSelect.querySelectorAll('option').length).toBeGreaterThan(1);
+    await waitFor(() =>
+      expect(projectSelect.querySelectorAll('option').length).toBeGreaterThan(1)
+    );
   });
 
-  it('filters projects by ticket client when possible', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+  it('sorts client-matching projects first', async () => {
+    renderDialog();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
     await waitFor(() => expect(getProjectsMock).toHaveBeenCalled());
-    const options = Array.from(screen.getByTestId('create-task-project').querySelectorAll('option'));
-    const values = options.map(option => option.getAttribute('value'));
-    expect(values).toContain('project-1');
-    expect(values).not.toContain('project-2');
+    await waitFor(() => {
+      const options = Array.from(
+        screen.getByTestId('create-task-project').querySelectorAll('option')
+      );
+      const values = options
+        .map(option => option.getAttribute('value'))
+        .filter(value => value);
+      expect(values).toEqual(['project-1', 'project-2']);
+    });
   });
 
   it('fetches phases and statuses when project is selected', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
     await waitFor(() => expect(getProjectsMock).toHaveBeenCalled());
 
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('create-task-project'), {
       target: { value: 'project-1' }
     });
@@ -152,9 +206,10 @@ describe('CreateTaskFromTicketDialog', () => {
   });
 
   it('populates phase selector from fetched phases', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('create-task-project'), {
       target: { value: 'project-1' }
     });
@@ -163,9 +218,10 @@ describe('CreateTaskFromTicketDialog', () => {
   });
 
   it('populates status selector from fetched statuses', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('create-task-project'), {
       target: { value: 'project-1' }
     });
@@ -174,7 +230,7 @@ describe('CreateTaskFromTicketDialog', () => {
   });
 
   it('auto-link checkbox defaults to checked', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
     const checkbox = screen.getByLabelText('Link ticket to the created task') as HTMLInputElement;
@@ -182,9 +238,10 @@ describe('CreateTaskFromTicketDialog', () => {
   });
 
   it('opens TaskQuickAdd in drawer with mapped prefillData', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('create-task-project'), { target: { value: 'project-1' } });
 
     await waitFor(() => expect(screen.getByTestId('create-task-phase').querySelectorAll('option').length).toBeGreaterThan(1));
@@ -195,13 +252,14 @@ describe('CreateTaskFromTicketDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(openDrawerMock).toHaveBeenCalled();
-    expect(lastTaskQuickAddProps.prefillData.task_name).toBe('Printer issue');
+    expect(getDrawerTaskQuickAddProps().prefillData.task_name).toBe('Printer issue');
   });
 
   it('includes pendingTicketLink when auto-link is on', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('create-task-project'), { target: { value: 'project-1' } });
     await waitFor(() => expect(screen.getByTestId('create-task-phase').querySelectorAll('option').length).toBeGreaterThan(1));
 
@@ -210,13 +268,14 @@ describe('CreateTaskFromTicketDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(lastTaskQuickAddProps.prefillData.pendingTicketLink).toBeDefined();
+    expect(getDrawerTaskQuickAddProps().prefillData.pendingTicketLink).toBeDefined();
   });
 
   it('omits pendingTicketLink when auto-link is off', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('create-task-project'), { target: { value: 'project-1' } });
     await waitFor(() => expect(screen.getByTestId('create-task-phase').querySelectorAll('option').length).toBeGreaterThan(1));
 
@@ -227,13 +286,14 @@ describe('CreateTaskFromTicketDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(lastTaskQuickAddProps.prefillData.pendingTicketLink).toBeUndefined();
+    expect(getDrawerTaskQuickAddProps().prefillData.pendingTicketLink).toBeUndefined();
   });
 
   it('E2E: opens drawer with prefilled task on create', async () => {
-    render(<CreateTaskFromTicketDialog ticket={ticket} />);
+    renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
 
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
     fireEvent.change(screen.getByTestId('create-task-project'), { target: { value: 'project-1' } });
     await waitFor(() => expect(screen.getByTestId('create-task-phase').querySelectorAll('option').length).toBeGreaterThan(1));
 

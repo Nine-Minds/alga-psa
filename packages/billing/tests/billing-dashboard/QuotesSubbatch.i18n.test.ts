@@ -143,7 +143,7 @@ describe('Quotes i18n wiring contract', () => {
       'quoteDetail.sections.quoteLayout',
       'quoteDetail.sections.versionHistory',
       'quoteDetail.sections.activityLog',
-      'quoteDetail.actions.backToQuotes',
+      'quoteDetail.actions.back',
       'quoteDetail.actions.openConvertedContract',
       'quoteDetail.alerts.clientConfigurationSubmitted',
       'quoteDetail.clientSelections.selectedOptionalItem',

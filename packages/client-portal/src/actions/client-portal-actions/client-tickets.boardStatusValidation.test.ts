@@ -54,6 +54,10 @@ vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
 }));
 
+vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
+  publishTicketUpdate: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getUserAvatarUrlAction: vi.fn().mockResolvedValue(null),
   getContactAvatarUrlAction: vi.fn().mockResolvedValue(null),
@@ -90,6 +94,19 @@ function createClientPortalTrx(overrides: {
             first: vi.fn().mockResolvedValue(overrides.defaultBoard ?? null),
           }),
         };
+      }
+
+      if (table === 'tickets as t') {
+        const builder: any = {
+          select: vi.fn(() => builder),
+          where: vi.fn(() => builder),
+          modify: vi.fn((cb: (query: any) => void) => {
+            cb(builder);
+            return builder;
+          }),
+          first: vi.fn().mockResolvedValue(overrides.ticket ?? null),
+        };
+        return builder;
       }
 
       if (table === 'tickets') {

@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom/vitest';
 
 let mockDraftContracts: any[] = [];
 let mockDraftResumeData: any = {};
@@ -26,15 +27,42 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
+// Interpolating t() mock so messages like 'delete the draft "{{contractName}}"'
+// render with their values instead of raw placeholders.
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: string | (Record<string, unknown> & { defaultValue?: string })) => {
+      if (typeof opts === 'string') {
+        return opts;
+      }
+      let result = typeof opts?.defaultValue === 'string' ? opts.defaultValue : key;
+      if (opts) {
+        for (const [name, value] of Object.entries(opts)) {
+          if (name === 'defaultValue') continue;
+          result = result.split(`{{${name}}}`).join(String(value));
+        }
+      }
+      return result;
+    },
+  }),
+  useFormatters: () => ({
+    formatDate: (value: unknown) => String(value),
+    formatCurrency: (value: number) => `$${value}`,
+  }),
+}));
+
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   default: ({
     tabs,
     defaultTab,
   }: {
-    tabs: Array<{ label: string; content: React.ReactNode }>;
+    tabs: Array<{ id?: string; label: string; content: React.ReactNode }>;
     defaultTab: string;
   }) => {
-    const tab = tabs.find((t) => t.label === defaultTab) ?? tabs[0];
+    const tab =
+      tabs.find((t) => t.id === defaultTab)
+      ?? tabs.find((t) => t.label === defaultTab)
+      ?? tabs[0];
     return (
       <div>
         <div>
@@ -943,7 +971,9 @@ describe('Drafts tab DataTable', () => {
     });
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Delete failed');
+      // Discard failures route through handleError, which prefers the provided
+      // fallback message over the raw error message.
+      expect(toast.error).toHaveBeenCalledWith('Failed to discard draft');
     });
     expect(toast.success).not.toHaveBeenCalled();
   });

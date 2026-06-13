@@ -11,7 +11,7 @@ describe('renewalsQueueActions completion-on-activation wiring', () => {
     expect(source).toContain('export type RenewalCompletionResult = RenewalQueueMutationResult & {');
     expect(source).toContain('export const completeRenewalQueueItemForActivation = withAuth(async (');
     expect(source).toContain("throw new Error('Client contract id is required');");
-    expect(source).toContain("throw new Error('Renewals queue status column is not available');");
+    expect(source).toContain("throw new Error('Cross-tenant activated contract identifier is not allowed');");
     expect(source).toContain("throw new Error('Renewal work item not found');");
     expect(source).toContain("if (previousStatus !== 'renewing') {");
     expect(source).toContain('Only renewing work items can be completed after activation');

@@ -43,6 +43,9 @@ describe('session utilities', () => {
 
   it('returns cookie config aligned with environment', () => {
     process.env.NODE_ENV = 'production';
+    // nx-invoked runs load the repo-root .env, which sets an http:// NEXTAUTH_URL;
+    // pin it so isSecureCookieEnvironment() reflects this test's scenario.
+    process.env.NEXTAUTH_URL = 'https://example.com';
     const config = getSessionCookieConfig();
     expect(config.options?.secure).toBe(true);
     expect(config.options?.httpOnly).toBe(true);

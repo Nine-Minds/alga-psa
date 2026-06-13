@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom/vitest';
 
 let mockDraftContracts: any[] = [];
 let mockClientContracts: any[] = [];
@@ -26,10 +27,13 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
     tabs,
     defaultTab,
   }: {
-    tabs: Array<{ label: string; content: React.ReactNode }>;
+    tabs: Array<{ id?: string; label: string; content: React.ReactNode }>;
     defaultTab: string;
   }) => {
-    const tab = tabs.find((t) => t.label === defaultTab) ?? tabs[0];
+    const tab =
+      tabs.find((t) => t.id === defaultTab)
+      ?? tabs.find((t) => t.label === defaultTab)
+      ?? tabs[0];
     return (
       <div>
         <div>{tabs.map((t) => t.label).join(' | ')}</div>

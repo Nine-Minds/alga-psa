@@ -39,6 +39,17 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError: (...args: unknown[]) => mockHandleError(...args),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      const text = typeof options?.defaultValue === 'string' ? options.defaultValue : key;
+      return text.replace(/{{\s*([^{}\s]+)\s*}}/g, (_match, name: string) =>
+        String(options?.[name] ?? '')
+      );
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => ({}),
 }));
@@ -52,11 +63,12 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, title, children }: any) =>
+  Dialog: ({ isOpen, title, children, footer }: any) =>
     isOpen ? (
       <div>
         <h1>{title}</h1>
         {children}
+        {footer}
       </div>
     ) : null,
 }));

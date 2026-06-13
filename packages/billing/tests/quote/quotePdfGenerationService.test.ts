@@ -32,18 +32,17 @@ vi.mock('../../src/models/quote', () => ({
   },
 }));
 
-vi.mock('../../src/lib/documentsHelpers', () => ({
-  getStorageProviderFactoryAsync: async () => ({
-    StorageProviderFactory: {
-      createProvider: async () => ({
-        upload: (...args: any[]) => uploadMock(...args),
-      }),
-    },
-    generateStoragePath: (...parts: string[]) => parts.join('/'),
-  }),
-  getFileStoreModelAsync: async () => ({
+vi.mock('@alga-psa/storage', () => ({
+  StorageProviderFactory: {
+    createProvider: async () => ({
+      upload: (...args: any[]) => uploadMock(...args),
+    }),
+  },
+  generateStoragePath: (...parts: string[]) => parts.join('/'),
+  FileStoreModel: {
     create: (...args: any[]) => createFileStoreMock(...args),
-  }),
+    findById: vi.fn().mockResolvedValue(null),
+  },
 }));
 
 vi.mock('../../src/services/browserPoolService', () => ({
@@ -143,12 +142,12 @@ describe('quotePdfGenerationService', () => {
     expect(pdf.toString('utf8')).toContain('%PDF-quote-test');
     const browser = await getBrowserMock.mock.results[0].value;
     const page = await browser.newPage.mock.results[0].value;
-    expect(page.setContent).toHaveBeenCalledWith(expect.stringContaining('<!doctype html>'), { waitUntil: 'networkidle0' });
+    expect(page.setContent).toHaveBeenCalledWith(expect.stringContaining('<!doctype html>'), { waitUntil: 'load' });
   });
 
   it('T084: stores generated file in file storage and returns file_id', async () => {
     const service = createPDFGenerationService(TENANT_ID);
-    const result = await service.generateAndStore({ quoteId: QUOTE_ID, userId: USER_ID });
+    const result = await service.generateAndStore({ quoteId: QUOTE_ID, quoteNumber: 'Q-0042', userId: USER_ID });
 
     expect(uploadMock).toHaveBeenCalledWith(expect.any(Buffer), '22222222-2222-4222-8222-222222222222/pdfs/Q-0042.pdf', {
       mime_type: 'application/pdf',

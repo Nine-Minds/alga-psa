@@ -38,7 +38,7 @@ describe('invoicing generate tab recurring copy wiring', () => {
       'Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage.'
     );
     expect(automaticSource).toContain(
-      'Each row is an invoice window. Generated recurring invoices group the due service periods that land in that window.'
+      'Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.'
     );
     expect(manualSource).toContain(
       'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.'

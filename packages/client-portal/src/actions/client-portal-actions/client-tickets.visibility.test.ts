@@ -9,10 +9,13 @@ const createTenantKnexMock = vi.fn();
 const getVisibilityContextMock = vi.fn();
 const applyVisibilityBoardFilterMock = vi.fn((query) => query);
 const createTicketWithRetryMock = vi.fn();
+const getDefaultStatusIdMock = vi.fn();
 const publishEventMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
+    action(currentUser, { tenant: currentUser.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
@@ -26,11 +29,32 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/tickets/lib', () => ({
   applyVisibilityBoardFilter: (...args: any[]) => applyVisibilityBoardFilterMock(...args),
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityContextMock(...args),
+  getTicketOrigin: (ticket: any) => ticket?.ticket_origin ?? 'internal',
+  // Mirrors @alga-psa/tickets/lib/ticketStatusFilter parseTicketStatusFilterValue.
+  parseTicketStatusFilterValue: (statusId?: string | null) => {
+    if (!statusId || statusId === '__status_filter__:open') {
+      return { kind: 'open' };
+    }
+    if (statusId === '__status_filter__:all') {
+      return { kind: 'all' };
+    }
+    if (statusId === '__status_filter__:closed') {
+      return { kind: 'closed' };
+    }
+    if (statusId.startsWith('__status_name__:')) {
+      return {
+        kind: 'name',
+        statusName: decodeURIComponent(statusId.slice('__status_name__:'.length)),
+      };
+    }
+    return { kind: 'id', statusId };
+  },
 }));
 
 vi.mock('@shared/models/ticketModel', () => ({
   TicketModel: {
     createTicketWithRetry: (...args: any[]) => createTicketWithRetryMock(...args),
+    getDefaultStatusId: (...args: any[]) => getDefaultStatusIdMock(...args),
   },
 }));
 
@@ -48,6 +72,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
+  publishTicketUpdate: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -103,6 +131,7 @@ describe('client portal ticket visibility enforcement', () => {
     hasPermissionMock.mockResolvedValue(true);
     getConnectionMock.mockResolvedValue(makeConnection());
     createTenantKnexMock.mockResolvedValue({ knex: {} as any });
+    getDefaultStatusIdMock.mockResolvedValue('status-1');
   });
 
   it('T008: client portal ticket list applies the assigned visibility group boards', async () => {
@@ -222,6 +251,14 @@ describe('client portal ticket visibility enforcement', () => {
             };
           }
 
+          if (table === 'asset_associations as aa') {
+            return {
+              innerJoin: vi.fn().mockReturnThis(),
+              where: vi.fn().mockReturnThis(),
+              select: vi.fn().mockResolvedValue([]),
+            };
+          }
+
           throw new Error(`Unexpected table: ${table}`);
         },
         {
@@ -276,6 +313,14 @@ describe('client portal ticket visibility enforcement', () => {
               select: vi.fn().mockReturnThis(),
               join: vi.fn().mockReturnThis(),
               where: vi.fn().mockResolvedValue([]),
+            };
+          }
+
+          if (table === 'asset_associations as aa') {
+            return {
+              innerJoin: vi.fn().mockReturnThis(),
+              where: vi.fn().mockReturnThis(),
+              select: vi.fn().mockResolvedValue([]),
             };
           }
 

@@ -22,7 +22,12 @@ vi.mock('@alga-psa/tickets/actions/ticketFormActions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Dialog: ({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) => (
+    <div>
+      {children}
+      {footer}
+    </div>
+  ),
   DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),

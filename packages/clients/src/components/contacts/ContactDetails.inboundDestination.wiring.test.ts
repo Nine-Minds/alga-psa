@@ -25,13 +25,15 @@ describe('Contact inbound destination wiring', () => {
     expect(contactDetailsSource).toContain('const updatedContact = await updateContact(dataToUpdate);');
 
     expect(contactDetailsEditSource).toContain("id={`${id}-inbound-ticket-destination-select`}");
-    expect(contactDetailsEditSource).toContain("name=\"inbound_ticket_defaults_id\"");
+    expect(contactDetailsEditSource).toContain("value={(contact as any).inbound_ticket_defaults_id || ''}");
+    expect(contactDetailsEditSource).toContain("onValueChange={(value) => handleInputChange('inbound_ticket_defaults_id', value)}");
     expect(contactDetailsEditSource).toContain('allowClear={true}');
-    expect(contactDetailsEditSource).toContain('await onSave(updatedData);');
+    expect(contactDetailsEditSource).toContain('onSave(updatedContact);');
 
-    expect(contactActionsSource).toContain("'role', 'notes', 'inbound_ticket_defaults_id' as keyof IContact");
+    // updateContact validates a submitted override against inbound_ticket_defaults
+    // and surfaces a FOREIGN_KEY_ERROR when the destination no longer exists.
     expect(contactActionsSource).toContain(
-      "if ((key === 'client_id' || key === 'inbound_ticket_defaults_id') && value === '') {"
+      'const inboundDestinationIdRaw = (contactData as any).inbound_ticket_defaults_id;'
     );
     expect(contactActionsSource).toContain(
       "throw new Error('FOREIGN_KEY_ERROR: The selected inbound ticket destination no longer exists');"

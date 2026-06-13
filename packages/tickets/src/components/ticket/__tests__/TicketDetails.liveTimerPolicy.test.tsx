@@ -103,6 +103,12 @@ vi.mock('@alga-psa/ui/services', () => ({
 
 vi.mock('@alga-psa/ui/components', () => ({
   ResponseStateBadge: () => <div data-testid="response-state" />,
+  ContentCard: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
+    <div data-testid="content-card">
+      {title ? <div>{title}</div> : null}
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/presence/PresenceBar', () => ({

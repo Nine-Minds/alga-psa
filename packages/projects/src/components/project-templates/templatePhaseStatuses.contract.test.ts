@@ -19,17 +19,20 @@ describe('template phase status contracts', () => {
 
   it('T049/T050: template status manager and wizard support phase-aware status scopes', () => {
     expect(managerSource).toContain("const [selectedScope, setSelectedScope] = useState<string>(TEMPLATE_DEFAULT_SCOPE);");
-    expect(managerSource).toContain("{ value: TEMPLATE_DEFAULT_SCOPE, label: 'Template Defaults' },");
-    expect(managerSource).toContain('Copy Template Defaults');
-    expect(managerSource).toContain('Use Template Defaults');
+    expect(managerSource).toContain("{ value: TEMPLATE_DEFAULT_SCOPE, label: t('templates.statuses.template_defaults') },");
+    expect(managerSource).toContain('id="copy-template-default-statuses"');
+    expect(managerSource).toContain('onClick={handleEnableCustomStatuses}');
+    expect(managerSource).toContain('id="use-template-default-statuses"');
+    expect(managerSource).toContain('onClick={() => setResetToDefaultsConfirmation(true)}');
     expect(managerSource).toContain('copyTemplateStatusesToPhase(templateId, selectedTemplatePhaseId)');
     expect(managerSource).toContain('removeTemplatePhaseStatuses(templateId, selectedTemplatePhaseId)');
     expect(wizardSource).toContain("const [selectedScope, setSelectedScope] = useState<string>(TEMPLATE_DEFAULT_SCOPE);");
-    expect(wizardSource).toContain("{ value: TEMPLATE_DEFAULT_SCOPE, label: 'Template Defaults' },");
+    expect(wizardSource).toContain("{ value: TEMPLATE_DEFAULT_SCOPE, label: t('templates.statuses.template_defaults') },");
     expect(wizardSource).toContain('template_phase_id: selectedPhaseTempId || undefined,');
     expect(wizardSource).toContain('template_phase_id: selectedPhaseTempId,');
-    expect(wizardSource).toContain('Copy Template Defaults');
-    expect(wizardSource).toContain('Use Template Defaults');
+    expect(wizardSource).toContain('id="wizard-copy-default-statuses"');
+    expect(wizardSource).toContain('onClick={copyDefaultsToPhase}');
+    expect(wizardSource).toContain('id="wizard-use-default-statuses"');
   });
 
   it('T051/T052: applying a template copies phase-scoped status mappings onto the created project', () => {

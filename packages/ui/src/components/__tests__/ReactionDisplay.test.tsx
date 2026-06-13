@@ -2,11 +2,24 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
+import { initReactI18next } from 'react-i18next';
 import { ReactionDisplay } from '../ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
+
+// The component builds aria labels through react-i18next (defaultValue +
+// interpolation), so initialize a bare i18next instance for the tests.
+beforeAll(async () => {
+  await i18next.use(initReactI18next).init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: { common: {} } },
+    interpolation: { escapeValue: false },
+  });
+});
 
 // Mock the EmojiPickerPopover to avoid loading emoji-mart in tests
 vi.mock('../EmojiPickerPopover', () => ({
