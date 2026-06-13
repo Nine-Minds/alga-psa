@@ -1121,7 +1121,8 @@
         "if": "Si",
         "loop": "Bucle",
         "try": "Intentar",
-        "block": "Bloque"
+        "block": "Bloque",
+        "disconnected": "Desconectado"
       },
       "mapping": {
         "unmappedTitle": "{{count}} campos obligatorios sin mapear",
@@ -1137,7 +1138,8 @@
         "duplicateAriaLabel": "Duplicar paso {{label}}",
         "delete": "Eliminar paso"
       },
-      "forEachSummary": "Elemento: {{itemVar}} | Concurrencia: {{concurrency}}"
+      "forEachSummary": "Elemento: {{itemVar}} | Concurrencia: {{concurrency}}",
+      "disconnectedTitle": "{{group}} no está conectado; este paso fallará en tiempo de ejecución hasta que se vuelva a conectar."
     },
     "toasts": {
       "loadRegistriesFailed": "Error al cargar los registros de flujo de trabajo",
@@ -1647,6 +1649,10 @@
       "transform": "Transformar",
       "app": "Aplicación",
       "ai": "IA"
+    },
+    "disconnected": {
+      "title": "{{group}} no está conectado",
+      "message": "Los pasos que usan sus acciones fallarán en tiempo de ejecución hasta que la integración se vuelva a conectar en Configuración > Integraciones."
     }
   },
   "trigger": {

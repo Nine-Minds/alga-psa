@@ -23,6 +23,7 @@ import {
   resolveActionCallOutputSchema,
   buildWorkflowDesignerActionCatalog,
   getWorkflowIntegrationModuleRegistry,
+  resolveAvailableIntegrationModuleKeys,
   zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
@@ -211,24 +212,7 @@ const loadAvailableFirstPartyIntegrationAppKeys = async (
   knex: Knex,
   tenantId: string | null | undefined
 ): Promise<Set<string>> => {
-  if (!tenantId) return new Set();
-  const available = new Set<string>();
-  const registry = getWorkflowIntegrationModuleRegistry();
-  for (const module of registry.list()) {
-    if (!module.availabilityKey) continue;
-    if (module.availabilityKey === 'rmm:ninjaone') {
-      const row = await knex('rmm_integrations')
-        .where({
-          tenant: tenantId,
-          provider: 'ninjaone',
-          is_active: true
-        })
-        .whereNotNull('connected_at')
-        .first();
-      if (row) available.add(module.groupKey);
-    }
-  }
-  return available;
+  return resolveAvailableIntegrationModuleKeys(knex, tenantId);
 };
 
 const isEnterpriseEdition = (): boolean => {
@@ -3225,10 +3209,15 @@ export const listWorkflowDesignerActionCatalogAction = withAuth(async (user, { t
   const availableAppKeys = await loadAvailableWorkflowDesignerAppKeys(knex, tenant);
   const availableFirstPartyKeys = await loadAvailableFirstPartyIntegrationAppKeys(knex, tenant);
   const firstPartyModuleKeys: Set<string> = new Set(integrationModules.map((module) => module.groupKey));
-  return catalog.filter((record) => {
-    if (record.tileKind !== 'app') return true;
-    if (firstPartyModuleKeys.has(record.groupKey)) return availableFirstPartyKeys.has(record.groupKey);
-    return availableAppKeys.has(record.groupKey);
+  return catalog.flatMap((record) => {
+    if (record.tileKind !== 'app') return [record];
+    // First-party integration records stay in the catalog when disconnected,
+    // flagged unavailable: the palette hides them, but existing steps keep
+    // their group context so the editor can explain the disconnected state.
+    if (firstPartyModuleKeys.has(record.groupKey)) {
+      return [{ ...record, available: availableFirstPartyKeys.has(record.groupKey) }];
+    }
+    return availableAppKeys.has(record.groupKey) ? [record] : [];
   });
 });
 

@@ -999,7 +999,8 @@
         "if": "55555",
         "loop": "55555",
         "try": "55555",
-        "block": "55555"
+        "block": "55555",
+        "disconnected": "55555"
       },
       "mapping": {
         "unmappedTitle": "55555 {{count}} 55555",
@@ -1015,7 +1016,8 @@
         "duplicateAriaLabel": "55555 {{label}} 55555",
         "delete": "55555"
       },
-      "forEachSummary": "55555 {{itemVar}} 55555 {{concurrency}} 55555"
+      "forEachSummary": "55555 {{itemVar}} 55555 {{concurrency}} 55555",
+      "disconnectedTitle": "55555 {{group}} 55555"
     },
     "toasts": {
       "loadRegistriesFailed": "55555",
@@ -1525,6 +1527,10 @@
       "transform": "55555",
       "app": "55555",
       "ai": "55555"
+    },
+    "disconnected": {
+      "title": "55555 {{group}} 55555",
+      "message": "55555"
     }
   },
   "trigger": {

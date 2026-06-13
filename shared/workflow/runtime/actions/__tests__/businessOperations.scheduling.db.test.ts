@@ -570,4 +570,102 @@ describe('scheduling business operation db actions', () => {
     const assignees = await db('schedule_entry_assignees').where({ tenant: runtimeState.tenantId, entry_id: entryId });
     expect(assignees).toHaveLength(1);
   });
+
+  it('create_entry: ad-hoc multi-assignee entry persists with assignee rows and audit-friendly output', async () => {
+    const techA = await createUser(db, runtimeState.tenantId, { email: `tech-a-${Date.now()}@example.com` });
+    const techB = await createUser(db, runtimeState.tenantId, { email: `tech-b-${Date.now()}@example.com` });
+    await ensureTechnicianRole(db, runtimeState.tenantId, techA);
+    await ensureTechnicianRole(db, runtimeState.tenantId, techB);
+
+    const result = await invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [techA, techB],
+      title: 'Patch window prep',
+      window: { start: '2026-06-20T10:00:00.000Z', end: '2026-06-20T11:00:00.000Z' },
+      notes: 'Stage updates before the weekend window',
+    });
+
+    expect(result.entry_id).toBeTruthy();
+    expect(result.assigned_user_ids).toEqual(expect.arrayContaining([techA, techB]));
+    expect(result.work_item_id).toBeNull();
+    expect(result.work_item_type).toBe('ad_hoc');
+
+    const row = await db('schedule_entries').where({ tenant: runtimeState.tenantId, entry_id: result.entry_id }).first();
+    expect(row.title).toBe('Patch window prep');
+    expect(row.work_item_id).toBeNull();
+    expect(row.work_item_type).toBe('ad_hoc');
+    expect(row.status).toBe('scheduled');
+
+    const assignees = await db('schedule_entry_assignees').where({ tenant: runtimeState.tenantId, entry_id: result.entry_id });
+    expect(assignees.map((assignee: { user_id: string }) => assignee.user_id).sort()).toEqual([techA, techB].sort());
+  });
+
+  it('create_entry: validates window order, unknown users, and technician eligibility', async () => {
+    const tech = await createUser(db, runtimeState.tenantId, { email: `tech-v-${Date.now()}@example.com` });
+    await ensureTechnicianRole(db, runtimeState.tenantId, tech);
+    const nonTechnician = await createUser(db, runtimeState.tenantId, { email: `plain-${Date.now()}@example.com` });
+
+    await expect(invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [tech],
+      title: 'Backwards window',
+      window: { start: '2026-06-20T11:00:00.000Z', end: '2026-06-20T10:00:00.000Z' },
+    })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    await expect(invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [uuidv4()],
+      title: 'Ghost assignee',
+      window: { start: '2026-06-20T10:00:00.000Z', end: '2026-06-20T11:00:00.000Z' },
+    })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [nonTechnician],
+      title: 'Not a technician',
+      window: { start: '2026-06-20T10:00:00.000Z', end: '2026-06-20T11:00:00.000Z' },
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+  });
+
+  it('create_entry: conflict fail mode reports conflicting users; shift mode moves past the conflict', async () => {
+    const tech = await createUser(db, runtimeState.tenantId, { email: `tech-c-${Date.now()}@example.com` });
+    await ensureTechnicianRole(db, runtimeState.tenantId, tech);
+
+    await createScheduleEntry(db, runtimeState.tenantId, {
+      title: 'Existing booking',
+      scheduledStart: '2026-06-21T10:00:00.000Z',
+      scheduledEnd: '2026-06-21T11:00:00.000Z',
+      assignedUserIds: [tech],
+    });
+
+    await expect(invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [tech],
+      title: 'Overlapping work',
+      window: { start: '2026-06-21T10:30:00.000Z', end: '2026-06-21T11:30:00.000Z' },
+      conflict_mode: 'fail',
+    })).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { conflicting_user_ids: [tech] },
+    });
+
+    const shifted = await invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [tech],
+      title: 'Shifted work',
+      window: { start: '2026-06-21T10:30:00.000Z', end: '2026-06-21T11:30:00.000Z' },
+      conflict_mode: 'shift',
+    });
+    expect(shifted.start).toBe('2026-06-21T11:00:00.000Z');
+    expect(shifted.end).toBe('2026-06-21T12:00:00.000Z');
+  });
+
+  it('create_entry: requires user_schedule:create and mutates nothing when denied', async () => {
+    const tech = await createUser(db, runtimeState.tenantId, { email: `tech-p-${Date.now()}@example.com` });
+    await ensureTechnicianRole(db, runtimeState.tenantId, tech);
+    runtimeState.deniedPermissions.add('user_schedule:create');
+
+    await expect(invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [tech],
+      title: 'Denied',
+      window: { start: '2026-06-22T10:00:00.000Z', end: '2026-06-22T11:00:00.000Z' },
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+
+    const rows = await db('schedule_entries').where({ tenant: runtimeState.tenantId, title: 'Denied' });
+    expect(rows).toHaveLength(0);
+  });
 });

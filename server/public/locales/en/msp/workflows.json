@@ -999,7 +999,8 @@
         "if": "If",
         "loop": "Loop",
         "try": "Try",
-        "block": "Block"
+        "block": "Block",
+        "disconnected": "Disconnected"
       },
       "mapping": {
         "unmappedTitle": "{{count}} required fields are unmapped",
@@ -1015,7 +1016,8 @@
         "duplicateAriaLabel": "Duplicate {{label}} step",
         "delete": "Delete step"
       },
-      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}"
+      "forEachSummary": "Item: {{itemVar}} | Concurrency: {{concurrency}}",
+      "disconnectedTitle": "{{group}} is not connected; this step will fail at run time until it is reconnected."
     },
     "toasts": {
       "loadRegistriesFailed": "Failed to load workflow registries",
@@ -1525,6 +1527,10 @@
       "transform": "Transform",
       "app": "App",
       "ai": "AI"
+    },
+    "disconnected": {
+      "title": "{{group}} is not connected",
+      "message": "Steps using its actions will fail at run time until the integration is reconnected under Settings > Integrations."
     }
   },
   "trigger": {

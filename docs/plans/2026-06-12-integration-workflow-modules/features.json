@@ -1,0 +1,288 @@
+[
+  {
+    "id": "F001",
+    "description": "Availability resolver registry in shared/workflow/runtime/registries (sibling of integrationModuleRegistry.ts): resolver type (knex, tenantId) => Promise<boolean>, registerWorkflowModuleAvailabilityResolver(key, resolver), lookup by availabilityKey; duplicate-key registration guarded.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "loadAvailableFirstPartyIntegrationAppKeys (ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts) delegates to the resolver registry; hardcoded 'rmm:ninjaone' branch removed; missing resolver => unavailable (fail closed); resolver exceptions caught and treated as unavailable so catalog listing never throws.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "5.3"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "rmmIntegrationAvailability(provider) resolver factory: rmm_integrations row for (tenant, provider) with is_active = true and connected_at IS NOT NULL.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "registerIntegrationWorkflowModule({ module, availability, registerActions }) helper in ee/packages/workflows: registers actions, module tile, and availability resolver in one idempotent call (re-invocation does not duplicate module or actions).",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "NinjaOne migrated onto registerIntegrationWorkflowModule + rmmIntegrationAvailability('ninjaone'); module registration removed from core.ts inline block; palette/catalog output identical before and after for connected and disconnected tenants.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "FetchNinjaOneWorkflowClient gains runScript (POST /v2/device/{id}/script/run with type SCRIPT|ACTION, script id/uid, parameters, runAs) and scripting-options discovery (verify exact path, expected GET /v2/device/{id}/scripting/options).",
+    "implemented": true,
+    "prdRefs": [
+      "6.1"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Action ninjaone.devices.run_script (sideEffectful) and ninjaone.devices.scripting_options (read); both added to app:ninjaone allowedActionIds.",
+    "implemented": true,
+    "prdRefs": [
+      "6.1"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Tactical client wrappers (getAgent, listScripts, runScript, runCommand, reboot) implemented in a self-contained FetchTacticalWorkflowClient inside ee/packages/workflows (api_key + Knox auth with 401 refresh + token persistence, beta pagination). DEVIATION from plan: workflows dist marks @alga-psa/* external and packages/integrations' runtime subpath maps to TS source, so the shared TacticalRmmClient is not importable at runtime \u2014 NinjaOne-style thin client instead.",
+    "implemented": true,
+    "prdRefs": [
+      "6.2"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Tactical runtime support resolves rmm_integrations row (instance_url, settings.auth_mode) via ctx.knex and tenant secrets (tacticalrmm_api_key or tacticalrmm_username/password/knox_token) matching the sync path's auth modes. No workspace dependency added (see F008 deviation).",
+    "implemented": true,
+    "prdRefs": [
+      "6.2"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Actions tacticalrmm.agents.find and tacticalrmm.agents.get (reads over /api/beta/v1/agent/ and agent detail).",
+    "implemented": true,
+    "prdRefs": [
+      "6.2"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Action tacticalrmm.scripts.list (read; script id + name + shell so run_script inputs are discoverable).",
+    "implemented": true,
+    "prdRefs": [
+      "6.2"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Actions tacticalrmm.agents.run_script (returns script output), tacticalrmm.agents.run_command, tacticalrmm.agents.reboot (all sideEffectful).",
+    "implemented": true,
+    "prdRefs": [
+      "6.2"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Module registration app:tacticalrmm via registerIntegrationWorkflowModule (label, icon token, default action tacticalrmm.agents.find, availability rmmIntegrationAvailability('tacticalrmm')).",
+    "implemented": true,
+    "prdRefs": [
+      "6.2",
+      "5.3"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Thin Level fetch client in ee/packages/workflows (tenant secret levelio_api_key, instance/base URL convention, cursor pagination) \u2014 ee/server client not importable across package boundary.",
+    "implemented": true,
+    "prdRefs": [
+      "6.3"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Actions levelio.devices.find (group filters), levelio.devices.get, levelio.alerts.list_active, levelio.updates.list (reads).",
+    "implemented": true,
+    "prdRefs": [
+      "6.3"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Action levelio.alerts.resolve (sideEffectful; POST /v2/alerts/{id}/resolve).",
+    "implemented": true,
+    "prdRefs": [
+      "6.3"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Actions levelio.automations.list (automations + webhook tokens for discovery) and levelio.automations.run_status (read).",
+    "implemented": true,
+    "prdRefs": [
+      "6.3"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Action levelio.automations.trigger (sideEffectful; POST /v2/automations/webhooks/{token} with optional device_ids[]; actionable error when the automation has no webhook trigger configured in Level).",
+    "implemented": true,
+    "prdRefs": [
+      "6.3"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Module registration app:levelio via registerIntegrationWorkflowModule (availability rmmIntegrationAvailability('levelio')).",
+    "implemented": true,
+    "prdRefs": [
+      "6.3",
+      "5.3"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Thin Huntress fetch client in ee/packages/workflows: Basic auth from tenant secrets huntress_api_key/huntress_api_secret, 60 req/min throttle with min-interval spacing and 429 backoff replicated from ee/server client.",
+    "implemented": true,
+    "prdRefs": [
+      "6.4"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Actions huntress.incidents.find (status/severity/org filters), huntress.incidents.get, huntress.organizations.list, huntress.agents.get, huntress.account.get (reads).",
+    "implemented": true,
+    "prdRefs": [
+      "6.4"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Action huntress.incidents.resolve (sideEffectful; Huntress write API for resolving incident reports \u2014 verify exact endpoint/payload against api.huntress.io docs).",
+    "implemented": true,
+    "prdRefs": [
+      "6.4"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Module registration app:huntress via registerIntegrationWorkflowModule (availability rmmIntegrationAvailability('huntress')).",
+    "implemented": true,
+    "prdRefs": [
+      "6.4",
+      "5.3"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Teams availability resolver: teams_integrations.install_status = 'active' AND Teams add-on active for tenant (mirrors delivery-path checks).",
+    "implemented": true,
+    "prdRefs": [
+      "6.5",
+      "5.1"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "teams.notify_user implemented with self-contained Graph support in ee/packages/workflows (the ee-microsoft-teams package depends on @alga-psa/workflows \u2014 circular \u2014 and is source-mapped): Graph app token per selected microsoft_profile, sendActivityNotification with category->activityType mapping (manifest-declared types), generic entity deep link; actionable error when the user lacks a linked Microsoft account (user_auth_accounts provider=microsoft).",
+    "implemented": true,
+    "prdRefs": [
+      "6.5"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Action teams.send_dm: proactive Bot Framework message (text + optional card) using stored teams_conversation_references; actionable error if the user has never opened the bot.",
+    "implemented": true,
+    "prdRefs": [
+      "6.5"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "createConversation support implemented in ee/packages/workflows teamsWorkflowRuntimeSupport (not ee/packages/microsoft-teams \u2014 circular dependency): proactive channel conversation via Bot Framework POST /v3/conversations with trusted-serviceUrl guard and cached bot token from TEAMS_BOT_APP_* env.",
+    "implemented": true,
+    "prdRefs": [
+      "6.5"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Action teams.post_to_channel built on createConversation; actionable error when the app is not installed in the target team.",
+    "implemented": true,
+    "prdRefs": [
+      "6.5"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Module registration app:teams via registerIntegrationWorkflowModule with the Teams availability resolver.",
+    "implemented": true,
+    "prdRefs": [
+      "6.5",
+      "5.3"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Shared core action scheduling.create_entry (CE+EE, scheduling.* family): assigned user(s), title, start/end, optional ticket/project link, optional status/notes; creates dispatch-board entry via the same model layer the UI uses; entry rides existing outbound calendar sync; explicit validation errors (unknown user, end before start).",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Designer icon tokens for tacticalrmm, levelio, huntress, teams (reusing settings-UI integration logos); palette grouping verified for the new app:* groups, extending category ordering only if required.",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Error-handling conventions applied across all new actions: vendor HTTP errors surface status + vendor message without credentials; integration-not-connected and the named Teams/Level failure modes produce explicit actionable messages.",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "WorkflowDesignerCatalogRecord gains optional available flag; listWorkflowDesignerActionCatalogAction keeps first-party integration records when disconnected and annotates available=true/false instead of filtering them out (extension-app filtering unchanged).",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Designer palette excludes catalog records with available === false client-side, preserving the hide-when-not-enabled palette decision.",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Editor disconnected state for existing steps: GroupedActionConfigSection renders an amber '{group} is not connected' banner when record.available === false (action select stays usable), and the step card shows a Disconnected badge with explanatory tooltip; config panel now renders for steps of disconnected integrations instead of silently dropping the group section.",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  }
+]

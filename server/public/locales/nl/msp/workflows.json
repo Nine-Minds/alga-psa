@@ -1121,7 +1121,8 @@
         "if": "Als",
         "loop": "Lus",
         "try": "Proberen",
-        "block": "Blok"
+        "block": "Blok",
+        "disconnected": "Niet verbonden"
       },
       "mapping": {
         "unmappedTitle": "{{count}} verplichte velden niet gekoppeld",
@@ -1137,7 +1138,8 @@
         "duplicateAriaLabel": "Stap {{label}} dupliceren",
         "delete": "Stap verwijderen"
       },
-      "forEachSummary": "Element: {{itemVar}} | Gelijktijdigheid: {{concurrency}}"
+      "forEachSummary": "Element: {{itemVar}} | Gelijktijdigheid: {{concurrency}}",
+      "disconnectedTitle": "{{group}} is niet verbonden; deze stap mislukt tijdens uitvoering totdat de verbinding is hersteld."
     },
     "toasts": {
       "loadRegistriesFailed": "Kan workflowregisters niet laden",
@@ -1647,6 +1649,10 @@
       "transform": "Transformeren",
       "app": "App",
       "ai": "AI"
+    },
+    "disconnected": {
+      "title": "{{group}} is niet verbonden",
+      "message": "Stappen die zijn acties gebruiken, mislukken tijdens uitvoering totdat de integratie opnieuw is verbonden onder Instellingen > Integraties."
     }
   },
   "trigger": {

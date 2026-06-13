@@ -520,6 +520,161 @@ export function registerSchedulingActions(): void {
     }),
   });
 
+  // ---------------------------------------------------------------------------
+  // scheduling.create_entry — like assign_user, but the work-item link is
+  // optional (ad-hoc entries) and multiple technicians can be assigned.
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'scheduling.create_entry',
+    version: 1,
+    inputSchema: z.object({
+      assigned_user_ids: z.array(withWorkflowPicker(uuidSchema, 'Assigned user', 'user')).min(1)
+        .describe('Technicians to schedule'),
+      title: z.string().trim().min(1).describe('Schedule entry title'),
+      window: z.object({
+        start: isoDateTimeSchema.describe('Start time (ISO)'),
+        end: isoDateTimeSchema.describe('End time (ISO)'),
+        timezone: z.string().optional().describe('IANA timezone (informational)'),
+      }),
+      link: z.object({
+        type: z.enum(['ticket', 'project_task']).describe('Work item type'),
+        id: uuidSchema.describe('Work item id'),
+      }).optional().describe('Optional work item link; omit for an ad-hoc entry'),
+      notes: z.string().optional().describe('Notes'),
+      conflict_mode: conflictModeSchema.default('fail').describe('Conflict handling mode'),
+    }),
+    outputSchema: z.object({
+      entry_id: uuidSchema,
+      assigned_user_ids: z.array(uuidSchema),
+      start: isoDateTimeSchema,
+      end: isoDateTimeSchema,
+      work_item_id: uuidSchema.nullable(),
+      work_item_type: z.string(),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Create Schedule Entry',
+      category: 'Business Operations',
+      description: 'Create a schedule entry for one or more technicians, with or without a linked work item',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'create' });
+
+      const assignedUserIds = normalizeStringArray(input.assigned_user_ids);
+      await ensureTechnicianEligibility(ctx, tx, assignedUserIds);
+
+      if (input.link) {
+        if (input.link.type === 'ticket') {
+          const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.link.id }).first();
+          if (!ticket) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
+        } else {
+          const task = await tx.trx('project_tasks').where({ tenant: tx.tenantId, task_id: input.link.id }).first();
+          if (!task) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project task not found' });
+        }
+      }
+
+      let start = new Date(input.window.start);
+      let end = new Date(input.window.end);
+      if (!(start.getTime() < end.getTime())) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'window.start must be before window.end' });
+      }
+
+      const entryId = uuidv4();
+      const findConflicts = (s: Date, e: Date) => detectConflicts(tx, {
+        assignedUserIds,
+        requestedStartIso: s.toISOString(),
+        requestedEndIso: e.toISOString(),
+        targetSeriesId: entryId,
+      });
+
+      let conflicts = await findConflicts(start, end);
+      if (conflicts.length && (input.conflict_mode ?? 'fail') === 'fail') {
+        throwActionError(ctx, {
+          category: 'ActionError',
+          code: 'CONFLICT',
+          message: 'Schedule conflict detected',
+          details: { conflicting_user_ids: normalizeStringArray(conflicts.map((row) => row.user_id)) },
+        });
+      }
+
+      if (conflicts.length && input.conflict_mode === 'shift') {
+        const latestEnd = conflicts
+          .map((row) => new Date(row.scheduled_end).getTime())
+          .reduce((a, b) => Math.max(a, b), start.getTime());
+        const durationMs = end.getTime() - start.getTime();
+        start = new Date(latestEnd);
+        end = new Date(latestEnd + durationMs);
+        conflicts = await findConflicts(start, end);
+        if (conflicts.length) {
+          throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Unable to shift schedule entry to a non-conflicting window' });
+        }
+      }
+
+      const nowIso = new Date().toISOString();
+      await tx.trx('schedule_entries').insert({
+        tenant: tx.tenantId,
+        entry_id: entryId,
+        title: input.title,
+        work_item_id: input.link?.id ?? null,
+        scheduled_start: start.toISOString(),
+        scheduled_end: end.toISOString(),
+        status: 'scheduled',
+        notes: input.notes ?? null,
+        work_item_type: input.link?.type ?? 'ad_hoc',
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+      for (const userId of assignedUserIds) {
+        await tx.trx('schedule_entry_assignees').insert({
+          tenant: tx.tenantId,
+          entry_id: entryId,
+          user_id: userId,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+
+      if (input.conflict_mode === 'override') {
+        const overlapping = await findConflicts(start, end);
+        for (const other of overlapping) {
+          if (other.entry_id === entryId) continue;
+          await tx.trx('schedule_conflicts').insert({
+            tenant: tx.tenantId,
+            conflict_id: uuidv4(),
+            entry_id_1: entryId,
+            entry_id_2: other.entry_id,
+            conflict_type: 'overlap',
+            resolved: false,
+            created_at: nowIso,
+            updated_at: nowIso,
+          });
+        }
+      }
+
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:scheduling.create_entry',
+        changedData: {
+          entry_id: entryId,
+          assigned_user_ids: assignedUserIds,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          link: input.link ?? null,
+        },
+        details: { action_id: 'scheduling.create_entry', action_version: 1, schedule_event_id: entryId },
+      });
+
+      return {
+        entry_id: entryId,
+        assigned_user_ids: assignedUserIds,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        work_item_id: input.link?.id ?? null,
+        work_item_type: input.link?.type ?? 'ad_hoc',
+      };
+    }),
+  });
+
   registry.register({
     id: 'scheduling.find_entry',
     version: 1,

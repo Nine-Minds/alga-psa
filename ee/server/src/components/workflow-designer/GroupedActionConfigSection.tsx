@@ -57,6 +57,26 @@ export const GroupedActionConfigSection: React.FC<{
 
   return (
     <div className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
+      {record.available === false && (
+        <Card
+          id={`workflow-step-group-disconnected-${stepId}`}
+          className="border border-amber-300 bg-amber-50 p-3"
+          role="status"
+        >
+          <div className="text-xs font-semibold text-amber-900">
+            {t('groupedAction.disconnected.title', {
+              defaultValue: '{{group}} is not connected',
+              group: translatedGroupLabel,
+            })}
+          </div>
+          <div className="mt-1 text-xs text-amber-900">
+            {t('groupedAction.disconnected.message', {
+              defaultValue:
+                'Steps using its actions will fail at run time until the integration is reconnected under Settings > Integrations.',
+            })}
+          </div>
+        </Card>
+      )}
       <div className="space-y-1">
         <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">
           {t('groupedAction.groupHeading', { defaultValue: 'Group' })}

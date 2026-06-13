@@ -2,11 +2,15 @@ import {
   initializeWorkflowRuntimeV2 as initializeSharedWorkflowRuntimeV2,
   isWorkflowRuntimeV2Initialized,
 } from '../../../../../shared/workflow/runtime/init';
-import { getWorkflowIntegrationModuleRegistry } from '../../../../../shared/workflow/runtime';
-import { registerNinjaOneWorkflowActionsV2 } from './actions/registerNinjaOneWorkflowActions';
+import { registerNinjaOneWorkflowModule } from './actions/registerNinjaOneWorkflowActions';
 import { registerRmmAlertWorkflowActionsV2 } from './actions/registerRmmAlertWorkflowActions';
+import { registerTacticalRmmWorkflowModule } from './actions/registerTacticalRmmWorkflowActions';
+import { registerLevelIoWorkflowModule } from './actions/registerLevelIoWorkflowActions';
+import { registerHuntressWorkflowModule } from './actions/registerHuntressWorkflowActions';
+import { registerTeamsWorkflowModule } from './actions/registerTeamsWorkflowActions';
 
 export * from '../../../../../shared/workflow/runtime';
+export * from './integrationModules';
 export * from '../../../../../shared/workflow/runtime/ai/aiSchema';
 export * from '../../../../../shared/workflow/runtime/client';
 export * from '../../../../../shared/workflow/runtime/designer/actionCatalog';
@@ -44,28 +48,14 @@ export { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../../../../../shared/workfl
 
 export function initializeWorkflowRuntimeV2(): void {
   initializeSharedWorkflowRuntimeV2();
-  registerNinjaOneWorkflowActionsV2();
+  // Provider-agnostic RMM alert actions (rmm.alerts.create_ticket) from the
+  // alert-handling feature; not an integration module tile.
   registerRmmAlertWorkflowActionsV2();
-  const moduleRegistry = getWorkflowIntegrationModuleRegistry();
-  if (!moduleRegistry.list().some((module) => module.groupKey === 'app:ninjaone')) {
-    moduleRegistry.register({
-      groupKey: 'app:ninjaone',
-      label: 'NinjaOne',
-      description: 'NinjaOne RMM actions for devices and alerts.',
-      tileKind: 'app',
-      iconToken: 'ninjaone',
-      defaultActionId: 'ninjaone.devices.find',
-      allowedActionIds: [
-        'ninjaone.devices.find',
-        'ninjaone.devices.sync',
-        'ninjaone.devices.reboot',
-        'ninjaone.alerts.list_active',
-        'ninjaone.alerts.get',
-        'ninjaone.alerts.reset'
-      ],
-      availabilityKey: 'rmm:ninjaone'
-    });
-  }
+  registerNinjaOneWorkflowModule();
+  registerTacticalRmmWorkflowModule();
+  registerLevelIoWorkflowModule();
+  registerHuntressWorkflowModule();
+  registerTeamsWorkflowModule();
 }
 
 export { isWorkflowRuntimeV2Initialized };
