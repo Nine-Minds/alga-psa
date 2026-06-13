@@ -152,9 +152,19 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDraggedOver(false);
-    setDragOverTaskId(null);
-    setDropPosition(null);
+    const column = e.currentTarget;
+    const { clientX, clientY } = e;
+
+    requestAnimationFrame(() => {
+      const elementAtPointer = document.elementFromPoint(clientX, clientY);
+      if (elementAtPointer && column.contains(elementAtPointer)) {
+        return;
+      }
+
+      setIsDraggedOver(false);
+      setDragOverTaskId(null);
+      setDropPosition(null);
+    });
   };
 
   const findClosestTask = (e: React.DragEvent): HTMLElement | null => {
@@ -344,7 +354,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
 
   return (
     <div
-      className={`${styles.kanbanColumn} ${isRevealedHidden ? styles.revealedHiddenColumn : ''} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
+      className={`${styles.kanbanColumn} ${isRevealedHidden ? styles.revealedHiddenColumn : ''} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid ${
         isDraggedOver ? 'border-purple-500 ' + styles.dragOver : (configuredColor ? '' : borderColor)
       }`}
       style={columnStyle}
