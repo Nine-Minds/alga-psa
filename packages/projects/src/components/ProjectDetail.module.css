@@ -510,6 +510,38 @@ body.dragging-task .mainContent::after {
   background-color: rgba(147, 51, 234, 0.05);
 }
 
+/*
+ * Slim drop indicator for the kanban board.
+ *
+ * Unlike .dropPlaceholder (which reserves a full card-sized gap), this is
+ * absolutely positioned and consumes NO layout space. Inserting/removing it
+ * never reflows the surrounding cards, which is what previously created a
+ * hover -> reflow -> re-measure feedback loop and made the drop target flicker
+ * back and forth while dragging between columns.
+ *
+ * It is positioned (via an inline top/bottom offset) in the centre of the gap
+ * between two cards, so the "after card A" and "before card B" indicators land
+ * on the exact same pixel and there is no visible jump if the closest-card
+ * calculation switches between two adjacent cards.
+ */
+.dropIndicator {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 3px;
+  border-radius: 9999px;
+  background-color: rgb(147, 51, 234);
+  box-shadow: 0 0 0 1px rgba(147, 51, 234, 0.25), 0 0 8px rgba(147, 51, 234, 0.45);
+  z-index: 5;
+  pointer-events: none;
+  animation: dropIndicatorFade 120ms ease-out;
+}
+
+@keyframes dropIndicatorFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Phase drop placeholder - styled like task drop placeholder */
 .phaseDropPlaceholder {
   height: 0;

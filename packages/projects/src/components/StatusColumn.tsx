@@ -433,9 +433,12 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           const taskPriority = task.priority_id ? priorities.find(p => p.priority_id === task.priority_id) : undefined;
           return (
           <div key={task.task_id} data-task-id={task.task_id} className="relative">
-            {/* Animated drop placeholder before task */}
+            {/* Drop indicator before task. Absolutely positioned so it does not
+                reflow the surrounding cards (which previously caused the drop
+                target to flicker back and forth). Centred in the gap above the
+                card via an inline offset. */}
             {dragOverTaskId === task.task_id && dropPosition === 'before' && (
-              <div className={`${styles.dropPlaceholder} ${styles.visible}`} />
+              <div className={styles.dropIndicator} style={{ top: `-${cardGap / 2 + 1.5}px` }} />
             )}
             <TaskCard
               task={task}
@@ -469,9 +472,10 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               teamNames={teamNames}
               teamAvatarUrls={teamAvatarUrls}
             />
-            {/* Animated drop placeholder after task */}
+            {/* Drop indicator after task. Centred in the gap below the card so it
+                lands on the same pixel as the next card's "before" indicator. */}
             {dragOverTaskId === task.task_id && dropPosition === 'after' && (
-              <div className={`${styles.dropPlaceholder} ${styles.visible}`} />
+              <div className={styles.dropIndicator} style={{ bottom: `-${cardGap / 2 + 1.5}px` }} />
             )}
           </div>
         )})}
