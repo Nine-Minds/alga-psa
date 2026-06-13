@@ -18,6 +18,7 @@
       "sharedGlobals"
     ],
     "sharedGlobals": [
+      "{workspaceRoot}/package-lock.json",
       {
         "env": "EDITION"
       },

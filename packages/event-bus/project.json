@@ -3,26 +3,27 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/event-bus/src",
   "projectType": "library",
-  "tags": ["scope:event-bus", "type:horizontal"],
+  "tags": [
+    "scope:event-bus",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop",
-      "dependsOn": ["@alga-psa/event-schemas:build"]
-    },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/event-bus"],
-      "options": {
-        "passWithNoTests": true
-      }
+      "dependsOn": [
+        "@alga-psa/event-schemas:build"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/event-bus/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/event-bus/**/*.{ts,tsx}"
+        ]
       }
     }
   }
 }
-

@@ -3,24 +3,24 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/billing/src",
   "projectType": "library",
-  "tags": ["scope:billing", "type:vertical"],
+  "tags": [
+    "scope:billing",
+    "type:vertical"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop",
       "dependsOn": []
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/billing"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/billing/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/billing/**/*.{ts,tsx}"
+        ]
       }
     }
   }

@@ -3,30 +3,31 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/validation/src",
   "projectType": "library",
-  "tags": ["scope:validation", "type:horizontal"],
+  "tags": [
+    "scope:validation",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "outputs": ["{projectRoot}/dist"],
+      "outputs": [
+        "{projectRoot}/dist"
+      ],
       "options": {
         "command": "tsc -b",
         "cwd": "packages/validation"
       }
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/validation"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/validation/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/validation/**/*.{ts,tsx}"
+        ]
       }
     }
   }
 }
-
