@@ -167,10 +167,8 @@ describe('Document Folder Operations', () => {
             }
             return queryBuilder;
           });
-          queryBuilder.groupBy.mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              count: vi.fn().mockResolvedValue([])
-            })
+          queryBuilder.select = vi.fn().mockReturnValue({
+            distinct: vi.fn().mockResolvedValue([])
           });
         }
 
@@ -204,10 +202,8 @@ describe('Document Folder Operations', () => {
             }
             return queryBuilder;
           });
-          queryBuilder.groupBy.mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              count: vi.fn().mockResolvedValue([])
-            })
+          queryBuilder.select = vi.fn().mockReturnValue({
+            distinct: vi.fn().mockResolvedValue([])
           });
         } else {
           queryBuilder.orderBy.mockResolvedValue(folders);

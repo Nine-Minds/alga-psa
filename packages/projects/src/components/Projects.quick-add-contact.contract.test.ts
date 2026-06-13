@@ -13,8 +13,8 @@ describe('projects contact filter creation wiring contract', () => {
     const source = read('./Projects.tsx');
 
     expect(source).toContain('onAddNew={() => setIsQuickAddContactOpen(true)}');
-    expect(source).toContain('isOpen={isQuickAddContactOpen}');
-    expect(source).toContain('selectedClientId={filterClientId || undefined}');
-    expect(source).toContain('setFilterContactId(newContact.contact_name_id);');
+    expect(source).toContain('isOpen: isQuickAddContactOpen,');
+    expect(source).toContain('selectedClientId: activeFilters.clientId || undefined,');
+    expect(source).toContain('handleFilterChange({ contactId: newContact.contact_name_id });');
   });
 });

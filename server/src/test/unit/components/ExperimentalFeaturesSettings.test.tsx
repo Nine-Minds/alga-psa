@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
 import { toast } from 'react-hot-toast';
 
@@ -53,6 +53,10 @@ vi.mock('react-hot-toast', () => ({
 describe('ExperimentalFeaturesSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("shows 'AI Assistant' name and description", async () => {

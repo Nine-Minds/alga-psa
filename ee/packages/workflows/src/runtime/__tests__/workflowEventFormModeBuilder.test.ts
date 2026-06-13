@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Repo root: this file lives at ee/packages/workflows/src/runtime/__tests__/
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../../../..'
+);
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '../index';
 
 function resolveLocalRef(root: any, schema: any): any {
@@ -128,7 +135,7 @@ describe('workflow event simulator: form-mode schema builder', () => {
     const registry = getSchemaRegistry();
 
     const proposalsPath = path.join(
-      process.cwd(),
+      REPO_ROOT,
       'ee',
       'docs',
       'plans',

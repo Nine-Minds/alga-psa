@@ -27,8 +27,17 @@ vi.mock('@alga-psa/auth', () => ({
       ),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
+  getTenantContext: vi.fn(async () => 'tenant-1'),
+  getTenantIdBySlug: vi.fn(async () => 'tenant-1'),
+  withTransaction: vi.fn(async (knex: any, handler: (trx: any) => Promise<unknown>) => handler(knex)),
+  registerAfterCommit: vi.fn(),
 }));
 
 vi.mock('../../../../../packages/billing/src/models/invoice', () => ({

@@ -23,8 +23,8 @@ const contactPickerDialogSource = readFileSync(
 
 describe('Contact summary email compatibility', () => {
   it('T024: contacts and client-contact summary surfaces continue using contact.email as the visible email field', () => {
-    expect(contactsSource).toContain("title: 'Email'");
-    expect(contactsSource).toContain("render: (value, record): React.ReactNode => record.email || 'N/A'");
+    expect(contactsSource).toContain("title: t('contactsPage.table.email', { defaultValue: 'Email' })");
+    expect(contactsSource).toContain("record.email || t('common.states.na', { defaultValue: 'N/A' })");
     expect(contactsSource).toContain("(contact.email && contact.email.toLowerCase().includes(searchTermLower))");
     expect(clientDetailsSource).toContain('{contact.email && ` (${contact.email})`}');
   });

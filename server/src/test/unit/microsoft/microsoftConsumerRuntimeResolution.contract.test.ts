@@ -24,16 +24,19 @@ describe('microsoft consumer runtime resolution contracts', () => {
       repoPath('server/src/services/email/providers/MicrosoftGraphAdapter.ts'),
       'utf8'
     );
+    // The concrete EE calendar action + adapter sources were relocated from
+    // packages/ee/src/lib/... into the dedicated ee/packages/calendar package;
+    // packages/ee/src now only re-exports stubs.
     const eeCalendarActionSource = fs.readFileSync(
-      repoPath('packages/ee/src/lib/actions/integrations/calendarActions.ts'),
+      repoPath('ee/packages/calendar/src/lib/actions/integrations/calendarActions.ts'),
       'utf8'
     );
     const eeCalendarCallbackSource = fs.readFileSync(
-      repoPath('ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts'),
+      repoPath('ee/packages/calendar/src/app/api/auth/microsoft/calendar/callback/route.ts'),
       'utf8'
     );
     const eeCalendarAdapterSource = fs.readFileSync(
-      repoPath('packages/ee/src/lib/services/calendar/providers/MicrosoftCalendarAdapter.ts'),
+      repoPath('ee/packages/calendar/src/lib/services/calendar/providers/MicrosoftCalendarAdapter.ts'),
       'utf8'
     );
     const mspSsoResolutionSource = fs.readFileSync(

@@ -11,9 +11,65 @@ import { addMessageToChatAction } from '@ee/lib/chat-actions/chatActions';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
+// jsdom does not implement Element#scrollTo, which Chat uses to keep the
+// message list pinned to the latest message.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollTo) {
+  Object.defineProperty(Element.prototype, 'scrollTo', {
+    value: () => {},
+    writable: true,
+    configurable: true,
+  });
+}
+
 vi.mock('next/image', () => ({
   __esModule: true,
   default: () => null,
+}));
+
+// Chat renders user-facing strings through react-i18next style t() from the
+// 'msp/chat' namespace. Resolve keys against the real English locale bundle so
+// the assertions below keep verifying actual user-visible text.
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const translations = JSON.parse(
+    readFileSync(resolve(process.cwd(), 'public/locales/en/msp/chat.json'), 'utf8'),
+  ) as Record<string, unknown>;
+
+  const lookup = (key: string): unknown =>
+    key.split('.').reduce<unknown>(
+      (node, segment) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[segment] : undefined,
+      translations,
+    );
+
+  const t = (key: string, options?: string | Record<string, unknown>) => {
+    const opts: Record<string, unknown> =
+      typeof options === 'string' ? { defaultValue: options } : options ?? {};
+    const resolved = lookup(key);
+    const template =
+      typeof resolved === 'string'
+        ? resolved
+        : typeof opts.defaultValue === 'string'
+          ? opts.defaultValue
+          : key;
+    return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) =>
+      name in opts ? String(opts[name]) : match,
+    );
+  };
+
+  return { useTranslation: () => ({ t }) };
+});
+
+// Chat now reads the surrounding UI context (current screen/record) through
+// useAIChatContext, which requires an AIChatContextProvider in production.
+vi.mock('@product/chat/context', () => ({
+  AIChatContextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAIChatContext: () => ({
+    pathname: '/msp/dashboard',
+    screen: { key: 'dashboard', label: 'Dashboard' },
+  }),
+  useAIChatContextOverride: () => {},
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({

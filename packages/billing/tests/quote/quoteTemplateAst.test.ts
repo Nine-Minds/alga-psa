@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 import {
   QUOTE_TEMPLATE_VALUE_BINDINGS,
@@ -45,7 +45,9 @@ describe('quote-template-ast – bindings', () => {
     expect(bindings.values).toBeDefined();
     expect(bindings.collections).toBeDefined();
     expect(Object.keys(bindings.values!).length).toBeGreaterThan(0);
-    expect(Object.keys(bindings.collections!).length).toBe(2);
+    expect(Object.keys(bindings.collections!)).toEqual(
+      Object.keys(QUOTE_TEMPLATE_COLLECTION_BINDINGS),
+    );
   });
 
   it('T233: value bindings provide fallbacks for display fields', () => {
@@ -72,7 +74,7 @@ describe('quote-template-ast – standardTemplates', () => {
   it('T236: each standard template has the correct AST structure', () => {
     for (const [code, ast] of Object.entries(STANDARD_QUOTE_TEMPLATE_ASTS)) {
       expect(ast.kind).toBe('invoice-template-ast');
-      expect(ast.version).toBe(INVOICE_TEMPLATE_AST_VERSION);
+      expect(ast.version).toBe(TEMPLATE_AST_VERSION);
       expect(ast.metadata?.templateName).toBeTruthy();
       expect(ast.bindings).toBeDefined();
       expect(ast.layout).toBeDefined();

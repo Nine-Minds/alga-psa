@@ -21,6 +21,15 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnexMock(...args),
   withTransaction: (...args: unknown[]) => withTransactionMock(...args),
+  runWithTenant: (_tenant: string, fn: () => unknown) => fn(),
+}));
+
+vi.mock('@alga-psa/documents/cache/CacheFactory', () => ({
+  CacheFactory: {
+    getPreviewCache: () => ({
+      delete: vi.fn(async () => undefined),
+    }),
+  },
 }));
 
 const makeTrx = (existing: unknown, updated: unknown) => {

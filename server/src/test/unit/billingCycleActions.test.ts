@@ -1,22 +1,70 @@
-// server/src/test/actions/billingCycleActions.test.ts
+// server/src/test/unit/billingCycleActions.test.ts
 
 import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
-import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '../../lib/actions/billingCycleActions';
-import { getSession } from '@alga-psa/auth';
+import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '@alga-psa/billing/actions/billingCycleActions';
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 
-// Mock session helper
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(),
+const { mockGetCurrentUser } = vi.hoisted(() => ({
+  mockGetCurrentUser: vi.fn(),
 }));
 
-// Mock shared db transaction helper used within actions
+// The actions are wrapped with withAuth; mirror the production wrapper which
+// throws when no authenticated user is available.
+vi.mock('@alga-psa/auth', () => {
+  const wrap = (handler: (...args: any[]) => any) => {
+    return async (...args: any[]) => {
+      const user = await mockGetCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      return handler(user, { tenant: 'test-tenant' }, ...args);
+    };
+  };
+
+  return {
+    getCurrentUser: mockGetCurrentUser,
+    getSession: vi.fn().mockResolvedValue(null),
+    getSessionWithRevocationCheck: vi.fn().mockResolvedValue(null),
+    hasPermission: vi.fn().mockResolvedValue(true),
+    withAuth: wrap,
+    withAuthCheck: wrap,
+    withOptionalAuth: (handler: (...args: any[]) => any) => async (...args: any[]) => {
+      const user = await mockGetCurrentUser();
+      if (!user) {
+        return handler(null, null, ...args);
+      }
+      return handler(user, { tenant: 'test-tenant' }, ...args);
+    },
+  };
+});
+
+// Permission checks go through @alga-psa/auth/rbac inside the actions.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
+
+// Mock shared db helpers used within actions; withTransaction passes the
+// mocked knex through as the trx so per-test stubs apply.
 vi.mock('@alga-psa/db', () => ({
-  withTransaction: async (_knex: any, fn: any) => {
-    // Execute callback immediately with the provided knex mock
-    return await fn(_knex);
-  },
+  createTenantKnex: vi.fn(),
+  withTransaction: vi.fn(async (knex: any, fn: any) => fn(knex)),
+  runWithTenant: vi.fn(async (_tenant: string, cb: any) => cb()),
+  getCurrentTenantId: vi.fn(() => 'test-tenant'),
+  getTenantContext: vi.fn(async () => 'test-tenant'),
+  getTenantIdBySlug: vi.fn(async () => 'test-tenant'),
+  registerAfterCommit: vi.fn(),
+}));
+
+// Heavy sibling modules pulled in by billingCycleActions' module graph.
+vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
+  getNextBillingDate: vi.fn(),
+}));
+vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({
+  hardDeleteInvoice: vi.fn(),
+}));
+vi.mock('@alga-psa/billing/lib/billing/createBillingCycles', () => ({
+  createClientContractLineCycles: vi.fn(),
 }));
 
 // Mock shared logger used by various model/action imports pulled into module graph
@@ -39,24 +87,14 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
-// Some server actions import from '@alga-psa/core'; provide the same stub
-vi.mock('@alga-psa/core', () => ({
-  getSecretProviderInstance: () => ({
-    getSecret: async (_k: string) => undefined,
-    setSecret: async (_k: string, _v: string) => {},
-    getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
-}));
-
-// (obsolete) previous db/db mock removed; actions import from server/src/lib/db
-
 // Create mock knex instance factory
 function createMockKnex(): Knex {
   const mockKnex = vi.fn(() => mockKnex) as unknown as Knex;
-  
+
   // Add query builder methods
   (mockKnex as any).where = vi.fn().mockReturnThis();
+  (mockKnex as any).whereIn = vi.fn().mockReturnThis();
+  (mockKnex as any).andWhere = vi.fn().mockReturnThis();
   (mockKnex as any).first = vi.fn();
   (mockKnex as any).insert = vi.fn().mockReturnThis();
   (mockKnex as any).onConflict = vi.fn().mockReturnThis();
@@ -65,24 +103,17 @@ function createMockKnex(): Knex {
   (mockKnex as any).orderBy = vi.fn().mockReturnThis();
   (mockKnex as any).del = vi.fn().mockReturnThis();
   (mockKnex as any).select = vi.fn().mockReturnThis();
+  (mockKnex as any).raw = vi.fn();
 
   return mockKnex;
 }
-
-// Mock the root db module
-vi.mock('server/src/lib/db', () => {
-  const mock = vi.fn().mockImplementation(async () => {
-    return { knex: createMockKnex(), tenant: 'test-tenant' };
-  });
-  return { createTenantKnex: mock };
-});
 
 describe('Billing Cycle Actions', () => {
   let mockCreateTenantKnex: MockedFunction<typeof createTenantKnex>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSession as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: 'test-user-id' } });
+    mockGetCurrentUser.mockResolvedValue({ user_id: 'test-user-id', tenant: 'test-tenant', roles: [] });
     mockCreateTenantKnex = vi.mocked(createTenantKnex);
   });
 
@@ -107,9 +138,9 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      mockGetCurrentUser.mockResolvedValue(null);
 
-      await expect(getBillingCycle('client-1')).rejects.toThrow('Unauthorized');
+      await expect(getBillingCycle('client-1')).rejects.toThrow('User not authenticated');
     });
   });
 
@@ -125,9 +156,9 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      mockGetCurrentUser.mockResolvedValue(null);
 
-      await expect(updateBillingCycle('client-1', 'quarterly')).rejects.toThrow('Unauthorized');
+      await expect(updateBillingCycle('client-1', 'quarterly')).rejects.toThrow('User not authenticated');
     });
   });
 
@@ -157,9 +188,9 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      mockGetCurrentUser.mockResolvedValue(null);
 
-      await expect(getAllBillingCycles()).rejects.toThrow('Unauthorized');
+      await expect(getAllBillingCycles()).rejects.toThrow('User not authenticated');
     });
   });
 });

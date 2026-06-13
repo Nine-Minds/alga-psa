@@ -91,31 +91,30 @@ function createCreditApplicationTrx() {
     allocations: [] as Row[],
   };
 
+  const RAW = Symbol('knex.raw');
+
   const trx: any = (tableName: string) => {
     if (tableName === 'client_contract_lines') {
       throw new Error('relation "client_contract_lines" does not exist');
     }
 
     if (tableName === 'invoices') {
-      let matchedInvoice = state.invoice;
       const builder: any = {
         where: vi.fn((_criteria: any) => builder),
         select: vi.fn((_columns: any) => builder),
-        first: vi.fn(async () => matchedInvoice),
-        increment: vi.fn((column: string, amount: number) => {
-          matchedInvoice = {
-            ...matchedInvoice,
-            [column]: Number(matchedInvoice[column] ?? 0) + amount,
-          };
-          state.invoice = matchedInvoice;
-          return builder;
-        }),
-        decrement: vi.fn(async (column: string, amount: number) => {
-          matchedInvoice = {
-            ...matchedInvoice,
-            [column]: Number(matchedInvoice[column] ?? 0) - amount,
-          };
-          state.invoice = matchedInvoice;
+        first: vi.fn(async () => state.invoice),
+        update: vi.fn(async (payload: Row) => {
+          // Source updates only credit_applied via trx.raw('COALESCE(credit_applied, 0) + ?')
+          // Invoice totals are intentionally immutable after finalization.
+          const next = { ...state.invoice };
+          for (const [column, value] of Object.entries(payload)) {
+            if (value && typeof value === 'object' && (value as any)[RAW]) {
+              next[column] = Number(next[column] ?? 0) + Number((value as any).amount);
+            } else {
+              next[column] = value;
+            }
+          }
+          state.invoice = next;
           return 1;
         }),
       };
@@ -187,6 +186,12 @@ function createCreditApplicationTrx() {
           whereCriteria = criteria;
           return builder;
         }),
+        select: vi.fn((_columns: any) => builder),
+        first: vi.fn(async () =>
+          state.transactions.find((row) =>
+            Object.entries(whereCriteria ?? {}).every(([key, value]) => row[key] === value),
+          ) ?? null,
+        ),
         update: vi.fn(async (payload: Row) => {
           const index = state.transactions.findIndex((row) =>
             Object.entries(whereCriteria ?? {}).every(([key, value]) => row[key] === value),
@@ -205,6 +210,11 @@ function createCreditApplicationTrx() {
 
     throw new Error(`Unexpected table ${tableName}`);
   };
+
+  trx.raw = vi.fn((_sql: string, bindings?: any[]) => ({
+    [RAW]: true,
+    amount: Array.isArray(bindings) ? bindings[0] : bindings,
+  }));
 
   return { trx, state };
 }
@@ -233,7 +243,9 @@ describe('credit application post-drop behavior', () => {
 
     expect(state.client.credit_balance).toBe(2000);
     expect(state.invoice.credit_applied).toBe(3000);
-    expect(state.invoice.total_amount).toBe(7000);
+    // Invoice totals are immutable after finalization; only credit_applied moves
+    // (balance due is derived as total − credit − payments).
+    expect(state.invoice.total_amount).toBe(10000);
     expect(state.allocations).toHaveLength(1);
     expect(state.transactions).toHaveLength(1);
     expect(state.transactions[0].related_transaction_id).toBe('tx-credit-1');

@@ -398,6 +398,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
             {
               groupKey: `child-selection:${contractMember.executionIdentityKey}`,
               selectorInputs: [contractMember.selectorInput],
+              billingCycleId: null,
             },
           ],
         }),
@@ -425,6 +426,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
             {
               groupKey: `child-selection:${nonContractMember.executionIdentityKey}`,
               selectorInputs: [nonContractMember.selectorInput],
+              billingCycleId: null,
             },
           ],
         }),
@@ -433,10 +435,23 @@ describe('AutomaticInvoices non-contract selection UI', () => {
   });
 
   it('T049: preview summary states multi-invoice outcome explicitly for mixed selections', async () => {
+    // Use a combinable parent group so Select All / parent checkbox is enabled and
+    // a preview can be requested. The preview mock reports invoiceCount: 2, which is
+    // what the summary copy under test reflects.
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildCandidate([contractMember, defaultContractMember])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
     await screen.findByText('Acme Co');
     const parentCheckbox = document.getElementById('select-parent-group:client-1:2025-03-01:2025-04-01') as HTMLInputElement;
+    expect(parentCheckbox.disabled).toBe(false);
     fireEvent.click(parentCheckbox);
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
@@ -472,6 +487,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
             {
               groupKey: 'parent-selection:candidate-mixed-1',
               selectorInputs: [contractMember.selectorInput, defaultContractMember.selectorInput],
+              billingCycleId: null,
             },
           ],
         }),
@@ -582,10 +598,12 @@ describe('AutomaticInvoices non-contract selection UI', () => {
                 compatibleContractMember.selectorInput,
                 compatibleNonContractMember.selectorInput,
               ],
+              billingCycleId: null,
             },
             {
               groupKey: `child-selection:${incompatibleNonContractMember.executionIdentityKey}`,
               selectorInputs: [incompatibleNonContractMember.selectorInput],
+              billingCycleId: null,
             },
           ]),
         }),

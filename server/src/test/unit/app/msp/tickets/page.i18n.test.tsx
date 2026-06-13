@@ -17,6 +17,7 @@ type TranslationOptions = {
 const replaceMock = vi.fn();
 const getCurrentUserMock = vi.fn();
 const getCurrentUserPermissionsMock = vi.fn();
+const getUserPreferenceMock = vi.fn();
 const getConsolidatedTicketListDataMock = vi.fn();
 const getTicketingDisplaySettingsMock = vi.fn();
 const getTeamsMock = vi.fn();
@@ -225,6 +226,37 @@ vi.mock('@/context/TierContext', () => ({
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUserMock(...args),
   getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissionsMock(...args),
+  getUserPreference: (...args: unknown[]) => getUserPreferenceMock(...args),
+}));
+
+vi.mock('@/lib/productAccess', () => ({
+  getCurrentTenantProduct: async () => 'psa',
+}));
+
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProduct: () => ({
+    productCode: 'psa',
+    isMisconfigured: false,
+    isPsa: true,
+    isAlgaDesk: false,
+    isLoading: false,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
+  KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
+  useKeyboardShortcutPreferenceStorage: () => ({
+    value: {},
+    setValue: () => {},
+    storage: {
+      load: () => ({}),
+      save: () => {},
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
@@ -307,10 +339,10 @@ async function renderTicketsList(locale: keyof typeof translations = 'en') {
   render(
     <MspLayoutClient
       session={null}
+      productCode="psa"
       needsOnboarding={false}
       initialSidebarCollapsed={false}
       initialLocale={locale}
-      i18nEnabled={true}
     >
       {page}
     </MspLayoutClient>
@@ -323,8 +355,9 @@ describe('/msp/tickets i18n integration', () => {
     vi.clearAllMocks();
     pathname = '/msp/tickets';
 
-    getCurrentUserMock.mockResolvedValue({ id: 'user-1' });
+    getCurrentUserMock.mockResolvedValue({ id: 'user-1', user_id: 'user-1' });
     getCurrentUserPermissionsMock.mockResolvedValue(['ticket:update']);
+    getUserPreferenceMock.mockResolvedValue(null);
     getConsolidatedTicketListDataMock.mockResolvedValue({
       options: {},
       tickets: [],

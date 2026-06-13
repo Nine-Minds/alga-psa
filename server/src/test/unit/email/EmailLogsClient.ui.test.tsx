@@ -78,11 +78,13 @@ describe('EmailLogsClient', () => {
       />
     );
 
-    expect(screen.getByText('Total sent')).toBeTruthy();
+    // The component renders i18n keys via useTranslation; the shared test setup
+    // mocks `t` to return the key when no defaultValue is supplied.
+    expect(screen.getByText('emailLogs.metrics.totalSent')).toBeTruthy();
     expect(screen.getByText('10')).toBeTruthy();
-    expect(screen.getByText('Failed rate')).toBeTruthy();
+    expect(screen.getByText('emailLogs.metrics.failedRate')).toBeTruthy();
     expect(screen.getByText('20%')).toBeTruthy();
-    expect(screen.getByText('Today')).toBeTruthy();
+    expect(screen.getByText('emailLogs.metrics.today')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
   });
 
@@ -179,7 +181,7 @@ describe('EmailLogsClient', () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Search email…'), { target: { value: 'alice' } });
+    fireEvent.change(screen.getByPlaceholderText('emailLogs.filters.recipientPlaceholder'), { target: { value: 'alice' } });
 
     await waitFor(() => {
       const lastCall = getEmailLogsMock.mock.calls.at(-1)?.[0] as any;
@@ -223,7 +225,7 @@ describe('EmailLogsClient', () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Ticket #…'), { target: { value: '123' } });
+    fireEvent.change(screen.getByPlaceholderText('emailLogs.filters.ticketPlaceholder'), { target: { value: '123' } });
 
     await waitFor(() => {
       const lastCall = getEmailLogsMock.mock.calls.at(-1)?.[0] as any;
@@ -297,14 +299,14 @@ describe('EmailLogsClient', () => {
     });
 
     const dialog = screen.getByTestId('dialog');
-    expect(within(dialog).getByText('Sent at')).toBeTruthy();
-    expect(within(dialog).getByText('Status')).toBeTruthy();
-    expect(within(dialog).getByText('Provider')).toBeTruthy();
-    expect(within(dialog).getByText('Message ID')).toBeTruthy();
-    expect(within(dialog).getByText('To')).toBeTruthy();
-    expect(within(dialog).getByText('From')).toBeTruthy();
-    expect(within(dialog).getByText('Error')).toBeTruthy();
-    expect(within(dialog).getByText('Metadata')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.sentAt')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.status')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.provider')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.messageId')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.to')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.from')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.error')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.metadata')).toBeTruthy();
 
     expect(within(dialog).getByText(/test \(p\)/i)).toBeTruthy();
     expect(within(dialog).getByText('m1')).toBeTruthy();

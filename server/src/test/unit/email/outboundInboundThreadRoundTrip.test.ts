@@ -50,6 +50,12 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// sendEmail publishes outbound-email lifecycle events (F071); stub the publisher
+// so this round-trip test doesn't reach the real event bus.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => {}),
+}));
+
 vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
   parseEmailReplyBody: (...args: unknown[]) => mocks.parseEmailReplyBody(...args),
   findTicketByReplyToken: (...args: unknown[]) => mocks.findTicketByReplyToken(...args),

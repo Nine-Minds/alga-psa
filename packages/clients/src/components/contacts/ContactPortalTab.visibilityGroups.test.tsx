@@ -97,11 +97,18 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  Checkbox: ({ checked, onCheckedChange, disabled }: any) => (
+  // The real Checkbox is a styled native input: consumers pass the standard
+  // onChange prop (ContactPortalTab does). Keep onCheckedChange for any
+  // callers still using the old callback shape.
+  Checkbox: ({ checked, onChange, onCheckedChange, disabled, id }: any) => (
     <input
       type="checkbox"
+      id={id}
       checked={checked}
-      onChange={() => onCheckedChange?.(!checked)}
+      onChange={(event) => {
+        onChange?.(event);
+        onCheckedChange?.(!checked);
+      }}
       disabled={disabled}
     />
   ),

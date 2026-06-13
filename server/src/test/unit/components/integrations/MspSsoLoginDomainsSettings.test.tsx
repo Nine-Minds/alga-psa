@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -27,6 +27,10 @@ describe('MspSsoLoginDomainsSettings', () => {
     vi.clearAllMocks();
     listMspSsoLoginDomainsMock.mockResolvedValue({ success: true, domains: ['acme.com'] });
     saveMspSsoLoginDomainsMock.mockResolvedValue({ success: true, domains: ['acme.com'] });
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('T012: renders MSP SSO login-domain management section', async () => {
@@ -106,7 +110,10 @@ describe('MspSsoLoginDomainsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
-    expect(await screen.findByText(/invalid domain "bad_domain"/i)).toBeInTheDocument();
+    // The component surfaces a neutral, user-safe message rather than echoing the
+    // raw backend error (no backend internals, and no raw "bad_domain" payload).
+    expect(await screen.findByText(/unable to save msp sso login domains\./i)).toBeInTheDocument();
+    expect(screen.queryByText(/bad_domain/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/SQL|stack|trace/i)).not.toBeInTheDocument();
   });
 
@@ -125,7 +132,9 @@ describe('MspSsoLoginDomainsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
-    expect(await screen.findByText(/already in use\./i)).toBeInTheDocument();
+    // Neutral conflict messaging: a user-safe headline plus actionable conflict
+    // details (the affected domains), without echoing the raw backend error text.
+    expect(await screen.findByText(/unable to save msp sso login domains\./i)).toBeInTheDocument();
     expect(await screen.findByText(/conflicts: acme\.com\./i)).toBeInTheDocument();
   });
 

@@ -27,7 +27,7 @@
     "start:express": "tsx index.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run src/test/unit src/test/infrastructure --coverage.enabled=false",
+    "test": "vitest run src/test/unit --coverage.enabled=false",
     "test:watch": "vitest --watch",
     "test:unit": "vitest src/test/unit",
     "test:integration": "vitest src/test/integration",

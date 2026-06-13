@@ -27,6 +27,7 @@ vi.mock('./session', () => ({
   getNextAuthSecretSync: () => 'unit-test-secret',
   getSessionCookieConfig: () => ({ name: 'authjs.session-token', options: {} }),
   getSessionMaxAge: () => 60 * 60,
+  isSecureCookieEnvironment: () => false,
   withDevPortSuffix: (value: string) => value,
 }));
 

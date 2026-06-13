@@ -107,7 +107,7 @@ describe('Entra Temporal workflow/activity contracts', () => {
     expect(scheduleSource).toContain('const ENTRA_SCHEDULE_ID_PREFIX = \'entra-all-tenants-sync-schedule\'');
     expect(scheduleSource).toContain('const entraConfigs = await loadEntraScheduleConfigs();');
     expect(scheduleSource).toContain('for (const config of entraConfigs)');
-    expect(scheduleSource).toContain('if (!config.syncEnabled || !config.hasActiveConnection)');
+    expect(scheduleSource).toContain('if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEnterpriseAddOn)');
     expect(scheduleSource).toContain('await upsertSchedule(client, tenantScheduleId, {');
     expect(scheduleSource).toContain('workflowType: entraAllTenantsSyncWorkflow');
     expect(scheduleSource).toContain("trigger: 'scheduled'");

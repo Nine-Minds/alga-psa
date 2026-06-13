@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
 import TaskForm from '../TaskForm';
 import type { IProjectPhase, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
@@ -32,9 +32,72 @@ const getProjectDetailsMock = vi.fn();
 
 let lastTaskTicketLinksProps: any = null;
 
-vi.mock('@alga-psa/users/actions', () => ({
+
+vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
+  useDocumentsCrossFeature: () => ({
+    renderDocuments: () => null,
+    renderDocumentUpload: () => null,
+    renderDocumentSelector: () => null,
+    renderFolderSelectorModal: () => null,
+    renderDocumentStorageCard: () => null,
+    downloadDocument: vi.fn().mockResolvedValue(undefined),
+    getDocumentDownloadUrl: vi.fn().mockResolvedValue(''),
+    getDocumentsByEntity: vi.fn().mockResolvedValue({ documents: [] }),
+    getDocumentCountsForEntities: vi.fn().mockResolvedValue({}),
+    getDocumentsByContractId: vi.fn().mockResolvedValue([]),
+    getDocumentByTicketId: vi.fn().mockResolvedValue(null),
+    getImageUrl: vi.fn().mockResolvedValue(null),
+    createDocumentAssociations: vi.fn().mockResolvedValue(undefined),
+    removeDocumentAssociations: vi.fn().mockResolvedValue(undefined),
+    deleteDocument: vi.fn().mockResolvedValue(undefined),
+    updateDocument: vi.fn().mockResolvedValue(undefined),
+    getBlockContent: vi.fn().mockResolvedValue(null),
+    updateBlockContent: vi.fn().mockResolvedValue(undefined),
+    downloadDocumentInBrowser: vi.fn().mockResolvedValue(undefined),
+    uploadDocument: vi.fn().mockResolvedValue(undefined),
+    createBlockDocument: vi.fn().mockResolvedValue({ document_id: 'doc-1', content_id: 'content-1' }),
+    ensureEntityFolders: vi.fn().mockResolvedValue(undefined),
+  }),
+  DocumentsCrossFeatureProvider: ({ children }: { children?: unknown }) => children,
+}));
+
+vi.mock('@alga-psa/ui/editor', () => ({
+  TextEditor: ({ initialContent, placeholder }: { initialContent?: Array<{ content?: Array<{ text?: string }> }>; placeholder?: string }) => {
+    const text = (initialContent ?? [])
+      .map((b) => (Array.isArray(b.content) ? b.content.map((c) => c.text ?? '').join('') : ''))
+      .join('\n');
+    return <textarea readOnly placeholder={placeholder} value={text} />;
+  },
+  RichTextViewer: () => null,
+}));
+
+vi.mock('@alga-psa/tags/components', () => ({
+  QuickAddTagPicker: () => null,
+  TagManager: () => null,
+}));
+
+vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
+  __esModule: true,
+  default: ({ value }: { value: string }) => (
+    <div data-testid="assigned-user" data-value={value} />
+  )
+}));
+
+
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeams: vi.fn().mockResolvedValue([]),
+  getTeamAvatarUrlsBatchAction: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock('@alga-psa/tags/actions', () => ({
+  findTagsByEntityId: vi.fn().mockResolvedValue([]),
+  createTagsForEntity: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: () => getCurrentUserMock(),
-  getUserAvatarUrlsBatchAction: vi.fn()
+  getUserAvatarUrlsBatchAction: vi.fn(),
+  searchUsersForMentions: vi.fn().mockResolvedValue([])
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
@@ -45,7 +108,7 @@ vi.mock('@alga-psa/projects/actions/serviceCatalogActions', () => ({
   getServices: (...args: unknown[]) => getServicesMock(...args)
 }));
 
-vi.mock('../actions/projectTaskActions', () => ({
+vi.mock('../../actions/projectTaskActions', () => ({
   updateTaskWithChecklist: vi.fn(),
   addTaskToPhase: vi.fn(),
   getTaskChecklistItems: vi.fn(),
@@ -62,7 +125,7 @@ vi.mock('../actions/projectTaskActions', () => ({
   getTaskTypes: (...args: unknown[]) => getTaskTypesMock(...args)
 }));
 
-vi.mock('../actions/projectActions', () => ({
+vi.mock('../../actions/projectActions', () => ({
   getProjectDetails: (...args: unknown[]) => getProjectDetailsMock(...args),
   getProjectTreeData: vi.fn()
 }));
@@ -78,6 +141,10 @@ vi.mock('../TaskTicketLinks', () => ({
     return <div data-testid="task-ticket-links" />;
   }
 }));
+
+afterEach(() => {
+  cleanup();
+});
 
 describe('TaskForm taskData prop', () => {
   const phase: IProjectPhase = {

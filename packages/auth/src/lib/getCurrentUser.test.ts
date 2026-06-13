@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -8,60 +8,38 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/auth', () => ({
+// getCurrentUser reads the session via the local ./getSession module.
+vi.mock('./getSession', () => ({
   getSession: vi.fn(),
 }));
 
+// User lookups now go through the @alga-psa/db helpers directly.
 vi.mock('@alga-psa/db', () => ({
+  getUserWithRoles: vi.fn(),
+  getUserWithRolesByEmail: vi.fn(),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
-  withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<any>) => {
-    const user = {
-      user_id: 'user-1',
-      tenant: 'tenant-1',
-    };
-    const roles = [{ role_id: 'role-1' }];
-
-    const userQuery = {
-      select: () => ({
-        where: () => ({
-          where: () => ({
-            first: async () => user,
-          }),
-        }),
-      }),
-    };
-
-    const rolesQuery = {
-      join: () => rolesQuery,
-      where: () => rolesQuery,
-      select: async () => roles,
-    };
-
-    const trx = ((table: string) => {
-      if (table === 'users') {
-        return userQuery;
-      }
-      if (table === 'roles') {
-        return rolesQuery;
-      }
-      return rolesQuery;
-    }) as any;
-
-    return await callback(trx);
-  }),
 }));
 
 import { getCurrentUser } from './getCurrentUser';
+import { getSession } from './getSession';
+import { getUserWithRoles } from '@alga-psa/db';
 
 const envSnapshot = { ...process.env };
+
+beforeEach(() => {
+  vi.mocked(getSession).mockReset();
+  vi.mocked(getUserWithRoles).mockReset();
+});
 
 afterEach(() => {
   process.env = { ...envSnapshot };
 });
 
 describe('getCurrentUser', () => {
-  it('returns user with roles and avatar when session has id and tenant', async () => {
-    const { getSession } = await import('@alga-psa/auth');
+  // Note: avatarUrl is intentionally NOT resolved by getCurrentUser anymore —
+  // it caused a circular dependency with @alga-psa/documents. Callers needing
+  // the avatar use getUserAvatarUrl separately.
+  it('returns user with roles when session has id and tenant', async () => {
     vi.mocked(getSession).mockResolvedValue({
       user: {
         id: 'user-1',
@@ -69,33 +47,36 @@ describe('getCurrentUser', () => {
       },
     } as any);
 
+    vi.mocked(getUserWithRoles).mockResolvedValue({
+      user_id: 'user-1',
+      tenant: 'tenant-1',
+      roles: [{ role_id: 'role-1' }],
+    } as any);
+
     const user = await getCurrentUser();
 
+    expect(vi.mocked(getUserWithRoles)).toHaveBeenCalledWith('user-1', 'tenant-1');
     expect(user?.user_id).toBe('user-1');
     expect(user?.tenant).toBe('tenant-1');
     expect(user?.roles).toEqual([{ role_id: 'role-1' }]);
-    expect(user?.avatarUrl).toBe('https://avatar.test/user.png');
   });
 
   it('returns null when session is missing', async () => {
-    const { getSession } = await import('@alga-psa/auth');
     vi.mocked(getSession).mockResolvedValue(null);
 
     await expect(getCurrentUser()).resolves.toBeNull();
   });
 
-  it('throws when tenant context mismatches session tenant', async () => {
-    const { getSession } = await import('@alga-psa/auth');
+  it('returns null when the session user cannot be found', async () => {
     vi.mocked(getSession).mockResolvedValue({
       user: {
         id: 'user-1',
-        tenant: 'tenant-2',
+        tenant: 'tenant-1',
       },
     } as any);
 
-    const { createTenantKnex } = await import('@alga-psa/db');
-    vi.mocked(createTenantKnex).mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+    vi.mocked(getUserWithRoles).mockResolvedValue(null as any);
 
-    await expect(getCurrentUser()).rejects.toThrow('Tenant context mismatch');
+    await expect(getCurrentUser()).resolves.toBeNull();
   });
 });

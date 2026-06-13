@@ -9,6 +9,41 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import RightSidebarContent from '@ee/components/layout/RightSidebarContent';
 import { getChatMessagesAction, listCurrentUserChatsAction } from '@ee/lib/chat-actions/chatActions';
 
+// RightSidebarContent renders user-facing strings through react-i18next style t()
+// from the 'msp/chat' namespace. Resolve keys against the real English locale
+// bundle so the assertions below keep verifying actual user-visible text.
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const translations = JSON.parse(
+    readFileSync(resolve(process.cwd(), 'public/locales/en/msp/chat.json'), 'utf8'),
+  ) as Record<string, unknown>;
+
+  const lookup = (key: string): unknown =>
+    key.split('.').reduce<unknown>(
+      (node, segment) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[segment] : undefined,
+      translations,
+    );
+
+  const t = (key: string, options?: string | Record<string, unknown>) => {
+    const opts: Record<string, unknown> =
+      typeof options === 'string' ? { defaultValue: options } : options ?? {};
+    const resolved = lookup(key);
+    const template =
+      typeof resolved === 'string'
+        ? resolved
+        : typeof opts.defaultValue === 'string'
+          ? opts.defaultValue
+          : key;
+    return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) =>
+      name in opts ? String(opts[name]) : match,
+    );
+  };
+
+  return { useTranslation: () => ({ t }) };
+});
+
 vi.mock('@ee/components/chat/Chat', () => ({
   Chat: ({
     initialChatId,
@@ -93,6 +128,7 @@ vi.mock('@ee/lib/chat-actions/chatActions', () => ({
   listCurrentUserChatsAction: vi.fn(),
   renameCurrentUserChatAction: vi.fn(),
   deleteCurrentUserChatAction: vi.fn(),
+  searchCurrentUserChatsAction: vi.fn(),
 }));
 
 describe('RightSidebarContent history toggle', () => {

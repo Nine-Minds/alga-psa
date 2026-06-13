@@ -84,6 +84,9 @@ describe('BoardPicker keyboard behavior', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(screen.getByPlaceholderText(/search boards/i));
     });
+    // The picker schedules its own requestAnimationFrame to focus the search
+    // input on open; flush it so it cannot steal focus from the option below.
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 
     const option = screen.getByRole('option', { name: /support/i });
     expect(option).toHaveProperty('tabIndex', 0);

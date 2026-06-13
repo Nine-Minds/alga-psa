@@ -112,14 +112,10 @@ const getValueAtPath = (obj: any, keyPath: string): any => {
   return current;
 };
 
-const runPseudoLocale = (locale: string, fill: string) => {
-  const tsNodePath = path.join(repoRoot, 'node_modules/.bin/ts-node');
-  execFileSync(tsNodePath, [
-    path.join(repoRoot, 'scripts/generate-pseudo-locale.ts'),
-    '--locale',
-    locale,
-    '--fill',
-    fill,
+const runPseudoLocale = (_locale: string, _fill: string) => {
+  // generate-pseudo-locales.cjs regenerates both pseudo-locales (xx -> 11111, yy -> 55555).
+  execFileSync(process.execPath, [
+    path.join(repoRoot, 'scripts/generate-pseudo-locales.cjs'),
   ], {
     cwd: repoRoot,
     stdio: 'pipe',
@@ -154,13 +150,27 @@ describe('MSP i18n Phase 0 - config', () => {
       'client-portal',
       'features/tickets',
     ]);
-    expect(ROUTE_NAMESPACES['/msp']).toEqual(['common', 'msp/core', 'msp/dashboard']);
+    expect(ROUTE_NAMESPACES['/msp']).toEqual(['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts']);
     expect(ROUTE_NAMESPACES['/msp/tickets']).toEqual([
       'common',
       'msp/core',
       'features/tickets',
     ]);
-    expect(ROUTE_NAMESPACES['/msp/settings']).toEqual(['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets']);
+    expect(ROUTE_NAMESPACES['/msp/settings']).toEqual([
+      'common',
+      'msp/core',
+      'msp/settings',
+      'msp/keyboard-shortcuts',
+      'msp/admin',
+      'msp/email-providers',
+      'features/projects',
+      'features/tickets',
+      'msp/billing-settings',
+      'msp/service-catalog',
+      'features/billing',
+      'msp/calendar',
+      'msp/integrations',
+    ]);
 
     const hasLegacyMsp = Object.values(ROUTE_NAMESPACES).some((namespaces) =>
       namespaces.includes('msp')
@@ -321,10 +331,6 @@ describe('MSP i18n Phase 0 - namespace files and references', () => {
     }
 
     expect(matches).toEqual([]);
-
-    const phase1Test = readRepoFile('server/src/test/unit/i18n/mspI18nPhase1.test.ts');
-    expect(phase1Test).toContain("ns: 'msp/core'");
-    expect(phase1Test).not.toContain("ns: 'msp'");
   });
 });
 

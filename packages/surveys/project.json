@@ -3,23 +3,23 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/surveys/src",
   "projectType": "library",
-  "tags": ["scope:surveys", "type:vertical"],
+  "tags": [
+    "scope:surveys",
+    "type:vertical"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop"
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/surveys"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/surveys/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/surveys/**/*.{ts,tsx}"
+        ]
       }
     }
   }

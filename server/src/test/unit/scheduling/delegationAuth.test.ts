@@ -8,6 +8,21 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
   };
 });
 
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    User: {
+      ...(actual as any).User,
+      getReportsToSubordinateIds: vi.fn(async () => []),
+    },
+  };
+});
+
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+}));
+
 import { hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 
@@ -71,9 +86,11 @@ describe('assertCanActOnBehalf', () => {
       return action === 'approve';
     });
 
+    // resolveManagedSubjectUserIds(): db('teams').join().where().select() -> [{ user_id }]
     const qb: any = {
       join: () => qb,
       where: () => qb,
+      select: async () => [{ user_id: 'subject-1' }],
       first: async () => ({ team_id: 'team-1' }),
     };
     const db = vi.fn(() => qb) as any;
@@ -96,9 +113,11 @@ describe('assertCanActOnBehalf', () => {
       return action === 'approve';
     });
 
+    // No managed team membership: select() returns no subordinate users.
     const qb: any = {
       join: () => qb,
       where: () => qb,
+      select: async () => [],
       first: async () => null,
     };
     const db = vi.fn(() => qb) as any;

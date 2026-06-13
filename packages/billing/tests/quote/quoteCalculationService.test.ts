@@ -11,14 +11,21 @@ function buildMockKnex(opts: {
   quote: Record<string, any> | undefined;
   items: Record<string, any>[];
   client?: Record<string, any> | null;
+  taxRates?: Record<string, any>[];
 }) {
   const updatedQuoteItems = new Map<string, Record<string, any>>();
   let updatedQuote: Record<string, any> | null = null;
+  const queriedTables: string[] = [];
 
   const knex: any = (table: string) => {
+    queriedTables.push(table);
     const chain: any = {};
     chain.where = vi.fn(() => chain);
+    chain.andWhere = vi.fn(() => chain);
+    chain.orWhere = vi.fn(() => chain);
     chain.whereNull = vi.fn(() => chain);
+    chain.whereIn = vi.fn(() => chain);
+    chain.join = vi.fn(() => chain);
     chain.select = vi.fn(() => chain);
     chain.orderBy = vi.fn(() => chain);
     chain.first = vi.fn(async () => {
@@ -48,6 +55,17 @@ function buildMockKnex(opts: {
       if (table === 'quote_items' && !chain.update.mock.calls.length) {
         return opts.items;
       }
+      if (table === 'tax_rates') {
+        return opts.taxRates ?? [];
+      }
+      if (
+        table === 'client_locations' ||
+        table === 'tax_holidays' ||
+        table === 'tax_components' ||
+        table === 'tax_rate_thresholds'
+      ) {
+        return [];
+      }
       return chain;
     };
     chain.then = (onFulfill: any, onReject?: any) => resolve().then(onFulfill, onReject);
@@ -56,18 +74,13 @@ function buildMockKnex(opts: {
   };
   knex.fn = { now: () => 'NOW()' };
 
-  return { knex, getUpdatedQuote: () => updatedQuote, getUpdatedItems: () => updatedQuoteItems };
+  return {
+    knex,
+    getUpdatedQuote: () => updatedQuote,
+    getUpdatedItems: () => updatedQuoteItems,
+    queriedTables,
+  };
 }
-
-// ── Mock TaxService ─────────────────────────────────────────────────
-const calculateTaxMock = vi.fn();
-vi.mock('../../src/services/taxService', () => ({
-  TaxService: vi.fn(() => ({ calculateTax: (...args: any[]) => calculateTaxMock(...args) })),
-}));
-
-vi.mock('@alga-psa/db', () => ({
-  runWithTenant: async (_t: string, fn: () => Promise<any>) => fn(),
-}));
 
 // ── Import under test ────────────────────────────────────────────────
 import { recalculateQuoteFinancials } from '../../src/services/quoteCalculationService';
@@ -76,7 +89,6 @@ import { recalculateQuoteFinancials } from '../../src/services/quoteCalculationS
 describe('quoteCalculationService – recalculateQuoteFinancials', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    calculateTaxMock.mockResolvedValue({ taxAmount: 0, taxRate: 0 });
   });
 
   it('T200: returns early when quote is not found', async () => {
@@ -193,14 +205,13 @@ describe('quoteCalculationService – recalculateQuoteFinancials', () => {
   });
 
   it('T207: calculates tax for items with internal tax source', async () => {
-    calculateTaxMock.mockResolvedValue({ taxAmount: 1000, taxRate: 10 });
-
-    const { knex, getUpdatedQuote, getUpdatedItems } = buildMockKnex({
+    const { knex, getUpdatedQuote, getUpdatedItems, queriedTables } = buildMockKnex({
       quote: { quote_id: quoteId, client_id: 'c-1', quote_date: '2026-01-01', currency_code: 'USD', tax_source: 'internal' },
       items: [
         { quote_item_id: 'i1', quantity: 1, unit_price: 10000, is_discount: false, is_optional: false, is_taxable: true },
       ],
       client: { region_code: 'US-CA' },
+      taxRates: [{ tax_percentage: 10 }],
     });
 
     await recalculateQuoteFinancials(knex, tenantStub, quoteId);
@@ -209,7 +220,7 @@ describe('quoteCalculationService – recalculateQuoteFinancials', () => {
     expect(q.subtotal).toBe(10000);
     expect(q.tax).toBe(1000);
     expect(q.total_amount).toBe(11000);
-    expect(calculateTaxMock).toHaveBeenCalledOnce();
+    expect(queriedTables).toContain('tax_rates');
 
     const itemUpdate = getUpdatedItems().get('i1')!;
     expect(itemUpdate.tax_amount).toBe(1000);
@@ -217,7 +228,7 @@ describe('quoteCalculationService – recalculateQuoteFinancials', () => {
   });
 
   it('T208: skips tax calculation when tax_source is external', async () => {
-    const { knex, getUpdatedQuote, getUpdatedItems } = buildMockKnex({
+    const { knex, getUpdatedQuote, getUpdatedItems, queriedTables } = buildMockKnex({
       quote: { quote_id: quoteId, client_id: 'c-1', quote_date: '2026-01-01', currency_code: 'USD', tax_source: 'external' },
       items: [
         { quote_item_id: 'i1', quantity: 1, unit_price: 10000, is_discount: false, is_optional: false, is_taxable: true },
@@ -227,7 +238,7 @@ describe('quoteCalculationService – recalculateQuoteFinancials', () => {
 
     await recalculateQuoteFinancials(knex, tenantStub, quoteId);
 
-    expect(calculateTaxMock).not.toHaveBeenCalled();
+    expect(queriedTables).not.toContain('tax_rates');
     const q = getUpdatedQuote()!;
     expect(q.tax).toBe(0);
     expect(q.total_amount).toBe(10000);

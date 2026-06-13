@@ -10,9 +10,9 @@ describe('renewalsQueueActions wiring', () => {
   it('exports a list action that maps normalized contract assignments into queue rows', () => {
     expect(source).toContain("import type { RenewalWorkItemStatus } from '@alga-psa/types';");
     expect(source).toContain("import { hasPermission } from '@alga-psa/auth/rbac';");
-    expect(source).toContain("const requireBillingReadPermission = (user: unknown): void => {");
-    expect(source).toContain("if (!hasPermission(user as any, 'billing', 'read')) {");
-    expect(source).toContain("throw new Error('Permission denied: Cannot read renewals queue');");
+    expect(source).toContain("const requireBillingReadPermission = async (user: unknown): Promise<ActionPermissionError | null> => {");
+    expect(source).toContain("if (!await hasPermission(user as any, 'billing', 'read')) {");
+    expect(source).toContain("return permissionError('Permission denied: Cannot read renewals queue');");
     expect(source).toContain('const DEFAULT_RENEWALS_HORIZON_DAYS = 90;');
     expect(source).toContain("export type RenewalQueueAction =");
     expect(source).toContain('const getAvailableActionsForStatus = (status: RenewalWorkItemStatus): RenewalQueueAction[] => {');

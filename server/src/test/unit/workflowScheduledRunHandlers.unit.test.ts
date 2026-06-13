@@ -81,7 +81,7 @@ describe('Workflow scheduled run handlers', () => {
   it('T025/T027: one-time handler launches with the saved schedule payload and preserves schedule provenance metadata', async () => {
     scheduleRecord = {
       id: 'schedule-1',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       workflow_id: 'workflow-1',
       workflow_version: 4,
       name: 'Quarterly kickoff',
@@ -138,7 +138,6 @@ describe('Workflow scheduled run handlers', () => {
         fireKey: 'workflow-schedule-fire:schedule-1:job-1'
       }),
       triggerFireKey: 'workflow-schedule-fire:schedule-1:job-1',
-      execute: true,
       executionKey: 'workflow-schedule-fire:schedule-1:job-1'
     });
     expect(payload).toEqual({
@@ -164,7 +163,7 @@ describe('Workflow scheduled run handlers', () => {
   it('T026: recurring handler uses the saved schedule payload as workflow input_json and still deduplicates by fire key', async () => {
     scheduleRecord = {
       id: 'schedule-2',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       workflow_id: 'workflow-2',
       workflow_version: 7,
       name: 'Daily digest',
@@ -223,7 +222,6 @@ describe('Workflow scheduled run handlers', () => {
         fireKey: 'workflow-schedule-fire:schedule-2:fire-1'
       }),
       triggerFireKey: 'workflow-schedule-fire:schedule-2:fire-1',
-      execute: true,
       executionKey: 'workflow-schedule-fire:schedule-2:fire-1'
     });
     expect(launchPublishedWorkflowRun.mock.calls[1]?.[1]).toMatchObject({
@@ -249,7 +247,7 @@ describe('Workflow scheduled run handlers', () => {
   it('T028: invalid saved payload at fire time does not start execution and records schedule error state', async () => {
     scheduleRecord = {
       id: 'schedule-3',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       workflow_id: 'workflow-3',
       workflow_version: 9,
       name: 'Broken payload schedule',
@@ -288,7 +286,7 @@ describe('Workflow scheduled run handlers', () => {
   it('T008: recurring business-day schedule launches on an eligible occurrence using scheduled occurrence time', async () => {
     scheduleRecord = {
       id: 'schedule-business-1',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       workflow_id: 'workflow-business-1',
       workflow_version: 11,
       name: 'Business day launch',
@@ -334,7 +332,7 @@ describe('Workflow scheduled run handlers', () => {
   it('T009: recurring business-day schedule skips disallowed holiday occurrences without launching a workflow', async () => {
     scheduleRecord = {
       id: 'schedule-business-2',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       workflow_id: 'workflow-business-2',
       workflow_version: 11,
       name: 'Business day skip',
@@ -384,7 +382,7 @@ describe('Workflow scheduled run handlers', () => {
   it('T010: recurring non-business schedule launches on holiday occurrences and skips ordinary business-day occurrences', async () => {
     scheduleRecord = {
       id: 'schedule-non-business-1',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       workflow_id: 'workflow-non-business-1',
       workflow_version: 11,
       name: 'Non-business day mixed',
@@ -443,7 +441,7 @@ describe('Workflow scheduled run handlers', () => {
   it('T011: filtered recurring schedule with unresolved business-hours configuration records actionable runtime error and does not launch', async () => {
     scheduleRecord = {
       id: 'schedule-error-1',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       workflow_id: 'workflow-error-1',
       workflow_version: 11,
       name: 'Missing calendar',

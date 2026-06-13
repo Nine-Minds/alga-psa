@@ -143,6 +143,32 @@ vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProduct: () => ({
+    productCode: 'psa',
+    isMisconfigured: false,
+    isPsa: true,
+    isAlgaDesk: false,
+    isLoading: false,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
+  KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
+  useKeyboardShortcutPreferenceStorage: () => ({
+    value: {},
+    setValue: () => {},
+    storage: {
+      load: () => ({}),
+      save: () => {},
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -209,10 +235,10 @@ async function renderServiceRequestEditor(locale: keyof typeof translations = 'd
   render(
     <MspLayoutClient
       session={null}
+      productCode="psa"
       needsOnboarding={false}
       initialSidebarCollapsed={false}
       initialLocale={locale}
-      i18nEnabled={true}
     >
       {page}
     </MspLayoutClient>

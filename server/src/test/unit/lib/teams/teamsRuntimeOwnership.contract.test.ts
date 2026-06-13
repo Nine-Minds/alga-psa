@@ -129,8 +129,11 @@ describe('teams runtime EE ownership', () => {
     expect(fs.existsSync(repoPath('server/src/lib/teams/actions/teamsActionRegistry.ts'))).toBe(false);
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/actions/teamsActionRegistry.ts'))).toBe(true);
     expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/microsoftConsumerBindings.ts'))).toBe(false);
+    // The Teams integration settings UI is a shared, availability-gated component
+    // living in @alga-psa/integrations; it calls shared action wrappers and no
+    // longer ships from EE.
     expect(fs.existsSync(repoPath('packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.tsx'))).toBe(
-      false
+      true
     );
     expect(fs.existsSync(repoPath('server/src/lib/notifications/teamsNotificationDelivery.ts'))).toBe(false);
 
@@ -148,15 +151,19 @@ describe('teams runtime EE ownership', () => {
     expect(sharedTeamsActionsSource).toContain("from './teamsContracts'");
     expect(sharedTeamsActionsSource).toContain("from './teamsShared'");
     expect(sharedPackageActionsSource).toContain("from './teamsContracts'");
+    // teamsActions still dynamically loads EE for live Graph diagnostics; the
+    // package (manifest/status) actions are now fully shared + availability-gated.
     expect(sharedTeamsActionsSource).toContain("import('@alga-psa/ee-microsoft-teams/actions')");
-    expect(sharedPackageActionsSource).toContain("import('@alga-psa/ee-microsoft-teams/actions')");
     expect(sharedTeamsActionsSource).not.toContain('ee/server/src/lib/actions/integrations/teamsActions');
     expect(sharedPackageActionsSource).not.toContain('ee/server/src/lib/actions/integrations/teamsPackageActions');
 
-    expect(eeTeamsActionsSource).toContain("@alga-psa/integrations/actions/integrations/teamsContracts");
-    expect(eeTeamsActionsSource).toContain("@alga-psa/integrations/actions/integrations/teamsShared");
+    // The EE microsoft-teams package now ships its own local teams contracts +
+    // shared constants (decoupled from @alga-psa/integrations) and never
+    // re-imports its own action modules.
+    expect(eeTeamsActionsSource).toContain("teams/teamsContracts");
+    expect(eeTeamsActionsSource).toContain("teams/teamsShared");
     expect(eeTeamsActionsSource).not.toContain("@alga-psa/integrations/actions/integrations/teamsActions';");
-    expect(eeTeamsPackageActionsSource).toContain("@alga-psa/integrations/actions/integrations/teamsContracts");
+    expect(eeTeamsPackageActionsSource).toContain("teams/teamsContracts");
     expect(eeTeamsPackageActionsSource).not.toContain("@alga-psa/integrations/actions/integrations/teamsPackageActions';");
     expect(eeTeamsActionsWrapperSource).toContain("@alga-psa/ee-microsoft-teams/actions");
     expect(eeTeamsPackageActionsWrapperSource).toContain("@alga-psa/ee-microsoft-teams/actions");
@@ -174,25 +181,30 @@ describe('teams runtime EE ownership', () => {
     expect(rootActionIndexSource).not.toContain("from './TeamsIntegrationSettings'");
 
     expect(sharedPackageActionsSource).toContain('getTeamsAvailability');
-    expect(sharedPackageActionsSource).toContain('loadEeTeamsPackageActions');
     expect(sharedPackageActionsSource).toContain('getTeamsAppPackageStatusImpl');
-    expect(sharedPackageActionsSource).not.toContain('function buildTeamsAppManifest');
+    // Teams app manifest composition + package status now live in the shared
+    // availability-gated package actions module (no EE delegation).
+    expect(sharedPackageActionsSource).toContain('function buildTeamsAppManifest');
   });
 
-  it('T191/T192/T223/T227/T239/T261: keeps Teams settings persistence under EE while leaving shared action wrappers in place', () => {
+  it('T191/T192/T223/T227/T239/T261: keeps shared Teams settings persistence availability-gated while EE owns live Graph diagnostics', () => {
     const sharedTeamsActionsPath = repoPath('packages/integrations/src/actions/integrations/teamsActions.ts');
     const sharedTeamsActionsSource = fs.readFileSync(sharedTeamsActionsPath, 'utf8');
 
     expect(fs.existsSync(sharedTeamsActionsPath)).toBe(true);
     expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/teamsActions.ts'))).toBe(true);
+    // Teams integration status/save persistence now lives in the shared
+    // availability-gated module; only live Graph diagnostics/test-message still
+    // delegate to EE via loadEeTeamsActions().
     expect(sharedTeamsActionsSource).toContain('loadEeTeamsActions');
     expect(sharedTeamsActionsSource).toContain('getTeamsIntegrationStatusImpl');
     expect(sharedTeamsActionsSource).toContain('getTeamsIntegrationExecutionStateImpl');
     expect(sharedTeamsActionsSource).toContain('saveTeamsIntegrationSettingsImpl');
-    expect(sharedTeamsActionsSource).not.toContain('function mapTeamsIntegrationRow');
+    expect(sharedTeamsActionsSource).toContain('getTeamsAvailability');
+    expect(sharedTeamsActionsSource).toContain('mapTeamsIntegrationRow');
   });
 
-  it('T181/T182/T283/T292/T293/T294/T305/T306/T353/T354: keeps Teams notification delivery implementation under EE while shared notification code imports only wrappers', () => {
+  it('T181/T182/T283/T292/T293/T294/T305/T306/T353/T354: keeps Teams notification delivery in the shared availability-gated module consumed by the broadcaster', () => {
     const sharedTeamsNotificationPath = repoPath('packages/notifications/src/realtime/teamsNotificationDelivery.ts');
     const sharedTeamsNotificationSource = fs.readFileSync(sharedTeamsNotificationPath, 'utf8');
     const sharedNotificationBroadcasterSource = fs.readFileSync(
@@ -202,11 +214,10 @@ describe('teams runtime EE ownership', () => {
 
     expect(fs.existsSync(sharedTeamsNotificationPath)).toBe(true);
     expect(fs.existsSync(repoPath('ee/server/src/lib/notifications/teamsNotificationDelivery.ts'))).toBe(true);
-    expect(sharedTeamsNotificationSource).toContain('loadEeTeamsNotificationDelivery');
-    expect(sharedTeamsNotificationSource).toContain('getTeamsAvailability');
-    expect(sharedTeamsNotificationSource).toContain('deliverTeamsNotificationImpl');
-    expect(sharedTeamsNotificationSource).toContain("import('@alga-psa/ee-microsoft-teams/lib/notifications/teamsNotificationDelivery')");
-    expect(sharedTeamsNotificationSource).not.toContain('teamwork/sendActivityNotification');
+    // Teams notification delivery was consolidated into the shared notifications
+    // package (availability-gated) instead of delegating to an EE wrapper.
+    expect(sharedTeamsNotificationSource).toContain('deliverTeamsNotification');
+    expect(sharedTeamsNotificationSource).toContain('teamwork/sendActivityNotification');
     expect(sharedNotificationBroadcasterSource).toContain("import { deliverTeamsNotification } from './teamsNotificationDelivery';");
     expect(sharedNotificationBroadcasterSource).not.toContain('ee/server/src/lib/notifications/teamsNotificationDelivery');
   });
@@ -225,10 +236,11 @@ describe('teams runtime EE ownership', () => {
     expect(fs.existsSync(repoPath('ee/server/src/lib/auth/teamsMicrosoftProviderResolution.ts'))).toBe(true);
     expect(fs.existsSync(repoPath('server/src/lib/teams/buildTeamsReauthUrl.ts'))).toBe(false);
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/buildTeamsReauthUrl.ts'))).toBe(true);
-    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('loadEeTeamsMicrosoftProviderResolution');
-    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('resolveTeamsMicrosoftProviderConfigImpl');
-    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain("import('@alga-psa/ee-microsoft-teams/lib/auth/teamsMicrosoftProviderResolution')");
-    expect(sharedTeamsMicrosoftProviderResolutionSource).not.toContain('getAdminConnection');
+    // The Teams Microsoft provider resolver now resolves directly in the shared
+    // auth package (admin-connection backed) and is re-exported from the SSO
+    // barrel rather than delegating to an EE wrapper module.
+    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('resolveTeamsMicrosoftProviderConfig');
+    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('getAdminConnection');
     expect(sharedAuthIndexSource).toContain("export * from './teamsMicrosoftProviderResolution';");
     expect(sharedAuthIndexSource).not.toContain('ee/server/src/lib/auth/teamsMicrosoftProviderResolution');
   });
@@ -243,6 +255,8 @@ describe('teams runtime EE ownership', () => {
     expect(sharedTeamsActionsSource).toContain('loadEeTeamsActions');
     expect(sharedTeamsActionsSource).toContain('getTeamsIntegrationStatusImpl');
     expect(sharedTeamsActionsSource).toContain('saveTeamsIntegrationSettingsImpl');
-    expect(sharedTeamsActionsSource).not.toContain('function validateSelectedProfile');
+    // Selected-profile validation runs inside the shared availability-gated
+    // persistence path (it no longer lives only in EE).
+    expect(sharedTeamsActionsSource).toContain('validateSelectedProfile');
   });
 });

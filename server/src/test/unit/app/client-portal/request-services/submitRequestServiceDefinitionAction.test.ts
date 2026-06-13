@@ -134,12 +134,12 @@ describe('submitRequestServiceDefinitionAction', () => {
       })
     );
     expect(redirectMock).toHaveBeenCalledWith(
-      '/client-portal/request-services/definition-1?submitted=submission-1&ticketId=ticket-1'
+      '/client-portal/request-services?submitted=submission-1&ticketId=ticket-1'
     );
     expect(sequence).toEqual([
       'transaction:start',
       'transaction:done',
-      'redirect:/client-portal/request-services/definition-1?submitted=submission-1&ticketId=ticket-1',
+      'redirect:/client-portal/request-services?submitted=submission-1&ticketId=ticket-1',
     ]);
   });
 });

@@ -28,11 +28,11 @@ const {
   getTeamsRuntimeAvailabilityMock: vi.fn(),
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTenantContext', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsTenantContext', () => ({
   resolveTeamsTenantContext: resolveTeamsTenantContextMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsLinkedUser', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsLinkedUser', () => ({
   resolveTeamsLinkedUser: resolveTeamsLinkedUserMock,
 }));
 
@@ -41,20 +41,20 @@ vi.mock('@alga-psa/db', () => ({
   getUserWithRoles: getUserWithRolesMock,
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/actions/integrations/teamsActions', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsActions', () => ({
   getTeamsIntegrationExecutionStateImpl: getTeamsIntegrationExecutionStateMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistry', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/getTeamsRuntimeAvailability', () => ({
   getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 
@@ -155,15 +155,15 @@ describe('teamsBotHandler', () => {
     expect(welcome.attachments?.[0]?.content.title).toBe('Teams bot commands');
     expect(welcome.attachments?.[0]?.content.text).toContain('my tickets');
     expect(welcome.attachments?.[0]?.content.text).toContain('my approvals');
-    expect(welcome.attachments?.[0]?.content.text).toContain('ticket <id>');
-    expect(welcome.attachments?.[0]?.content.text).toContain('assign ticket <ticket-id> to me');
+    expect(welcome.attachments?.[0]?.content.text).toContain('ticket <number>');
+    expect(welcome.attachments?.[0]?.content.text).toContain('assign ticket <number> to me');
     expect(welcome.suggestedActions?.actions.map((action) => action.value)).toContain('my tickets');
 
     const help = await handleTeamsBotActivity(buildPersonalMessageActivity('help'), { tenantIdHint: 'tenant-1' });
 
-    expect(help.attachments?.[0]?.content.text).toContain('add note <ticket-id>: <note>');
-    expect(help.attachments?.[0]?.content.text).toContain('reply to contact <ticket-id>: <reply>');
-    expect(help.attachments?.[0]?.content.text).toContain('log time ticket <ticket-id> 30m: <note>');
+    expect(help.attachments?.[0]?.content.text).toContain('add note <number>: <note>');
+    expect(help.attachments?.[0]?.content.text).toContain('reply to contact <number>: <reply>');
+    expect(help.attachments?.[0]?.content.text).toContain('log time ticket <number> 30m: <note>');
     expect(help.attachments?.[0]?.content.text).toContain('approve approval <approval-id>');
     expect(help.metadata?.commandId).toBe('help');
   });
@@ -175,7 +175,7 @@ describe('teamsBotHandler', () => {
 
     expect(response.text).toContain('not supported');
     expect(response.attachments?.[0]?.content.text).toContain('my tickets');
-    expect(response.suggestedActions?.actions.map((action) => action.value)).toContain('ticket <id>');
+    expect(response.suggestedActions?.actions.map((action) => action.value)).toContain('ticket <number>');
   });
 
   it('T267/T268: non-personal Teams contexts return a clear personal-scope-only response', async () => {
@@ -190,8 +190,8 @@ describe('teamsBotHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
-    expect(response.text).toContain('personal chats');
-    expect(response.attachments?.[0]?.content.title).toBe('Personal scope only');
+    expect(response.text).toContain('personal and group chats');
+    expect(response.attachments?.[0]?.content.title).toBe('Unsupported conversation type');
   });
 
   it('T261/T263/T265: ticket lookups render cards with Teams/PSA buttons and only tenant-allowed follow-up command shortcuts for the resolved ticket', async () => {
@@ -1094,11 +1094,10 @@ describe('teamsBotHandler', () => {
 
     const okResponse = await handleTeamsBotActivityRequest(okRequest);
     expect(okResponse.status).toBe(200);
+    // Teams ignores the HTTP body for message activities; replies are sent via
+    // the Bot Framework connector, so the endpoint just acknowledges receipt.
     await expect(okResponse.json()).resolves.toMatchObject({
-      type: 'message',
-      metadata: {
-        tenantId: 'tenant-1',
-      },
+      status: 'ok',
     });
 
     const badRequest = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {

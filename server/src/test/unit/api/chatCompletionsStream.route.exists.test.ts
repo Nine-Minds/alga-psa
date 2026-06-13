@@ -5,6 +5,9 @@ const isExperimentalFeatureEnabledMock = vi.hoisted(() =>
   vi.fn<(featureKey: string) => Promise<boolean>>(),
 );
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
+const assertPsaChatProductAccessMock = vi.hoisted(() =>
+  vi.fn<() => Promise<Response | null>>(),
+);
 
 const createStructuredCompletionStreamMock = vi.hoisted(() =>
   vi.fn<
@@ -23,6 +26,10 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
 }));
 
+vi.mock('@/app/api/chat/productAccess', () => ({
+  assertPsaChatProductAccess: assertPsaChatProductAccessMock,
+}));
+
 vi.mock('@product/chat/entry', () => ({
   ChatCompletionsService: {
     createStructuredCompletionStream: createStructuredCompletionStreamMock,
@@ -37,6 +44,8 @@ describe('POST /api/chat/v1/completions/stream', () => {
     isExperimentalFeatureEnabledMock.mockReset();
     getCurrentUserMock.mockReset();
     getCurrentUserMock.mockResolvedValue({ tenant: 'tenant-1', user_id: 'user-1' });
+    assertPsaChatProductAccessMock.mockReset();
+    assertPsaChatProductAccessMock.mockResolvedValue(null);
     createStructuredCompletionStreamMock.mockReset();
     process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;

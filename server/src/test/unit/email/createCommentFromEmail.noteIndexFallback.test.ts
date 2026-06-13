@@ -10,11 +10,19 @@ const tenantSettingsFirstMock = vi.fn(async () => ({
   ticket_display_settings: { responseStateTrackingEnabled: false },
 }));
 
+const ticketAuditLogInsertMock = vi.fn(async () => undefined);
+
 const trxMock = vi.fn((table: string) => {
   if (table === 'tenant_settings') {
     const whereMock = vi.fn().mockReturnValue({ first: tenantSettingsFirstMock });
     return {
       select: vi.fn().mockReturnValue({ where: whereMock }),
+    };
+  }
+
+  if (table === 'ticket_audit_logs') {
+    return {
+      insert: ticketAuditLogInsertMock,
     };
   }
 

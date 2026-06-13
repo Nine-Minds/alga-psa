@@ -133,6 +133,13 @@ vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// MspLayoutClient now wraps the tree in ProductProvider, which calls
+// next-auth's useSession(); the AppSessionProvider mock above is a passthrough
+// that doesn't supply a session context, so stub the provider out.
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@alga-psa/assets/components/QuickAddAsset', () => ({
   QuickAddAsset: () => null,
 }));

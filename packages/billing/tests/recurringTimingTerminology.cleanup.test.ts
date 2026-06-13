@@ -6,6 +6,7 @@ describe('recurring timing terminology cleanup', () => {
   it('T165: migrated UI copy, comments, and portal summaries avoid stale recurring timing terminology', () => {
     const billingUiSources = [
       '../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx',
+      '../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx',
       '../src/components/billing-dashboard/ContractLineDialog.tsx',
       '../src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx',

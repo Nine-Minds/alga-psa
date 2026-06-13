@@ -33,8 +33,17 @@ vi.mock('@alga-psa/ui', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children, isOpen }: any) => (isOpen ? <div>{children}</div> : null),
+  // The dialog footer (with the submit button) is passed via the `footer` prop,
+  // so the mock must render it alongside children.
+  Dialog: ({ children, footer, isOpen }: any) =>
+    isOpen ? (
+      <div>
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogDescription: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
 

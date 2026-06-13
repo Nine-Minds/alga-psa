@@ -29,7 +29,12 @@ vi.mock('@alga-psa/core/secrets', async () => {
 
   return {
     ...actual,
-    getSecret: actual.getSecret,
+    getSecret: vi.fn(async (name: string) => {
+      if (name === 'OPENROUTER_API_KEY') {
+        return 'test-openrouter-key';
+      }
+      return '';
+    }),
     getSecretProviderInstance: vi.fn(async () => ({
       getAppSecret: vi.fn(async () => 'test-openrouter-key'),
     })),

@@ -149,6 +149,36 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUserMock(...args),
 }));
 
+vi.mock('@/lib/productAccess', () => ({
+  getCurrentTenantProduct: async () => 'psa',
+}));
+
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProduct: () => ({
+    productCode: 'psa',
+    isMisconfigured: false,
+    isPsa: true,
+    isAlgaDesk: false,
+    isLoading: false,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
+  KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
+  useKeyboardShortcutPreferenceStorage: () => ({
+    value: {},
+    setValue: () => {},
+    storage: {
+      load: () => ({}),
+      save: () => {},
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   getConsolidatedTicketData: (...args: unknown[]) => getConsolidatedTicketDataMock(...args),
 }));
@@ -213,10 +243,10 @@ async function renderTicketDetail(locale: keyof typeof translations = 'de') {
   render(
     <MspLayoutClient
       session={null}
+      productCode="psa"
       needsOnboarding={false}
       initialSidebarCollapsed={false}
       initialLocale={locale}
-      i18nEnabled={true}
     >
       {page}
     </MspLayoutClient>

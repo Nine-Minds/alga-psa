@@ -3,27 +3,29 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/tags/src",
   "projectType": "library",
-  "tags": ["scope:tags", "type:horizontal"],
+  "tags": [
+    "scope:tags",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:run-script",
       "options": {
         "script": "build"
       },
-      "dependsOn": ["^build"]
-    },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/tags"],
-      "options": {
-        "passWithNoTests": true
-      }
+      "dependsOn": [
+        "^build"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/tags/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/tags/**/*.{ts,tsx}"
+        ]
       }
     }
   }

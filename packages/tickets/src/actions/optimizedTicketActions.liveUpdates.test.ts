@@ -12,6 +12,10 @@ const disconnectRedisMock = vi.fn();
 const validateStatusBelongsToBoardMock = vi.fn(
   async (_statusId: string, _boardId: string, _tenant: string, _trx: unknown) => ({ valid: true })
 );
+// Queue mirroring @alga-psa/db's after-commit hook registry: hooks registered
+// via registerAfterCommit during a transaction run after the (mocked)
+// transaction resolves, matching production's flush-after-commit semantics.
+const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -24,7 +28,26 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
-  withTransaction: (...args: any[]) => withTransactionMock(...args),
+  withTransaction: async (...args: any[]) => {
+    try {
+      const result = await withTransactionMock(...args);
+      const hooks = afterCommitHooksQueue.splice(0);
+      for (const hook of hooks) {
+        try {
+          await hook();
+        } catch {
+          // Production swallows after-commit hook failures.
+        }
+      }
+      return result;
+    } catch (error) {
+      afterCommitHooksQueue.length = 0;
+      throw error;
+    }
+  },
+  registerAfterCommit: (_trx: unknown, hook: () => unknown | Promise<unknown>, _label?: string) => {
+    afterCommitHooksQueue.push(hook);
+  },
 }));
 
 vi.mock('next/cache', () => ({
@@ -234,6 +257,7 @@ describe('updateTicketWithCache live updates', () => {
   beforeEach(async () => {
     await resetTicketUpdatePublisherClientForTests();
     vi.clearAllMocks();
+    afterCommitHooksQueue.length = 0;
     setTicketUpdateEventBusLoaderForTests(async () => ({
       getRedisClient: vi.fn(async () => ({
         publish: publishRedisMock,

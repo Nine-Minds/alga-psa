@@ -189,7 +189,7 @@ describe('MSP dashboard locale batch 2b-1', () => {
   });
 
   it('T091/T092: ROUTE_NAMESPACES loads msp/dashboard for /msp and /msp/dashboard', () => {
-    expect(ROUTE_NAMESPACES['/msp']).toEqual(['common', 'msp/core', 'msp/dashboard']);
+    expect(ROUTE_NAMESPACES['/msp']).toEqual(['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts']);
     expect(ROUTE_NAMESPACES['/msp/dashboard']).toEqual(['common', 'msp/core', 'msp/dashboard']);
   });
 

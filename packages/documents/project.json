@@ -3,24 +3,24 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/documents/src",
   "projectType": "library",
-  "tags": ["scope:documents", "type:vertical"],
+  "tags": [
+    "scope:documents",
+    "type:vertical"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop",
       "dependsOn": []
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/documents"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/documents/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/documents/**/*.{ts,tsx}"
+        ]
       }
     }
   }

@@ -16,17 +16,68 @@ function normalizeColumn(column: string): string {
 function createQueryBuilder(rows: Row[]) {
   let resultRows = [...rows];
 
-  const builder: any = {
-    where: vi.fn((criteria: Record<string, any>) => {
+  // Columns sourced from joined tables are not present on the base-table rows;
+  // treat filters on missing columns as pass-through.
+  const matchesValue = (row: Row, column: string, expected: any) => {
+    const value = row[normalizeColumn(column)];
+    return value === undefined ? true : value === expected;
+  };
+
+  const applyWhere = (...args: any[]) => {
+    if (typeof args[0] === 'function') {
+      // Grouped where callbacks are treated as pass-through in this stub.
+      return builder;
+    }
+    if (typeof args[0] === 'object' && args[0] !== null) {
+      const criteria: Record<string, any> = args[0];
       resultRows = resultRows.filter((row) =>
-        Object.entries(criteria).every(([key, expected]) => row[normalizeColumn(key)] === expected),
+        Object.entries(criteria).every(([key, expected]) => matchesValue(row, key, expected)),
       );
+      return builder;
+    }
+    if (args.length === 2) {
+      resultRows = resultRows.filter((row) => matchesValue(row, args[0], args[1]));
+      return builder;
+    }
+    // (column, operator, value) form — only equality is meaningful for this stub.
+    if (args.length === 3 && args[1] === '=') {
+      resultRows = resultRows.filter((row) => matchesValue(row, args[0], args[2]));
+    }
+    return builder;
+  };
+
+  const builder: any = {
+    where: vi.fn(applyWhere),
+    andWhere: vi.fn(applyWhere),
+    join: vi.fn(() => builder),
+    leftJoin: vi.fn(() => builder),
+    modify: vi.fn((callback: (qb: any) => void) => {
+      callback(builder);
+      return builder;
+    }),
+    whereIn: vi.fn((column: string, values: any[]) => {
+      resultRows = resultRows.filter((row) => {
+        const value = row[normalizeColumn(column)];
+        return value === undefined ? true : values.includes(value);
+      });
+      return builder;
+    }),
+    whereNotIn: vi.fn((column: string, values: any[]) => {
+      resultRows = resultRows.filter((row) => {
+        const value = row[normalizeColumn(column)];
+        return value === undefined ? true : !values.includes(value);
+      });
       return builder;
     }),
     whereNotNull: vi.fn((column: string) => {
       resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
       return builder;
     }),
+    whereNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] == null);
+      return builder;
+    }),
+    orderBy: vi.fn(() => builder),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
     raw: vi.fn((sql: string) => sql),
@@ -66,8 +117,14 @@ const mocks = vi.hoisted(() => {
         record_id: 'record-1',
         tenant: 'tenant-1',
         cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        obligation_id: 'line-1',
+        lifecycle_state: 'active',
         schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
         period_key: 'period:2025-02-01:2025-03-01',
+        service_period_start: '2025-02-01',
+        service_period_end: '2025-03-01',
+        revision: 1,
         invoice_window_start: '2025-02-01',
         invoice_window_end: '2025-03-01',
         invoice_id: 'invoice-1',

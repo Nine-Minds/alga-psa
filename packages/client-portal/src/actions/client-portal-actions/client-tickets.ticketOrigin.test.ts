@@ -10,6 +10,8 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(currentUser, { tenant: currentUser.tenant }, ...args),
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
@@ -41,6 +43,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
+  publishTicketUpdate: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@alga-psa/users/actions', () => ({
@@ -97,6 +103,10 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
           select: vi.fn().mockReturnThis(),
           leftJoin: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
+          modify: vi.fn(function (this: any, callback: (query: any) => void) {
+            callback(this);
+            return this;
+          }),
           first: vi.fn().mockResolvedValue(params.ticket),
         };
       }
@@ -114,6 +124,14 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
           select: vi.fn().mockReturnThis(),
           join: vi.fn().mockReturnThis(),
           where: vi.fn().mockResolvedValue([]),
+        };
+      }
+
+      if (table === 'asset_associations as aa') {
+        return {
+          innerJoin: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue([]),
         };
       }
 

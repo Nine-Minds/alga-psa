@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
+// The real BubbleMenu from @tiptap/react/menus renders its children into a
+// floating element managed by a ProseMirror plugin, which requires a real
+// editor view. The module is aliased to an inline-rendering stub in
+// vitest.config.ts (src/test/stubs/tiptap-react-menus.tsx) so the toolbar
+// buttons are testable.
 const { EditorToolbar } = await import('@alga-psa/documents/components/EditorToolbar');
 
 describe('EditorToolbar', () => {
@@ -36,6 +41,13 @@ describe('EditorToolbar', () => {
       registerPlugin: vi.fn(),
       unregisterPlugin: vi.fn(),
     };
+  });
+
+  // Unmount between tests; otherwise repeated renders accumulate in the DOM and
+  // getByTitle('Bold (Ctrl+B)') matches multiple nodes (order-dependent, surfaced
+  // under shuffle).
+  afterEach(() => {
+    cleanup();
   });
 
   it('renders the bubble menu toolbar container', () => {

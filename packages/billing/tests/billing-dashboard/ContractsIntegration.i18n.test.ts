@@ -36,7 +36,7 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/en/msp/contracts.json'
     );
 
-    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts']");
+    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing']");
 
     expect(contractsSource).toContain("const { t } = useTranslation('msp/contracts');");
     expect(clientContractsSource).toContain("const { t } = useTranslation('msp/contracts');");
@@ -328,6 +328,6 @@ describe('Contracts integration i18n coverage', () => {
     expect(reviewSource).toContain('useFormatters');
     expect(reviewSource).toContain('const { formatCurrency } = useFormatters();');
     expect(reviewSource).toContain('const formatMinorCurrency = (minorUnits: number | null | undefined) => {');
-    expect(reviewSource).toContain('return formatCurrency(amount / 100, {');
+    expect(reviewSource).toContain('return formatCurrency(amount / 100, currencyCode, {');
   });
 });

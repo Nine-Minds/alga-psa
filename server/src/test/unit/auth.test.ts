@@ -60,6 +60,9 @@ vi.mock('jsonwebtoken', () => {
 vi.mock('@/utils/logger', () => {
     const mockLogger = {
         system: vi.fn(),
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
         error: vi.fn()
     };
     return {
@@ -91,7 +94,8 @@ describe('Auth Functions', () => {
                 username: mockUser.username,
                 email: mockUser.email,
                 password: mockUser.password,
-                clientName: mockUser.clientName
+                clientName: mockUser.clientName,
+                user_type: mockUser.user_type
             }, expect.any(String), { expiresIn: expect.any(String) });
 
             expect(token).toBe(mockToken);

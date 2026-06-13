@@ -50,8 +50,15 @@ describe('invoice preview sample data', () => {
       ])
     );
 
+    // Some scenario items carry only detail periods (no item-level summary
+    // period); the alignment check applies to items that define both.
     recurringItems
-      .filter((item) => item.recurringDetailPeriods && item.recurringDetailPeriods.length > 0)
+      .filter(
+        (item) =>
+          item.recurringDetailPeriods &&
+          item.recurringDetailPeriods.length > 0 &&
+          item.servicePeriodStart != null
+      )
       .forEach((item) => {
         expect(item.servicePeriodStart).toBe(item.recurringDetailPeriods?.[0]?.servicePeriodStart ?? null);
         expect(item.servicePeriodEnd).toBe(

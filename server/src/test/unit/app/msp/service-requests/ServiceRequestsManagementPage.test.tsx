@@ -141,8 +141,10 @@ describe('ServiceRequestsManagementPage', () => {
       );
     });
 
+    // Copy is now driven by i18n keys; the shared test t() returns the key when
+    // no defaultValue is supplied by the component.
     expect(toastSuccessMock).toHaveBeenCalledWith(
-      'Draft created from example: New Hire Onboarding'
+      'messages.success.draftCreatedFromExample'
     );
     expect(pushMock).toHaveBeenCalledWith('/msp/service-requests/definition-123');
     expect(listServiceRequestDefinitionsActionMock).toHaveBeenCalledTimes(1);
@@ -175,11 +177,15 @@ describe('ServiceRequestsManagementPage', () => {
 
     expect(screen.queryByText('Archived Request')).toBeNull();
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Show archived (1)' }));
+    // The toggle label is now i18n-driven (key shown by the shared test t());
+    // target the switch by its stable id instead of label text.
+    const archivedToggle = document.getElementById(
+      'service-request-show-archived-toggle'
+    ) as HTMLInputElement;
+    expect(archivedToggle).not.toBeNull();
+    fireEvent.click(archivedToggle);
 
     expect(await screen.findByText('Archived Request')).toBeTruthy();
-    expect(
-      (screen.getByRole('switch', { name: 'Show archived (1)' }) as HTMLInputElement).checked
-    ).toBe(true);
+    expect(archivedToggle.checked).toBe(true);
   });
 });

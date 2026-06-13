@@ -35,6 +35,11 @@ describe('calendar migration ownership contracts', () => {
     );
 
     expect(calendarEeMigrationFiles.every((file) => eeMigrationFiles.has(file))).toBe(true);
-    expect(eeActionSource).toContain("@alga-psa/ee-calendar/actions");
+    // The EE forwarder re-exports the concrete calendar action surface. To break
+    // enterprise dependency cycles it routes through the stub module rather than
+    // importing '@alga-psa/ee-calendar/actions' directly; the shared source still
+    // performs the dynamic EE resolution.
+    expect(eeActionSource).toContain('initiateCalendarOAuth');
+    expect(eeActionSource).toContain('calendarStubs');
   });
 });

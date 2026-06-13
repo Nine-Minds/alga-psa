@@ -18,11 +18,12 @@ vi.mock('@alga-psa/ui/components/Tooltip', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, title, children }: any) => (
+  Dialog: ({ isOpen, title, children, footer }: any) => (
     isOpen ? (
       <div>
         <div>{title}</div>
         {children}
+        {footer}
       </div>
     ) : null
   ),

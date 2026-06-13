@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { findTicketByReplyToken, createCommentFromEmail } from '@alga-psa/workflows/actions/emailWorkflowActions';
 
 describe('Reply Token Threading Logic', () => {

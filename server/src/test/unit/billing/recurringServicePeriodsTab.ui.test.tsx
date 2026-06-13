@@ -23,6 +23,21 @@ vi.mock('@alga-psa/billing/actions/recurringServicePeriodActions', () => ({
   repairMissingRecurringServicePeriods: mocks.repairMissingRecurringServicePeriods,
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: string | Record<string, unknown>) => {
+      if (typeof options === 'string') {
+        return options;
+      }
+      const template = (options?.defaultValue as string | undefined) ?? key;
+      return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+        const value = options?.[name];
+        return value === undefined || value === null ? match : String(value);
+      });
+    },
+  }),
+}));
+
 const { default: RecurringServicePeriodsTab } = await import(
   '../../../../../packages/billing/src/components/billing-dashboard/RecurringServicePeriodsTab'
 );
@@ -192,9 +207,9 @@ describe('RecurringServicePeriodsTab UI', () => {
     });
   });
 
-  it('T065: billing dashboard keeps the service-period management surface wired for recurring troubleshooting and repair', () => {
-    const { billingTabDefinitions } = require(
-      `${process.cwd()}/../packages/billing/src/components/billing-dashboard/billingTabsConfig.ts`
+  it('T065: billing dashboard keeps the service-period management surface wired for recurring troubleshooting and repair', async () => {
+    const { billingTabDefinitions } = await import(
+      '../../../../../packages/billing/src/components/billing-dashboard/billingTabsConfig'
     );
 
     expect(billingTabDefinitions).toEqual(

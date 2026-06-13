@@ -12,6 +12,8 @@ const maybeReopenBundleMasterFromChildReplyMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(currentUser, { tenant: currentUser.tenant }, ...args),
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
@@ -33,6 +35,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: (...args: any[]) =>
     maybeReopenBundleMasterFromChildReplyMock(...args),
+}));
+
+vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
+  publishTicketUpdate: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('addClientTicketComment response source metadata', () => {
@@ -63,27 +69,77 @@ describe('addClientTicketComment response source metadata', () => {
 
     withTransactionMock.mockImplementation(
       async (_db: any, callback: (trx: any) => Promise<any>) => {
-        const trx = (table: string) => {
-          if (table === 'users') {
-            return {
-              where: () => ({
-                first: async () => ({
-                  contact_id: 'contact-1',
-                  first_name: 'Client',
-                  last_name: 'User',
+        const trx = Object.assign(
+          (table: string) => {
+            if (table === 'users') {
+              return {
+                where: () => ({
+                  first: async () => ({
+                    contact_id: 'contact-1',
+                    first_name: 'Client',
+                    last_name: 'User',
+                  }),
                 }),
-              }),
-            };
-          }
+              };
+            }
 
-          if (table === 'comments') {
-            return {
-              insert: commentsInsertMock,
-            };
-          }
+            if (table === 'contacts') {
+              return {
+                where: () => ({
+                  first: async () => ({
+                    contact_name_id: 'contact-1',
+                    client_id: 'client-1',
+                    portal_visibility_group_id: null,
+                  }),
+                }),
+              };
+            }
 
-          throw new Error(`Unexpected table: ${table}`);
-        };
+            if (table === 'tickets as t') {
+              const builder: any = {
+                select: vi.fn(() => builder),
+                where: vi.fn(() => builder),
+                modify: vi.fn((cb: (query: any) => void) => {
+                  cb(builder);
+                  return builder;
+                }),
+                first: vi.fn().mockResolvedValue({
+                  ticket_id: 'ticket-1',
+                  board_id: 'board-1',
+                  client_id: 'client-1',
+                }),
+              };
+              return builder;
+            }
+
+            if (table === 'comment_threads') {
+              return {
+                insert: vi.fn().mockResolvedValue(undefined),
+              };
+            }
+
+            if (table === 'comments') {
+              return {
+                insert: commentsInsertMock,
+              };
+            }
+
+            if (table === 'tickets') {
+              return {
+                where: vi.fn().mockReturnValue({
+                  update: vi.fn().mockResolvedValue(1),
+                }),
+              };
+            }
+
+            throw new Error(`Unexpected table: ${table}`);
+          },
+          {
+            raw: vi.fn().mockResolvedValue({
+              rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
+            }),
+          }
+        );
 
         return callback(trx);
       }

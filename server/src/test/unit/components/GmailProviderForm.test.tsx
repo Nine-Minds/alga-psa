@@ -6,26 +6,26 @@ import { screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
-import { GmailProviderForm } from '../../../components/GmailProviderForm';
+import { GmailProviderForm } from '@alga-psa/integrations/components';
 import { renderWithProviders } from '../../utils/testWrapper';
 
-// Mock server actions
+// Mock server actions (single factory: repeated vi.mock calls for the same
+// module override each other, so all exports must live in one mock).
 vi.mock('@alga-psa/integrations/actions', () => ({
   createEmailProvider: vi.fn(),
   updateEmailProvider: vi.fn(),
   upsertEmailProvider: vi.fn(),
-}));
-
-vi.mock('@alga-psa/integrations/actions', () => ({
   getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] }),
-}));
-
-vi.mock('@alga-psa/integrations/actions', () => ({
   initiateEmailOAuth: vi.fn().mockResolvedValue({ success: false, error: 'not used in unit tests' }),
-}));
-
-vi.mock('@/lib/actions/integrations/googleActions', () => ({
-  getGoogleIntegrationStatus: vi.fn().mockResolvedValue({ success: true, config: { hasServiceAccountKey: true } }),
+  getGoogleIntegrationStatus: vi.fn().mockResolvedValue({
+    success: true,
+    config: {
+      gmailClientId: 'client-id',
+      gmailClientSecretMasked: '****',
+      projectId: 'test-project',
+      hasServiceAccountKey: true,
+    },
+  }),
 }));
 
 import * as emailProviderActions from '@alga-psa/integrations/actions';
@@ -59,7 +59,7 @@ describe('GmailProviderForm', () => {
   it('should render form fields', () => {
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    expect(screen.getByPlaceholderText('e.g., Support Gmail')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g., Support Gmail (internal)')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('support@client.com')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('INBOX, Support, Custom Label')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /authorize access/i })).toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('GmailProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail (internal)'), 'Test Provider');
     
     // Type invalid email
     const emailInput = screen.getByPlaceholderText('support@client.com');
@@ -110,7 +110,7 @@ describe('GmailProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Gmail Provider');
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail (internal)'), 'Test Gmail Provider');
     await user.type(screen.getByPlaceholderText('support@client.com'), 'test@gmail.com');
 
     await user.click(screen.getByRole('button', { name: /add provider/i }));
@@ -127,7 +127,7 @@ describe('GmailProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Gmail Provider');
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail (internal)'), 'Test Gmail Provider');
     await user.type(screen.getByPlaceholderText('support@client.com'), 'test@gmail.com');
 
     await user.click(screen.getByRole('button', { name: /add provider/i }));

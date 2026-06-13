@@ -25,6 +25,6 @@ describe('default-contract client-delete cleanup parity wiring', () => {
     expect(source).toContain("await this.deleteFromTableIfExists(trx, 'client_billing_settings'");
     expect(source).toContain("await this.deleteFromTableIfExists(trx, 'client_billing_cycles'");
     expect(source).toContain("await trx('client_contracts')");
-    expect(source).toContain(".andWhere('is_system_managed_default', true)");
+    expect(source).toContain('is_system_managed_default: true,');
   });
 });

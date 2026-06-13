@@ -2,30 +2,60 @@
  * Unit tests for Software Actions
  *
  * Tests the server actions for software inventory management.
+ *
+ * NOTE: Tenant resolution now happens at the `withAuth` boundary (the action
+ * reads `tenant` from the authenticated user's context, not from
+ * `createTenantKnex`). The previous "No tenant found" guard inside the action
+ * was removed; the equivalent now is `withAuth` throwing when there is no
+ * authenticated user.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Knex } from 'knex';
 
-// Mock the database module
+const TEST_TENANT = 'test-tenant-123';
+const TEST_ASSET_ID = 'asset-123';
+
+// Mock the database module. `withAuth` (mocked in setup.ts) resolves the tenant
+// through getCurrentTenantId() -> getTenantContext(), so the db mock must
+// expose getTenantContext/runWithTenant in addition to createTenantKnex.
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
+  getTenantContext: vi.fn(() => TEST_TENANT),
+  runWithTenant: vi.fn((_tenant: string, cb: () => unknown) => cb()),
+  withTransaction: vi.fn(async (knex: unknown, cb: (trx: unknown) => unknown) => cb(knex)),
+}));
+
+// Faithful withAuth: reads tenant from the authenticated user and throws when
+// there is no user (mirrors packages/auth/src/lib/withAuth.ts). The shared
+// setup.ts mock intentionally never throws, so we override it here to exercise
+// the auth boundary.
+const { mockGetCurrentUser } = vi.hoisted(() => ({ mockGetCurrentUser: vi.fn() }));
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: mockGetCurrentUser,
+  hasPermission: vi.fn().mockResolvedValue(true),
+  withAuth: (handler: (...args: any[]) => any) => async (...args: any[]) => {
+    const user = await mockGetCurrentUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    return handler(user, { tenant: user.tenant }, ...args);
+  },
 }));
 
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth';
 import {
   getAssetSoftware,
   getAssetSoftwareSummary,
 } from '@alga-psa/assets/actions/softwareActions';
 
-// Test data
-const TEST_TENANT = 'test-tenant-123';
-const TEST_ASSET_ID = 'asset-123';
-
 // Mock query builder
 function createMockQueryBuilder(returnData: unknown): Partial<Knex.QueryBuilder> {
   const mockBuilder: Partial<Knex.QueryBuilder> = {
     where: vi.fn().mockReturnThis(),
+    whereILike: vi.fn().mockReturnThis(),
+    orWhereILike: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
@@ -42,22 +72,24 @@ function createMockQueryBuilder(returnData: unknown): Partial<Knex.QueryBuilder>
 describe('Software Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      user_id: '00000000-0000-0000-0000-000000000001',
+      tenant: TEST_TENANT,
+      roles: [],
+    });
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('getAssetSoftware', () => {
-    it('should throw error when no tenant found', async () => {
-      (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
-        knex: vi.fn(),
-        tenant: null,
-      });
+    it('should throw when there is no authenticated user', async () => {
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       await expect(
         getAssetSoftware({ asset_id: TEST_ASSET_ID })
-      ).rejects.toThrow('No tenant found');
+      ).rejects.toThrow();
     });
 
     it('should return paginated software list', async () => {
@@ -131,19 +163,21 @@ describe('Software Actions', () => {
   });
 
   describe('getAssetSoftwareSummary', () => {
-    it('should throw error when no tenant found', async () => {
-      (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
-        knex: vi.fn(),
-        tenant: null,
-      });
+    it('should throw when there is no authenticated user', async () => {
+      (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       await expect(
         getAssetSoftwareSummary(TEST_ASSET_ID)
-      ).rejects.toThrow('No tenant found');
+      ).rejects.toThrow();
     });
 
     it('should return summary statistics', async () => {
       const mockQueryBuilder = createMockQueryBuilder({ count: 25 });
+      // groupBy-terminated stat queries are awaited as arrays, while count
+      // queries terminate with .first() and return { count }.
+      (mockQueryBuilder.then as ReturnType<typeof vi.fn>).mockImplementation(
+        (callback) => callback([])
+      );
       const mockKnex = vi.fn().mockReturnValue(mockQueryBuilder);
 
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({

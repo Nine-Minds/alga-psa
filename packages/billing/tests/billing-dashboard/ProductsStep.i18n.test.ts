@@ -40,8 +40,9 @@ describe('ProductsStep i18n wiring contract', () => {
       'wizardProducts.labels.selectProductPlaceholder',
       'wizardProducts.labels.quantity',
       'wizardProducts.labels.overrideUnitPriceOptional',
-      'wizardProducts.labels.defaultCatalogPrice',
-      'wizardProducts.validation.noDefaultPriceEnterUnitPrice',
+      'wizardProducts.labels.catalogPriceInCurrency',
+      'wizardProducts.validation.noCurrencyPriceEnterUnitPrice',
+      'wizardProducts.validation.noCurrencyPriceWithLegacyHint',
       'wizardProducts.validation.productMissingPrice',
       'wizardProducts.actions.addProduct',
     ];

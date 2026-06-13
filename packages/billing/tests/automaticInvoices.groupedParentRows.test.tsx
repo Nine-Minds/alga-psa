@@ -35,6 +35,17 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: { defaultValue?: string } & Record<string, unknown>) =>
+      (opts && typeof opts.defaultValue === 'string' ? opts.defaultValue : key),
+  }),
+  useFormatters: () => ({
+    formatDate: (value: unknown) => String(value),
+    formatCurrency: (value: number) => `$${value}`,
+  }),
+}));
+
 vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
   getAvailableRecurringDueWork: vi.fn(async () => mockDueWorkResponse),
 }));
@@ -101,11 +112,28 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  Checkbox: ({ indeterminate: _indeterminate, ...props }: any) => (
+  // The component drives parent-row selection through onClick (for shift-range
+  // support) and calls event.preventDefault(). On a native jsdom checkbox that
+  // cancels the click activation and reverts `.checked`, so we hand the
+  // component a no-op preventDefault instead.
+  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
     <input
       type="checkbox"
       data-indeterminate={_indeterminate ? 'true' : 'false'}
       {...props}
+      onClick={
+        onClick
+          ? (event: any) => {
+            onClick({
+              shiftKey: event.shiftKey,
+              metaKey: event.metaKey,
+              ctrlKey: event.ctrlKey,
+              stopPropagation: () => event.stopPropagation(),
+              preventDefault: () => {},
+            });
+          }
+          : undefined
+      }
     />
   ),
 }));
@@ -263,7 +291,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(
       await screen.findByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Execution exec-1')).toBeInTheDocument();
+    expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cadence: Contract anniversary').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Billing timing: Advance').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Service period: 2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
@@ -377,7 +405,9 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     fireEvent.click(parentCheckbox);
 
-    expect(parentCheckbox.checked).toBe(true);
+    await waitFor(() => {
+      expect(parentCheckbox.checked).toBe(true);
+    });
     expect(screen.getByText('Generate Invoices for Selected Periods (2)')).toBeInTheDocument();
   });
 
@@ -505,7 +535,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
-        'This selection will generate 1 invoice.',
+        'This selection will generate one combined invoice.',
       );
     });
     expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
@@ -534,7 +564,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
-        'This selection will generate 2 invoices.',
+        'This selection will generate 2 separate invoices.',
       );
     });
   });
@@ -646,7 +676,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
-        'This selection will generate 1 invoice.',
+        'This selection will generate one combined invoice.',
       );
     });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();

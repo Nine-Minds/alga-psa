@@ -143,6 +143,9 @@ function createFetchEntriesDbStub() {
 
     if (table === 'time_entries') {
       const builder: any = {
+        leftJoin() {
+          return builder;
+        },
         where() {
           return builder;
         },

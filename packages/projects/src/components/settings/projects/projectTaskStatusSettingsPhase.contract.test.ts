@@ -18,19 +18,23 @@ const actionsSource = readFileSync(
 describe('phase-aware project status settings contracts', () => {
   it('T039/T040: phase selector includes project defaults and toggles phase default-vs-custom state', () => {
     expect(settingsSource).toContain("const DEFAULT_SCOPE = '__project_defaults__';");
-    expect(settingsSource).toContain("{ value: DEFAULT_SCOPE, label: 'Project Defaults' },");
-    expect(settingsSource).toContain("label className=\"mb-2 block text-sm font-medium\">Status Scope</label>");
+    expect(settingsSource).toContain("{ value: DEFAULT_SCOPE, label: t('settings.statuses.scope_project_defaults') },");
+    expect(settingsSource).toContain("{t('settings.statuses.scope_label')}");
     expect(settingsSource).toContain('const isUsingProjectDefaults = Boolean(selectedPhaseId) && !hasCustomStatuses;');
-    expect(settingsSource).toContain('Use project defaults');
-    expect(settingsSource).toContain('Custom statuses');
+    expect(settingsSource).toContain("{t('settings.statuses.use_project_defaults')}");
+    expect(settingsSource).toContain("{t('settings.statuses.custom_statuses')}");
   });
 
   it('T041/T042/T043: settings expose copy-from-defaults and revert-to-default flows for phases', () => {
-    expect(settingsSource).toContain('async function handleCopyDefaultsToPhase() {');
+    // Copying project defaults into a phase now happens via the
+    // 'Custom statuses' toggle (handleEnableCustomStatuses), and the revert
+    // flow is confirmed through a ConfirmationDialog instead of confirm().
+    expect(settingsSource).toContain('async function handleEnableCustomStatuses() {');
     expect(settingsSource).toContain('await copyProjectStatusesToPhase(projectId, selectedPhaseId);');
-    expect(settingsSource).toContain('Copy from project defaults');
+    expect(settingsSource).toContain('onClick={handleEnableCustomStatuses}');
     expect(settingsSource).toContain('async function handleRevertToDefaults() {');
-    expect(settingsSource).toContain("if (!confirm('Remove this phase\\'s custom statuses and revert to project defaults?')) {");
+    expect(settingsSource).toContain('onClick={() => setRevertConfirmation(true)}');
+    expect(settingsSource).toContain('onConfirm={handleRevertToDefaults}');
     expect(settingsSource).toContain('await removePhaseStatuses(selectedPhaseId);');
   });
 
@@ -41,13 +45,15 @@ describe('phase-aware project status settings contracts', () => {
     expect(addDialogSource).toContain('export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddStatusDialogProps)');
     expect(addDialogSource).toContain("await addStatusToProject(projectId, {");
     expect(addDialogSource).toContain('}, phaseId);');
-    expect(addDialogSource).toContain("title={phaseId ? 'Add Phase Status from Library' : 'Add Status from Library'}");
+    expect(addDialogSource).toContain(
+      "title={phaseId ? t('addStatusDialog.phaseTitle', 'Add Phase Status from Library') : t('addStatusDialog.projectTitle', 'Add Status from Library')}"
+    );
   });
 
   it('T062: status deletion still blocks removing the last remaining status mapping', () => {
-    expect(actionsSource).toContain("const remainingCount = await trx('project_status_mappings')");
-    expect(actionsSource).toContain("count('* as count')");
-    expect(actionsSource).toContain("if (parseInt(remainingCount?.count as string) <= 1) {");
+    expect(actionsSource).toContain("const remainingQuery = trx('project_status_mappings')");
+    expect(actionsSource).toContain("const remainingCount = await remainingQuery.count('* as count').first();");
+    expect(actionsSource).toContain("if (parseInt(remainingCount?.count as string) < 1) {");
     expect(actionsSource).toContain("throw new Error('Cannot delete the last status in a project');");
   });
 });

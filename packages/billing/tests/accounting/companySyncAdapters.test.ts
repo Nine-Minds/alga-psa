@@ -3,8 +3,8 @@
  * (packages/billing/src/services/companySync/adapters/).
  *
  * The adapters bridge normalized company payloads to the QBO/Xero client
- * services. The external client services are mocked; we verify context
- * validation (QBO realm requirement), factory wiring, and delegation.
+ * services. The external client services are mocked; we verify factory
+ * wiring (including null-realm passthrough) and delegation.
  */
 import { describe, expect, it, vi } from 'vitest';
 
@@ -20,22 +20,25 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
 import { QuickBooksOnlineCompanyAdapter } from '../../src/services/companySync/adapters/quickBooksCompanyAdapter';
 import { XeroCompanyAdapter } from '../../src/services/companySync/adapters/xeroCompanyAdapter';
 import type { NormalizedCompanyPayload } from '../../src/services/companySync/companySync.types';
-import { AppError } from '@alga-psa/core';
 
 const payload: NormalizedCompanyPayload = { companyId: 'co-1', name: 'Acme Co' };
 
 describe('QuickBooksOnlineCompanyAdapter', () => {
-  it('requires a target realm before any client is constructed', async () => {
-    const factory = vi.fn();
-    const adapter = new QuickBooksOnlineCompanyAdapter(factory);
+  it('passes a null realm to the factory when no target realm is provided', async () => {
+    // The adapter no longer enforces a realm up front; QboClientService.create
+    // resolves the tenant's default realm when given null.
+    const client = {
+      findCustomerByDisplayName: vi.fn(async () => null),
+      createOrUpdateCustomer: vi.fn(),
+    };
+    const factory = vi.fn(async () => client);
+    const adapter = new QuickBooksOnlineCompanyAdapter(factory as any);
 
-    const attempt = adapter.findExternalCompany(payload, { tenantId: 'tenant-1', targetRealm: null });
+    const result = await adapter.findExternalCompany(payload, { tenantId: 'tenant-1', targetRealm: null });
 
-    await expect(attempt).rejects.toMatchObject({
-      constructor: AppError,
-      code: 'QBO_REALM_REQUIRED',
-    });
-    expect(factory).not.toHaveBeenCalled();
+    expect(factory).toHaveBeenCalledWith('tenant-1', null);
+    expect(client.findCustomerByDisplayName).toHaveBeenCalledWith('Acme Co');
+    expect(result).toBeNull();
   });
 
   it('looks up customers by display name through a realm-scoped client', async () => {

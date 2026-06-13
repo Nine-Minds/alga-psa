@@ -8,6 +8,7 @@ const resolveTeamsTabAuthStateMock = vi.fn();
 const resolveTeamsTabAccessStateMock = vi.fn();
 const getTeamsAvailabilityMock = vi.fn();
 const CardMock = vi.fn((props: { children?: React.ReactNode }) => null);
+const TeamsTabSignInGateMock = vi.fn(() => null);
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
@@ -17,16 +18,20 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: CardMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTabAuthState', () => ({
+vi.mock('../../../../../../../ee/packages/microsoft-teams/src/lib/teams/resolveTeamsTabAuthState', () => ({
   resolveTeamsTabAuthState: (...args: unknown[]) => resolveTeamsTabAuthStateMock(...args),
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTabAccessState', () => ({
+vi.mock('../../../../../../../ee/packages/microsoft-teams/src/lib/teams/resolveTeamsTabAccessState', () => ({
   resolveTeamsTabAccessState: (...args: unknown[]) => resolveTeamsTabAccessStateMock(...args),
 }));
 
-vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
+vi.mock('../../../../../../../ee/packages/microsoft-teams/src/lib/teams/teamsAvailability', () => ({
   getTeamsAvailability: (...args: unknown[]) => getTeamsAvailabilityMock(...args),
+}));
+
+vi.mock('../../../../../../../ee/packages/microsoft-teams/src/app/teams/tab/TeamsTabSignInGate', () => ({
+  TeamsTabSignInGate: TeamsTabSignInGateMock,
 }));
 
 const { default: TeamsTabPage } = await import('../../../../../../../ee/server/src/app/teams/tab/page');
@@ -113,13 +118,13 @@ describe('TeamsTabPage', () => {
     });
   });
 
-  it('T171: redirects expired or invalid Teams tab sessions into a Teams-safe MSP reauthentication path', async () => {
+  it('T171: routes expired or invalid Teams tab sessions into a Teams-safe MSP reauthentication gate', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue({
       status: 'unauthenticated',
       message: 'Sign in with your MSP account to open Alga PSA in Teams.',
     });
 
-    await TeamsTabPage({
+    const result = await TeamsTabPage({
       searchParams: Promise.resolve({
         context: JSON.stringify({ page: 'ticket', ticketId: '12345' }),
       }),
@@ -129,8 +134,13 @@ describe('TeamsTabPage', () => {
       expectedTenantId: undefined,
       expectedMicrosoftTenantId: undefined,
     });
-    expect(redirectMock).toHaveBeenCalledWith(
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect((result as any)?.type).toBe(TeamsTabSignInGateMock);
+    expect((result as any)?.props?.fallbackSignInUrl).toBe(
       '/auth/msp/signin?callbackUrl=%2Fteams%2Ftab%3Fcontext%3D%257B%2522page%2522%253A%2522ticket%2522%252C%2522ticketId%2522%253A%252212345%2522%257D&teamsReauth=1'
+    );
+    expect((result as any)?.props?.popupSignInUrl).toBe(
+      '/auth/msp/signin?callbackUrl=%2Fteams%2Fauth%2Fpopup-complete&teamsReauth=1'
     );
   });
 
@@ -173,7 +183,7 @@ describe('TeamsTabPage', () => {
     expect(collectHrefs(result)).toContain('/msp/tickets/12345');
     expect(collectDataProp(result, 'data-teams-embedded-psa')).toContain('/msp/tickets/12345');
     expect(collectNormalizedText(result)).toContain('Ticket 12345');
-    expect(collectNormalizedText(result)).toContain("You're opening ticket 12345 from Teams.");
+    expect(collectNormalizedText(result)).toContain('Signed in as Taylor Tech');
   });
 
   it('T170: returns Teams-safe remediation for rejected or unavailable deep-link entry points', async () => {
@@ -237,9 +247,9 @@ describe('TeamsTabPage', () => {
     expect((result as any)?.props?.['data-teams-tab-fallback']).toBe('my_work');
     expect(collectHrefs(result)).toContain('/msp/tickets/12345');
     expect(collectDataProp(result, 'data-teams-embedded-psa')).toEqual([]);
-    expect(collectNormalizedText(result)).toContain('Requested Teams record unavailable');
+    expect(collectNormalizedText(result)).toContain('Requested record unavailable:');
     expect(collectNormalizedText(result)).toContain('That ticket is unavailable or you no longer have access to it.');
-    expect(collectNormalizedText(result)).toContain('You landed on your Teams work list instead of ticket 12345');
+    expect(collectNormalizedText(result)).toContain('Showing your Teams work list instead of ticket 12345');
   });
 
   it('T191/T193/T195/T197: renders project-task, approval, time-entry, and contact destinations from Teams deep-link context', async () => {
@@ -255,8 +265,9 @@ describe('TeamsTabPage', () => {
       projectId: 'project-44',
       taskId: 'task-88',
     });
+    expect((projectTaskResult as any)?.props?.['data-teams-tab-destination']).toBe('project_task');
     expect(collectNormalizedText(projectTaskResult)).toContain('Project task task-88');
-    expect(collectNormalizedText(projectTaskResult)).toContain("You're opening task task-88 in project project-44.");
+    expect(collectHrefs(projectTaskResult)).toContain('/msp/projects/project-44/tasks/task-88');
 
     const approvalResult = await TeamsTabPage({
       searchParams: Promise.resolve({
@@ -267,6 +278,7 @@ describe('TeamsTabPage', () => {
       type: 'approval',
       approvalId: 'approval-2',
     });
+    expect((approvalResult as any)?.props?.['data-teams-tab-destination']).toBe('approval');
     expect(collectNormalizedText(approvalResult)).toContain('Approval approval-2');
 
     const timeEntryResult = await TeamsTabPage({
@@ -278,6 +290,7 @@ describe('TeamsTabPage', () => {
       type: 'time_entry',
       entryId: 'entry-9',
     });
+    expect((timeEntryResult as any)?.props?.['data-teams-tab-destination']).toBe('time_entry');
     expect(collectNormalizedText(timeEntryResult)).toContain('Time entry entry-9');
 
     const contactResult = await TeamsTabPage({
@@ -290,8 +303,9 @@ describe('TeamsTabPage', () => {
       contactId: 'contact-5',
       clientId: 'client-9',
     });
+    expect((contactResult as any)?.props?.['data-teams-tab-destination']).toBe('contact');
     expect(collectNormalizedText(contactResult)).toContain('Contact contact-5');
-    expect(collectNormalizedText(contactResult)).toContain("You're opening contact contact-5 for client client-9 from Teams.");
+    expect(collectHrefs(contactResult)).toContain('/msp/contacts/contact-5');
   });
 
   it('T192/T194/T196/T198/T202: falls back to my-work when project-task, approval, time-entry, or contact deep links resolve to unavailable records', async () => {
@@ -379,8 +393,8 @@ describe('TeamsTabPage', () => {
     });
     expect((result as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
     expect((result as any)?.props?.['data-teams-tab-requested-destination']).toBe('ticket');
-    expect(collectNormalizedText(result)).toContain('Requested Teams record unavailable');
-    expect(collectNormalizedText(result)).toContain('You landed on your Teams work list instead of ticket ticket-123');
+    expect(collectNormalizedText(result)).toContain('Requested record unavailable:');
+    expect(collectNormalizedText(result)).toContain('Showing your Teams work list instead of ticket ticket-123');
   });
 
   it('T213/T215/T219: opens bot-result and message-extension-result links on the correct tab destination and keeps the full-PSA escalation path visible', async () => {
@@ -398,11 +412,9 @@ describe('TeamsTabPage', () => {
     });
     expect((botResult as any)?.props?.['data-teams-tab-destination']).toBe('ticket');
     expect((botResult as any)?.props?.['data-teams-tab-entry-source']).toBe('bot');
-    expect(collectNormalizedText(botResult)).toContain('This record was opened from a Teams bot result.');
-    expect(collectNormalizedText(botResult)).toContain(
-      'Use the full PSA view when this workflow needs more context than a Teams card or quick action can provide.'
-    );
+    expect(collectNormalizedText(botResult)).toContain('Open in full PSA');
     expect(collectHrefs(botResult)).toContain('/msp/tickets/ticket-123');
+    expect(collectDataProp(botResult, 'data-teams-embedded-psa')).toContain('/msp/tickets/ticket-123');
 
     const messageExtensionResult = await TeamsTabPage({
       searchParams: Promise.resolve({
@@ -417,9 +429,7 @@ describe('TeamsTabPage', () => {
     });
     expect((messageExtensionResult as any)?.props?.['data-teams-tab-destination']).toBe('contact');
     expect((messageExtensionResult as any)?.props?.['data-teams-tab-entry-source']).toBe('message_extension');
-    expect(collectNormalizedText(messageExtensionResult)).toContain(
-      'This record was opened from a Teams message extension result.'
-    );
+    expect(collectNormalizedText(messageExtensionResult)).toContain('Open in full PSA');
     expect(collectHrefs(messageExtensionResult)).toContain('/msp/contacts/contact-5');
   });
 
@@ -439,7 +449,8 @@ describe('TeamsTabPage', () => {
 
     expect((botFallback as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
     expect((botFallback as any)?.props?.['data-teams-tab-entry-source']).toBe('bot');
-    expect(collectNormalizedText(botFallback)).toContain('Requested Teams record unavailable');
+    expect(collectNormalizedText(botFallback)).toContain('Requested record unavailable:');
+    expect(collectNormalizedText(botFallback)).toContain('Opened from a Teams bot result.');
 
     resolveTeamsTabAuthStateMock.mockResolvedValueOnce(readyAuthState);
     resolveTeamsTabAccessStateMock.mockResolvedValueOnce({

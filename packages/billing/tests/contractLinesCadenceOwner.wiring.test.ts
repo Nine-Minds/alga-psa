@@ -12,8 +12,8 @@ describe('contract detail line cadence owner editing wiring', () => {
     expect(source).toContain("cadence_owner?: 'client' | 'contract';");
     expect(source).toContain("cadence_owner: line.cadence_owner ?? 'client'");
     expect(source).toContain('id={`cadence-owner-${line.contract_line_id}`}');
-    expect(source).toContain("value: 'contract', label: 'Contract anniversary'");
-    expect(source).toContain("value: 'client', label: 'Client schedule'");
+    expect(source).toContain("label: t('billing.cadenceOwner.contract', { defaultValue: 'Contract anniversary' }),");
+    expect(source).toContain("label: t('billing.cadenceOwner.client', { defaultValue: 'Client schedule' }),");
     expect(source).toContain("cadence_owner: editLineData.cadence_owner,");
   });
 });

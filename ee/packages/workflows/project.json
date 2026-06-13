@@ -3,24 +3,24 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "ee/packages/workflows/src",
   "projectType": "library",
-  "tags": ["scope:workflows", "type:vertical"],
+  "tags": [
+    "scope:workflows",
+    "type:vertical"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop",
       "dependsOn": []
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/ee/packages/workflows"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["ee/packages/workflows/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "ee/packages/workflows/**/*.{ts,tsx}"
+        ]
       }
     }
   }

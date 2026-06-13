@@ -5,6 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@alga-psa/extension-runtime': path.resolve(__dirname, '../../../extension-runtime/src/index.ts'),
+      '@alga/extension-runtime': path.resolve(__dirname, '../../../extension-runtime/src/index.ts'),
     },
   },
   test: {

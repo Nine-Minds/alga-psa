@@ -9,7 +9,7 @@ describe('multi-active recurring PO scope wiring', () => {
       'utf8',
     );
 
-    expect(source).toContain('purchaseOrderScopeKey: row.client_contract_id ?? null');
+    expect(source).toContain('purchaseOrderScopeKey: row.po_required ? row.client_contract_id ?? null : null,');
     expect(source).toContain('groupDueServicePeriodsForInvoiceCandidates(');
     expect(source).toContain('purchaseOrderScopeKey:');
     expect(source).toContain('splitReasons');

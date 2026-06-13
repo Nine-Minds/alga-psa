@@ -20,6 +20,14 @@ vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
   },
 }));
 
+vi.mock('@alga-psa/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core')>();
+  return {
+    ...actual,
+    isFeatureFlagEnabled: featureFlagIsEnabledMock,
+  };
+});
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
 }));

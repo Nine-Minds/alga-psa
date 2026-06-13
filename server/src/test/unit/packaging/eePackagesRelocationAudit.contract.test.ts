@@ -76,18 +76,21 @@ describe('EE package relocation audits', () => {
 
     expect(sharedTeamsActions).toContain("import('@alga-psa/ee-microsoft-teams/actions')");
     expect(sharedTeamsActions).not.toContain('ee/server/src/lib/actions/integrations/teamsActions');
-    expect(sharedTeamsPackageActions).toContain("import('@alga-psa/ee-microsoft-teams/actions')");
+    // Teams package actions are now a first-class shared implementation in
+    // packages/integrations rather than a forwarder into the EE package.
+    expect(sharedTeamsPackageActions).toContain("'use server'");
+    expect(sharedTeamsPackageActions).toContain('withAuth');
     expect(sharedTeamsPackageActions).not.toContain('ee/server/src/lib/actions/integrations/teamsPackageActions');
-    expect(sharedTeamsSettings).toContain(
-      "import('@alga-psa/ee-microsoft-teams/components').then((mod) => mod.TeamsIntegrationSettings)"
-    );
-    expect(sharedTeamsNotifications).toContain(
-      "import('@alga-psa/ee-microsoft-teams/lib/notifications/teamsNotificationDelivery')"
-    );
+    // The Teams settings UI now lives alongside the shared integrations code.
+    expect(sharedTeamsSettings).toContain("import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';");
+    expect(sharedTeamsSettings).not.toContain('@alga-psa/ee-microsoft-teams');
+    // Teams notification delivery is now implemented directly in
+    // packages/notifications instead of forwarding to the EE package.
+    expect(sharedTeamsNotifications).toContain('export async function deliverTeamsNotification');
     expect(sharedTeamsNotifications).not.toContain('ee/server/src/lib/notifications/teamsNotificationDelivery');
-    expect(sharedTeamsAuth).toContain(
-      "import('@alga-psa/ee-microsoft-teams/lib/auth/teamsMicrosoftProviderResolution')"
-    );
+    // Teams Microsoft provider resolution is now implemented directly in
+    // packages/auth instead of forwarding to the EE package.
+    expect(sharedTeamsAuth).toContain('export async function resolveTeamsMicrosoftProviderConfig');
     expect(sharedTeamsAuth).not.toContain('ee/server/src/lib/auth/teamsMicrosoftProviderResolution');
   });
 
@@ -103,20 +106,22 @@ describe('EE package relocation audits', () => {
     expect(sharedMaintenance).not.toContain('CalendarWebhookMaintenanceService');
   });
 
-  it('keeps packages/ee calendar files as forwarders and Teams files as CE stubs only', () => {
-    const calendarRouteForwarder = readSource('packages/ee/src/app/api/auth/google/calendar/callback/route.ts');
-    const calendarUiForwarder = readSource('packages/ee/src/components/settings/profile/CalendarProfileSettings.tsx');
-    const calendarActionsForwarder = readSource('packages/ee/src/lib/actions/integrations/calendarActions.ts');
+  it('keeps packages/ee calendar and Teams files as CE stubs only', () => {
+    const calendarRouteStub = readSource('packages/ee/src/app/api/auth/google/calendar/callback/route.ts');
+    const calendarUiStub = readSource('packages/ee/src/components/settings/profile/CalendarProfileSettings.tsx');
+    const calendarActionsStub = readSource('packages/ee/src/lib/actions/integrations/calendarActions.ts');
     const teamsRouteStub = readSource('packages/ee/src/app/api/teams/bot/messages/route.ts');
     const teamsUiStub = readSource('packages/ee/src/components/settings/integrations/TeamsIntegrationSettings.tsx');
     const teamsActionsStub = readSource('packages/ee/src/lib/actions/integrations/teamsActions.ts');
 
-    expect(calendarRouteForwarder).toContain('@alga-psa/ee-calendar/routes');
-    expect(calendarRouteForwarder).not.toContain('CalendarProviderService');
-    expect(calendarUiForwarder).toContain('@alga-psa/ee-calendar/components');
-    expect(calendarUiForwarder).not.toContain('useState');
-    expect(calendarActionsForwarder).toContain('@alga-psa/ee-calendar/actions');
-    expect(calendarActionsForwarder).not.toContain('CalendarSyncService');
+    // CE builds now fail closed through shared calendar stubs instead of
+    // forwarding into the EE calendar package.
+    expect(calendarRouteStub).toContain('calendarStubs');
+    expect(calendarRouteStub).not.toContain('CalendarProviderService');
+    expect(calendarUiStub).toContain('calendarStubs');
+    expect(calendarUiStub).not.toContain('useState');
+    expect(calendarActionsStub).toContain('calendarStubs');
+    expect(calendarActionsStub).not.toContain('CalendarSyncService');
 
     expect(teamsRouteStub).toContain('eeUnavailable');
     expect(teamsRouteStub).not.toContain('@alga-psa/ee-microsoft-teams');
@@ -139,7 +144,9 @@ describe('EE package relocation audits', () => {
     expect(vitestConfig).toContain('@alga-psa\\/ee-calendar');
     expect(vitestConfig).toContain('@alga-psa\\/ee-microsoft-teams');
     expect(nextConfig).toContain("'@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts'");
-    expect(nextConfig).toContain("'@alga-psa/ee-microsoft-teams': '../ee/packages/microsoft-teams/src/index.ts'");
+    expect(nextConfig).toContain(
+      "'@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : './src/empty/index.ts'"
+    );
     expect(nextConfig).toContain("'@enterprise': isEE ? '../ee/server/src' : '../packages/ee/src'");
     expect(nextConfig).toContain("'@ee': isEE ? '../ee/server/src' : '../packages/ee/src'");
   });

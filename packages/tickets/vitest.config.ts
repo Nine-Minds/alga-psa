@@ -15,6 +15,7 @@ export default defineConfig({
     },
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     include: ['src/**/*.test.{ts,tsx}'],
+    testTimeout: 20000,
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
     server: {

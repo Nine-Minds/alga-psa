@@ -132,6 +132,17 @@ vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProduct: () => ({
+    productCode: 'psa',
+    isMisconfigured: false,
+    isPsa: true,
+    isAlgaDesk: false,
+    isLoading: false,
+  }),
+}));
+
 const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 const { MspLayoutClient } = await import('server/src/app/msp/MspLayoutClient');
 
@@ -173,10 +184,10 @@ function renderWithRoute(path: string, child: React.ReactNode) {
   render(
     <MspLayoutClient
       session={null}
+      productCode="psa"
       needsOnboarding={false}
       initialSidebarCollapsed={false}
       initialLocale="xx"
-      i18nEnabled={true}
     >
       {child}
     </MspLayoutClient>

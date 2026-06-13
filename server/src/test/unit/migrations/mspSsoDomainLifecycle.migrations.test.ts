@@ -45,26 +45,20 @@ type MigrationKnexState = {
 };
 
 function createColumnBuilder() {
-  return {
-    notNullable() {
-      return this;
-    },
-    nullable() {
-      return this;
-    },
-    defaultTo(_value: unknown) {
-      return this;
-    },
-    references(_value: unknown) {
-      return this;
-    },
-    inTable(_value: unknown) {
-      return this;
-    },
-    onDelete(_value: unknown) {
-      return this;
-    },
-  };
+  // Generically chainable column builder: any method call (.primary(),
+  // .notNullable(), .defaultTo(), .references(), etc.) returns the builder.
+  const builder: any = new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        if (prop === 'then') {
+          return undefined; // keep the builder non-thenable for await safety
+        }
+        return (..._args: unknown[]) => builder;
+      },
+    }
+  );
+  return builder;
 }
 
 function createMigrationKnex(state: MigrationKnexState) {

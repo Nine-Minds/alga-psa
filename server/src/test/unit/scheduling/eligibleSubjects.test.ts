@@ -9,6 +9,13 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: vi.fn(), tenant: currentUser.tenant })),
+  User: {
+    getReportsToSubordinateIds: vi.fn(async () => []),
+  },
+  runWithTenant: vi.fn(async (_tenant: string, fn: () => any) => fn()),
+  getTenantContext: vi.fn(async () => currentUser?.tenant),
+  withTransaction: vi.fn(async (knex: any, fn: (trx: any) => any) => fn(knex)),
+  registerAfterCommit: vi.fn(),
 }));
 
 import { hasPermission } from '@alga-psa/auth';

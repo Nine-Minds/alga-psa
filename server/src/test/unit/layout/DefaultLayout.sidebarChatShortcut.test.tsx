@@ -8,6 +8,34 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import DefaultLayout from '../../../components/layout/DefaultLayout';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+
+// DefaultLayout now binds its AI shortcuts through the keyboard-shortcuts catalog
+// (useCatalogShortcut), which requires a KeyboardShortcutsProvider in the tree
+// (supplied by MspLayoutClient in production). Force the 'other' platform so the
+// `mod` modifier resolves to Ctrl, and the catalog keydown listener lives on
+// `document`, so events must be dispatched there with a `code` (e.g. KeyL).
+const renderLayout = (children: React.ReactNode = <div>content</div>) =>
+  render(
+    <KeyboardShortcutsProvider platform="other">
+      <DefaultLayout>{children}</DefaultLayout>
+    </KeyboardShortcutsProvider>,
+  );
+
+const dispatchToggleChatShortcut = () => {
+  const event = new KeyboardEvent('keydown', {
+    key: 'l',
+    code: 'KeyL',
+    ctrlKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+  act(() => {
+    document.dispatchEvent(event);
+  });
+  return preventDefaultSpy;
+};
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/msp/dashboard',
@@ -102,29 +130,16 @@ describe('DefaultLayout sidebar chat shortcut gating', () => {
       })
     );
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>
-    );
+    renderLayout();
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
     });
 
-    const metaEvent = new KeyboardEvent('keydown', { key: 'l', metaKey: true });
-    const metaPreventDefaultSpy = vi.spyOn(metaEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(metaEvent);
-    });
-    expect(metaPreventDefaultSpy).not.toHaveBeenCalled();
-
-    const ctrlEvent = new KeyboardEvent('keydown', { key: 'l', ctrlKey: true });
-    const ctrlPreventDefaultSpy = vi.spyOn(ctrlEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(ctrlEvent);
-    });
-    expect(ctrlPreventDefaultSpy).not.toHaveBeenCalled();
+    // With the AI Assistant disabled the catalog handler returns false, so the
+    // event is not consumed.
+    const preventDefaultSpy = dispatchToggleChatShortcut();
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
   });
 
   it('does not render the RightSidebar when aiAssistant is disabled', async () => {
@@ -137,11 +152,7 @@ describe('DefaultLayout sidebar chat shortcut gating', () => {
       })
     );
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>
-    );
+    renderLayout();
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -160,11 +171,7 @@ describe('DefaultLayout sidebar chat shortcut gating', () => {
       })
     );
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>
-    );
+    renderLayout();
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -173,23 +180,17 @@ describe('DefaultLayout sidebar chat shortcut gating', () => {
     const sidebar = await screen.findByTestId('right-sidebar');
     expect(sidebar).toHaveAttribute('data-open', 'false');
 
-    const metaEvent = new KeyboardEvent('keydown', { key: 'l', metaKey: true });
-    const metaPreventDefaultSpy = vi.spyOn(metaEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(metaEvent);
-    });
-    expect(metaPreventDefaultSpy).toHaveBeenCalled();
+    // First Ctrl+L opens the sidebar...
+    const openSpy = dispatchToggleChatShortcut();
+    expect(openSpy).toHaveBeenCalled();
 
     await waitFor(() => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
-    const ctrlEvent = new KeyboardEvent('keydown', { key: 'l', ctrlKey: true });
-    const ctrlPreventDefaultSpy = vi.spyOn(ctrlEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(ctrlEvent);
-    });
-    expect(ctrlPreventDefaultSpy).toHaveBeenCalled();
+    // ...and a second Ctrl+L toggles it closed.
+    const closeSpy = dispatchToggleChatShortcut();
+    expect(closeSpy).toHaveBeenCalled();
 
     await waitFor(() => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'false');

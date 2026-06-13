@@ -14,6 +14,7 @@ describe('multi-active billing cycles summary wiring', () => {
     expect(source).toContain('clientContractId: contract.client_contract_id');
     expect(source).toContain('const assignments = clientContracts[value] ?? [];');
     expect(source).toContain('No active assignments');
-    expect(source).toContain('Assignment {assignment.clientContractId.slice(0, 8)}');
+    expect(source).toContain('id: assignment.clientContractId.slice(0, 8),');
+    expect(source).toContain("defaultValue: 'Assignment {{id}}',");
   });
 });

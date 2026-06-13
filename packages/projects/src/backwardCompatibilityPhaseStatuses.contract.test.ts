@@ -18,7 +18,7 @@ describe('per-phase status backward compatibility contracts', () => {
     expect(modelSource).toContain('const phaseMappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId, phaseId);');
     expect(modelSource).toContain('if (phaseMappings.length > 0) {');
     expect(settingsSource).toContain("const DEFAULT_SCOPE = '__project_defaults__';");
-    expect(settingsSource).toContain("const [selectedScope, setSelectedScope] = useState<string>(DEFAULT_SCOPE);");
+    expect(settingsSource).toContain("const [selectedScope, setSelectedScope] = useState<string>(initialPhaseId || DEFAULT_SCOPE);");
     expect(settingsSource).toContain('const defaults = await getProjectStatusMappings(projectId);');
   });
 

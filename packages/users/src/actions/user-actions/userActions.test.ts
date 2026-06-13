@@ -12,6 +12,8 @@ const getUserWithRolesMock = vi.hoisted(() => vi.fn());
 const isInReportsToChainMock = vi.hoisted(() => vi.fn());
 const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
+const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
+const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
@@ -46,8 +48,13 @@ vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     update: userUpdateMock,
     getUserWithRoles: getUserWithRolesMock,
+    getUserRoles: modelGetUserRolesMock,
     isInReportsToChain: isInReportsToChainMock,
   },
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: publishWorkflowEventMock,
 }));
 
 vi.mock('@alga-psa/core/encryption', () => ({
@@ -120,6 +127,10 @@ function createAdminDbByType(rowsByUserType: { internal?: string; client?: strin
 }
 
 function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number | null; usedInternalUsers: number }) {
+  // Captures the row inserted by addUser so the post-insert
+  // getSafeUserWithRoles lookup (where().select(FIELDS).first()) can return it.
+  let insertedUser: Record<string, any> | null = null;
+
   return ((table: string) => {
     if (table === 'roles') {
       return {
@@ -144,9 +155,15 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
       return {
         where: (_criteria: Record<string, any>) => ({
           count: async () => [{ count: String(input.usedInternalUsers) }],
+          select: (..._fields: any[]) => ({
+            first: async () => insertedUser,
+          }),
         }),
         insert: (values: Record<string, any>) => ({
-          returning: async () => [{ user_id: 'new-user', ...values }],
+          returning: async () => {
+            insertedUser = { user_id: 'new-user', ...values };
+            return [insertedUser];
+          },
         }),
       };
     }
@@ -154,6 +171,39 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
     if (table === 'user_roles') {
       return {
         insert: async (_values: Record<string, any>) => [],
+      };
+    }
+
+    throw new Error(`Unexpected tenant table ${table}`);
+  }) as any;
+}
+
+// Tenant DB stub for updateUser. The action now reads the user's current
+// email/user_type straight from trx('users').select('email','user_type') and,
+// after the update, re-reads the row via select(USER_RESPONSE_FIELD_NAMES)
+// (an array arg) inside getSafeUserWithRoles — the arg shape disambiguates.
+function createUpdateTenantDb(current: { email: string; user_type?: 'internal' | 'client' }) {
+  const updatedRow = { user_id: 'user-1', email: 'updated@example.com' };
+
+  return ((table: string) => {
+    if (table === 'users') {
+      return {
+        where: (_criteria: Record<string, any>) => ({
+          select: (...fields: any[]) => ({
+            first: async () =>
+              Array.isArray(fields[0])
+                ? updatedRow
+                : { email: current.email, user_type: current.user_type ?? 'internal' },
+          }),
+        }),
+      };
+    }
+
+    if (table === 'boards') {
+      return {
+        where: (_criteria: Record<string, any>) => ({
+          update: async (_values: Record<string, any>) => 0,
+        }),
       };
     }
 
@@ -174,7 +224,11 @@ describe('addUser', () => {
     userUpdateMock.mockReset();
     getUserWithRolesMock.mockReset();
     isInReportsToChainMock.mockReset();
+    publishWorkflowEventMock.mockReset();
+    modelGetUserRolesMock.mockReset();
 
+    publishWorkflowEventMock.mockResolvedValue(undefined);
+    modelGetUserRolesMock.mockResolvedValue([]);
     hasPermissionMock.mockResolvedValue(true);
     hashPasswordMock.mockResolvedValue('hashed-password');
     upsertMock.mockResolvedValue(undefined);
@@ -260,7 +314,9 @@ describe('addUser', () => {
   });
 
   it('rejects updating an email when another tenant already uses it', async () => {
-    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    createTenantKnexMock.mockResolvedValue({
+      knex: createUpdateTenantDb({ email: 'updated@example.com', user_type: 'internal' }),
+    });
     getAdminConnectionMock.mockResolvedValue(createAdminDb('other-tenant-user'));
 
     const updateUser = await loadUpdateUser();
@@ -278,7 +334,9 @@ describe('addUser', () => {
   });
 
   it('normalizes updated email addresses to lowercase before saving', async () => {
-    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    createTenantKnexMock.mockResolvedValue({
+      knex: createUpdateTenantDb({ email: 'old@example.com', user_type: 'internal' }),
+    });
 
     const updateUser = await loadUpdateUser();
     const result = await updateUser(actingUser, tenantContext, actingUser.user_id, {
@@ -287,14 +345,14 @@ describe('addUser', () => {
     });
 
     expect(userUpdateMock).toHaveBeenCalledWith(
-      {},
+      expect.anything(),
       actingUser.user_id,
       expect.objectContaining({
         email: 'updated@example.com',
         first_name: 'Updated',
       })
     );
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       user: {
         user_id: 'user-1',
@@ -308,7 +366,9 @@ describe('addUser', () => {
   // cross-tenant duplicates. The global lookup must be skipped when the email
   // hasn't changed.
   it('skips the global email check when the submitted email matches the current one', async () => {
-    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    createTenantKnexMock.mockResolvedValue({
+      knex: createUpdateTenantDb({ email: 'updated@example.com', user_type: 'internal' }),
+    });
     // Admin DB would *return* a duplicate if asked — this test passes only if
     // the global check is never consulted.
     getAdminConnectionMock.mockResolvedValue(createAdminDb('cross-tenant-duplicate'));
@@ -322,7 +382,7 @@ describe('addUser', () => {
     expect(getAdminConnectionMock).not.toHaveBeenCalled();
     expect(result).toMatchObject({ success: true });
     expect(userUpdateMock).toHaveBeenCalledWith(
-      {},
+      expect.anything(),
       actingUser.user_id,
       expect.objectContaining({
         email: 'updated@example.com',
@@ -336,13 +396,10 @@ describe('addUser', () => {
   // tenant. Updating the internal user's email must not be blocked by the
   // unrelated client-portal row.
   it('allows updating email when only a different user_type uses it globally', async () => {
-    createTenantKnexMock.mockResolvedValue({ knex: {} });
     // Existing user is internal with a different email — forces the change
     // path AND establishes the user_type to scope by.
-    getUserWithRolesMock.mockResolvedValueOnce({
-      user_id: 'user-1',
-      email: 'old@example.com',
-      user_type: 'internal',
+    createTenantKnexMock.mockResolvedValue({
+      knex: createUpdateTenantDb({ email: 'old@example.com', user_type: 'internal' }),
     });
     // A client-portal duplicate exists, but no internal duplicate.
     getAdminConnectionMock.mockResolvedValue(

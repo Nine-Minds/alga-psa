@@ -94,7 +94,9 @@ vi.mock('@alga-psa/db/models/user', () => ({ default: { updateLastLogin: (...arg
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => ((table: string) => makeTableQuery(table))),
 }));
-vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.fn(), error: vi.fn() } }));
+vi.mock('@alga-psa/core/logger', () => ({
+  default: { debug: vi.fn(), trace: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
 
 const { getAuthOptions } = await import('./nextAuthOptions');
 

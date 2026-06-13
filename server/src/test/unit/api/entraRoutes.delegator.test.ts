@@ -17,6 +17,9 @@ describe('CE Entra route delegators', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.doUnmock('@/lib/api/standaloneProductGuards');
+    vi.doUnmock('@enterprise/app/api/integrations/entra/route');
+    vi.doUnmock('@enterprise/app/api/integrations/entra/connect/route');
 
     if (originalEdition === undefined) {
       delete process.env.EDITION;
@@ -34,6 +37,10 @@ describe('CE Entra route delegators', () => {
   it('returns enterprise-only payload when edition is disabled', async () => {
     process.env.EDITION = 'ce';
     delete process.env.NEXT_PUBLIC_EDITION;
+
+    vi.doMock('@/lib/api/standaloneProductGuards', () => ({
+      assertSessionProductAccess: vi.fn(async () => null),
+    }));
 
     const entraStatusRoute = await import('@/app/api/integrations/entra/route');
     const entraConnectRoute = await import('@/app/api/integrations/entra/connect/route');
@@ -81,6 +88,9 @@ describe('CE Entra route delegators', () => {
       });
     });
 
+    vi.doMock('@/lib/api/standaloneProductGuards', () => ({
+      assertSessionProductAccess: vi.fn(async () => null),
+    }));
     vi.doMock('@enterprise/app/api/integrations/entra/route', () => ({
       GET: eeStatusGet,
     }));

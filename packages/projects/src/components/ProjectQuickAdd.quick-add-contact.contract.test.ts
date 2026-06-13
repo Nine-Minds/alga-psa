@@ -13,8 +13,8 @@ describe('project quick add contact creation wiring contract', () => {
     const source = read('./ProjectQuickAdd.tsx');
 
     expect(source).toContain('onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}');
-    expect(source).toContain('isOpen={isQuickAddContactOpen}');
-    expect(source).toContain('selectedClientId={selectedClientId || undefined}');
+    expect(source).toContain('isOpen: isQuickAddContactOpen,');
+    expect(source).toContain('selectedClientId: selectedClientId || null,');
     expect(source).toContain('setSelectedContactId(newContact.contact_name_id);');
   });
 });

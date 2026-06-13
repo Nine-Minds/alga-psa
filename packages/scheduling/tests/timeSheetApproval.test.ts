@@ -4,6 +4,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushSync } from 'react-dom';
 import { createRoot, Root } from 'react-dom/client';
 
+// useFormatters requires an I18nProvider; these tests render the component
+// standalone, so substitute locale-stable formatters.
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    useFormatters: () => ({
+      formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+        new Intl.DateTimeFormat('en-US', options).format(typeof date === 'string' ? new Date(date) : date),
+      formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en-US', options).format(value),
+      formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en-US', { style: 'currency', currency, ...options }).format(value),
+      formatRelativeTime: (date: Date | string) => String(date),
+    }),
+  };
+});
+
 vi.mock('@alga-psa/ui/components/Badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => React.createElement('span', null, children),
 }), { virtual: true });
@@ -121,6 +139,7 @@ describe('TimeSheetApproval', () => {
             end_time: '2026-03-02T10:00:00.000Z',
             created_at: '2026-03-02T10:00:00.000Z',
             updated_at: '2026-03-02T10:00:00.000Z',
+            work_date: '2026-03-02',
             billable_duration: 60,
             notes: 'Needs follow-up',
             user_id: 'user-1',
@@ -277,6 +296,7 @@ describe('TimeSheetApproval', () => {
         end_time: '2026-03-02T10:00:00.000Z',
         created_at: '2026-03-02T10:00:00.000Z',
         updated_at: '2026-03-02T10:00:00.000Z',
+        work_date: '2026-03-02',
         billable_duration: 60,
         notes: 'Needs follow-up',
         user_id: 'user-1',

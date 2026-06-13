@@ -160,15 +160,27 @@ describe('T001: lang-pack key parity', () => {
     return paths;
   }
 
+  // i18next plural-category suffixes (CLDR). Languages like Polish need
+  // _few/_many plural forms that English does not have, so parity for plural
+  // variants is checked on the base key instead of requiring identical keys.
+  const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+  const toBasePath = (p: string): string => p.replace(PLURAL_SUFFIX, '');
+
   const en = readJson<Record<string, unknown>>(`${localesDir}/en/${namespace}`);
   const enPaths = collectLeafPaths(en);
+  const enBasePaths = new Set(enPaths.map(toBasePath));
 
   for (const lang of ['fr', 'es', 'de', 'nl', 'it', 'pl', 'xx', 'yy']) {
     it(`${lang} locale has same key count as en (${enPaths.length} keys)`, () => {
       const locale = readJson<Record<string, unknown>>(`${localesDir}/${lang}/${namespace}`);
       const localePaths = collectLeafPaths(locale);
-      const missingInLocale = enPaths.filter(p => !localePaths.includes(p));
-      const extraInLocale = localePaths.filter(p => !enPaths.includes(p));
+      const localeBasePaths = new Set(localePaths.map(toBasePath));
+      const missingInLocale = enPaths.filter(
+        p => !localePaths.includes(p) && !localeBasePaths.has(toBasePath(p))
+      );
+      const extraInLocale = localePaths.filter(
+        p => !enPaths.includes(p) && !enBasePaths.has(toBasePath(p))
+      );
 
       expect(missingInLocale, `keys missing in ${lang}`).toEqual([]);
       expect(extraInLocale, `extra keys in ${lang}`).toEqual([]);

@@ -25,10 +25,23 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib/graphAuth', () => ({
 
 import { verifyMeetingOrganizer } from '@alga-psa/ee-microsoft-teams/lib/meetings/verifyMeetingOrganizer';
 
+// resolveTeamsMeetingGraphConfig now issues two queries before resolving provider
+// config: tenant_addons (Teams add-on entitlement check, using
+// .where().andWhere().first()) and teams_integrations (.where().first()).
 function buildTeamsIntegrationKnex(row: Record<string, unknown> | undefined | null) {
-  const first = vi.fn().mockResolvedValue(row ?? undefined);
-  const where = vi.fn(() => ({ first }));
-  const knex = vi.fn(() => ({ where }));
+  const knex: any = vi.fn((table: string) => {
+    if (table === 'tenant_addons') {
+      const first = vi.fn().mockResolvedValue({ addon_key: 'teams' });
+      const andWhere = vi.fn(() => ({ first }));
+      const where = vi.fn(() => ({ andWhere, first }));
+      return { where };
+    }
+
+    const first = vi.fn().mockResolvedValue(row ?? undefined);
+    const where = vi.fn(() => ({ first }));
+    return { where };
+  });
+  knex.fn = { now: vi.fn(() => 'now()') };
   return { knex };
 }
 

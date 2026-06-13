@@ -48,7 +48,7 @@ describe('asset authorization kernel contracts', () => {
   });
 
   it('T017: enforces asset-level authorization across update/delete, relationship, association, and maintenance mutations', () => {
-    expect(source).toContain('export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, data: UpdateAssetRequest)');
+    expect(source).toContain('export const updateAsset = withAuth(async (\n    user,\n    { tenant },\n    asset_id: string,\n    data: UpdateAssetRequest,');
     expect(source).toContain('export const deleteAsset = withAuth(async (');
     expect(source).toContain('export const createAssetRelationship = withAuth(async (user, { tenant }, data: CreateAssetRelationshipRequest)');
     expect(source).toContain('export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_asset_id: string, child_asset_id: string)');
@@ -68,7 +68,7 @@ describe('asset authorization kernel contracts', () => {
   it('T018: enforces linked-child intersection semantics in asset detail bundles for linked ticket/document payloads', () => {
     expect(source).toContain('export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([])');
-    expect(source).toContain('canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, 15, context) : Promise.resolve([])');
+    expect(source).toContain('canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, assetRecord.client_id ?? null, 15, context) : Promise.resolve([])');
     expect(source).toContain("resource: { type: 'ticket', action: 'read', id: row.ticket_id }");
     expect(source).toContain("resource: { type: 'document', action: 'read', id: record.document_id }");
     expect(source).toContain('const rowsAfterIntersection = authorizationContext');

@@ -14,18 +14,24 @@ const {
   mockGetInboundTicketDefaults,
   mockCreateInboundTicketDefaults,
   mockGetTicketFieldOptions,
+  mockGetAvailableStatuses,
   mockGetAllBoards,
   mockGetAllClients,
+  mockGetIntegrationClients,
   mockGetAllPriorities,
   mockGetAllUsersBasic,
+  mockGetUserAvatarUrlsBatchAction,
 } = vi.hoisted(() => ({
   mockGetInboundTicketDefaults: vi.fn(),
   mockCreateInboundTicketDefaults: vi.fn(),
   mockGetTicketFieldOptions: vi.fn(),
+  mockGetAvailableStatuses: vi.fn(),
   mockGetAllBoards: vi.fn(),
   mockGetAllClients: vi.fn(),
+  mockGetIntegrationClients: vi.fn(),
   mockGetAllPriorities: vi.fn(),
   mockGetAllUsersBasic: vi.fn(),
+  mockGetUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
 // Mock UI subcomponents used by the form for predictable interactions
@@ -133,7 +139,15 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   updateInboundTicketDefaults: vi.fn(),
   deleteInboundTicketDefaults: vi.fn(),
   getTicketFieldOptions: mockGetTicketFieldOptions,
+  getAvailableStatuses: mockGetAvailableStatuses,
   getCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [] }),
+}));
+
+// The form hydrates its client picker via getIntegrationClients (deep action),
+// not the @alga-psa/clients barrel.
+vi.mock('../../../../../packages/integrations/src/actions/clientLookupActions', () => ({
+  __esModule: true,
+  getIntegrationClients: mockGetIntegrationClients,
 }));
 
 vi.mock('@alga-psa/tickets/actions', () => ({
@@ -151,9 +165,11 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getAllPriorities: mockGetAllPriorities,
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
+// The form imports user actions from @alga-psa/user-composition/actions.
+vi.mock('@alga-psa/user-composition/actions', () => ({
   __esModule: true,
   getAllUsersBasic: mockGetAllUsersBasic,
+  getUserAvatarUrlsBatchAction: mockGetUserAvatarUrlsBatchAction,
 }));
 
 import { InboundTicketDefaultsManager } from '@alga-psa/integrations/components';
@@ -186,10 +202,14 @@ describe('InboundTicketDefaultsManager', () => {
 
     mockGetInboundTicketDefaults.mockResolvedValue({ defaults: [] });
     mockGetTicketFieldOptions.mockResolvedValue({ options: sampleFieldOptions });
+    // Statuses are loaded per-board via getAvailableStatuses once a board is selected.
+    mockGetAvailableStatuses.mockResolvedValue({ statuses: sampleFieldOptions.statuses });
     mockGetAllBoards.mockResolvedValue(sampleBoards);
     mockGetAllClients.mockResolvedValue(sampleClients);
+    mockGetIntegrationClients.mockResolvedValue(sampleClients);
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
     mockGetAllUsersBasic.mockResolvedValue([]);
+    mockGetUserAvatarUrlsBatchAction.mockResolvedValue(new Map());
     mockCreateInboundTicketDefaults.mockResolvedValue({
       defaults: {
         id: 'new-1',

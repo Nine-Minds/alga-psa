@@ -1,8 +1,15 @@
 /** @vitest-environment jsdom */
 
+import '@testing-library/jest-dom/vitest';
+
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, within, configure, cleanup } from '@testing-library/react';
+
+// Components under test attach automation ids via the plain
+// `data-automation-id` attribute, so point Testing Library's testId queries
+// at that attribute.
+configure({ testIdAttribute: 'data-automation-id' });
 import userEvent from '@testing-library/user-event';
 import TaskCommentThread from './TaskCommentThread';
 import type { IProjectTaskCommentWithUser } from '@alga-psa/types';
@@ -25,7 +32,7 @@ vi.mock('@alga-psa/ui/editor', () => ({
       content: [{ type: 'text', text: '', styles: {} }],
     },
   ],
-  RichTextViewer: () => <div data-testid="rich-text-viewer" />,
+  RichTextViewer: () => <div data-automation-id="rich-text-viewer" />,
   TextEditor: ({ editorRef }: any) => {
     if (editorRef) {
       editorRef.current = {
@@ -38,20 +45,26 @@ vi.mock('@alga-psa/ui/editor', () => ({
         replaceBlocks: vi.fn(),
       };
     }
-    return <div data-testid="task-comment-editor" />;
+    return <div data-automation-id="task-comment-editor" />;
   },
 }));
 
+const translate = (key: string, arg2?: unknown): string => {
+  if (typeof arg2 === 'string') return arg2;
+  if (arg2 && typeof arg2 === 'object') {
+    const opts = arg2 as Record<string, unknown>;
+    const template = typeof opts.defaultValue === 'string' ? opts.defaultValue : key;
+    return template.replace(/{{\s*(\w+)\s*}}/g, (_m, name: string) => String(opts[name] ?? ''));
+  }
+  return key;
+};
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
-  }),
+  useTranslation: () => ({ t: translate }),
 }));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
-  }),
+  useTranslation: () => ({ t: translate }),
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -71,8 +84,8 @@ vi.mock('@alga-psa/ui/components/ReactionDisplay', () => ({
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
-  withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
-  withUIReflectionId: ({ id }: { id: string }) => ({ 'data-testid': id }),
+  withDataAutomationId: ({ id }: { id: string }) => ({ 'data-automation-id': id }),
+  withUIReflectionId: ({ id }: { id: string }) => ({ 'data-automation-id': id }),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -135,6 +148,10 @@ describe('TaskCommentThread threaded replies', () => {
   beforeEach(() => {
     taskStore.comments = [buildTaskComment()];
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('T064: opens an inline reply composer and submits an indented child reply', async () => {

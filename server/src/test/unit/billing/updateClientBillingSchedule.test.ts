@@ -112,6 +112,12 @@ vi.mock('@alga-psa/db', () => ({
     return await fn(currentTrx);
   },
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
+  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
+  getTenantContext: vi.fn(async () => 'tenant-1'),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

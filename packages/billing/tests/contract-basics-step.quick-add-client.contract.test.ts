@@ -14,9 +14,9 @@ describe('contract basics client creation wiring contract', () => {
     const source = readSource();
 
     expect(source).toContain('onAddNew={() => setIsQuickAddClientOpen(true)}');
-    expect(source).toContain('open={isQuickAddClientOpen}');
-    expect(source).toContain('setClients((prevClients) => {');
-    expect(source).toContain('client_id: newClient.client_id,');
-    expect(source).toContain('currency_code: newClient.default_currency_code || data.currency_code,');
+    expect(source).toContain('open: isQuickAddClientOpen,');
+    expect(source).toContain('setClients(prev => [...prev, newClient]);');
+    expect(source).toContain('updateData({ client_id: newClient.client_id });');
+    expect(source).toContain('const clientCurrency = selectedClient?.default_currency_code || data.currency_code;');
   });
 });

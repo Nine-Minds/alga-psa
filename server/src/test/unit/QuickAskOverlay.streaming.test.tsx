@@ -2,9 +2,65 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import path from 'node:path';
+import { readFileSync } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+
+// The QuickAsk/Chat components reference i18n keys (e.g. quickAsk.inputAriaLabel,
+// quickAsk.ask, chat.send) WITHOUT a defaultValue, so the shared setup's mock --
+// which returns the key when no default is given -- would surface raw keys here.
+// Override it locally with a stable singleton `t` that resolves dotted keys
+// against the real English chat catalog. Built once at module load so `t`/`i18n`
+// stay referentially stable (avoids the render-loop the shared mock guards against).
+const chatCatalog = JSON.parse(
+  readFileSync(
+    path.resolve(__dirname, '../../../public/locales/en/msp/chat.json'),
+    'utf8',
+  ),
+) as Record<string, unknown>;
+
+const resolveCatalogKey = (key: string): string | undefined => {
+  const value = key.split('.').reduce<unknown>((acc, segment) => {
+    if (acc && typeof acc === 'object') {
+      return (acc as Record<string, unknown>)[segment];
+    }
+    return undefined;
+  }, chatCatalog);
+  return typeof value === 'string' ? value : undefined;
+};
+
+const stableT = (
+  key: string,
+  options?: string | { defaultValue?: string; [k: string]: unknown },
+) => {
+  if (typeof options === 'string') {
+    return options;
+  }
+  const template = resolveCatalogKey(key) ?? options?.defaultValue ?? key;
+  return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) => {
+    const v = options?.[name];
+    return v === undefined ? match : String(v);
+  });
+};
+
+const stableI18n = { language: 'en' };
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({ t: stableT, i18n: stableI18n }),
+}));
+
+// The expanded Chat consumes the AI chat UI context (normally supplied higher up
+// in MspLayoutClient). Provide a stable stub so the component renders without a
+// full provider tree / Next router.
+vi.mock('@product/chat/context', () => ({
+  useAIChatContext: () => ({
+    pathname: '/msp',
+    screen: { key: 'msp', label: 'MSP Portal' },
+  }),
+  AIChatContextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 import QuickAskOverlay from '@ee/components/chat/QuickAskOverlay';
 import {
@@ -82,7 +138,19 @@ const createControlledSseResponse = () => {
   };
 };
 
+// jsdom does not implement Element.scrollTo; the Chat auto-scrolls on new
+// messages, so provide a no-op.
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = function scrollTo() {};
+}
+
 describe('QuickAskOverlay (streaming)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it('expands to Chat and posts to the streaming completions endpoint', async () => {
     expect(QuickAskOverlay).toBeDefined();
 

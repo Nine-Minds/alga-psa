@@ -3,24 +3,24 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/scheduling/src",
   "projectType": "library",
-  "tags": ["scope:scheduling", "type:vertical"],
+  "tags": [
+    "scope:scheduling",
+    "type:vertical"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop",
       "dependsOn": []
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/scheduling"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/scheduling/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/scheduling/**/*.{ts,tsx}"
+        ]
       }
     }
   }

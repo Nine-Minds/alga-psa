@@ -5,14 +5,41 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom/vitest';
+
+// Stable t()/formatters so hooks that list `t` in effect dependencies do not
+// re-run on every render (react-i18next's no-instance fallback returns an
+// unstable t, which sends ContractWizard's mount effect into a render loop).
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  const t = (key: string, opts?: string | { defaultValue?: string }) => {
+    if (typeof opts === 'string') return opts;
+    return typeof opts?.defaultValue === 'string' ? opts.defaultValue : key;
+  };
+  const translation = { t };
+  const formatters = {
+    formatDate: (value: unknown) => String(value),
+    formatCurrency: (value: number) => `$${value}`,
+  };
+  return {
+    useTranslation: () => translation,
+    useFormatters: () => formatters,
+  };
+});
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
-    isOpen ? <div data-testid="dialog">{children}</div> : null,
+  Dialog: ({ isOpen, children, footer }: { isOpen: boolean; children: React.ReactNode; footer?: React.ReactNode }) =>
+    isOpen ? (
+      <div data-testid="dialog">
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/onboarding/WizardProgress', () => ({
