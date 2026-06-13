@@ -1121,7 +1121,8 @@
         "if": "Wenn",
         "loop": "Schleife",
         "try": "Versuchen",
-        "block": "Block"
+        "block": "Block",
+        "disconnected": "Getrennt"
       },
       "mapping": {
         "unmappedTitle": "{{count}} Pflichtfelder nicht zugeordnet",
@@ -1137,7 +1138,8 @@
         "duplicateAriaLabel": "Schritt {{label}} duplizieren",
         "delete": "Schritt löschen"
       },
-      "forEachSummary": "Element: {{itemVar}} | Gleichzeitigkeit: {{concurrency}}"
+      "forEachSummary": "Element: {{itemVar}} | Gleichzeitigkeit: {{concurrency}}",
+      "disconnectedTitle": "{{group}} ist nicht verbunden; dieser Schritt schlägt zur Laufzeit fehl, bis die Verbindung wiederhergestellt ist."
     },
     "toasts": {
       "loadRegistriesFailed": "Workflow-Register konnten nicht geladen werden",
@@ -1647,6 +1649,10 @@
       "transform": "Transformieren",
       "app": "App",
       "ai": "KI"
+    },
+    "disconnected": {
+      "title": "{{group}} ist nicht verbunden",
+      "message": "Schritte, die seine Aktionen verwenden, schlagen zur Laufzeit fehl, bis die Integration unter Einstellungen > Integrationen wieder verbunden ist."
     }
   },
   "trigger": {

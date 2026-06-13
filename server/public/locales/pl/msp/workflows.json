@@ -1121,7 +1121,8 @@
         "if": "Jeśli",
         "loop": "Pętla",
         "try": "Spróbuj",
-        "block": "Blok"
+        "block": "Blok",
+        "disconnected": "Rozłączono"
       },
       "mapping": {
         "unmappedTitle": "{{count}} wymaganych pól nie jest zmapowanych",
@@ -1137,7 +1138,8 @@
         "duplicateAriaLabel": "Duplikuj krok {{label}}",
         "delete": "Usuń krok"
       },
-      "forEachSummary": "Element: {{itemVar}} | Równoległość: {{concurrency}}"
+      "forEachSummary": "Element: {{itemVar}} | Równoległość: {{concurrency}}",
+      "disconnectedTitle": "{{group}} nie jest połączony; ten krok zakończy się niepowodzeniem w czasie wykonywania, dopóki połączenie nie zostanie przywrócone."
     },
     "toasts": {
       "loadRegistriesFailed": "Nie udało się wczytać rejestrów przepływów pracy",
@@ -1649,6 +1651,10 @@
       "transform": "Przekształć",
       "app": "Aplikacja",
       "ai": "AI"
+    },
+    "disconnected": {
+      "title": "{{group}} nie jest połączony",
+      "message": "Kroki używające jego akcji będą kończyć się niepowodzeniem w czasie wykonywania, dopóki integracja nie zostanie ponownie połączona w Ustawienia > Integracje."
     }
   },
   "trigger": {

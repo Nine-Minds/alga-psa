@@ -1121,7 +1121,8 @@
         "if": "Se",
         "loop": "Ciclo",
         "try": "Prova",
-        "block": "Blocco"
+        "block": "Blocco",
+        "disconnected": "Disconnesso"
       },
       "mapping": {
         "unmappedTitle": "{{count}} campi obbligatori non sono mappati",
@@ -1137,7 +1138,8 @@
         "duplicateAriaLabel": "Duplica passaggio {{label}}",
         "delete": "Elimina passaggio"
       },
-      "forEachSummary": "Elemento: {{itemVar}} | Concorrenza: {{concurrency}}"
+      "forEachSummary": "Elemento: {{itemVar}} | Concorrenza: {{concurrency}}",
+      "disconnectedTitle": "{{group}} non è connesso; questo passaggio fallirà in fase di esecuzione finché non viene riconnesso."
     },
     "toasts": {
       "loadRegistriesFailed": "Impossibile caricare i registri dei workflow",
@@ -1647,6 +1649,10 @@
       "transform": "Trasforma",
       "app": "App",
       "ai": "AI"
+    },
+    "disconnected": {
+      "title": "{{group}} non è connesso",
+      "message": "I passaggi che usano le sue azioni falliranno in fase di esecuzione finché l'integrazione non viene riconnessa in Impostazioni > Integrazioni."
     }
   },
   "trigger": {

@@ -1121,7 +1121,8 @@
         "if": "Si",
         "loop": "Boucle",
         "try": "Tenter",
-        "block": "Bloc"
+        "block": "Bloc",
+        "disconnected": "Déconnecté"
       },
       "mapping": {
         "unmappedTitle": "{{count}} champs requis non mappés",
@@ -1137,7 +1138,8 @@
         "duplicateAriaLabel": "Dupliquer l’étape {{label}}",
         "delete": "Supprimer l’étape"
       },
-      "forEachSummary": "Élément : {{itemVar}} | Concurrence : {{concurrency}}"
+      "forEachSummary": "Élément : {{itemVar}} | Concurrence : {{concurrency}}",
+      "disconnectedTitle": "{{group}} n'est pas connecté ; cette étape échouera à l'exécution tant qu'il n'est pas reconnecté."
     },
     "toasts": {
       "loadRegistriesFailed": "Échec du chargement des registres de workflow",
@@ -1647,6 +1649,10 @@
       "transform": "Transformer",
       "app": "Application",
       "ai": "IA"
+    },
+    "disconnected": {
+      "title": "{{group}} n'est pas connecté",
+      "message": "Les étapes utilisant ses actions échoueront à l'exécution tant que l'intégration n'est pas reconnectée dans Paramètres > Intégrations."
     }
   },
   "trigger": {
