@@ -1968,13 +1968,14 @@ function TemplateStatusColumn({
         style={{ gap: `${cardGap}px` }}
       >
         {sortedTasks.map((task, index) => (
-          <div key={task.template_task_id}>
-            {/* Drop placeholder before task */}
-            <div
-              className={`${styles.dropPlaceholder} ${
-                dropIndicatorPosition === index && draggedTaskId ? styles.visible : ''
-              }`}
-            />
+          <div key={task.template_task_id} className="relative">
+            {/* Drop indicator before task. Absolutely positioned so it consumes
+                no layout space and never reflows the cards (which previously
+                caused the drop target to flicker back and forth during a drag).
+                Centred in the gap above the card. */}
+            {draggedTaskId && dropIndicatorPosition === index && (
+              <div className={styles.dropIndicator} style={{ top: `-${cardGap / 2 + 1.5}px` }} />
+            )}
             <TaskCard
               task={task}
               onDragStart={onTaskDragStart}
@@ -2002,14 +2003,17 @@ function TemplateStatusColumn({
               teamAvatarUrls={teamAvatarUrls}
               zoomLevel={zoomLevel}
             />
+            {/* Drop indicator after the last card (drop at end of column),
+                centred in the gap below the card. */}
+            {draggedTaskId && index === sortedTasks.length - 1 && dropIndicatorPosition === sortedTasks.length && (
+              <div className={styles.dropIndicator} style={{ bottom: `-${cardGap / 2 + 1.5}px` }} />
+            )}
           </div>
         ))}
-        {/* Drop placeholder at end */}
-        <div
-          className={`${styles.dropPlaceholder} ${
-            dropIndicatorPosition === sortedTasks.length && draggedTaskId ? styles.visible : ''
-          }`}
-        />
+        {/* Empty column: no card to anchor to, show a simple indicator line */}
+        {draggedTaskId && sortedTasks.length === 0 && dropIndicatorPosition === 0 && (
+          <div className={styles.dropIndicator} style={{ top: '4px' }} />
+        )}
       </div>
     </div>
   );
