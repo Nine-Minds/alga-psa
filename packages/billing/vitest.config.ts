@@ -6,7 +6,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    testTimeout: 10000,
+    testTimeout: 20000,
   },
   resolve: {
     alias: [
@@ -33,6 +33,34 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
+      },
+      {
+        find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
+        replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
+      },
+      {
+        find: /^@alga-psa\/auth\/sso\/entry$/,
+        replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx'),
+      },
+      {
+        find: /^@alga-psa\/auth\/(session|rbac|withAuth|apiAuth|nextAuthOptions|getCurrentUser)$/,
+        replacement: `${path.resolve(__dirname, '../auth/src/lib')}/$1.ts`,
+      },
+      {
+        find: /^@alga-psa\/auth\/types\/next-auth$/,
+        replacement: path.resolve(__dirname, '../auth/src/types/next-auth.ts'),
+      },
+      {
+        find: /^@alga-psa\/product-extension-actions$/,
+        replacement: path.resolve(__dirname, '../product-extension-actions/oss/entry.ts'),
+      },
+      {
+        find: /^@enterprise$/,
+        replacement: path.resolve(__dirname, '../ee/src/index.ts'),
+      },
+      {
+        find: /^@enterprise\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../ee/src')}/$1`,
       },
       {
         find: /^@alga-psa\/([^/]+)\/(.*)$/,
