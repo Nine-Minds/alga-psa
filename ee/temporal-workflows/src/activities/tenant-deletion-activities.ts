@@ -180,6 +180,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
   'asset_history', 'asset_associations', 'asset_software', 'asset_facts',
   'workstation_assets', 'server_assets', 'network_device_assets', 'mobile_device_assets', 'printer_assets',
+  // Asset type registry: tenant-scoped lookup, RESTRICT FK to tenants (no FK
+  // to/from assets), so it must be deleted explicitly before tenants.
+  'asset_type_registry',
 
   // Software catalog
   'software_catalog',
@@ -259,6 +262,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'entra_client_tenant_mappings', 'entra_sync_run_tenants',
   'entra_sync_runs', 'entra_managed_tenants',
   'entra_partner_connections', 'entra_sync_settings',
+
+  // Hudu integration: one connection row per tenant (FK to tenants is CASCADE,
+  // but delete it explicitly so cleanup doesn't rely on the cascade). Hudu
+  // mappings live in tenant_external_entity_mappings (deleted below).
+  'hudu_integrations',
 
   // Project/task entities
   'project_tasks', 'project_phases', 'project_status_mappings',

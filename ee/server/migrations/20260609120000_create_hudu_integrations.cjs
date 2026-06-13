@@ -72,13 +72,11 @@ exports.up = async function up(knex) {
     });
   }
 
-  await knex.raw(`
-    DROP TRIGGER IF EXISTS update_${TABLE}_updated_at ON ${TABLE};
-    CREATE TRIGGER update_${TABLE}_updated_at
-    BEFORE UPDATE ON ${TABLE}
-    FOR EACH ROW
-    EXECUTE PROCEDURE on_update_timestamp();
-  `);
+  // No updated_at trigger: the backend sets updated_at on every write (see
+  // huduIntegrationRepository). Drop any trigger an older migration version left,
+  // both to keep the column app-owned and because Citus refuses to distribute a
+  // table that has triggers.
+  await knex.raw(`DROP TRIGGER IF EXISTS update_${TABLE}_updated_at ON ${TABLE}`);
 
   const inRecovery = await knex.raw(`SELECT pg_is_in_recovery() AS in_recovery`);
   if (!inRecovery.rows?.[0]?.in_recovery && await isCitusEnabled(knex)) {
