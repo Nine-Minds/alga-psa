@@ -44,9 +44,15 @@ export interface FieldSchemaIssue {
   message: string;
 }
 
-export type FieldsSchemaValidationResult =
-  | { valid: true; fields: AssetTypeField[] }
-  | { valid: false; issues: FieldSchemaIssue[] };
+// A flat shape (not a discriminated union) so `fields` and `issues` are always
+// present: ee/server typechecks this module under tsconfig strict:false, where
+// the false branch of a boolean-discriminated union does not narrow. `issues` is
+// empty when valid; `fields` holds the parsed fields (best-effort when invalid).
+export interface FieldsSchemaValidationResult {
+  valid: boolean;
+  fields: AssetTypeField[];
+  issues: FieldSchemaIssue[];
+}
 
 export type AssetTypeRegistryError =
   | { code: 'invalid_name'; message: string }
@@ -69,6 +75,7 @@ export function validateFieldsSchema(input: unknown): FieldsSchemaValidationResu
   if (!Array.isArray(input)) {
     return {
       valid: false,
+      fields: [],
       issues: [{ index: -1, code: 'invalid_field', message: 'fields_schema must be an array' }],
     };
   }
@@ -139,11 +146,7 @@ export function validateFieldsSchema(input: unknown): FieldsSchemaValidationResu
     });
   });
 
-  if (issues.length > 0) {
-    return { valid: false, issues };
-  }
-
-  return { valid: true, fields };
+  return { valid: issues.length === 0, fields, issues };
 }
 
 export function generateAssetTypeSlug(name: string): string {

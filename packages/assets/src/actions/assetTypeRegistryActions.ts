@@ -23,9 +23,13 @@ export type AssetTypeRegistryActionResult<T> =
   | { success: false; error: AssetTypeRegistryError };
 
 function toActionResult<T>(result: AssetTypeRegistryResult<T>): AssetTypeRegistryActionResult<T> {
-  return result.ok
-    ? { success: true, data: result.value }
-    : { success: false, error: result.error };
+  if (result.ok) {
+    return { success: true, data: result.value };
+  }
+  // ee/server typechecks this file with tsconfig strict:false, where the false
+  // branch of a boolean-discriminated union does not narrow. Pin the failure
+  // member explicitly so `result.error` resolves under strict and non-strict.
+  return { success: false, error: (result as Extract<AssetTypeRegistryResult<T>, { ok: false }>).error };
 }
 
 export const getAssetTypes = withAuth(async (user, { tenant }): Promise<AssetTypeRegistryEntry[]> => {
