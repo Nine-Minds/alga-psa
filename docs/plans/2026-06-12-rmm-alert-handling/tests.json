@@ -1,0 +1,291 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit (table-driven): NinjaOne normalizer maps TRIGGERED/RESET/ACKNOWLEDGED payloads, normalizes all severity values, derives condition identity from statusCode with activityType fallback",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: TacticalRMM payload maps to a NormalizedRmmAlertEvent",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit (table-driven): rule condition matrix — each condition type matches and mismatches, multi-condition rules require all fields, empty conditions is catch-all",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F022"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: rule selection — lower priority_order wins, inactive rules skipped, other integrations'/tenants' rules never evaluated",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F049"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: a rule with an invalid stored regex is logged, skipped, and the next rule is evaluated",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: dedup_key computation from device + condition identity",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: ticket templates render all placeholders; defaults apply when no template",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit (table-driven): untouched determination — human comment, time entry, manual status change each count as touched; rule auto-assignment does not",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit (table-driven): window matching — one-off in/out of range, weekly recurrence in window timezone including across midnight, scope combinations require all non-null scopes, inactive windows never match",
+    "implemented": true,
+    "featureIds": [
+      "F071",
+      "F072"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: shared Zod schemas reject malformed conditions/actions shapes and invalid messagePattern regex",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F050"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Integration: TRIGGERED webhook end-to-end — rmm_alerts row with metadata/dedup_key/matched_rule_id, ticket honoring boardId/priorityOverride/assignToUserId with source, source_reference, asset association, and initial comment; auto_ticket_created set",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F016",
+      "F017",
+      "F023",
+      "F027",
+      "F028",
+      "F031",
+      "F033"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: replaying the same webhook creates no duplicate alert row and no duplicate ticket",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: repeat trigger while ticket open — occurrence_count incremented, re-triggered comment added, no new ticket",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F026"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: trigger after linked ticket closed creates a new ticket; same condition on a different device creates a separate ticket",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F025",
+      "F027"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: no matching rule, or createTicket false, stores the alert without a ticket",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: severity-to-priority fallback applies when the rule has no priorityOverride",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: ticket client resolves from the asset, falling back to the organization mapping",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: RESET resolves the alert, comments the ticket, closes untouched tickets via autoResolveStatusId or the default closed status",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F035",
+      "F037"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Integration: RESET leaves touched tickets open (comment only); without autoResolveTicket the ticket is untouched entirely",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F036",
+      "F038"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Integration: acknowledged events set status acknowledged with acknowledged_at",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Integration: ticket close calls the outbound adapter when resetAlertOnTicketClose is true; skips when the rule opted out or the alert is already resolved",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Integration: outbound reset failure is logged and stamped in metadata without blocking the close; providers without an adapter are skipped cleanly",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F042",
+      "F043"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Integration: alert in a matching window is stored suppressed with suppressed_by_window_id — no ticket, no notification, no workflow event; a reset for it resolves quietly",
+    "implemented": true,
+    "featureIds": [
+      "F073",
+      "F074"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: poll cycle upserts a missed RMM-active alert into a ticket, synthesizes a reset for a stale local active alert, and processes an expired-window suppressed alert into a ticket",
+    "implemented": true,
+    "featureIds": [
+      "F078",
+      "F079",
+      "F080"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: the same alert arriving via webhook and poller yields one alert row and one ticket",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Integration: rule CRUD validates shapes and regex at save, requires admin, and is tenant-isolated",
+    "implemented": false,
+    "featureIds": [
+      "F044",
+      "F045",
+      "F046",
+      "F047",
+      "F048",
+      "F049",
+      "F050"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Integration: window CRUD validates shapes, requires admin, and is tenant-isolated",
+    "implemented": false,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Integration: pipeline publishes RMM_ALERT_TRIGGERED and RMM_ALERT_RESOLVED workflow v2 events with alert, asset/client, and ticket IDs",
+    "implemented": true,
+    "featureIds": [
+      "F059",
+      "F060",
+      "F061"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Integration: rmm.alerts.create_ticket workflow action creates a ticket for an unlinked alert and errors cleanly when already linked",
+    "implemented": false,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Integration: OAuth callback rejects a wrong or expired csrf state and accepts a valid one",
+    "implemented": false,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Integration: matched rule notifyUserIds produces in-app notifications honoring the rmm-alert category",
+    "implemented": false,
+    "featureIds": [
+      "F063",
+      "F064"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Integration: an org mapping with auto_create_tickets false still gets tickets when a rule matches (flag no longer consulted)",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  }
+]

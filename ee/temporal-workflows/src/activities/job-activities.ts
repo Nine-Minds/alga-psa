@@ -68,6 +68,32 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     throw error;
   }
 
+  // RMM polling handlers: in EE these recurring jobs arrive as Temporal
+  // Schedules (TemporalJobRunner.scheduleRecurringJob) that start
+  // genericJobWorkflow, which executes whatever is registered here. The same
+  // handler code runs on pg-boss in CE — see
+  // server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts for the model.
+  try {
+    const {
+      rmmAlertReconciliationHandler,
+      huntressIncidentPollHandler,
+      RMM_ALERT_RECONCILIATION_JOB,
+      HUNTRESS_INCIDENT_POLL_JOB,
+    } = await import('../../../../server/src/lib/jobs/handlers/rmmAlertPollingHandlers');
+
+    registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, async (jobId, data) => {
+      await rmmAlertReconciliationHandler(jobId, data as any);
+    });
+    registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, async (jobId, data) => {
+      await huntressIncidentPollHandler(jobId, data as any);
+    });
+  } catch (error) {
+    logger.error('Failed to register RMM polling handlers', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+
   jobHandlersInitialized = true;
   logger.info('Initialized job handler registry for Temporal worker', {
     handlerCount: jobHandlers.size,

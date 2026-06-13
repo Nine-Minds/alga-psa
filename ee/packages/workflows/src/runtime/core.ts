@@ -3,6 +3,7 @@ import {
   isWorkflowRuntimeV2Initialized,
 } from '../../../../../shared/workflow/runtime/init';
 import { registerNinjaOneWorkflowModule } from './actions/registerNinjaOneWorkflowActions';
+import { registerRmmAlertWorkflowActionsV2 } from './actions/registerRmmAlertWorkflowActions';
 import { registerTacticalRmmWorkflowModule } from './actions/registerTacticalRmmWorkflowActions';
 import { registerLevelIoWorkflowModule } from './actions/registerLevelIoWorkflowActions';
 import { registerHuntressWorkflowModule } from './actions/registerHuntressWorkflowActions';
@@ -47,6 +48,9 @@ export { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../../../../../shared/workfl
 
 export function initializeWorkflowRuntimeV2(): void {
   initializeSharedWorkflowRuntimeV2();
+  // Provider-agnostic RMM alert actions (rmm.alerts.create_ticket) from the
+  // alert-handling feature; not an integration module tile.
+  registerRmmAlertWorkflowActionsV2();
   registerNinjaOneWorkflowModule();
   registerTacticalRmmWorkflowModule();
   registerLevelIoWorkflowModule();

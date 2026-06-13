@@ -31,6 +31,10 @@ const logger = createLogger({
 const EMAIL_WORKFLOW_TASK_QUEUE = 'email-domain-workflows';
 const ENTRA_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
 const ENTRA_SCHEDULE_ID_PREFIX = 'entra-all-tenants-sync-schedule';
+// Note: RMM alert reconciliation and Huntress incident polling are NOT set up
+// here. They run as per-integration recurring jobs on the job-runner
+// abstraction (Temporal Schedules in EE via TemporalJobRunner), converged by
+// the reconciler in server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts.
 
 interface EntraScheduleConfigRow {
   tenantId: string;

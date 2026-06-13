@@ -21,6 +21,7 @@ import {
   triggerLevelIoFullSync,
   updateLevelIoOrganizationMapping,
 } from '../../../lib/actions/integrations/levelIoActions';
+import { RmmAlertAutomationSettings } from '@alga-psa/integrations/components/settings/integrations/RmmAlertAutomationSettings';
 
 type MappingRow = {
   mapping_id: string;
@@ -49,6 +50,7 @@ export default function LevelIoIntegrationSettings() {
   const [apiKey, setApiKey] = useState('');
   const [hasApiKey, setHasApiKey] = useState(false);
 
+  const [integrationId, setIntegrationId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [connectedAt, setConnectedAt] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<string>('pending');
@@ -87,6 +89,7 @@ export default function LevelIoIntegrationSettings() {
         setError(settingsResult.error || t('integrations.rmm.levelio.errors.loadSettings', { defaultValue: 'Failed to load Level settings' }));
       } else {
         const config = settingsResult.config;
+        setIntegrationId(config?.integrationId || null);
         setIsActive(Boolean(config?.isActive));
         setConnectedAt(config?.connectedAt || null);
         setSyncStatus(config?.syncStatus || 'pending');
@@ -497,6 +500,9 @@ export default function LevelIoIntegrationSettings() {
           )}
         </CardContent>
       </Card>
+      {isActive && integrationId && (
+        <RmmAlertAutomationSettings integrationId={integrationId} provider="levelio" />
+      )}
     </div>
   );
 }

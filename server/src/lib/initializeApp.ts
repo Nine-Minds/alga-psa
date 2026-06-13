@@ -604,17 +604,39 @@ async function initializeJobScheduler(storageService: StorageService) {
     }
   }
 
-  // Huntress incident polling (Enterprise only). The @enterprise alias
-  // resolves to the CE no-op stub in community builds.
-  if (isEnterprise) {
-    try {
-      const { registerHuntressPolling } = await import(
-        '@enterprise/lib/integrations/huntress/scheduling'
-      );
-      await registerHuntressPolling(jobScheduler);
-    } catch (error) {
-      logger.error('Failed to register Huntress incident polling:', error);
+  // RMM polling (alert reconciliation + Huntress incidents) runs as
+  // per-integration recurring jobs on the job-runner abstraction — Temporal
+  // Schedules in EE, pg-boss cron in CE. This small control loop keeps those
+  // jobs converged with rmm_integrations state (connects, disconnects,
+  // interval changes) without operator intervention; see
+  // server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts for the model.
+  //
+  // The tick is a process-local timer, not a persisted job: the legacy
+  // scheduler's scheduleRecurringJob is a one-shot delayed send (it never
+  // re-fires after completion), and the loop is cheap and idempotent — the
+  // runner-side schedule creation is an upsert, so concurrent ticks from
+  // multiple replicas are safe.
+  try {
+    const RECONCILER_INTERVAL_MS = 5 * 60 * 1000;
+    const tick = async () => {
+      try {
+        const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
+        const runner = await initializeJobRunner();
+        await reconcileRmmPollingSchedules(runner);
+      } catch (error) {
+        logger.error('[RmmPollingReconciler] tick failed:', error);
+      }
+    };
+    const globalScope = globalThis as { __rmmPollingReconcilerTimer?: NodeJS.Timeout };
+    if (!globalScope.__rmmPollingReconcilerTimer) {
+      globalScope.__rmmPollingReconcilerTimer = setInterval(() => void tick(), RECONCILER_INTERVAL_MS);
+      globalScope.__rmmPollingReconcilerTimer.unref?.();
     }
+
+    // One pass at boot so fresh deployments don't wait for the first tick.
+    await tick();
+  } catch (error) {
+    logger.error('Failed to set up RMM polling schedule reconciler:', error);
   }
 }
 

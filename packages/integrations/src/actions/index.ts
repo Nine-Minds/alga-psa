@@ -192,6 +192,23 @@ export {
   syncTacticalRmmSingleAgent,
 } from './integrations/tacticalRmmActions';
 export {
+  listRmmAlertRules,
+  createRmmAlertRule,
+  updateRmmAlertRule,
+  deleteRmmAlertRule,
+  reorderRmmAlertRules,
+  listRmmMaintenanceWindows,
+  createRmmMaintenanceWindow,
+  updateRmmMaintenanceWindow,
+  deleteRmmMaintenanceWindow,
+  getRmmAlertRuleFormOptions,
+  getRmmAlertPollingSettings,
+  updateRmmAlertPollingSettings,
+  getRmmIntegrationIdByProvider,
+  type RmmAlertRuleFormOptions,
+  type RmmAlertPollingSettingsView,
+} from './integrations/rmmAlertRuleActions';
+export {
   TACTICAL_WEBHOOK_HEADER_NAME,
   type TacticalRmmAuthMode,
 } from '../lib/rmm/tacticalrmm/shared';

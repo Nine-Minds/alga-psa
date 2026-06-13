@@ -25,8 +25,10 @@ import {
   syncTacticalRmmDevices,
   testTacticalRmmConnection,
   updateTacticalRmmOrganizationMapping,
+  getRmmIntegrationIdByProvider,
   type TacticalRmmAuthMode,
 } from '@alga-psa/integrations/actions';
+import { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
 import type { IClient } from '@alga-psa/types';
 import { getIntegrationClients } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -76,15 +78,17 @@ export function TacticalRmmIntegrationSettings() {
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
   const [webhookInfo, setWebhookInfo] = React.useState<Awaited<ReturnType<typeof getTacticalRmmWebhookInfo>>['webhook'] | null>(null);
   const [showWebhookSecret, setShowWebhookSecret] = React.useState(false);
+  const [integrationId, setIntegrationId] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     try {
-      const [res, summaryRes] = await Promise.all([
+      const [res, summaryRes, idRes] = await Promise.all([
         getTacticalRmmSettings(),
         getTacticalRmmConnectionSummary(),
+        getRmmIntegrationIdByProvider({ provider: 'tacticalrmm' }),
       ]);
       if (!res.success) {
         setError(t('integrations.rmm.tactical.errors.loadSettings', { defaultValue: 'Failed to load Tactical RMM settings' }));
@@ -95,6 +99,7 @@ export function TacticalRmmIntegrationSettings() {
       setAuthMode(res.config?.authMode || 'api_key');
       setCredentialsStatus(res.credentials || null);
       setConnectionSummary(summaryRes.success ? (summaryRes.summary || null) : null);
+      if (idRes.success && idRes.data?.integrationId) setIntegrationId(idRes.data.integrationId);
 
       if (res.credentials?.username) setUsername(res.credentials.username);
     } finally {
@@ -343,6 +348,7 @@ export function TacticalRmmIntegrationSettings() {
   };
 
   return (
+    <>
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
         <CardTitle>{t('integrations.rmm.tactical.title', { defaultValue: 'Tactical RMM' })}</CardTitle>
@@ -847,6 +853,11 @@ export function TacticalRmmIntegrationSettings() {
         </div>
       </CardContent>
     </Card>
+
+    {connectionSummary?.isActive && integrationId && (
+      <RmmAlertAutomationSettings integrationId={integrationId} provider="tacticalrmm" />
+    )}
+    </>
   );
 }
 
