@@ -281,19 +281,24 @@ async function importHuduAssetCore(
   // attributes payload (F317) — no post-create jsonb merge anymore.
   let createdAssetId: string;
   try {
-    const created = await createAsset({
-      asset_type: assetType,
-      client_id: clientId,
-      asset_tag: assetTag,
-      name: huduAsset.name,
-      status,
-      serial_number: huduAsset.primary_serial ?? undefined,
-      attributes: {
-        ...projection.attributes,
-        hudu_fields: buildHuduFieldsAttribute(huduAsset.fields),
-        hudu_synced_at: new Date().toISOString(),
+    const created = await createAsset(
+      {
+        asset_type: assetType,
+        client_id: clientId,
+        asset_tag: assetTag,
+        name: huduAsset.name,
+        status,
+        serial_number: huduAsset.primary_serial ?? undefined,
+        attributes: {
+          ...projection.attributes,
+          hudu_fields: buildHuduFieldsAttribute(huduAsset.fields),
+          hudu_synced_at: new Date().toISOString(),
+        },
       },
-    });
+      // F317: a required custom field missing from Hudu must not fail the import;
+      // it's skipped (raw value stays in hudu_fields), matching the projection.
+      { requireCustomAttributes: false }
+    );
     createdAssetId = created.asset_id;
   } catch (error) {
     return { success: false, error: toErrorMessage(error), code: 'create_failed' };

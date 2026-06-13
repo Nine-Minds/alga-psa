@@ -13,8 +13,10 @@ import {
   dateSchema
 } from './common';
 
-// Asset type schema
-export const assetTypeSchema = z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']);
+// Asset type schema — any registry slug (built-in or custom tenant type), not a
+// fixed enum. Validation against the tenant's asset_type_registry happens in the
+// action layer (resolveWritableAssetType).
+export const assetTypeSchema = z.string().min(1, 'Asset type is required').max(255);
 
 // Base asset schema
 export const createAssetSchema = z.object({

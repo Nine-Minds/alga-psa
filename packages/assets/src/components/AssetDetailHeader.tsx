@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useTransition } from 'react';
+import React, { useCallback, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
 import {
@@ -20,6 +20,8 @@ import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { StatusBadge } from './shared/StatusBadge';
+import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
 import type { Asset, DeletionValidationResult } from '@alga-psa/types';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { RemoteAccessButton } from './RemoteAccessButton';
@@ -62,7 +64,14 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
   const { renderQuickAddTicket } = useAssetCrossFeature();
-  const Icon = getAssetIcon(asset.asset_type);
+  const assetTypeEntries = useAssetTypeRegistry();
+  // Custom types render their registry-configured icon; built-ins keep the
+  // hardcoded lucide icon (mirrors AssetDashboardClient.getAssetTypeIcon).
+  const Icon = useMemo(() => {
+    const customIcon = assetTypeEntries
+      ?.find((entry) => entry.slug === asset.asset_type && !entry.is_builtin)?.icon;
+    return customIcon ? getIconComponent(customIcon) : getAssetIcon(asset.asset_type);
+  }, [asset.asset_type, assetTypeEntries]);
 
   // Determine badge status
   const badgeStatus = asset.agent_status || 'unknown';
@@ -147,7 +156,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
             </div>
           </BackNav>
           <div className="h-10 w-px bg-gray-200 mx-2 hidden md:block" />
-          <Icon size={40} className="text-gray-700" />
+          <Icon className="h-10 w-10 text-gray-700" />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold leading-none text-gray-900">

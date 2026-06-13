@@ -168,6 +168,48 @@ describe('asset_type_registry migration artifacts and seeding', () => {
     expectSixBuiltins(await fetchRegistryRows(tenantId));
   });
 
+  it('T324: a custom-type asset inserts (legacy valid_asset_type CHECK was dropped)', async () => {
+    // up() drops the legacy assets.valid_asset_type CHECK (which only allowed
+    // the six built-ins) and is idempotent — run it so this test is deterministic
+    // regardless of the ambient DB's migration state.
+    const migration = require(migrationPath);
+    await migration.up(db);
+
+    const constraint = await db.raw(`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'assets'::regclass AND conname = 'valid_asset_type'
+    `);
+    expect(constraint.rows).toHaveLength(0);
+
+    const tenantId = await seedTenant();
+    const [client] = await db('clients')
+      .insert({ tenant: tenantId, client_name: 'Asset Test Client' })
+      .returning('client_id');
+    await db('asset_type_registry').insert({
+      tenant: tenantId,
+      slug: 'door_access',
+      name: 'Door Access',
+      is_builtin: false,
+    });
+
+    try {
+      await expect(
+        db('assets').insert({
+          tenant: tenantId,
+          client_id: client.client_id,
+          asset_type: 'door_access',
+          asset_tag: `TAG-${tenantId.slice(0, 8)}`,
+          name: 'Front Door Reader',
+          status: 'active',
+        })
+      ).resolves.toBeDefined();
+    } finally {
+      // afterEach only clears registry + tenant; clean up the asset/client here.
+      await db('assets').where({ tenant: tenantId }).delete().catch(() => undefined);
+      await db('clients').where({ tenant: tenantId }).delete().catch(() => undefined);
+    }
+  });
+
   it('T301: migration down() drops the table and up() restores it', async () => {
     const migration = require(migrationPath);
 

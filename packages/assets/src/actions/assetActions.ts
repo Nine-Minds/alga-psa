@@ -782,7 +782,14 @@ function formatAssetForOutput(asset: any): Asset {
     return formattedAsset;
 }
 
-export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRequest): Promise<Asset> => {
+export const createAsset = withAuth(async (
+    user,
+    { tenant },
+    data: CreateAssetRequest,
+    // Importers (e.g. Hudu) project best-effort attributes and must never fail
+    // on a required custom field the source didn't supply; they pass false.
+    options?: { requireCustomAttributes?: boolean }
+): Promise<Asset> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset creation
@@ -811,7 +818,7 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
                 const issues = validateAttributesAgainstSchema(
                     customTypeEntry.fields_schema,
                     validatedData.attributes ?? {},
-                    { requireAll: true }
+                    { requireAll: options?.requireCustomAttributes !== false }
                 );
                 if (issues.length > 0) {
                     throw attributeValidationError(issues);

@@ -311,6 +311,18 @@ describe('slug generation and conflicts (T304)', () => {
     expect(generateAssetTypeSlug('Cloud--Accounts')).toBe('cloud_accounts');
   });
 
+  it('prefixes digit-leading names so slugs always start with a letter', () => {
+    // Consumers like the Hudu layout map require /^[a-z][a-z0-9_]*$/; a
+    // digit-leading slug would be coerced to "unknown" there. (Regression.)
+    const slugPattern = /^[a-z][a-z0-9_]*$/;
+    expect(generateAssetTypeSlug('3CX Phone System')).toBe('t_3cx_phone_system');
+    expect(generateAssetTypeSlug('5G Modem')).toBe('t_5g_modem');
+    expect(slugPattern.test(generateAssetTypeSlug('3CX Phone System'))).toBe(true);
+    expect(slugPattern.test(generateAssetTypeSlug('123'))).toBe(true);
+    // Purely non-alphanumeric names still produce no slug.
+    expect(generateAssetTypeSlug('!!!')).toBe('');
+  });
+
   it('creates a custom type with the generated slug', async () => {
     const created = await createCustomType('Door Access', 'tenant_a', {
       icon: 'door-open',

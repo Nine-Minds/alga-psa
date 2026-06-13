@@ -54,7 +54,10 @@ export async function upsertHuduIntegration(
   input: UpsertHuduIntegrationInput
 ): Promise<HuduIntegrationRecord> {
   const values: Record<string, unknown> = { tenant };
-  const merge: Record<string, unknown> = { updated_at: knex.fn.now() };
+  // Bind a literal Date, not knex.fn.now(): hudu_integrations is a distributed
+  // Citus table and a now() call in ON CONFLICT DO UPDATE SET is rejected as
+  // non-IMMUTABLE. A constant timestamp value is safe.
+  const merge: Record<string, unknown> = { updated_at: new Date() };
 
   if (input.base_url !== undefined) {
     values.base_url = input.base_url;

@@ -31,6 +31,7 @@ import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUI
 import type { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Clock3, Copy, FileText, Layers, Link as LinkIcon, ListChecks, Settings2, ShieldCheck } from 'lucide-react';
 import AssetDocuments from './AssetDocuments';
+import { CustomTypeDetailsPanel } from './panels/CustomTypeDetailsPanel';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
 import { RemoteAccessButton } from './RemoteAccessButton';
@@ -549,6 +550,9 @@ function renderConfigurationTab({ asset, t }: ConfigurationTabProps) {
       </Card>
 
       {renderTypeSpecificConfiguration(asset, t)}
+
+      {/* Custom-type asset attributes (renders nothing for built-in types). */}
+      <CustomTypeDetailsPanel asset={asset} />
     </div>
   );
 }

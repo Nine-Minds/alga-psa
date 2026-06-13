@@ -62,4 +62,8 @@ describe('asset_type_registry migration (Citus greenfield pattern)', () => {
   it('down() drops the table', () => {
     expect(migration).toContain("dropTableIfExists('asset_type_registry')");
   });
+
+  it('drops the legacy valid_asset_type CHECK so custom-type assets can insert', () => {
+    expect(migration).toContain('DROP CONSTRAINT IF EXISTS valid_asset_type');
+  });
 });

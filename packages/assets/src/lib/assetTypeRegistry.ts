@@ -147,11 +147,16 @@ export function validateFieldsSchema(input: unknown): FieldsSchemaValidationResu
 }
 
 export function generateAssetTypeSlug(name: string): string {
-  return name
+  const base = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_+|_+$/g, '');
+  if (!base) return '';
+  // Slugs must start with a letter to satisfy consumers (e.g. the Hudu layout
+  // map's /^[a-z][a-z0-9_]*$/); prefix digit-leading names like "3CX" -> "t_3cx",
+  // mirroring deriveAssetFieldKey's f_ prefix.
+  return /^[a-z]/.test(base) ? base : `t_${base}`;
 }
 
 function parseFieldsSchema(value: unknown): AssetTypeField[] {

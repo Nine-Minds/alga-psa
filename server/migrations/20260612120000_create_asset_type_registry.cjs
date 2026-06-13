@@ -35,6 +35,11 @@ const BUILTIN_ASSET_TYPES = [
  * @returns { Promise<void> }
  */
 exports.up = async function (knex) {
+  // The registry is now the source of truth for valid asset_type slugs, so drop
+  // the legacy hardcoded CHECK (20241117200000_remove_asset_types_table) that
+  // only allowed the six built-ins and rejects every custom type.
+  await knex.raw('ALTER TABLE assets DROP CONSTRAINT IF EXISTS valid_asset_type');
+
   if (!(await knex.schema.hasTable('asset_type_registry'))) {
     await knex.schema.createTable('asset_type_registry', (table) => {
       table.uuid('tenant').notNullable().references('tenant').inTable('tenants');

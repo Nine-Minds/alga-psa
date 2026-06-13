@@ -18,6 +18,8 @@ import Pagination from '@alga-psa/ui/components/Pagination';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
+import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
+import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { ContentCard } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -42,6 +44,7 @@ interface SelectedAsset {
 
 export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId }: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
+    const assetTypeEntries = useAssetTypeRegistry();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
@@ -398,8 +401,16 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                 return <Printer {...iconProps} />;
             case 'network_device':
                 return <Network {...iconProps} />;
-            default:
+            default: {
+                // Custom type: use its registry-configured icon, else generic.
+                const customIcon = assetTypeEntries
+                    ?.find((entry) => entry.slug === type && !entry.is_builtin)?.icon;
+                if (customIcon) {
+                    const CustomIcon = getIconComponent(customIcon);
+                    return <CustomIcon {...iconProps} />;
+                }
                 return <Boxes {...iconProps} />;
+            }
         }
     };
 
