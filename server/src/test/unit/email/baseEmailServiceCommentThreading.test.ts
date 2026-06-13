@@ -26,6 +26,12 @@ vi.mock('@alga-psa/db', () => ({
   })),
 }));
 
+// sendEmail publishes outbound-email lifecycle events (F071); stub the publisher
+// so these unit tests don't reach the real event bus.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => {}),
+}));
+
 function makeQueryBuilder(table: string) {
   const whereCriteria: Criteria = {};
   const builder = {

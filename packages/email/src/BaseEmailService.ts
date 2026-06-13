@@ -7,7 +7,19 @@ import {
   EmailAddress as ProviderEmailAddress
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { SupportedLocale } from './lib/localeConfig';
+
+function extractEmailAddress(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/<([^>]+)>/);
+  return (match?.[1] ?? trimmed).replace(/^"+|"+$/g, '');
+}
+
+function isUuid(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
 
 export interface EmailAddress {
   email: string;
@@ -410,6 +422,50 @@ export abstract class BaseEmailService {
         headers
       };
 
+      // Outbound email lifecycle workflow events (F071). Best-effort: publishing
+      // must never block or fail the actual send.
+      const tenantId = params.tenantId || 'system';
+      const workflowMessageId = randomUUID();
+      const workflowActor: WorkflowActor =
+        params.workflowActor && typeof params.workflowActor === 'object'
+          ? (params.workflowActor as WorkflowActor)
+          : { actorType: 'SYSTEM' };
+      const maybeThreadId = isUuid(params.replyContext?.threadId) ? params.replyContext?.threadId : undefined;
+      const maybeTicketId = isUuid(params.replyContext?.ticketId) ? params.replyContext?.ticketId : undefined;
+      const fromEmail = extractEmailAddress(emailMessage.from.email);
+      const toEmails = emailMessage.to.map(addr => extractEmailAddress(addr.email));
+      const ccEmails = emailMessage.cc?.map(addr => extractEmailAddress(addr.email));
+      const workflowCtx = {
+        tenantId,
+        correlationId: params.correlationId || workflowMessageId,
+        actor: workflowActor,
+      };
+
+      try {
+        await publishWorkflowEvent({
+          eventType: 'OUTBOUND_EMAIL_QUEUED',
+          payload: {
+            messageId: workflowMessageId,
+            ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
+            ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+            from: fromEmail,
+            to: toEmails,
+            ...(ccEmails?.length ? { cc: ccEmails } : {}),
+            subject,
+            queuedAt: new Date().toISOString(),
+            provider: this.emailProvider.providerType,
+          },
+          ctx: workflowCtx,
+          idempotencyKey: `outbound_email:${workflowMessageId}:queued`,
+        });
+      } catch (publishError) {
+        logger.warn(`[${this.getServiceName()}] Failed to publish OUTBOUND_EMAIL_QUEUED workflow event`, {
+          error: publishError,
+          tenantId,
+          providerType: this.emailProvider.providerType,
+        });
+      }
+
       // Send via provider
       const result = await this.emailProvider.sendEmail(emailMessage, params.tenantId || 'system');
 
@@ -436,6 +492,49 @@ export abstract class BaseEmailService {
           messageId: result.messageId,
           to: emailMessage.to,
           subject
+        });
+      }
+
+      // Best-effort: publish sent/failed lifecycle event (must not affect send result).
+      try {
+        if (result.success) {
+          await publishWorkflowEvent({
+            eventType: 'OUTBOUND_EMAIL_SENT',
+            payload: {
+              messageId: workflowMessageId,
+              providerMessageId:
+                result.providerMessageId || result.messageId || `${result.providerType}:${result.providerId}:${workflowMessageId}`,
+              ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
+              ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+              sentAt: result.sentAt?.toISOString?.() || new Date().toISOString(),
+              provider: result.providerType || this.emailProvider.providerType,
+            },
+            ctx: workflowCtx,
+            idempotencyKey: `outbound_email:${workflowMessageId}:sent`,
+          });
+        } else {
+          await publishWorkflowEvent({
+            eventType: 'OUTBOUND_EMAIL_FAILED',
+            payload: {
+              messageId: workflowMessageId,
+              ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
+              ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+              failedAt: new Date().toISOString(),
+              provider: result.providerType || this.emailProvider.providerType,
+              errorMessage: result.error || 'Email send failed',
+              ...(result.metadata?.errorCode ? { errorCode: String(result.metadata.errorCode) } : {}),
+              ...(typeof result.metadata?.retryable === 'boolean' ? { retryable: result.metadata.retryable } : {}),
+            },
+            ctx: workflowCtx,
+            idempotencyKey: `outbound_email:${workflowMessageId}:failed`,
+          });
+        }
+      } catch (publishError) {
+        logger.warn(`[${this.getServiceName()}] Failed to publish outbound email workflow event`, {
+          error: publishError,
+          tenantId,
+          providerType: this.emailProvider.providerType,
+          providerId: this.emailProvider.providerId,
         });
       }
 
@@ -478,6 +577,38 @@ export abstract class BaseEmailService {
       }
 
       logger.error(`[${this.getServiceName()}] Failed to send email:`, error);
+
+      // Best-effort: emit a FAILED lifecycle event for unexpected errors too.
+      try {
+        const failureMessageId = randomUUID();
+        const failureTenantId = params.tenantId || 'system';
+        await publishWorkflowEvent({
+          eventType: 'OUTBOUND_EMAIL_FAILED',
+          payload: {
+            messageId: failureMessageId,
+            ...(isUuid(params.replyContext?.threadId) ? { threadId: params.replyContext?.threadId } : {}),
+            ...(isUuid(params.replyContext?.ticketId) ? { ticketId: params.replyContext?.ticketId } : {}),
+            failedAt: new Date().toISOString(),
+            provider: this.emailProvider?.providerType || 'unknown',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            ...(typeof (error as any)?.code === 'string' ? { errorCode: (error as any).code } : {}),
+          },
+          ctx: {
+            tenantId: failureTenantId,
+            correlationId: params.correlationId || failureMessageId,
+            actor:
+              params.workflowActor && typeof params.workflowActor === 'object'
+                ? (params.workflowActor as WorkflowActor)
+                : { actorType: 'SYSTEM' },
+          },
+          idempotencyKey: `outbound_email:${failureMessageId}:failed_exception`,
+        });
+      } catch (publishError) {
+        logger.warn(`[${this.getServiceName()}] Failed to publish OUTBOUND_EMAIL_FAILED workflow event`, {
+          error: publishError,
+        });
+      }
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
