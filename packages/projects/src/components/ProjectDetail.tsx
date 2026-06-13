@@ -118,6 +118,7 @@ const PROJECT_LIST_DENSITY_PRESETS: readonly ProjectListDensityPreset[] = [
 const STATUS_FALLBACK_BACKGROUNDS = ['#f3f4f6', '#e0e7ff', '#dcfce7', '#fef9c3'];
 const STATUS_FALLBACK_BADGES = ['#e5e7eb', '#c7d2fe', '#bbf7d0', '#fef08a'];
 const STATUS_FALLBACK_BORDERS = ['#d1d5db', '#a5b4fc', '#86efac', '#fde047'];
+type TaskLayoutSnapshot = Map<string, { left: number; top: number }>;
 
 // Task type icons for the filter dropdown
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
@@ -684,6 +685,7 @@ export default function ProjectDetail({
   const scrollbarThumbRef = useRef<HTMLDivElement>(null);
   const dragAbortRef = useRef<AbortController | null>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
+  const taskLayoutAnimationsRef = useRef<Map<string, Animation>>(new Map());
   const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
   const [phasesPanelHeight, setPhasesPanelHeight] = useState<number | null>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -694,6 +696,77 @@ export default function ProjectDetail({
   });
   const phasesContainerRef = useRef<HTMLDivElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
+
+  const captureTaskLayout = useCallback((): TaskLayoutSnapshot => {
+    const container = kanbanBoardRef.current;
+    const snapshot: TaskLayoutSnapshot = new Map();
+    if (!container) return snapshot;
+
+    container.querySelectorAll<HTMLElement>('[data-kanban-column-tasks="true"] [data-task-id]').forEach((element) => {
+      const taskId = element.dataset.taskId;
+      if (!taskId) return;
+
+      const rect = element.getBoundingClientRect();
+      snapshot.set(taskId, { left: rect.left, top: rect.top });
+    });
+
+    return snapshot;
+  }, []);
+
+  const playTaskLayoutAnimation = useCallback((beforeLayout: TaskLayoutSnapshot, excludedTaskIds: Set<string>) => {
+    if (beforeLayout.size === 0) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    window.requestAnimationFrame(() => {
+      const container = kanbanBoardRef.current;
+      if (!container) return;
+
+      container.querySelectorAll<HTMLElement>('[data-kanban-column-tasks="true"] [data-task-id]').forEach((element) => {
+        const taskId = element.dataset.taskId;
+        if (!taskId || excludedTaskIds.has(taskId) || typeof element.animate !== 'function') return;
+
+        const before = beforeLayout.get(taskId);
+        if (!before) return;
+
+        const after = element.getBoundingClientRect();
+        const deltaX = before.left - after.left;
+        const deltaY = before.top - after.top;
+        if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) return;
+
+        taskLayoutAnimationsRef.current.get(taskId)?.cancel();
+        element.style.willChange = 'transform';
+        const animation = element.animate(
+          [
+            { transform: `translate(${deltaX}px, ${deltaY}px)` },
+            { transform: 'translate(0, 0)' },
+          ],
+          {
+            duration: 180,
+            easing: 'cubic-bezier(0.2, 0, 0, 1)',
+          },
+        );
+
+        taskLayoutAnimationsRef.current.set(taskId, animation);
+        const clearAnimation = () => {
+          if (taskLayoutAnimationsRef.current.get(taskId) === animation) {
+            taskLayoutAnimationsRef.current.delete(taskId);
+            element.style.willChange = '';
+          }
+        };
+
+        animation.addEventListener('finish', clearAnimation, { once: true });
+        animation.addEventListener('cancel', clearAnimation, { once: true });
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const animations = taskLayoutAnimationsRef.current;
+    return () => {
+      animations.forEach((animation) => animation.cancel());
+      animations.clear();
+    };
+  }, []);
 
   // Dynamically set min-height on pageContainer so it fills exactly the remaining
   // viewport, eliminating the dead-zone scroll caused by a static min-height: 100vh.
@@ -1688,6 +1761,12 @@ export default function ProjectDetail({
         }
       }
 
+      const movedTaskIds = new Set<string>([
+        ...statusUpdatedById.keys(),
+        ...otherPhaseTasks.map(t => t.task_id),
+      ]);
+      const beforeLayout = captureTaskLayout();
+
       if (otherPhaseTasks.length > 0) {
         // Cross-phase tasks now belong to this phase. Update the project-wide list
         // optimistically, then reload the board so they appear with correct
@@ -1703,6 +1782,7 @@ export default function ProjectDetail({
           return t;
         }));
         setStatusVersion(v => v + 1);
+        playTaskLayoutAnimation(beforeLayout, movedTaskIds);
       } else {
         // Pure same-phase status change — update in place to avoid a reload flicker
         const applyUpdate = (t: IProjectTask): IProjectTask => {
@@ -1713,6 +1793,7 @@ export default function ProjectDetail({
         };
         setProjectTasks(prev => prev.map(applyUpdate));
         setAllProjectTasks(prev => prev.map(applyUpdate));
+        playTaskLayoutAnimation(beforeLayout, movedTaskIds);
 
         setAnimatingTasks(prev => {
           const next = new Set(prev);
@@ -1791,6 +1872,7 @@ export default function ProjectDetail({
       // server round-trips before updating state, which let the card flash back
       // into its original column (at full opacity, once the drag ghost cleared)
       // until the request resolved.
+      const beforeLayout = captureTaskLayout();
       setProjectTasks(prevTasks =>
         prevTasks.map((t): IProjectTask =>
           t.task_id === draggedTaskId
@@ -1798,6 +1880,7 @@ export default function ProjectDetail({
             : t
         )
       );
+      playTaskLayoutAnimation(beforeLayout, new Set([draggedTaskId]));
       animateDroppedTask();
 
       try {
@@ -1821,11 +1904,13 @@ export default function ProjectDetail({
     } else {
       // Reorder within the same status. Update local order immediately, then
       // persist; roll back if the request fails.
+      const beforeLayout = captureTaskLayout();
       setProjectTasks(prevTasks =>
         prevTasks.map((t): IProjectTask =>
           t.task_id === draggedTaskId ? { ...t, order_key: newOrderKey } : t
         )
       );
+      playTaskLayoutAnimation(beforeLayout, new Set([draggedTaskId]));
       animateDroppedTask();
 
       try {
