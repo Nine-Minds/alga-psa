@@ -53,7 +53,8 @@ flowchart TD
 
     L --> LL[Process Reply Attachments]
     LL --> MM[Add Reply Comment]
-    MM --> NN[Update Ticket Status]
+    MM --> OO[Send Comment Notifications]
+    OO --> NN[Update Ticket Status]
     NN --> DD
 
     classDef webhook fill:#e3f2fd
@@ -63,6 +64,7 @@ flowchart TD
     classDef ticket fill:#e1f5fe
     classDef error fill:#ffebee
     classDef warning fill:#fff8e1
+    classDef notification fill:#f9fbe7
 
     class A,B,C webhook
     class E,F queue
@@ -71,10 +73,12 @@ flowchart TD
     class T,U,V,W,X,Y,Z,AA,BB,CC,DD,L,LL,MM,NN ticket
     class ERROR1,ERROR2,ERROR3 error
     class WARN1 warning
+    class OO notification
 ```
 
 ### Notes
 
 * The workflow file in code is `workflows/system-email-processing.json`.
 * Human task generation points are highlighted in yellow.
-
+* **New-ticket notifications (CC):** After a new ticket is created from an inbound email the `Send Notifications` step fires `TICKET_CREATED` events, which email the assigned tech and any watchers.
+* **Reply notifications (OO):** When a client replies to an existing ticket via email, the `Send Comment Notifications` step fires `TICKET_COMMENT_ADDED` through both the internal-notifications and email channels. The assigned tech receives an email containing the reply body, the author name, and a link back to the ticket. The very first comment on a brand-new inbound-email ticket is kept in-app only (the email channel is suppressed) to avoid duplicating the `TICKET_CREATED` email that already covers it.

@@ -1,6 +1,6 @@
 # Alga PSA Deletion Rules
 
-This document explains how client and contact deletion works in Alga PSA.
+This document explains how client, contact, and ticket deletion works in Alga PSA.
 
 ## Client Deletion Rules
 
@@ -50,6 +50,36 @@ Instead of deletion, mark contacts as **inactive**:
 - Prevents new activities
 - Can be reactivated if needed
 
+## Ticket Deletion Rules
+
+Tickets can be deleted from the ticket detail page (the **Delete** button in the top-right toolbar) or via the REST API (`DELETE /api/v1/tickets/{id}`). Both paths run the same dependency validation before removing any data.
+
+### You CAN delete a ticket if it has:
+- Comments and internal notes (automatically removed)
+- Attachments and documents owned by the ticket (automatically removed)
+- SLA notification tracking records (automatically removed)
+- Email reply tokens (automatically removed)
+- Project-ticket links (automatically removed)
+- Tags (automatically removed)
+
+### You CANNOT delete a ticket if it has:
+- **Logged time entries** – Review, close, or delete the time entries on the ticket first
+- **Schedule entries** – Remove or reassign any scheduled work blocks against the ticket first
+
+### What happens to the SLA audit log
+
+SLA audit log rows are *not* deleted when a ticket is removed. Instead they are **detached**: the `ticket_id` column is set to `null` and the original ticket ID and number are written into `event_data`. This preserves SLA compliance records even after the ticket itself is gone.
+
+Ticket activity logs (`ticket_audit_logs`) are deleted along with the ticket.
+
+### REST API behaviour
+
+`DELETE /api/v1/tickets/{id}` enforces the same dependency rules described above. If blocking records exist the endpoint returns `409 Conflict` with a `details.dependencies` array listing each blocking item so the caller knows exactly what to remove first. When the delete succeeds the response is `204 No Content` and the ticket is removed from the search index.
+
+### Alternative: Close the ticket
+
+If a ticket has extensive time-entry history or you want to keep it for billing reconciliation, close it instead of deleting it. Closed tickets are excluded from most active-ticket views but remain fully available in reporting, SLA dashboards, and audit trails.
+
 ## Why These Rules Exist
 
 These deletion rules ensure:
@@ -65,12 +95,14 @@ These deletion rules ensure:
 ### Instead of Deleting:
 1. **Mark clients as inactive** when they have business history
 2. **Mark contacts as inactive** rather than deleting
-3. **Clean up test data** before it accumulates business records
+3. **Close tickets** rather than deleting when time entries or schedule entries are present
+4. **Clean up test data** before it accumulates business records
 
 ### When Deletion is Appropriate:
 1. **Test/demo clients** with no real business data
 2. **Duplicate entries** created by mistake (before they gain dependencies)
 3. **Initial setup cleanup** during implementation
+4. **Tickets with no time entries or schedule entries** when the work item is no longer needed
 
 ## Technical Implementation
 
@@ -89,6 +121,9 @@ These deletion rules ensure:
 
 **Billing contact:**
 > "Cannot delete this contact because they are set as the billing contact. Please assign a different billing contact first."
+
+**Ticket with blocking records (API):**
+> `409 Conflict` — `details.dependencies` lists each blocking record type (e.g. time entries, schedule entries) that must be cleared before the ticket can be deleted.
 
 ---
 
