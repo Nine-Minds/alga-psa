@@ -23,6 +23,7 @@ Our APIs are segmented into two editions:
 - Advanced/premium features
 - Current EE-only APIs:
   - Tenant Provisioning API (see [tenant_provisioning_api.md](tenant_provisioning_api.md))
+  - Hudu Integration Status API (see Section 6)
 
 The edition is controlled by the `EDITION` environment variable:
 - `EDITION=community` for CE deployments
@@ -167,6 +168,7 @@ Assets and tickets can be linked to each other (the same association surfaced in
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
+- **Hudu Integration Status:** `GET /api/integrations/hudu` returns connection health for the tenant's Hudu integration: `status`, `baseUrl`, `connectedAt`, `lastSyncedAt`, and `passwordAccess` (whether the Hudu API key can reach the password endpoints). Connection setup, company mapping, and asset layout mapping are configured through the Alga PSA UI at **Settings → Integrations → Hudu**, not via REST. Requires the `system_settings` read permission; available on EE deployments with the Hudu feature enabled. See [hudu.md](../integrations/hudu.md) for the full admin guide.
 
 ## 7. Development Guidelines
 
