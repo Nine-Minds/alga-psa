@@ -1338,7 +1338,7 @@
           "organizations": "{{count}} organizations",
           "devices": "{{count}} devices",
           "activeAlerts": "{{count}} active alerts",
-          "lastSynced": "Last synced: {{time}}"
+          "lastSynced": "Ostatnia synchronizacja: {{time}}"
         },
         "setup": {
           "title": "Setup Instructions",

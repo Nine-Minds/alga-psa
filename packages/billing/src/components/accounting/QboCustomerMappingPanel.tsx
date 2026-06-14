@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getCustomerMatchCandidates,
   linkClientToQboCustomer,
@@ -249,6 +250,7 @@ function PickerInline({
 }
 
 export function QboCustomerMappingPanel() {
+  const { t: tCommon } = useTranslation('common');
   const [rows, setRows] = React.useState<Candidate[]>([]);
   const [qboCustomers, setQboCustomers] = React.useState<QboCustomer[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -325,7 +327,7 @@ export function QboCustomerMappingPanel() {
       )}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading customer mappings…</p>
+        <p className="text-sm text-muted-foreground">{tCommon('status.loading', { defaultValue: 'Loading...' })}</p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No clients found.</p>
       ) : (

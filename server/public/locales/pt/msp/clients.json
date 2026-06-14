@@ -824,7 +824,7 @@
     "selectHandling": "Select handling option",
     "suppressEmptyInvoices": "Suppress Empty Invoices",
     "suppressHelp": "Skip creation of invoices with no line items",
-    "createAsDraft": "Create as Draft",
+    "createAsDraft": "Criar como rascunho",
     "createAndFinalize": "Create and Finalize",
     "useDefault": "Use Default Settings",
     "useDefaultHelp": "Use the system-wide default settings for zero-dollar invoices",
@@ -832,7 +832,7 @@
     "clientSpecificEnabled": "Client-specific zero-dollar invoice settings enabled.",
     "handling": {
       "finalized": "Create and Finalize",
-      "normal": "Create as Draft"
+      "normal": "Criar como rascunho"
     },
     "handlingHelp": "Choose how zero-dollar invoices should be handled when generated",
     "loadError": "Failed to load settings",

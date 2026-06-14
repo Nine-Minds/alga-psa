@@ -933,6 +933,21 @@
       "finalized": "Finalizzata"
     }
   },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Non sincronizzato",
+      "queued": "In coda",
+      "synced": "Sincronizzato",
+      "drift": "Differenza",
+      "error": "Errore di sincronizzazione",
+      "voided": "Annullata"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Ultima sincronizzazione:",
+      "viewInQuickBooks": "Visualizza in QuickBooks"
+    }
+  },
   "templateManager": {
     "title": "Gestore modelli di fattura",
     "sampleInvoices": "Fatture campione",

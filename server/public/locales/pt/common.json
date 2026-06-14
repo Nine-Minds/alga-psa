@@ -71,18 +71,18 @@
     "printSelected": "Imprimir selecionados ({{count}})"
   },
   "status": {
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "processing": "Processing...",
-    "success": "Success",
-    "error": "Error",
-    "warning": "Warning",
-    "info": "Information",
-    "pending": "Pending",
-    "active": "Active",
-    "inactive": "Inactive",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
+    "loading": "Carregando...",
+    "saving": "Salvando...",
+    "processing": "Processando...",
+    "success": "Sucesso",
+    "error": "Erro",
+    "warning": "Aviso",
+    "info": "Informação",
+    "pending": "Pendente",
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "completed": "Concluído",
+    "cancelled": "Cancelado"
   },
   "messages": {
     "welcome": "Welcome",
@@ -306,7 +306,7 @@
           "addressLine1": "Enter address *",
           "city": "Enter city *",
           "country": "Select Country *",
-          "loadingCountries": "Loading countries...",
+          "loadingCountries": "Carregando países...",
           "taxRegionOption": "Select a tax region...",
           "taxRegion": "Select a tax region..."
         }
@@ -465,7 +465,7 @@
       "parentLabel": "Parent folder: {{folder}}",
       "rootLabel": "/ (Root)",
       "namePlaceholder": "Enter folder name",
-      "loading": "Loading folders...",
+      "loading": "Carregando pastas...",
       "rootOption": "Root (No folder)",
       "empty": "No folders available. Documents will be saved to root.",
       "showAllFolders": "Show all folders",
@@ -569,7 +569,7 @@
       "deleteSuccess": "Folder \"{{name}}\" deleted successfully",
       "deleteFailed": "Failed to delete folder",
       "deleteAction": "Delete folder",
-      "loading": "Loading folders...",
+      "loading": "Carregando pastas...",
       "title": "Folders",
       "collapse": "Collapse folders",
       "allDocuments": "All Documents",
@@ -640,7 +640,7 @@
   },
   "surveys": {
     "common": {
-      "loading": "Loading..."
+      "loading": "Carregando..."
     },
     "settings": {
       "tabLabel": "Surveys",
@@ -879,7 +879,7 @@
       "title": "Appointment Requests",
       "description": "Review and manage appointment requests from clients",
       "noRequests": "No appointment requests found",
-      "loadingRequests": "Loading requests..."
+      "loadingRequests": "Carregando solicitações..."
     },
     "card": {
       "requesterName": "Requester",
@@ -938,8 +938,8 @@
     "actions": "Actions",
     "active": "Active",
     "inactive": "Inactive",
-    "loading": "Loading...",
-    "uploading": "Uploading...",
+    "loading": "Carregando...",
+    "uploading": "Enviando...",
     "error": "An error occurred",
     "save": "Save",
     "cancel": "Cancel",
@@ -986,7 +986,7 @@
     "title": "Active Sessions",
     "description": "Manage your active login sessions across all devices (max 5 sessions)",
     "states": {
-      "loading": "Loading sessions...",
+      "loading": "Carregando sessões...",
       "noSessions": "No active sessions found"
     },
     "labels": {
@@ -1073,7 +1073,15 @@
   },
   "pickers": {
     "addNewClient": "Adicionar novo cliente",
-    "addNewContact": "Adicionar novo contato"
+    "addNewContact": "Adicionar novo contato",
+    "loadingUsers": "Carregando usuários...",
+    "errorLoadingUsers": "Erro ao carregar usuários",
+    "searchUsers": "Pesquisar usuários...",
+    "unassigned": "Não atribuído",
+    "noUsersAvailable": "Nenhum usuário disponível",
+    "searchBoards": "Pesquisar quadros...",
+    "searchBoardsLabel": "Pesquisar quadros",
+    "noBoardsFound": "Nenhum quadro encontrado"
   },
   "tagFilter": {
     "placeholder": "Filtrar por etiquetas...",

@@ -581,12 +581,12 @@
       "sendEmail": "Enviar e-mail",
       "unfinalize": "Desfinalizar",
       "viewSourceQuote": "Ver cotação da fonte",
-      "applyCredit": "Apply Credit",
-      "driftAccept": "Accept QuickBooks Version",
-      "driftReexport": "Re-export to QuickBooks",
-      "syncNow": "Sync to QuickBooks",
-      "viewInQbo": "View in QuickBooks",
-      "voidInvoice": "Void Invoice"
+      "applyCredit": "Aplicar crédito",
+      "driftAccept": "Aceitar versão do QuickBooks",
+      "driftReexport": "Reexportar para o QuickBooks",
+      "syncNow": "Sincronizar com o QuickBooks",
+      "viewInQbo": "Ver no QuickBooks",
+      "voidInvoice": "Anular fatura"
     },
     "loading": "Carregando visualização...",
     "empty": "Selecione uma fatura para visualizar",
@@ -604,14 +604,14 @@
       }
     },
     "applyCreditDialog": {
-      "title": "Apply Credit"
+      "title": "Aplicar crédito"
     },
     "voidDialog": {
-      "title": "Void Invoice",
+      "title": "Anular fatura",
       "description": "Voiding this invoice is permanent. Please provide a reason.",
       "reasonPlaceholder": "Reason for voiding...",
       "cancel": "Cancel",
-      "confirm": "Void Invoice",
+      "confirm": "Anular fatura",
       "voiding": "Voiding..."
     }
   },
@@ -931,6 +931,21 @@
       "generate": "Gerar",
       "drafts": "Rascunhos",
       "finalized": "Finalizado"
+    }
+  },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Não sincronizado",
+      "queued": "Na fila",
+      "synced": "Sincronizado",
+      "drift": "Divergência",
+      "error": "Erro de sincronização",
+      "voided": "Anulada"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Última sincronização:",
+      "viewInQuickBooks": "Ver no QuickBooks"
     }
   },
   "templateManager": {

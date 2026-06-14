@@ -1073,7 +1073,15 @@
   },
   "pickers": {
     "addNewClient": "Aggiungi nuovo cliente",
-    "addNewContact": "Aggiungi nuovo contatto"
+    "addNewContact": "Aggiungi nuovo contatto",
+    "loadingUsers": "Caricamento utenti...",
+    "errorLoadingUsers": "Errore durante il caricamento degli utenti",
+    "searchUsers": "Cerca utenti...",
+    "unassigned": "Non assegnato",
+    "noUsersAvailable": "Nessun utente disponibile",
+    "searchBoards": "Cerca bacheche...",
+    "searchBoardsLabel": "Cerca bacheche",
+    "noBoardsFound": "Nessuna bacheca trovata"
   },
   "tagFilter": {
     "placeholder": "Filtra per tag...",

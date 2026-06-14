@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from './Popover';
+import { useTranslation } from '../lib/i18n/client';
 
 /** Custom Alga logo emoji identifier */
 export const ALGA_EMOJI_ID = ':alga:';
@@ -34,6 +35,7 @@ interface EmojiPickerPopoverProps {
 }
 
 export function EmojiPickerPopover({ id, onSelect, children }: EmojiPickerPopoverProps) {
+  const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
@@ -66,7 +68,7 @@ export function EmojiPickerPopover({ id, onSelect, children }: EmojiPickerPopove
         {open && (
           <Suspense fallback={
             <div className="w-[352px] h-[435px] flex items-center justify-center text-sm text-[rgb(var(--color-text-400))]">
-              Loading...
+              {t('status.loading', { defaultValue: 'Loading...' })}
             </div>
           }>
             <Picker

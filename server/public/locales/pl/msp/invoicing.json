@@ -985,8 +985,23 @@
     "title": "Fakturowanie",
     "tabs": {
       "generate": "Spowodować",
-      "drafts": "Warcaby",
+      "drafts": "Wersje robocze",
       "finalized": "Sfinalizowana"
+    }
+  },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Nie zsynchronizowano",
+      "queued": "W kolejce",
+      "synced": "Zsynchronizowano",
+      "drift": "Rozbieżność",
+      "error": "Błąd synchronizacji",
+      "voided": "Unieważniona"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Ostatnia synchronizacja:",
+      "viewInQuickBooks": "Wyświetl w QuickBooks"
     }
   },
   "templateManager": {

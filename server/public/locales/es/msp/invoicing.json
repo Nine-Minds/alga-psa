@@ -929,8 +929,23 @@
     "title": "Facturación",
     "tabs": {
       "generate": "Generar",
-      "drafts": "Damas",
+      "drafts": "Borradores",
       "finalized": "Finalizada"
+    }
+  },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "No sincronizado",
+      "queued": "En cola",
+      "synced": "Sincronizado",
+      "drift": "Desfase",
+      "error": "Error de sincronización",
+      "voided": "Anulada"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Última sincronización:",
+      "viewInQuickBooks": "Ver en QuickBooks"
     }
   },
   "templateManager": {

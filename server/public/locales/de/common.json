@@ -1073,7 +1073,15 @@
   },
   "pickers": {
     "addNewClient": "Neuen Kunden hinzufügen",
-    "addNewContact": "Neuen Kontakt hinzufügen"
+    "addNewContact": "Neuen Kontakt hinzufügen",
+    "loadingUsers": "Benutzer werden geladen...",
+    "errorLoadingUsers": "Fehler beim Laden der Benutzer",
+    "searchUsers": "Benutzer suchen...",
+    "unassigned": "Nicht zugewiesen",
+    "noUsersAvailable": "Keine Benutzer verfügbar",
+    "searchBoards": "Boards suchen...",
+    "searchBoardsLabel": "Boards suchen",
+    "noBoardsFound": "Keine Boards gefunden"
   },
   "tagFilter": {
     "placeholder": "Nach Tags filtern...",

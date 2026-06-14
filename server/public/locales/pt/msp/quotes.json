@@ -600,9 +600,9 @@
       "description": "Some records for this quote already exist."
     },
     "actions": {
-      "contract": "Create Draft Contract",
+      "contract": "Criar contrato rascunho",
       "convertQuote": "Convert Quote",
-      "invoice": "Create Draft Invoice",
+      "invoice": "Criar fatura rascunho",
       "both": "Create Both Records",
       "converting": "Converting..."
     },
@@ -620,8 +620,8 @@
     },
     "settings": {
       "label": "Approval required before sending",
-      "enabled": "Draft quotes must be approved before sending.",
-      "disabled": "Draft quotes can be sent without approval."
+      "enabled": "Orçamentos em rascunho devem ser aprovados antes do envio.",
+      "disabled": "Orçamentos em rascunho podem ser enviados sem aprovação."
     },
     "filters": {
       "status": "Status",

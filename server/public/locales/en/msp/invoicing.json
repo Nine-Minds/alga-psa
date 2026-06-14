@@ -933,6 +933,21 @@
       "finalized": "Finalized"
     }
   },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Not synced",
+      "queued": "Queued",
+      "synced": "Synced",
+      "drift": "Drift",
+      "error": "Sync error",
+      "voided": "Voided"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Last synced:",
+      "viewInQuickBooks": "View in QuickBooks"
+    }
+  },
   "templateManager": {
     "title": "Invoice Template Manager",
     "sampleInvoices": "Sample Invoices",

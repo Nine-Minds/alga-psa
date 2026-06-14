@@ -80,7 +80,15 @@
   },
   "pickers": {
     "addNewClient": "11111",
-    "addNewContact": "11111"
+    "addNewContact": "11111",
+    "loadingUsers": "11111",
+    "errorLoadingUsers": "11111",
+    "searchUsers": "11111",
+    "unassigned": "11111",
+    "noUsersAvailable": "11111",
+    "searchBoards": "11111",
+    "searchBoardsLabel": "11111",
+    "noBoardsFound": "11111"
   },
   "tagFilter": {
     "placeholder": "11111",

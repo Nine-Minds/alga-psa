@@ -13,6 +13,7 @@ import { Checkbox } from './Checkbox';
 import { Button } from './Button';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from './TeamAvatar';
+import { useTranslation } from '../lib/i18n/client';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -68,6 +69,7 @@ const MultiUserAndTeamPicker = ({
   onUserClick,
   'data-automation-id': dataAutomationId
 }: MultiUserAndTeamPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
@@ -350,7 +352,7 @@ const MultiUserAndTeamPicker = ({
     const hasSelection = selectedUsers.length > 0 || includeUnassigned || selectedTeams.length > 0;
 
     if (!hasSelection) {
-      return <span className="text-gray-500">{loading ? 'Loading users...' : placeholder}</span>;
+      return <span className="text-gray-500">{loading ? t('pickers.loadingUsers', { defaultValue: 'Loading users...' }) : placeholder}</span>;
     }
 
     // Compact display mode (for filters)
@@ -359,7 +361,7 @@ const MultiUserAndTeamPicker = ({
         return (
           <div className="flex items-center gap-2">
             <UserMinus className="w-4 h-4 text-gray-500" />
-            <span>Unassigned</span>
+            <span>{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
           </div>
         );
       }
@@ -428,7 +430,7 @@ const MultiUserAndTeamPicker = ({
               ? `${firstUser.first_name || ''} ${firstUser.last_name || ''}`.trim().split(' ')[0]
               : firstTeam
                 ? (firstTeam.team_name || 'Team')
-                : 'Unassigned'}
+                : t('pickers.unassigned', { defaultValue: 'Unassigned' })}
             {additionalCount > 0 && ` +${additionalCount}`}
           </span>
         </div>
@@ -441,7 +443,7 @@ const MultiUserAndTeamPicker = ({
         {includeUnassigned && (
           <div className="flex items-center gap-1 bg-gray-100 rounded-full pl-2 pr-2 py-1">
             <UserMinus className="w-3 h-3 text-gray-500" />
-            <span className="text-sm">Unassigned</span>
+            <span className="text-sm">{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
             <div
               role="button"
               tabIndex={0}
@@ -562,7 +564,7 @@ const MultiUserAndTeamPicker = ({
               <Input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search users..."
+                placeholder={t('pickers.searchUsers', { defaultValue: 'Search users...' })}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
@@ -585,7 +587,7 @@ const MultiUserAndTeamPicker = ({
               onChange={handleUnassignedToggle}
             />
             <UserMinus className="w-4 h-4 text-gray-400" />
-            <span className="text-sm">Unassigned</span>
+            <span className="text-sm">{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
           </div>
         )}
 
@@ -620,14 +622,16 @@ const MultiUserAndTeamPicker = ({
           }}
         >
           {loading ? (
-            <div className="px-3 py-2 text-sm text-gray-500">Loading users...</div>
+            <div className="px-3 py-2 text-sm text-gray-500">{t('pickers.loadingUsers', { defaultValue: 'Loading users...' })}</div>
           ) : error ? (
-            <div className="px-3 py-2 text-sm text-red-500">Error loading users</div>
+            <div className="px-3 py-2 text-sm text-red-500">{t('pickers.errorLoadingUsers', { defaultValue: 'Error loading users' })}</div>
           ) : (
             <>
               {filteredUsers.length === 0 && filteredTeams.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-gray-500">
-                  {searchQuery ? 'No results found' : 'No users available'}
+                  {searchQuery
+                    ? t('form.noResults', { defaultValue: 'No results found' })
+                    : t('pickers.noUsersAvailable', { defaultValue: 'No users available' })}
                 </div>
               ) : (
                 <>
