@@ -2,10 +2,22 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+
+// The component freezes `isEnterprise` from process.env.NEXT_PUBLIC_EDITION at
+// module-load time. The unit suite runs single-fork, so process.env is shared
+// across files; a prior test leaving NEXT_PUBLIC_EDITION=enterprise would flip
+// this CE-only component to its EE branch and fail every assertion here. Pin
+// Community Edition before the component import (hoisted above it) — a
+// beforeEach would be too late, since the import is already evaluated by then.
+const originalEdition = vi.hoisted(() => {
+  const previous = process.env.NEXT_PUBLIC_EDITION;
+  process.env.NEXT_PUBLIC_EDITION = 'community';
+  return previous;
+});
 
 const listMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
 const saveMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
@@ -31,6 +43,14 @@ describe('MspSsoLoginDomainsSettings', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  afterAll(() => {
+    if (originalEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalEdition;
+    }
   });
 
   it('T012: renders MSP SSO login-domain management section', async () => {
