@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { QboCustomerMappingPanel } from './QboCustomerMappingPanel';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getHistoricalInvoiceMatches,
   bulkLinkHistoricalInvoices,
@@ -68,6 +69,7 @@ function StepCustomers() {
 // ─── Step 2: History ──────────────────────────────────────────────────────────
 
 function StepHistory() {
+  const { t: tCommon } = useTranslation('common');
   const [windowStart, setWindowStart] = React.useState('');
   const [fetching, setFetching] = React.useState(false);
   const [matches, setMatches] = React.useState<{
@@ -159,7 +161,7 @@ function StepHistory() {
           />
         </div>
         <Button id="qbo-history-load" type="button" variant="outline" disabled={fetching} onClick={() => void handleFetch()}>
-          {fetching ? 'Loading…' : matches === null ? 'Load matches' : 'Reload'}
+          {fetching ? tCommon('status.loading', { defaultValue: 'Loading...' }) : matches === null ? 'Load matches' : 'Reload'}
         </Button>
       </div>
 

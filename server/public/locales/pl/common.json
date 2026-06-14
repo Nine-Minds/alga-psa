@@ -1101,7 +1101,15 @@
   },
   "pickers": {
     "addNewClient": "Dodaj nowego klienta",
-    "addNewContact": "Dodaj nowy kontakt"
+    "addNewContact": "Dodaj nowy kontakt",
+    "loadingUsers": "Ładowanie użytkowników...",
+    "errorLoadingUsers": "Błąd podczas ładowania użytkowników",
+    "searchUsers": "Szukaj użytkowników...",
+    "unassigned": "Nieprzypisane",
+    "noUsersAvailable": "Brak dostępnych użytkowników",
+    "searchBoards": "Szukaj tablic...",
+    "searchBoardsLabel": "Szukaj tablic",
+    "noBoardsFound": "Nie znaleziono tablic"
   },
   "tagFilter": {
     "placeholder": "Filtruj według tagów...",

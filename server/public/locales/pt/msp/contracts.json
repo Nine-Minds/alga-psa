@@ -45,7 +45,7 @@
     },
     "tabs": {
       "clientContracts": "Client Contracts",
-      "drafts": "Drafts",
+      "drafts": "Rascunhos",
       "templates": "Templates"
     },
     "moneyPlaceholder": "—",
@@ -53,7 +53,7 @@
   },
   "status": {
     "active": "Active",
-    "draft": "Draft",
+    "draft": "Rascunho",
     "expired": "Expired",
     "terminated": "Terminated"
   },
@@ -292,7 +292,7 @@
     },
     "status": {
       "active": "Active",
-      "draft": "Draft",
+      "draft": "Rascunho",
       "expired": "Expired",
       "terminated": "Terminated"
     },
@@ -334,7 +334,7 @@
   "contractDialog": {
     "actions": {
       "createContract": "Create Contract",
-      "saveAsDraft": "Save as Draft",
+      "saveAsDraft": "Salvar como rascunho",
       "updateContract": "Update Contract"
     },
     "documents": {
@@ -451,7 +451,7 @@
     "heading": "Contract Details",
     "status": {
       "active": "Active",
-      "draft": "Draft",
+      "draft": "Rascunho",
       "expired": "Expired",
       "expiredHelper": "Expired contracts cannot be changed to another status",
       "terminated": "Terminated"
@@ -872,7 +872,7 @@
       },
       "discardDraft": {
         "message": "This will permanently delete the draft \"{{contractName}}\" for {{clientName}}.\nThis action cannot be undone.",
-        "title": "Discard Draft Contract?"
+        "title": "Descartar contrato rascunho?"
       }
     },
     "drafts": {
@@ -913,7 +913,7 @@
       "published": "Published"
     },
     "toasts": {
-      "draftDiscarded": "Draft discarded",
+      "draftDiscarded": "Rascunho descartado",
       "failedToActivateContract": "Failed to activate contract",
       "failedToDeleteContract": "Failed to delete contract",
       "failedToDiscardDraft": "Failed to discard draft",
@@ -1042,7 +1042,7 @@
     "status": {
       "active": "Active",
       "archived": "Archived",
-      "draft": "Draft",
+      "draft": "Rascunho",
       "expired": "Expired",
       "published": "Published",
       "terminated": "Terminated"
@@ -1318,7 +1318,7 @@
       "next": "Next",
       "skip": "Skip",
       "finish": "Finish Setup",
-      "saveDraft": "Save as Draft",
+      "saveDraft": "Salvar como rascunho",
       "saving": "Saving...",
       "completing": "Completing..."
     }

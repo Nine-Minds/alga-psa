@@ -312,7 +312,7 @@
     "title": "Run Workflow",
     "description": "Provide a synthetic payload to preview (and run) a workflow.",
     "descriptionEvent": "Event: {{name}}.",
-    "draftWarning": "Draft version differs from published (v{{version}}).",
+    "draftWarning": "A versão rascunho difere da publicada (v{{version}}).",
     "concurrencyLimit": "Concurrency limit: {{count}} run(s) at a time.",
     "common": {
       "emptyValue": "—"
@@ -616,7 +616,7 @@
     "toolbar": {
       "backToList": "Back to workflows",
       "newWorkflow": "New Workflow",
-      "saveDraft": "Save Draft",
+      "saveDraft": "Salvar rascunho",
       "saving": "Saving...",
       "publish": "Publish",
       "publishing": "Publishing...",
@@ -654,7 +654,7 @@
       "chooseTriggerHint": "Choose a trigger to define available fields.",
       "schemaLoadErrorPrefix": "We could not load schema information for",
       "schemaLoadErrorSuffix": "Check the event catalog entry.",
-      "draftDifferent": "Draft contract differs from published",
+      "draftDifferent": "O contrato rascunho difere do publicado",
       "publishedUsesPrefix": "The published version uses",
       "draftResolvesTo": "This draft currently resolves to",
       "lockToPublished": "Lock to published contract",

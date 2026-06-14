@@ -1,6 +1,6 @@
 'use client';
 
-import { I18nProvider } from '@alga-psa/ui/lib/i18n/client';
+import { detectClientLocale, getBootstrapLoadingText, I18nProvider } from '@alga-psa/ui/lib/i18n/client';
 import { SupportedLocale, LOCALE_CONFIG, getNamespacesForRoute } from '@alga-psa/core/i18n/config';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -43,9 +43,13 @@ export function I18nWrapper({
   }, [initialLocale]);
 
   if (isLoading) {
+    // Avoid persisted browser preferences here; they can belong to a previous
+    // logged-in user. Authenticated layouts should provide initialLocale.
+    const loadingLocale = initialLocale || detectClientLocale({ includeStoredPreference: false });
+
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading language preferences...</div>
+        <div className="text-gray-500">{getBootstrapLoadingText(loadingLocale, 'languagePreferences')}</div>
       </div>
     );
   }

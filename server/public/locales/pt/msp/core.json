@@ -242,7 +242,7 @@
     }
   },
   "search": {
-    "placeholder": "Search clients, tickets, documents...",
+    "placeholder": "Pesquisar clientes, tickets e documentos...",
     "shortcutHint": "Cmd/Ctrl+K",
     "loading": "Searching...",
     "pageTitle": "Search",

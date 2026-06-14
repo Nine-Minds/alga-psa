@@ -80,7 +80,15 @@
   },
   "pickers": {
     "addNewClient": "Add new client",
-    "addNewContact": "Add new contact"
+    "addNewContact": "Add new contact",
+    "loadingUsers": "Loading users...",
+    "errorLoadingUsers": "Error loading users",
+    "searchUsers": "Search users...",
+    "unassigned": "Unassigned",
+    "noUsersAvailable": "No users available",
+    "searchBoards": "Search boards...",
+    "searchBoardsLabel": "Search Boards",
+    "noBoardsFound": "No boards found"
   },
   "tagFilter": {
     "placeholder": "Filter by tags...",

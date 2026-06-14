@@ -246,7 +246,7 @@
   },
   "shared": {
     "statusLabels": {
-      "draft": "Draft",
+      "draft": "Rascunho",
       "review": "In Review",
       "published": "Published",
       "archived": "Archived"

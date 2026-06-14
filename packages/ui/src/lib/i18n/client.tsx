@@ -29,6 +29,63 @@ import {
  */
 let i18nInitialized = false;
 
+const BOOTSTRAP_LOADING_TEXT: Record<
+  SupportedLocale,
+  { translations: string; languagePreferences: string }
+> = {
+  en: {
+    translations: 'Loading translations...',
+    languagePreferences: 'Loading language preferences...',
+  },
+  fr: {
+    translations: 'Chargement des traductions...',
+    languagePreferences: 'Chargement des préférences linguistiques...',
+  },
+  es: {
+    translations: 'Cargando traducciones...',
+    languagePreferences: 'Cargando preferencias de idioma...',
+  },
+  de: {
+    translations: 'Übersetzungen werden geladen...',
+    languagePreferences: 'Spracheinstellungen werden geladen...',
+  },
+  nl: {
+    translations: 'Vertalingen worden geladen...',
+    languagePreferences: 'Taalvoorkeuren worden geladen...',
+  },
+  it: {
+    translations: 'Caricamento delle traduzioni...',
+    languagePreferences: 'Caricamento delle preferenze lingua...',
+  },
+  pl: {
+    translations: 'Ładowanie tłumaczeń...',
+    languagePreferences: 'Ładowanie preferencji językowych...',
+  },
+  pt: {
+    translations: 'Carregando traduções...',
+    languagePreferences: 'Carregando preferências de idioma...',
+  },
+  xx: {
+    translations: '11111',
+    languagePreferences: '11111',
+  },
+  yy: {
+    translations: '55555',
+    languagePreferences: '55555',
+  },
+};
+
+export function getBootstrapLoadingText(
+  locale: SupportedLocale | undefined,
+  key: keyof (typeof BOOTSTRAP_LOADING_TEXT)[SupportedLocale],
+) {
+  const resolvedLocale = locale && isSupportedLocale(locale)
+    ? locale
+    : (LOCALE_CONFIG.defaultLocale as SupportedLocale);
+
+  return BOOTSTRAP_LOADING_TEXT[resolvedLocale]?.[key] ?? BOOTSTRAP_LOADING_TEXT.en[key];
+}
+
 async function initI18n(locale?: SupportedLocale) {
   if (i18nInitialized) {
     if (locale && i18next.language !== locale) {
@@ -165,7 +222,7 @@ export function I18nProvider({
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading translations...</div>
+        <div className="text-gray-500">{getBootstrapLoadingText(locale, 'translations')}</div>
       </div>
     );
   }
@@ -203,26 +260,32 @@ export function useTranslation(namespace?: string | string[]) {
 /**
  * Client-side locale detection
  */
-export function detectClientLocale(): SupportedLocale {
+export function detectClientLocale(
+  options: { includeStoredPreference?: boolean } = {}
+): SupportedLocale {
   // Only run on client side
   if (typeof window === 'undefined') {
     return LOCALE_CONFIG.defaultLocale as SupportedLocale;
   }
 
-  // 1. Check cookie
-  const localeCookie = getCookie(LOCALE_CONFIG.cookie.name);
-  if (localeCookie && typeof localeCookie === 'string' && isSupportedLocale(localeCookie)) {
-    return localeCookie;
-  }
+  const includeStoredPreference = options.includeStoredPreference ?? true;
 
-  // 2. Check localStorage (only on client)
-  try {
-    const localStorageLocale = localStorage.getItem(LOCALE_CONFIG.cookie.name);
-    if (localStorageLocale && isSupportedLocale(localStorageLocale)) {
-      return localStorageLocale;
+  if (includeStoredPreference) {
+    // 1. Check cookie
+    const localeCookie = getCookie(LOCALE_CONFIG.cookie.name);
+    if (localeCookie && typeof localeCookie === 'string' && isSupportedLocale(localeCookie)) {
+      return localeCookie;
     }
-  } catch (e) {
-    // localStorage might not be available
+
+    // 2. Check localStorage (only on client)
+    try {
+      const localStorageLocale = localStorage.getItem(LOCALE_CONFIG.cookie.name);
+      if (localStorageLocale && isSupportedLocale(localStorageLocale)) {
+        return localStorageLocale;
+      }
+    } catch (e) {
+      // localStorage might not be available
+    }
   }
 
   // 3. Check browser language (only on client)

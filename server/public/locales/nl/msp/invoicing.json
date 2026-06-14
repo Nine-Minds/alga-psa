@@ -933,6 +933,21 @@
       "finalized": "Afgerond"
     }
   },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Niet gesynchroniseerd",
+      "queued": "In wachtrij",
+      "synced": "Gesynchroniseerd",
+      "drift": "Afwijking",
+      "error": "Synchronisatiefout",
+      "voided": "Geannuleerd"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Laatst gesynchroniseerd:",
+      "viewInQuickBooks": "Bekijken in QuickBooks"
+    }
+  },
   "templateManager": {
     "title": "Factuursjabloonbeheerder",
     "sampleInvoices": "Voorbeeldfacturen",

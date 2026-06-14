@@ -19,7 +19,7 @@
   },
   "shared": {
     "statusLabels": {
-      "draft": "Draft",
+      "draft": "Rascunho",
       "review": "In Review",
       "published": "Published",
       "archived": "Archived"
@@ -220,7 +220,7 @@
       "delete": "Excluir permanentemente"
     },
     "flow": {
-      "draft": "Draft",
+      "draft": "Rascunho",
       "review": "Review",
       "published": "Published"
     },

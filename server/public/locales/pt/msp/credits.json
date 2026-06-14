@@ -50,8 +50,8 @@
     "runReconciliation": "Run Reconciliation",
     "running": "Running...",
     "reset": "Reset",
-    "applyCredit": "Apply Credit",
-    "applying": "Applying...",
+    "applyCredit": "Aplicar crédito",
+    "applying": "Aplicando...",
     "select": "Select",
     "selected": "Selected",
     "saveChanges": "Save Changes",
@@ -135,7 +135,7 @@
     }
   },
   "application": {
-    "title": "Apply Credit",
+    "title": "Aplicar crédito",
     "applyToInvoice": "Apply available credits to this invoice",
     "applyToBalance": "Apply credits to reduce customer balance",
     "totalAvailableCredit": "Total Available Credit:",

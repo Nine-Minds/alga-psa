@@ -2168,7 +2168,7 @@
               "s2": "Sélectionnez des factures et choisissez « Xero CSV » comme adaptateur",
               "s3": "Téléchargez le fichier CSV généré",
               "s4": "Dans Xero : Business → Invoices → Import",
-              "s5": "Téléversez le CSV et importez comme factures Draft",
+              "s5": "Téléversez le CSV et importez comme factures brouillons",
               "s6": "Xero calculera la taxe selon vos paramètres fiscaux"
             },
             "exportInvoices": "Exporter les factures",

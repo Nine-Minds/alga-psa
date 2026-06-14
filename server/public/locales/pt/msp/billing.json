@@ -348,7 +348,7 @@
     "buttons": {
       "createTrackingEntry": "Create Credit Tracking Entry",
       "updateRemainingAmount": "Update Remaining Amount",
-      "applyAdjustment": "Apply Credit Adjustment",
+      "applyAdjustment": "Aplicar ajuste de crédito",
       "applyCustomAdjustment": "Apply Custom Adjustment",
       "markResolvedNoAction": "Mark as Resolved (No Action)",
       "cancel": "Cancel",

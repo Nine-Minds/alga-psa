@@ -42,7 +42,7 @@
         }
       },
       "options": {
-        "draft": "Create as Draft",
+        "draft": "Criar como rascunho",
         "finalized": "Create and Finalize"
       },
       "toast": {

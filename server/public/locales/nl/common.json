@@ -1073,7 +1073,15 @@
   },
   "pickers": {
     "addNewClient": "Nieuwe klant toevoegen",
-    "addNewContact": "Nieuwe contactpersoon toevoegen"
+    "addNewContact": "Nieuwe contactpersoon toevoegen",
+    "loadingUsers": "Gebruikers laden...",
+    "errorLoadingUsers": "Fout bij laden van gebruikers",
+    "searchUsers": "Gebruikers zoeken...",
+    "unassigned": "Niet toegewezen",
+    "noUsersAvailable": "Geen gebruikers beschikbaar",
+    "searchBoards": "Boards zoeken...",
+    "searchBoardsLabel": "Boards zoeken",
+    "noBoardsFound": "Geen boards gevonden"
   },
   "tagFilter": {
     "placeholder": "Filter op tags...",

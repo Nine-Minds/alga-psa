@@ -933,6 +933,21 @@
       "finalized": "Finalisiert"
     }
   },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Nicht synchronisiert",
+      "queued": "In Warteschlange",
+      "synced": "Synchronisiert",
+      "drift": "Abweichung",
+      "error": "Synchronisierungsfehler",
+      "voided": "Storniert"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Zuletzt synchronisiert:",
+      "viewInQuickBooks": "In QuickBooks anzeigen"
+    }
+  },
   "templateManager": {
     "title": "Rechnungsvorlagen-Manager",
     "sampleInvoices": "Musterrechnungen",

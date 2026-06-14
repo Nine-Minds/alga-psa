@@ -1073,7 +1073,15 @@
   },
   "pickers": {
     "addNewClient": "Agregar nuevo cliente",
-    "addNewContact": "Añadir nuevo contacto"
+    "addNewContact": "Añadir nuevo contacto",
+    "loadingUsers": "Cargando usuarios...",
+    "errorLoadingUsers": "Error al cargar usuarios",
+    "searchUsers": "Buscar usuarios...",
+    "unassigned": "Sin asignar",
+    "noUsersAvailable": "No hay usuarios disponibles",
+    "searchBoards": "Buscar tableros...",
+    "searchBoardsLabel": "Buscar tableros",
+    "noBoardsFound": "No se encontraron tableros"
   },
   "tagFilter": {
     "placeholder": "Filtrar por etiquetas...",

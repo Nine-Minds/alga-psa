@@ -22,6 +22,7 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type {
   TicketActivityRow,
@@ -377,6 +378,7 @@ function sourceBadge(source: string): { label: string; className: string } {
 }
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
+  const { t: tCommon } = useTranslation('common');
   const [entries, setEntries] = useState<TicketTimelineEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -602,7 +604,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
   if (loading) {
     return (
       <div id="ticket-activity-timeline-loading" className="p-4 text-sm text-[rgb(var(--color-text-500))]">
-        Loading timeline…
+        {tCommon('status.loading', { defaultValue: 'Loading...' })}
       </div>
     );
   }

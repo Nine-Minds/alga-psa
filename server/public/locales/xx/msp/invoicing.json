@@ -933,6 +933,21 @@
       "finalized": "11111"
     }
   },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "11111",
+      "queued": "11111",
+      "synced": "11111",
+      "drift": "11111",
+      "error": "11111",
+      "voided": "11111"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "11111",
+      "lastSynced": "11111",
+      "viewInQuickBooks": "11111"
+    }
+  },
   "templateManager": {
     "title": "11111",
     "sampleInvoices": "11111",
