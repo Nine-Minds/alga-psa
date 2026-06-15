@@ -216,4 +216,23 @@ describe('client portal domain session exchange', () => {
     expect(consumeOttMock).toHaveBeenCalled();
     expect(resolveCnameMock).not.toHaveBeenCalled();
   });
+
+  it('skips dns verification for active domains even when enforcement is enabled', async () => {
+    process.env.PORTAL_DOMAIN_DNS_CHECK = 'true';
+    // Simulate a custom domain fronted by a proxy (e.g. Cloudflare "orange cloud")
+    // where the CNAME is no longer resolvable. An already-active domain was verified
+    // at registration time, so the login must still finalize without re-resolving DNS.
+    resolveCnameMock.mockRejectedValue(new Error('ENODATA'));
+
+    const request = buildRequest({
+      ott: 'ott-token-123',
+      returnPath: '/client-portal/tickets',
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(consumeOttMock).toHaveBeenCalled();
+    expect(resolveCnameMock).not.toHaveBeenCalled();
+  });
 });
