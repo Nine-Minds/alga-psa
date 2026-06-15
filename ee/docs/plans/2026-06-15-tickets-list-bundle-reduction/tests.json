@@ -1,6 +1,6 @@
 [
-  { "id": "T001", "description": "Baseline trace recorded: list-load LCP, render delay, first-load JS, and per-row prefetch count captured in SCRATCHPAD", "implemented": false, "featureIds": ["F001"] },
-  { "id": "T002", "description": "Baseline next-build first-load JS for /msp/tickets recorded; 7 dialogs + ClientDetails confirmed present in baseline chunk graph", "implemented": false, "featureIds": ["F002"] },
+  { "id": "T001", "description": "Baseline trace recorded: list-load LCP, render delay, first-load JS, and per-row prefetch count captured in SCRATCHPAD", "implemented": true, "featureIds": ["F001"] },
+  { "id": "T002", "description": "Baseline next-build first-load JS for /msp/tickets recorded; 7 dialogs + ClientDetails confirmed present in baseline chunk graph", "implemented": true, "featureIds": ["F002"] },
 
   { "id": "T010", "description": "On list load, network capture shows zero GET /msp/tickets/<id>?_rsc=... prefetch requests", "implemented": false, "featureIds": ["F010", "F011", "F070"] },
   { "id": "T011", "description": "Clicking the ticket-number link opens the ticket (onTicketClick fired) and does not full-navigate", "implemented": false, "featureIds": ["F010", "F012"] },

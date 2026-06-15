@@ -117,6 +117,30 @@ npx nx build <tickets-app-or-server> # then inspect .next route first-load JS
 # Perf re-trace: use chrome-devtools performance_start_trace on /msp/tickets (reload=true)
 ```
 
+## Implementation log
+
+### 2026-06-15 — Baseline artifacts (F001, F002, T001, T002)
+
+- F001/T001: Marked complete because the production-style trace baseline is already captured
+  above with LCP 3,048 ms, render delay 2,774 ms, ~9.3 MB decoded JS, and 48 per-row RSC
+  prefetches.
+- F002/T002: Ran `cd server && EDITION=community NEXT_PUBLIC_EDITION=community NODE_ENV=production npm run build`.
+  Build completed successfully with existing warnings from scheduling star exports,
+  `cleanupAiSessionKeysHandler`, and `/_global-error` static rendering.
+- Parsed `server/.next/server/app/msp/tickets/page_client-reference-manifest.js`:
+  `/msp/tickets` baseline client graph has **421 client modules**, **95 JS chunks**, and
+  **8,684,502 bytes** of referenced JS files. Largest chunks: `87726` 1,195,273 bytes,
+  `82147` 1,024,770 bytes, `73842` 454,454 bytes, `60966` 448,878 bytes.
+- Baseline route graph proof: `ClientDetails.tsx` is present in the `/msp/tickets` client
+  manifest and appears in route-referenced chunks including `87726`, `48742`,
+  `app/msp/layout`, `6162`, and `30198`.
+- Baseline dialog proof: `TicketingDashboard.tsx` still statically imports the 7 list-only
+  dialogs (`TicketImportDialog`, `TicketExportDialog`, `BulkAssignTicketsDialog`,
+  `BulkAddTagsDialog`, `BulkSetDueDateDialog`, `BulkChangeStatusDialog`,
+  `BulkChangePriorityDialog`). The production chunks are minified enough that most dialog
+  component names are not recoverable by string search; `BulkAssignTicketsDialog` does
+  appear in route-referenced chunk `6162`.
+
 ## Open questions (mirror PRD §10)
 - OQ1: Intercepting routes acceptable as a new pattern? (only option meeting C1+C2+C3)
 - OQ2: Preferred shared-state mechanism (existing store vs new React context)?
