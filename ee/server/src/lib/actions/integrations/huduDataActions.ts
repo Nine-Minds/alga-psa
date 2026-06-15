@@ -4,7 +4,7 @@
  * Hudu reference-data server actions (EE-only): per-mapped-company assets /
  * articles / asset-password lists (F060–F066) and the on-demand password
  * reveal (F067/F068). Gating mirrors huduActions (withHuduSettingsAccess):
- * EE tier + Enterprise add-on, `system_settings` RBAC, `hudu-integration`
+ * EE tier, `system_settings` RBAC, `hudu-integration`
  * flag. All actions — including reveal — use the READ gate: PRD flow 4 makes
  * viewing/revealing credentials a Technician flow, and the compensating
  * control for reveal is the mandatory fail-closed audit, not a stricter gate.
@@ -20,9 +20,8 @@
 import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { ADD_ONS, TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
-import { assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
@@ -100,7 +99,6 @@ function withHuduSettingsAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-    await assertAddOnAccess(ADD_ONS.ENTERPRISE);
 
     const enabled = await featureFlags.isEnabled('hudu-integration', {
       userId: user.user_id,

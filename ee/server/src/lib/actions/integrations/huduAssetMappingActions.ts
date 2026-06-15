@@ -5,7 +5,7 @@
  *
  * Sibling of huduMappingActions.ts, but RBAC-gated on the `asset` resource
  * (FR16/FR6/FR10: mapping is a Technician flow — read=view, update=mutate)
- * instead of system_settings. Same EE tier + Enterprise add-on +
+ * instead of system_settings. Same EE tier +
  * `hudu-integration` flag chain otherwise.
  *
  * The Hudu asset list is fetched through the Phase 1 path
@@ -16,9 +16,8 @@
 import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { ADD_ONS, TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
-import { assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
@@ -100,7 +99,6 @@ function withHuduAssetAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-    await assertAddOnAccess(ADD_ONS.ENTERPRISE);
 
     const enabled = await featureFlags.isEnabled('hudu-integration', {
       userId: user.user_id,

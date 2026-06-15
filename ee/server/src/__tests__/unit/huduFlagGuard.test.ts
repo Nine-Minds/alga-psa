@@ -4,10 +4,8 @@ const getCurrentUserMock = vi.fn();
 const hasPermissionMock = vi.fn();
 const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
-const assertAddOnAccessMock = vi.fn();
 
 class TierAccessErrorMock extends Error {}
-class AddOnAccessErrorMock extends Error {}
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
@@ -28,11 +26,6 @@ vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   TierAccessError: TierAccessErrorMock,
 }));
 
-vi.mock('server/src/lib/tier-gating/assertAddOnAccess', () => ({
-  assertAddOnAccess: assertAddOnAccessMock,
-  AddOnAccessError: AddOnAccessErrorMock,
-}));
-
 const internalUser = {
   user_id: 'user-1',
   tenant: 'tenant-1',
@@ -50,13 +43,11 @@ describe('T001: requireHuduUiFlagEnabled', () => {
     hasPermissionMock.mockReset();
     isEnabledMock.mockReset();
     assertTierAccessMock.mockReset();
-    assertAddOnAccessMock.mockReset();
 
     // Happy-path defaults; individual tests override as needed.
     getCurrentUserMock.mockResolvedValue(internalUser);
     hasPermissionMock.mockResolvedValue(true);
     assertTierAccessMock.mockResolvedValue(undefined);
-    assertAddOnAccessMock.mockResolvedValue(undefined);
     isEnabledMock.mockResolvedValue(true);
   });
 
@@ -86,20 +77,7 @@ describe('T001: requireHuduUiFlagEnabled', () => {
     expect(payload.success).toBe(false);
   });
 
-  it('returns a 403 blocked response when EE add-on/tier access is denied (EE off)', async () => {
-    assertAddOnAccessMock.mockRejectedValue(new AddOnAccessErrorMock('Enterprise add-on required'));
-    const { requireHuduUiFlagEnabled } = await importGuard();
-
-    const result = await requireHuduUiFlagEnabled('read');
-
-    expect(result).toBeInstanceOf(Response);
-    const response = result as Response;
-    expect(response.status).toBe(403);
-    // Never evaluates the flag once EE access is denied.
-    expect(isEnabledMock).not.toHaveBeenCalled();
-  });
-
-  it('returns a 403 blocked response when the integrations tier is denied (EE off)', async () => {
+  it('returns a 403 blocked response when the integrations tier is denied', async () => {
     assertTierAccessMock.mockRejectedValue(new TierAccessErrorMock('Integrations tier required'));
     const { requireHuduUiFlagEnabled } = await importGuard();
 

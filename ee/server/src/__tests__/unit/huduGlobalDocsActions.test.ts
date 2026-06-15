@@ -19,7 +19,6 @@ const currentUserRef: { value: Record<string, unknown> | null } = { value: inter
 const hasPermissionMock = vi.fn();
 const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
-const assertAddOnAccessMock = vi.fn();
 
 const knexCallableMock = vi.fn();
 const createTenantKnexMock = vi.fn();
@@ -50,10 +49,6 @@ vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTierAccess: assertTierAccessMock,
-}));
-
-vi.mock('server/src/lib/tier-gating/assertAddOnAccess', () => ({
-  assertAddOnAccess: assertAddOnAccessMock,
 }));
 
 vi.mock('server/src/lib/db', () => ({
@@ -132,7 +127,6 @@ beforeEach(() => {
   hasPermissionMock.mockResolvedValue(true);
   isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
-  assertAddOnAccessMock.mockResolvedValue(undefined);
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
 
   getHuduIntegrationMock.mockResolvedValue(integrationRow());
@@ -281,10 +275,10 @@ describe('T242: guard chain + disconnected state', () => {
     expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 
-  it('rejects when the Enterprise add-on is missing', async () => {
-    assertAddOnAccessMock.mockRejectedValue(new Error('Enterprise add-on required'));
+  it('rejects when the integrations tier is missing', async () => {
+    assertTierAccessMock.mockRejectedValue(new Error('Integrations tier required'));
 
-    await expect(listHuduArticlesAcrossCompanies()).rejects.toThrow(/Enterprise add-on required/);
+    await expect(listHuduArticlesAcrossCompanies()).rejects.toThrow(/Integrations tier required/);
     expect(isEnabledMock).not.toHaveBeenCalled();
   });
 

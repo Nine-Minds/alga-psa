@@ -1,6 +1,6 @@
 /**
  * T090/T091/T093 (Phase 1) + T249/F238 (Phase 2) — permissions sweep: every
- * Hudu server action enforces its guard chain (RBAC, EE tier + add-on,
+ * Hudu server action enforces its guard chain (RBAC, EE tier,
  * `hudu-integration` flag) at the correct level. Phase 1 modules gate on
  * system_settings (update = connect/disconnect/test/sync/map, read = status/
  * mappings/data/reveal/context); Phase 2 layout-map actions reuse
@@ -29,7 +29,6 @@ let authenticatedUser: typeof internalUser | null = internalUser;
 const hasPermissionMock = vi.fn();
 const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
-const assertAddOnAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
 
@@ -67,10 +66,6 @@ vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTierAccess: assertTierAccessMock,
-}));
-
-vi.mock('server/src/lib/tier-gating/assertAddOnAccess', () => ({
-  assertAddOnAccess: assertAddOnAccessMock,
 }));
 
 vi.mock('server/src/lib/db', () => ({
@@ -179,7 +174,6 @@ beforeEach(() => {
   hasPermissionMock.mockResolvedValue(true);
   isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
-  assertAddOnAccessMock.mockResolvedValue(undefined);
   createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: TENANT });
 });
 
@@ -276,12 +270,12 @@ describe('T093/T249: every action rejects when the hudu-integration flag is off'
   });
 });
 
-describe('T093/T249: every action rejects when EE access is denied', () => {
-  it.each(allEntries)('$name rejects when the Enterprise add-on is missing', async ({ run }) => {
-    assertAddOnAccessMock.mockRejectedValue(new Error('Enterprise add-on required'));
+describe('T093/T249: every action rejects when the integrations tier is denied', () => {
+  it.each(allEntries)('$name rejects when the integrations tier is missing', async ({ run }) => {
+    assertTierAccessMock.mockRejectedValue(new Error('Integrations tier required'));
 
-    await expect(run()).rejects.toThrow(/Enterprise add-on required/);
-    // EE access is checked before the flag is even consulted.
+    await expect(run()).rejects.toThrow(/Integrations tier required/);
+    // Tier access is checked before the flag is even consulted.
     expect(isEnabledMock).not.toHaveBeenCalled();
     expect(createTenantKnexMock).not.toHaveBeenCalled();
   });

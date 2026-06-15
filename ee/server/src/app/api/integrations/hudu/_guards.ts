@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { ADD_ONS, TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
-import { AddOnAccessError, assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { TierAccessError, assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 type HuduGuardPermission = 'read' | 'update';
@@ -11,7 +10,7 @@ type HuduGuardPermission = 'read' | 'update';
 /**
  * Hudu UI flag guard — mirrors requireEntraUiFlagEnabled.
  *
- * Requires EE (Enterprise add-on + integrations tier) and the
+ * Requires the integrations tier and the
  * `hudu-integration` feature flag. Returns a Response (401/403/404) when the
  * caller is unauthorized or the integration is disabled, otherwise resolves the
  * tenant + user ids for the handler. Hudu reuses the existing `system_settings`
@@ -55,9 +54,8 @@ export async function requireHuduUiFlagEnabled(
 
   try {
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-    await assertAddOnAccess(ADD_ONS.ENTERPRISE);
   } catch (error) {
-    if (error instanceof TierAccessError || error instanceof AddOnAccessError) {
+    if (error instanceof TierAccessError) {
       return NextResponse.json(
         {
           success: false,
