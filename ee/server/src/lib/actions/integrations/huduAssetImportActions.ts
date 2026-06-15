@@ -3,7 +3,7 @@
 /**
  * Hudu asset import server actions (F214–F218, EE-only).
  *
- * Sibling of huduAssetMappingActions.ts — same EE tier + Enterprise add-on +
+ * Sibling of huduAssetMappingActions.ts — same EE tier +
  * `hudu-integration` flag chain, but RBAC-gated on `asset` CREATE (FR6).
  * The Hudu asset list rides the Phase 1 fetch+cache path
  * (getHuduCompanyAssets); asset creation goes through the existing
@@ -15,9 +15,8 @@
 import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { ADD_ONS, TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
-import { assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
@@ -131,7 +130,6 @@ function withHuduAssetCreateAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-    await assertAddOnAccess(ADD_ONS.ENTERPRISE);
 
     const enabled = await featureFlags.isEnabled('hudu-integration', {
       userId: user.user_id,

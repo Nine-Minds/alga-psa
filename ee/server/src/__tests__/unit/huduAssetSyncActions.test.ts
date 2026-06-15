@@ -34,7 +34,6 @@ const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' 
 const hasPermissionMock = vi.fn();
 const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
-const assertAddOnAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
 let assetsRows: Array<{
@@ -94,10 +93,6 @@ vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTierAccess: assertTierAccessMock,
-}));
-
-vi.mock('server/src/lib/tier-gating/assertAddOnAccess', () => ({
-  assertAddOnAccess: assertAddOnAccessMock,
 }));
 
 vi.mock('server/src/lib/db', () => ({
@@ -169,7 +164,6 @@ beforeEach(() => {
   hasPermissionMock.mockResolvedValue(true);
   isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
-  assertAddOnAccessMock.mockResolvedValue(undefined);
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
 
