@@ -73,7 +73,7 @@ export default function LicenseManagementPage() {
       const result = await startTrial();
       if (result.success && result.status) {
         refresh(result.status);
-        setSuccessMsg('30-day Enterprise trial started.');
+        setSuccessMsg('15-day Enterprise trial started.');
       } else {
         setError(result.error ?? 'Failed to start trial');
       }
@@ -240,9 +240,9 @@ export default function LicenseManagementPage() {
       {/* Start trial */}
       {canStartTrial && (
         <section style={{ marginTop: '1.5rem', padding: '1rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '0.5rem' }}>
-          <h2 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>30-Day Enterprise Trial</h2>
+          <h2 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>15-Day Enterprise Trial</h2>
           <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
-            Try all Enterprise features free for 30 days. No credit card required.
+            Try all Enterprise features free for 15 days. No credit card required.
             This trial is available once per installation.
           </p>
           <button
@@ -254,7 +254,7 @@ export default function LicenseManagementPage() {
               opacity: isPending ? 0.5 : 1,
             }}
           >
-            {isPending ? 'Starting…' : 'Start 30-Day Trial'}
+            {isPending ? 'Starting…' : 'Start 15-Day Trial'}
           </button>
         </section>
       )}

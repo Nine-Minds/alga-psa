@@ -49,18 +49,18 @@ describe('resolveSelfHostTier', () => {
   });
 
   // T010: active trial → premium
-  it('returns premium during an active 30-day trial', () => {
+  it('returns premium during an active 15-day trial', () => {
     const trialStart = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000); // 5 days ago
     const result = resolveSelfHostTier(makeRow({ trial_started_at: trialStart }));
     expect(result?.state).toBe('trial');
     expect(result?.tier).toBe('premium');
     expect(result?.daysRemaining).toBeGreaterThan(0);
-    expect(result?.daysRemaining).toBeLessThanOrEqual(25);
+    expect(result?.daysRemaining).toBeLessThanOrEqual(10);
   });
 
   // T011: trial expired → essentials
-  it('returns essentials after the 30-day trial window elapses', () => {
-    const trialStart = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000); // 31 days ago
+  it('returns essentials after the 15-day trial window elapses', () => {
+    const trialStart = new Date(Date.now() - 16 * 24 * 60 * 60 * 1000); // 16 days ago
     const result = resolveSelfHostTier(makeRow({ trial_started_at: trialStart }));
     expect(result?.state).toBe('trial_expired');
     expect(result?.tier).toBe('essentials');

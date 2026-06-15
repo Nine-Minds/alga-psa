@@ -52,7 +52,7 @@ export interface ResolvedLicenseState {
   daysRemaining: number | null;
 }
 
-const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+const TRIAL_DURATION_MS = 15 * 24 * 60 * 60 * 1000;
 
 /**
  * Reads the license_state singleton from the admin DB.
@@ -88,7 +88,7 @@ export async function upsertLicenseState(
  *
  * Resolution order (per spec):
  *   1. Valid unexpired license → license.tier
- *   2. Active 30-day trial     → 'premium'
+ *   2. Active 15-day trial     → 'premium'
  *   3. Everything else         → 'essentials'
  *
  * Returns null when passed null (no row → caller falls through to SaaS logic).

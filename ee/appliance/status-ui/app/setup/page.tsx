@@ -280,7 +280,7 @@ export default function SetupPage() {
                         <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
                           <input type="radio" name="editionChoice" value="ee" checked={editionChoice === 'ee'} onChange={() => setEditionChoice('ee')} disabled={disabled} style={{ marginTop: '0.2rem' }} />
                           <span>
-                            <strong>Enterprise</strong> — 30-day free trial, then reverts to Essentials.
+                            <strong>Enterprise</strong> — 15-day free trial, then reverts to Essentials.
                             <br /><small style={{ color: 'var(--muted, #6b7280)' }}>Includes all features. Enter a license key below to extend beyond the trial.</small>
                           </span>
                         </label>
@@ -309,7 +309,7 @@ export default function SetupPage() {
                           aria-describedby="setup-license-key-help setup-license-key-error"
                           style={{ fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
                         />
-                        <span id="setup-license-key-help" className={styles.helpText}>Paste the signed key from Nine Minds. Leave blank to start the 30-day trial.</span>
+                        <span id="setup-license-key-help" className={styles.helpText}>Paste the signed key from Nine Minds. Leave blank to start the 15-day trial.</span>
                         {fieldErrors.licenseKey ? <span id="setup-license-key-error" className={styles.fieldError}>{fieldErrors.licenseKey}</span> : null}
                       </div>
                     )}
