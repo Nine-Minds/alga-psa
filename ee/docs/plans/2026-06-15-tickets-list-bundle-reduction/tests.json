@@ -3,10 +3,10 @@
   { "id": "T002", "description": "Baseline next-build first-load JS for /msp/tickets recorded; 7 dialogs + ClientDetails confirmed present in baseline chunk graph", "implemented": true, "featureIds": ["F002"] },
 
   { "id": "T010", "description": "On list load, network capture shows zero GET /msp/tickets/<id>?_rsc=... prefetch requests", "implemented": false, "featureIds": ["F010", "F011", "F070"] },
-  { "id": "T011", "description": "Clicking the ticket-number link opens the ticket (onTicketClick fired) and does not full-navigate", "implemented": false, "featureIds": ["F010", "F012"] },
-  { "id": "T012", "description": "Clicking the title link opens the ticket (onTicketClick fired)", "implemented": false, "featureIds": ["F011", "F012"] },
-  { "id": "T013", "description": "Cmd/Ctrl+click and middle-click on a row open /msp/tickets/[id] in a new tab (href preserved)", "implemented": false, "featureIds": ["F013"] },
-  { "id": "T014", "description": "Unit/contract test: ticket-columns renders Links with prefetch={false}", "implemented": false, "featureIds": ["F010", "F011"] },
+  { "id": "T011", "description": "Clicking the ticket-number link opens the ticket (onTicketClick fired) and does not full-navigate", "implemented": true, "featureIds": ["F010", "F012"] },
+  { "id": "T012", "description": "Clicking the title link opens the ticket (onTicketClick fired)", "implemented": true, "featureIds": ["F011", "F012"] },
+  { "id": "T013", "description": "Cmd/Ctrl+click and middle-click on a row open /msp/tickets/[id] in a new tab (href preserved)", "implemented": true, "featureIds": ["F013"] },
+  { "id": "T014", "description": "Unit/contract test: ticket-columns renders Links with prefetch={false}", "implemented": true, "featureIds": ["F010", "F011"] },
 
   { "id": "T020", "description": "Lightweight details-tab component renders client details fields identically to the previous quickView tab (snapshot/visual)", "implemented": false, "featureIds": ["F020", "F022"] },
   { "id": "T021", "description": "Static-import assertion: ClientQuickView module graph does NOT include BillingConfiguration, InteractionsFeed, ClientContactsList, ClientNotesPanel, or the Hudu tab modules", "implemented": false, "featureIds": ["F020", "F021"] },

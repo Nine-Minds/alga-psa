@@ -141,6 +141,23 @@ npx nx build <tickets-app-or-server> # then inspect .next route first-load JS
   component names are not recoverable by string search; `BulkAssignTicketsDialog` does
   appear in route-referenced chunk `6162`.
 
+### 2026-06-15 — Row link prefetch fix (F010-F013, T011-T014)
+
+- Added `prefetch={false}` to both ticket list `<Link>` elements in
+  `packages/tickets/src/lib/ticket-columns.tsx`: ticket number and title.
+- Kept the existing `href={`/msp/tickets/${record.ticket_id}`}` on both links, so
+  cmd/ctrl-click and browser open-in-new-tab behavior still have a real URL.
+- Kept the existing primary-click interception: normal clicks still call
+  `preventDefault()`, `stopPropagation()`, and `onTicketClick(record.ticket_id as string)`.
+- Added `packages/tickets/src/lib/__tests__/ticketColumns.prefetch.contract.test.ts` to
+  assert both links retain the href, disable prefetch, and keep the intercepted primary
+  click handler contract.
+- Verification command: `cd server && npx vitest run ../packages/tickets/src/lib/__tests__/ticketColumns.prefetch.contract.test.ts`
+  passed (1 test). A root-level `npx vitest run packages/...` invocation did not match the
+  repo's Vitest include pattern; use the server-root command above for package tests.
+- Left T010 false for the later verification phase because it requires an authenticated
+  browser/network capture proving zero `_rsc` row-prefetch requests on an actual list load.
+
 ## Open questions (mirror PRD §10)
 - OQ1: Intercepting routes acceptable as a new pattern? (only option meeting C1+C2+C3)
 - OQ2: Preferred shared-state mechanism (existing store vs new React context)?

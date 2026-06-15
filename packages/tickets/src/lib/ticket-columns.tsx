@@ -218,6 +218,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               ) : null}
               <Link
                 href={`/msp/tickets/${record.ticket_id}`}
+                prefetch={false}
                 onClick={(e) => {
                   if (e.metaKey || e.ctrlKey) return;
                   e.preventDefault();
@@ -272,6 +273,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         <div className="flex flex-col gap-1 overflow-hidden">
           <Link
             href={`/msp/tickets/${record.ticket_id}`}
+            prefetch={false}
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey) return;
               e.preventDefault();

@@ -2,10 +2,10 @@
   { "id": "F001", "description": "[Baseline] Capture and record current production-style perf trace of /msp/tickets (LCP, render delay, first-load JS, prefetch count) in SCRATCHPAD as the before-state", "implemented": true, "prdRefs": ["9"] },
   { "id": "F002", "description": "[Baseline] Record `next build` first-load JS for the tickets-list route and the chunk graph membership of the 7 dialogs + ClientDetails", "implemented": true, "prdRefs": ["9"] },
 
-  { "id": "F010", "description": "[A] Add prefetch={false} to the ticket-number column <Link> in ticket-columns.tsx (~line 219)", "implemented": false, "prdRefs": ["6.A", "2"] },
-  { "id": "F011", "description": "[A] Add prefetch={false} to the title column <Link> in ticket-columns.tsx (~line 273)", "implemented": false, "prdRefs": ["6.A", "2"] },
-  { "id": "F012", "description": "[A] Verify ticket row click still opens the ticket via onTicketClick (no behavior change)", "implemented": false, "prdRefs": ["6.A", "9"] },
-  { "id": "F013", "description": "[A] Verify middle-click / cmd+click / open-in-new-tab on a row still navigates to /msp/tickets/[id]", "implemented": false, "prdRefs": ["6.A"] },
+  { "id": "F010", "description": "[A] Add prefetch={false} to the ticket-number column <Link> in ticket-columns.tsx (~line 219)", "implemented": true, "prdRefs": ["6.A", "2"] },
+  { "id": "F011", "description": "[A] Add prefetch={false} to the title column <Link> in ticket-columns.tsx (~line 273)", "implemented": true, "prdRefs": ["6.A", "2"] },
+  { "id": "F012", "description": "[A] Verify ticket row click still opens the ticket via onTicketClick (no behavior change)", "implemented": true, "prdRefs": ["6.A", "9"] },
+  { "id": "F013", "description": "[A] Verify middle-click / cmd+click / open-in-new-tab on a row still navigates to /msp/tickets/[id]", "implemented": true, "prdRefs": ["6.A"] },
 
   { "id": "F020", "description": "[B] Extract the ClientDetails 'details' tab content (tabContent[0]) into a standalone lightweight component that does NOT statically import the contacts/billing/interactions/notes/Hudu tabs", "implemented": false, "prdRefs": ["6.B"] },
   { "id": "F021", "description": "[B] Rebuild ClientQuickView.tsx to render the lightweight details-tab component directly instead of wrapping full <ClientDetails quickView />", "implemented": false, "prdRefs": ["6.B", "3"] },
