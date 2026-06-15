@@ -315,7 +315,7 @@ data:
 
     # Seed license_state from appliance-license-seed Secret (F082-F084).
     # ALWAYS seeds a row on a self-hosted/appliance install (defaulting to an
-    # 'ee' 30-day trial when EDITION_CHOICE is absent). A missing/empty
+    # 'ee' 15-day trial when EDITION_CHOICE is absent). A missing/empty
     # appliance-license-seed Secret previously left license_state empty, which
     # silently bricks licensing: getLicenseStatus returns selfHostMode=false, so
     # the in-app License page shows "only available for self-hosted" with NO

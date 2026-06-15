@@ -46,7 +46,7 @@ export default function LicenseBanner() {
       break;
     case 'trial_available':
       // Fresh install, trial not yet used — invite, don't warn.
-      message = 'Running Essentials features. Start a free 30-day Enterprise trial to unlock all features.';
+      message = 'Running Essentials features. Start a free 15-day Enterprise trial to unlock all features.';
       urgency = 'info';
       break;
     case 'trial_expired':
@@ -70,7 +70,7 @@ export default function LicenseBanner() {
     case 'ce':
       // CE installs: only show if they haven't used their trial yet.
       if (!status.trialUsed) {
-        message = 'Running Essentials features. Start a free 30-day Enterprise trial to unlock all features.';
+        message = 'Running Essentials features. Start a free 15-day Enterprise trial to unlock all features.';
         urgency = 'info';
       }
       break;

@@ -109,7 +109,7 @@ export async function submitLicense(token: string): Promise<{ success: boolean; 
 }
 
 /**
- * Starts the one-time 30-day Enterprise trial.
+ * Starts the one-time 15-day Enterprise trial.
  * Blocked if: trial already used, or a valid license is already active.
  */
 export async function startTrial(): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
