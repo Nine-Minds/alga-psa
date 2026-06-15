@@ -1,0 +1,124 @@
+# SCRATCHPAD — Tickets List Load-Time Reduction
+
+Rolling working memory. Append discoveries, decisions, commands, gotchas.
+
+## Baseline (production trace, algapsa.com /msp/tickets, 2026-06-15, warm cache)
+
+- LCP **3,048 ms**; TTFB **274 ms**; render delay **2,774 ms (91% of LCP)**.
+- CLS 0.00. DOMContentLoaded ~2,963 ms, load ~2,984 ms.
+- **~9.3 MB decoded JS across 103 script chunks** on the list route (transferSize 0 = served
+  from warm disk cache; cold cache / post-deploy would also pay download cost).
+  - Largest chunks observed: 1,167 KB, 820 KB, 445 KB, 438 KB, 350 KB...
+- Server actions are fast: `x-envoy-upstream-service-time` ~24–27 ms. Backend is NOT the bottleneck.
+- **48 RSC prefetch requests** to `/msp/tickets/<id>?_rsc=...` per list view (two `<Link>`s per
+  row × ~24 rows, observed in two waves at ~6.6 s and ~364 s).
+- Steady-state: a server-action POST every ~15 s (the `JobActivityIndicator` job-metrics poll
+  in `server/src/components/layout/Header.tsx:304`) — OUT OF SCOPE (shell-level).
+- ~20 app-shell server-action POSTs during hydration — OUT OF SCOPE (shell-level).
+
+> Trace artifact saved during investigation at `.tmp/tickets-trace.json` (gitignored tmp).
+
+## Decisions
+
+- **D1 — No dynamic imports.** Team avoids `next/dynamic`/`React.lazy` to keep module
+  boundaries clean. All splitting must be via static imports at route boundaries.
+- **D2 — Routing = intercepting routes + parallel `@modal` slot.** Forced by the constraint
+  set: no visual change (rules out full pages) + must respect filters/selection + no dynamic
+  imports. This is the only approach that keeps the modal UX while moving dialog code out of
+  the list route bundle. NEW pattern for this codebase (none exist today).
+- **D3 — Editor excluded.** `QuickAddTicket` (+ rich-text editor) is imported by 9 surfaces
+  incl. the global header quick-create (`server/src/components/layout/QuickCreateDialog.tsx`),
+  so list-only extraction wouldn't remove it app-wide. Possible separate future plan.
+- **D4 — QuickAddCategory excluded.** Shared by 4 components (QuickAddTicket,
+  CategoriesSettings, TicketInfo, TicketingDashboard) — not cleanly list-only.
+- **D5 — Primary goal is list load time.** Deep-linkable dialog URLs are a non-goal (a free
+  side effect of intercepting routes, not something to invest in).
+- **D6 — ClientQuickView reused everywhere**, not just the tickets list (user request).
+
+## Key code facts / file map
+
+- List page (server component, SSR): `server/src/app/msp/tickets/page.tsx`
+  - SSR data fetch is already consolidated + parallel (`Promise.all`, line ~231,
+    `getConsolidatedTicketListData`). The slowness is client hydration, not SSR.
+  - `export const dynamic = "force-dynamic"`.
+- `MspTicketsPageClient`: `packages/msp-composition/src/tickets/MspTicketsPageClient.tsx`
+  - line 5 statically imports full `ClientDetails`; line 18 renders it `quickView isInDrawer`.
+- Dashboard tree: `MspTicketsPageClient` → `TicketingDashboardContainer` → `TicketingDashboard`
+  (`packages/tickets/src/components/`).
+- `TicketingDashboard.tsx` static dialog imports: lines 11–16 (5 bulk dialogs), 55–56
+  (Export/Import), 69 (QuickAddCategory), 8 (QuickAddTicket).
+  - Selection state: `selectedTicketIds` `useState<Set<string>>` at **line 252**.
+  - Many `is*DialogOpen` booleans (lines 280–301) — these become route navigations.
+  - Filters synced to URL: builds `URLSearchParams` at line 510, `router.push(href)` at 625.
+- Row links / prefetch: `packages/tickets/src/lib/ticket-columns.tsx`
+  - ticket-number `<Link>` ~line 219 (href line 220), title `<Link>` ~line 273 (href 274).
+  - Both already `onClick` → `e.preventDefault()` → `onTicketClick(...)`. href kept for
+    middle-click/new-tab. → add `prefetch={false}`.
+
+### Importers (who pulls each dialog) — establishes clean-removability
+- 7 dialogs imported **only** by `TicketingDashboard.tsx`: TicketExportDialog, TicketImportDialog,
+  BulkAssignTicketsDialog, BulkAddTagsDialog, BulkSetDueDateDialog, BulkChangeStatusDialog,
+  BulkChangePriorityDialog. ✅ clean to route-extract.
+- QuickAddCategory: 4 importers (excluded). QuickAddTicket: 9 importers (excluded).
+
+### ClientDetails / quick view
+- `packages/clients/src/components/clients/ClientDetails.tsx` — **2,215 lines**. Statically
+  imports all tabs: ClientContactsList (17), BillingConfiguration (20), InteractionsFeed (51),
+  ClientNotesPanel (68), HuduClientTab (85), HuduClientPasswordsTab (86),
+  HuduClientDocumentsSection (87).
+  - `quickView` is a runtime flag only: line 2058 `tabs={quickView ? [tabContent[0]] : tabContent}`,
+    line 2061 default tab 'details', line 1925 hides header chrome. Does NOT reduce imports.
+- **`ClientQuickView.tsx` already exists** (`packages/clients/src/components/clients/`) but just
+  wraps `<ClientDetails quickView />` (lines 65, 68) → still heavy. Must be rebuilt to import
+  only the extracted details-tab content.
+- Client quick-view call sites to wire to ClientQuickView:
+  - `packages/msp-composition/src/tickets/MspTicketsPageClient.tsx:18`
+  - `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx:71`
+  - `packages/msp-composition/src/clients/MspClientDrawerProvider.tsx:36`
+  - `packages/msp-composition/src/billing/MspBillingDashboardClient.tsx:18`
+  - `packages/msp-composition/src/projects/MspClientIntegrationProvider.tsx:44`
+  - `packages/clients/src/components/clients/Clients.tsx:1779`
+  - `packages/clients/src/components/interactions/InteractionDetails.tsx:209`
+  - `packages/projects/src/components/Projects.tsx` (renderClientDetails ~1024)
+  - `server/src/components/settings/general/UserList.tsx:206`
+  - TBD classify (contact context): `Contacts.tsx:697`, `MspContactTickets.tsx:230`
+- NOTE: a parallel `ContactDetails`/`ContactQuickView` story exists (contacts also use
+  `quickView`). Out of scope unless trivially shared; do not expand silently.
+
+### Routing infra
+- `server/src/app/msp/tickets/` currently: `page.tsx`, `loading.tsx`, `[id]/`. **No layout.tsx.**
+- `server/src/app/msp/layout.tsx` exists (parent).
+- No intercepting `(.)`/`(..)` routes and no `@parallel` slots anywhere in the app today —
+  this pattern is net-new; prototype Import first (F045).
+
+## Gotchas / watch-outs
+
+- Intercepting modal routes are **sibling subtrees** to the page; they cannot read the list
+  page's local React state. → selection + filters MUST be lifted to a shared context in
+  `tickets/layout.tsx` (F042–F044). This is the highest-effort/riskiest item.
+- "Respect all filters" (C2): export + bulk "select all matching" rely on the active
+  `ITicketListFilters`. Verify the shared context carries the full filter object, not just URL
+  params (some filter state may be client-only).
+- Multi-tenant (CLAUDE.md): reused server actions keep `tenant` in WHERE/JOIN; new routes must
+  not bypass `withAuth`/tenant scoping.
+- Need a `@modal/default.tsx` returning null or navigation throws on non-modal renders.
+- Keep BulkTicketActionBar (selection toolbar) on the list as the trigger surface; only the
+  dialog bodies move.
+
+## Commands / runbook
+
+```bash
+# Find importers of a component
+grep -rlE "import .*\bTicketImportDialog\b" packages server --include='*.tsx' --include='*.ts' | grep -v __tests__
+
+# Tickets-list build size (after change) — confirm dialogs left the chunk
+npx nx build <tickets-app-or-server> # then inspect .next route first-load JS
+
+# Perf re-trace: use chrome-devtools performance_start_trace on /msp/tickets (reload=true)
+```
+
+## Open questions (mirror PRD §10)
+- OQ1: Intercepting routes acceptable as a new pattern? (only option meeting C1+C2+C3)
+- OQ2: Preferred shared-state mechanism (existing store vs new React context)?
+- OQ3: Are poor effort:benefit bulk dialogs allowed to stay in-list?
+- OQ4: Migrate contact-context `<ClientDetails>` usages too?
