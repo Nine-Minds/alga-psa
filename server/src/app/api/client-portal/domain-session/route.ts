@@ -171,7 +171,13 @@ export async function POST(request: Request): Promise<Response> {
       return typeof candidate === 'string' ? candidate : null;
     })();
 
-    const enforceCname = shouldVerifyCname();
+    // Active domains were already CNAME-verified during registration and are kept
+    // live by ongoing cert-manager renewal, so we trust that state rather than
+    // re-resolving DNS on every login. Re-checking here breaks legitimate setups
+    // that front the custom domain with a proxy (e.g. Cloudflare "orange cloud"),
+    // which hides the CNAME from resolution even though traffic and TLS are healthy.
+    const isActiveDomain = portalDomain.status === 'active';
+    const enforceCname = shouldVerifyCname() && !isActiveDomain;
 
     const cnameHost = hostParts.hostname;
 
@@ -203,6 +209,7 @@ export async function POST(request: Request): Promise<Response> {
         tenant: portalDomain.tenant,
         expected: expectedCname,
         enforceCname,
+        domainStatus: portalDomain.status,
       });
     }
 
