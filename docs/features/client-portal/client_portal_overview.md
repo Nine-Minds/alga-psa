@@ -129,7 +129,7 @@ if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
 
 - **OTT Issuance**: Successful logins on the canonical host call `issuePortalDomainOtt()` to generate a short-lived, single-use token that stores the client user's session snapshot.
 - **Handoff Page**: `/auth/client-portal/handoff` displays a lightweight loading state while exchanging the OTT for an Auth.js cookie via `/api/client-portal/domain-session`.
-- **DNS Verification**: The exchange endpoint compares the vanity host's active CNAME records against `verification_details.expected_cname` and rejects handoffs when drift is detected.
+- **DNS Verification**: The exchange endpoint verifies CNAME alignment only when the portal domain's status is not yet `active`. Domains already in `active` status skip DNS re-verification: they were CNAME-validated at registration time and are kept live by cert-manager renewal. Skipping the re-check also prevents login failures on custom domains fronted by a reverse proxy (e.g. Cloudflare "orange cloud") that hides the CNAME from public DNS resolution even though traffic and TLS are healthy. The `PORTAL_DOMAIN_DNS_CHECK` environment variable still governs whether verification runs for non-active domains.
 - **Cookie Minting**: `buildSessionCookie()` guarantees Auth.js-compatible cookie attributes (`__Secure-` prefix, `Lax` SameSite, `Secure`, `HttpOnly`).
 - **Cleanup**: Expired or consumed OTTs can be pruned with `pnpm cli portal-domain sessions prune [--tenant <tenantId>] [--minutes 10] [--dry-run]`.
 
