@@ -53,7 +53,6 @@ import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStat
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
-import TicketImportDialog from './TicketImportDialog';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -80,6 +79,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
   type TicketStatusFilterOption,
 } from '../lib/ticketStatusFilter';
+import { useTicketsRouteState } from './TicketsRouteProvider';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -249,7 +249,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
-  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const { selectedTicketIds, setSelectedTicketIds, setFilters: setTicketsRouteFilters } = useTicketsRouteState();
   const [allMatchingMode, setAllMatchingMode] = useState(false);
   // Boards resolved on demand for selected tickets that aren't on the current page
   // (paginate-then-select / select-all-matching). Maps ticket_id -> board_id (or null).
@@ -278,7 +278,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
@@ -1709,6 +1708,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
   ]);
 
+  useEffect(() => {
+    setTicketsRouteFilters(exportFilters);
+  }, [exportFilters, setTicketsRouteFilters]);
+
   const printColumns = useMemo<PrintColumnOption<ITicketListItem>[]>(() => {
     const availableColumns = createTicketColumns({
       categories,
@@ -2046,7 +2049,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 id: `${id}-share-import`,
                 icon: Upload,
                 label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
-                onSelect: () => setIsImportDialogOpen(true),
+                onSelect: () => router.push('/msp/tickets/import'),
               },
             ] satisfies ShareAction[]}
           />
@@ -2902,19 +2905,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onConfirm={handleConfirmBulkPriority}
       />
     </ReflectionContainer>
-    {isImportDialogOpen && (
-      <TicketImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        initialBoards={boards}
-        initialClients={clients}
-        initialUsers={initialUsers}
-        onImportComplete={() => {
-          setIsImportDialogOpen(false);
-          router.refresh();
-        }}
-      />
-    )}
     </>
   );
 };

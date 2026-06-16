@@ -208,6 +208,49 @@ Results:
   exports, `cleanupAiSessionKeysHandler` critical dependency, and `/_global-error` dynamic
   server usage.
 
+### 2026-06-15 — Tickets modal infra + Import extraction (F040-F045, F050-F052, T040-T047, T051)
+
+- F040/T040: Added `server/src/app/msp/tickets/layout.tsx` with `{children}` plus the
+  `@modal` parallel slot, wrapped in `TicketsRouteProvider`.
+- F041/T041: Added `server/src/app/msp/tickets/@modal/default.tsx` returning `null` for
+  normal list loads.
+- F042-F044/T042-T044: Added `packages/tickets/src/components/TicketsRouteProvider.tsx`.
+  `TicketingDashboard` now reads/writes `selectedTicketIds` through the route context and
+  syncs active `exportFilters` into context via `setTicketsRouteFilters(exportFilters)`.
+  A fallback local state path remains in the hook so isolated component tests/stories do
+  not crash outside the provider.
+- F045/T045-T047: Prototyped Import with route-level modal boundaries:
+  `server/src/app/msp/tickets/import/page.tsx` for hard-load fallback and
+  `server/src/app/msp/tickets/@modal/(.)import/page.tsx` for intercepted overlay renders.
+  The intercepted route closes with `router.back()`; the hard-load route closes with
+  `router.replace('/msp/tickets')`.
+- F050-F052/T051: Moved Import dialog ownership out of `TicketingDashboard`. The Share menu
+  Import action now calls `router.push('/msp/tickets/import')`, and `TicketingDashboard.tsx`
+  no longer imports or renders `TicketImportDialog`.
+- T050 remains open: an authenticated browser run with a real CSV is still needed to prove
+  the import action itself completes and refreshes the list.
+
+Verification commands:
+
+```bash
+cd server && npx vitest run src/app/msp/tickets/ticketsModalRoutes.contract.test.ts ../packages/tickets/src/lib/__tests__/ticketColumns.prefetch.contract.test.ts
+cd server && NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck
+cd server && EDITION=community NEXT_PUBLIC_EDITION=community NODE_ENV=production npm run build
+```
+
+Results:
+
+- Modal route/source contracts passed: 2 files, 5 tests.
+- Typecheck has no modal/import errors; it still fails only on the existing unrelated
+  missing modules listed in the quick-view batch.
+- Production build completed. Route table includes `/msp/tickets/import` and
+  `/msp/tickets/(.)import`. Existing build warnings persisted.
+- Parsed `server/.next/server/app/msp/tickets/page_client-reference-manifest.js` after the
+  build: tickets page graph has **423 client modules**, **95 JS chunks**, and
+  **8,021,913 bytes**. `TicketImportDialog` has no string hits in route-referenced chunks;
+  the only import-route client entry is `TicketImportDialogRouteClient.tsx` with
+  `chunks: []`. `BulkAssignTicketsDialog` remains in the list chunk pending F060-F065.
+
 ## Open questions (mirror PRD §10)
 - OQ1: Intercepting routes acceptable as a new pattern? (only option meeting C1+C2+C3)
 - OQ2: Preferred shared-state mechanism (existing store vs new React context)?
