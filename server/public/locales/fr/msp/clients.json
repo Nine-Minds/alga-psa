@@ -258,6 +258,10 @@
       "helper": "Définir le statut du client comme actif ou inactif"
     },
     "entraSyncStarted": "Synchronisation Entra démarrée. ID d'exécution : {{runId}}",
+    "entraSyncStatusUnknown": "Statut de synchronisation indisponible",
+    "clientNameRequired": "Le nom du client est requis",
+    "deactivateClientAndContacts": "Désactiver le client et les contacts",
+    "reactivateClientAndContacts": "Réactiver le client et les contacts",
     "inboundDomainAdded": "Domaine de courrier entrant ajouté",
     "inboundDomainAddFailed": "Échec de l'ajout du domaine",
     "inboundDomainRemoved": "Domaine de courrier entrant supprimé",

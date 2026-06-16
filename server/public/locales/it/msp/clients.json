@@ -258,6 +258,10 @@
       "helper": "Imposta lo stato del cliente come attivo o inattivo"
     },
     "entraSyncStarted": "Sincronizzazione Entra avviata. ID esecuzione: {{runId}}",
+    "entraSyncStatusUnknown": "Stato di sincronizzazione non disponibile",
+    "clientNameRequired": "Il nome del cliente è obbligatorio",
+    "deactivateClientAndContacts": "Disattiva cliente e contatti",
+    "reactivateClientAndContacts": "Riattiva cliente e contatti",
     "inboundDomainAdded": "Dominio email in entrata aggiunto",
     "inboundDomainAddFailed": "Impossibile aggiungere il dominio",
     "inboundDomainRemoved": "Dominio email in entrata rimosso",
