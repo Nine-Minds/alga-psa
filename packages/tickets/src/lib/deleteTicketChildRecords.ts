@@ -33,6 +33,21 @@ export async function deleteTicketChildRecords(
       .delete();
   }
 
+  // Delete email reply tokens before comments. email_reply_tokens has a
+  // non-cascading FK to comments (tenant, comment_id), so any token referencing
+  // one of this ticket's comments must be removed first or the comments delete
+  // below trips the constraint. Match on comment_id as well as ticket_id to
+  // catch tokens whose ticket_id is null/stale but still point at a comment.
+  await trx('email_reply_tokens')
+    .where({ tenant })
+    .where((builder: Knex.QueryBuilder) => {
+      builder.where('ticket_id', ticketId);
+      if (commentIds.length > 0) {
+        builder.orWhereIn('comment_id', commentIds);
+      }
+    })
+    .delete();
+
   await trx('comments')
     .where({ ticket_id: ticketId, tenant })
     .delete();
@@ -42,10 +57,6 @@ export async function deleteTicketChildRecords(
     .delete();
 
   await trx('project_ticket_links')
-    .where({ ticket_id: ticketId, tenant })
-    .delete();
-
-  await trx('email_reply_tokens')
     .where({ ticket_id: ticketId, tenant })
     .delete();
 
