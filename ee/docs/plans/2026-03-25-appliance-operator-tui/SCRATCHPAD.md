@@ -18,7 +18,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-25) Implemented operator as Node ESM modules under `ee/appliance/operator` with a thin shell wrapper `ee/appliance/appliance`. Reason: no existing appliance package/workspace existed and ESM keeps packaging and standalone embedding simple.
 - (2026-03-25) Added runtime path abstraction with repo auto-discovery and `ALGA_APPLIANCE_ASSET_ROOT` override. Reason: required for future standalone packaging while preserving repo-hosted workflow.
 - (2026-03-25) Implemented one normalized status model (`collectStatus`) used by both TUI and non-interactive commands. Reason: avoids divergent status logic and supports consistent blocker guidance across command surfaces.
-- (2026-03-25) Kept lifecycle actions script-driven (`bootstrap-appliance.sh`, `upgrade-appliance.sh`, `reset-appliance-data.sh`, `collect-support-bundle.sh`) with phase-aware progress wrappers. Reason: minimizes operational drift and honors existing script contracts.
+- (2026-03-25) Kept lifecycle actions script-driven (`historical removed bootstrap script`, `historical removed upgrade script`, `reset-appliance-data.sh`, `collect-support-bundle.sh`) with phase-aware progress wrappers. Reason: minimizes operational drift and honors existing script contracts.
 - (2026-03-25) The current `readline` shell is not the accepted final UX. Reason: it is operationally useful, but it does not meet the product bar for a real operator TUI.
 - (2026-03-25) Ink is the intended runtime for the interactive layer. Reason: it supports the full-screen, persistent-layout, keyboard-driven interface we actually want while allowing the existing Node operator core to remain intact.
 - (2026-03-25) Replaced the interactive `readline/promises` loop with a stateful Ink app while keeping lifecycle/status modules untouched. Reason: satisfies the UX acceptance bar (`F026`-`F031`) without destabilizing non-interactive commands.
@@ -38,8 +38,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 ## Discoveries / Constraints
 
-- (2026-03-25) The repo already has operator-facing appliance scripts: `bootstrap-appliance.sh`, `upgrade-appliance.sh`, `reset-appliance-data.sh`, and `collect-support-bundle.sh`.
-- (2026-03-25) The current bootstrap and upgrade flows are already release-manifest driven under `ee/appliance/releases/<version>/release.json`.
+- (2026-03-25) The repo already has operator-facing appliance scripts: `historical removed bootstrap script`, `historical removed upgrade script`, `reset-appliance-data.sh`, and `collect-support-bundle.sh`.
+- (2026-03-25) The current bootstrap and upgrade flows are already release-manifest driven under `historical local release metadata (removed)`.
 - (2026-03-25) The operator problem is not missing capability; it is poor usability and path/command discoverability.
 - (2026-03-25) The existing shell scripts already own sensitive logic like Talos config generation, Flux install, release value rendering, and destructive reset semantics. Reimplementing them in v1 would create drift risk.
 - (2026-03-25) The existing developer CLI is Nushell-based and heavily focused on dev/build/test workflows, which makes it a poor default home for a customer-facing appliance operator surface.
@@ -58,8 +58,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-25) Plan scaffold command:
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Appliance Operator TUI"`
 - (2026-03-25) Existing appliance script entrypoints:
-  - `ee/appliance/scripts/bootstrap-appliance.sh`
-  - `ee/appliance/scripts/upgrade-appliance.sh`
+  - `historical removed bootstrap script`
+  - `historical removed upgrade script`
   - `ee/appliance/scripts/reset-appliance-data.sh`
   - `ee/appliance/scripts/collect-support-bundle.sh`
 - (2026-03-25) New operator entrypoints:
@@ -78,8 +78,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 ## Links / References
 
 - `ee/appliance/README.md`
-- `ee/appliance/scripts/bootstrap-appliance.sh`
-- `ee/appliance/scripts/upgrade-appliance.sh`
+- `historical removed bootstrap script`
+- `historical removed upgrade script`
 - `ee/appliance/appliance`
 - `ee/appliance/operator/appliance.mjs`
 - `ee/appliance/operator/lib/cli.mjs`

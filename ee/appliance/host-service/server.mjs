@@ -61,8 +61,8 @@ function networkProbeRelevant(installState) {
   if (!installState) return false;
   const phase = String(installState.phase || '').toLowerCase();
   const failurePhase = String(installState.failure?.phase || '').toLowerCase();
-  const earlyPhases = ['setup', 'dns', 'network', 'github-release-source', 'release'];
-  return earlyPhases.includes(phase) || ['network', 'dns', 'github-release-source'].includes(failurePhase);
+  const earlyPhases = ['setup', 'dns', 'network', 'registry-release-source', 'release'];
+  return earlyPhases.includes(phase) || ['network', 'dns', 'registry-release-source'].includes(failurePhase);
 }
 
 function networkProbeInputs() {
@@ -135,7 +135,7 @@ const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX
 const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
 const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
 const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
-const NETWORK_CLASS_PHASES = ['network', 'dns', 'github-release-source'];
+const NETWORK_CLASS_PHASES = ['network', 'dns', 'registry-release-source'];
 const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
 let reconcileRunning = false;
 
@@ -566,8 +566,8 @@ function preflightGuidanceForPhase(phase) {
   if (phase === 'network') {
     return 'Confirm outbound HTTPS connectivity and proxy/firewall egress rules to required endpoints.';
   }
-  if (phase === 'github-release-source') {
-    return 'Confirm access to raw.githubusercontent.com and selected channel file for the configured repo/branch.';
+  if (phase === 'registry-release-source') {
+    return 'Confirm outbound HTTPS to ghcr.io and that the selected appliance release channel exists.';
   }
   return 'Review host and network prerequisites, then retry setup.';
 }

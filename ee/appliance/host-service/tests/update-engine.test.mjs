@@ -18,8 +18,9 @@ test('runAppChannelUpdate applies channel update and persists history without OS
   fs.chmodSync(path.join(fakeBin, 'kubectl'), 0o755);
 
   fs.writeFileSync(releaseSelectionFile, JSON.stringify({
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: 'main',
+    registryHost: 'ghcr.io',
+    repository: 'nine-minds/alga-appliance-release',
+    manifestDigest: 'sha256:previous',
     runtime: { appHostname: 'psa.example.com', dnsMode: 'system', dnsServers: '' }
   }));
 

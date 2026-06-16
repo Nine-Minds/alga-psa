@@ -12,7 +12,7 @@ Working notes for the Talos appliance GitOps deployment path. This log captures 
 - (2026-03-10) Use Flux-managed GitOps for the Talos appliance instead of direct first-boot `helm upgrade --install` commands.
 - (2026-03-10) Keep the runtime split across multiple Helm releases rather than forcing an umbrella-chart refactor now. Root `helm/` owns core services; EE worker charts remain separate.
 - (2026-03-10) Treat "initial install" as "database not yet initialized" rather than "Helm release install" so restarts and release recreation stay safe.
-- (2026-03-10) Simplify the operator entrypoint to one script: `bootstrap-site.sh` now handles the `msp` namespace, required bootstrap secrets, and profile apply. Missing values are prompted interactively when stdin is a TTY.
+- (2026-03-10) Simplify the operator entrypoint to one script: `historical removed bootstrap wrapper` now handles the `msp` namespace, required bootstrap secrets, and profile apply. Missing values are prompted interactively when stdin is a TTY.
 
 ## Discoveries / Constraints
 
@@ -49,8 +49,8 @@ Working notes for the Talos appliance GitOps deployment path. This log captures 
   - `helm/templates/jobs.yaml` passes `SETUP_RUN_MIGRATIONS` and `SETUP_RUN_SEEDS`
   - `setup/entrypoint.sh` reads admin credentials from env fallbacks and still performs a DB-state seed check
 - (2026-03-10) `sh ee/appliance/scripts/deploy-app.sh --profile talos-single-node` fails clearly without kubeconfig as expected.
-- (2026-03-10) `sh ee/appliance/scripts/bootstrap-site.sh --profile talos-single-node` fails clearly without kubeconfig as expected.
-- (2026-03-10) `sh ee/appliance/scripts/bootstrap-site.sh --help` prints the simplified automation/interface contract.
+- (2026-03-10) `sh historical removed bootstrap wrapper --profile talos-single-node` fails clearly without kubeconfig as expected.
+- (2026-03-10) `sh historical removed bootstrap wrapper --help` prints the simplified automation/interface contract.
 - (2026-03-10) `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-10-talos-appliance-gitops-alga-deployment` succeeded.
 
 ## Links / References
