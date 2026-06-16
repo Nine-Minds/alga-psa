@@ -9,11 +9,6 @@ import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BulkTicketActionBar from './BulkTicketActionBar';
-import BulkAssignTicketsDialog from './BulkAssignTicketsDialog';
-import BulkAddTagsDialog from './BulkAddTagsDialog';
-import BulkSetDueDateDialog from './BulkSetDueDateDialog';
-import BulkChangeStatusDialog from './BulkChangeStatusDialog';
-import BulkChangePriorityDialog from './BulkChangePriorityDialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -42,12 +37,6 @@ import { ColumnDefinition } from '@alga-psa/types';
 import {
   deleteTickets,
   moveTicketsToBoard,
-  bulkAssignTickets,
-  bulkAddTagsToTickets,
-  bulkUpdateTicketDueDate,
-  bulkUpdateTicketStatus,
-  bulkUpdateTicketPriority,
-  type BulkTicketAssignSelection,
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
@@ -253,6 +242,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setSelectedTicketIds,
     setFilters: setTicketsRouteFilters,
     setTotalCount: setTicketsRouteTotalCount,
+    setSelectedTicketDetails: setTicketsRouteSelectedTicketDetails,
+    setSelectedTicketsSharedBoardId: setTicketsRouteSelectedTicketsSharedBoardId,
+    setIsResolvingSelectedBoards: setTicketsRouteIsResolvingSelectedBoards,
+    setPriorityOptions: setTicketsRoutePriorityOptions,
   } = useTicketsRouteState();
   const [allMatchingMode, setAllMatchingMode] = useState(false);
   // Boards resolved on demand for selected tickets that aren't on the current page
@@ -283,24 +276,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
-
-  const [isBulkAssignDialogOpen, setIsBulkAssignDialogOpen] = useState(false);
-  const [isBulkAssigning, setIsBulkAssigning] = useState(false);
-  const [bulkAssignErrors, setBulkAssignErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [isBulkTagsDialogOpen, setIsBulkTagsDialogOpen] = useState(false);
-  const [isBulkAddingTags, setIsBulkAddingTags] = useState(false);
-  const [bulkTagsErrors, setBulkTagsErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [isBulkDueDateDialogOpen, setIsBulkDueDateDialogOpen] = useState(false);
-  const [isBulkUpdatingDueDate, setIsBulkUpdatingDueDate] = useState(false);
-  const [bulkDueDateErrors, setBulkDueDateErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [isBulkStatusDialogOpen, setIsBulkStatusDialogOpen] = useState(false);
-  const [isBulkUpdatingStatus, setIsBulkUpdatingStatus] = useState(false);
-  const [bulkStatusErrors, setBulkStatusErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [bulkStatusOptions, setBulkStatusOptions] = useState<SelectOption[]>([]);
-  const [isLoadingBulkStatusOptions, setIsLoadingBulkStatusOptions] = useState(false);
-  const [isBulkPriorityDialogOpen, setIsBulkPriorityDialogOpen] = useState(false);
-  const [isBulkUpdatingPriority, setIsBulkUpdatingPriority] = useState(false);
-  const [bulkPriorityErrors, setBulkPriorityErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -1324,256 +1299,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [selectedTicketIdsArray, clearSelection, currentUser, t]);
 
-  const handleConfirmBulkAssign = useCallback(async (selection: BulkTicketAssignSelection) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.assignRequired', 'You must be logged in to reassign tickets'));
-      return;
-    }
-
-    setIsBulkAssigning(true);
-    setBulkAssignErrors([]);
-
-    try {
-      const result = await bulkAssignTickets(selectedTicketIdsArray, selection);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkAssignErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.assign.partialFailure', 'Some tickets could not be reassigned'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.assign.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? '{{count}} ticket reassigned' : '{{count}} tickets reassigned',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.assign.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? '{{count}} ticket reassigned' : '{{count}} tickets reassigned',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkAssignDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.assign.failure', 'Failed to reassign selected tickets'));
-    } finally {
-      setIsBulkAssigning(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  const handleConfirmBulkAddTags = useCallback(async (tagTexts: string[]) => {
-    if (selectedTicketIdsArray.length === 0 || tagTexts.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.tagsRequired', 'You must be logged in to add tags'));
-      return;
-    }
-
-    setIsBulkAddingTags(true);
-    setBulkTagsErrors([]);
-
-    try {
-      const result = await bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkTagsErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.tags.partialFailure', 'Tags could not be added to some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.tags.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Tags added to {{count}} ticket' : 'Tags added to {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.tags.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Tags added to {{count}} ticket' : 'Tags added to {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkTagsDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.tags.failure', 'Failed to add tags to selected tickets'));
-    } finally {
-      setIsBulkAddingTags(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  const handleConfirmBulkDueDate = useCallback(async (dueDateIso: string | null) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.dueDateRequired', 'You must be logged in to update tickets'));
-      return;
-    }
-
-    setIsBulkUpdatingDueDate(true);
-    setBulkDueDateErrors([]);
-
-    try {
-      const result = await bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkDueDateErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.dueDate.partialFailure', 'Due date could not be updated on some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.dueDate.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Due date updated on {{count}} ticket' : 'Due date updated on {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.dueDate.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Due date updated on {{count}} ticket' : 'Due date updated on {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkDueDateDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.dueDate.failure', 'Failed to update due date on selected tickets'));
-    } finally {
-      setIsBulkUpdatingDueDate(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  // Load statuses for the selected tickets' shared board when the Status dialog opens.
-  useEffect(() => {
-    if (!isBulkStatusDialogOpen) return;
-    if (!selectedTicketsSharedBoardId) {
-      setBulkStatusOptions([]);
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingBulkStatusOptions(true);
-    getBoardTicketStatuses(selectedTicketsSharedBoardId)
-      .then(statuses => {
-        if (cancelled) return;
-        setBulkStatusOptions(statuses.map((s: { status_id: string; name: string }) => ({
-          value: s.status_id,
-          label: s.name,
-        })));
-      })
-      .catch(error => {
-        if (cancelled) return;
-        console.error('[TicketingDashboard] Failed to load bulk status options:', error);
-        setBulkStatusOptions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingBulkStatusOptions(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isBulkStatusDialogOpen, selectedTicketsSharedBoardId]);
-
-  const handleConfirmBulkStatus = useCallback(async (statusId: string) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.statusRequired', 'You must be logged in to update tickets'));
-      return;
-    }
-
-    setIsBulkUpdatingStatus(true);
-    setBulkStatusErrors([]);
-
-    try {
-      const result = await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkStatusErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.status.partialFailure', 'Status could not be updated on some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.status.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Status updated on {{count}} ticket' : 'Status updated on {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.status.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Status updated on {{count}} ticket' : 'Status updated on {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkStatusDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.status.failure', 'Failed to update status on selected tickets'));
-    } finally {
-      setIsBulkUpdatingStatus(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  const handleConfirmBulkPriority = useCallback(async (priorityId: string) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.priorityRequired', 'You must be logged in to update tickets'));
-      return;
-    }
-
-    setIsBulkUpdatingPriority(true);
-    setBulkPriorityErrors([]);
-
-    try {
-      const result = await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkPriorityErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.priority.partialFailure', 'Priority could not be updated on some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.priority.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Priority updated on {{count}} ticket' : 'Priority updated on {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.priority.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Priority updated on {{count}} ticket' : 'Priority updated on {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkPriorityDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.priority.failure', 'Failed to update priority on selected tickets'));
-    } finally {
-      setIsBulkUpdatingPriority(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
   // When the bundle dialog opens, check which of the selected tickets are already
   // bundle masters of other bundles. Masters can't be added as children, so we must
   // either force them to BE the master or block the operation entirely.
@@ -1714,7 +1439,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useEffect(() => {
     setTicketsRouteFilters(exportFilters);
     setTicketsRouteTotalCount(totalCount);
-  }, [exportFilters, setTicketsRouteFilters, setTicketsRouteTotalCount, totalCount]);
+    setTicketsRouteSelectedTicketDetails(selectedTicketDetails);
+    setTicketsRouteSelectedTicketsSharedBoardId(selectedTicketsSharedBoardId);
+    setTicketsRouteIsResolvingSelectedBoards(isResolvingSelectedBoards);
+    setTicketsRoutePriorityOptions(priorityOptions);
+  }, [
+    exportFilters,
+    isResolvingSelectedBoards,
+    priorityOptions,
+    selectedTicketDetails,
+    selectedTicketsSharedBoardId,
+    setTicketsRouteFilters,
+    setTicketsRouteIsResolvingSelectedBoards,
+    setTicketsRoutePriorityOptions,
+    setTicketsRouteSelectedTicketDetails,
+    setTicketsRouteSelectedTicketsSharedBoardId,
+    setTicketsRouteTotalCount,
+    totalCount,
+  ]);
 
   const printColumns = useMemo<PrintColumnOption<ITicketListItem>[]>(() => {
     const availableColumns = createTicketColumns({
@@ -2811,95 +2553,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBundleDialogOpen(true);
         }}
         onAssign={() => {
-          setBulkAssignErrors([]);
-          setIsBulkAssignDialogOpen(true);
+          router.push('/msp/tickets/bulk-assign');
         }}
         onStatus={() => {
-          setBulkStatusErrors([]);
-          setBulkStatusOptions([]);
-          setIsBulkStatusDialogOpen(true);
+          router.push('/msp/tickets/bulk-status');
         }}
         onPriority={() => {
-          setBulkPriorityErrors([]);
-          setIsBulkPriorityDialogOpen(true);
+          router.push('/msp/tickets/bulk-priority');
         }}
         onTags={() => {
-          setBulkTagsErrors([]);
-          setIsBulkTagsDialogOpen(true);
+          router.push('/msp/tickets/bulk-tags');
         }}
         onDueDate={() => {
-          setBulkDueDateErrors([]);
-          setIsBulkDueDateDialogOpen(true);
+          router.push('/msp/tickets/bulk-due-date');
         }}
         onDelete={() => {
           setBulkDeleteErrors([]);
           setIsBulkDeleteDialogOpen(true);
         }}
         onClear={clearSelection}
-      />
-      <BulkAssignTicketsDialog
-        idPrefix={`${id}-bulk-assign`}
-        isOpen={isBulkAssignDialogOpen && hasSelection}
-        onClose={() => setIsBulkAssignDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        users={initialUsers}
-        failed={bulkAssignErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkAssigning}
-        onConfirm={handleConfirmBulkAssign}
-      />
-      <BulkAddTagsDialog
-        idPrefix={`${id}-bulk-tags`}
-        isOpen={isBulkTagsDialogOpen && hasSelection}
-        onClose={() => setIsBulkTagsDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        failed={bulkTagsErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkAddingTags}
-        onConfirm={handleConfirmBulkAddTags}
-      />
-      <BulkSetDueDateDialog
-        idPrefix={`${id}-bulk-due-date`}
-        isOpen={isBulkDueDateDialogOpen && hasSelection}
-        onClose={() => setIsBulkDueDateDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        failed={bulkDueDateErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkUpdatingDueDate}
-        onConfirm={handleConfirmBulkDueDate}
-      />
-      <BulkChangeStatusDialog
-        idPrefix={`${id}-bulk-status`}
-        isOpen={isBulkStatusDialogOpen && hasSelection && !!selectedTicketsSharedBoardId}
-        onClose={() => setIsBulkStatusDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        statuses={bulkStatusOptions}
-        isLoadingStatuses={isLoadingBulkStatusOptions}
-        failed={bulkStatusErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkUpdatingStatus}
-        onConfirm={handleConfirmBulkStatus}
-      />
-      <BulkChangePriorityDialog
-        idPrefix={`${id}-bulk-priority`}
-        isOpen={isBulkPriorityDialogOpen && hasSelection}
-        onClose={() => setIsBulkPriorityDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        options={priorityOptions}
-        failed={bulkPriorityErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkUpdatingPriority}
-        onConfirm={handleConfirmBulkPriority}
       />
     </ReflectionContainer>
     </>

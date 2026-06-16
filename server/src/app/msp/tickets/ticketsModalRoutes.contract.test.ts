@@ -61,9 +61,101 @@ describe('tickets modal route infrastructure', () => {
     expect(provider).toContain('totalCount: number');
     expect(provider).toContain('selectedTicketIds: Set<string>');
     expect(provider).toContain('selectedTicketIdsArray');
+    expect(provider).toContain('selectedTicketDetails: TicketsRouteSelectedTicketDetail[]');
+    expect(provider).toContain('selectedTicketsSharedBoardId: string | null');
+    expect(provider).toContain('priorityOptions: SelectOption[]');
     expect(dashboard).toContain('useTicketsRouteState()');
     expect(dashboard).toContain('setTicketsRouteFilters(exportFilters)');
     expect(dashboard).toContain('setTicketsRouteTotalCount(totalCount)');
     expect(dashboard).toContain('setSelectedTicketIds');
+    expect(dashboard).toContain('setTicketsRouteSelectedTicketDetails(selectedTicketDetails)');
+    expect(dashboard).toContain('setTicketsRouteSelectedTicketsSharedBoardId(selectedTicketsSharedBoardId)');
+    expect(dashboard).toContain('setTicketsRoutePriorityOptions(priorityOptions)');
+  });
+
+  it('routes all extracted bulk dialogs through plain and intercepted entries', () => {
+    const cases = [
+      ['bulk-assign', 'BulkAssignTicketsRouteContent', 'BulkAssignTicketsDialog', "bulkAssignTickets(selectedTicketIdsArray, selection)"],
+      ['bulk-tags', 'BulkAddTagsRouteClient', 'BulkAddTagsDialog', 'bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts)'],
+      ['bulk-due-date', 'BulkSetDueDateRouteClient', 'BulkSetDueDateDialog', 'bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso)'],
+      ['bulk-status', 'BulkChangeStatusRouteClient', 'BulkChangeStatusDialog', 'bulkUpdateTicketStatus(selectedTicketIdsArray, statusId)'],
+      ['bulk-priority', 'BulkChangePriorityRouteClient', 'BulkChangePriorityDialog', 'bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId)'],
+    ] as const;
+
+    for (const [segment, routeComponent, dialogName, actionCall] of cases) {
+      const plainRoute = read(`server/src/app/msp/tickets/${segment}/page.tsx`);
+      const modalRoute = read(`server/src/app/msp/tickets/@modal/(.)${segment}/page.tsx`);
+
+      expect(plainRoute).toContain('closeMode="replace"');
+      expect(plainRoute).toContain(routeComponent);
+      expect(modalRoute).toContain('closeMode="back"');
+      expect(modalRoute).toContain(routeComponent);
+
+      const routeClientPath = segment === 'bulk-assign'
+        ? 'server/src/app/msp/tickets/_components/BulkAssignTicketsRouteClient.tsx'
+        : segment === 'bulk-tags'
+          ? 'server/src/app/msp/tickets/_components/BulkAddTagsRouteClient.tsx'
+          : segment === 'bulk-due-date'
+            ? 'server/src/app/msp/tickets/_components/BulkSetDueDateRouteClient.tsx'
+            : segment === 'bulk-status'
+              ? 'server/src/app/msp/tickets/_components/BulkChangeStatusRouteClient.tsx'
+              : 'server/src/app/msp/tickets/_components/BulkChangePriorityRouteClient.tsx';
+      const routeClient = read(routeClientPath);
+
+      expect(routeClient).toContain(dialogName);
+      expect(routeClient).toContain('useTicketBulkRouteDialog(closeMode)');
+      expect(routeClient).toContain(actionCall);
+      expect(routeClient).toContain('keepFailedSelection(result.failed)');
+      expect(routeClient).toContain('refreshList()');
+      expect(routeClient).toContain('refreshAndClose()');
+    }
+  });
+
+  it('keeps the bulk action bar in the list while navigating to bulk modal routes', () => {
+    const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
+
+    expect(dashboard).toContain('<BulkTicketActionBar');
+    expect(dashboard).toContain("router.push('/msp/tickets/bulk-assign')");
+    expect(dashboard).toContain("router.push('/msp/tickets/bulk-tags')");
+    expect(dashboard).toContain("router.push('/msp/tickets/bulk-due-date')");
+    expect(dashboard).toContain("router.push('/msp/tickets/bulk-status')");
+    expect(dashboard).toContain("router.push('/msp/tickets/bulk-priority')");
+  });
+
+  it('keeps select-all-matching selections in the shared selected id set for routed bulk actions', () => {
+    const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
+
+    expect(dashboard).toContain('const allIds = await getAllMatchingTicketIds(filters)');
+    expect(dashboard).toContain('setSelectedTicketIds(new Set(allIds))');
+    expect(dashboard).toContain('setAllMatchingMode(true)');
+  });
+
+  it('retains failed-ticket selection after partial bulk failures', () => {
+    for (const routeClientPath of [
+      'server/src/app/msp/tickets/_components/BulkAssignTicketsRouteClient.tsx',
+      'server/src/app/msp/tickets/_components/BulkAddTagsRouteClient.tsx',
+      'server/src/app/msp/tickets/_components/BulkSetDueDateRouteClient.tsx',
+      'server/src/app/msp/tickets/_components/BulkChangeStatusRouteClient.tsx',
+      'server/src/app/msp/tickets/_components/BulkChangePriorityRouteClient.tsx',
+    ]) {
+      const routeClient = read(routeClientPath);
+
+      expect(routeClient).toContain('setFailed(result.failed)');
+      expect(routeClient).toContain('keepFailedSelection(result.failed)');
+    }
+  });
+
+  it('does not import the extracted bulk dialogs into the tickets dashboard', () => {
+    const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
+
+    for (const dialogName of [
+      'BulkAssignTicketsDialog',
+      'BulkAddTagsDialog',
+      'BulkSetDueDateDialog',
+      'BulkChangeStatusDialog',
+      'BulkChangePriorityDialog',
+    ]) {
+      expect(dashboard).not.toContain(dialogName);
+    }
   });
 });

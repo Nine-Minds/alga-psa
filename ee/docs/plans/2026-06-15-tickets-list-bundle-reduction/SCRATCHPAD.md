@@ -290,3 +290,16 @@ Results:
 - OQ2: Preferred shared-state mechanism (existing store vs new React context)?
 - OQ3: Are poor effort:benefit bulk dialogs allowed to stay in-list?
 - OQ4: Migrate contact-context `<ClientDetails>` usages too?
+
+## 2026-06-16 — Bulk dialog route extraction (F060-F066, T060-T068)
+
+- Added plain + intercepted modal routes for the five targeted bulk dialogs: `/msp/tickets/bulk-assign`, `/msp/tickets/bulk-tags`, `/msp/tickets/bulk-due-date`, `/msp/tickets/bulk-status`, and `/msp/tickets/bulk-priority`, each with a matching `@modal/(.)...` route.
+- Added one route-client wrapper per dialog under `server/src/app/msp/tickets/_components/`, each importing only its dialog and the existing server action it needs.
+- Kept `BulkTicketActionBar` in `TicketingDashboard`; its five extracted actions now navigate to the corresponding modal route. Move/delete/bundle remain local because they are outside the seven-dialog PRD scope.
+- Extended `TicketsRouteProvider` with the small bits routed bulk dialogs need from the mounted list: selected ticket details for failure labels, the shared board id/loading state for status options, and priority options for the priority picker.
+- Removed all five bulk dialog imports/render sites and their local open/error/submitting state from `TicketingDashboard`.
+- Behavior decisions: full-success bulk actions call `router.refresh()` and close; partial-success actions refresh, keep the modal open, surface per-ticket errors, and narrow selection to failed ticket IDs; successful assign/tags/due-date/status/priority actions continue to keep selection when closing, matching the old chaining behavior.
+- Focused test: `cd server && npx vitest run src/app/msp/tickets/ticketsModalRoutes.contract.test.ts` passed (10 tests).
+- Typecheck: `cd server && NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck` still fails only on known unrelated missing modules (`@alga-psa/user-activities/...`, `@alga-psa/agent-tooling/registry/schema`).
+- Production build: `cd server && EDITION=community NEXT_PUBLIC_EDITION=community NODE_ENV=production npm run build` completed successfully with the existing warnings/dynamic-error note.
+- Post-build manifest check after bulk extraction: `/msp/tickets` client chunk references are **96 JS chunks**, **7,969,966 bytes**; `TicketingDashboard.tsx` no longer imports/renders the five bulk dialog components; `/msp/tickets` chunk text search found **0 hits** for the five bulk dialog component names.
