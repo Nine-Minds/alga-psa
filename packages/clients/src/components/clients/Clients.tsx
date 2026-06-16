@@ -44,7 +44,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from './ClientDetails';
+import ClientQuickView from './ClientQuickView';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
 import { DeleteEntityDialog, handleError, useClientDrawer } from '@alga-psa/ui';
@@ -337,6 +337,20 @@ const Clients: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // This list fetches its own data client-side, so router.refresh() (used by the global
+  // quick-create) won't reload it. Listen for the quick-create "created" event and re-fetch.
+  // Event name is mirrored in QuickCreateDialog.tsx.
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'client') {
+        setRefreshKey((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
+  }, []);
 
   useEffect(() => {
     if (searchParams) {
@@ -1776,7 +1790,7 @@ const Clients: React.FC = () => {
         }}
       >
         {quickViewClient && (
-          <ClientDetails
+          <ClientQuickView
             client={quickViewClient}
             isInDrawer={true}
             quickView={true}

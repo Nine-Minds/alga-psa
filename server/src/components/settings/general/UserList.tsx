@@ -10,7 +10,7 @@ import { getContactAvatarUrlAction, getUserAvatarUrlAction } from '@alga-psa/use
 import { deleteUser, getUsersClientInfo } from '@alga-psa/users/actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   DropdownMenu,
@@ -203,7 +203,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
       const client = await getClientById(clientId);
       if (client) {
         openDrawer(
-          <ClientDetails
+          <ClientQuickView
             client={client}
             isInDrawer={true}
             quickView={true}

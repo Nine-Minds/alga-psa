@@ -258,6 +258,10 @@
       "helper": "Stel de clientstatus in op actief of inactief"
     },
     "entraSyncStarted": "Entra-synchronisatie gestart. Uitvoerings-ID: {{runId}}",
+    "entraSyncStatusUnknown": "Synchronisatiestatus niet beschikbaar",
+    "clientNameRequired": "Klantnaam is vereist",
+    "deactivateClientAndContacts": "Klant en contacten deactiveren",
+    "reactivateClientAndContacts": "Klant en contacten opnieuw activeren",
     "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
     "inboundDomainAddFailed": "Kan domein niet toevoegen",
     "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",

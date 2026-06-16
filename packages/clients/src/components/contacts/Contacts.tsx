@@ -32,7 +32,7 @@ import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
-import ClientDetails from '../clients/ClientDetails';
+import ClientQuickView from '../clients/ClientQuickView';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -139,6 +139,20 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     // Force refresh by changing a key to trigger re-render
     setRefreshKey(prev => prev + 1);
   };
+
+  // This list fetches its own data client-side, so router.refresh() (used by the global
+  // quick-create) won't reload it. Listen for the quick-create "created" event and re-fetch.
+  // Event name is mirrored in QuickCreateDialog.tsx.
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'contact') {
+        setRefreshKey(prev => prev + 1);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
+  }, []);
 
   const handleChangesSaved = () => {
     setChangesSavedInDrawer(true);
@@ -694,10 +708,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             return;
           }
           openDrawer(
-            <ClientDetails
+            <ClientQuickView
               client={client}
-              documents={[]}
-              contacts={[]}
               isInDrawer={true}
               quickView={true}
             />

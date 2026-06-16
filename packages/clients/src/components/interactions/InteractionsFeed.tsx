@@ -9,7 +9,7 @@ import { getInteractionById } from '@alga-psa/clients/actions';
 import { getInteractionsForEntity } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from '@alga-psa/ui';
-import { InteractionDetails } from '@alga-psa/clients/components';
+import InteractionDetails from './InteractionDetails';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';

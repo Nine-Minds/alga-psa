@@ -258,6 +258,10 @@
       "helper": "Legen Sie den Clientstatus als aktiv oder inaktiv fest"
     },
     "entraSyncStarted": "Entra-Synchronisierung gestartet. Lauf-ID: {{runId}}",
+    "entraSyncStatusUnknown": "Synchronisierungsstatus nicht verfügbar",
+    "clientNameRequired": "Der Name des Kunden ist erforderlich",
+    "deactivateClientAndContacts": "Client und Kontakte deaktivieren",
+    "reactivateClientAndContacts": "Client und Kontakte reaktivieren",
     "inboundDomainAdded": "Eingehende E-Mail-Domäne hinzugefügt",
     "inboundDomainAddFailed": "Domäne konnte nicht hinzugefügt werden",
     "inboundDomainRemoved": "Eingehende E-Mail-Domäne entfernt",

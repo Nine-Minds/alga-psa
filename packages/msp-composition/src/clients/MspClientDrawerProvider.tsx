@@ -2,7 +2,7 @@
 
 import React, { useCallback, useMemo, type ReactNode } from 'react';
 import { useDrawer, ClientDrawerContext } from '@alga-psa/ui';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import { getClientByIdForAssets } from '@alga-psa/assets/actions/clientLookupActions';
 import { MspClientCrossFeatureProvider } from './MspClientCrossFeatureProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -33,7 +33,7 @@ export function MspClientDrawerProvider({ children }: { children: ReactNode }) {
       }
       replaceDrawer(
         <MspClientCrossFeatureProvider>
-          <ClientDetails
+          <ClientQuickView
             id="client-drawer-details"
             client={clientData}
             isInDrawer={true}
