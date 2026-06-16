@@ -494,10 +494,32 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .where({ tenant, item_type: 'ticket' })
         .orderBy('priority_name', 'asc'),
       
-      // Categories
-      trx('categories')
-        .where({ tenant })
-        .orderBy('category_name', 'asc')
+      // Categories for the ticket's current board. This must match
+      // getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly
+      // show tenant-wide categories before the client-side board fetch returns.
+      (async () => {
+        if (!ticket.board_id) {
+          return trx<ITicketCategory>('categories')
+            .where({ tenant })
+            .orderBy('category_name', 'asc');
+        }
+
+        const ticketBoard = await trx('boards')
+          .where({ tenant, board_id: ticket.board_id })
+          .select('category_type')
+          .first();
+
+        if (ticketBoard?.category_type === 'itil') {
+          return trx<ITicketCategory>('categories')
+            .where({ tenant })
+            .where('is_from_itil_standard', true)
+            .orderBy('category_name', 'asc');
+        }
+
+        return trx<ITicketCategory>('categories')
+          .where({ tenant, board_id: ticket.board_id })
+          .orderBy('category_name', 'asc');
+      })()
     ]);
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---

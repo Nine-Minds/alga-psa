@@ -25,3 +25,13 @@ describe('MSP consolidated ticket data contact authorship contract', () => {
     expect(source).toContain('contactMap,');
   });
 });
+
+describe('MSP consolidated ticket data category scoping contract', () => {
+  it('T025: scopes hydrated ticket categories to the ticket board before client refresh', () => {
+    const source = readOptimizedTicketActionsSource();
+
+    expect(source).toContain("getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly");
+    expect(source).toContain("where({ tenant, board_id: ticket.board_id })");
+    expect(source).toContain("where('is_from_itil_standard', true)");
+  });
+});
