@@ -23,6 +23,7 @@ Our APIs are segmented into two editions:
 - Advanced/premium features
 - Current EE-only APIs:
   - Tenant Provisioning API (see [tenant_provisioning_api.md](tenant_provisioning_api.md))
+  - Hudu Integration Status API (see Section 6)
 
 The edition is controlled by the `EDITION` environment variable:
 - `EDITION=community` for CE deployments
@@ -126,7 +127,7 @@ The following REST API groups are available in the Community Edition under the b
 
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
-- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling and asset links (see below).
+- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling and asset links (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`.
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
@@ -137,7 +138,7 @@ The following REST API groups are available in the Community Edition under the b
 When multiple tickets describe the same underlying issue, they can be grouped under one *master* ticket using the bundle sub-resource at `/api/v1/tickets/{id}/bundle`. This feature is available to both PSA and AlgaDesk tenants.
 
 | Method | Path | Purpose |
-|--------|------|---------|
+|--------|------|-------|
 | `GET` | `/tickets/{id}/bundle` | Return the ticket's bundle role (`master`, `child`, or `standalone`), the master ticket, children, and settings |
 | `POST` | `/tickets/{id}/bundle` | Create a bundle with `{id}` as master. Requires `child_ticket_ids` (array of UUIDs); accepts optional `mode` (`link_only` or `sync_updates`, default `sync_updates`) |
 | `DELETE` | `/tickets/{id}/bundle` | Detach all children and remove bundle settings |
@@ -155,7 +156,7 @@ When multiple tickets describe the same underlying issue, they can be grouped un
 Assets and tickets can be linked to each other (the same association surfaced in the asset and ticket detail UIs). The link is a single record readable and writable from either side.
 
 | Method | Path | Purpose |
-|--------|------|---------|
+|--------|------|-------|
 | `GET` | `/assets/{id}/tickets` | List tickets linked to an asset |
 | `POST` | `/assets/{id}/tickets` | Link a ticket to an asset. Requires `ticket_id`; accepts optional `relationship_type` (default `affected`) and `notes` |
 | `DELETE` | `/assets/{id}/tickets/{ticketId}` | Remove the link between an asset and a ticket |
@@ -167,6 +168,7 @@ Assets and tickets can be linked to each other (the same association surfaced in
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
+- **Hudu Integration Status:** `GET /api/integrations/hudu` returns connection health for the tenant's Hudu integration: `status`, `baseUrl`, `connectedAt`, `lastSyncedAt`, and `passwordAccess` (whether the Hudu API key can reach the password endpoints). Connection setup, company mapping, and asset layout mapping are configured through the Alga PSA UI at **Settings → Integrations → Hudu**, not via REST. Requires the `system_settings` read permission; available on EE deployments with the Hudu feature enabled. See [hudu.md](../integrations/hudu.md) for the full admin guide.
 
 ## 7. Development Guidelines
 
