@@ -505,8 +505,8 @@ export function validateSetupInputs(raw, options = {}) {
   const dnsMode = String(raw.dnsMode || 'system').trim();
   const dnsServers = String(raw.dnsServers || '').trim();
   // Optional advanced override: pin to a specific release version or digest
-  // instead of following the channel tag. There is no repoUrl/repoBranch any
-  // more -- release metadata is resolved from the OCI registry by channel.
+  // instead of following the channel tag; release metadata is resolved from
+  // the OCI registry.
   const releaseRef = String(raw.releaseRef || '').trim();
   const initialTenant = options.requireInitialTenant === false ? null : normalizeInitialTenant(raw);
 
@@ -1078,7 +1078,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n appliance-system create secret generic appliance-status-auth --from-literal=token=${shellQuote(statusToken)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     licenseSeedCmd,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -k ${shellQuote(tempDir)}`,
-    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(manifest.version)} --from-literal=algaCoreTag=${shellQuote(manifest.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(manifest.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(manifest.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(manifest.images?.temporalWorker || '')} --from-literal=controlPlaneTag=${shellQuote(manifest.controlPlane || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(manifest.version)} --from-literal=registryHost=${shellQuote(releaseSelection.registryHost || DEFAULT_REGISTRY_HOST)} --from-literal=repository=${shellQuote(releaseSelection.repository || DEFAULT_RELEASE_REPOSITORY)} --from-literal=manifestDigest=${shellQuote(releaseSelection.manifestDigest || '')} --from-literal=algaCoreTag=${shellQuote(manifest.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(manifest.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(manifest.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(manifest.images?.temporalWorker || '')} --from-literal=controlPlaneTag=${shellQuote(manifest.controlPlane || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
   ];
 
   for (const command of commands) {

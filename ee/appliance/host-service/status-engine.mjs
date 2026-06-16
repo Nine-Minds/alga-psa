@@ -103,7 +103,7 @@ function classifyFailureCategory(phase, status, failure) {
     return 'network';
   }
   if (lowerPhase.includes('github') || lowerStatus.includes('release') || lowerStep.includes('channel')) {
-    return 'github-release-source';
+    return 'registry-release-source';
   }
   if (lowerPhase.includes('k3s') || lowerStatus.includes('k3s')) {
     return 'k3s';
@@ -129,7 +129,7 @@ function isEarlyKubernetesBootstrapPhase(phase) {
     'setup',
     'dns',
     'network',
-    'github-release-source',
+    'registry-release-source',
     'release',
     'storage',
     'k3s',
@@ -217,8 +217,8 @@ function guidanceForCategory(category) {
   if (category === 'network') {
     return 'Check outbound HTTPS, proxy variables, and firewall egress policy.';
   }
-  if (category === 'github-release-source') {
-    return 'Verify GitHub repo/branch/channel file access and proxy/firewall policy.';
+  if (category === 'registry-release-source') {
+    return 'Verify GHCR access, the selected appliance release channel, and proxy/firewall policy.';
   }
   if (category === 'k3s') {
     return 'Inspect k3s installer output and `systemctl status k3s` on the host.';
@@ -238,7 +238,7 @@ function guidanceForCategory(category) {
   return 'Inspect app pods/events and reconcile blockers for login readiness.';
 }
 
-const NETWORK_CLASS_CATEGORIES = ['network', 'dns', 'github-release-source'];
+const NETWORK_CLASS_CATEGORIES = ['network', 'dns', 'registry-release-source'];
 
 // Builds a failure-summary entry from a live network probe. When `resolved` is
 // true the probe currently passes but a network-class failure was previously

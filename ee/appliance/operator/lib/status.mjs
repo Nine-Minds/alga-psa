@@ -1,4 +1,3 @@
-import { readReleaseManifest } from './releases.mjs';
 import { ShellRunner } from './runner.mjs';
 
 const PSA_COMPONENTS = [
@@ -394,7 +393,7 @@ function determineTopBlocker(status) {
     return {
       layer: 'Flux source/reconcile failure',
       reason: 'One or more Flux resources are not Ready',
-      nextAction: 'Review Flux GitRepository and Kustomization conditions.',
+      nextAction: 'Review Flux source and Kustomization conditions.',
     };
   }
 
@@ -469,8 +468,7 @@ function summarizeLoginProbe(probeOutput, appUrl) {
 
 function toCanonicalStatus(status) {
   const sourceRevision = (status.flux.sources || []).find((entry) => entry.name === 'alga-appliance')?.revision || null;
-  const releaseBranch = status.release.metadata?.app?.releaseBranch || null;
-  const gitRevision = sourceRevision && releaseBranch ? `${releaseBranch}@${sourceRevision}` : releaseBranch || sourceRevision;
+  const gitRevision = sourceRevision || null;
 
   const componentRows = status.workloads.components.map((component) => ({
     name: component.name,
@@ -569,8 +567,8 @@ function toCanonicalStatus(status) {
     release: {
       selectedChannel: status.release.selectedChannel,
       selectedReleaseVersion: status.release.selectedReleaseVersion,
-      appVersion: status.release.metadata?.app?.version || null,
-      channel: status.release.metadata?.channel || null,
+      appVersion: status.release.appVersion || null,
+      channel: status.release.selectedChannel || null,
       gitRevision,
     },
     urls: {
@@ -780,11 +778,15 @@ export async function collectStatus(env, options = {}) {
   };
 
   if (cluster.apiReachable) {
-    const sources = await kubeJson(shell, kubeconfig, 'flux-system', 'gitrepositories.source.toolkit.fluxcd.io');
+    const gitSources = await kubeJson(shell, kubeconfig, 'flux-system', 'gitrepositories.source.toolkit.fluxcd.io');
+    const ociSources = await kubeJson(shell, kubeconfig, 'flux-system', 'ocirepositories.source.toolkit.fluxcd.io');
     const kustomizations = await kubeJson(shell, kubeconfig, 'flux-system', 'kustomizations.kustomize.toolkit.fluxcd.io');
     const helmReleases = await kubeJson(shell, kubeconfig, 'alga-system', 'helmreleases.helm.toolkit.fluxcd.io');
 
-    flux.sources = summarizeFluxItems(sources.json?.items);
+    flux.sources = [
+      ...summarizeFluxItems(gitSources.json?.items),
+      ...summarizeFluxItems(ociSources.json?.items),
+    ];
     flux.kustomizations = summarizeFluxItems(kustomizations.json?.items);
     flux.helmReleases = summarizeFluxItems(helmReleases.json?.items);
     flux.status = mapRollupStatus([...flux.sources, ...flux.kustomizations], 'unknown');
@@ -816,7 +818,10 @@ export async function collectStatus(env, options = {}) {
   const release = {
     selectedChannel: null,
     selectedReleaseVersion: null,
-    metadata: null,
+    appVersion: null,
+    manifestDigest: null,
+    registryHost: null,
+    repository: null,
     appUrl: env.appUrl,
     desiredImages: {
       setupImage: null,
@@ -840,8 +845,13 @@ export async function collectStatus(env, options = {}) {
 
   if (cluster.apiReachable) {
     const selection = await kubeJson(shell, kubeconfig, 'alga-system', 'configmap/appliance-release-selection');
-    release.selectedChannel = selection.json?.data?.selectedChannel || null;
-    release.selectedReleaseVersion = selection.json?.data?.releaseVersion || null;
+    const selectionData = selection.json?.data || {};
+    release.selectedChannel = selectionData.selectedChannel || selectionData.channel || null;
+    release.selectedReleaseVersion = selectionData.releaseVersion || selectionData.selectedReleaseVersion || null;
+    release.appVersion = selectionData.appVersion || null;
+    release.manifestDigest = selectionData.manifestDigest || null;
+    release.registryHost = selectionData.registryHost || null;
+    release.repository = selectionData.repository || null;
 
     const values = await kubeJson(shell, kubeconfig, 'alga-system', 'configmap/appliance-values-alga-core');
     const parsedAppUrl = parseAppUrlFromAlgaCoreConfigMap(values.json);
@@ -885,14 +895,6 @@ export async function collectStatus(env, options = {}) {
           bootstrap.seed.usersCount = parsed;
         }
       }
-    }
-  }
-
-  if (release.selectedReleaseVersion) {
-    try {
-      release.metadata = readReleaseManifest(env.runtime.releasesDir, release.selectedReleaseVersion);
-    } catch {
-      release.metadata = null;
     }
   }
 

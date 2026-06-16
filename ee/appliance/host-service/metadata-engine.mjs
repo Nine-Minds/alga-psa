@@ -84,8 +84,9 @@ export function persistMaintenanceMetadata(options = {}) {
     app: {
       selectedChannel: releaseSelection.selectedChannel || releaseSelection.channel || null,
       selectedReleaseVersion: releaseSelection.selectedReleaseVersion || null,
-      repoUrl: releaseSelection.repoUrl || null,
-      repoBranch: releaseSelection.repoBranch || null,
+      registryHost: releaseSelection.registryHost || null,
+      repository: releaseSelection.repository || null,
+      manifestDigest: releaseSelection.manifestDigest || null,
       lastKnownInstallStatus: installState.status || null,
       lastKnownPhase: installState.phase || null,
       lastAppUpdateAt: existing.app?.lastAppUpdateAt || null

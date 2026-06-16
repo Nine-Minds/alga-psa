@@ -40,9 +40,7 @@ function supportBundlePayload() {
     ['host/ip-addresses.txt', 'ip addr'],
     ['host/routes.txt', 'ip route'],
     ['host/resolv-conf.txt', 'cat /etc/resolv.conf'],
-    ['host/dns-lookup-github.txt', 'getent hosts raw.githubusercontent.com'],
     ['host/dns-lookup-ghcr.txt', 'getent hosts ghcr.io'],
-    ['host/https-github.txt', 'curl -I --max-time 10 https://raw.githubusercontent.com'],
     ['host/https-ghcr.txt', 'curl -I --max-time 10 https://ghcr.io/v2/']
   ];
 

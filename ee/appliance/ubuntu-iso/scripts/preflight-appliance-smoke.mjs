@@ -6,47 +6,34 @@ import { spawnSync } from 'node:child_process';
 import { parse, parseAllDocuments } from 'yaml';
 
 const repoRoot = path.resolve(path.join(import.meta.dirname, '..', '..', '..', '..'));
-const defaultRepoUrl = 'https://github.com/Nine-Minds/alga-psa.git';
 const expectedHelmReleases = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
 
 function parseArgs(argv) {
   const args = {
     channel: 'stable',
-    repoUrl: defaultRepoUrl,
-    repoBranch: '',
     iso: '',
     workRoot: '',
-    allowChannelBranch: false,
-    allowUnpushed: false,
-    skipRemote: false,
     keepExtracted: false
   };
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--channel') args.channel = argv[++i] || '';
-    else if (arg === '--repo-url') args.repoUrl = argv[++i] || '';
-    else if (arg === '--repo-branch') args.repoBranch = argv[++i] || '';
     else if (arg === '--iso') args.iso = argv[++i] || '';
     else if (arg === '--work-root') args.workRoot = argv[++i] || '';
-    else if (arg === '--allow-channel-branch') args.allowChannelBranch = true;
-    else if (arg === '--allow-unpushed') args.allowUnpushed = true;
-    else if (arg === '--skip-remote') args.skipRemote = true;
     else if (arg === '--keep-extracted') args.keepExtracted = true;
     else if (arg === '--help' || arg === '-h') args.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
 
   args.channel = String(args.channel || '').trim();
-  args.repoUrl = String(args.repoUrl || '').trim();
-  args.repoBranch = String(args.repoBranch || '').trim();
   args.iso = String(args.iso || '').trim();
   args.workRoot = String(args.workRoot || '').trim();
   return args;
 }
 
 function usage() {
-  return `Usage: node ee/appliance/ubuntu-iso/scripts/preflight-appliance-smoke.mjs [options]\n\nRequired for smoke unless --allow-channel-branch is set:\n  --repo-branch <branch>       Branch Flux will reconcile during the VM run\n\nOptions:\n  --channel <stable|nightly>   Release channel submitted to setup (default: stable)\n  --repo-url <url>             GitHub repo URL submitted to setup\n  --iso <path>                 Extract and validate a built appliance ISO\n  --work-root <path>           Validate an ISO build work root containing iso-root\n  --allow-channel-branch       Permit blank repoBranch and validate channel-selected branch\n  --allow-unpushed             Do not require local HEAD to be present on the selected remote branch\n  --skip-remote                Skip remote branch freshness checks\n  --keep-extracted             Keep temporary ISO extraction directory\n`;
+  return `Usage: node ee/appliance/ubuntu-iso/scripts/preflight-appliance-smoke.mjs [options]\n\nOptions:\n  --channel <stable|nightly>   Release channel submitted to setup (default: stable)\n  --iso <path>                 Extract and validate a built appliance ISO\n  --work-root <path>           Validate an ISO build work root containing iso-root\n  --keep-extracted             Keep temporary ISO extraction directory\n`;
 }
 
 function run(command, args, options = {}) {
@@ -57,24 +44,6 @@ function run(command, args, options = {}) {
     timeout: options.timeout || 120_000,
     env: { ...process.env, ...(options.env || {}) }
   });
-}
-
-function commandOutput(command, args, options = {}) {
-  const result = run(command, args, options);
-  if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(' ')} failed: ${(result.stderr || result.stdout || '').trim()}`);
-  }
-  return result.stdout.trim();
-}
-
-function normalizeRepoUrl(value) {
-  return String(value || '')
-    .trim()
-    .replace(/^git@github\.com:/i, 'https://github.com/')
-    .replace(/^http:\/\//i, 'https://')
-    .replace(/\.git$/i, '')
-    .replace(/\/$/, '')
-    .toLowerCase();
 }
 
 function collect() {
@@ -180,24 +149,24 @@ function assertSetupUiAndApi(checks, root, label) {
   const setupEngine = path.join(root, 'ee', 'appliance', 'host-service', 'setup-engine.mjs');
 
   const setupText = fs.existsSync(setupPage) ? readText(setupPage) : '';
-  if (setupText.includes('new FormData(event.currentTarget)') && setupText.includes('name="repoBranch"') && setupText.includes('repoBranch')) {
-    checks.pass(`${label}: setup UI submits repoBranch from form data`);
+  if (setupText.includes('name="installCode"') && setupText.includes('name="channel"') && setupText.includes('name="releaseRef"')) {
+    checks.pass(`${label}: setup UI submits install code, channel, and optional release pin`);
   } else {
-    checks.fail(`${label}: setup UI submits repoBranch from form data`, setupPage);
+    checks.fail(`${label}: setup UI submits install code, channel, and optional release pin`, setupPage);
   }
 
   const serverText = fs.existsSync(server) ? readText(server) : '';
-  if (serverText.includes('acceptedInputs') && serverText.includes('repoBranch: payload.repoBranch')) {
-    checks.pass(`${label}: setup API echoes accepted inputs and persists repoBranch`);
+  if (serverText.includes('acceptedInputs') && serverText.includes('releaseRef: payload.releaseRef') && serverText.includes('installCode: payload.installCode')) {
+    checks.pass(`${label}: setup API accepts registry release inputs and install code`);
   } else {
-    checks.fail(`${label}: setup API echoes accepted inputs and persists repoBranch`, server);
+    checks.fail(`${label}: setup API accepts registry release inputs and install code`, server);
   }
 
   const setupEngineText = fs.existsSync(setupEngine) ? readText(setupEngine) : '';
-  if (setupEngineText.includes('applyRepoBranchOverride') && setupEngineText.includes('requestedBranch') && setupEngineText.includes('repoBranch: requestedBranch')) {
-    checks.pass(`${label}: setup engine applies repoBranch override to release selection`);
+  if (setupEngineText.includes('resolveReleaseManifest') && setupEngineText.includes('DEFAULT_RELEASE_REPOSITORY') && setupEngineText.includes('releaseRef')) {
+    checks.pass(`${label}: setup engine resolves appliance release metadata from OCI`);
   } else {
-    checks.fail(`${label}: setup engine applies repoBranch override to release selection`, setupEngine);
+    checks.fail(`${label}: setup engine resolves appliance release metadata from OCI`, setupEngine);
   }
 }
 
@@ -223,10 +192,10 @@ function assertStatusUiDist(checks, distRoot, label) {
     .filter((file) => /\.(html|js)$/.test(file))
     .map((file) => readText(file))
     .join('\n');
-  if (combined.includes('setup-repo-branch') && combined.includes('repoBranch')) {
-    checks.pass(`${label}: status UI dist contains repoBranch field and payload logic`);
+  if (combined.includes('setup-install-code') && combined.includes('releaseRef')) {
+    checks.pass(`${label}: status UI dist contains install code and release-pin payload logic`);
   } else {
-    checks.fail(`${label}: status UI dist contains repoBranch field and payload logic`, distRoot);
+    checks.fail(`${label}: status UI dist contains install code and release-pin payload logic`, distRoot);
   }
 }
 
@@ -235,78 +204,6 @@ function assertLocalRepo(checks) {
   assertApplianceStatusNoHostNetwork(checks, repoRoot, 'local source');
   assertAlgaCoreProgressDeadline(checks, repoRoot, 'local source');
   assertSetupUiAndApi(checks, repoRoot, 'local source');
-}
-
-function localRemoteNameFor(repoUrl) {
-  const remotes = commandOutput('git', ['remote']).split(/\r?\n/).filter(Boolean);
-  const normalized = normalizeRepoUrl(repoUrl);
-  for (const remote of remotes) {
-    const remoteUrl = commandOutput('git', ['remote', 'get-url', remote]);
-    if (normalizeRepoUrl(remoteUrl) === normalized) return remote;
-  }
-  return null;
-}
-
-function selectedBranchFromChannel(repoUrl, channel) {
-  const channelFile = path.join(repoRoot, 'ee', 'appliance', 'releases', 'channels', `${channel}.json`);
-  if (!fs.existsSync(channelFile)) throw new Error(`Missing local channel file: ${channelFile}`);
-  const data = JSON.parse(readText(channelFile));
-  return String(data.repoBranch || data.branch || 'main').trim() || 'main';
-}
-
-function assertRemoteBranch(checks, args, selectedBranch) {
-  const remote = localRemoteNameFor(args.repoUrl);
-  if (!remote) {
-    checks.fail('remote branch: repo URL matches a local git remote', `repoUrl=${args.repoUrl}`);
-    return;
-  }
-  const fetch = run('git', ['fetch', '--quiet', remote, selectedBranch], { timeout: 180_000 });
-  if (fetch.status !== 0) {
-    checks.fail('remote branch: fetch selected branch', (fetch.stderr || fetch.stdout || '').trim());
-    return;
-  }
-
-  const remoteRef = 'FETCH_HEAD';
-  const remoteSha = commandOutput('git', ['rev-parse', remoteRef]);
-  checks.pass('remote branch: selected branch fetched', `${remote}/${selectedBranch}@${remoteSha.slice(0, 12)}`);
-
-  if (!args.allowUnpushed) {
-    const localHead = commandOutput('git', ['rev-parse', 'HEAD']);
-    const contains = run('git', ['merge-base', '--is-ancestor', localHead, remoteRef]);
-    if (contains.status === 0) {
-      checks.pass('remote branch: local HEAD is present on selected branch', localHead.slice(0, 12));
-    } else {
-      checks.fail('remote branch: local HEAD is present on selected branch', `local HEAD ${localHead.slice(0, 12)} is not an ancestor of ${selectedBranch}@${remoteSha.slice(0, 12)}; push first or use --allow-unpushed`);
-    }
-  }
-
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-remote-tree-'));
-  const criticalFiles = [
-    ...expectedHelmReleases.map((name) => `ee/appliance/flux/base/releases/${name}.yaml`),
-    'ee/appliance/flux/base/platform/appliance-status.yaml',
-    'ee/appliance/flux/profiles/single-node/values/alga-core.single-node.yaml',
-    'ee/appliance/status-ui/app/setup/page.tsx',
-    'ee/appliance/host-service/server.mjs',
-    'ee/appliance/host-service/setup-engine.mjs',
-    'helm/templates/deployment.yaml'
-  ];
-
-  for (const file of criticalFiles) {
-    const result = run('git', ['show', `${remoteRef}:${file}`], { timeout: 120_000 });
-    if (result.status !== 0) {
-      checks.fail('remote branch: read critical file', `${file}: ${(result.stderr || result.stdout || '').trim()}`);
-      continue;
-    }
-    const target = path.join(tmp, file);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, result.stdout);
-  }
-
-  assertHelmReleaseRetries(checks, tmp, 'remote branch');
-  assertApplianceStatusNoHostNetwork(checks, tmp, 'remote branch');
-  assertAlgaCoreProgressDeadline(checks, tmp, 'remote branch');
-  assertSetupUiAndApi(checks, tmp, 'remote branch');
-  safeRm(tmp);
 }
 
 function overlayRootFromWorkRoot(workRoot) {
@@ -332,15 +229,15 @@ function assertOverlay(checks, overlayRoot, label) {
   const setupEngine = path.join(overlayRoot, 'host-service', 'setup-engine.mjs');
   const serverText = fs.existsSync(server) ? readText(server) : '';
   const setupEngineText = fs.existsSync(setupEngine) ? readText(setupEngine) : '';
-  if (serverText.includes('acceptedInputs') && serverText.includes('repoBranch: payload.repoBranch')) {
-    checks.pass(`${label}: packaged setup API echoes accepted repoBranch`);
+  if (serverText.includes('acceptedInputs') && serverText.includes('releaseRef: payload.releaseRef') && serverText.includes('installCode: payload.installCode')) {
+    checks.pass(`${label}: packaged setup API accepts registry release inputs and install code`);
   } else {
-    checks.fail(`${label}: packaged setup API echoes accepted repoBranch`, server);
+    checks.fail(`${label}: packaged setup API accepts registry release inputs and install code`, server);
   }
-  if (setupEngineText.includes('applyRepoBranchOverride') && setupEngineText.includes('repoBranch: requestedBranch')) {
-    checks.pass(`${label}: packaged setup engine applies branch override`);
+  if (setupEngineText.includes('resolveReleaseManifest') && setupEngineText.includes('DEFAULT_RELEASE_REPOSITORY')) {
+    checks.pass(`${label}: packaged setup engine resolves OCI release metadata`);
   } else {
-    checks.fail(`${label}: packaged setup engine applies branch override`, setupEngine);
+    checks.fail(`${label}: packaged setup engine resolves OCI release metadata`, setupEngine);
   }
 }
 
@@ -392,27 +289,7 @@ function main() {
     checks.pass('inputs: channel is stable or nightly', args.channel);
   }
 
-  let selectedBranch = args.repoBranch;
-  if (!selectedBranch && args.allowChannelBranch) {
-    try {
-      selectedBranch = selectedBranchFromChannel(args.repoUrl, args.channel);
-      checks.pass('inputs: blank repoBranch allowed; using channel branch', selectedBranch);
-    } catch (error) {
-      checks.fail('inputs: blank repoBranch allowed; using channel branch', error instanceof Error ? error.message : String(error));
-    }
-  } else if (!selectedBranch) {
-    checks.fail('inputs: repoBranch override is required for smoke', 'Pass --repo-branch <branch> or --allow-channel-branch.');
-  } else {
-    checks.pass('inputs: repoBranch override provided', selectedBranch);
-  }
-
   assertLocalRepo(checks);
-
-  if (!args.skipRemote && selectedBranch) {
-    assertRemoteBranch(checks, args, selectedBranch);
-  } else if (args.skipRemote) {
-    checks.pass('remote branch: skipped by request');
-  }
 
   if (args.workRoot) {
     assertOverlay(checks, overlayRootFromWorkRoot(args.workRoot), 'work-root overlay');

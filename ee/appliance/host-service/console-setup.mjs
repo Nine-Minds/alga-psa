@@ -15,8 +15,8 @@ async function collectInputs() {
       appHostname: (lines[1] || '').trim(),
       dnsMode: (lines[2] || 'system').trim() || 'system',
       dnsServers: (lines[3] || '').trim(),
-      repoUrl: (lines[4] || 'https://github.com/Nine-Minds/alga-psa.git').trim() || 'https://github.com/Nine-Minds/alga-psa.git',
-      repoBranch: (lines[5] || '').trim()
+      releaseRef: (lines[4] || '').trim(),
+      installCode: (lines[5] || '').trim()
     };
   }
 
@@ -28,8 +28,8 @@ async function collectInputs() {
       appHostname: (await rl.question('App URL / hostname (example: psa.example.com): ')).trim(),
       dnsMode: (await rl.question('DNS mode [system/custom] (default: system): ')).trim() || 'system',
       dnsServers: (await rl.question('Custom DNS servers comma-separated (optional): ')).trim(),
-      repoUrl: (await rl.question('Repo URL override (default: https://github.com/Nine-Minds/alga-psa.git): ')).trim() || 'https://github.com/Nine-Minds/alga-psa.git',
-      repoBranch: (await rl.question('Repo branch override (default: main): ')).trim()
+      releaseRef: (await rl.question('Release pin (optional; blank follows channel): ')).trim(),
+      installCode: (await rl.question('Install code from registration email: ')).trim()
     };
   } finally {
     rl.close();

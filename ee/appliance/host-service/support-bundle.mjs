@@ -146,9 +146,7 @@ export function generateSupportBundle(options = {}) {
     captureCommand(path.join(tempDir, 'host', 'ip-addresses.txt'), 'ip addr', runCommand);
     captureCommand(path.join(tempDir, 'host', 'routes.txt'), 'ip route', runCommand);
     captureCommand(path.join(tempDir, 'host', 'resolv-conf.txt'), 'cat /etc/resolv.conf', runCommand);
-    captureCommand(path.join(tempDir, 'host', 'dns-lookup-github.txt'), 'getent hosts raw.githubusercontent.com', runCommand);
     captureCommand(path.join(tempDir, 'host', 'dns-lookup-ghcr.txt'), 'getent hosts ghcr.io', runCommand);
-    captureCommand(path.join(tempDir, 'host', 'https-github.txt'), 'curl -I --max-time 10 https://raw.githubusercontent.com', runCommand);
     captureCommand(path.join(tempDir, 'host', 'https-ghcr.txt'), 'curl -I --max-time 10 https://ghcr.io/v2/', runCommand);
   }
 
