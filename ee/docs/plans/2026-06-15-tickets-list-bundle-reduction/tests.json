@@ -35,9 +35,9 @@
 
   { "id": "T050", "description": "Import modal performs an import correctly and the list refreshes to reflect imported tickets", "implemented": false, "featureIds": ["F050", "F051"] },
   { "id": "T051", "description": "After import extraction, TicketingDashboard no longer imports TicketImportDialog (grep/build assertion)", "implemented": true, "featureIds": ["F052"] },
-  { "id": "T052", "description": "Export modal opens as overlay and exports respecting the current filters (filtered set only)", "implemented": false, "featureIds": ["F053", "F054"] },
+  { "id": "T052", "description": "Export modal opens as overlay and exports respecting the current filters (filtered set only)", "implemented": true, "featureIds": ["F053", "F054"] },
   { "id": "T053", "description": "Export respects a non-default filter combination (e.g. board + status + tag) end-to-end", "implemented": false, "featureIds": ["F054"] },
-  { "id": "T054", "description": "After export extraction, TicketingDashboard no longer imports TicketExportDialog", "implemented": false, "featureIds": ["F055"] },
+  { "id": "T054", "description": "After export extraction, TicketingDashboard no longer imports TicketExportDialog", "implemented": true, "featureIds": ["F055"] },
 
   { "id": "T060", "description": "Bulk Assign modal acts on exactly the selected ticket ids from context", "implemented": false, "featureIds": ["F060"] },
   { "id": "T061", "description": "Bulk Assign respects 'select all matching filter' selections (filtered superset), not just visible page", "implemented": false, "featureIds": ["F060", "F054"] },

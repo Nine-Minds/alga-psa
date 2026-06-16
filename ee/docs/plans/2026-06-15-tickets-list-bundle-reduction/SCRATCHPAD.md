@@ -251,6 +251,40 @@ Results:
   the only import-route client entry is `TicketImportDialogRouteClient.tsx` with
   `chunks: []`. `BulkAssignTicketsDialog` remains in the list chunk pending F060-F065.
 
+### 2026-06-15 — Export dialog route extraction (F053-F055, T052, T054)
+
+- F053/T052: Added `server/src/app/msp/tickets/export/page.tsx` and
+  `server/src/app/msp/tickets/@modal/(.)export/page.tsx`, both rendering the existing
+  `TicketExportDialog` through `TicketExportDialogRouteClient`.
+- F054/T052: Extended `TicketsRouteProvider` with `totalCount` and route-client access to
+  `filters`, `selectedTicketIdsArray`, and `totalCount`. `TicketingDashboard` syncs
+  `exportFilters` and `totalCount` into the context. This keeps export using the same active
+  filter object and selected IDs as the list.
+- F055/T054: Replaced the in-list export trigger with `router.push('/msp/tickets/export')`
+  and removed `TicketExportDialog` from `TicketingDashboard`.
+- T053 remains open for an authenticated browser/data pass proving a non-default filter
+  combination exports exactly the filtered set.
+
+Verification commands:
+
+```bash
+cd server && npx vitest run src/app/msp/tickets/ticketsModalRoutes.contract.test.ts
+cd server && NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck
+cd server && EDITION=community NEXT_PUBLIC_EDITION=community NODE_ENV=production npm run build
+```
+
+Results:
+
+- Modal route/source contracts passed: 1 file, 5 tests.
+- Typecheck has no export-route errors; it still fails only on the existing unrelated
+  missing modules listed above.
+- Production build completed. Route table includes `/msp/tickets/export` and
+  `/msp/tickets/(.)export`.
+- Parsed tickets page client reference manifest: **424 client modules**, **95 JS chunks**,
+  **7,998,314 bytes**. `TicketExportDialog` and `TicketImportDialog` have no string hits in
+  route-referenced chunks; `TicketExportDialogRouteClient.tsx` and
+  `TicketImportDialogRouteClient.tsx` are present as route entries with `chunks: []`.
+
 ## Open questions (mirror PRD §10)
 - OQ1: Intercepting routes acceptable as a new pattern? (only option meeting C1+C2+C3)
 - OQ2: Preferred shared-state mechanism (existing store vs new React context)?

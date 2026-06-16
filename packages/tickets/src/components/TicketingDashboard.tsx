@@ -52,7 +52,6 @@ import {
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
-import TicketExportDialog from './TicketExportDialog';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -249,7 +248,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
-  const { selectedTicketIds, setSelectedTicketIds, setFilters: setTicketsRouteFilters } = useTicketsRouteState();
+  const {
+    selectedTicketIds,
+    setSelectedTicketIds,
+    setFilters: setTicketsRouteFilters,
+    setTotalCount: setTicketsRouteTotalCount,
+  } = useTicketsRouteState();
   const [allMatchingMode, setAllMatchingMode] = useState(false);
   // Boards resolved on demand for selected tickets that aren't on the current page
   // (paginate-then-select / select-all-matching). Maps ticket_id -> board_id (or null).
@@ -277,7 +281,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleExistingMasterIds, setBundleExistingMasterIds] = useState<Set<string>>(new Set());
   const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
@@ -1710,7 +1713,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   useEffect(() => {
     setTicketsRouteFilters(exportFilters);
-  }, [exportFilters, setTicketsRouteFilters]);
+    setTicketsRouteTotalCount(totalCount);
+  }, [exportFilters, setTicketsRouteFilters, setTicketsRouteTotalCount, totalCount]);
 
   const printColumns = useMemo<PrintColumnOption<ITicketListItem>[]>(() => {
     const availableColumns = createTicketColumns({
@@ -2041,7 +2045,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       defaultValue: 'Export selected ({{count}})',
                     })
                   : t('dashboard.exportAction', { defaultValue: 'Export CSV' }),
-                onSelect: () => setIsExportDialogOpen(true),
+                onSelect: () => router.push('/msp/tickets/export'),
                 disabled: !hasSelection,
                 separator: true,
               },
@@ -2777,13 +2781,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       </Dialog>
         );
       })()}
-      <TicketExportDialog
-        isOpen={isExportDialogOpen}
-        onClose={() => setIsExportDialogOpen(false)}
-        filters={exportFilters}
-        totalCount={totalCount}
-        selectedTicketIds={selectedTicketIdsArray}
-      />
       <BulkTicketActionBar
         idPrefix={`${id}-bulk`}
         count={selectedTicketIds.size}

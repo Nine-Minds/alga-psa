@@ -36,15 +36,34 @@ describe('tickets modal route infrastructure', () => {
     expect(dashboard).not.toContain('<TicketImportDialog');
   });
 
+  it('routes Export through context-backed plain and intercepted route entries', () => {
+    const plainRoute = read('server/src/app/msp/tickets/export/page.tsx');
+    const modalRoute = read('server/src/app/msp/tickets/@modal/(.)export/page.tsx');
+    const routeClient = read('server/src/app/msp/tickets/_components/TicketExportDialogRouteClient.tsx');
+    const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
+
+    expect(plainRoute).toContain('closeMode="replace"');
+    expect(modalRoute).toContain('closeMode="back"');
+    expect(routeClient).toContain('TicketExportDialog');
+    expect(routeClient).toContain('useTicketsRouteState');
+    expect(routeClient).toContain('filters={filters}');
+    expect(routeClient).toContain('selectedTicketIds={selectedTicketIdsArray}');
+    expect(dashboard).toContain("router.push('/msp/tickets/export')");
+    expect(dashboard).not.toContain("import TicketExportDialog from './TicketExportDialog'");
+    expect(dashboard).not.toContain('<TicketExportDialog');
+  });
+
   it('shares active filters and selected ticket ids through the route context', () => {
     const provider = read('packages/tickets/src/components/TicketsRouteProvider.tsx');
     const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
 
     expect(provider).toContain('filters: ITicketListFilters');
+    expect(provider).toContain('totalCount: number');
     expect(provider).toContain('selectedTicketIds: Set<string>');
     expect(provider).toContain('selectedTicketIdsArray');
     expect(dashboard).toContain('useTicketsRouteState()');
     expect(dashboard).toContain('setTicketsRouteFilters(exportFilters)');
+    expect(dashboard).toContain('setTicketsRouteTotalCount(totalCount)');
     expect(dashboard).toContain('setSelectedTicketIds');
   });
 });

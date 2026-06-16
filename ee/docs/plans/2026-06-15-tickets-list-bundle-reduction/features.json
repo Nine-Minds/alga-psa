@@ -34,9 +34,9 @@
   { "id": "F051", "description": "[C-import] Replace the in-list Import trigger to navigate to the import route instead of toggling isImportDialogOpen", "implemented": true, "prdRefs": ["6.C"] },
   { "id": "F052", "description": "[C-import] Remove TicketImportDialog import from TicketingDashboard", "implemented": true, "prdRefs": ["6.C", "G4"] },
 
-  { "id": "F053", "description": "[C-export] Create msp/tickets/export route segment + (.)export intercepting modal rendering TicketExportDialog", "implemented": false, "prdRefs": ["6.C"] },
-  { "id": "F054", "description": "[C-export] Ensure export reads the current filters from the shared context and exports the filtered set", "implemented": false, "prdRefs": ["6.C", "C2"] },
-  { "id": "F055", "description": "[C-export] Replace in-list Export trigger with navigation; remove TicketExportDialog import from TicketingDashboard", "implemented": false, "prdRefs": ["6.C", "G4"] },
+  { "id": "F053", "description": "[C-export] Create msp/tickets/export route segment + (.)export intercepting modal rendering TicketExportDialog", "implemented": true, "prdRefs": ["6.C"] },
+  { "id": "F054", "description": "[C-export] Ensure export reads the current filters from the shared context and exports the filtered set", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F055", "description": "[C-export] Replace in-list Export trigger with navigation; remove TicketExportDialog import from TicketingDashboard", "implemented": true, "prdRefs": ["6.C", "G4"] },
 
   { "id": "F060", "description": "[C-bulk] Bulk Assign: route segment + (.) intercepting modal, reads selection+filters from context, calls existing bulk-assign action", "implemented": false, "prdRefs": ["6.C", "C2"] },
   { "id": "F061", "description": "[C-bulk] Bulk Add Tags: route segment + intercepting modal wired to context + existing action", "implemented": false, "prdRefs": ["6.C", "C2"] },
