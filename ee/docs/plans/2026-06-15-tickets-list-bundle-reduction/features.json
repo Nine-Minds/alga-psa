@@ -46,9 +46,9 @@
   { "id": "F065", "description": "[C-bulk] Remove all 5 bulk dialog imports from TicketingDashboard once routes are live", "implemented": true, "prdRefs": ["6.C", "G4"] },
   { "id": "F066", "description": "[C-bulk] Preserve BulkTicketActionBar (selection toolbar) on the list as the trigger surface (lightweight, stays)", "implemented": true, "prdRefs": ["6.C", "C1"] },
 
-  { "id": "F070", "description": "[Verify] Confirm 0 per-row RSC prefetch requests fire on list load (DoD-3)", "implemented": false, "prdRefs": ["9"] },
-  { "id": "F071", "description": "[Verify] Confirm the 7 dialogs are absent from the tickets-list route chunk graph in next build (DoD-2)", "implemented": false, "prdRefs": ["9"] },
-  { "id": "F072", "description": "[Verify] Re-run perf trace; record new LCP / render delay / first-load JS vs baseline in SCRATCHPAD (DoD-1)", "implemented": false, "prdRefs": ["9"] },
-  { "id": "F073", "description": "[Verify] Confirm no next/dynamic / React.lazy / import() introduced anywhere in the changes (DoD-6)", "implemented": false, "prdRefs": ["3", "C3"] },
-  { "id": "F074", "description": "[Verify] Visual diff / manual pass confirming no end-user visual change to dialogs or client drawer (DoD-5, C1)", "implemented": false, "prdRefs": ["4", "9"] }
+  { "id": "F070", "description": "[Verify] Confirm 0 per-row RSC prefetch requests fire on list load (DoD-3)", "implemented": true, "prdRefs": ["9"] },
+  { "id": "F071", "description": "[Verify] Confirm the 7 dialogs are absent from the tickets-list route chunk graph in next build (DoD-2)", "implemented": true, "prdRefs": ["9"] },
+  { "id": "F072", "description": "[Verify] Re-run perf trace; record new LCP / render delay / first-load JS vs baseline in SCRATCHPAD (DoD-1)", "implemented": true, "prdRefs": ["9"] },
+  { "id": "F073", "description": "[Verify] Confirm no next/dynamic / React.lazy / import() introduced anywhere in the changes (DoD-6)", "implemented": true, "prdRefs": ["3", "C3"] },
+  { "id": "F074", "description": "[Verify] Visual diff / manual pass confirming no end-user visual change to dialogs or client drawer (DoD-5, C1)", "implemented": true, "prdRefs": ["4", "9"] }
 ]

@@ -2,7 +2,7 @@
   { "id": "T001", "description": "Baseline trace recorded: list-load LCP, render delay, first-load JS, and per-row prefetch count captured in SCRATCHPAD", "implemented": true, "featureIds": ["F001"] },
   { "id": "T002", "description": "Baseline next-build first-load JS for /msp/tickets recorded; 7 dialogs + ClientDetails confirmed present in baseline chunk graph", "implemented": true, "featureIds": ["F002"] },
 
-  { "id": "T010", "description": "On list load, network capture shows zero GET /msp/tickets/<id>?_rsc=... prefetch requests", "implemented": false, "featureIds": ["F010", "F011", "F070"] },
+  { "id": "T010", "description": "On list load, network capture shows zero GET /msp/tickets/<id>?_rsc=... prefetch requests", "implemented": true, "featureIds": ["F010", "F011", "F070"] },
   { "id": "T011", "description": "Clicking the ticket-number link opens the ticket (onTicketClick fired) and does not full-navigate", "implemented": true, "featureIds": ["F010", "F012"] },
   { "id": "T012", "description": "Clicking the title link opens the ticket (onTicketClick fired)", "implemented": true, "featureIds": ["F011", "F012"] },
   { "id": "T013", "description": "Cmd/Ctrl+click and middle-click on a row open /msp/tickets/[id] in a new tab (href preserved)", "implemented": true, "featureIds": ["F013"] },
@@ -33,10 +33,10 @@
   { "id": "T046", "description": "Import prototype: closing modal (Esc/backdrop/close) returns to list without full reload; back button closes modal", "implemented": true, "featureIds": ["F045"] },
   { "id": "T047", "description": "Import prototype: hard refresh on the import URL renders the full-page fallback without crashing", "implemented": true, "featureIds": ["F045", "F050"] },
 
-  { "id": "T050", "description": "Import modal performs an import correctly and the list refreshes to reflect imported tickets", "implemented": false, "featureIds": ["F050", "F051"] },
+  { "id": "T050", "description": "Import modal performs an import correctly and the list refreshes to reflect imported tickets", "implemented": true, "featureIds": ["F050", "F051"] },
   { "id": "T051", "description": "After import extraction, TicketingDashboard no longer imports TicketImportDialog (grep/build assertion)", "implemented": true, "featureIds": ["F052"] },
   { "id": "T052", "description": "Export modal opens as overlay and exports respecting the current filters (filtered set only)", "implemented": true, "featureIds": ["F053", "F054"] },
-  { "id": "T053", "description": "Export respects a non-default filter combination (e.g. board + status + tag) end-to-end", "implemented": false, "featureIds": ["F054"] },
+  { "id": "T053", "description": "Export respects a non-default filter combination (e.g. board + status + tag) end-to-end", "implemented": true, "featureIds": ["F054"] },
   { "id": "T054", "description": "After export extraction, TicketingDashboard no longer imports TicketExportDialog", "implemented": true, "featureIds": ["F055"] },
 
   { "id": "T060", "description": "Bulk Assign modal acts on exactly the selected ticket ids from context", "implemented": true, "featureIds": ["F060"] },
@@ -49,10 +49,10 @@
   { "id": "T067", "description": "After bulk extraction, TicketingDashboard imports none of the 5 bulk dialogs", "implemented": true, "featureIds": ["F065"] },
   { "id": "T068", "description": "Selection clears appropriately after a successful bulk action (matches prior behavior)", "implemented": true, "featureIds": ["F060", "F061", "F062", "F063", "F064", "F044"] },
 
-  { "id": "T070", "description": "DoD-2: next build shows reduced first-load JS for /msp/tickets vs baseline; 7 dialogs absent from list chunk graph", "implemented": false, "featureIds": ["F071", "F052", "F055", "F065"] },
-  { "id": "T071", "description": "DoD-1: repeat perf trace shows reduced render delay and LCP vs 2774ms/3048ms baseline; numbers recorded", "implemented": false, "featureIds": ["F072"] },
-  { "id": "T072", "description": "DoD-6: repo grep confirms no next/dynamic, React.lazy, or import() added by this work", "implemented": false, "featureIds": ["F073"] },
-  { "id": "T073", "description": "DoD-5/C1: manual + visual pass confirms dialogs still appear as modal overlays and client drawer is visually unchanged", "implemented": false, "featureIds": ["F074", "F022"] },
-  { "id": "T074", "description": "Regression: existing tickets-list e2e/integration suites pass (filters, pagination, sorting, row selection, quick add)", "implemented": false, "featureIds": ["F044", "F066"] },
-  { "id": "T075", "description": "Multi-tenant: bulk/import/export/client-fetch via new routes remain tenant-scoped (no cross-tenant leakage)", "implemented": false, "featureIds": ["F050", "F053", "F060", "F061", "F062", "F063", "F064", "F024"] }
+  { "id": "T070", "description": "DoD-2: next build shows reduced first-load JS for /msp/tickets vs baseline; 7 dialogs absent from list chunk graph", "implemented": true, "featureIds": ["F071", "F052", "F055", "F065"] },
+  { "id": "T071", "description": "DoD-1: repeat perf trace shows reduced render delay and LCP vs 2774ms/3048ms baseline; numbers recorded", "implemented": true, "featureIds": ["F072"] },
+  { "id": "T072", "description": "DoD-6: repo grep confirms no next/dynamic, React.lazy, or import() added by this work", "implemented": true, "featureIds": ["F073"] },
+  { "id": "T073", "description": "DoD-5/C1: manual + visual pass confirms dialogs still appear as modal overlays and client drawer is visually unchanged", "implemented": true, "featureIds": ["F074", "F022"] },
+  { "id": "T074", "description": "Regression: existing tickets-list e2e/integration suites pass (filters, pagination, sorting, row selection, quick add)", "implemented": true, "featureIds": ["F044", "F066"] },
+  { "id": "T075", "description": "Multi-tenant: bulk/import/export/client-fetch via new routes remain tenant-scoped (no cross-tenant leakage)", "implemented": true, "featureIds": ["F050", "F053", "F060", "F061", "F062", "F063", "F064", "F024"] }
 ]

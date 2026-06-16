@@ -158,4 +158,33 @@ describe('tickets modal route infrastructure', () => {
       expect(dashboard).not.toContain(dialogName);
     }
   });
+
+  it('keeps routed import/export/bulk mutations on existing tenant-scoped server actions', () => {
+    const bulkActions = read('packages/tickets/src/actions/ticketActions.ts');
+    const importActions = read('packages/tickets/src/actions/ticketImportActions.ts');
+    const exportActions = read('packages/tickets/src/actions/ticketExportActions.ts');
+
+    for (const actionName of [
+      'bulkAssignTickets',
+      'bulkAddTagsToTickets',
+      'bulkUpdateTicketDueDate',
+      'bulkUpdateTicketStatus',
+      'bulkUpdateTicketPriority',
+    ]) {
+      expect(bulkActions).toContain(`export const ${actionName} = withAuth(async (`);
+    }
+    expect(bulkActions).toContain('{ tenant }');
+    expect(bulkActions).toContain('updateTicketInTransaction(trx, user as IUserWithRoles, tenant');
+    expect(bulkActions).toContain("createTagsForEntityWithTransaction(trx, tenant, ticketId, 'ticket'");
+
+    expect(importActions).toContain('export const importTickets = withAuth(async (');
+    expect(importActions).toContain('CreateTicketInput');
+    expect(importActions).toContain('createTicket(');
+    expect(importActions).toContain('tenant, trx');
+
+    expect(exportActions).toContain('export const exportTicketsToCSV = withAuth(async (');
+    expect(exportActions).toContain('{ tenant }');
+    expect(exportActions).toContain('getTicketsForList(filters');
+    expect(exportActions).toContain('resolveNameLookups(tickets, tenant)');
+  });
 });
