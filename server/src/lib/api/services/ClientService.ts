@@ -1,9 +1,6 @@
 /**
  * Client Service
  * Business logic for client-related operations
- *
- * This service replaces ClientService as part of the client → client migration.
- * It implements dual-write logic to both clients and clients tables during the transition period.
  */
 
 import { Knex } from 'knex';
@@ -23,7 +20,6 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildClientArchivedPayload,
@@ -150,48 +146,6 @@ export class ClientService extends BaseService<IClient> {
   }
 
   /**
-   * Check if dual-write is enabled for the migration
-   */
-  private async isDualWriteEnabled(context: ServiceContext): Promise<boolean> {
-    return await featureFlags.isEnabled('enable_client_client_dual_write', {
-      tenantId: context.tenant,
-      userId: context.userId
-    });
-  }
-
-  /**
-   * Map client data to client data for dual-write
-   */
-  private mapClientToClientData(inputData: any): any {
-    const clientData = { ...inputData };
-
-    // Map field names
-    if (clientData.client_id) clientData.client_id = clientData.client_id;
-    if (clientData.client_name) clientData.client_name = clientData.client_name;
-
-    // Remove client-specific fields
-    delete clientData.client_id;
-    delete clientData.client_name;
-
-    return clientData;
-  }
-
-  /**
-   * Map client location data to client location data
-   */
-  private mapClientLocationToClientLocation(locationData: any): any {
-    const clientLocationData = { ...locationData };
-
-    // Map field names
-    if (locationData.client_id) clientLocationData.client_id = locationData.client_id;
-
-    // Remove client-specific fields
-    delete clientLocationData.client_id;
-
-    return clientLocationData;
-  }
-
-  /**
    * List clients with enhanced filtering and search
    */
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IClient>> {
@@ -301,13 +255,9 @@ export class ClientService extends BaseService<IClient> {
   }
 
   /**
-   * Create new client with default settings
-   * Implements dual-write to clients table during migration period
-   */
+   * Create new client with default settings   */
   async create(data: Partial<IClient>, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
-    const enableDualWrite = await this.isDualWriteEnabled(context);
-
     const client = await withTransaction(knex, async (trx) => {
       // Prepare client data
       const clientData = {
@@ -346,18 +296,6 @@ export class ClientService extends BaseService<IClient> {
         tenant: context.tenant,
         clientId: client.client_id,
       });
-
-      // Dual-write to clients table if enabled
-      if (enableDualWrite) {
-        try {
-          const clientData = this.mapClientToClientData(client);
-          await trx('clients').insert(clientData);
-          console.log(`[ClientService] Dual-write: Created client record for client ${client.client_id}`);
-        } catch (dualWriteError) {
-          console.warn(`[ClientService] Dual-write failed for client ${client.client_id}:`, dualWriteError);
-          // Don't fail the whole transaction - dual-write is for safety only
-        }
-      }
 
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {
@@ -596,13 +534,9 @@ export class ClientService extends BaseService<IClient> {
   }
 
   /**
-   * Update client
-   * Implements dual-write to clients table during migration period
-   */
+   * Update client   */
   async update(id: string, data: UpdateClientData, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
-    const enableDualWrite = await this.isDualWriteEnabled(context);
-
     const result = await withTransaction(knex, async (trx) => {
       const before = await trx('clients')
         .where('client_id', id)
@@ -638,26 +572,6 @@ export class ClientService extends BaseService<IClient> {
 
       if (!client) {
         throw new NotFoundError('Client not found');
-      }
-
-      // Dual-write to clients table if enabled
-      if (enableDualWrite) {
-        try {
-          const clientUpdateData = this.mapClientToClientData(updateData);
-          const updated = await trx('clients')
-            .where('client_id', id)
-            .where('tenant', context.tenant)
-            .update(clientUpdateData);
-
-          if (updated > 0) {
-            console.log(`[ClientService] Dual-write: Updated client record for client ${id}`);
-          } else {
-            console.warn(`[ClientService] Dual-write: No client record found for client ${id}`);
-          }
-        } catch (dualWriteError) {
-          console.warn(`[ClientService] Dual-write update failed for client ${id}:`, dualWriteError);
-          // Don't fail the whole transaction
-        }
       }
 
       // If the client is being set to inactive, update all associated contacts and users
@@ -817,17 +731,13 @@ export class ClientService extends BaseService<IClient> {
   }
 
   /**
-   * Create client location
-   * Implements dual-write to client_locations table during migration period
-   */
+   * Create client location   */
   async createLocation(
     clientId: string,
     data: CreateClientLocationData,
     context: ServiceContext
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
-    const enableDualWrite = await this.isDualWriteEnabled(context);
-
     return withTransaction(knex, async (trx) => {
       // Verify client exists
       const client = await trx('clients')
@@ -851,26 +761,12 @@ export class ClientService extends BaseService<IClient> {
         .insert(locationData)
         .returning('*');
 
-      // Dual-write to client_locations table if enabled
-      if (enableDualWrite) {
-        try {
-          const clientLocationData = this.mapClientLocationToClientLocation(location);
-          await trx('client_locations').insert(clientLocationData);
-          console.log(`[ClientService] Dual-write: Created client_location record for client location ${location.location_id}`);
-        } catch (dualWriteError) {
-          console.warn(`[ClientService] Dual-write location create failed:`, dualWriteError);
-          // Don't fail the whole transaction
-        }
-      }
-
       return location as IClientLocation;
     });
   }
 
   /**
-   * Update client location
-   * Implements dual-write to client_locations table during migration period
-   */
+   * Update client location   */
   async updateLocation(
     clientId: string,
     locationId: string,
@@ -878,8 +774,6 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
-    const enableDualWrite = await this.isDualWriteEnabled(context);
-
     return withTransaction(knex, async (trx) => {
       const updateData: any = {
         ...data,
@@ -904,41 +798,18 @@ export class ClientService extends BaseService<IClient> {
         throw new NotFoundError('Client location not found');
       }
 
-      // Dual-write to client_locations table if enabled
-      if (enableDualWrite) {
-        try {
-          const clientLocationUpdateData = this.mapClientLocationToClientLocation(updateData);
-          const updated = await trx('client_locations')
-            .where('location_id', locationId)
-            .where('client_id', clientId)
-            .where('tenant', context.tenant)
-            .update(clientLocationUpdateData);
-
-          if (updated > 0) {
-            console.log(`[ClientService] Dual-write: Updated client_location record for location ${locationId}`);
-          }
-        } catch (dualWriteError) {
-          console.warn(`[ClientService] Dual-write location update failed:`, dualWriteError);
-          // Don't fail the whole transaction
-        }
-      }
-
       return location as IClientLocation;
     });
   }
 
   /**
-   * Delete client location
-   * Implements dual-write to client_locations table during migration period
-   */
+   * Delete client location   */
   async deleteLocation(
     clientId: string,
     locationId: string,
     context: ServiceContext
   ): Promise<void> {
     const { knex } = await this.getKnex();
-    const enableDualWrite = await this.isDualWriteEnabled(context);
-
     return withTransaction(knex, async (trx) => {
       const result = await trx('client_locations')
         .where({
@@ -952,22 +823,6 @@ export class ClientService extends BaseService<IClient> {
         throw new NotFoundError('Location not found');
       }
 
-      // Dual-write to client_locations table if enabled
-      if (enableDualWrite) {
-        try {
-          await trx('client_locations')
-            .where({
-              location_id: locationId,
-              client_id: clientId,
-              tenant: context.tenant
-            })
-            .delete();
-          console.log(`[ClientService] Dual-write: Deleted client_location record for location ${locationId}`);
-        } catch (dualWriteError) {
-          console.warn(`[ClientService] Dual-write location delete failed:`, dualWriteError);
-          // Don't fail the whole transaction
-        }
-      }
     });
   }
 

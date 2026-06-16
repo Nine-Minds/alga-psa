@@ -27,7 +27,6 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'teams-integration-ui': true,
   'enable_jira_sync': false,
   'enable_salesforce_sync': false,
-  'enable_client_client_dual_write': true,
   'quoting-enabled': false,
 };
 
