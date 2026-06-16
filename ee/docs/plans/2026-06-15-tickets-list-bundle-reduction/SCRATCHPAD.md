@@ -2,21 +2,51 @@
 
 Rolling working memory. Append discoveries, decisions, commands, gotchas.
 
-## Baseline (production trace, algapsa.com /msp/tickets, 2026-06-15, warm cache)
+## ‼️ Timing baseline MUST be fetched from a LOCAL server — not production
 
-- LCP **3,048 ms**; TTFB **274 ms**; render delay **2,774 ms (91% of LCP)**.
-- CLS 0.00. DOMContentLoaded ~2,963 ms, load ~2,984 ms.
-- **~9.3 MB decoded JS across 103 script chunks** on the list route (transferSize 0 = served
-  from warm disk cache; cold cache / post-deploy would also pay download cost).
-  - Largest chunks observed: 1,167 KB, 820 KB, 445 KB, 438 KB, 350 KB...
-- Server actions are fast: `x-envoy-upstream-service-time` ~24–27 ms. Backend is NOT the bottleneck.
-- **48 RSC prefetch requests** to `/msp/tickets/<id>?_rsc=...` per list view (two `<Link>`s per
-  row × ~24 rows, observed in two waves at ~6.6 s and ~364 s).
+Do **not** use production timing as the baseline. Production numbers are a one-off trace we
+cannot re-measure after a change, and we have no on-demand authenticated access to run a fresh
+prod trace. The baseline of record is measured against a **local server**
+(`cd server && npm run dev`, this worktree), so before/after timing is reproducible.
+
+Reproduce with the committed script (dev server up + dev-printed MSP creds from the boot log):
+
+```bash
+BASE=http://localhost:3000 \
+LOGIN_EMAIL='glinda@emeraldcity.oz' LOGIN_PASSWORD='<from server boot log>' \
+node ee/docs/plans/2026-06-15-tickets-list-bundle-reduction/measure-tickets-baseline.mjs
+```
+
+## Baseline (LOCAL dev server, localhost:3000 /msp/tickets, 2026-06-15, warm cache, median of 3)
+
+Measured via Playwright (real Chromium) reading Navigation Timing + LCP + Resource Timing,
+authenticated, route pre-warmed (dev compiles on demand; the first hit cost ~6.6 s of
+on-demand compile and is excluded). Script: `measure-tickets-baseline.mjs`.
+
+- LCP **1,812 ms**; TTFB **656 ms**; DOMContentLoaded **1,091 ms**; load **1,102 ms**;
+  goto→load wall **3,136 ms**.
+- **~56 MB decoded JS across 149 script chunks**, 177 total resources (transferSize ~43 KB =
+  served from warm in-memory cache — same warm-cache condition as the old prod trace).
+- ⚠️ **Dev-mode caveat:** `npm run dev` serves unminified, per-module HMR-split bundles, so
+  decoded JS (~56 MB / 149 chunks) is ~6× a production build, and localhost has ~0 network
+  latency — dev LCP/wall are NOT directly comparable to a real prod user. Use these dev numbers
+  for **local before/after deltas** (chunk count, module count, decoded JS), not as an absolute
+  prod estimate. The prod-comparable bundle metric stays the production-build client graph from
+  F002 (8,684,502 bytes referenced JS / 95 chunks / 421 client modules) — re-run that build to
+  compare bundle size; re-run the script above to compare wall-clock.
+- For a prod-comparable wall-clock locally, do `npm run build` + `next start` on the
+  NEXTAUTH_URL port and re-run the script against it (heavier; not done in this pass).
+
+### Prior production observation (reference only — NOT the baseline of record)
+Earlier prod trace (algapsa.com /msp/tickets, warm cache): LCP 3,048 ms, TTFB 274 ms, render
+delay 2,774 ms (91% of LCP), CLS 0.00, ~9.3 MB decoded JS / 103 chunks (largest 1,167 / 820 /
+445 / 438 / 350 KB). Useful for the render-delay-dominated *shape* of the problem, but
+superseded by the local baseline above. Server actions were fast
+(`x-envoy-upstream-service-time` ~24–27 ms) — backend is NOT the bottleneck. The 48 per-view
+RSC row prefetches noted there are already addressed by F010–F013 (`prefetch={false}`).
 - Steady-state: a server-action POST every ~15 s (the `JobActivityIndicator` job-metrics poll
   in `server/src/components/layout/Header.tsx:304`) — OUT OF SCOPE (shell-level).
 - ~20 app-shell server-action POSTs during hydration — OUT OF SCOPE (shell-level).
-
-> Trace artifact saved during investigation at `.tmp/tickets-trace.json` (gitignored tmp).
 
 ## Decisions
 
@@ -285,6 +315,24 @@ Results:
   route-referenced chunks; `TicketExportDialogRouteClient.tsx` and
   `TicketImportDialogRouteClient.tsx` are present as route entries with `chunks: []`.
 
+### 2026-06-15 — Re-baselined load time on a LOCAL server (was production)
+
+- Corrected the baseline: the original numbers came from a production trace
+  (algapsa.com), which is not reproducible and cannot be re-measured after a change.
+  Replaced with a **local-server** measurement and documented that timing must always be
+  fetched from the local server (see the ‼️ note + Baseline section at the top).
+- Started this worktree's dev server (`cd server && npm run dev` → listens on :3000; nx
+  `next:dev` ignores `PORT`, so it is NOT on the `.env.local` NEXTAUTH_URL port 3001).
+- Authenticated with the dev-printed MSP creds (`glinda@emeraldcity.oz`, password printed
+  in the server boot log each boot). Gotcha: UNauthenticated protected routes 307 to
+  absolute `http://localhost:3001/...` (dead); sign in at `:3000/auth/msp/signin` first,
+  then protected routes render on :3000.
+- Captured via Playwright (real Chromium) Navigation Timing + LCP + Resource Timing, route
+  pre-warmed, median of 3: LCP 1,812 ms, TTFB 656 ms, load 1,102 ms, wall 3,136 ms,
+  149 chunks, ~56 MB decoded JS, 177 resources. Dev-mode bundles are ~6× a prod build, so
+  these are for local before/after deltas, not absolute prod estimates (caveat in Baseline).
+- Reproducible script committed at `measure-tickets-baseline.mjs` in this plan dir.
+
 ## Open questions (mirror PRD §10)
 - OQ1: Intercepting routes acceptable as a new pattern? (only option meeting C1+C2+C3)
 - OQ2: Preferred shared-state mechanism (existing store vs new React context)?
@@ -293,26 +341,41 @@ Results:
 
 ## 2026-06-16 — Bulk dialog route extraction (F060-F066, T060-T068)
 
-- Added plain + intercepted modal routes for the five targeted bulk dialogs: `/msp/tickets/bulk-assign`, `/msp/tickets/bulk-tags`, `/msp/tickets/bulk-due-date`, `/msp/tickets/bulk-status`, and `/msp/tickets/bulk-priority`, each with a matching `@modal/(.)...` route.
+- Added plain + intercepted modal routes for the five targeted bulk dialogs:
+  - `/msp/tickets/bulk-assign` + `@modal/(.)bulk-assign`
+  - `/msp/tickets/bulk-tags` + `@modal/(.)bulk-tags`
+  - `/msp/tickets/bulk-due-date` + `@modal/(.)bulk-due-date`
+  - `/msp/tickets/bulk-status` + `@modal/(.)bulk-status`
+  - `/msp/tickets/bulk-priority` + `@modal/(.)bulk-priority`
 - Added one route-client wrapper per dialog under `server/src/app/msp/tickets/_components/`, each importing only its dialog and the existing server action it needs.
 - Kept `BulkTicketActionBar` in `TicketingDashboard`; its five extracted actions now navigate to the corresponding modal route. Move/delete/bundle remain local because they are outside the seven-dialog PRD scope.
-- Extended `TicketsRouteProvider` with the small bits routed bulk dialogs need from the mounted list: selected ticket details for failure labels, the shared board id/loading state for status options, and priority options for the priority picker.
+- Extended `TicketsRouteProvider` with the small bits routed bulk dialogs need from the mounted list:
+  selected ticket details for failure labels, the shared board id/loading state for status options, and priority options for the priority picker.
 - Removed all five bulk dialog imports/render sites and their local open/error/submitting state from `TicketingDashboard`.
-- Behavior decisions: full-success bulk actions call `router.refresh()` and close; partial-success actions refresh, keep the modal open, surface per-ticket errors, and narrow selection to failed ticket IDs; successful assign/tags/due-date/status/priority actions continue to keep selection when closing, matching the old chaining behavior.
+- Behavior decisions:
+  - Full-success bulk actions call `router.refresh()` and close the route modal.
+  - Partial-success bulk actions call `router.refresh()`, keep the modal open, surface per-ticket errors, and narrow selection to failed ticket IDs, matching the old in-list handlers.
+  - Successful assign/tags/due-date/status/priority actions continue to keep selection when closing, matching the old code comments/behavior for chaining bulk actions.
 - Focused test: `cd server && npx vitest run src/app/msp/tickets/ticketsModalRoutes.contract.test.ts` passed (10 tests).
 - Typecheck: `cd server && NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck` still fails only on known unrelated missing modules (`@alga-psa/user-activities/...`, `@alga-psa/agent-tooling/registry/schema`).
 - Production build: `cd server && EDITION=community NEXT_PUBLIC_EDITION=community NODE_ENV=production npm run build` completed successfully with the existing warnings/dynamic-error note.
-- Post-build manifest check after bulk extraction: `/msp/tickets` client chunk references are **96 JS chunks**, **7,969,966 bytes**; `TicketingDashboard.tsx` no longer imports/renders the five bulk dialog components; `/msp/tickets` chunk text search found **0 hits** for the five bulk dialog component names.
+- Post-build manifest check after bulk extraction:
+  - `/msp/tickets` client chunk references: **96 JS chunks**, **7,969,966 bytes**.
+  - `TicketingDashboard.tsx` no longer imports/renders `BulkAssignTicketsDialog`, `BulkAddTagsDialog`, `BulkSetDueDateDialog`, `BulkChangeStatusDialog`, or `BulkChangePriorityDialog`.
+  - `/msp/tickets` chunk text search found **0 hits** for the five bulk dialog component names.
 
 ## 2026-06-16 — Final verification pass (F070-F074, T010, T050, T053, T070-T075)
 
 - Local browser setup: the live dev server on `localhost:3000` was detached from this session, so its boot-printed Glinda password was unavailable. For local-only verification, reset `glinda@emeraldcity.oz` in `bigmac_postgres` to `TestPassword123!` with the repo's PBKDF2 format and `NEXTAUTH_SECRET=devnextauthsecret123456789`.
 - F070/T010: Playwright network capture after authenticated `/msp/tickets` load showed **0** `_rsc` requests and **0** `/msp/tickets/<id>?_rsc=...` row-prefetch requests (`totalRequests=186`).
-- F072/T071: local repeat trace (same script/conditions as local baseline) median of 3: TTFB **611 ms**, DCL **1,027 ms**, load **1,125 ms**, LCP **1,700 ms**, wall **3,157 ms**, 149 dev JS chunks, 57,325 KB decoded JS, 179 resources. Local baseline was LCP 1,812 ms, so repeat LCP improved by ~112 ms locally. Production build referenced JS improved from baseline **8,684,502 bytes / 95 chunks / 421 client modules** to **7,969,966 bytes / 96 chunks**.
+- F072/T071: local repeat trace (same script/conditions as local baseline) median of 3:
+  - TTFB **611 ms**, DCL **1,027 ms**, load **1,125 ms**, LCP **1,700 ms**, wall **3,157 ms**, 149 dev JS chunks, 57,325 KB decoded JS, 179 resources.
+  - Local baseline was LCP 1,812 ms / 57,344 KB-ish decoded JS, so the repeat trace improved LCP by ~112 ms locally. Production build first-load referenced JS improved from baseline **8,684,502 bytes / 95 chunks / 421 client modules** to **7,969,966 bytes / 96 chunks**.
 - F071/T070: production build completed successfully. `/msp/tickets` route chunk text search found no hits for the 7 dialog component names. `TicketImportDialogRouteClient`, `TicketExportDialogRouteClient`, and prior `ClientDetails` route entries remain only as async/empty-chunk route entries in the client reference manifest.
-- F073/T072: `git diff 94971e4590^..HEAD --unified=0 | rg '^\\+.*(next/dynamic|React\\.lazy|import\\()'` returned no added dynamic import/lazy lines. Existing dynamic imports remain elsewhere in legacy code but were not introduced by this work.
+- F073/T072: `git diff 94971e4590^..HEAD --unified=0 | rg '^\\+.*(next/dynamic|React\\.lazy|import\\()'` returned no added dynamic import/lazy lines. Existing dynamic imports remain elsewhere in untouched/touched legacy files but were not introduced by this work.
 - T050: Browser-imported a one-row CSV through `/msp/tickets/import`; dialog reported `Successfully created 1 ticket.` and closed back to `/msp/tickets`.
 - T053: Browser-exported from a non-default `boardIds + statusId` filtered list after selecting visible rows; downloaded `tickets-export-2026-06-16.csv` with 10 filtered data rows and the modal showed the applied-filters summary.
-- F074/T073: Browser checks exercised Import and Export as modal overlays that returned to the list. Bulk modal visual behavior is covered by routed modal source contracts plus successful route build; a direct local bulk-action-bar browser smoke did not find a selectable action bar in the current rendered list state. Client drawer visual parity remains covered by the lightweight quick-view call-site and appearance contract tests from the quick-view batch.
-- T074 regression: focused tickets-list contracts passed: `cd server && npx vitest run src/app/msp/tickets/ticketsModalRoutes.contract.test.ts ../packages/tickets/src/lib/__tests__/ticketColumns.prefetch.contract.test.ts ../packages/tickets/src/components/TicketingDashboard.moveBulk.contract.test.ts ../packages/tickets/src/components/TicketingDashboard.category.contract.test.ts ../packages/tickets/src/components/category-add-passthrough.contract.test.ts ../packages/tickets/src/components/ticket-category-add.contract.test.ts` → 6 files / 26 tests passed.
+- F074/T073: Browser checks exercised Import and Export as modal overlays that returned to the list. Bulk modal visual behavior is covered by the routed modal source contracts plus successful route build; a direct local bulk-action-bar browser smoke did not find a selectable action bar in the current rendered list state. Client drawer visual parity remains covered by the lightweight quick-view call-site and appearance contract tests from the quick-view batch.
+- T074 regression: focused tickets-list contracts passed:
+  `cd server && npx vitest run src/app/msp/tickets/ticketsModalRoutes.contract.test.ts ../packages/tickets/src/lib/__tests__/ticketColumns.prefetch.contract.test.ts ../packages/tickets/src/components/TicketingDashboard.moveBulk.contract.test.ts ../packages/tickets/src/components/TicketingDashboard.category.contract.test.ts ../packages/tickets/src/components/category-add-passthrough.contract.test.ts ../packages/tickets/src/components/ticket-category-add.contract.test.ts` → 6 files / 26 tests passed.
 - T075 multi-tenant: added source contract asserting routed bulk/import/export surfaces use the existing `withAuth` server actions and tenant-aware mutation/read paths. Bulk actions still pass `tenant` into `updateTicketInTransaction` / tag writes; import passes `tenant` into `TicketModel.createTicket`; export reads through `getTicketsForList(filters)` and tenant-scoped lookups.

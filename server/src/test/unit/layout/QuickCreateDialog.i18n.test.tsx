@@ -35,6 +35,7 @@ const interpolate = (template: string, values: Record<string, unknown> = {}) =>
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     refresh: routerRefresh,
+    push: vi.fn(),
   }),
 }));
 
@@ -146,8 +147,10 @@ describe('QuickCreateDialog i18n wiring', () => {
       buttonText: string;
       expectedToast: string;
     }> = [
+      // 'ticket' is intentionally absent: the global dialog now navigates to the
+      // create-ticket modal route instead of rendering the editor inline, so its success
+      // toast lives in CreateTicketRouteClient, not here (see the ticket integration test).
       { type: 'asset', buttonText: 'Add asset', expectedToast: 'Actif cree avec succes' },
-      { type: 'ticket', buttonText: 'Add ticket', expectedToast: 'Ticket no 42 cree avec succes' },
       { type: 'client', buttonText: 'Add client', expectedToast: 'Client "Acme" cree avec succes' },
       { type: 'contact', buttonText: 'Add contact', expectedToast: 'Ada Lovelace ajoute avec succes' },
       { type: 'project', buttonText: 'Add project', expectedToast: 'Projet "Apollo" cree avec succes' },

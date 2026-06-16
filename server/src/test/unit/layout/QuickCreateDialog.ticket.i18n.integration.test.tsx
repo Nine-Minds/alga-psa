@@ -15,6 +15,7 @@ type TranslationOptions = {
 
 const refreshMock = vi.fn();
 const replaceMock = vi.fn();
+const pushMock = vi.fn();
 
 let pathname = '/msp/dashboard';
 
@@ -46,6 +47,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     refresh: refreshMock,
     replace: replaceMock,
+    push: pushMock,
   }),
 }));
 
@@ -242,29 +244,16 @@ describe('global quick-create ticket i18n integration', () => {
     cleanup();
   });
 
-  it('T106: the global quick-create dialog renders the reused ticket quick-add shell in de', () => {
+  it('T106: the global quick-create dialog routes ticket creation to the create-ticket modal route instead of rendering the editor inline', () => {
     renderQuickCreateDialog('de');
 
-    expect(screen.getByText('Ticket schnell hinzufügen')).toBeInTheDocument();
-    expect(screen.getByText('Ticket-Titel *')).toBeInTheDocument();
-    expect(screen.getByText('Kunden auswählen *')).toBeInTheDocument();
-    expect(screen.getByText('Board auswählen *')).toBeInTheDocument();
-    expect(screen.getByText('Status auswählen *')).toBeInTheDocument();
-    expect(screen.getByText('Priorität auswählen *')).toBeInTheDocument();
-    expect(screen.getByText('Fälligkeitsdatum')).toBeInTheDocument();
-    expect(screen.getByText('Abbrechen')).toBeInTheDocument();
-    expect(screen.getByText('Erstellen')).toBeInTheDocument();
-    expect(screen.getByText('Erstellen + Ticket anzeigen')).toBeInTheDocument();
+    // The heavy ticket quick-add shell (and its rich-text editor) must NOT load in the
+    // app shell anymore — selecting "ticket" navigates to the create-ticket route, which
+    // renders the dialog as an intercepted modal and keeps the editor out of first-load.
+    expect(pushMock).toHaveBeenCalledWith('/msp/create-ticket');
 
-    expect(screen.queryByText('Quick Add Ticket')).not.toBeInTheDocument();
-    expect(screen.queryByText('Ticket Title *')).not.toBeInTheDocument();
-    expect(screen.queryByText('Select Client *')).not.toBeInTheDocument();
-    expect(screen.queryByText('Select Board *')).not.toBeInTheDocument();
-    expect(screen.queryByText('Select Status *')).not.toBeInTheDocument();
-    expect(screen.queryByText('Select Priority *')).not.toBeInTheDocument();
-    expect(screen.queryByText('Due Date')).not.toBeInTheDocument();
-    expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
-    expect(screen.queryByText('Create')).not.toBeInTheDocument();
-    expect(screen.queryByText('Create + View Ticket')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('global-quick-add-ticket')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ticket schnell hinzufügen')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ticket-Titel *')).not.toBeInTheDocument();
   });
 });

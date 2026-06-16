@@ -5,14 +5,14 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
-import { QuickAddTicket } from '@alga-psa/tickets/components';
+import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
 import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import ProjectQuickAdd from '@alga-psa/projects/components/ProjectQuickAdd';
 import { QuickAddProduct, QuickAddService } from '@alga-psa/billing/components';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { ITicket, IClient, IContact, IProject } from '@alga-psa/types';
+import { IClient, IContact, IProject } from '@alga-psa/types';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { toast } from 'react-hot-toast';
@@ -77,17 +77,15 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
     router.refresh();
   };
 
-  const handleTicketAdded = (ticket: ITicket) => {
-    toast.success(
-      t('quickCreate.success.ticket', {
-        defaultValue: 'Ticket #{{number}} created successfully',
-        number: ticket.ticket_number,
-      })
-    );
-    onClose();
-    // Refresh the page to update any list that might be showing tickets
-    router.refresh();
-  };
+  // Ticket creation is a routed modal now, so the heavy rich-text editor (pulled in by
+  // QuickAddTicket) stays out of the app-shell bundle. Navigate to the create-ticket route
+  // and close this dispatcher; the route renders the dialog (intercepted as an overlay).
+  useEffect(() => {
+    if (type === 'ticket') {
+      router.push(buildCreateTicketHref());
+      onClose();
+    }
+  }, [type, router, onClose]);
 
   const handleClientAdded = (client: IClient) => {
     toast.success(
@@ -99,6 +97,10 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
     onClose();
     // Refresh the page to update any list that might be showing clients
     router.refresh();
+    // The clients/contacts list pages fetch their own data client-side and don't react to
+    // router.refresh(), so notify them to re-fetch. Event name is mirrored in
+    // Clients.tsx / Contacts.tsx listeners.
+    window.dispatchEvent(new CustomEvent('alga:quick-create:created', { detail: { entity: 'client' } }));
   };
 
   const handleContactAdded = (contact: IContact) => {
@@ -112,6 +114,8 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
     onClose();
     // Refresh the page to update any list that might be showing contacts
     router.refresh();
+    // See note in handleClientAdded — notify the client-side contacts list to re-fetch.
+    window.dispatchEvent(new CustomEvent('alga:quick-create:created', { detail: { entity: 'contact' } }));
   };
 
   const handleProjectAdded = (project: IProject) => {
@@ -164,17 +168,9 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
     );
   }
 
-  // Handle QuickAddTicket
+  // Ticket creation is handled by navigation (see effect above) — nothing to render here.
   if (type === 'ticket') {
-    return (
-      <QuickAddTicket
-        open={true}
-        onOpenChange={(open) => {
-          if (!open) onClose();
-        }}
-        onTicketAdded={handleTicketAdded}
-      />
-    );
+    return null;
   }
 
   // Handle QuickAddClient

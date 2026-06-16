@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ITicketListFilters } from '@alga-psa/types';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
@@ -22,6 +22,10 @@ interface TicketsRouteState {
   selectedTicketIdsArray: string[];
   setSelectedTicketIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   clearSelectedTicketIds: () => void;
+  // False until selection has been rehydrated from sessionStorage on mount. Consumers
+  // that redirect on empty selection (the bulk-action modal routes) must wait for this
+  // so a reload doesn't bounce away before the persisted selection is restored.
+  selectionHydrated: boolean;
   selectedTicketDetails: TicketsRouteSelectedTicketDetail[];
   setSelectedTicketDetails: React.Dispatch<React.SetStateAction<TicketsRouteSelectedTicketDetail[]>>;
   selectedTicketsSharedBoardId: string | null;
@@ -45,6 +49,47 @@ const EMPTY_FILTERS: ITicketListFilters = {
 
 const TicketsRouteContext = createContext<TicketsRouteState | null>(null);
 
+// Ticket selection is lifted to this provider (rendered in tickets/layout.tsx) so the
+// intercepting bulk-action modal routes — sibling subtrees that can't read the list
+// page's state — can see it. That context is in-memory only, so a full page reload of a
+// modal route (where Next renders the non-intercepted route, not the @modal slot) would
+// otherwise lose the selection. We persist it to sessionStorage (per-tab, cleared on tab
+// close — the right scope; not URL-encoded because "select all matching" can be thousands
+// of ids) and rehydrate on mount so selection survives reload.
+const SELECTION_STORAGE_KEY = 'tickets:route-selection';
+
+interface PersistedSelection {
+  ids: string[];
+  details: TicketsRouteSelectedTicketDetail[];
+  sharedBoardId: string | null;
+}
+
+function readPersistedSelection(): PersistedSelection | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(SELECTION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedSelection;
+    if (!Array.isArray(parsed?.ids)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedSelection(selection: PersistedSelection | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!selection || selection.ids.length === 0) {
+      window.sessionStorage.removeItem(SELECTION_STORAGE_KEY);
+      return;
+    }
+    window.sessionStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(selection));
+  } catch {
+    // sessionStorage unavailable (private mode/quota) — selection just won't survive reload.
+  }
+}
+
 export function TicketsRouteProvider({ children }: { children: React.ReactNode }) {
   const [filters, setFilters] = useState<ITicketListFilters>(EMPTY_FILTERS);
   const [totalCount, setTotalCount] = useState(0);
@@ -53,6 +98,31 @@ export function TicketsRouteProvider({ children }: { children: React.ReactNode }
   const [selectedTicketsSharedBoardId, setSelectedTicketsSharedBoardId] = useState<string | null>(null);
   const [isResolvingSelectedBoards, setIsResolvingSelectedBoards] = useState(false);
   const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>([]);
+  const [selectionHydrated, setSelectionHydrated] = useState(false);
+
+  // Rehydrate selection from sessionStorage once on mount (client-only, after hydration
+  // to avoid an SSR mismatch). Runs before the persist effect can clobber storage because
+  // that effect is gated on selectionHydrated.
+  useEffect(() => {
+    const persisted = readPersistedSelection();
+    if (persisted) {
+      setSelectedTicketIds(new Set(persisted.ids));
+      setSelectedTicketDetails(persisted.details ?? []);
+      setSelectedTicketsSharedBoardId(persisted.sharedBoardId ?? null);
+    }
+    setSelectionHydrated(true);
+  }, []);
+
+  // Persist selection on every change (only after rehydration, so the initial empty state
+  // doesn't overwrite a stored selection during mount).
+  useEffect(() => {
+    if (!selectionHydrated) return;
+    writePersistedSelection({
+      ids: Array.from(selectedTicketIds),
+      details: selectedTicketDetails,
+      sharedBoardId: selectedTicketsSharedBoardId,
+    });
+  }, [selectionHydrated, selectedTicketIds, selectedTicketDetails, selectedTicketsSharedBoardId]);
 
   const value = useMemo<TicketsRouteState>(() => ({
     filters,
@@ -62,7 +132,12 @@ export function TicketsRouteProvider({ children }: { children: React.ReactNode }
     selectedTicketIds,
     selectedTicketIdsArray: Array.from(selectedTicketIds),
     setSelectedTicketIds,
-    clearSelectedTicketIds: () => setSelectedTicketIds(new Set()),
+    clearSelectedTicketIds: () => {
+      setSelectedTicketIds(new Set());
+      setSelectedTicketDetails([]);
+      setSelectedTicketsSharedBoardId(null);
+    },
+    selectionHydrated,
     selectedTicketDetails,
     setSelectedTicketDetails,
     selectedTicketsSharedBoardId,
@@ -71,7 +146,7 @@ export function TicketsRouteProvider({ children }: { children: React.ReactNode }
     setIsResolvingSelectedBoards,
     priorityOptions,
     setPriorityOptions,
-  }), [filters, isResolvingSelectedBoards, priorityOptions, selectedTicketDetails, selectedTicketIds, selectedTicketsSharedBoardId, totalCount]);
+  }), [filters, isResolvingSelectedBoards, priorityOptions, selectedTicketDetails, selectedTicketIds, selectedTicketsSharedBoardId, selectionHydrated, totalCount]);
 
   return (
     <TicketsRouteContext.Provider value={value}>
@@ -99,6 +174,7 @@ export function useTicketsRouteState(): TicketsRouteState {
     selectedTicketIdsArray: Array.from(fallbackSelectedTicketIds),
     setSelectedTicketIds: setFallbackSelectedTicketIds,
     clearSelectedTicketIds: () => setFallbackSelectedTicketIds(new Set()),
+    selectionHydrated: true,
     selectedTicketDetails: fallbackSelectedTicketDetails,
     setSelectedTicketDetails: setFallbackSelectedTicketDetails,
     selectedTicketsSharedBoardId: fallbackSelectedTicketsSharedBoardId,

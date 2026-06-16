@@ -338,6 +338,20 @@ const Clients: React.FC = () => {
   const searchParams = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // This list fetches its own data client-side, so router.refresh() (used by the global
+  // quick-create) won't reload it. Listen for the quick-create "created" event and re-fetch.
+  // Event name is mirrored in QuickCreateDialog.tsx.
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'client') {
+        setRefreshKey((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
+  }, []);
+
   useEffect(() => {
     if (searchParams) {
       const create = searchParams.get('create');

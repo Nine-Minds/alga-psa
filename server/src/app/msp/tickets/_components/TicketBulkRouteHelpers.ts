@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -27,6 +27,7 @@ export function useTicketBulkRouteDialog(closeMode: TicketBulkCloseMode) {
     selectedTicketIdsArray,
     selectedTicketDetails,
     setSelectedTicketIds,
+    selectionHydrated,
   } = useTicketsRouteState();
 
   const ticketLabelById = useMemo(() => {
@@ -44,6 +45,17 @@ export function useTicketBulkRouteDialog(closeMode: TicketBulkCloseMode) {
     }
     router.replace('/msp/tickets');
   };
+
+  // A bulk dialog with no selection is meaningless. This happens on a hard load/reload of
+  // the route once there is genuinely nothing selected (e.g. storage cleared, or the URL
+  // visited directly). Wait for selectionHydrated so we don't bounce away before the
+  // persisted selection is restored from sessionStorage on mount.
+  useEffect(() => {
+    if (selectionHydrated && selectedTicketIds.size === 0) {
+      close();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionHydrated, selectedTicketIds.size]);
 
   const refreshAndClose = () => {
     router.refresh();

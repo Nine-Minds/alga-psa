@@ -21,8 +21,12 @@ export const metadata: Metadata = {
 
 export default async function MspLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  // Parallel slot for app-wide intercepting modal routes (e.g. create-ticket). Falls back
+  // to @modal/default.tsx (null) on routes that don't open a modal.
+  modal: React.ReactNode;
 }>) {
   // Use full auth with revocation check so terminated sessions cannot keep browsing
   const session =
@@ -76,6 +80,7 @@ export default async function MspLayout({
       selfHostLicensing={selfHostLicensing}
     >
       {children}
+      {modal}
     </MspLayoutClient>
   );
 }

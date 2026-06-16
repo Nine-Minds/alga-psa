@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
-import { QuickAddTicket } from './QuickAddTicket';
+import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BulkTicketActionBar from './BulkTicketActionBar';
@@ -344,8 +344,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const openQuickAddTicket = useCallback(() => setIsQuickAddOpen(true), []);
+  // Create-ticket is a routed modal now (keeps the rich-text editor out of this route's
+  // bundle). Navigate instead of rendering QuickAddTicket inline; the route renders the
+  // dialog (intercepted as an overlay over the list) and refreshes the list on success.
+  const openQuickAddTicket = useCallback(
+    () => router.push(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
+    [router, useAlgaDeskQuickAddForm],
+  );
   usePageCreateShortcut(openQuickAddTicket);
 
   // Tag filter values from props
@@ -1604,78 +1609,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     onAfterPrint: cleanupPrintTickets,
   });
 
-  const handleTicketAdded = useCallback((newTicket: ITicket) => {
-    // Store tags for the new ticket if provided
-    if (newTicket.ticket_id && newTicket.tags && newTicket.tags.length > 0) {
-      ticketTagsRef.current[newTicket.ticket_id] = newTicket.tags;
-
-      // Update unique tags list with any new tags
-      setAllUniqueTags(prevTags => {
-        const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
-        const newUniqueTags = newTicket.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
-        if (newUniqueTags.length > 0) {
-          return [...prevTags, ...newUniqueTags];
-        }
-        return prevTags;
-      });
-    }
-
-    // Add the new ticket to the local state
-    setTickets(prevTickets => {
-      const status = rawStatusOptions.find(s => s.value === newTicket.status_id);
-      const priority = priorityOptions.find(p => p.value === newTicket.priority_id);
-      const board = boards.find(c => c.board_id === newTicket.board_id);
-
-      let categoryName = '';
-      if (newTicket.category_id) {
-        const category = categories.find(c => c.category_id === newTicket.category_id);
-        if (category) {
-          categoryName = category.category_name;
-        }
-      }
-
-      // Find the client name
-      const client = initialClients.find(c => c.client_id === newTicket.client_id);
-      const clientName = client ? client.client_name : t('properties.unknown', 'Unknown');
-
-      // Convert the new ticket to match the ITicketListItem format
-      const newTicketListItem: ITicketListItem = {
-        ticket_id: newTicket.ticket_id,
-        ticket_number: newTicket.ticket_number,
-        title: newTicket.title,
-        url: newTicket.url,
-        status_id: newTicket.status_id,
-        status_name: typeof status?.label === 'string' ? status.label : '',
-        priority_id: newTicket.priority_id ?? null,
-        priority_name: typeof priority?.label === 'string' ? priority.label : '',
-        board_id: newTicket.board_id,
-        board_name: board?.board_name || '',
-        category_id: newTicket.category_id,
-        subcategory_id: newTicket.subcategory_id,
-        category_name: categoryName,
-        client_id: newTicket.client_id,
-        client_name: clientName,
-        contact_name_id: newTicket.contact_name_id,
-        entered_by: newTicket.entered_by,
-        entered_by_name: currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : '',
-        updated_by: newTicket.updated_by,
-        closed_by: newTicket.closed_by,
-        assigned_to: newTicket.assigned_to,
-        assigned_to_name: null,
-        entered_at: newTicket.entered_at,
-        updated_at: newTicket.updated_at,
-        closed_at: newTicket.closed_at,
-        attributes: newTicket.attributes,
-        tenant: newTicket.tenant,
-        tags: newTicket.tags
-      };
-
-      return [newTicketListItem, ...prevTickets];
-    });
-
-    // Close the quick add dialog
-    setIsQuickAddOpen(false);
-  }, [rawStatusOptions, priorityOptions, boards, categories, currentUser, initialClients, t]);
 
   const handleBoardSelect = useCallback((newSelectedBoards: string[], newExcludedBoards: string[]) => {
     // Status options are board-scoped; only scope when exactly one real board is selected.
@@ -2179,13 +2112,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       />
 
-      <QuickAddTicket
-        id={`${id}-quick-add`}
-        open={isQuickAddOpen}
-        onOpenChange={setIsQuickAddOpen}
-        onTicketAdded={handleTicketAdded}
-        isAlgaDeskMode={useAlgaDeskQuickAddForm}
-      />
       <ConfirmationDialog
         id={`${id}-bundle-multi-client-confirm`}
         isOpen={isMultiClientBundleConfirmOpen}

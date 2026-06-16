@@ -140,6 +140,20 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     setRefreshKey(prev => prev + 1);
   };
 
+  // This list fetches its own data client-side, so router.refresh() (used by the global
+  // quick-create) won't reload it. Listen for the quick-create "created" event and re-fetch.
+  // Event name is mirrored in QuickCreateDialog.tsx.
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'contact') {
+        setRefreshKey(prev => prev + 1);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
+  }, []);
+
   const handleChangesSaved = () => {
     setChangesSavedInDrawer(true);
   };
