@@ -12,7 +12,7 @@ import { getAllContacts } from '@alga-psa/clients/actions';
 import { getRecentInteractions, getInteractionStatuses } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from "@alga-psa/ui";
-import { InteractionDetails } from '@alga-psa/clients/components';
+import InteractionDetails from './InteractionDetails';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import UserPicker from '@alga-psa/ui/components/UserPicker';

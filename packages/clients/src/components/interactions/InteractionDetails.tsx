@@ -11,7 +11,7 @@ import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/
 import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
@@ -206,10 +206,8 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         const client = await getClientById(interaction.client_id);
         if (client) {
           openDrawer(
-            <ClientDetails
+            <ClientQuickView
               client={client}
-              documents={[]}
-              contacts={[]}
               isInDrawer={true}
               quickView={true}
             />

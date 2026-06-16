@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import type { IClient, IContact, SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
@@ -68,7 +68,7 @@ export default function MspTicketDetailsContainerClient({
     ({ id, client }: { id: string; client: IClient }) => {
       return (
         <MspClientCrossFeatureProvider>
-          <ClientDetails id={id} client={client} isInDrawer={true} quickView={true} />
+          <ClientQuickView id={id} client={client} isInDrawer={true} quickView={true} />
         </MspClientCrossFeatureProvider>
       );
     },

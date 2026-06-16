@@ -158,6 +158,56 @@ npx nx build <tickets-app-or-server> # then inspect .next route first-load JS
 - Left T010 false for the later verification phase because it requires an authenticated
   browser/network capture proving zero `_rsc` row-prefetch requests on an actual list load.
 
+### 2026-06-15 — Lightweight client quick view (F020-F034, T020-T034)
+
+- F020/T020/T021: Added `packages/clients/src/components/clients/ClientDetailsTabContent.tsx`,
+  a shared details-tab component extracted from `ClientDetails`. It imports only details-tab
+  dependencies and does not import `BillingConfiguration`, `InteractionsFeed`,
+  `ClientContactsList`, `ClientNotesPanel`, or Hudu tab modules.
+- F021/T034: Rebuilt `packages/clients/src/components/clients/ClientQuickView.tsx` to render
+  `ClientDetailsTabContent` directly instead of wrapping `<ClientDetails quickView />`.
+  Preserved prior details-tab actions: open in new tab, print, delete, Entra sync when
+  enabled, Quick Add Ticket, location management, save shortcut, and inactive/reactivate
+  confirmation flows.
+- F022/T020/T034: Restored header/action parity with the old quick-view details tab at source
+  level. Added contract assertions for the key action/dialog IDs and status-change handlers.
+  A later full manual/visual pass remains tracked by F074/T073.
+- F023/T023: Refactored full `ClientDetails.tsx` to consume `ClientDetailsTabContent` for
+  its details tab while leaving the full-page tab imports in `ClientDetails` itself.
+- F024-F032/T022/T024-T031: Rewired client quick-view call sites to `ClientQuickView`: tickets
+  list, ticket detail drawer, MSP client drawer provider, billing dashboard, projects
+  integration, clients page, interactions detail, projects context via integration provider,
+  and settings user list.
+- F033/T032: Classified contact-context `ClientDetails quickView` usages as quick-view
+  surfaces and migrated them too: `Contacts.tsx`, `MspContactTickets.tsx`,
+  `ContactDetailsView.tsx`, and `ContactDetails.tsx`.
+- F034/T033: After production build, `/msp/tickets` client reference manifest has
+  `ClientDetails.tsx`, `InteractionsFeed.tsx`, and `OverallInteractionsFeed.tsx` as async
+  entries with `chunks: []`; full `ClientDetails` is no longer attached to the tickets page
+  eager chunk graph. Eager route JS changed from baseline **8,684,502 bytes / 95 JS chunks**
+  to **8,073,167 bytes / 94 JS chunks**. Note: strings such as `ClientDetails` still appear
+  in shared chunks as prop names/minified code, and `BillingConfiguration` appears in a
+  contracts chunk, so use manifest `chunks: []` rather than raw string grep for this assertion.
+
+Verification commands:
+
+```bash
+cd server && npx vitest run ../packages/clients/src/components/clients/ClientQuickView.bundleBoundary.contract.test.ts ../packages/clients/src/components/clients/ClientQuickView.callSites.contract.test.ts
+cd server && NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck
+cd server && EDITION=community NEXT_PUBLIC_EDITION=community NODE_ENV=production npm run build
+```
+
+Results:
+
+- Focused quick-view Vitest contracts passed: 2 files, 4 tests.
+- Typecheck has no quick-view errors after fixes; it still fails on existing unrelated
+  missing modules: `@alga-psa/user-activities/components`,
+  `@alga-psa/user-activities/client/workflow-tasks`, and
+  `@alga-psa/agent-tooling/registry/schema`.
+- Production build completed. Existing warnings persisted: scheduling conflicting star
+  exports, `cleanupAiSessionKeysHandler` critical dependency, and `/_global-error` dynamic
+  server usage.
+
 ## Open questions (mirror PRD §10)
 - OQ1: Intercepting routes acceptable as a new pattern? (only option meeting C1+C2+C3)
 - OQ2: Preferred shared-state mechanism (existing store vs new React context)?

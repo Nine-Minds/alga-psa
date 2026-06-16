@@ -44,7 +44,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from './ClientDetails';
+import ClientQuickView from './ClientQuickView';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
 import { DeleteEntityDialog, handleError, useClientDrawer } from '@alga-psa/ui';
@@ -1776,7 +1776,7 @@ const Clients: React.FC = () => {
         }}
       >
         {quickViewClient && (
-          <ClientDetails
+          <ClientQuickView
             client={quickViewClient}
             isInDrawer={true}
             quickView={true}

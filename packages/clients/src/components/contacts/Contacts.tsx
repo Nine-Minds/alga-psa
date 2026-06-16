@@ -32,7 +32,7 @@ import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
-import ClientDetails from '../clients/ClientDetails';
+import ClientQuickView from '../clients/ClientQuickView';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -694,10 +694,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             return;
           }
           openDrawer(
-            <ClientDetails
+            <ClientQuickView
               client={client}
-              documents={[]}
-              contacts={[]}
               isInDrawer={true}
               quickView={true}
             />
