@@ -1,0 +1,38 @@
+[
+  {
+    "id": "T001",
+    "description": "Appliance setup-mode smoke: authenticated `/` detects `mode: setup` and navigates to `/setup/` while avoiding redirects outside setup mode.",
+    "featureIds": ["F001"],
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "Appliance setup UI smoke: `/setup/` shows install-code-first guidance, hides main fields before code entry, reveals fields after code entry, and keeps release controls under Advanced.",
+    "featureIds": ["F003", "F004"],
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "Appliance status UI smoke: `/` renders a prominent setup CTA when setup is reeditable or setup is not complete.",
+    "featureIds": ["F002"],
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "nm-store server-action unit test: Essentials registration calls the server-side register+email helper but returns no installCode/downloadUrl to the client.",
+    "featureIds": ["F005", "F008", "F009"],
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "nm-store provisioning unit test: paid checkout provisioning and already-provisioned refresh paths do not expose installCode/downloadUrl to the thank-you page contract while preserving email/idempotency behavior.",
+    "featureIds": ["F007", "F008", "F009"],
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "Manual/browser review: Essentials and paid appliance order pages show only email confirmation/instructions, never raw install code or ISO URL.",
+    "featureIds": ["F006", "F007"],
+    "implemented": false
+  }
+]
