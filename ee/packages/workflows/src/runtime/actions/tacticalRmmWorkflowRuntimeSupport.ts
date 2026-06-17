@@ -108,7 +108,7 @@ export class FetchTacticalWorkflowClient implements TacticalWorkflowClient {
       throw new Error('Tactical RMM Knox credentials are not configured for this tenant');
     }
 
-    const checkResponse = await fetch(`${this.baseUrl}/api/v2/checkcreds/`, {
+    const checkResponse = await fetch(`${this.baseUrl}/v2/checkcreds/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
@@ -121,7 +121,7 @@ export class FetchTacticalWorkflowClient implements TacticalWorkflowClient {
       throw new Error('Tactical RMM account requires TOTP; Knox token cannot be refreshed automatically');
     }
 
-    const loginResponse = await fetch(`${this.baseUrl}/api/v2/login/`, {
+    const loginResponse = await fetch(`${this.baseUrl}/v2/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
@@ -186,7 +186,7 @@ export class FetchTacticalWorkflowClient implements TacticalWorkflowClient {
     const agents: Record<string, unknown>[] = [];
     let pageNum = 1;
     for (;;) {
-      const data = await this.request('/api/beta/v1/agent/', {
+      const data = await this.request('/beta/v1/agent/', {
         query: { ...params, page_size: pageSize, page: pageNum }
       });
       if (Array.isArray(data)) {
@@ -202,7 +202,7 @@ export class FetchTacticalWorkflowClient implements TacticalWorkflowClient {
   }
 
   async getAgent(agentId: string): Promise<Record<string, unknown>> {
-    const data = await this.request(`/api/beta/v1/agent/${encodeURIComponent(agentId)}/`);
+    const data = await this.request(`/beta/v1/agent/${encodeURIComponent(agentId)}/`);
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       throw new Error(`Tactical RMM agent ${agentId} returned an unexpected response`);
     }

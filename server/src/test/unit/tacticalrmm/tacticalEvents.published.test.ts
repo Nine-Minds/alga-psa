@@ -54,7 +54,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
 
   class TacticalRmmClientMock {
     async listAllBeta(args: any) {
-      if (String(args?.path) === '/api/beta/v1/client/') {
+      if (String(args?.path) === '/beta/v1/client/') {
         if (throwOnClientList) throw throwOnClientList;
         return remoteClients;
       }

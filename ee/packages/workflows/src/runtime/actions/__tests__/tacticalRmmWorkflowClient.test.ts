@@ -77,8 +77,8 @@ describe('FetchTacticalWorkflowClient (T008)', () => {
 
     expect(scripts).toEqual([{ id: 1, name: 's' }]);
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Token stale-token');
-    expect(fetchMock.mock.calls[1][0]).toBe('https://api.tactical.example.com/api/v2/checkcreds/');
-    expect(fetchMock.mock.calls[2][0]).toBe('https://api.tactical.example.com/api/v2/login/');
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.tactical.example.com/v2/checkcreds/');
+    expect(fetchMock.mock.calls[2][0]).toBe('https://api.tactical.example.com/v2/login/');
     expect(fetchMock.mock.calls[3][1].headers.Authorization).toBe('Token fresh-token');
     expect(secretMocks.setTenantSecret).toHaveBeenCalledWith('tenant-1', 'tacticalrmm_knox_token', 'fresh-token');
   });
@@ -104,7 +104,7 @@ describe('FetchTacticalWorkflowClient (T008)', () => {
 
     const agents = await client.listAgents();
     expect(agents.map((a) => a.agent_id)).toEqual(['a1', 'a2']);
-    expect(fetchMock.mock.calls[0][0]).toContain('/api/beta/v1/agent/?');
+    expect(fetchMock.mock.calls[0][0]).toContain('/beta/v1/agent/?');
     expect(fetchMock.mock.calls[0][0]).toContain('page=1');
     expect(fetchMock.mock.calls[1][0]).toContain('page=2');
 

@@ -99,14 +99,14 @@ function startMockTacticalServer(): Promise<{
 
     res.setHeader('content-type', 'application/json');
 
-    if (method === 'POST' && url.pathname === '/api/v2/checkcreds/') {
+    if (method === 'POST' && url.pathname === '/v2/checkcreds/') {
       calls.checkcreds += 1;
       res.statusCode = 200;
       res.end(JSON.stringify({ totp: true }));
       return;
     }
 
-    if (method === 'POST' && url.pathname === '/api/v2/login/') {
+    if (method === 'POST' && url.pathname === '/v2/login/') {
       calls.login += 1;
       let body = '';
       req.on('data', (chunk) => {
@@ -124,7 +124,7 @@ function startMockTacticalServer(): Promise<{
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/beta/v1/client/') {
+    if (method === 'GET' && url.pathname === '/beta/v1/client/') {
       calls.clientList += 1;
       const auth = req.headers.authorization || '';
       calls.lastClientListAuth = auth;

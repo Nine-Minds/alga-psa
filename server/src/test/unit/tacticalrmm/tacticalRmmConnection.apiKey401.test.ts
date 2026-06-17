@@ -69,7 +69,7 @@ describe('Tactical RMM connection test (API key)', () => {
 
     expect(getSpy).toHaveBeenCalledTimes(1);
     expect(getSpy).toHaveBeenCalledWith(
-      'https://tactical.example/api/beta/v1/client/',
+      'https://tactical.example/beta/v1/client/',
       expect.objectContaining({
         headers: { 'X-API-KEY': 'api_abcdefghijklmnop' },
         timeout: 15_000,

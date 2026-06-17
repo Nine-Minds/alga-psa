@@ -107,7 +107,7 @@ export async function syncTacticalSingleAgentForTenant(args: {
 
   const agent = await client.request<any>({
     method: 'GET',
-    path: `/api/beta/v1/agent/${encodeURIComponent(agentId)}/`,
+    path: `/beta/v1/agent/${encodeURIComponent(agentId)}/`,
   });
 
   const mapping = await knex('tenant_external_entity_mappings')

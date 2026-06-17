@@ -5,7 +5,7 @@ import { buildTacticalClientForTenant } from './buildClient';
 /**
  * Lists currently-active TacticalRMM alerts for reconciliation, using the
  * same filterable alerts endpoint the manual backfill verified (PATCH
- * /api/alerts/ with a status filter; permissive about response shape).
+ * /alerts/ with a status filter; permissive about response shape).
  */
 export const tacticalRmmAlertFetcher: RmmActiveAlertFetcher = {
   async fetchActiveAlerts({ tenantId, integrationId }) {
@@ -14,7 +14,7 @@ export const tacticalRmmAlertFetcher: RmmActiveAlertFetcher = {
 
     const res = await client.request<any>({
       method: 'PATCH',
-      path: '/api/alerts/',
+      path: '/alerts/',
       data: { status: 'active' },
     });
     const alerts: any[] = Array.isArray(res)
