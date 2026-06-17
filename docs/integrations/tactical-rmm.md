@@ -99,5 +99,3 @@ It validates the `X-Alga-Webhook-Secret` header against the tenant's stored
 
 - [Asset Management System](../features/asset_management.md) — the asset model that
   device sync writes into.
-- [Hudu Integration](./hudu.md) — another way to bring a client's external systems
-  into AlgaPSA.
