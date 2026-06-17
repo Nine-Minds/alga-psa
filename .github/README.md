@@ -66,16 +66,48 @@ Feature availability varies by edition, deployment configuration, and enabled fe
 
 These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1419-building-an-invoice-layout).
 
-| Core workflow | Business operations |
-| --- | --- |
-| <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20Cycles.png" alt="Alga PSA billing dashboard" width="420"> |
-| Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
-| <img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="Alga PSA multilingual client portal" width="420"> | <img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="Alga PSA time approval screen" width="420"> |
-| Multilingual client portal views for client-facing requests and updates. | Time entry views for recording and reviewing work before billing. |
-| <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> | <img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"> |
-| Schedule views for dispatch and calendar-based work planning. | Drag-and-drop invoice and quote layout designer for branded PDFs. |
-| <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> | <img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"> |
-| Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. | Asset views for client equipment and service context. |
+<table>
+  <thead>
+    <tr>
+      <th width="50%" align="center">Core workflow</th>
+      <th width="50%" align="center">Business operations</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Billing%20Cycles.png" alt="Alga PSA billing dashboard" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Ticketing views for client requests, assignment, attachments, and follow-up.</td>
+      <td width="50%">Contracts, billing, and invoice-related workflows in one billing area.</td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="Alga PSA multilingual client portal" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="Alga PSA time approval screen" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Multilingual client portal views for client-facing requests and updates.</td>
+      <td width="50%">Time entry views for recording and reviewing work before billing.</td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Schedule views for dispatch and calendar-based work planning.</td>
+      <td width="50%">Drag-and-drop invoice and quote layout designer for branded PDFs.</td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes.</td>
+      <td width="50%">Asset views for client equipment and service context.</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Quick start
 
