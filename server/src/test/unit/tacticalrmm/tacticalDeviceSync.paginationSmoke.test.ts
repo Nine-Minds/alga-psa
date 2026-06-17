@@ -183,13 +183,13 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
       const path = String(args.path);
       const page = Number(args?.params?.page || 1);
 
-      if (path === '/api/beta/v1/site/') {
+      if (path === '/beta/v1/site/') {
         if (page === 1) return { results: [{ id: 's1', name: 'HQ' }], next: 'page2' };
         if (page === 2) return { results: [{ id: 's2', name: 'Branch' }], next: null };
         throw new Error(`Unexpected site page: ${page}`);
       }
 
-      if (path === '/api/beta/v1/agent/') {
+      if (path === '/beta/v1/agent/') {
         const clientId = String(args?.params?.client_id ?? '');
         if (clientId !== '100') throw new Error(`Unexpected client_id: ${clientId}`);
 
@@ -292,8 +292,8 @@ describe('Tactical device sync paging (smoke)', () => {
     expect(res.items_created).toBe(5);
 
     // Ensure we made multiple page requests for both sites and agents, with page_size capped to 1000.
-    const siteCalls = requestCalls.filter((c) => c.path === '/api/beta/v1/site/');
-    const agentCalls = requestCalls.filter((c) => c.path === '/api/beta/v1/agent/');
+    const siteCalls = requestCalls.filter((c) => c.path === '/beta/v1/site/');
+    const agentCalls = requestCalls.filter((c) => c.path === '/beta/v1/agent/');
     expect(siteCalls.map((c) => c.params.page)).toEqual([1, 2]);
     expect(agentCalls.map((c) => c.params.page)).toEqual([1, 2, 3]);
     expect(requestCalls.every((c) => Number(c.params.page_size) === 1000)).toBe(true);

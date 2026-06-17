@@ -35,6 +35,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) Tactical has an additional status state `overdue`. Current Alga types/UI generally assume `online|offline|unknown`, so Tactical likely requires a small type/UI expansion.
 - (2026-02-13) Tactical beta agent list serializer is `__all__` model fields; computed `status` may not appear on list responses. Prefer computing status from last_seen/offline_time/overdue_time for list-based sync.
 - (2026-02-13) Fleet-scale software inventory ingestion should use bulk `GET /api/software/` (cached) rather than per-agent refresh `PUT /api/software/<agent_id>/`.
+- (2026-06-17) CORRECTION, verified against a live Tactical (v0.0.203): stock Tactical serves its API at the **root** of the `api.` host, not under `/api/`. The integration's paths were wrong by an `/api/` prefix and were corrected in code, tests, and the EE workflow runtime: `/api/beta/v1/...` -> `/beta/v1/...`, `/api/v2/...` -> `/v2/...`, `/api/alerts/` -> `/alerts/`, `/api/software/` -> `/software/`. Two more gotchas surfaced during manual testing:
+  - The instance URL must be the `api.` host. The `rmm.` (dashboard) host serves the SPA `index.html` with a `200` for every path, so sync parses zero records and looks like a no-op. The settings UI default placeholder used `https://rmm.example.com`, which steered users wrong; it now uses `https://api.example.com`.
+  - The beta API is off by default. `BETA_API_ENABLED` gates `path("beta/v1/", ...)` in Tactical's `urls.py`, so `/beta/v1/*` returns `404` until you set `BETA_API_ENABLED = True` and restart Tactical.
 
 ## Commands / Runbooks
 

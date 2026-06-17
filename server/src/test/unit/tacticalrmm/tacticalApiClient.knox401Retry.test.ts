@@ -28,7 +28,7 @@ describe('TacticalRmmClient Knox 401 retry guard', () => {
     });
 
     await expect(
-      client.request({ method: 'GET', path: '/api/beta/v1/client/' })
+      client.request({ method: 'GET', path: '/beta/v1/client/' })
     ).rejects.toThrow();
 
     // One refresh attempt max (even though both attempts 401).

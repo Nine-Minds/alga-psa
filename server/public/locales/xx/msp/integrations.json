@@ -1509,7 +1509,8 @@
         },
         "fields": {
           "instanceUrl": "11111",
-          "instanceUrlHelp": "11111"
+          "instanceUrlHelp": "11111",
+          "betaApiNote": "55555"
         },
         "lastError": "11111 {{error}} 11111",
         "loadingSettings": "11111",

@@ -431,15 +431,182 @@ export function TacticalRmmIntegrationSettings() {
             <Label htmlFor="tacticalrmm-instance-url">{t('integrations.rmm.tactical.fields.instanceUrl', { defaultValue: 'Instance URL' })}</Label>
             <Input
               id="tacticalrmm-instance-url"
-              placeholder="https://rmm.example.com"
+              placeholder="https://api.example.com"
               value={instanceUrl}
               onChange={(e) => setInstanceUrl(e.target.value)}
               disabled={loading || saving || disconnecting}
             />
             <div className="text-xs text-muted-foreground">
-              {t('integrations.rmm.tactical.fields.instanceUrlHelp', { defaultValue: 'Use your Tactical base URL (no trailing /api).' })}
+              {t('integrations.rmm.tactical.fields.instanceUrlHelp', { defaultValue: 'Use your Tactical API host — the api. subdomain, e.g. https://api.example.com. Not the dashboard (rmm.) URL, and no trailing /api.' })}
             </div>
           </div>
+
+          <Alert variant="info">
+            <AlertDescription className="text-xs">
+              {t('integrations.rmm.tactical.fields.betaApiNote', { defaultValue: "Requires Tactical's Beta API to be enabled on the server: set BETA_API_ENABLED = True in Tactical, then restart it. Without the Beta API, the connection test and sync will fail." })}
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-2">
+            <Label htmlFor="tacticalrmm-auth-mode">{t('integrations.rmm.tactical.auth.mode', { defaultValue: 'Authentication' })}</Label>
+            <CustomSelect
+              id="tacticalrmm-auth-mode"
+              className="!w-auto"
+              value={authMode}
+              onValueChange={(v) => {
+                setAuthMode(v as TacticalRmmAuthMode);
+                setTotpRequired(false);
+                setTotpCode('');
+                setError(null);
+                setSuccess(null);
+              }}
+              options={[
+                { value: 'api_key', label: t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' }) },
+                { value: 'knox', label: t('integrations.rmm.tactical.auth.knoxOption', { defaultValue: 'Username/password (Knox token)' }) },
+              ]}
+            />
+          </div>
+
+          {authMode === 'api_key' ? (
+            <div className="space-y-2">
+              <Label htmlFor="tacticalrmm-api-key">{t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' })}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="tacticalrmm-api-key"
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={credentialsStatus?.apiKeyMasked ? credentialsStatus.apiKeyMasked : t('integrations.rmm.tactical.auth.enterApiKey', { defaultValue: 'Enter API key' })}
+                  disabled={loading || saving || disconnecting}
+                />
+                <Button
+                  id="tacticalrmm-toggle-api-key-visibility"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowApiKey((s) => !s)}
+                  disabled={loading || saving || disconnecting}
+                >
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {credentialsStatus?.hasApiKey && (
+                <div className="text-xs text-muted-foreground">
+                  {t('integrations.rmm.tactical.auth.saved', { defaultValue: 'Saved: {{value}}', value: credentialsStatus.apiKeyMasked })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="tacticalrmm-username">{t('integrations.rmm.tactical.auth.username', { defaultValue: 'Username' })}</Label>
+                <Input
+                  id="tacticalrmm-username"
+                  className="!w-auto"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder={t('integrations.rmm.tactical.auth.enterUsername', { defaultValue: 'Enter username' })}
+                  disabled={loading || saving || disconnecting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tacticalrmm-password">{t('integrations.rmm.tactical.auth.password', { defaultValue: 'Password' })}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="tacticalrmm-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={credentialsStatus?.hasKnoxCredentials
+                      ? t('integrations.rmm.tactical.auth.savedEnterToUpdate', { defaultValue: 'Saved (enter to update)' })
+                      : t('integrations.rmm.tactical.auth.enterPassword', { defaultValue: 'Enter password' })}
+                    disabled={loading || saving || disconnecting}
+                  />
+                  <Button
+                    id="tacticalrmm-toggle-password-visibility"
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowPassword((s) => !s)}
+                    disabled={loading || saving || disconnecting}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              {totpRequired && (
+                <div className="space-y-2">
+                  <Label htmlFor="tacticalrmm-totp">{t('integrations.rmm.tactical.auth.totp', { defaultValue: 'TOTP code' })}</Label>
+                  <Input
+                    id="tacticalrmm-totp"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value)}
+                    placeholder="123456"
+                    disabled={testing || disconnecting}
+                  />
+                </div>
+              )}
+
+              {credentialsStatus?.hasKnoxToken && (
+                <div className="text-xs text-muted-foreground">
+                  {t('integrations.rmm.tactical.auth.knoxTokenSaved', { defaultValue: 'Knox token saved: {{value}}', value: credentialsStatus.knoxTokenMasked })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              id="tacticalrmm-save-config"
+              type="button"
+              onClick={handleSave}
+              disabled={!canSave || saving || loading || disconnecting}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saving
+                ? t('integrations.rmm.tactical.actions.saving', { defaultValue: 'Saving...' })
+                : t('integrations.rmm.tactical.actions.save', { defaultValue: 'Save' })}
+            </Button>
+
+            <Button
+              id="tacticalrmm-test-connection"
+              type="button"
+              variant="secondary"
+              onClick={handleTestConnection}
+              disabled={testing || loading || disconnecting || (totpRequired && !totpCode.trim())}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${testing ? 'animate-spin' : ''}`} />
+              {testing
+                ? t('integrations.rmm.tactical.actions.testing', { defaultValue: 'Testing...' })
+                : t('integrations.rmm.tactical.actions.testConnection', { defaultValue: 'Test Connection' })}
+            </Button>
+
+            <Button
+              id="tacticalrmm-disconnect"
+              type="button"
+              variant="destructive"
+              onClick={handleDisconnect}
+              disabled={disconnecting || loading}
+            >
+              <Unlink className="h-4 w-4 mr-2" />
+              {disconnecting
+                ? t('integrations.rmm.tactical.actions.disconnecting', { defaultValue: 'Disconnecting...' })
+                : t('integrations.rmm.tactical.actions.disconnect', { defaultValue: 'Disconnect' })}
+            </Button>
+          </div>
+
+          {!loading && credentialsStatus && (
+            <div className="text-xs text-muted-foreground">
+              {credentialsStatus.hasApiKey || credentialsStatus.hasKnoxCredentials
+                ? t('integrations.rmm.tactical.statusLine.configured', { defaultValue: 'Status: Configured' })
+                : t('integrations.rmm.tactical.statusLine.notConfigured', { defaultValue: 'Status: Not configured' })}
+            </div>
+          )}
+
+          {loading && (
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              {t('integrations.rmm.tactical.loadingSettings', { defaultValue: 'Loading Tactical RMM settings...' })}
+            </div>
+          )}
 
           <div className="rounded-md border bg-background p-4">
             <div className="flex items-start justify-between gap-3">
@@ -585,7 +752,7 @@ export function TacticalRmmIntegrationSettings() {
               <div className="space-y-1">
                 <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.softwareInventory', { defaultValue: 'Software Inventory' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  {t('integrations.rmm.tactical.sections.softwareInventoryDescription', { defaultValue: 'Optional: ingest cached software inventory via Tactical /api/software/ (no per-agent refresh calls).' })}
+                  {t('integrations.rmm.tactical.sections.softwareInventoryDescription', { defaultValue: 'Optional: ingest cached software inventory via Tactical /software/ (no per-agent refresh calls).' })}
                 </div>
               </div>
               <Button
@@ -692,164 +859,6 @@ export function TacticalRmmIntegrationSettings() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tacticalrmm-auth-mode">{t('integrations.rmm.tactical.auth.mode', { defaultValue: 'Authentication' })}</Label>
-            <CustomSelect
-              id="tacticalrmm-auth-mode"
-              value={authMode}
-              onValueChange={(v) => {
-                setAuthMode(v as TacticalRmmAuthMode);
-                setTotpRequired(false);
-                setTotpCode('');
-                setError(null);
-                setSuccess(null);
-              }}
-              options={[
-                { value: 'api_key', label: t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' }) },
-                { value: 'knox', label: t('integrations.rmm.tactical.auth.knoxOption', { defaultValue: 'Username/password (Knox token)' }) },
-              ]}
-            />
-          </div>
-
-          {authMode === 'api_key' ? (
-            <div className="space-y-2">
-              <Label htmlFor="tacticalrmm-api-key">{t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' })}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="tacticalrmm-api-key"
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={credentialsStatus?.apiKeyMasked ? credentialsStatus.apiKeyMasked : t('integrations.rmm.tactical.auth.enterApiKey', { defaultValue: 'Enter API key' })}
-                  disabled={loading || saving || disconnecting}
-                />
-                <Button
-                  id="tacticalrmm-toggle-api-key-visibility"
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowApiKey((s) => !s)}
-                  disabled={loading || saving || disconnecting}
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              {credentialsStatus?.hasApiKey && (
-                <div className="text-xs text-muted-foreground">
-                  {t('integrations.rmm.tactical.auth.saved', { defaultValue: 'Saved: {{value}}', value: credentialsStatus.apiKeyMasked })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tacticalrmm-username">{t('integrations.rmm.tactical.auth.username', { defaultValue: 'Username' })}</Label>
-                <Input
-                  id="tacticalrmm-username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={t('integrations.rmm.tactical.auth.enterUsername', { defaultValue: 'Enter username' })}
-                  disabled={loading || saving || disconnecting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tacticalrmm-password">{t('integrations.rmm.tactical.auth.password', { defaultValue: 'Password' })}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="tacticalrmm-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={credentialsStatus?.hasKnoxCredentials
-                      ? t('integrations.rmm.tactical.auth.savedEnterToUpdate', { defaultValue: 'Saved (enter to update)' })
-                      : t('integrations.rmm.tactical.auth.enterPassword', { defaultValue: 'Enter password' })}
-                    disabled={loading || saving || disconnecting}
-                  />
-                  <Button
-                    id="tacticalrmm-toggle-password-visibility"
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowPassword((s) => !s)}
-                    disabled={loading || saving || disconnecting}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              {totpRequired && (
-                <div className="space-y-2">
-                  <Label htmlFor="tacticalrmm-totp">{t('integrations.rmm.tactical.auth.totp', { defaultValue: 'TOTP code' })}</Label>
-                  <Input
-                    id="tacticalrmm-totp"
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value)}
-                    placeholder="123456"
-                    disabled={testing || disconnecting}
-                  />
-                </div>
-              )}
-
-              {credentialsStatus?.hasKnoxToken && (
-                <div className="text-xs text-muted-foreground">
-                  {t('integrations.rmm.tactical.auth.knoxTokenSaved', { defaultValue: 'Knox token saved: {{value}}', value: credentialsStatus.knoxTokenMasked })}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              id="tacticalrmm-save-config"
-              type="button"
-              onClick={handleSave}
-              disabled={!canSave || saving || loading || disconnecting}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {saving
-                ? t('integrations.rmm.tactical.actions.saving', { defaultValue: 'Saving...' })
-                : t('integrations.rmm.tactical.actions.save', { defaultValue: 'Save' })}
-            </Button>
-
-            <Button
-              id="tacticalrmm-test-connection"
-              type="button"
-              variant="secondary"
-              onClick={handleTestConnection}
-              disabled={testing || loading || disconnecting || (totpRequired && !totpCode.trim())}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${testing ? 'animate-spin' : ''}`} />
-              {testing
-                ? t('integrations.rmm.tactical.actions.testing', { defaultValue: 'Testing...' })
-                : t('integrations.rmm.tactical.actions.testConnection', { defaultValue: 'Test Connection' })}
-            </Button>
-
-            <Button
-              id="tacticalrmm-disconnect"
-              type="button"
-              variant="destructive"
-              onClick={handleDisconnect}
-              disabled={disconnecting || loading}
-            >
-              <Unlink className="h-4 w-4 mr-2" />
-              {disconnecting
-                ? t('integrations.rmm.tactical.actions.disconnecting', { defaultValue: 'Disconnecting...' })
-                : t('integrations.rmm.tactical.actions.disconnect', { defaultValue: 'Disconnect' })}
-            </Button>
-          </div>
-
-          {!loading && credentialsStatus && (
-            <div className="text-xs text-muted-foreground">
-              {credentialsStatus.hasApiKey || credentialsStatus.hasKnoxCredentials
-                ? t('integrations.rmm.tactical.statusLine.configured', { defaultValue: 'Status: Configured' })
-                : t('integrations.rmm.tactical.statusLine.notConfigured', { defaultValue: 'Status: Not configured' })}
-            </div>
-          )}
-
-          {loading && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              {t('integrations.rmm.tactical.loadingSettings', { defaultValue: 'Loading Tactical RMM settings...' })}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
