@@ -50,8 +50,9 @@ Primary user: MSP admin / system admin configuring integrations.
 
 Flows:
 1. Configure Tactical:
+   - On the Tactical server, enable the Beta API: set `BETA_API_ENABLED = True` and restart Tactical.
    - Open Settings -> Integrations -> RMM -> Tactical RMM.
-   - Enter instance base URL.
+   - Enter the Tactical **API host** as the instance URL: the `api.` subdomain (e.g. `https://api.example.com`), not the dashboard (`rmm.`) URL.
    - Choose auth mode:
      - API key: paste key, save, verify.
      - Username/password: enter creds, if TOTP required prompt for code, login, store token.
@@ -123,23 +124,27 @@ Flows:
 
 ## Data / API / Integrations
 
-Tactical endpoints (assume base URL `https://<tactical-host>`):
+Point the integration at the Tactical **API host** (the `api.` subdomain), for example `https://api.example.com`. Do not use the dashboard host (`rmm.`). The dashboard serves the single-page app and returns its HTML with a `200` for every path, so sync reads zero records and silently does nothing.
+
+Tactical's **Beta API must be enabled** for inventory sync. Set `BETA_API_ENABLED = True` in Tactical and restart it. While it is off, the `/beta/v1/*` endpoints return `404` and both the connection test and sync fail.
+
+Tactical endpoints (base URL `https://<tactical-api-host>`, served at the root with no `/api` prefix):
 
 - Auth (username/password):
-  - `POST /api/v2/checkcreds/` `{ username, password }` -> `{ totp: true }` or short-lived token
-  - `POST /api/v2/login/` `{ username, password, twofactor? }` -> Knox token response
+  - `POST /v2/checkcreds/` `{ username, password }` -> `{ totp: true }` or short-lived token
+  - `POST /v2/login/` `{ username, password, twofactor? }` -> Knox token response
   - Auth header: `Authorization: Token <knox_token>`
 - Auth (api key):
   - Auth header: `X-API-KEY: <key>`
-- Inventory (beta API):
-  - `GET /api/beta/v1/client/`
-  - `GET /api/beta/v1/site/?page_size=1000&page=N`
-  - `GET /api/beta/v1/agent/?client_id=<client_pk>&page_size=1000&page=N`
+- Inventory (beta API, requires `BETA_API_ENABLED`):
+  - `GET /beta/v1/client/`
+  - `GET /beta/v1/site/?page_size=1000&page=N`
+  - `GET /beta/v1/agent/?client_id=<client_pk>&page_size=1000&page=N`
 - Alerts:
-  - `PATCH /api/alerts/` with filter body for backfill/top-N
+  - `PATCH /alerts/` with filter body for backfill/top-N
 - Software:
-  - `GET /api/software/` bulk cached software inventory
-  - `PUT /api/software/<agent_id>/` per-agent refresh (non-goal by default)
+  - `GET /software/` bulk cached software inventory
+  - `PUT /software/<agent_id>/` per-agent refresh (non-goal by default)
 
 Alga DB tables involved:
 - `rmm_integrations` (one row per tenant+provider; store instance_url, is_active, settings JSON including webhook secret and auth mode).
