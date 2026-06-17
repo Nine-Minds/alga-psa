@@ -64,11 +64,11 @@ Feature availability varies by edition, deployment configuration, and enabled fe
 
 ## Product screenshots
 
-These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1410-bind-invoice-data-to-your-layout).
+These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1419-building-an-invoice-layout).
 
 | Core workflow | Business operations |
 | --- | --- |
-| <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20dashboard.png" alt="Alga PSA billing dashboard" width="420"> |
+| <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20Cycles.png" alt="Alga PSA billing dashboard" width="420"> |
 | Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
 | <img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="Alga PSA multilingual client portal" width="420"> | <img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="Alga PSA time approval screen" width="420"> |
 | Multilingual client portal views for client-facing requests and updates. | Time entry views for recording and reviewing work before billing. |
