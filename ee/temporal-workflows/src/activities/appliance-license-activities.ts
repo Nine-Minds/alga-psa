@@ -8,6 +8,7 @@
 
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { emailService } from '../services/email-service';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
@@ -369,4 +370,82 @@ export async function revokeLicenseEntitlement(
     .where({ tenant: input.tenant })
     .whereIn('contract_id', contractIds)
     .update({ is_active: false, updated_at: knex.fn.now() });
+}
+
+// ── Appliance Essentials (free) registration ────────────────────────────────
+//
+// The free Essentials order has no Stripe entitlement: it mints a registry
+// tenant + a one-time install code and emails the operator. nm-store starts the
+// workflow; these activities run on this worker, which already holds the
+// alga-license service auth (c4Post) and the shared email service — so a
+// transient Postgres 53300 on the mint is retried by Temporal, not lost.
+
+export interface RegisterEssentialsTenantInput {
+  submissionId: string;
+  companyName: string;
+  contactName?: string;
+  contactEmail: string;
+}
+
+export interface RegisterEssentialsTenantResult {
+  tenantId: string;
+  installCode: string;
+}
+
+export interface DeliverEssentialsInstallEmailInput {
+  to: string;
+  companyName: string;
+  installCode: string;
+  downloadUrl: string;
+}
+
+/** Mint a registry tenant + one-time install code for the free Essentials edition. */
+export async function registerEssentialsTenant(
+  input: RegisterEssentialsTenantInput,
+): Promise<RegisterEssentialsTenantResult> {
+  const log = logger();
+  log.info('registerEssentialsTenant', { submissionId: input.submissionId });
+
+  const res = (await c4Post('/register-tenant', {
+    company_name: input.companyName,
+    contact_email: input.contactEmail,
+    contact_name: input.contactName,
+    edition: 'essentials',
+  })) as { tenant_id: string; install_code: string };
+
+  return { tenantId: res.tenant_id, installCode: res.install_code };
+}
+
+/** Email the operator their install code + ISO download link (shared email service). */
+export async function deliverEssentialsInstallEmail(
+  input: DeliverEssentialsInstallEmailInput,
+): Promise<void> {
+  const log = logger();
+  log.info('deliverEssentialsInstallEmail', { to: input.to });
+
+  const svc = await emailService;
+  await svc.sendEmail({
+    to: input.to,
+    subject: 'Your AlgaPSA appliance install code',
+    html: renderEssentialsInstallEmail(input),
+    metadata: { kind: 'appliance-essentials-install-code' },
+  });
+}
+
+function escapeApplianceHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string),
+  );
+}
+
+function renderEssentialsInstallEmail(input: DeliverEssentialsInstallEmailInput): string {
+  return `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#111">
+      <h2>Your AlgaPSA appliance is ready to install</h2>
+      <p>Thanks for registering <strong>${escapeApplianceHtml(input.companyName)}</strong> for an on-prem AlgaPSA appliance (Essentials).</p>
+      <p>Enter this <strong>install code</strong> on the appliance setup screen. It binds the appliance to your account:</p>
+      <p style="font-family:monospace;font-size:24px;letter-spacing:0.15em;background:#f3f4f6;padding:16px 20px;border-radius:8px;text-align:center">${escapeApplianceHtml(input.installCode)}</p>
+      <p><a href="${input.downloadUrl}" style="display:inline-block;background:#7c3aed;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Download the appliance ISO</a></p>
+      <p style="color:#6b7280;font-size:13px">The install code is single-use. If you reinstall, re-issue a fresh one from your account.</p>
+    </div>`;
 }
