@@ -17,6 +17,7 @@ import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
 import { signIn } from 'next-auth/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
+import { validatePassword as validatePasswordPolicy, getPasswordRequirements } from '@alga-psa/validation';
 
 const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
   TOKEN_REQUIRED: 'auth.portalSetup.errors.tokenRequired',
@@ -134,20 +135,22 @@ function PortalSetupContent() {
 
   const validatePassword = () => {
     const { password, confirmPassword } = formData;
-    
+    const reqs = getPasswordRequirements(password);
+
     setPasswordRequirements({
-      minLength: password.length >= 8,
-      hasUppercase: /[A-Z]/.test(password),
-      hasLowercase: /[a-z]/.test(password),
-      hasNumber: /\d/.test(password),
-      hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+      minLength: reqs.minLength,
+      hasUppercase: reqs.hasUpper,
+      hasLowercase: reqs.hasLower,
+      hasNumber: reqs.hasNumber,
+      hasSpecialChar: reqs.hasSpecial,
       passwordsMatch: password === confirmPassword && password.length > 0
     });
   };
 
   const isPasswordValid = () => {
-    const { minLength, hasUppercase, hasLowercase, hasNumber, hasSpecialChar, passwordsMatch } = passwordRequirements;
-    return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar && passwordsMatch;
+    // Checklist items are necessary but not sufficient — the shared policy also
+    // enforces the common-word blocklist and long-sequence rejection.
+    return passwordRequirements.passwordsMatch && validatePasswordPolicy(formData.password) === null;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +165,10 @@ function PortalSetupContent() {
     e.preventDefault();
 
     if (!isPasswordValid()) {
-      toast.error(t('auth.portalSetup.requirementsNotMet', 'Please ensure all password requirements are met'));
+      // Surface the specific policy error (e.g. too common / sequential) when present,
+      // otherwise fall back to the generic requirements message (e.g. passwords mismatch).
+      const policyError = validatePasswordPolicy(formData.password);
+      toast.error(policyError ?? t('auth.portalSetup.requirementsNotMet', 'Please ensure all password requirements are met'));
       return;
     }
 
