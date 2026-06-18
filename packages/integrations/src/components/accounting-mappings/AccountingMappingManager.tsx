@@ -33,18 +33,34 @@ export function AccountingMappingManager({
   const paramKey = urlParamKey ?? 'tab';
   const tabParam = searchParams?.get(paramKey);
 
-  const defaultTab = defaultTabId ?? modules[0]?.id ?? '';
+  const resolveTabId = React.useCallback(
+    (candidate?: string | null, fallbackId?: string) => {
+      if (!modules.length) {
+        return '';
+      }
+
+      if (!candidate) {
+        return fallbackId ?? modules[0].id;
+      }
+
+      const normalizedCandidate = candidate.toLowerCase();
+      return modules.find((module) => module.id.toLowerCase() === normalizedCandidate)?.id ?? fallbackId ?? modules[0].id;
+    },
+    [modules]
+  );
+
+  const defaultTab = resolveTabId(defaultTabId);
 
   const [activeTab, setActiveTab] = useState<string>(() => {
-    return tabParam?.toLowerCase() || defaultTab;
+    return tabParam ? resolveTabId(tabParam, defaultTab) : defaultTab;
   });
 
   useEffect(() => {
-    const targetTab = tabParam?.toLowerCase() || defaultTab;
+    const targetTab = tabParam ? resolveTabId(tabParam, defaultTab) : defaultTab;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
-  }, [tabParam, activeTab, defaultTab]);
+  }, [tabParam, activeTab, defaultTab, resolveTabId]);
 
   const updateURL = (tabId: string) => {
     // Build new URL with tab parameter

@@ -2,9 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Badge } from '@alga-psa/ui/components/Badge';
 import CSVIntegrationSettings from './CSVIntegrationSettings';
 import QboIntegrationSettings from './QboIntegrationSettings';
 import XeroIntegrationSettings from './XeroIntegrationSettings';
@@ -12,60 +10,48 @@ import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv';
+type AccountingIntegrationId =
+  | 'quickbooks_online'
+  | 'xero'
+  | 'quickbooks_csv'
+  | 'xero_csv';
 
 type AccountingIntegrationOption = {
   id: AccountingIntegrationId;
   title: string;
   description: string;
-  badge?: { label: string; variant: React.ComponentProps<typeof Badge>['variant'] };
   disabled?: boolean;
+  mode: string;
   highlights: Array<{ label: string; value: string }>;
 };
 
-function BannerIcon({
-  className,
-  children
+function IntegrationMark({
+  option,
+  selected
 }: {
-  className: string;
-  children: React.ReactNode;
+  option: AccountingIntegrationOption;
+  selected: boolean;
 }) {
+  const label =
+    option.id === 'quickbooks_online'
+      ? 'QB'
+      : option.id === 'xero'
+        ? 'XE'
+        : option.id === 'xero_csv'
+          ? 'XC'
+          : 'QC';
+
   return (
     <div
       className={cn(
-        'flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold shadow-sm ring-1 ring-border',
-        className
+        'flex h-11 w-11 shrink-0 items-center justify-center rounded-md border text-xs font-semibold tracking-normal',
+        selected
+          ? 'border-primary-500 bg-primary-50 text-primary-700'
+          : 'border-border bg-background text-muted-foreground'
       )}
+      aria-hidden="true"
     >
-      {children}
-    </div>
-  );
-}
-
-function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) {
-  const icon =
-    option.id === 'quickbooks_online' ? (
-      <BannerIcon className="bg-green-500 text-xl font-bold text-white">Q</BannerIcon>
-    ) : option.id === 'xero' ? (
-      <BannerIcon className="bg-sky-500 text-xl font-bold text-white">X</BannerIcon>
-    ) : option.id === 'xero_csv' ? (
-      <BannerIcon className="bg-sky-500 text-[11px] font-bold tracking-wider text-white">
-        X·CSV
-      </BannerIcon>
-    ) : (
-      <BannerIcon className="bg-slate-800 text-[11px] font-bold tracking-wider text-white">
-        CSV
-      </BannerIcon>
-    );
-
-  return (
-    <div className="relative flex h-24 w-full items-center justify-center rounded-lg bg-muted/40">
-      {option.badge ? (
-        <div className="absolute right-3 top-3">
-          <Badge variant={option.badge.variant}>{option.badge.label}</Badge>
-        </div>
-      ) : null}
-      {icon}
+      {label}
     </div>
   );
 }
@@ -75,64 +61,154 @@ interface AccountingIntegrationsSetupProps {
   qboOnboardingSlot?: React.ReactNode;
 }
 
-export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
+export default function AccountingIntegrationsSetup({
+  qboSyncHealthSlot,
+  qboOnboardingSlot
+}: AccountingIntegrationsSetupProps = {}) {
   const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-  const options = useMemo<AccountingIntegrationOption[]>(
-    () => {
-      const next: AccountingIntegrationOption[] = [];
+  const options = useMemo<AccountingIntegrationOption[]>(() => {
+    const next: AccountingIntegrationOption[] = [];
 
-      if (isEEAvailable) {
-        next.push({
-          id: 'quickbooks_online',
-          title: 'QuickBooks Online',
-          description: t('integrations.accounting.setup.options.qbo.description', { defaultValue: 'Connect your realm to sync invoices and manage mappings.' }),
-          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Enterprise' }), variant: 'secondary' },
-          highlights: [
-            { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
-            { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.live', { defaultValue: 'Live' }) }
-          ]
-        });
+    if (isEEAvailable) {
+      next.push({
+        id: 'quickbooks_online',
+        title: 'QuickBooks Online',
+        description: t(
+          'integrations.accounting.setup.options.qbo.description',
+          {
+            defaultValue:
+              'Connect your QuickBooks company for live invoice delivery and mappings.'
+          }
+        ),
+        mode: t('integrations.accounting.setup.modes.liveOauth', {
+          defaultValue: 'Live connection'
+        }),
+        highlights: [
+          {
+            label: t('integrations.accounting.setup.highlights.sync', {
+              defaultValue: 'Sync'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.twoWay', {
+              defaultValue: '2-way'
+            })
+          },
+          {
+            label: t('integrations.accounting.setup.highlights.delivery', {
+              defaultValue: 'Delivery'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.live', {
+              defaultValue: 'Live'
+            })
+          }
+        ]
+      });
 
-        next.push({
-          id: 'xero',
-          title: 'Xero',
-          description: t('integrations.accounting.setup.options.xero.description', { defaultValue: 'Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings.' }),
-          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Enterprise' }), variant: 'secondary' },
-          highlights: [
-            { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
-            { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.live', { defaultValue: 'Live' }) }
-          ]
-        });
+      next.push({
+        id: 'xero',
+        title: 'Xero',
+        description: t(
+          'integrations.accounting.setup.options.xero.description',
+          {
+            defaultValue:
+              'Connect your Xero organisation for live accounting exports and mappings.'
+          }
+        ),
+        mode: t('integrations.accounting.setup.modes.liveOauth', {
+          defaultValue: 'Live connection'
+        }),
+        highlights: [
+          {
+            label: t('integrations.accounting.setup.highlights.sync', {
+              defaultValue: 'Sync'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.twoWay', {
+              defaultValue: '2-way'
+            })
+          },
+          {
+            label: t('integrations.accounting.setup.highlights.delivery', {
+              defaultValue: 'Delivery'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.live', {
+              defaultValue: 'Live'
+            })
+          }
+        ]
+      });
+    }
+
+    next.push(
+      {
+        id: 'quickbooks_csv',
+        title: 'QuickBooks CSV',
+        description: t(
+          'integrations.accounting.setup.options.qboCsv.description',
+          {
+            defaultValue:
+              'Export invoices to CSV for manual import into QuickBooks and import tax data from reports.'
+          }
+        ),
+        mode: t('integrations.accounting.setup.modes.fileWorkflow', {
+          defaultValue: 'File workflow'
+        }),
+        highlights: [
+          {
+            label: t('integrations.accounting.setup.highlights.export', {
+              defaultValue: 'Export'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.manual', {
+              defaultValue: 'Manual'
+            })
+          },
+          {
+            label: t('integrations.accounting.setup.highlights.format', {
+              defaultValue: 'Format'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.csv', {
+              defaultValue: 'CSV'
+            })
+          }
+        ]
+      },
+      {
+        id: 'xero_csv',
+        title: 'Xero CSV',
+        description: t(
+          'integrations.accounting.setup.options.xeroCsv.description',
+          {
+            defaultValue:
+              'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.'
+          }
+        ),
+        mode: t('integrations.accounting.setup.modes.fileWorkflow', {
+          defaultValue: 'File workflow'
+        }),
+        highlights: [
+          {
+            label: t('integrations.accounting.setup.highlights.export', {
+              defaultValue: 'Export'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.manual', {
+              defaultValue: 'Manual'
+            })
+          },
+          {
+            label: t('integrations.accounting.setup.highlights.format', {
+              defaultValue: 'Format'
+            }),
+            value: t('integrations.accounting.setup.highlightValues.csv', {
+              defaultValue: 'CSV'
+            })
+          }
+        ]
       }
+    );
 
-      next.push(
-        {
-          id: 'quickbooks_csv',
-          title: 'QuickBooks CSV',
-          description: t('integrations.accounting.setup.options.qboCsv.description', { defaultValue: 'Export invoices to CSV for manual import into QuickBooks and import tax data from reports.' }),
-          highlights: [
-            { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
-            { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.csv', { defaultValue: 'CSV' }) }
-          ]
-        },
-        {
-          id: 'xero_csv',
-          title: 'Xero CSV',
-          description: t('integrations.accounting.setup.options.xeroCsv.description', { defaultValue: 'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.' }),
-          highlights: [
-            { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
-            { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.csv', { defaultValue: 'CSV' }) }
-          ]
-        }
-      );
-
-      return next;
-    },
-    [isEEAvailable, t]
-  );
+    return next;
+  }, [isEEAvailable, t]);
 
   const requestedIntegration = searchParams?.get('accounting_integration');
   const xeroOauthStatus = searchParams?.get('xero_status');
@@ -141,7 +217,10 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
   // An explicit accounting_integration request wins over OAuth status params so
   // the Xero and QBO callbacks cannot clobber each other's selection.
   const resolveRequestedSelection = (): AccountingIntegrationId | null => {
-    if (requestedIntegration === 'quickbooks_online' || requestedIntegration === 'qbo') {
+    if (
+      requestedIntegration === 'quickbooks_online' ||
+      requestedIntegration === 'qbo'
+    ) {
       return isEEAvailable ? 'quickbooks_online' : null;
     }
     if (requestedIntegration === 'xero') {
@@ -181,7 +260,8 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
     setSelected(options[0]?.id ?? 'quickbooks_csv');
   }, [options, selected]);
 
-  const selectedOption = options.find((option) => option.id === selected) ?? options[0];
+  const selectedOption =
+    options.find((option) => option.id === selected) ?? options[0];
 
   const updateUrlSelection = (nextSelection: AccountingIntegrationId) => {
     const currentSearchParams = new URLSearchParams(window.location.search);
@@ -194,91 +274,127 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
 
   return (
     <div className="space-y-6" id="accounting-integrations-setup">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div
+        className="divide-y rounded-md border"
+        role="list"
+        aria-label={t('integrations.accounting.setup.selectorLabel', {
+          defaultValue: 'Accounting integration options'
+        })}
+      >
         {options.map((option) => {
           const isSelected = option.id === selected;
           const isDisabled = Boolean(option.disabled);
 
           return (
-            <Card
+            <div
               key={option.id}
-              className={[
-                'relative overflow-hidden transition-shadow hover:shadow-md',
-                isSelected ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : '',
-                isDisabled ? 'opacity-70' : 'cursor-pointer'
-              ].join(' ')}
+              role="listitem"
+              className={cn(
+                'grid gap-4 p-4 transition-colors sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:items-center',
+                isSelected
+                  ? 'bg-primary-50/60'
+                  : 'bg-background hover:bg-muted/30',
+                isDisabled ? 'opacity-70' : ''
+              )}
               id={`accounting-integration-card-${option.id}`}
             >
-              <CardHeader className="space-y-4 pb-3">
-                <IntegrationBanner option={option} />
-                <div className="space-y-1">
-                  <CardTitle className="text-base">{option.title}</CardTitle>
-                  <CardDescription className="text-sm">{option.description}</CardDescription>
-                </div>
-              </CardHeader>
+              <IntegrationMark option={option} selected={isSelected} />
 
-              <CardContent className="space-y-4 pt-0">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="min-w-0 space-y-2">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h3 className="text-base font-semibold text-foreground">
+                      {option.title}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      {option.mode}
+                    </span>
+                  </div>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {option.description}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
                   {option.highlights.map((h) => (
-                    <div key={`${option.id}-${h.label}`} className="flex items-center gap-1">
-                      <span className="font-medium text-foreground/80">{h.label}</span>
+                    <div
+                      key={`${option.id}-${h.label}`}
+                      className="flex items-center gap-1"
+                    >
+                      <span className="font-medium text-foreground/80">
+                        {h.label}
+                      </span>
                       <span>{h.value}</span>
                     </div>
                   ))}
                 </div>
-              </CardContent>
+              </div>
 
-              <CardFooter className="pt-0">
-                <Button
-                  className="w-full"
-                  variant={isSelected ? 'default' : 'outline'}
-                  disabled={isDisabled}
-                  onClick={() => {
-                    if (isDisabled) return;
-                    setSelected(option.id);
-                    updateUrlSelection(option.id);
-                  }}
-                  id={`accounting-integration-configure-${option.id}`}
-                >
-                  {isDisabled
-                    ? t('integrations.accounting.setup.comingSoon', { defaultValue: 'Coming Soon' })
-                    : t('integrations.accounting.setup.configure', { defaultValue: 'Configure Integration' })}
-                </Button>
-              </CardFooter>
-
-              {isDisabled ? (
-                <div className="pointer-events-none absolute inset-0 bg-background/5" />
-              ) : null}
-            </Card>
+              <Button
+                className="w-full sm:w-auto"
+                variant={isSelected ? 'default' : 'outline'}
+                disabled={isDisabled}
+                onClick={() => {
+                  if (isDisabled) return;
+                  setSelected(option.id);
+                  updateUrlSelection(option.id);
+                }}
+                id={`accounting-integration-configure-${option.id}`}
+              >
+                {isDisabled
+                  ? t('integrations.accounting.setup.comingSoon', {
+                      defaultValue: 'Coming Soon'
+                    })
+                  : t('integrations.accounting.setup.configure', {
+                      defaultValue: 'Configure Integration'
+                    })}
+              </Button>
+            </div>
           );
         })}
       </div>
 
       <div className="border-t pt-6" id="accounting-integrations-active-config">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">{t('integrations.accounting.setup.activeConfiguration', { defaultValue: 'Active Configuration' })}</h3>
+          <h3 className="text-base font-semibold">
+            {t('integrations.accounting.setup.activeConfiguration', {
+              defaultValue: 'Active Configuration'
+            })}
+          </h3>
           <span className="text-xs text-muted-foreground">
-            {selectedOption ? t('integrations.accounting.setup.selected', { defaultValue: '{{title}} selected', title: selectedOption.title }) : null}
+            {selectedOption
+              ? t('integrations.accounting.setup.selected', {
+                  defaultValue: '{{title}} selected',
+                  title: selectedOption.title
+                })
+              : null}
           </span>
         </div>
 
         {selected === 'quickbooks_csv' ? (
           <CSVIntegrationSettings />
         ) : selected === 'quickbooks_online' ? (
-          <QboIntegrationSettings syncHealthSlot={qboSyncHealthSlot} onboardingSlot={qboOnboardingSlot} />
+          <QboIntegrationSettings
+            syncHealthSlot={qboSyncHealthSlot}
+            onboardingSlot={qboOnboardingSlot}
+          />
         ) : selected === 'xero' ? (
           <XeroIntegrationSettings />
         ) : selected === 'xero_csv' ? (
           <XeroCsvIntegrationSettings />
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('integrations.accounting.setup.unavailable.title', { defaultValue: 'Configuration unavailable' })}</CardTitle>
-              <CardDescription>
-                {t('integrations.accounting.setup.unavailable.description', { defaultValue: 'This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.' })}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <div className="space-y-1 border-t pt-4">
+            <h3 className="text-base font-semibold text-foreground">
+              {t('integrations.accounting.setup.unavailable.title', {
+                defaultValue: 'Configuration unavailable'
+              })}
+            </h3>
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              {t('integrations.accounting.setup.unavailable.description', {
+                defaultValue:
+                  'This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.'
+              })}
+            </p>
+          </div>
         )}
       </div>
     </div>

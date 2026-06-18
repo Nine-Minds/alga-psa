@@ -57,13 +57,13 @@
         },
         "options": {
           "qbo": {
-            "description": "Connect your realm to sync invoices and manage mappings."
+            "description": "Connect your QuickBooks company for live invoice delivery and mappings."
           },
           "qboCsv": {
             "description": "Export invoices to CSV for manual import into QuickBooks and import tax data from reports."
           },
           "xero": {
-            "description": "Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings."
+            "description": "Connect your Xero organisation for live accounting exports and mappings."
           },
           "xeroCsv": {
             "description": "Export invoices to CSV for manual import into Xero and import tax data from Xero reports."
@@ -1225,32 +1225,32 @@
         },
         "callback": {
           "accessDenied": "QuickBooks access was denied before the connection completed.",
-          "configMissing": "QuickBooks OAuth could not start because the client ID and client secret were not fully configured.",
+          "configMissing": "QuickBooks could not start connecting because app setup is incomplete.",
           "generic": "QuickBooks returned an OAuth error: {{code}}",
-          "invalidState": "The QuickBooks OAuth state was invalid or expired. Start the connect flow again.",
-          "missingParams": "The QuickBooks callback was missing required parameters. Start the connect flow again.",
-          "oauthFailed": "The QuickBooks OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.",
-          "tokenExchangeFailed": "Intuit did not return the expected tokens. Try connecting again."
+          "invalidState": "This QuickBooks connection attempt expired. Start again.",
+          "missingParams": "QuickBooks returned an incomplete response. Start again.",
+          "oauthFailed": "QuickBooks could not finish connecting. Try again. If it keeps failing, review Advanced setup.",
+          "tokenExchangeFailed": "Intuit did not finish the connection. Try connecting again."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Paste your Intuit app client ID",
         "clientSecretLabel": "QuickBooks Client Secret",
         "clientSecretPlaceholder": "Paste your Intuit app client secret",
-        "connectSuccess": "QuickBooks connected successfully. The connected company is now the default live QuickBooks context.",
+        "connectSuccess": "QuickBooks connected successfully. Alga will use this company for live exports and mappings.",
         "connection": {
           "defaultCompany": "Connected company",
-          "description": "Start OAuth only after QuickBooks app credentials are configured. Disconnecting removes stored QuickBooks access tokens but keeps the tenant-owned app credentials in place.",
-          "notConnected": "No QuickBooks company is connected yet. Save credentials, then click Connect QuickBooks.",
+          "description": "Connect the QuickBooks company Alga should use for live sync, mappings, and invoice delivery.",
+          "notConnected": "No QuickBooks company is connected yet. Finish setup, then connect a company.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks Connection",
           "unknown": "unknown"
         },
-        "credentialsSaved": "QuickBooks credentials saved. You can now start the QuickBooks OAuth flow.",
-        "csvAvailableMiddle": "in this same Accounting section and manage exports from",
-        "csvAvailablePrefix": "If you prefer a manual workflow, keep using",
-        "csvAvailableTitle": "QuickBooks CSV remains available",
-        "description": "Configure QuickBooks OAuth credentials, connect your QuickBooks company, and keep live QuickBooks available beside the manual QuickBooks CSV workflow.",
-        "disconnectSuccess": "The stored QuickBooks connection was removed. Tenant-owned QuickBooks app credentials were preserved.",
+        "credentialsSaved": "QuickBooks app setup saved. You can now connect a QuickBooks company.",
+        "csvAvailableMiddle": "from",
+        "csvAvailablePrefix": "Manual QuickBooks CSV exports are managed separately",
+        "csvAvailableTitle": "QuickBooks CSV",
+        "description": "Connect your QuickBooks company for live invoice delivery, sync checks, and mappings.",
+        "disconnectSuccess": "QuickBooks was disconnected. Saved app setup was left in place for reconnecting.",
         "environment": "Intuit Environment",
         "environmentProduction": "Production",
         "environmentSandbox": "Sandbox",
@@ -1259,25 +1259,25 @@
           "load": "Failed to load QuickBooks settings.",
           "saveCredentials": "Failed to save QuickBooks credentials."
         },
-        "howItWorksDescription": "Save QuickBooks app credentials here, complete the Intuit OAuth flow, and Alga PSA will use the connected QuickBooks company as the default live context for exports and mappings.",
+        "howItWorksDescription": "Connect a QuickBooks company and Alga PSA will use it for live exports and mappings.",
         "howItWorksTitle": "How live QuickBooks works in this release",
         "loading": "Loading QuickBooks settings…",
         "mapping": {
-          "alert": "QuickBooks items, tax codes, and terms are loaded from the connected company so live exports can keep using the first stored QuickBooks connection in v1.",
+          "alert": "QuickBooks items, tax codes, and terms are loaded from the connected company.",
           "descriptionPrefix": "Configure live QuickBooks mappings for the connected company. These mappings are scoped to",
-          "placeholderAlert": "The mapping manager becomes available after the first QuickBooks company is connected and set as the default live QuickBooks context.",
+          "placeholderAlert": "The mapping manager becomes available after a QuickBooks company is connected.",
           "placeholderDescription": "Connect a QuickBooks company before configuring live QuickBooks item and tax mappings.",
           "title": "Live QuickBooks Mapping & Configuration"
         },
-        "noClientId": "No client ID is stored for this tenant yet.",
-        "noClientSecret": "No client secret is stored for this tenant yet.",
+        "noClientId": "No custom client ID is stored.",
+        "noClientSecret": "No custom client secret is stored.",
         "quickbooksCsv": "QuickBooks CSV",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Required Scopes",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
-        "tenantOauthDescription": "Paste the Intuit app credentials registered for this tenant, or leave blank to use the application-level QuickBooks app if one is configured. Secret values are never returned to the browser after they are saved.",
-        "tenantOauthTitle": "Tenant-Owned OAuth App",
+        "tenantOauthDescription": "Use this only when this company needs its own Intuit app. Saved secrets are hidden after they are stored.",
+        "tenantOauthTitle": "Advanced: Custom Intuit App",
         "title": "QuickBooks Online"
       },
       "sync": {
@@ -2212,10 +2212,10 @@
           "configMissing": "Xero OAuth could not start because the tenant client ID and client secret were not fully configured.",
           "connectionsUnmapped": "Xero returned organisations, but none included the identifiers required to save a connection.",
           "generic": "Xero returned an OAuth error: {{code}}",
-          "invalidState": "The Xero OAuth state was invalid or expired. Start the connect flow again.",
+          "invalidState": "This Xero connection attempt expired. Start again.",
           "missingParams": "The Xero callback was missing required parameters. Start the connect flow again.",
           "noConnections": "Xero did not return any organisations for this login. Check your Xero app and organisation access, then try again.",
-          "oauthFailed": "The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes."
+          "oauthFailed": "Xero could not finish connecting. Try again. If it keeps failing, review app setup."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Paste your tenant-owned Xero client ID",
@@ -2225,7 +2225,7 @@
         "connection": {
           "connectionId": "Connection ID: {{id}}",
           "defaultOrganisation": "Default organisation",
-          "description": "Start OAuth only after the tenant-owned Xero app is configured. Disconnecting removes stored Xero access tokens but keeps the tenant-owned app credentials in place.",
+          "description": "Connect the Xero organisation Alga should use for live accounting exports and mappings.",
           "notConnected": "No live Xero organisation is connected yet. Save credentials, then click Connect Xero.",
           "title": "Live Xero Connection",
           "unknown": "unknown"
@@ -2258,7 +2258,7 @@
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
         "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
-        "tenantOauthTitle": "Tenant-Owned OAuth App",
+        "tenantOauthTitle": "Xero App Setup",
         "title": "Xero",
         "xeroCsv": "Xero CSV"
       }

@@ -105,4 +105,13 @@ describe('AccountingExportsTab i18n wiring contract', () => {
       expect(getLeaf(pseudo, key)).toBe('11111');
     }
   });
+
+  it('T021: only renders execute actions for executable batch states', () => {
+    const source = read('../../src/components/billing-dashboard/accounting/AccountingExportsTab.tsx');
+
+    expect(source).toContain('const isExecutable = (status: AccountingExportStatus): boolean =>');
+    expect(source).toContain("status === 'pending' || status === 'ready' || status === 'needs_attention' || status === 'failed'");
+    expect(source).toContain('{isExecutable(batch.status) && (');
+    expect(source).toContain('{isExecutable(selectedBatch.status) && (');
+  });
 });

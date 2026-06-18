@@ -89,6 +89,10 @@ const DEFAULT_ADAPTERS = [
   { id: 'quickbooks_desktop', label: 'QuickBooks Desktop' }
 ] as const;
 
+function getAdapterLabel(adapterType: string): string {
+  return DEFAULT_ADAPTERS.find((adapter) => adapter.id === adapterType)?.label ?? adapterType;
+}
+
 function getAccountingExportStatusKey(status: AccountingExportStatus): string {
   switch (status) {
     case 'pending':
@@ -290,6 +294,9 @@ export default function AccountingExportsTab(): React.JSX.Element {
     status === 'pending' || status === 'validating' || status === 'ready' ||
     status === 'needs_attention' || status === 'failed';
 
+  const isExecutable = (status: AccountingExportStatus): boolean =>
+    status === 'pending' || status === 'ready' || status === 'needs_attention' || status === 'failed';
+
   return (
     <div className="space-y-6" id="billing-accounting-exports">
       <Card>
@@ -298,7 +305,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
             <CardTitle>{t('accountingExports.title', { defaultValue: 'Accounting Exports' })}</CardTitle>
             <CardDescription>
               {t('accountingExports.description', {
-                defaultValue: 'Create export batches, validate mappings, and deliver files for manual import into your accounting system.',
+                defaultValue: 'Create export batches, validate mappings, and deliver invoices to connected accounting systems or downloadable CSV files.',
               })}
             </CardDescription>
           </div>
@@ -343,7 +350,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 {batches.map((batch) => (
                   <TableRow key={batch.batch_id}>
                     <TableCell className="font-mono text-xs">{batch.batch_id}</TableCell>
-                    <TableCell>{batch.adapter_type}</TableCell>
+                    <TableCell>{getAdapterLabel(batch.adapter_type)}</TableCell>
                     <TableCell>{getStatusLabel(batch.status)}</TableCell>
                     <TableCell>{formatIso(batch.created_at)}</TableCell>
                     <TableCell>{formatIso(batch.updated_at)}</TableCell>
@@ -357,14 +364,16 @@ export default function AccountingExportsTab(): React.JSX.Element {
                         >
                           {t('accountingExports.actions.open', { defaultValue: 'Open' })}
                         </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => void onExecute(batch.batch_id)}
-                          id={`accounting-exports-execute-${batch.batch_id}`}
-                        >
-                          {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
-                        </Button>
+                        {isExecutable(batch.status) && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => void onExecute(batch.batch_id)}
+                            id={`accounting-exports-execute-${batch.batch_id}`}
+                          >
+                            {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -550,7 +559,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                   <div className="text-xs text-muted-foreground">
                     {t('accountingExports.detailDialog.fields.adapter', { defaultValue: 'Adapter' })}
                   </div>
-                  <div className="text-sm">{selectedBatch.adapter_type}</div>
+                  <div className="text-sm">{getAdapterLabel(selectedBatch.adapter_type)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">
@@ -633,12 +642,14 @@ export default function AccountingExportsTab(): React.JSX.Element {
                     {t('accountingExports.actions.cancelBatch', { defaultValue: 'Cancel Batch' })}
                   </Button>
                 )}
-                <Button
-                  id="accounting-exports-detail-execute"
-                  onClick={() => void onExecute(selectedBatch.batch_id)}
-                >
-                  {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
-                </Button>
+                {isExecutable(selectedBatch.status) && (
+                  <Button
+                    id="accounting-exports-detail-execute"
+                    onClick={() => void onExecute(selectedBatch.batch_id)}
+                  >
+                    {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
+                  </Button>
+                )}
               </div>
             </div>
           )}

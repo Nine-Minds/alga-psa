@@ -30,9 +30,9 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
     case 'connections_unmapped':
       return t('integrations.xero.settings.callback.connectionsUnmapped', { defaultValue: 'Xero returned organisations, but none included the identifiers required to save a connection.' });
     case 'oauth_failed':
-      return t('integrations.xero.settings.callback.oauthFailed', { defaultValue: 'The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.' });
+      return t('integrations.xero.settings.callback.oauthFailed', { defaultValue: 'Xero could not finish connecting. Try again. If it keeps failing, review app setup.' });
     case 'invalid_state':
-      return t('integrations.xero.settings.callback.invalidState', { defaultValue: 'The Xero OAuth state was invalid or expired. Start the connect flow again.' });
+      return t('integrations.xero.settings.callback.invalidState', { defaultValue: 'This Xero connection attempt expired. Start again.' });
     case 'missing_params':
       return t('integrations.xero.settings.callback.missingParams', { defaultValue: 'The Xero callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
@@ -192,7 +192,7 @@ export default function XeroIntegrationSettings() {
 
       <Card id="xero-integration-credentials-card">
         <CardHeader>
-          <CardTitle>{t('integrations.xero.settings.tenantOauthTitle', { defaultValue: 'Tenant-Owned OAuth App' })}</CardTitle>
+          <CardTitle>{t('integrations.xero.settings.tenantOauthTitle', { defaultValue: 'Xero App Setup' })}</CardTitle>
           <CardDescription>
             {t('integrations.xero.settings.tenantOauthDescription', { defaultValue: 'Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.' })}
           </CardDescription>
@@ -312,7 +312,7 @@ export default function XeroIntegrationSettings() {
         <CardHeader>
           <CardTitle>{t('integrations.xero.settings.connection.title', { defaultValue: 'Live Xero Connection' })}</CardTitle>
           <CardDescription>
-            {t('integrations.xero.settings.connection.description', { defaultValue: 'Start OAuth only after the tenant-owned Xero app is configured. Disconnecting removes stored Xero access tokens but keeps the tenant-owned app credentials in place.' })}
+            {t('integrations.xero.settings.connection.description', { defaultValue: 'Connect the Xero organisation Alga should use for live accounting exports and mappings.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -57,13 +57,13 @@
         },
         "options": {
           "qbo": {
-            "description": "Verbind uw realm om facturen te synchroniseren en toewijzingen te beheren."
+            "description": "Verbind uw QuickBooks-bedrijf voor live factuurlevering en toewijzingen."
           },
           "qboCsv": {
             "description": "Exporteer facturen naar CSV voor handmatige import in QuickBooks en importeer belastinggegevens uit rapporten."
           },
           "xero": {
-            "description": "Verbind uw organisatie met tenant-eigen OAuth-inloggegevens voor live boekhoudexports en toewijzingen."
+            "description": "Verbind uw Xero-organisatie voor live boekhoudexports en toewijzingen."
           },
           "xeroCsv": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten."
@@ -1225,32 +1225,32 @@
         },
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
-          "configMissing": "QuickBooks OAuth kon niet worden gestart omdat het client ID en client secret niet volledig waren geconfigureerd.",
+          "configMissing": "QuickBooks kon niet starten met verbinden omdat de app-configuratie onvolledig is.",
           "generic": "QuickBooks heeft een OAuth-fout geretourneerd: {{code}}",
-          "invalidState": "De QuickBooks OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
-          "missingParams": "In de QuickBooks-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
-          "oauthFailed": "De QuickBooks OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
-          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken."
+          "invalidState": "Deze QuickBooks-verbindingspoging is verlopen. Start opnieuw.",
+          "missingParams": "QuickBooks heeft een onvolledige reactie teruggegeven. Start opnieuw.",
+          "oauthFailed": "QuickBooks kon de verbinding niet voltooien. Probeer opnieuw. Als het blijft mislukken, controleer Geavanceerde configuratie.",
+          "tokenExchangeFailed": "Intuit heeft de verbinding niet voltooid. Probeer opnieuw verbinding te maken."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Plak uw Intuit app-client ID",
         "clientSecretLabel": "QuickBooks Client Secret",
         "clientSecretPlaceholder": "Plak uw Intuit app-client secret",
-        "connectSuccess": "QuickBooks succesvol verbonden. Het verbonden bedrijf is nu de standaard live QuickBooks-context.",
+        "connectSuccess": "QuickBooks is verbonden. Alga gebruikt dit bedrijf voor live exports en toewijzingen.",
         "connection": {
           "defaultCompany": "Verbonden bedrijf",
-          "description": "Start OAuth pas nadat de QuickBooks app-inloggegevens zijn geconfigureerd. Ontkoppelen verwijdert opgeslagen QuickBooks-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
-          "notConnected": "Er is nog geen QuickBooks-bedrijf verbonden. Sla de inloggegevens op en klik vervolgens op QuickBooks verbinden.",
+          "description": "Verbind het QuickBooks-bedrijf dat Alga moet gebruiken voor live synchronisatie, toewijzingen en factuurlevering.",
+          "notConnected": "Er is nog geen QuickBooks-bedrijf verbonden. Rond de configuratie af en verbind daarna een bedrijf.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks-verbinding",
           "unknown": "onbekend"
         },
-        "credentialsSaved": "QuickBooks-inloggegevens opgeslagen. U kunt nu de QuickBooks OAuth-flow starten.",
-        "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
-        "csvAvailablePrefix": "Als u de voorkeur geeft aan een handmatige workflow, blijf dan gebruiken",
-        "csvAvailableTitle": "QuickBooks CSV blijft beschikbaar",
-        "description": "Configureer QuickBooks OAuth-inloggegevens, verbind uw QuickBooks-bedrijf en behoud live QuickBooks naast de handmatige QuickBooks CSV-workflow.",
-        "disconnectSuccess": "De opgeslagen QuickBooks-verbinding is verwijderd. Tenant-eigen QuickBooks app-inloggegevens zijn behouden.",
+        "credentialsSaved": "QuickBooks app-configuratie opgeslagen. U kunt nu een QuickBooks-bedrijf verbinden.",
+        "csvAvailableMiddle": "vanuit",
+        "csvAvailablePrefix": "Handmatige QuickBooks CSV-exports worden apart beheerd",
+        "csvAvailableTitle": "QuickBooks CSV",
+        "description": "Verbind uw QuickBooks-bedrijf voor live factuurlevering, synchronisatiecontroles en toewijzingen.",
+        "disconnectSuccess": "QuickBooks is ontkoppeld. Opgeslagen app-configuratie is bewaard om opnieuw te verbinden.",
         "environment": "Intuit-omgeving",
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
@@ -1259,25 +1259,25 @@
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en Alga PSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
+        "howItWorksDescription": "Verbind een QuickBooks-bedrijf en Alga PSA gebruikt het voor live exports en toewijzingen.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
         "loading": "QuickBooks-instellingen worden geladen…",
         "mapping": {
-          "alert": "QuickBooks-artikelen, belastingcodes en voorwaarden worden geladen uit het verbonden bedrijf, zodat live exports in v1 de eerste opgeslagen QuickBooks-verbinding kunnen blijven gebruiken.",
+          "alert": "QuickBooks-artikelen, belastingcodes en voorwaarden worden geladen uit het verbonden bedrijf.",
           "descriptionPrefix": "Configureer live QuickBooks-toewijzingen voor het verbonden bedrijf. Deze toewijzingen zijn beperkt tot",
-          "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat het eerste QuickBooks-bedrijf is verbonden en ingesteld als standaard live QuickBooks-context.",
+          "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat een QuickBooks-bedrijf is verbonden.",
           "placeholderDescription": "Verbind een QuickBooks-bedrijf voordat u live QuickBooks-artikel- en belastingtoewijzingen configureert.",
           "title": "Live QuickBooks-toewijzing en -configuratie"
         },
-        "noClientId": "Er is nog geen client ID opgeslagen voor deze tenant.",
-        "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
+        "noClientId": "Er is geen aangepaste client ID opgeslagen.",
+        "noClientSecret": "Er is geen aangepast client secret opgeslagen.",
         "quickbooksCsv": "QuickBooks CSV",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Plak de Intuit app-inloggegevens die voor deze tenant zijn geregistreerd, of laat leeg om de QuickBooks-app op toepassingsniveau te gebruiken als die is geconfigureerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
-        "tenantOauthTitle": "Tenant-eigen OAuth-app",
+        "tenantOauthDescription": "Gebruik dit alleen wanneer dit bedrijf een eigen Intuit-app nodig heeft. Opgeslagen secrets worden verborgen nadat ze zijn opgeslagen.",
+        "tenantOauthTitle": "Geavanceerd: aangepaste Intuit-app",
         "title": "QuickBooks Online"
       },
       "sync": {
@@ -2212,10 +2212,10 @@
           "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
           "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
           "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
-          "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
+          "invalidState": "Deze Xero-verbindingspoging is verlopen. Start opnieuw.",
           "missingParams": "In de Xero-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
           "noConnections": "Xero heeft geen organisaties geretourneerd voor deze aanmelding. Controleer uw Xero-app en organisatietoegang en probeer het opnieuw.",
-          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes."
+          "oauthFailed": "Xero kon de verbinding niet voltooien. Probeer opnieuw. Als het blijft mislukken, controleer de app-configuratie."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
@@ -2225,7 +2225,7 @@
         "connection": {
           "connectionId": "Verbindings-ID: {{id}}",
           "defaultOrganisation": "Standaardorganisatie",
-          "description": "Start OAuth pas nadat de tenant-eigen Xero-app is geconfigureerd. Ontkoppelen verwijdert opgeslagen Xero-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
+          "description": "Verbind de Xero-organisatie die Alga moet gebruiken voor live boekhoudexports en toewijzingen.",
           "notConnected": "Er is nog geen live Xero-organisatie verbonden. Sla de inloggegevens op en klik vervolgens op Xero verbinden.",
           "title": "Live Xero-verbinding",
           "unknown": "onbekend"
@@ -2258,7 +2258,7 @@
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
         "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
-        "tenantOauthTitle": "Tenant-eigen OAuth-app",
+        "tenantOauthTitle": "Xero app-configuratie",
         "title": "Xero",
         "xeroCsv": "Xero CSV"
       }

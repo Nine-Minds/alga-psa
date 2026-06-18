@@ -31,7 +31,7 @@ export function QboLiveMappingManager({ defaultConnection }: QboLiveMappingManag
       context={context}
       realmLabel={t('integrations.qbo.live.defaultCompany', { defaultValue: 'Connected QuickBooks Company' })}
       tabStyles={tabStyles}
-      defaultTabId="Items / Services"
+      defaultTabId="qbo-live-service-mappings"
       urlParamKey="qboMappingTab"
     />
   );

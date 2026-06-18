@@ -224,7 +224,7 @@ describe('QboIntegrationSettings contracts', () => {
 
     render(<QboIntegrationSettings />);
 
-    expect(await screen.findByText(/Intuit did not return the expected tokens/)).toBeInTheDocument();
+    expect(await screen.findByText(/Intuit did not finish the connection/)).toBeInTheDocument();
   });
 
   it('T059: qbo_status=failure + qbo_error=access_denied shows access denied error', async () => {
@@ -283,13 +283,16 @@ describe('QboIntegrationSettings contracts', () => {
     });
   });
 
-  it('T062: includes guidance that QuickBooks CSV remains available as the manual fallback', async () => {
+  it('T062: does not show the QuickBooks CSV fallback card on the live QuickBooks settings screen', async () => {
     const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
 
     render(<QboIntegrationSettings />);
 
-    expect((await screen.findAllByText('QuickBooks CSV remains available')).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Billing → Accounting Exports/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-connection-card')).toBeInTheDocument();
+    });
+    expect(document.getElementById('qbo-integration-manual-alternative-alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('QuickBooks CSV remains available')).not.toBeInTheDocument();
   });
 
   it('T063: syncHealthSlot is rendered when a default connection exists', async () => {
