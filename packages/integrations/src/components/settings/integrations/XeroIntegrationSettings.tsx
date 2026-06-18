@@ -3,13 +3,16 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
-import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import { ExternalLink, Link2, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ExternalLink,
+  Link2,
+  RefreshCw
+} from 'lucide-react';
 import {
   disconnectXero,
   getXeroConnectionStatus,
@@ -42,14 +45,28 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
   }
 }
 
-function statusBadgeVariant(status?: 'connected' | 'expired'): 'success' | 'secondary' | 'error' {
-  if (status === 'expired') {
-    return 'error';
-  }
-  if (status === 'connected') {
-    return 'success';
-  }
-  return 'secondary';
+function FeedbackMessage({
+  tone,
+  children
+}: {
+  tone: 'success' | 'error';
+  children: React.ReactNode;
+}) {
+  const Icon = tone === 'success' ? CheckCircle2 : AlertCircle;
+  const toneClass =
+    tone === 'success'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : 'border-red-200 bg-red-50 text-red-800';
+
+  return (
+    <div
+      role={tone === 'error' ? 'alert' : 'status'}
+      className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${toneClass}`}
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <div>{children}</div>
+    </div>
+  );
 }
 
 export default function XeroIntegrationSettings() {
@@ -117,7 +134,7 @@ export default function XeroIntegrationSettings() {
 
       setClientId('');
       setClientSecret('');
-      setSuccessMessage(t('integrations.xero.settings.credentialsSaved', { defaultValue: 'Xero credentials saved. You can now start the live Xero OAuth flow.' }));
+      setSuccessMessage(t('integrations.xero.settings.credentialsSaved', { defaultValue: 'Xero credentials saved. You can now connect a Xero organisation.' }));
       await load();
     } finally {
       setSaving(false);
@@ -146,275 +163,274 @@ export default function XeroIntegrationSettings() {
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
   const defaultConnection = status?.defaultConnection;
+  const isConnected = defaultConnection?.status === 'connected';
+  const isExpired = defaultConnection?.status === 'expired';
+
+  const connectionStatusLabel = loading
+    ? t('integrations.xero.settings.connection.checking', { defaultValue: 'Checking connection' })
+    : isConnected
+      ? t('integrations.xero.settings.connection.connected', { defaultValue: 'Connected' })
+      : isExpired
+        ? t('integrations.xero.settings.connection.needsAttention', { defaultValue: 'Needs attention' })
+        : canConnect
+          ? t('integrations.xero.settings.connection.ready', { defaultValue: 'Ready to connect' })
+          : t('integrations.xero.settings.connection.setupRequired', { defaultValue: 'Setup required' });
+
+  const connectionStatusDescription = loading
+    ? t('integrations.xero.settings.connection.checkingDescription', { defaultValue: 'Reading the tenant Xero configuration.' })
+    : defaultConnection
+      ? isExpired
+        ? t('integrations.xero.settings.connection.expiredDescription', { defaultValue: 'Reconnect Xero to resume live exports and mappings.' })
+        : t('integrations.xero.settings.connection.connectedDescription', { defaultValue: 'Live exports and mappings use this Xero organisation.' })
+      : t('integrations.xero.settings.connection.notConnected', { defaultValue: 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.' });
+
+  const connectionDotClass = loading
+    ? 'bg-muted-foreground/60'
+    : isConnected
+      ? 'bg-emerald-500'
+      : isExpired
+        ? 'bg-amber-500'
+        : canConnect
+          ? 'bg-sky-500'
+          : 'bg-muted-foreground/60';
 
   return (
-    <div className="space-y-6" id="xero-integration-settings">
+    <div className="space-y-8" id="xero-integration-settings">
       {successMessage ? (
-        <Alert variant="success">
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
+        <FeedbackMessage tone="success">{successMessage}</FeedbackMessage>
       ) : null}
 
-      {error ? (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
+      {error ? <FeedbackMessage tone="error">{error}</FeedbackMessage> : null}
 
-      <Card id="xero-integration-overview-card">
-        <CardHeader>
-          <CardTitle>{t('integrations.xero.settings.title', { defaultValue: 'Xero' })}</CardTitle>
-          <CardDescription>
-            {t('integrations.xero.settings.description', { defaultValue: 'Configure tenant-owned Xero OAuth credentials, connect your default organisation, and keep live Xero available beside the manual Xero CSV workflow.' })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">{t('integrations.xero.settings.howItWorksTitle', { defaultValue: 'How live Xero works in this release' })}</p>
-            <p className="mt-2">
-              {t('integrations.xero.settings.howItWorksDescription', { defaultValue: 'Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and Alga PSA will use the first connected Xero organisation as the default live context.' })}
+      <section id="xero-integration-connection-card" className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span
+              className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${connectionDotClass}`}
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <h4 className="text-base font-semibold text-foreground">
+                {connectionStatusLabel}
+              </h4>
+              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                {connectionStatusDescription}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              id="xero-connect-button"
+              type="button"
+              disabled={!canConnect}
+              onClick={() => window.location.assign('/api/integrations/xero/connect')}
+            >
+              {defaultConnection
+                ? t('integrations.xero.settings.actions.reconnect', { defaultValue: 'Reconnect Xero' })
+                : t('integrations.xero.settings.actions.connect', { defaultValue: 'Connect Xero' })}
+            </Button>
+
+            <Button
+              id="xero-settings-refresh"
+              type="button"
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t('integrations.xero.settings.actions.refresh', { defaultValue: 'Refresh' })}
+            </Button>
+          </div>
+        </div>
+
+        {status?.error && defaultConnection ? (
+          <p className={isConnected ? 'text-sm text-muted-foreground' : 'text-sm text-red-600'}>
+            {status.error}
+          </p>
+        ) : null}
+
+        {defaultConnection ? (
+          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <div className="min-w-0">
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t('integrations.xero.settings.connection.defaultOrganisation', { defaultValue: 'Organisation' })}
+              </dt>
+              <dd className="mt-1 truncate text-foreground">
+                {defaultConnection.tenantName || defaultConnection.xeroTenantId}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t('integrations.xero.settings.connection.statusLabel', { defaultValue: 'Status' })}
+              </dt>
+              <dd className="mt-1 text-foreground">
+                {isExpired
+                  ? t('integrations.xero.settings.badges.connectionExpired', { defaultValue: 'Connection Expired' })
+                  : t('integrations.xero.settings.badges.connected', { defaultValue: 'Connected' })}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t('integrations.xero.settings.connection.connectionIdLabel', { defaultValue: 'Connection ID' })}
+              </dt>
+              <dd className="mt-1 flex items-center gap-1.5 font-mono text-xs text-foreground">
+                <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">{defaultConnection.connectionId}</span>
+              </dd>
+            </div>
+          </dl>
+        ) : null}
+
+        <div className="rounded-lg border">
+          <div className="px-4 py-3">
+            <h4 className="text-sm font-semibold text-foreground">
+              {t('integrations.xero.settings.tenantOauthTitle', { defaultValue: 'Xero app setup' })}
+            </h4>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('integrations.xero.settings.tenantOauthDescription', { defaultValue: 'Paste the credentials from your Xero app registration. Secret values are hidden after they are saved.' })}
             </p>
           </div>
+          <div className="space-y-6 border-t px-4 py-5">
+            {loading ? (
+              <div className="text-sm text-muted-foreground">{t('integrations.xero.settings.loading', { defaultValue: 'Loading Xero settings…' })}</div>
+            ) : (
+              <>
+                <dl className="grid gap-4 text-sm">
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('integrations.xero.settings.redirectUri', { defaultValue: 'Redirect URI' })}</dt>
+                    <dd className="mt-1 break-all font-mono text-xs text-foreground">{status?.redirectUri}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('integrations.xero.settings.requiredScopes', { defaultValue: 'Required scopes' })}</dt>
+                    <dd className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                      {status?.scopes?.map((scope) => (
+                        <code key={scope} className="font-mono text-xs text-foreground">{scope}</code>
+                      ))}
+                    </dd>
+                  </div>
+                </dl>
 
-          <Alert variant="info" id="xero-integration-manual-alternative-alert">
-            <AlertTitle>{t('integrations.xero.settings.csvAvailableTitle', { defaultValue: 'Xero CSV remains available' })}</AlertTitle>
-            <AlertDescription>
-              {t('integrations.xero.settings.csvAvailablePrefix', { defaultValue: 'If you prefer a manual workflow, keep using' })}{' '}
-              <strong>{t('integrations.xero.settings.xeroCsv', { defaultValue: 'Xero CSV' })}</strong>{' '}
-              {t('integrations.xero.settings.csvAvailableMiddle', { defaultValue: 'in this same Accounting section and manage exports from' })}{' '}
-              <Link href="/msp/billing?tab=accounting-exports" className="font-medium underline underline-offset-4">
-                {t('integrations.csv.settings.exports.path', { defaultValue: 'Billing → Accounting Exports' })}
-              </Link>.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="xero-client-id">{t('integrations.xero.settings.clientIdLabel', { defaultValue: 'Xero Client ID' })}</Label>
+                    <Input
+                      id="xero-client-id"
+                      value={clientId}
+                      onChange={(event) => setClientId(event.target.value)}
+                      placeholder={t('integrations.xero.settings.clientIdPlaceholder', { defaultValue: 'Paste your Xero client ID' })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {status?.credentials.clientIdMasked
+                        ? t('integrations.xero.settings.storedClientId', { defaultValue: 'Stored client ID: {{value}}', value: status.credentials.clientIdMasked })
+                        : t('integrations.xero.settings.noClientId', { defaultValue: 'No client ID is stored yet.' })}
+                    </p>
+                  </div>
 
-      <Card id="xero-integration-credentials-card">
-        <CardHeader>
-          <CardTitle>{t('integrations.xero.settings.tenantOauthTitle', { defaultValue: 'Xero App Setup' })}</CardTitle>
-          <CardDescription>
-            {t('integrations.xero.settings.tenantOauthDescription', { defaultValue: 'Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.' })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {loading ? (
-            <div className="text-sm text-muted-foreground">{t('integrations.xero.settings.loading', { defaultValue: 'Loading Xero settings…' })}</div>
-          ) : (
-            <>
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t('integrations.xero.settings.redirectUri', { defaultValue: 'Redirect URI' })}</p>
-                  <p className="mt-1 break-all rounded-md bg-background px-3 py-2 font-mono text-xs">
-                    {status?.redirectUri}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t('integrations.xero.settings.requiredScopes', { defaultValue: 'Required Scopes' })}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {status?.scopes?.map((scope) => (
-                      <Badge key={scope} variant="secondary">
-                        {scope}
-                      </Badge>
-                    ))}
+                  <div className="space-y-2">
+                    <Label htmlFor="xero-client-secret">{t('integrations.xero.settings.clientSecretLabel', { defaultValue: 'Xero Client Secret' })}</Label>
+                    <Input
+                      id="xero-client-secret"
+                      type="password"
+                      value={clientSecret}
+                      onChange={(event) => setClientSecret(event.target.value)}
+                      placeholder={t('integrations.xero.settings.clientSecretPlaceholder', { defaultValue: 'Paste your Xero client secret' })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {status?.credentials.clientSecretMasked
+                        ? t('integrations.xero.settings.storedClientSecret', { defaultValue: 'Stored client secret: {{value}}', value: status.credentials.clientSecretMasked })
+                        : t('integrations.xero.settings.noClientSecret', { defaultValue: 'No client secret is stored yet.' })}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="xero-client-id">{t('integrations.xero.settings.clientIdLabel', { defaultValue: 'Xero Client ID' })}</Label>
-                  <Input
-                    id="xero-client-id"
-                    value={clientId}
-                    onChange={(event) => setClientId(event.target.value)}
-                    placeholder={t('integrations.xero.settings.clientIdPlaceholder', { defaultValue: 'Paste your tenant-owned Xero client ID' })}
-                  />
-                  {status?.credentials.clientIdMasked ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.xero.settings.storedClientId', { defaultValue: 'Stored client ID: {{value}}', value: status.credentials.clientIdMasked })}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.xero.settings.noClientId', { defaultValue: 'No client ID is stored for this tenant yet.' })}
-                    </p>
-                  )}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    {status?.credentials.ready
+                      ? t('integrations.xero.settings.credentialsReady', { defaultValue: 'Xero app credentials are saved.' })
+                      : t('integrations.xero.settings.badges.credentialsRequired', { defaultValue: 'Credentials Required' })}
+                  </p>
+                  <Button
+                    id="xero-settings-save"
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={!readyToSave || saving}
+                  >
+                    {saving
+                      ? t('integrations.xero.settings.actions.saving', { defaultValue: 'Saving…' })
+                      : t('integrations.xero.settings.actions.saveCredentials', { defaultValue: 'Save credentials' })}
+                  </Button>
                 </div>
+              </>
+            )}
+          </div>
+        </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="xero-client-secret">{t('integrations.xero.settings.clientSecretLabel', { defaultValue: 'Xero Client Secret' })}</Label>
-                  <Input
-                    id="xero-client-secret"
-                    type="password"
-                    value={clientSecret}
-                    onChange={(event) => setClientSecret(event.target.value)}
-                    placeholder={t('integrations.xero.settings.clientSecretPlaceholder', { defaultValue: 'Paste your tenant-owned Xero client secret' })}
-                  />
-                  {status?.credentials.clientSecretMasked ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.xero.settings.storedClientSecret', { defaultValue: 'Stored client secret: {{value}}', value: status.credentials.clientSecretMasked })}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.xero.settings.noClientSecret', { defaultValue: 'No client secret is stored for this tenant yet.' })}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={status?.credentials.ready ? 'default' : 'secondary'}>
-                  {status?.credentials.ready
-                    ? t('integrations.xero.settings.badges.credentialsReady', { defaultValue: 'Credentials Ready' })
-                    : t('integrations.xero.settings.badges.credentialsRequired', { defaultValue: 'Credentials Required' })}
-                </Badge>
-                {defaultConnection ? (
-                  <Badge variant={statusBadgeVariant(defaultConnection.status)}>
-                    {defaultConnection.status === 'expired'
-                      ? t('integrations.xero.settings.badges.connectionExpired', { defaultValue: 'Connection Expired' })
-                      : t('integrations.xero.settings.badges.defaultConnected', { defaultValue: 'Default Organisation Connected' })}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">{t('integrations.xero.settings.badges.noOrganisation', { defaultValue: 'No Organisation Connected' })}</Badge>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <Button
-                  id="xero-settings-refresh"
-                  type="button"
-                  variant="outline"
-                  onClick={() => void load()}
-                  disabled={loading}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('integrations.xero.settings.actions.refresh', { defaultValue: 'Refresh' })}
-                </Button>
-
-                <Button
-                  id="xero-settings-save"
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={!readyToSave || saving}
-                >
-                  {saving
-                    ? t('integrations.xero.settings.actions.saving', { defaultValue: 'Saving…' })
-                    : t('integrations.xero.settings.actions.saveCredentials', { defaultValue: 'Save Xero Credentials' })}
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card id="xero-integration-connection-card">
-        <CardHeader>
-          <CardTitle>{t('integrations.xero.settings.connection.title', { defaultValue: 'Live Xero Connection' })}</CardTitle>
-          <CardDescription>
-            {t('integrations.xero.settings.connection.description', { defaultValue: 'Connect the Xero organisation Alga should use for live accounting exports and mappings.' })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {defaultConnection ? (
-            <div className="rounded-lg border bg-muted/20 p-4 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{t('integrations.xero.settings.connection.defaultOrganisation', { defaultValue: 'Default organisation' })}</span>
-                <Badge variant={statusBadgeVariant(defaultConnection.status)}>
-                  {defaultConnection.status ?? t('integrations.xero.settings.connection.unknown', { defaultValue: 'unknown' })}
-                </Badge>
-              </div>
-              <p className="mt-3 text-muted-foreground">
-                {defaultConnection.tenantName || defaultConnection.xeroTenantId}
-              </p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <Link2 className="h-3.5 w-3.5" />
-                <span>{t('integrations.xero.settings.connection.connectionId', { defaultValue: 'Connection ID: {{id}}', id: defaultConnection.connectionId })}</span>
-              </div>
-            </div>
-          ) : (
-            <Alert variant="info">
-              <AlertDescription>
-                {t('integrations.xero.settings.connection.notConnected', { defaultValue: 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.' })}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {status?.error && defaultConnection ? (
-            <Alert variant={status.connected ? 'info' : 'destructive'}>
-              <AlertDescription>{status.error}</AlertDescription>
-            </Alert>
-          ) : null}
-        </CardContent>
-        <CardFooter className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <Button
-            id="xero-connect-button"
+            id="xero-disconnect-button"
             type="button"
-            disabled={!canConnect}
-            onClick={() => window.location.assign('/api/integrations/xero/connect')}
+            variant="outline"
+            disabled={!defaultConnection || disconnecting}
+            onClick={() => void handleDisconnect()}
           >
-            {defaultConnection
-              ? t('integrations.xero.settings.actions.reconnect', { defaultValue: 'Reconnect Xero' })
-              : t('integrations.xero.settings.actions.connect', { defaultValue: 'Connect Xero' })}
+            {disconnecting
+              ? t('integrations.xero.settings.actions.disconnecting', { defaultValue: 'Disconnecting…' })
+              : t('integrations.xero.settings.actions.disconnect', { defaultValue: 'Disconnect Xero' })}
           </Button>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              id="xero-disconnect-button"
-              type="button"
-              variant="destructive"
-              disabled={!defaultConnection || disconnecting}
-              onClick={() => void handleDisconnect()}
-            >
-              {disconnecting
-                ? t('integrations.xero.settings.actions.disconnecting', { defaultValue: 'Disconnecting…' })
-                : t('integrations.xero.settings.actions.disconnect', { defaultValue: 'Disconnect Xero' })}
-            </Button>
-
-            <Button id="xero-open-accounting-exports" asChild variant="outline">
-              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-                {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
-                <ExternalLink className="h-4 w-4 opacity-80" />
+          {defaultConnection ? (
+            <Button id="xero-open-accounting-exports" asChild variant="link">
+              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-1.5">
+                {t('integrations.accounting.settings.viewExportHistory', { defaultValue: 'View export history' })}
+                <ExternalLink className="h-4 w-4" />
               </Link>
             </Button>
-          </div>
-        </CardFooter>
-      </Card>
+          ) : null}
+        </div>
+
+        <p className="text-sm text-muted-foreground" id="xero-integration-manual-alternative">
+          <span className="font-medium text-foreground">
+            {t('integrations.xero.settings.csvAvailableTitle', { defaultValue: 'Xero CSV remains available' })}
+          </span>{' '}
+          {t('integrations.xero.settings.csvAvailablePrefix', { defaultValue: 'If you prefer a manual workflow, keep using' })}{' '}
+          <strong>{t('integrations.xero.settings.xeroCsv', { defaultValue: 'Xero CSV' })}</strong>{' '}
+          {t('integrations.xero.settings.csvAvailableMiddle', { defaultValue: 'and manage exports from' })}{' '}
+          <Link href="/msp/billing?tab=accounting-exports" className="font-medium underline underline-offset-4">
+            {t('integrations.csv.settings.exports.path', { defaultValue: 'Billing → Accounting Exports' })}
+          </Link>
+          .
+        </p>
+      </section>
 
       {defaultConnection ? (
-        <Card id="xero-integration-mapping-card">
-          <CardHeader>
-            <CardTitle>{t('integrations.xero.settings.mapping.title', { defaultValue: 'Live Xero Mapping & Configuration' })}</CardTitle>
-            <CardDescription>
-              {t('integrations.xero.settings.mapping.descriptionPrefix', { defaultValue: 'Configure live Xero mappings for the default connected organisation. These mappings are scoped to' })}{' '}
-              <strong>{defaultConnection.tenantName || defaultConnection.xeroTenantId}</strong>.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert variant="info">
-              <AlertDescription>
-                {t('integrations.xero.settings.mapping.alert', { defaultValue: 'Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.' })}
-              </AlertDescription>
-            </Alert>
-            <XeroLiveMappingManager defaultConnection={defaultConnection} />
-          </CardContent>
-        </Card>
+        <section id="xero-integration-mapping-card" className="space-y-4 border-t pt-6">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">
+              {t('integrations.xero.settings.mapping.title', { defaultValue: 'Mappings' })}
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              {t('integrations.xero.settings.mapping.description', {
+                defaultValue:
+                  'Match your services, tax rates, and accounts to {{organisation}} so invoices land correctly in Xero.',
+                organisation: defaultConnection.tenantName || defaultConnection.xeroTenantId
+              })}
+            </p>
+          </div>
+          <XeroLiveMappingManager defaultConnection={defaultConnection} />
+        </section>
       ) : (
-        <Card id="xero-integration-mapping-placeholder-card">
-          <CardHeader>
-            <CardTitle>{t('integrations.xero.settings.mapping.title', { defaultValue: 'Live Xero Mapping & Configuration' })}</CardTitle>
-            <CardDescription>
-              {t('integrations.xero.settings.mapping.placeholderDescription', { defaultValue: 'Connect a live Xero organisation before configuring live Xero item and tax mappings.' })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="info">
-              <AlertDescription>
-                {t('integrations.xero.settings.mapping.placeholderAlert', { defaultValue: 'The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.' })}
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+        <section id="xero-integration-mapping-placeholder-card" className="space-y-2 border-t pt-6">
+          <h3 className="text-base font-semibold text-foreground">
+            {t('integrations.xero.settings.mapping.title', { defaultValue: 'Mappings' })}
+          </h3>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {t('integrations.xero.settings.mapping.placeholderDescription', {
+              defaultValue:
+                'Connect a Xero organisation to map your services, tax rates, and accounts.'
+            })}
+          </p>
+        </section>
       )}
     </div>
   );

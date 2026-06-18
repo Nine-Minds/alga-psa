@@ -85,13 +85,13 @@ function FeedbackMessage({
   const Icon = tone === 'success' ? CheckCircle2 : AlertCircle;
   const toneClass =
     tone === 'success'
-      ? 'border-emerald-200 text-emerald-800'
-      : 'border-red-200 text-red-800';
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : 'border-red-200 bg-red-50 text-red-800';
 
   return (
     <div
       role={tone === 'error' ? 'alert' : 'status'}
-      className={`flex items-start gap-3 rounded-md border px-4 py-3 text-sm ${toneClass}`}
+      className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${toneClass}`}
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <div>{children}</div>
@@ -308,7 +308,7 @@ export default function QboIntegrationSettings({
         });
 
   return (
-    <div className="space-y-6" id="qbo-integration-settings">
+    <div className="space-y-8" id="qbo-integration-settings">
       {successMessage ? (
         <FeedbackMessage tone="success">{successMessage}</FeedbackMessage>
       ) : null}
@@ -316,122 +316,120 @@ export default function QboIntegrationSettings({
       {error ? <FeedbackMessage tone="error">{error}</FeedbackMessage> : null}
 
       <section id="qbo-integration-connection-card" className="space-y-5">
-        <div className="border-b pb-4">
-          <h3 className="text-base font-semibold text-foreground">
-            {t('integrations.qbo.settings.connection.title', {
-              defaultValue: 'Live QuickBooks Connection'
-            })}
-          </h3>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            {t('integrations.qbo.settings.connection.description', {
-              defaultValue:
-                'Connect the QuickBooks company Alga should use for live sync, mappings, and invoice delivery.'
-            })}
-          </p>
-        </div>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <span
-                className={`mt-2 h-3 w-3 rounded-full ${connectionDotClass}`}
-                aria-hidden="true"
-              />
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase text-muted-foreground">
-                  {t('integrations.qbo.settings.title', {
-                    defaultValue: 'QuickBooks Online'
-                  })}
-                </p>
-                <h4 className="mt-1 text-2xl font-semibold tracking-normal text-foreground">
-                  {connectionStatusLabel}
-                </h4>
-                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                  {connectionStatusDescription}
-                </p>
-              </div>
-            </div>
-
-            {status?.error && defaultConnection ? (
-              <p
-                className={
-                  status.connected
-                    ? 'text-sm text-muted-foreground'
-                    : 'text-sm text-red-600'
-                }
-              >
-                {status.error}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span
+              className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${connectionDotClass}`}
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <h4 className="text-base font-semibold text-foreground">
+                {connectionStatusLabel}
+              </h4>
+              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                {connectionStatusDescription}
               </p>
-            ) : null}
-
-            {defaultConnection ? (
-              <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">
-                    {t('integrations.qbo.settings.connection.defaultCompany', {
-                      defaultValue: 'Connected company'
-                    })}
-                  </dt>
-                  <dd className="mt-1 truncate text-foreground">
-                    {defaultConnection.displayName || defaultConnection.realmId}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">
-                    {t('integrations.qbo.settings.connection.realm', {
-                      defaultValue: 'Realm'
-                    })}
-                  </dt>
-                  <dd className="mt-1 flex items-center gap-2 font-mono text-xs text-foreground">
-                    <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="truncate">
-                      {defaultConnection.realmId}
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
+            </div>
           </div>
 
-          <div className="border-t pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-1">
-            <dl className="space-y-4 text-sm">
-              <div>
-                <dt className="text-xs font-medium uppercase text-muted-foreground">
-                  {t('integrations.qbo.settings.connection.state', {
-                    defaultValue: 'State'
+          <div className="flex items-center gap-2">
+            <Button
+              id="qbo-connect-button"
+              type="button"
+              disabled={!canConnect}
+              onClick={() =>
+                window.location.assign('/api/integrations/qbo/connect')
+              }
+            >
+              {defaultConnection
+                ? t('integrations.qbo.settings.actions.reconnect', {
+                    defaultValue: 'Reconnect QuickBooks'
+                  })
+                : t('integrations.qbo.settings.actions.connect', {
+                    defaultValue: 'Connect QuickBooks'
                   })}
-                </dt>
-                <dd className="mt-1 text-foreground">
-                  {connectionStatusLabel}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium uppercase text-muted-foreground">
-                  {t('integrations.qbo.settings.credentialSource.label', {
-                    defaultValue: 'App setup'
-                  })}
-                </dt>
-                <dd className="mt-1 text-foreground">
-                  {credentialSourceLabel}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium uppercase text-muted-foreground">
-                  {t('integrations.qbo.settings.environment', {
-                    defaultValue: 'Intuit Environment'
-                  })}
-                </dt>
-                <dd className="mt-1 text-foreground">{environmentLabel}</dd>
-              </div>
-            </dl>
+            </Button>
+
+            <Button
+              id="qbo-settings-refresh"
+              type="button"
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t('integrations.qbo.settings.actions.refresh', {
+                defaultValue: 'Refresh'
+              })}
+            </Button>
           </div>
         </div>
 
-        <details open={shouldOpenCredentialDetails} className="group border-t">
-          <summary className="flex cursor-pointer list-none items-start justify-between gap-4 py-4 [&::-webkit-details-marker]:hidden">
+        {status?.error && defaultConnection ? (
+          <p
+            className={
+              status.connected
+                ? 'text-sm text-muted-foreground'
+                : 'text-sm text-red-600'
+            }
+          >
+            {status.error}
+          </p>
+        ) : null}
+
+        <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          {defaultConnection ? (
+            <>
+              <div className="min-w-0">
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t('integrations.qbo.settings.connection.defaultCompany', {
+                    defaultValue: 'Connected company'
+                  })}
+                </dt>
+                <dd className="mt-1 truncate text-foreground">
+                  {defaultConnection.displayName || defaultConnection.realmId}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t('integrations.qbo.settings.connection.realm', {
+                    defaultValue: 'Realm ID'
+                  })}
+                </dt>
+                <dd className="mt-1 flex items-center gap-1.5 font-mono text-xs text-foreground">
+                  <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{defaultConnection.realmId}</span>
+                </dd>
+              </div>
+            </>
+          ) : null}
+          <div className="min-w-0">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('integrations.qbo.settings.credentialSource.label', {
+                defaultValue: 'App setup'
+              })}
+            </dt>
+            <dd className="mt-1 text-foreground">{credentialSourceLabel}</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('integrations.qbo.settings.environment', {
+                defaultValue: 'Environment'
+              })}
+            </dt>
+            <dd className="mt-1 text-foreground">{environmentLabel}</dd>
+          </div>
+        </dl>
+
+        <details
+          open={shouldOpenCredentialDetails}
+          className="group rounded-lg border"
+        >
+          <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-4 py-3 [&::-webkit-details-marker]:hidden">
             <div>
               <h4 className="text-sm font-semibold text-foreground">
                 {t('integrations.qbo.settings.tenantOauthTitle', {
-                  defaultValue: 'Advanced: Custom Intuit App'
+                  defaultValue: 'Advanced: use your own Intuit app'
                 })}
               </h4>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -440,27 +438,18 @@ export default function QboIntegrationSettings({
                       'integrations.qbo.settings.tenantOauthHostedDescription',
                       {
                         defaultValue:
-                          'This environment already has the hosted QuickBooks app configured. Add a custom Intuit app only when this company needs its own app registration.'
+                          'Alga already provides a QuickBooks app for connecting. Add your own only if this company needs its own Intuit app registration.'
                       }
                     )
                   : t('integrations.qbo.settings.tenantOauthDescription', {
                       defaultValue:
-                        'Use this only when this company needs its own Intuit app. Saved secrets are hidden after they are stored.'
+                        'Most teams can skip this. Add your own Intuit app credentials only if you need to. Saved secrets are hidden after they are stored.'
                     })}
               </p>
             </div>
-            <ChevronDown className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+            <ChevronDown className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
           </summary>
-          <div className="space-y-6 border-t py-5">
-            {usingAppLevelCredentials ? (
-              <p className="text-sm text-muted-foreground">
-                {t('integrations.qbo.settings.hostedAppReadyDescription', {
-                  defaultValue:
-                    'The usual Connect QuickBooks flow is available. Custom Intuit credentials are optional.'
-                })}
-              </p>
-            ) : null}
-
+          <div className="space-y-6 border-t px-4 py-5">
             {loading ? (
               <div className="text-sm text-muted-foreground">
                 {t('integrations.qbo.settings.loading', {
@@ -469,9 +458,9 @@ export default function QboIntegrationSettings({
               </div>
             ) : (
               <>
-                <dl className="grid gap-4 text-sm md:grid-cols-2">
-                  <div className="md:col-span-2">
-                    <dt className="text-xs font-medium uppercase text-muted-foreground">
+                <dl className="grid gap-4 text-sm">
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       {t('integrations.qbo.settings.redirectUri', {
                         defaultValue: 'Redirect URI'
                       })}
@@ -480,10 +469,10 @@ export default function QboIntegrationSettings({
                       {status?.redirectUri}
                     </dd>
                   </div>
-                  <div className="md:col-span-2">
-                    <dt className="text-xs font-medium uppercase text-muted-foreground">
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       {t('integrations.qbo.settings.requiredScopes', {
-                        defaultValue: 'Required Scopes'
+                        defaultValue: 'Required scopes'
                       })}
                     </dt>
                     <dd className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
@@ -556,7 +545,7 @@ export default function QboIntegrationSettings({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-muted-foreground">
                     {status?.credentials.ready
                       ? t('integrations.qbo.settings.credentialsReady', {
@@ -577,7 +566,7 @@ export default function QboIntegrationSettings({
                           defaultValue: 'Saving…'
                         })
                       : t('integrations.qbo.settings.actions.saveCredentials', {
-                          defaultValue: 'Save QuickBooks Credentials'
+                          defaultValue: 'Save credentials'
                         })}
                   </Button>
                 </div>
@@ -585,74 +574,37 @@ export default function QboIntegrationSettings({
             )}
           </div>
         </details>
+
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              id="qbo-connect-button"
-              type="button"
-              disabled={!canConnect}
-              onClick={() =>
-                window.location.assign('/api/integrations/qbo/connect')
-              }
-            >
-              {defaultConnection
-                ? t('integrations.qbo.settings.actions.reconnect', {
-                    defaultValue: 'Reconnect QuickBooks'
-                  })
-                : t('integrations.qbo.settings.actions.connect', {
-                    defaultValue: 'Connect QuickBooks'
-                  })}
-            </Button>
+          <Button
+            id="qbo-disconnect-button"
+            type="button"
+            variant="outline"
+            disabled={!defaultConnection || disconnecting}
+            onClick={() => void handleDisconnect()}
+          >
+            {disconnecting
+              ? t('integrations.qbo.settings.actions.disconnecting', {
+                  defaultValue: 'Disconnecting…'
+                })
+              : t('integrations.qbo.settings.actions.disconnect', {
+                  defaultValue: 'Disconnect QuickBooks'
+                })}
+          </Button>
 
-            <Button
-              id="qbo-settings-refresh"
-              type="button"
-              variant="outline"
-              onClick={() => void load()}
-              disabled={loading}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {t('integrations.qbo.settings.actions.refresh', {
-                defaultValue: 'Refresh'
-              })}
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {defaultConnection ? (
-              <Button
-                id="qbo-open-accounting-exports"
-                asChild
-                variant="outline"
+          {defaultConnection ? (
+            <Button id="qbo-open-accounting-exports" asChild variant="link">
+              <Link
+                href="/msp/billing?tab=accounting-exports"
+                className="inline-flex items-center gap-1.5"
               >
-                <Link
-                  href="/msp/billing?tab=accounting-exports"
-                  className="inline-flex items-center gap-2"
-                >
-                  {t('integrations.csv.settings.exports.openButton', {
-                    defaultValue: 'View Export History'
-                  })}
-                  <ExternalLink className="h-4 w-4 opacity-80" />
-                </Link>
-              </Button>
-            ) : null}
-
-            <Button
-              id="qbo-disconnect-button"
-              type="button"
-              variant="destructive"
-              disabled={!defaultConnection || disconnecting}
-              onClick={() => void handleDisconnect()}
-            >
-              {disconnecting
-                ? t('integrations.qbo.settings.actions.disconnecting', {
-                    defaultValue: 'Disconnecting…'
-                  })
-                : t('integrations.qbo.settings.actions.disconnect', {
-                    defaultValue: 'Disconnect QuickBooks'
-                  })}
+                {t('integrations.accounting.settings.viewExportHistory', {
+                  defaultValue: 'View export history'
+                })}
+                <ExternalLink className="h-4 w-4" />
+              </Link>
             </Button>
-          </div>
+          ) : null}
         </div>
       </section>
 
@@ -668,23 +620,15 @@ export default function QboIntegrationSettings({
           <div>
             <h3 className="text-base font-semibold text-foreground">
               {t('integrations.qbo.settings.mapping.title', {
-                defaultValue: 'Live QuickBooks Mapping & Configuration'
+                defaultValue: 'Mappings'
               })}
             </h3>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              {t('integrations.qbo.settings.mapping.descriptionPrefix', {
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              {t('integrations.qbo.settings.mapping.description', {
                 defaultValue:
-                  'Configure live QuickBooks mappings for the connected company. These mappings are scoped to'
-              })}{' '}
-              <strong>
-                {defaultConnection.displayName || defaultConnection.realmId}
-              </strong>
-              .
-            </p>
-            <p className="max-w-3xl text-sm text-muted-foreground">
-              {t('integrations.qbo.settings.mapping.alert', {
-                defaultValue:
-                  'QuickBooks items, tax codes, and terms are loaded from the connected company.'
+                  'Match your services, tax codes, and payment terms to {{company}} so invoices land correctly in QuickBooks.',
+                company:
+                  defaultConnection.displayName || defaultConnection.realmId
               })}
             </p>
           </div>
@@ -693,25 +637,17 @@ export default function QboIntegrationSettings({
       ) : (
         <section
           id="qbo-integration-mapping-placeholder-card"
-          className="space-y-3 border-t pt-6"
+          className="space-y-2 border-t pt-6"
         >
-          <div>
-            <h3 className="text-base font-semibold text-foreground">
-              {t('integrations.qbo.settings.mapping.title', {
-                defaultValue: 'Live QuickBooks Mapping & Configuration'
-              })}
-            </h3>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              {t('integrations.qbo.settings.mapping.placeholderDescription', {
-                defaultValue:
-                  'Connect a QuickBooks company before configuring live QuickBooks item and tax mappings.'
-              })}
-            </p>
-          </div>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            {t('integrations.qbo.settings.mapping.placeholderAlert', {
+          <h3 className="text-base font-semibold text-foreground">
+            {t('integrations.qbo.settings.mapping.title', {
+              defaultValue: 'Mappings'
+            })}
+          </h3>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {t('integrations.qbo.settings.mapping.placeholderDescription', {
               defaultValue:
-                'The mapping manager becomes available after a QuickBooks company is connected.'
+                'Connect a QuickBooks company to map your services, tax codes, and payment terms.'
             })}
           </p>
         </section>

@@ -135,7 +135,7 @@ describe('XeroIntegrationSettings contracts', () => {
     render(<XeroIntegrationSettings />);
 
     expect(await screen.findByTestId('xero-live-mapping-manager')).toHaveTextContent('connection-1');
-    expect(screen.getByText('Live Xero Mapping & Configuration')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mappings' })).toBeInTheDocument();
 
     cleanup();
 
@@ -163,7 +163,7 @@ describe('XeroIntegrationSettings contracts', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('xero-live-mapping-manager')).not.toBeInTheDocument();
     });
-    expect(screen.getByText(/Connect a live Xero organisation before configuring live Xero item and tax mappings/)).toBeInTheDocument();
+    expect(screen.getByText(/Connect a Xero organisation to map your services, tax rates, and accounts/)).toBeInTheDocument();
   });
 
   it('T026: uses the first default Xero connection for the mapping context without rendering an org picker', async () => {

@@ -24,9 +24,7 @@ vi.mock('./CSVIntegrationSettings', () => ({
 
 vi.mock('./XeroCsvIntegrationSettings', () => ({
   __esModule: true,
-  default: () => (
-    <div data-testid="xero-csv-settings-stub">Xero CSV Settings</div>
-  )
+  default: () => <div data-testid="xero-csv-settings-stub">Xero CSV Settings</div>
 }));
 
 vi.mock('./XeroIntegrationSettings', () => ({
@@ -38,6 +36,10 @@ vi.mock('./QboIntegrationSettings', () => ({
   __esModule: true,
   default: () => <div data-testid="qbo-settings-stub">Live QBO Settings</div>
 }));
+
+function getRow(id: string): HTMLElement | null {
+  return document.getElementById(`accounting-integration-card-${id}`);
+}
 
 describe('AccountingIntegrationsSetup live Xero contracts', () => {
   const originalEdition = process.env.NEXT_PUBLIC_EDITION;
@@ -58,50 +60,41 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     vi.clearAllMocks();
   });
 
-  it('T001: enterprise mode renders live Xero and QBO beside Xero CSV as active options (no Coming Soon)', async () => {
+  it('T001: enterprise mode lists live QBO and Xero beside the CSV options as selectable rows (no Coming Soon)', async () => {
     const { default: AccountingIntegrationsSetup } =
       await import('./AccountingIntegrationsSetup');
 
     render(<AccountingIntegrationsSetup />);
 
-    const xeroCard = screen
-      .getByText('Xero')
-      .closest('#accounting-integration-card-xero');
-    const xeroCsvCard = screen
-      .getAllByText('Xero CSV')[0]
-      ?.closest('#accounting-integration-card-xero_csv');
-    const qboCard = screen
-      .getByText('QuickBooks Online')
-      .closest('#accounting-integration-card-quickbooks_online');
+    const qboRow = getRow('quickbooks_online');
+    const xeroRow = getRow('xero');
+    const qboCsvRow = getRow('quickbooks_csv');
+    const xeroCsvRow = getRow('xero_csv');
 
-    expect(xeroCard).toBeTruthy();
-    expect(screen.getAllByText('Xero CSV').length).toBeGreaterThan(0);
-    expect(xeroCsvCard).toBeTruthy();
-    expect(qboCard).toBeTruthy();
+    expect(qboRow).toBeTruthy();
+    expect(xeroRow).toBeTruthy();
+    expect(qboCsvRow).toBeTruthy();
+    expect(xeroCsvRow).toBeTruthy();
+
+    // Each option is itself the clickable control (a button), not a row with a
+    // separate "Configure" button inside it.
+    expect(qboRow?.tagName).toBe('BUTTON');
+    expect(xeroRow?.tagName).toBe('BUTTON');
+    expect(qboRow).not.toBeDisabled();
+    expect(xeroRow).not.toBeDisabled();
+
+    // No Coming Soon affordance — every listed option is available in EE.
+    expect(screen.queryByText('Coming Soon')).not.toBeInTheDocument();
+
+    // Live options are tagged as live connections; CSV options as CSV exports.
     expect(
-      within(xeroCard as HTMLElement).getByRole('button', {
-        name: 'Configure Integration'
-      })
-    ).not.toBeDisabled();
-    expect(
-      within(xeroCsvCard as HTMLElement).getByRole('button', {
-        name: 'Configure Integration'
-      })
-    ).not.toBeDisabled();
-    expect(
-      within(qboCard as HTMLElement).getByRole('button', {
-        name: 'Configure Integration'
-      })
-    ).not.toBeDisabled();
-    // No Coming Soon button — QBO is now enabled in EE
-    expect(
-      screen.queryByRole('button', { name: 'Coming Soon' })
-    ).not.toBeInTheDocument();
-    expect(
-      within(qboCard as HTMLElement).getByText('Live connection')
+      within(qboRow as HTMLElement).getByText('Live connection')
     ).toBeInTheDocument();
     expect(
-      within(xeroCard as HTMLElement).getByText('Live connection')
+      within(xeroRow as HTMLElement).getByText('Live connection')
+    ).toBeInTheDocument();
+    expect(
+      within(qboCsvRow as HTMLElement).getByText('CSV export')
     ).toBeInTheDocument();
   });
 
@@ -112,27 +105,20 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
 
     render(<AccountingIntegrationsSetup />);
 
-    expect(screen.queryByText(/^Xero$/)).not.toBeInTheDocument();
+    expect(getRow('xero')).toBeNull();
     expect(screen.getByText('Xero CSV')).toBeInTheDocument();
   });
 
-  it('T003: selecting Xero loads the dedicated accounting-scoped Xero settings panel', async () => {
+  it('T003: selecting Xero drills into the dedicated accounting-scoped Xero settings panel', async () => {
     const user = userEvent.setup();
     const { default: AccountingIntegrationsSetup } =
       await import('./AccountingIntegrationsSetup');
 
     render(<AccountingIntegrationsSetup />);
 
-    const xeroCard = screen
-      .getByText('Xero')
-      .closest('#accounting-integration-card-xero');
-    const xeroButton = xeroCard
-      ? within(xeroCard as HTMLElement).getByRole('button', {
-          name: 'Configure Integration'
-        })
-      : null;
-    expect(xeroButton).toBeTruthy();
-    await user.click(xeroButton as HTMLElement);
+    const xeroRow = getRow('xero');
+    expect(xeroRow).toBeTruthy();
+    await user.click(xeroRow as HTMLElement);
 
     expect(screen.getByTestId('xero-settings-stub')).toBeInTheDocument();
     expect(
@@ -140,62 +126,64 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('T010: enterprise mode shows the QuickBooks Online option with live mode text and enabled button', async () => {
+  it('T010: enterprise mode shows the QuickBooks Online option as an enabled live-connection row', async () => {
     const { default: AccountingIntegrationsSetup } =
       await import('./AccountingIntegrationsSetup');
 
     render(<AccountingIntegrationsSetup />);
 
-    const qboCard = screen
-      .getByText('QuickBooks Online')
-      .closest('#accounting-integration-card-quickbooks_online');
-    expect(qboCard).toBeTruthy();
+    const qboRow = getRow('quickbooks_online');
+    expect(qboRow).toBeTruthy();
+    expect(qboRow).not.toBeDisabled();
     expect(
-      within(qboCard as HTMLElement).getByRole('button', {
-        name: 'Configure Integration'
-      })
-    ).not.toBeDisabled();
-    expect(
-      within(qboCard as HTMLElement).getByText('Live connection')
+      within(qboRow as HTMLElement).getByText('Live connection')
     ).toBeInTheDocument();
   });
 
-  it('T011: non-enterprise mode hides the QuickBooks Online card', async () => {
+  it('T011: non-enterprise mode hides the QuickBooks Online row', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     const { default: AccountingIntegrationsSetup } =
       await import('./AccountingIntegrationsSetup');
 
     render(<AccountingIntegrationsSetup />);
 
-    expect(
-      document.getElementById('accounting-integration-card-quickbooks_online')
-    ).not.toBeInTheDocument();
+    expect(getRow('quickbooks_online')).toBeNull();
     // QuickBooks CSV is still available
     expect(screen.getByText('QuickBooks CSV')).toBeInTheDocument();
   });
 
-  it('T012: selecting QuickBooks Online loads the QBO settings panel', async () => {
+  it('T012: selecting QuickBooks Online drills into the QBO settings panel', async () => {
     const user = userEvent.setup();
     const { default: AccountingIntegrationsSetup } =
       await import('./AccountingIntegrationsSetup');
 
     render(<AccountingIntegrationsSetup />);
 
-    const qboCard = screen
-      .getByText('QuickBooks Online')
-      .closest('#accounting-integration-card-quickbooks_online');
-    const qboButton = qboCard
-      ? within(qboCard as HTMLElement).getByRole('button', {
-          name: 'Configure Integration'
-        })
-      : null;
-    expect(qboButton).toBeTruthy();
-    await user.click(qboButton as HTMLElement);
+    const qboRow = getRow('quickbooks_online');
+    expect(qboRow).toBeTruthy();
+    await user.click(qboRow as HTMLElement);
 
     expect(screen.getByTestId('qbo-settings-stub')).toBeInTheDocument();
     expect(
       screen.queryByTestId('quickbooks-csv-settings-stub')
     ).not.toBeInTheDocument();
+  });
+
+  it('T012b: drilling in shows a back control that returns to the option list', async () => {
+    const user = userEvent.setup();
+    const { default: AccountingIntegrationsSetup } =
+      await import('./AccountingIntegrationsSetup');
+
+    render(<AccountingIntegrationsSetup />);
+
+    await user.click(getRow('quickbooks_online') as HTMLElement);
+    expect(screen.getByTestId('qbo-settings-stub')).toBeInTheDocument();
+
+    await user.click(screen.getByText('All accounting integrations'));
+
+    // Back on the list: the QBO panel is gone and the rows are shown again.
+    expect(screen.queryByTestId('qbo-settings-stub')).not.toBeInTheDocument();
+    expect(getRow('quickbooks_online')).toBeTruthy();
   });
 
   it('T013: accounting_integration=quickbooks_online auto-selects the QBO panel in EE', async () => {
@@ -244,10 +232,8 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
 
     render(<AccountingIntegrationsSetup />);
 
-    // QBO card should not exist, so QBO panel should not be rendered
-    expect(
-      document.getElementById('accounting-integration-card-quickbooks_online')
-    ).not.toBeInTheDocument();
+    // QBO row should not exist, so the QBO panel should not be rendered
+    expect(getRow('quickbooks_online')).toBeNull();
     expect(screen.queryByTestId('qbo-settings-stub')).not.toBeInTheDocument();
   });
 });

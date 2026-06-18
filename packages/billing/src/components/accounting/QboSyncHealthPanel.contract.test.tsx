@@ -155,8 +155,8 @@ describe('QboSyncHealthPanel contracts', () => {
     await waitFor(() => {
       const card = document.getElementById('qbo-integration-sync-health-card');
       expect(card).toBeInTheDocument();
-      // cycle status badge
-      expect(card).toHaveTextContent('succeeded');
+      // cycle status (humanized)
+      expect(card).toHaveTextContent('Succeeded');
       // stats
       expect(card).toHaveTextContent('10 ops processed');
     });

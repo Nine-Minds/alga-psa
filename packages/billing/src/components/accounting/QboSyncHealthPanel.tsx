@@ -3,11 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { RefreshCw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAccountingSyncHealth,
@@ -20,6 +19,21 @@ import type { AccountingSyncHealth } from '../../actions/accountingSyncActions';
 import { getQboAccounts, getQboClasses, getQboDepartments } from '@alga-psa/integrations/actions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- type-only import for the QBO catalog shapes above
 import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations/actions';
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+function cycleStatusMeta(status: string | undefined, t: TranslateFn) {
+  switch (status) {
+    case 'succeeded':
+      return { dot: 'bg-emerald-500', label: t('integrations.qbo.sync.status.succeeded', { defaultValue: 'Succeeded' }) };
+    case 'failed':
+      return { dot: 'bg-red-500', label: t('integrations.qbo.sync.status.failed', { defaultValue: 'Failed' }) };
+    case 'running':
+      return { dot: 'bg-amber-500', label: t('integrations.qbo.sync.status.running', { defaultValue: 'Running' }) };
+    default:
+      return { dot: 'bg-muted-foreground/60', label: status ?? '' };
+  }
+}
 
 export default function QboSyncHealthPanel() {
   const { t } = useTranslation('msp/integrations');
@@ -70,259 +84,49 @@ export default function QboSyncHealthPanel() {
     return null;
   }
 
-  const defaultRealm = health.realms.find((r) => r.isDefault)?.realmId ?? null;
   const multiRealm = health.realms.length > 1;
+  const lastCycle = health.lastCycle;
+  const statusMeta = cycleStatusMeta(lastCycle?.status, t);
+
+  // Token expiry: keep it quiet unless it is close or already lapsed.
+  const tokenExpiresAt = health.refreshTokenExpiresAt
+    ? new Date(health.refreshTokenExpiresAt)
+    : null;
+  const tokenMsLeft = tokenExpiresAt ? tokenExpiresAt.getTime() - Date.now() : null;
+  const tokenExpired = tokenMsLeft !== null && tokenMsLeft <= 0;
+  const tokenExpiringSoon = tokenMsLeft !== null && tokenMsLeft > 0 && tokenMsLeft <= 14 * 24 * 60 * 60 * 1000;
+  const tokenDate = tokenExpiresAt ? tokenExpiresAt.toLocaleDateString() : '';
+
+  const metrics: Array<{ value: number; label: string; tone: 'neutral' | 'warn' | 'error'; href?: string }> = [
+    { value: health.pendingOps, label: t('integrations.qbo.sync.pendingOps', { defaultValue: 'Pending ops' }), tone: 'neutral' },
+    { value: health.erroredOps, label: t('integrations.qbo.sync.erroredOps', { defaultValue: 'Errored ops' }), tone: 'error' },
+    { value: health.driftCount, label: t('integrations.qbo.sync.driftCount', { defaultValue: 'Drift' }), tone: 'warn' },
+    { value: health.openExceptions, label: t('integrations.qbo.sync.openExceptions', { defaultValue: 'Open exceptions' }), tone: 'error', href: '/msp/user-activities' }
+  ];
+
+  const metricToneClass = (value: number, tone: 'neutral' | 'warn' | 'error') => {
+    if (value <= 0) return 'text-foreground';
+    if (tone === 'error') return 'text-red-600';
+    if (tone === 'warn') return 'text-amber-600';
+    return 'text-foreground';
+  };
 
   return (
-    <Card id="qbo-integration-sync-health-card">
-      <CardHeader>
-        <CardTitle>{t('integrations.qbo.sync.healthCardTitle', { defaultValue: 'Sync Health' })}</CardTitle>
-        <CardDescription>
-          {t('integrations.qbo.sync.healthCardDescription', { defaultValue: 'QuickBooks accounting sync status and controls. Runs every 15 minutes.' })}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {syncNowFeedback && (
-          <Alert variant={syncNowFeedback.type === 'success' ? 'success' : 'destructive'}>
-            <AlertDescription>{syncNowFeedback.message}</AlertDescription>
-          </Alert>
-        )}
-
-        <>
-          {/* Last cycle */}
-          <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
-            <p className="font-medium text-foreground">
-              {t('integrations.qbo.sync.lastCycleTitle', { defaultValue: 'Last Sync Cycle' })}
-            </p>
-            {health.lastCycle ? (
-              <div className="space-y-1">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Badge variant={health.lastCycle.status === 'succeeded' ? 'success' : health.lastCycle.status === 'failed' ? 'error' : 'secondary'}>
-                    {health.lastCycle.status}
-                  </Badge>
-                  {health.lastCycle.finished_at && (
-                    <span className="text-muted-foreground text-xs">
-                      {new Date(health.lastCycle.finished_at).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-                {health.lastCycle.stats && (
-                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    {health.lastCycle.stats.opsProcessed !== undefined && (
-                      <span>
-                        {t('integrations.qbo.sync.statOpsProcessed', {
-                          count: health.lastCycle.stats.opsProcessed,
-                          defaultValue: `${health.lastCycle.stats.opsProcessed} ops processed`,
-                        })}
-                      </span>
-                    )}
-                    {health.lastCycle.stats.driftFound !== undefined && (
-                      <span>
-                        {t('integrations.qbo.sync.statDriftFound', {
-                          count: health.lastCycle.stats.driftFound,
-                          defaultValue: `${health.lastCycle.stats.driftFound} drift`,
-                        })}
-                      </span>
-                    )}
-                    {health.lastCycle.stats.paymentsApplied !== undefined && (
-                      <span>
-                        {t('integrations.qbo.sync.statPaymentsApplied', {
-                          count: health.lastCycle.stats.paymentsApplied,
-                          defaultValue: `${health.lastCycle.stats.paymentsApplied} payments applied`,
-                        })}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                {t('integrations.qbo.sync.noLastCycle', { defaultValue: 'No sync cycle has run yet.' })}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {t('integrations.qbo.sync.nextRunHint', { defaultValue: 'Runs automatically every 15 minutes when auto-sync is enabled.' })}
-            </p>
-          </div>
-
-          {/* Counts row */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">{health.pendingOps}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.pendingOps', { defaultValue: 'Pending ops' })}
-              </div>
-            </div>
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">{health.erroredOps}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.erroredOps', { defaultValue: 'Errored ops' })}
-              </div>
-            </div>
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">{health.driftCount}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.driftCount', { defaultValue: 'Drift' })}
-              </div>
-            </div>
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">
-                <Link href="/msp/user-activities" className="underline">
-                  {health.openExceptions}
-                </Link>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.openExceptions', { defaultValue: 'Open exceptions' })}
-              </div>
-            </div>
-          </div>
-
-          {/* QBO 'Automatically apply credits' conflicts with Alga-driven credit application */}
-          {health.autoApplyCreditsEnabled === true && (
-            <Alert variant="warning" id="qbo-auto-apply-credits-warning">
-              <AlertDescription>
-                {t('integrations.qbo.sync.autoApplyCreditsWarning', {
-                  defaultValue:
-                    'QuickBooks is set to automatically apply credits, which conflicts with credit applications driven from Alga: QuickBooks may apply exported credit memos to a different invoice before the sync does. In QuickBooks, go to Account and Settings → Advanced → Automation and turn off "Automatically apply credits".',
-                })}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Refresh token expiry */}
-          {health.refreshTokenExpiresAt && (() => {
-            const expiresMs = new Date(health.refreshTokenExpiresAt!).getTime() - Date.now();
-            const expired = expiresMs <= 0;
-            const expiresDate = new Date(health.refreshTokenExpiresAt!).toLocaleDateString();
-            return (
-              <Alert variant={expired ? 'destructive' : 'info'}>
-                <AlertDescription>
-                  {expired
-                    ? t('integrations.qbo.sync.refreshTokenExpired', { defaultValue: 'QuickBooks token expired — reconnect to resume syncing.' })
-                    : t('integrations.qbo.sync.refreshTokenExpiry', { date: expiresDate, defaultValue: `QuickBooks token expires ${expiresDate}` })}
-                </AlertDescription>
-              </Alert>
-            );
-          })()}
-
-          {/* Multi-realm: realm list with Make default */}
-          {multiRealm && (
-            <div id="qbo-realm-list" className="rounded-lg border p-4 space-y-2 text-sm">
-              <p className="font-medium text-foreground">
-                {t('integrations.qbo.sync.connectedCompanies', { defaultValue: 'Connected Companies' })}
-              </p>
-              <div className="space-y-2">
-                {health.realms.map((realm) => (
-                  <div key={realm.realmId} className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">{realm.realmId}</span>
-                    {realm.isDefault ? (
-                      <Badge variant="secondary">
-                        {t('integrations.qbo.sync.defaultRealm', { defaultValue: 'Default' })}
-                      </Badge>
-                    ) : (
-                      <Button
-                        id={`qbo-make-default-${realm.realmId}`}
-                        variant="outline"
-                        size="sm"
-                        disabled={savingRef === realm.realmId}
-                        onClick={async () => {
-                          setSavingRef(realm.realmId);
-                          try {
-                            await setDefaultQboRealm(realm.realmId);
-                            await loadHealth();
-                          } finally {
-                            setSavingRef(null);
-                          }
-                        }}
-                      >
-                        {savingRef === realm.realmId
-                          ? t('integrations.qbo.sync.saving', { defaultValue: 'Saving…' })
-                          : t('integrations.qbo.sync.makeDefault', { defaultValue: 'Make default' })}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sync configuration: deposit / class / department pickers */}
-          {health.connected && (
-            <div id="qbo-sync-config-section" className="rounded-lg border p-4 space-y-4 text-sm">
-              <p className="font-medium text-foreground">
-                {t('integrations.qbo.sync.configTitle', { defaultValue: 'Sync Configuration' })}
-              </p>
-
-              {/* Deposit account */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t('integrations.qbo.sync.depositAccount', { defaultValue: 'Deposit Account' })}
-                </label>
-                <CustomSelect
-                  id="qbo-sync-deposit-account"
-                  value={health.settings.depositAccountRef?.value ?? ''}
-                  onValueChange={async (value) => {
-                    const account = accounts.find((a) => a.id === value) ?? null;
-                    const ref = account ? { value: account.id, name: account.name } : null;
-                    const updated = await updateAccountingSyncSettingsAction({ depositAccountRef: ref });
-                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
-                  }}
-                  options={[
-                    { value: '', label: t('integrations.qbo.sync.undepositedFunds', { defaultValue: 'Undeposited Funds (default)' }) },
-                    ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.accountType})` }))
-                  ]}
-                />
-              </div>
-
-              {/* Default class */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t('integrations.qbo.sync.defaultClass', { defaultValue: 'Default Class' })}
-                </label>
-                <CustomSelect
-                  id="qbo-sync-default-class"
-                  value={health.settings.defaultClassRef?.value ?? ''}
-                  onValueChange={async (value) => {
-                    const cls = classes.find((c) => c.id === value) ?? null;
-                    const ref = cls ? { value: cls.id, name: cls.name } : null;
-                    const updated = await updateAccountingSyncSettingsAction({ defaultClassRef: ref });
-                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
-                  }}
-                  options={[
-                    { value: '', label: t('integrations.qbo.sync.noDefault', { defaultValue: 'No default' }) },
-                    ...classes.map((c) => ({ value: c.id, label: c.name }))
-                  ]}
-                />
-              </div>
-
-              {/* Default department */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t('integrations.qbo.sync.defaultDepartment', { defaultValue: 'Default Department' })}
-                </label>
-                <CustomSelect
-                  id="qbo-sync-default-department"
-                  value={health.settings.defaultDepartmentRef?.value ?? ''}
-                  onValueChange={async (value) => {
-                    const dept = departments.find((d) => d.id === value) ?? null;
-                    const ref = dept ? { value: dept.id, name: dept.name } : null;
-                    const updated = await updateAccountingSyncSettingsAction({ defaultDepartmentRef: ref });
-                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
-                  }}
-                  options={[
-                    { value: '', label: t('integrations.qbo.sync.noDefault', { defaultValue: 'No default' }) },
-                    ...departments.map((d) => ({ value: d.id, label: d.name }))
-                  ]}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Auto-sync toggle */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              {t('integrations.qbo.sync.autoSyncLabel', { defaultValue: 'Auto-sync enabled' })}
-            </span>
+    <section id="qbo-integration-sync-health-card" className="space-y-5 border-t pt-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-semibold text-foreground">
+            {t('integrations.qbo.sync.healthCardTitle', { defaultValue: 'Sync health' })}
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            {t('integrations.qbo.sync.healthCardDescription', {
+              defaultValue: 'QuickBooks accounting sync runs automatically every 15 minutes when auto-sync is on.'
+            })}
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+            {t('integrations.qbo.sync.autoSyncLabel', { defaultValue: 'Auto-sync' })}
             <Switch
               id="qbo-sync-auto-sync-toggle"
               checked={health.settings.autoSyncEnabled}
@@ -333,54 +137,260 @@ export default function QboSyncHealthPanel() {
                   const updated = await updateAccountingSyncSettingsAction({ autoSyncEnabled: checked });
                   setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
                 } catch {
-                  // Silently ignore — badge state stays as-is
+                  // Silently ignore — toggle state stays as-is
                 } finally {
                   setAutoSyncToggling(false);
                 }
               }}
             />
-          </div>
-        </>
-      </CardContent>
-      <CardFooter>
-        <Button
-          id="qbo-sync-now-button"
-          type="button"
-          variant="outline"
-          disabled={syncNowRunning}
-          onClick={async () => {
-            setSyncNowRunning(true);
-            setSyncNowFeedback(null);
-            try {
-              const result = await runAccountingSyncNow();
-              if (result.ran) {
-                setSyncNowFeedback({ type: 'success', message: t('integrations.qbo.sync.syncNowSuccess', { defaultValue: 'Sync completed successfully.' }) });
-              } else {
+          </label>
+          <Button
+            id="qbo-sync-now-button"
+            type="button"
+            variant="outline"
+            disabled={syncNowRunning}
+            onClick={async () => {
+              setSyncNowRunning(true);
+              setSyncNowFeedback(null);
+              try {
+                const result = await runAccountingSyncNow();
+                if (result.ran) {
+                  setSyncNowFeedback({ type: 'success', message: t('integrations.qbo.sync.syncNowSuccess', { defaultValue: 'Sync completed successfully.' }) });
+                } else {
+                  setSyncNowFeedback({
+                    type: 'error',
+                    message: t('integrations.qbo.sync.syncNowSkipped', {
+                      reason: result.error ?? result.status,
+                      defaultValue: `Sync skipped: ${result.error ?? result.status}`,
+                    }),
+                  });
+                }
+                void loadHealth();
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
                 setSyncNowFeedback({
                   type: 'error',
-                  message: t('integrations.qbo.sync.syncNowSkipped', {
-                    reason: result.error ?? result.status,
-                    defaultValue: `Sync skipped: ${result.error ?? result.status}`,
-                  }),
+                  message: t('integrations.qbo.sync.syncNowError', { error: msg, defaultValue: `Sync failed: ${msg}` }),
                 });
+              } finally {
+                setSyncNowRunning(false);
               }
-              void loadHealth();
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
-              setSyncNowFeedback({
-                type: 'error',
-                message: t('integrations.qbo.sync.syncNowError', { error: msg, defaultValue: `Sync failed: ${msg}` }),
-              });
-            } finally {
-              setSyncNowRunning(false);
-            }
-          }}
-        >
-          {syncNowRunning
-            ? t('integrations.qbo.sync.syncNowRunning', { defaultValue: 'Syncing…' })
-            : t('integrations.qbo.sync.syncNowButton', { defaultValue: 'Sync Now' })}
-        </Button>
-      </CardFooter>
-    </Card>
+            }}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4${syncNowRunning ? ' animate-spin' : ''}`} />
+            {syncNowRunning
+              ? t('integrations.qbo.sync.syncNowRunning', { defaultValue: 'Syncing…' })
+              : t('integrations.qbo.sync.syncNowButton', { defaultValue: 'Sync Now' })}
+          </Button>
+        </div>
+      </div>
+
+      {syncNowFeedback && (
+        <Alert variant={syncNowFeedback.type === 'success' ? 'success' : 'destructive'}>
+          <AlertDescription>{syncNowFeedback.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Last sync cycle — a single status line, no badge */}
+      <div className="space-y-1 text-sm">
+        {lastCycle ? (
+          <>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${statusMeta.dot}`} aria-hidden="true" />
+              <span className="font-medium text-foreground">{statusMeta.label}</span>
+              {lastCycle.finished_at && (
+                <span className="text-muted-foreground">
+                  {t('integrations.qbo.sync.lastRunAt', {
+                    time: new Date(lastCycle.finished_at).toLocaleString(),
+                    defaultValue: `· last run ${new Date(lastCycle.finished_at).toLocaleString()}`
+                  })}
+                </span>
+              )}
+            </div>
+            {lastCycle.stats && (
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-4 text-xs text-muted-foreground">
+                {lastCycle.stats.opsProcessed !== undefined && (
+                  <span>{t('integrations.qbo.sync.statOpsProcessed', { count: lastCycle.stats.opsProcessed, defaultValue: `${lastCycle.stats.opsProcessed} ops processed` })}</span>
+                )}
+                {lastCycle.stats.driftFound !== undefined && (
+                  <span>{t('integrations.qbo.sync.statDriftFound', { count: lastCycle.stats.driftFound, defaultValue: `${lastCycle.stats.driftFound} drift` })}</span>
+                )}
+                {lastCycle.stats.paymentsApplied !== undefined && (
+                  <span>{t('integrations.qbo.sync.statPaymentsApplied', { count: lastCycle.stats.paymentsApplied, defaultValue: `${lastCycle.stats.paymentsApplied} payments applied` })}</span>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/60" aria-hidden="true" />
+            {t('integrations.qbo.sync.noLastCycle', { defaultValue: 'No sync cycle has run yet.' })}
+          </div>
+        )}
+        {tokenExpiresAt && !tokenExpired && !tokenExpiringSoon && (
+          <p className="pl-4 text-xs text-muted-foreground">
+            {t('integrations.qbo.sync.tokenValidUntil', { date: tokenDate, defaultValue: `Connection valid until ${tokenDate}` })}
+          </p>
+        )}
+      </div>
+
+      {/* Metrics — one grouped strip, errors highlighted only when present */}
+      <dl className="grid grid-cols-2 divide-y divide-border overflow-hidden rounded-lg border sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+        {metrics.map((m) => (
+          <div key={m.label} className="px-4 py-3">
+            <dt className="text-xs text-muted-foreground">{m.label}</dt>
+            <dd className={`mt-0.5 text-xl font-semibold ${metricToneClass(m.value, m.tone)}`}>
+              {m.href && m.value > 0 ? (
+                <Link href={m.href} className="underline underline-offset-2">{m.value}</Link>
+              ) : (
+                m.value
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {/* QBO 'Automatically apply credits' conflicts with Alga-driven credit application */}
+      {health.autoApplyCreditsEnabled === true && (
+        <Alert variant="warning" id="qbo-auto-apply-credits-warning">
+          <AlertDescription>
+            {t('integrations.qbo.sync.autoApplyCreditsWarning', {
+              defaultValue:
+                'QuickBooks is set to automatically apply credits, which conflicts with credit applications driven from Alga: QuickBooks may apply exported credit memos to a different invoice before the sync does. In QuickBooks, go to Account and Settings → Advanced → Automation and turn off "Automatically apply credits".',
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Token expiry — only escalated when expired or close */}
+      {(tokenExpired || tokenExpiringSoon) && (
+        <Alert variant={tokenExpired ? 'destructive' : 'warning'}>
+          <AlertDescription>
+            {tokenExpired
+              ? t('integrations.qbo.sync.refreshTokenExpired', { defaultValue: 'QuickBooks token expired — reconnect to resume syncing.' })
+              : t('integrations.qbo.sync.refreshTokenExpirySoon', { date: tokenDate, defaultValue: `QuickBooks token expires ${tokenDate} — reconnect soon to avoid interruption.` })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Multi-realm: realm list with Make default */}
+      {multiRealm && (
+        <div id="qbo-realm-list" className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground">
+            {t('integrations.qbo.sync.connectedCompanies', { defaultValue: 'Connected companies' })}
+          </h4>
+          <div className="divide-y rounded-lg border">
+            {health.realms.map((realm) => (
+              <div key={realm.realmId} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                <span className="font-mono text-xs text-muted-foreground">{realm.realmId}</span>
+                {realm.isDefault ? (
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {t('integrations.qbo.sync.defaultRealm', { defaultValue: 'Default' })}
+                  </span>
+                ) : (
+                  <Button
+                    id={`qbo-make-default-${realm.realmId}`}
+                    variant="outline"
+                    size="sm"
+                    disabled={savingRef === realm.realmId}
+                    onClick={async () => {
+                      setSavingRef(realm.realmId);
+                      try {
+                        await setDefaultQboRealm(realm.realmId);
+                        await loadHealth();
+                      } finally {
+                        setSavingRef(null);
+                      }
+                    }}
+                  >
+                    {savingRef === realm.realmId
+                      ? t('integrations.qbo.sync.saving', { defaultValue: 'Saving…' })
+                      : t('integrations.qbo.sync.makeDefault', { defaultValue: 'Make default' })}
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sync configuration: deposit / class / department pickers */}
+      {health.connected && (
+        <div id="qbo-sync-config-section" className="space-y-3">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">
+              {t('integrations.qbo.sync.configTitle', { defaultValue: 'Sync configuration' })}
+            </h4>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('integrations.qbo.sync.configDescription', {
+                defaultValue: 'Defaults applied to documents Alga posts into QuickBooks.'
+              })}
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t('integrations.qbo.sync.depositAccount', { defaultValue: 'Deposit account' })}
+              </label>
+              <CustomSelect
+                id="qbo-sync-deposit-account"
+                value={health.settings.depositAccountRef?.value ?? ''}
+                onValueChange={async (value) => {
+                  const account = accounts.find((a) => a.id === value) ?? null;
+                  const ref = account ? { value: account.id, name: account.name } : null;
+                  const updated = await updateAccountingSyncSettingsAction({ depositAccountRef: ref });
+                  setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                }}
+                options={[
+                  { value: '', label: t('integrations.qbo.sync.undepositedFunds', { defaultValue: 'Undeposited Funds (default)' }) },
+                  ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.accountType})` }))
+                ]}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t('integrations.qbo.sync.defaultClass', { defaultValue: 'Default class' })}
+              </label>
+              <CustomSelect
+                id="qbo-sync-default-class"
+                value={health.settings.defaultClassRef?.value ?? ''}
+                onValueChange={async (value) => {
+                  const cls = classes.find((c) => c.id === value) ?? null;
+                  const ref = cls ? { value: cls.id, name: cls.name } : null;
+                  const updated = await updateAccountingSyncSettingsAction({ defaultClassRef: ref });
+                  setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                }}
+                options={[
+                  { value: '', label: t('integrations.qbo.sync.noDefault', { defaultValue: 'No default' }) },
+                  ...classes.map((c) => ({ value: c.id, label: c.name }))
+                ]}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t('integrations.qbo.sync.defaultDepartment', { defaultValue: 'Default department' })}
+              </label>
+              <CustomSelect
+                id="qbo-sync-default-department"
+                value={health.settings.defaultDepartmentRef?.value ?? ''}
+                onValueChange={async (value) => {
+                  const dept = departments.find((d) => d.id === value) ?? null;
+                  const ref = dept ? { value: dept.id, name: dept.name } : null;
+                  const updated = await updateAccountingSyncSettingsAction({ defaultDepartmentRef: ref });
+                  setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                }}
+                options={[
+                  { value: '', label: t('integrations.qbo.sync.noDefault', { defaultValue: 'No default' }) },
+                  ...departments.map((d) => ({ value: d.id, label: d.name }))
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

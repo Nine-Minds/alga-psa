@@ -57,23 +57,28 @@
         },
         "options": {
           "qbo": {
-            "description": "Connect your QuickBooks company for live invoice delivery and mappings."
+            "description": "Send finalized invoices straight to QuickBooks and keep customers, items, and tax codes in sync."
           },
           "qboCsv": {
-            "description": "Export invoices to CSV for manual import into QuickBooks and import tax data from reports."
+            "description": "Export invoices as a CSV to import into QuickBooks, and bring tax data back from reports."
           },
           "xero": {
-            "description": "Connect your Xero organisation for live accounting exports and mappings."
+            "description": "Send finalized invoices straight to Xero and keep contacts, accounts, and tax rates in sync."
           },
           "xeroCsv": {
-            "description": "Export invoices to CSV for manual import into Xero and import tax data from Xero reports."
+            "description": "Export invoices as a CSV to import into Xero, and bring tax data back from Xero reports."
           }
         },
         "selected": "{{title}} selected",
         "unavailable": {
           "description": "This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.",
           "title": "Configuration unavailable"
-        }
+        },
+        "kinds": {
+          "live": "Live connection",
+          "csv": "CSV export"
+        },
+        "backToList": "All accounting integrations"
       },
       "modules": {
         "tabs": {
@@ -82,6 +87,9 @@
           "taxCodes": "Tax Codes",
           "paymentTerms": "Payment Terms"
         }
+      },
+      "settings": {
+        "viewExportHistory": "View export history"
       }
     },
     "calendar": {
@@ -194,11 +202,11 @@
       },
       "settings": {
         "exports": {
-          "description": "Create export batches, download CSV files, import tax reports, and review export history.",
+          "description": "Create export batches, download CSV files, import tax reports, and review history from Billing → Accounting Exports.",
           "managedTitle": "Managed from Billing",
           "openButton": "Open Accounting Exports",
           "path": "Billing → Accounting Exports",
-          "title": "Accounting Exports"
+          "title": "Accounting exports"
         },
         "qbo": {
           "bullets": {
@@ -214,11 +222,12 @@
           },
           "intro": "This integration provides an alternative to OAuth-based QuickBooks connectivity:",
           "mappings": {
-            "description": "Map Alga clients, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.",
-            "title": "QuickBooks CSV Mappings"
+            "description": "Match your clients, services, tax codes, and payment terms to the identifiers used in QuickBooks. These values are written into every CSV export.",
+            "title": "Mappings"
           },
           "note": "Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.",
-          "title": "QuickBooks CSV Integration"
+          "title": "QuickBooks CSV Integration",
+          "summary": "Generate a CSV of your finalized invoices to import into QuickBooks. When you calculate tax outside Alga, you can import the tax totals back from QuickBooks reports. Map your billing data below, then run exports from Billing → Accounting Exports."
         }
       },
       "taxImport": {
@@ -1213,7 +1222,7 @@
           "disconnecting": "Disconnecting…",
           "reconnect": "Reconnect QuickBooks",
           "refresh": "Refresh",
-          "saveCredentials": "Save QuickBooks Credentials",
+          "saveCredentials": "Save credentials",
           "saving": "Saving…"
         },
         "badges": {
@@ -1243,7 +1252,8 @@
           "notConnected": "No QuickBooks company is connected yet. Finish setup, then connect a company.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks Connection",
-          "unknown": "unknown"
+          "unknown": "unknown",
+          "realm": "Realm ID"
         },
         "credentialsSaved": "QuickBooks app setup saved. You can now connect a QuickBooks company.",
         "csvAvailableMiddle": "from",
@@ -1251,7 +1261,7 @@
         "csvAvailableTitle": "QuickBooks CSV",
         "description": "Connect your QuickBooks company for live invoice delivery, sync checks, and mappings.",
         "disconnectSuccess": "QuickBooks was disconnected. Saved app setup was left in place for reconnecting.",
-        "environment": "Intuit Environment",
+        "environment": "Environment",
         "environmentProduction": "Production",
         "environmentSandbox": "Sandbox",
         "errors": {
@@ -1266,23 +1276,25 @@
           "alert": "QuickBooks items, tax codes, and terms are loaded from the connected company.",
           "descriptionPrefix": "Configure live QuickBooks mappings for the connected company. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after a QuickBooks company is connected.",
-          "placeholderDescription": "Connect a QuickBooks company before configuring live QuickBooks item and tax mappings.",
-          "title": "Live QuickBooks Mapping & Configuration"
+          "placeholderDescription": "Connect a QuickBooks company to map your services, tax codes, and payment terms.",
+          "title": "Mappings",
+          "description": "Match your services, tax codes, and payment terms to {{company}} so invoices land correctly in QuickBooks."
         },
         "noClientId": "No custom client ID is stored.",
         "noClientSecret": "No custom client secret is stored.",
         "quickbooksCsv": "QuickBooks CSV",
         "redirectUri": "Redirect URI",
-        "requiredScopes": "Required Scopes",
+        "requiredScopes": "Required scopes",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
-        "tenantOauthDescription": "Use this only when this company needs its own Intuit app. Saved secrets are hidden after they are stored.",
-        "tenantOauthTitle": "Advanced: Custom Intuit App",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Most teams can skip this. Add your own Intuit app credentials only if you need to. Saved secrets are hidden after they are stored.",
+        "tenantOauthTitle": "Advanced: use your own Intuit app",
+        "title": "QuickBooks Online",
+        "tenantOauthHostedDescription": "Alga already provides a QuickBooks app for connecting. Add your own only if this company needs its own Intuit app registration."
       },
       "sync": {
-        "healthCardTitle": "Sync Health",
-        "healthCardDescription": "QuickBooks accounting sync status and controls. Runs every 15 minutes.",
+        "healthCardTitle": "Sync health",
+        "healthCardDescription": "QuickBooks accounting sync runs automatically every 15 minutes when auto-sync is on.",
         "lastCycleTitle": "Last Sync Cycle",
         "lastCycleStatus": "Status",
         "lastCycleFinishedAt": "Finished",
@@ -1298,7 +1310,7 @@
         "openExceptions": "Open exceptions",
         "refreshTokenExpiry": "QuickBooks token expires {{date}}",
         "refreshTokenExpired": "QuickBooks token expired — reconnect to resume syncing.",
-        "autoSyncLabel": "Auto-sync enabled",
+        "autoSyncLabel": "Auto-sync",
         "syncNowButton": "Sync Now",
         "syncNowRunning": "Syncing…",
         "syncNowSuccess": "Sync completed successfully.",
@@ -1306,16 +1318,25 @@
         "syncNowError": "Sync failed: {{error}}",
         "viewExceptionsLink": "View exceptions",
         "autoApplyCreditsWarning": "QuickBooks is set to automatically apply credits, which conflicts with credit applications driven from Alga: QuickBooks may apply exported credit memos to a different invoice before the sync does. In QuickBooks, go to Account and Settings → Advanced → Automation and turn off \"Automatically apply credits\".",
-        "configTitle": "Sync Configuration",
-        "connectedCompanies": "Connected Companies",
-        "defaultClass": "Default Class",
-        "defaultDepartment": "Default Department",
+        "configTitle": "Sync configuration",
+        "connectedCompanies": "Connected companies",
+        "defaultClass": "Default class",
+        "defaultDepartment": "Default department",
         "defaultRealm": "Default",
-        "depositAccount": "Deposit Account",
+        "depositAccount": "Deposit account",
         "makeDefault": "Make default",
         "noDefault": "No default",
         "saving": "Saving…",
-        "undepositedFunds": "Undeposited Funds (default)"
+        "undepositedFunds": "Undeposited Funds (default)",
+        "status": {
+          "succeeded": "Succeeded",
+          "failed": "Failed",
+          "running": "Running"
+        },
+        "lastRunAt": "· last run {{time}}",
+        "tokenValidUntil": "Connection valid until {{date}}",
+        "refreshTokenExpirySoon": "QuickBooks token expires {{date}} — reconnect soon to avoid interruption.",
+        "configDescription": "Defaults applied to documents Alga posts into QuickBooks."
       }
     },
     "rmm": {
@@ -2125,14 +2146,14 @@
           },
           "exportSettings": {
             "description": "Configure how invoices are exported to CSV format for Xero.",
-            "title": "CSV Export Settings"
+            "title": "Export settings"
           },
           "loading": "Loading Xero CSV settings...",
           "managedPrefix": "Go to",
           "managedSuffix": "to select invoices, generate Xero CSV exports, import tax reports, and manage batches.",
           "mappings": {
-            "description": "Map Alga clients, services, and tax codes to the identifiers used in your Xero organisation. These values are used when generating the CSV export.",
-            "title": "Xero CSV Mappings"
+            "description": "Match your clients, services, and tax codes to the identifiers used in your Xero organisation. These values are written into every CSV export.",
+            "title": "Mappings"
           },
           "overview": {
             "description": "Export invoices to CSV for manual import into Xero, and import tax data from Xero reports.",
@@ -2142,7 +2163,8 @@
             "note": "Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.",
             "taxImportLabel": "Tax Import",
             "taxImportText": "When using external tax calculation, import tax amounts from Xero's Invoice Details Report",
-            "title": "Xero CSV Integration"
+            "title": "Xero CSV Integration",
+            "summary": "Generate a CSV of your finalized invoices to import into Xero, then import tax totals back from Xero reports. Complete the one-time Xero setup below, map your billing data, and run exports from Billing → Accounting Exports."
           },
           "savedMessage": "Settings saved successfully",
           "selectCurrency": "Select currency",
@@ -2159,7 +2181,7 @@
             "step2Title": "Step 2: Configure Tax Rates",
             "step3Description": "Use the mapping section below to link your Alga services to Xero item codes, and your tax regions to Xero tax rates.",
             "step3Title": "Step 3: Map Services and Tax Regions",
-            "title": "Xero Setup Required"
+            "title": "Finish the one-time Xero setup"
           },
           "useInvoiceCurrency": "Use invoice currency",
           "workflow": {
@@ -2181,9 +2203,12 @@
               "s5": "Review matched invoices and confirm import"
             },
             "importTax": "Import Tax Calculations",
-            "title": "CSV Workflow",
+            "title": "CSV workflow",
             "trackingDescription": "The CSV export includes tracking category columns that link each Xero invoice back to its Alga source. When you import tax from Xero, these tracking categories are used to automatically match invoices - no manual reconciliation needed.",
             "trackingTitle": "Tracking Categories for Reconciliation"
+          },
+          "exports": {
+            "navDescription": "Create export batches, download CSV files, import tax reports, and review history from Billing → Accounting Exports."
           }
         }
       },
@@ -2197,7 +2222,7 @@
           "disconnecting": "Disconnecting…",
           "reconnect": "Reconnect Xero",
           "refresh": "Refresh",
-          "saveCredentials": "Save Xero Credentials",
+          "saveCredentials": "Save credentials",
           "saving": "Saving…"
         },
         "badges": {
@@ -2205,7 +2230,8 @@
           "credentialsReady": "Credentials Ready",
           "credentialsRequired": "Credentials Required",
           "defaultConnected": "Default Organisation Connected",
-          "noOrganisation": "No Organisation Connected"
+          "noOrganisation": "No Organisation Connected",
+          "connected": "Connected"
         },
         "callback": {
           "accessDenied": "Xero access was denied before the connection completed.",
@@ -2218,20 +2244,30 @@
           "oauthFailed": "Xero could not finish connecting. Try again. If it keeps failing, review app setup."
         },
         "clientIdLabel": "Xero Client ID",
-        "clientIdPlaceholder": "Paste your tenant-owned Xero client ID",
+        "clientIdPlaceholder": "Paste your Xero client ID",
         "clientSecretLabel": "Xero Client Secret",
-        "clientSecretPlaceholder": "Paste your tenant-owned Xero client secret",
+        "clientSecretPlaceholder": "Paste your Xero client secret",
         "connectSuccess": "Xero connected successfully. The first connected organisation is now the default live Xero context.",
         "connection": {
           "connectionId": "Connection ID: {{id}}",
-          "defaultOrganisation": "Default organisation",
+          "defaultOrganisation": "Organisation",
           "description": "Connect the Xero organisation Alga should use for live accounting exports and mappings.",
           "notConnected": "No live Xero organisation is connected yet. Save credentials, then click Connect Xero.",
           "title": "Live Xero Connection",
-          "unknown": "unknown"
+          "unknown": "unknown",
+          "checking": "Checking connection",
+          "connected": "Connected",
+          "needsAttention": "Needs attention",
+          "ready": "Ready to connect",
+          "setupRequired": "Setup required",
+          "checkingDescription": "Reading the tenant Xero configuration.",
+          "expiredDescription": "Reconnect Xero to resume live exports and mappings.",
+          "connectedDescription": "Live exports and mappings use this Xero organisation.",
+          "statusLabel": "Status",
+          "connectionIdLabel": "Connection ID"
         },
-        "credentialsSaved": "Xero credentials saved. You can now start the live Xero OAuth flow.",
-        "csvAvailableMiddle": "in this same Accounting section and manage exports from",
+        "credentialsSaved": "Xero credentials saved. You can now connect a Xero organisation.",
+        "csvAvailableMiddle": "and manage exports from",
         "csvAvailablePrefix": "If you prefer a manual workflow, keep using",
         "csvAvailableTitle": "Xero CSV remains available",
         "description": "Configure tenant-owned Xero OAuth credentials, connect your default organisation, and keep live Xero available beside the manual Xero CSV workflow.",
@@ -2248,19 +2284,21 @@
           "alert": "Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.",
           "descriptionPrefix": "Configure live Xero mappings for the default connected organisation. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.",
-          "placeholderDescription": "Connect a live Xero organisation before configuring live Xero item and tax mappings.",
-          "title": "Live Xero Mapping & Configuration"
+          "placeholderDescription": "Connect a Xero organisation to map your services, tax rates, and accounts.",
+          "title": "Mappings",
+          "description": "Match your services, tax rates, and accounts to {{organisation}} so invoices land correctly in Xero."
         },
-        "noClientId": "No client ID is stored for this tenant yet.",
-        "noClientSecret": "No client secret is stored for this tenant yet.",
+        "noClientId": "No client ID is stored yet.",
+        "noClientSecret": "No client secret is stored yet.",
         "redirectUri": "Redirect URI",
-        "requiredScopes": "Required Scopes",
+        "requiredScopes": "Required scopes",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
-        "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
-        "tenantOauthTitle": "Xero App Setup",
+        "tenantOauthDescription": "Paste the credentials from your Xero app registration. Secret values are hidden after they are saved.",
+        "tenantOauthTitle": "Xero app setup",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "credentialsReady": "Xero app credentials are saved."
       }
     },
     "stripe": {

@@ -57,23 +57,28 @@
         },
         "options": {
           "qbo": {
-            "description": "Verbind uw QuickBooks-bedrijf voor live factuurlevering en toewijzingen."
+            "description": "Stuur definitieve facturen rechtstreeks naar QuickBooks en houd klanten, artikelen en belastingcodes gesynchroniseerd."
           },
           "qboCsv": {
-            "description": "Exporteer facturen naar CSV voor handmatige import in QuickBooks en importeer belastinggegevens uit rapporten."
+            "description": "Exporteer facturen als CSV om in QuickBooks te importeren en haal belastinggegevens terug uit rapporten."
           },
           "xero": {
-            "description": "Verbind uw Xero-organisatie voor live boekhoudexports en toewijzingen."
+            "description": "Stuur definitieve facturen rechtstreeks naar Xero en houd contacten, grootboekrekeningen en belastingtarieven gesynchroniseerd."
           },
           "xeroCsv": {
-            "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten."
+            "description": "Exporteer facturen als CSV om in Xero te importeren en haal belastinggegevens terug uit Xero-rapporten."
           }
         },
         "selected": "{{title}} geselecteerd",
         "unavailable": {
           "description": "Deze integratie is nog niet beschikbaar. Selecteer QuickBooks CSV of Xero CSV om handmatige exports te configureren.",
           "title": "Configuratie niet beschikbaar"
-        }
+        },
+        "kinds": {
+          "live": "Live verbinding",
+          "csv": "CSV-export"
+        },
+        "backToList": "Alle boekhoudintegraties"
       },
       "modules": {
         "tabs": {
@@ -82,6 +87,9 @@
           "taxCodes": "Belastingcodes",
           "paymentTerms": "Betalingsvoorwaarden"
         }
+      },
+      "settings": {
+        "viewExportHistory": "Exportgeschiedenis bekijken"
       }
     },
     "calendar": {
@@ -194,7 +202,7 @@
       },
       "settings": {
         "exports": {
-          "description": "Maak export-batches aan, download CSV-bestanden, importeer belastingrapporten en bekijk de exportgeschiedenis.",
+          "description": "Maak exportbatches, download CSV-bestanden, importeer belastingrapporten en bekijk de geschiedenis via Facturatie → Boekhoudexports.",
           "managedTitle": "Beheerd vanuit Facturatie",
           "openButton": "Boekhoudexports openen",
           "path": "Facturatie → Boekhoudexports",
@@ -214,11 +222,12 @@
           },
           "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde QuickBooks-connectiviteit:",
           "mappings": {
-            "description": "Wijs Alga-klanten, services, belastingcodes en betalingsvoorwaarden toe aan de identifiers die in uw QuickBooks-bedrijf worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
-            "title": "QuickBooks CSV-toewijzingen"
+            "description": "Koppel je klanten, diensten, belastingcodes en betalingstermijnen aan de identifiers die in QuickBooks worden gebruikt. Deze waarden worden in elke CSV-export geschreven.",
+            "title": "Toewijzingen"
           },
           "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
-          "title": "QuickBooks CSV-integratie"
+          "title": "QuickBooks CSV-integratie",
+          "summary": "Genereer een CSV van je definitieve facturen om in QuickBooks te importeren. Als je belasting buiten Alga berekent, kun je de belastingtotalen terug importeren uit QuickBooks-rapporten. Koppel hieronder je facturatiegegevens en voer vervolgens exports uit via Facturatie → Boekhoudexports."
         }
       },
       "taxImport": {
@@ -1213,7 +1222,7 @@
           "disconnecting": "Ontkoppelen…",
           "reconnect": "QuickBooks opnieuw verbinden",
           "refresh": "Vernieuwen",
-          "saveCredentials": "QuickBooks-inloggegevens opslaan",
+          "saveCredentials": "Inloggegevens opslaan",
           "saving": "Opslaan…"
         },
         "badges": {
@@ -1243,7 +1252,8 @@
           "notConnected": "Er is nog geen QuickBooks-bedrijf verbonden. Rond de configuratie af en verbind daarna een bedrijf.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks-verbinding",
-          "unknown": "onbekend"
+          "unknown": "onbekend",
+          "realm": "Realm-ID"
         },
         "credentialsSaved": "QuickBooks app-configuratie opgeslagen. U kunt nu een QuickBooks-bedrijf verbinden.",
         "csvAvailableMiddle": "vanuit",
@@ -1251,7 +1261,7 @@
         "csvAvailableTitle": "QuickBooks CSV",
         "description": "Verbind uw QuickBooks-bedrijf voor live factuurlevering, synchronisatiecontroles en toewijzingen.",
         "disconnectSuccess": "QuickBooks is ontkoppeld. Opgeslagen app-configuratie is bewaard om opnieuw te verbinden.",
-        "environment": "Intuit-omgeving",
+        "environment": "Omgeving",
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
         "errors": {
@@ -1266,8 +1276,9 @@
           "alert": "QuickBooks-artikelen, belastingcodes en voorwaarden worden geladen uit het verbonden bedrijf.",
           "descriptionPrefix": "Configureer live QuickBooks-toewijzingen voor het verbonden bedrijf. Deze toewijzingen zijn beperkt tot",
           "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat een QuickBooks-bedrijf is verbonden.",
-          "placeholderDescription": "Verbind een QuickBooks-bedrijf voordat u live QuickBooks-artikel- en belastingtoewijzingen configureert.",
-          "title": "Live QuickBooks-toewijzing en -configuratie"
+          "placeholderDescription": "Verbind een QuickBooks-bedrijf om je diensten, belastingcodes en betalingstermijnen te koppelen.",
+          "title": "Toewijzingen",
+          "description": "Koppel je diensten, belastingcodes en betalingstermijnen aan {{company}} zodat facturen correct in QuickBooks terechtkomen."
         },
         "noClientId": "Er is geen aangepaste client ID opgeslagen.",
         "noClientSecret": "Er is geen aangepast client secret opgeslagen.",
@@ -1276,13 +1287,14 @@
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Gebruik dit alleen wanneer dit bedrijf een eigen Intuit-app nodig heeft. Opgeslagen secrets worden verborgen nadat ze zijn opgeslagen.",
-        "tenantOauthTitle": "Geavanceerd: aangepaste Intuit-app",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "De meeste teams kunnen dit overslaan. Voeg alleen je eigen Intuit-app-gegevens toe als dat nodig is. Opgeslagen geheimen worden na opslaan verborgen.",
+        "tenantOauthTitle": "Geavanceerd: gebruik je eigen Intuit-app",
+        "title": "QuickBooks Online",
+        "tenantOauthHostedDescription": "Alga biedt al een QuickBooks-app om verbinding te maken. Voeg alleen je eigen toe als dit bedrijf een eigen Intuit-app-registratie nodig heeft."
       },
       "sync": {
         "healthCardTitle": "Synchronisatiestatus",
-        "healthCardDescription": "Status en bediening van de QuickBooks-boekhoudsynchronisatie. Wordt elke 15 minuten uitgevoerd.",
+        "healthCardDescription": "QuickBooks-boekhoudsynchronisatie draait automatisch elke 15 minuten als auto-sync aanstaat.",
         "lastCycleTitle": "Laatste synchronisatiecyclus",
         "lastCycleStatus": "Status",
         "lastCycleFinishedAt": "Voltooid",
@@ -1298,7 +1310,7 @@
         "openExceptions": "Open uitzonderingen",
         "refreshTokenExpiry": "QuickBooks-token verloopt op {{date}}",
         "refreshTokenExpired": "QuickBooks-token verlopen — maak opnieuw verbinding om de synchronisatie te hervatten.",
-        "autoSyncLabel": "Automatische synchronisatie ingeschakeld",
+        "autoSyncLabel": "Auto-sync",
         "syncNowButton": "Nu synchroniseren",
         "syncNowRunning": "Synchroniseren…",
         "syncNowSuccess": "Synchronisatie voltooid.",
@@ -1306,7 +1318,7 @@
         "syncNowError": "Synchronisatie mislukt: {{error}}",
         "viewExceptionsLink": "Uitzonderingen bekijken",
         "autoApplyCreditsWarning": "QuickBooks staat ingesteld om tegoeden automatisch toe te passen, wat conflicteert met tegoedtoepassingen vanuit Alga: QuickBooks kan geëxporteerde creditnota's vóór de synchronisatie op een andere factuur toepassen. Ga in QuickBooks naar \"Account and Settings → Advanced → Automation\" en schakel \"Automatically apply credits\" uit.",
-        "configTitle": "Synchronisatieconfiguratie",
+        "configTitle": "Synchronisatie-instellingen",
         "connectedCompanies": "Verbonden bedrijven",
         "defaultClass": "Standaardklasse",
         "defaultDepartment": "Standaardafdeling",
@@ -1315,7 +1327,16 @@
         "makeDefault": "Als standaard instellen",
         "noDefault": "Geen standaard",
         "saving": "Opslaan…",
-        "undepositedFunds": "Niet-gestorte middelen (standaard)"
+        "undepositedFunds": "Niet-gestorte middelen (standaard)",
+        "status": {
+          "succeeded": "Geslaagd",
+          "failed": "Mislukt",
+          "running": "Bezig"
+        },
+        "lastRunAt": "· laatste run {{time}}",
+        "tokenValidUntil": "Verbinding geldig tot {{date}}",
+        "refreshTokenExpirySoon": "QuickBooks-token verloopt {{date}} — verbind binnenkort opnieuw om onderbreking te voorkomen.",
+        "configDescription": "Standaardwaarden die worden toegepast op documenten die Alga in QuickBooks boekt."
       }
     },
     "rmm": {
@@ -2125,14 +2146,14 @@
           },
           "exportSettings": {
             "description": "Configureer hoe facturen worden geëxporteerd naar CSV-formaat voor Xero.",
-            "title": "CSV-exportinstellingen"
+            "title": "Exportinstellingen"
           },
           "loading": "Xero CSV-instellingen worden geladen...",
           "managedPrefix": "Ga naar",
           "managedSuffix": "om facturen te selecteren, Xero CSV-exports te genereren, belastingrapporten te importeren en batches te beheren.",
           "mappings": {
-            "description": "Wijs Alga-klanten, services en belastingcodes toe aan de identifiers die in uw Xero-organisatie worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
-            "title": "Xero CSV-toewijzingen"
+            "description": "Koppel je klanten, diensten en belastingcodes aan de identifiers die in je Xero-organisatie worden gebruikt. Deze waarden worden in elke CSV-export geschreven.",
+            "title": "Toewijzingen"
           },
           "overview": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten.",
@@ -2142,7 +2163,8 @@
             "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
             "taxImportLabel": "Belastingimport",
             "taxImportText": "Bij gebruik van externe belastingberekening belastingbedragen importeren uit het Xero Invoice Details Report",
-            "title": "Xero CSV-integratie"
+            "title": "Xero CSV-integratie",
+            "summary": "Genereer een CSV van je definitieve facturen om in Xero te importeren en importeer vervolgens belastingtotalen terug uit Xero-rapporten. Voltooi hieronder de eenmalige Xero-configuratie, koppel je facturatiegegevens en voer exports uit via Facturatie → Boekhoudexports."
           },
           "savedMessage": "Instellingen succesvol opgeslagen",
           "selectCurrency": "Valuta selecteren",
@@ -2159,7 +2181,7 @@
             "step2Title": "Stap 2: Belastingtarieven configureren",
             "step3Description": "Gebruik de toewijzingssectie hieronder om uw Alga-services te koppelen aan Xero-itemcodes en uw belastingregio's aan Xero-belastingtarieven.",
             "step3Title": "Stap 3: Services en belastingregio's toewijzen",
-            "title": "Xero-installatie vereist"
+            "title": "Voltooi de eenmalige Xero-configuratie"
           },
           "useInvoiceCurrency": "Factuurvaluta gebruiken",
           "workflow": {
@@ -2184,6 +2206,9 @@
             "title": "CSV-workflow",
             "trackingDescription": "De CSV-export bevat tracking-categoriekolommen die elke Xero-factuur koppelen aan zijn Alga-bron. Wanneer u belasting importeert uit Xero, worden deze tracking-categorieën gebruikt om facturen automatisch te koppelen - geen handmatige afstemming nodig.",
             "trackingTitle": "Tracking-categorieën voor afstemming"
+          },
+          "exports": {
+            "navDescription": "Maak exportbatches, download CSV-bestanden, importeer belastingrapporten en bekijk de geschiedenis via Facturatie → Boekhoudexports."
           }
         }
       },
@@ -2197,7 +2222,7 @@
           "disconnecting": "Ontkoppelen…",
           "reconnect": "Xero opnieuw verbinden",
           "refresh": "Vernieuwen",
-          "saveCredentials": "Xero-inloggegevens opslaan",
+          "saveCredentials": "Inloggegevens opslaan",
           "saving": "Opslaan…"
         },
         "badges": {
@@ -2205,7 +2230,8 @@
           "credentialsReady": "Inloggegevens gereed",
           "credentialsRequired": "Inloggegevens vereist",
           "defaultConnected": "Standaardorganisatie verbonden",
-          "noOrganisation": "Geen organisatie verbonden"
+          "noOrganisation": "Geen organisatie verbonden",
+          "connected": "Verbonden"
         },
         "callback": {
           "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
@@ -2218,20 +2244,30 @@
           "oauthFailed": "Xero kon de verbinding niet voltooien. Probeer opnieuw. Als het blijft mislukken, controleer de app-configuratie."
         },
         "clientIdLabel": "Xero Client ID",
-        "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
+        "clientIdPlaceholder": "Plak je Xero-client-ID",
         "clientSecretLabel": "Xero Client Secret",
-        "clientSecretPlaceholder": "Plak uw tenant-eigen Xero Client Secret",
+        "clientSecretPlaceholder": "Plak je Xero-clientgeheim",
         "connectSuccess": "Xero succesvol verbonden. De eerste verbonden organisatie is nu de standaard live Xero-context.",
         "connection": {
           "connectionId": "Verbindings-ID: {{id}}",
-          "defaultOrganisation": "Standaardorganisatie",
+          "defaultOrganisation": "Organisatie",
           "description": "Verbind de Xero-organisatie die Alga moet gebruiken voor live boekhoudexports en toewijzingen.",
-          "notConnected": "Er is nog geen live Xero-organisatie verbonden. Sla de inloggegevens op en klik vervolgens op Xero verbinden.",
+          "notConnected": "Er is nog geen live Xero-organisatie verbonden. Sla inloggegevens op en klik vervolgens op Xero verbinden.",
           "title": "Live Xero-verbinding",
-          "unknown": "onbekend"
+          "unknown": "onbekend",
+          "checking": "Verbinding controleren",
+          "connected": "Verbonden",
+          "needsAttention": "Vereist aandacht",
+          "ready": "Klaar om te verbinden",
+          "setupRequired": "Configuratie vereist",
+          "checkingDescription": "De Xero-configuratie van de tenant wordt gelezen.",
+          "expiredDescription": "Verbind Xero opnieuw om live-exports en toewijzingen te hervatten.",
+          "connectedDescription": "Live-exports en toewijzingen gebruiken deze Xero-organisatie.",
+          "statusLabel": "Status",
+          "connectionIdLabel": "Verbindings-ID"
         },
-        "credentialsSaved": "Xero-inloggegevens opgeslagen. U kunt nu de live Xero OAuth-flow starten.",
-        "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
+        "credentialsSaved": "Xero-inloggegevens opgeslagen. Je kunt nu een Xero-organisatie verbinden.",
+        "csvAvailableMiddle": "en beheer exports vanuit",
         "csvAvailablePrefix": "Als u de voorkeur geeft aan een handmatige workflow, blijf dan gebruiken",
         "csvAvailableTitle": "Xero CSV blijft beschikbaar",
         "description": "Configureer tenant-eigen Xero OAuth-inloggegevens, verbind uw standaardorganisatie en behoud live Xero naast de handmatige Xero CSV-workflow.",
@@ -2248,19 +2284,21 @@
           "alert": "Xero-items, omzetrekeningen, belastingtarieven en tracking-categorieën worden geladen uit de standaard verbonden organisatie, zodat live exports in v1 de eerste opgeslagen Xero-verbinding kunnen blijven gebruiken.",
           "descriptionPrefix": "Configureer live Xero-toewijzingen voor de standaard verbonden organisatie. Deze toewijzingen zijn beperkt tot",
           "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat de eerste Xero-organisatie is verbonden en ingesteld als standaard live Xero-context.",
-          "placeholderDescription": "Verbind een live Xero-organisatie voordat u live Xero-item- en belastingtoewijzingen configureert.",
-          "title": "Live Xero-toewijzing en -configuratie"
+          "placeholderDescription": "Verbind een Xero-organisatie om je diensten, belastingtarieven en grootboekrekeningen te koppelen.",
+          "title": "Toewijzingen",
+          "description": "Koppel je diensten, belastingtarieven en grootboekrekeningen aan {{organisation}} zodat facturen correct in Xero terechtkomen."
         },
-        "noClientId": "Er is nog geen client ID opgeslagen voor deze tenant.",
-        "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
+        "noClientId": "Er is nog geen client-ID opgeslagen.",
+        "noClientSecret": "Er is nog geen clientgeheim opgeslagen.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
-        "tenantOauthTitle": "Xero app-configuratie",
+        "tenantOauthDescription": "Plak de gegevens van je Xero-app-registratie. Geheime waarden worden na opslaan verborgen.",
+        "tenantOauthTitle": "Xero-app instellen",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "credentialsReady": "Xero-app-inloggegevens zijn opgeslagen."
       }
     },
     "stripe": {
