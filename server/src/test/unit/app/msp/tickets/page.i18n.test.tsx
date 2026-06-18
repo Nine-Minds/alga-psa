@@ -276,7 +276,7 @@ vi.mock('@alga-psa/msp-composition/tickets/MspTicketsPageClient', async () => {
   const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 
   return {
-    default: () => {
+    default: function MockTicketsPageClient() {
       const { t } = useTranslation('features/tickets');
 
       return (
