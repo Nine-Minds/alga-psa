@@ -98,6 +98,67 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     }).catchall(zOpenApi.string()),
   );
 
+  const FinancialInvoiceListQuery = registry.registerSchema(
+    'FinancialInvoiceListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .string()
+        .optional()
+        .describe('Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at).'),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      search: zOpenApi.string().optional().describe('Matches invoice_number or client name.'),
+      created_from: zOpenApi.string().optional(),
+      created_to: zOpenApi.string().optional(),
+      updated_from: zOpenApi.string().optional(),
+      updated_to: zOpenApi.string().optional(),
+      is_active: zOpenApi.enum(['true', 'false']).optional(),
+      client_id: zOpenApi.string().uuid().optional(),
+      status: zOpenApi
+        .enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied'])
+        .optional(),
+      billing_cycle_id: zOpenApi.string().uuid().optional(),
+      due_date_from: zOpenApi.string().optional(),
+      due_date_to: zOpenApi.string().optional(),
+      amount_min: zOpenApi.string().optional(),
+      amount_max: zOpenApi.string().optional(),
+      is_manual: zOpenApi.enum(['true', 'false']).optional(),
+      has_credit_applied: zOpenApi.enum(['true', 'false']).optional(),
+    }),
+  );
+
+  const FinancialPaymentMethodListQuery = registry.registerSchema(
+    'FinancialPaymentMethodListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .string()
+        .optional()
+        .describe('Sort field. One of created_at, updated_at, type, is_default (defaults to created_at).'),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      search: zOpenApi.string().optional().describe('Matches client name or card last4.'),
+      created_from: zOpenApi.string().optional(),
+      created_to: zOpenApi.string().optional(),
+      updated_from: zOpenApi.string().optional(),
+      updated_to: zOpenApi.string().optional(),
+      is_active: zOpenApi.enum(['true', 'false']).optional(),
+      client_id: zOpenApi.string().uuid().optional(),
+      type: zOpenApi.enum(['credit_card', 'bank_account']).optional(),
+      is_default: zOpenApi.enum(['true', 'false']).optional(),
+      exclude_deleted: zOpenApi
+        .enum(['true', 'false'])
+        .optional()
+        .describe('Exclude soft-deleted payment methods. Defaults to true.'),
+    }),
+  );
+
+  const InvoicePdfBinary = registry.registerSchema(
+    'InvoicePdfBinary',
+    zOpenApi.string().openapi({ format: 'binary' }).describe('Raw PDF file bytes (application/pdf).'),
+  );
+
   const ExecutionIdQuery = registry.registerSchema(
     'InvoiceExecutionIdQuery',
     zOpenApi.object({
@@ -523,14 +584,14 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/financial/invoices',
-    summary: 'List financial invoices (transaction list wiring)',
+    summary: 'List invoices',
     description:
-      'Route file maps to ApiFinancialController.list(), which is transaction-oriented (resource financial/transactions) rather than invoice-specific list logic. Current response is the generic transaction list envelope with financial report links.',
+      'Returns a paginated list of invoices for the tenant. Maps to ApiFinancialController.listInvoices() → FinancialService.listInvoices(), filtered and sorted by the supplied query parameters. Each item carries the invoice record (including client_name) plus HATEOAS links.',
     tags: [financialTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { query: FinancialListQuery },
+    request: { query: FinancialInvoiceListQuery },
     responses: {
-      200: { description: 'Paginated financial list returned.', schema: ApiPaginated },
+      200: { description: 'Paginated invoice list returned.', schema: ApiPaginated },
       400: { description: 'Invalid query parameters.', schema: ApiError },
       401: { description: 'API key missing/invalid.', schema: ApiError },
       403: { description: 'financial:read permission denied.', schema: ApiError },
@@ -540,8 +601,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
       ...commonExtensions,
       'x-rbac-resource': 'financial',
       'x-rbac-action': 'read',
-      'x-route-to-controller-mismatch': true,
-      'x-controller-method': 'ApiFinancialController.list()',
+      'x-controller-method': 'ApiFinancialController.listInvoices()',
     },
     edition: 'both',
   });
@@ -609,14 +669,14 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/financial/payment-methods',
-    summary: 'List payment methods (transaction list wiring)',
+    summary: 'List payment methods',
     description:
-      'Current route wiring calls ApiFinancialController.list(), which lists transaction records and not payment methods. This discrepancy is documented as implementation behavior.',
+      'Returns a paginated list of payment methods for the tenant. Maps to ApiFinancialController.listPaymentMethods() → FinancialService.listPaymentMethods(). Soft-deleted methods are excluded by default. Each item carries the payment method record (including client_name) plus HATEOAS links.',
     tags: [financialTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { query: FinancialListQuery },
+    request: { query: FinancialPaymentMethodListQuery },
     responses: {
-      200: { description: 'Paginated list returned.', schema: ApiPaginated },
+      200: { description: 'Paginated payment method list returned.', schema: ApiPaginated },
       400: { description: 'Invalid query parameters.', schema: ApiError },
       401: { description: 'API key missing/invalid.', schema: ApiError },
       403: { description: 'financial:read permission denied.', schema: ApiError },
@@ -626,8 +686,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
       ...commonExtensions,
       'x-rbac-resource': 'financial',
       'x-rbac-action': 'read',
-      'x-route-to-controller-mismatch': true,
-      'x-controller-method': 'ApiFinancialController.list()',
+      'x-controller-method': 'ApiFinancialController.listPaymentMethods()',
     },
     edition: 'both',
   });
@@ -1311,44 +1370,51 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post',
     path: '/api/v1/invoices/{id}/pdf',
-    summary: 'Generate invoice PDF asset',
-    description: 'Generates/refreshes invoice PDF metadata and returns file_id plus optional download_url.',
+    summary: 'Generate and download invoice PDF',
+    description: 'Generates the invoice PDF and returns the raw PDF file as an application/pdf attachment.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: UuidIdParam },
     responses: {
-      200: { description: 'PDF generation metadata returned.', schema: ApiSuccess },
+      200: {
+        description: 'PDF file returned as an application/pdf attachment.',
+        contentType: 'application/pdf',
+        schema: InvoicePdfBinary,
+      },
       400: { description: 'Invalid invoice id.', schema: ApiError },
       401: { description: 'API key missing/invalid.', schema: ApiError },
-      403: { description: 'invoice:pdf permission denied.', schema: ApiError },
+      403: { description: 'invoice:read permission denied.', schema: ApiError },
       404: { description: 'Invoice not found.', schema: ApiError },
       500: { description: 'Unexpected PDF generation failure.', schema: ApiError },
     },
-    extensions: { ...commonExtensions, 'x-rbac-resource': 'invoice', 'x-rbac-action': 'pdf' },
+    extensions: { ...commonExtensions, 'x-rbac-resource': 'invoice', 'x-rbac-action': 'read' },
     edition: 'both',
   });
 
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/invoices/{id}/pdf',
-    summary: 'Redirect to invoice PDF download',
-    description: 'Attempts to generate/load PDF metadata and redirects to download_url when present.',
+    summary: 'Download invoice PDF',
+    description: 'Generates (when needed) and returns the invoice PDF as a raw application/pdf attachment.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: UuidIdParam },
     responses: {
-      307: { description: 'Redirect to generated PDF URL.', emptyBody: true },
+      200: {
+        description: 'PDF file returned as an application/pdf attachment.',
+        contentType: 'application/pdf',
+        schema: InvoicePdfBinary,
+      },
       400: { description: 'Invalid invoice id.', schema: ApiError },
       401: { description: 'API key missing/invalid.', schema: ApiError },
-      403: { description: 'invoice:pdf permission denied.', schema: ApiError },
-      404: { description: 'PDF URL unavailable or invoice not found.', schema: ApiError },
+      403: { description: 'invoice:read permission denied.', schema: ApiError },
+      404: { description: 'Invoice not found.', schema: ApiError },
       500: { description: 'Unexpected PDF download failure.', schema: ApiError },
     },
     extensions: {
       ...commonExtensions,
       'x-rbac-resource': 'invoice',
-      'x-rbac-action': 'pdf',
-      'x-redirect-response': true,
+      'x-rbac-action': 'read',
     },
     edition: 'both',
   });

@@ -434,6 +434,43 @@ export class ApiFinancialController extends ApiBaseController {
     };
   }
 
+  /**
+   * GET /api/v1/financial/payment-methods - List payment methods
+   */
+  listPaymentMethods() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const url = new URL(apiRequest.url);
+          const query: Record<string, any> = {};
+          url.searchParams.forEach((value, key) => {
+            query[key] = value;
+          });
+
+          const validatedQuery = paymentMethodListQuerySchema.parse(query);
+          const result = await this.financialService.listPaymentMethods(validatedQuery, apiRequest.context!);
+
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            validatedQuery.page || 1,
+            validatedQuery.limit || 25,
+            {
+              filters: validatedQuery,
+              resource: 'financial/payment-methods'
+            }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
   // ============================================================================
   // CONTRACT LINE ENDPOINTS
   // ============================================================================
@@ -754,6 +791,43 @@ export class ApiFinancialController extends ApiBaseController {
                 credits: '/api/v1/financial/credits',
                 invoices: '/api/v1/financial/invoices'
               }
+            }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/financial/invoices - List invoices for financial operations
+   */
+  listInvoices() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const url = new URL(apiRequest.url);
+          const query: Record<string, any> = {};
+          url.searchParams.forEach((value, key) => {
+            query[key] = value;
+          });
+
+          const validatedQuery = invoiceListQuerySchema.parse(query);
+          const result = await this.financialService.listInvoices(validatedQuery, apiRequest.context!);
+
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            validatedQuery.page || 1,
+            validatedQuery.limit || 25,
+            {
+              filters: validatedQuery,
+              resource: 'financial/invoices'
             }
           );
         });

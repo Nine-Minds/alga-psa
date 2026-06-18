@@ -1972,14 +1972,6 @@
           },
           "asset_type": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ],
             "description": "Asset type stored in assets.asset_type."
           },
           "status": {
@@ -2055,14 +2047,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": [
-                "workstation",
-                "network_device",
-                "server",
-                "mobile_device",
-                "printer",
-                "unknown"
-              ]
+              "description": "Asset type slug from the tenant asset type registry."
             },
             "description": "Filter to these asset types. Repeat the param or pass a comma-separated list."
           },
@@ -2148,14 +2133,6 @@
           },
           "asset_type": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ],
             "description": "Asset type. Determines the optional extension data table."
           },
           "asset_tag": {
@@ -2223,14 +2200,6 @@
           },
           "asset_type": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ],
             "description": "Asset type to store in assets.asset_type."
           },
           "asset_tag": {
@@ -2585,14 +2554,6 @@
           },
           "asset_type": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ],
             "description": "Asset type stored in assets.asset_type."
           },
           "asset_tag": {
@@ -3713,14 +3674,6 @@
           },
           "asset_type": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ],
             "description": "Related asset type from joined related_assets, present in list responses."
           },
           "status": {
@@ -3855,14 +3808,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": [
-                "workstation",
-                "network_device",
-                "server",
-                "mobile_device",
-                "printer",
-                "unknown"
-              ]
+              "description": "Asset type slug from the tenant asset type registry."
             },
             "description": "Optional asset type filters."
           },
@@ -6933,7 +6879,11 @@
             "type": "string"
           },
           "client_type": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "company",
+              "individual"
+            ]
           },
           "billing_cycle": {
             "type": "string",
@@ -7011,7 +6961,11 @@
             "type": "string"
           },
           "client_type": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "company",
+              "individual"
+            ]
           },
           "tax_id_number": {
             "type": "string"
@@ -7948,6 +7902,10 @@
                 "type": [
                   "string",
                   "null"
+                ],
+                "enum": [
+                  "company",
+                  "individual"
                 ]
               },
               "tax_id_number": {
@@ -8225,6 +8183,10 @@
                   "type": [
                     "string",
                     "null"
+                  ],
+                  "enum": [
+                    "company",
+                    "individual"
                   ]
                 },
                 "tax_id_number": {
@@ -10846,6 +10808,174 @@
         "additionalProperties": {
           "type": "string"
         }
+      },
+      "FinancialInvoiceListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at)."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "search": {
+            "type": "string",
+            "description": "Matches invoice_number or client name."
+          },
+          "created_from": {
+            "type": "string"
+          },
+          "created_to": {
+            "type": "string"
+          },
+          "updated_from": {
+            "type": "string"
+          },
+          "updated_to": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "sent",
+              "paid",
+              "overdue",
+              "cancelled",
+              "pending",
+              "prepayment",
+              "partially_applied"
+            ]
+          },
+          "billing_cycle_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "due_date_from": {
+            "type": "string"
+          },
+          "due_date_to": {
+            "type": "string"
+          },
+          "amount_min": {
+            "type": "string"
+          },
+          "amount_max": {
+            "type": "string"
+          },
+          "is_manual": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "has_credit_applied": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        }
+      },
+      "FinancialPaymentMethodListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort field. One of created_at, updated_at, type, is_default (defaults to created_at)."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "search": {
+            "type": "string",
+            "description": "Matches client name or card last4."
+          },
+          "created_from": {
+            "type": "string"
+          },
+          "created_to": {
+            "type": "string"
+          },
+          "updated_from": {
+            "type": "string"
+          },
+          "updated_to": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "credit_card",
+              "bank_account"
+            ]
+          },
+          "is_default": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "exclude_deleted": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Exclude soft-deleted payment methods. Defaults to true."
+          }
+        }
+      },
+      "InvoicePdfBinary": {
+        "type": "string",
+        "format": "binary",
+        "description": "Raw PDF file bytes (application/pdf)."
       },
       "InvoiceExecutionIdQuery": {
         "type": "object",
@@ -28813,14 +28943,6 @@
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "workstation",
-                "network_device",
-                "server",
-                "mobile_device",
-                "printer",
-                "unknown"
-              ],
               "description": "Asset type stored in assets.asset_type."
             },
             "required": false,
@@ -29382,14 +29504,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": [
-                  "workstation",
-                  "network_device",
-                  "server",
-                  "mobile_device",
-                  "printer",
-                  "unknown"
-                ]
+                "description": "Asset type slug from the tenant asset type registry."
               },
               "description": "Filter to these asset types. Repeat the param or pass a comma-separated list."
             },
@@ -29807,14 +29922,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": [
-                  "workstation",
-                  "network_device",
-                  "server",
-                  "mobile_device",
-                  "printer",
-                  "unknown"
-                ]
+                "description": "Asset type slug from the tenant asset type registry."
               },
               "description": "Optional asset type filters."
             },
@@ -35497,7 +35605,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "company",
+                "individual"
+              ]
             },
             "required": false,
             "name": "client_type",
@@ -42732,8 +42844,8 @@
     },
     "/api/v1/financial/invoices": {
       "get": {
-        "summary": "List financial invoices (transaction list wiring)",
-        "description": "Route file maps to ApiFinancialController.list(), which is transaction-oriented (resource financial/transactions) rather than invoice-specific list logic. Current response is the generic transaction list envelope with financial report links.",
+        "summary": "List invoices",
+        "description": "Returns a paginated list of invoices for the tenant. Maps to ApiFinancialController.listInvoices() → FinancialService.listInvoices(), filtered and sorted by the supplied query parameters. Each item carries the invoice record (including client_name) plus HATEOAS links.",
         "tags": [
           "Financial"
         ],
@@ -42748,8 +42860,7 @@
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "financial",
           "x-rbac-action": "read",
-          "x-route-to-controller-mismatch": true,
-          "x-controller-method": "ApiFinancialController.list()"
+          "x-controller-method": "ApiFinancialController.listInvoices()"
         },
         "x-alga-products": [
           "psa"
@@ -42773,9 +42884,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at)."
             },
             "required": false,
+            "description": "Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at).",
             "name": "sort",
             "in": "query"
           },
@@ -42793,9 +42906,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Matches invoice_number or client name."
             },
             "required": false,
+            "description": "Matches invoice_number or client name.",
             "name": "search",
             "in": "query"
           },
@@ -42834,6 +42949,18 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "is_active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "uuid"
             },
             "required": false,
@@ -42843,26 +42970,44 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "invoice_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "type",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
+              "enum": [
+                "draft",
+                "sent",
+                "paid",
+                "overdue",
+                "cancelled",
+                "pending",
+                "prepayment",
+                "partially_applied"
+              ]
             },
             "required": false,
             "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "billing_cycle_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "due_date_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "due_date_to",
             "in": "query"
           },
           {
@@ -42890,7 +43035,7 @@
               ]
             },
             "required": false,
-            "name": "include_expired",
+            "name": "is_manual",
             "in": "query"
           },
           {
@@ -42902,86 +43047,13 @@
               ]
             },
             "required": false,
-            "name": "expiring_soon",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_remaining",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_expiration",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "day",
-                "week",
-                "month"
-              ]
-            },
-            "required": false,
-            "name": "group_by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_projections",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "as_of_date",
+            "name": "has_credit_applied",
             "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Paginated financial list returned.",
+            "description": "Paginated invoice list returned.",
             "content": {
               "application/json": {
                 "schema": {
@@ -43248,8 +43320,8 @@
     },
     "/api/v1/financial/payment-methods": {
       "get": {
-        "summary": "List payment methods (transaction list wiring)",
-        "description": "Current route wiring calls ApiFinancialController.list(), which lists transaction records and not payment methods. This discrepancy is documented as implementation behavior.",
+        "summary": "List payment methods",
+        "description": "Returns a paginated list of payment methods for the tenant. Maps to ApiFinancialController.listPaymentMethods() → FinancialService.listPaymentMethods(). Soft-deleted methods are excluded by default. Each item carries the payment method record (including client_name) plus HATEOAS links.",
         "tags": [
           "Financial"
         ],
@@ -43264,8 +43336,7 @@
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "financial",
           "x-rbac-action": "read",
-          "x-route-to-controller-mismatch": true,
-          "x-controller-method": "ApiFinancialController.list()"
+          "x-controller-method": "ApiFinancialController.listPaymentMethods()"
         },
         "x-alga-products": [
           "psa"
@@ -43289,9 +43360,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Sort field. One of created_at, updated_at, type, is_default (defaults to created_at)."
             },
             "required": false,
+            "description": "Sort field. One of created_at, updated_at, type, is_default (defaults to created_at).",
             "name": "sort",
             "in": "query"
           },
@@ -43309,9 +43382,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Matches client name or card last4."
             },
             "required": false,
+            "description": "Matches client name or card last4.",
             "name": "search",
             "in": "query"
           },
@@ -43350,6 +43425,18 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "is_active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "uuid"
             },
             "required": false,
@@ -43359,15 +43446,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "invoice_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
+              "enum": [
+                "credit_card",
+                "bank_account"
+              ]
             },
             "required": false,
             "name": "type",
@@ -43375,26 +43457,14 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
             },
             "required": false,
-            "name": "status",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_min",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_max",
+            "name": "is_default",
             "in": "query"
           },
           {
@@ -43403,101 +43473,18 @@
               "enum": [
                 "true",
                 "false"
-              ]
+              ],
+              "description": "Exclude soft-deleted payment methods. Defaults to true."
             },
             "required": false,
-            "name": "include_expired",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "expiring_soon",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_remaining",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_expiration",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "day",
-                "week",
-                "month"
-              ]
-            },
-            "required": false,
-            "name": "group_by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_projections",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "as_of_date",
+            "description": "Exclude soft-deleted payment methods. Defaults to true.",
+            "name": "exclude_deleted",
             "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Paginated list returned.",
+            "description": "Paginated payment method list returned.",
             "content": {
               "application/json": {
                 "schema": {
@@ -49572,8 +49559,8 @@
     },
     "/api/v1/invoices/{id}/pdf": {
       "post": {
-        "summary": "Generate invoice PDF asset",
-        "description": "Generates/refreshes invoice PDF metadata and returns file_id plus optional download_url.",
+        "summary": "Generate and download invoice PDF",
+        "description": "Generates the invoice PDF and returns the raw PDF file as an application/pdf attachment.",
         "tags": [
           "Invoices"
         ],
@@ -49587,7 +49574,7 @@
           "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "invoice",
-          "x-rbac-action": "pdf"
+          "x-rbac-action": "read"
         },
         "x-alga-products": [
           "psa"
@@ -49607,11 +49594,11 @@
         ],
         "responses": {
           "200": {
-            "description": "PDF generation metadata returned.",
+            "description": "PDF file returned as an application/pdf attachment.",
             "content": {
-              "application/json": {
+              "application/pdf": {
                 "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiSuccess"
+                  "$ref": "#/components/schemas/InvoicePdfBinary"
                 }
               }
             }
@@ -49637,7 +49624,7 @@
             }
           },
           "403": {
-            "description": "invoice:pdf permission denied.",
+            "description": "invoice:read permission denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -49669,8 +49656,8 @@
         }
       },
       "get": {
-        "summary": "Redirect to invoice PDF download",
-        "description": "Attempts to generate/load PDF metadata and redirects to download_url when present.",
+        "summary": "Download invoice PDF",
+        "description": "Generates (when needed) and returns the invoice PDF as a raw application/pdf attachment.",
         "tags": [
           "Invoices"
         ],
@@ -49684,8 +49671,7 @@
           "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "invoice",
-          "x-rbac-action": "pdf",
-          "x-redirect-response": true
+          "x-rbac-action": "read"
         },
         "x-alga-products": [
           "psa"
@@ -49704,8 +49690,15 @@
           }
         ],
         "responses": {
-          "307": {
-            "description": "Redirect to generated PDF URL."
+          "200": {
+            "description": "PDF file returned as an application/pdf attachment.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoicePdfBinary"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid invoice id.",
@@ -49728,7 +49721,7 @@
             }
           },
           "403": {
-            "description": "invoice:pdf permission denied.",
+            "description": "invoice:read permission denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -49738,7 +49731,7 @@
             }
           },
           "404": {
-            "description": "PDF URL unavailable or invoice not found.",
+            "description": "Invoice not found.",
             "content": {
               "application/json": {
                 "schema": {

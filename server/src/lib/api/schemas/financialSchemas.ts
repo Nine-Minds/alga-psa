@@ -1026,6 +1026,7 @@ export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>;
 export type CreatePaymentMethodRequest = z.infer<typeof createPaymentMethodSchema>;
 export type UpdatePaymentMethodRequest = z.infer<typeof updatePaymentMethodSchema>;
 export type PaymentMethodResponse = z.infer<typeof paymentMethodResponseSchema>;
+export type PaymentMethodListQuery = z.infer<typeof paymentMethodListQuerySchema>;
 
 export type CreateContractLineRequest = z.infer<typeof createContractLineSchema>;
 export type UpdateContractLineRequest = z.infer<typeof updateContractLineSchema>;
