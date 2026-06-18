@@ -14,6 +14,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { User, Lock } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { validatePassword as validatePasswordPolicy, getPasswordRequirements } from '@alga-psa/validation';
 
 type FormData = {
   password: string;
@@ -73,12 +74,13 @@ const SetNewPasswordContent: React.FC = () => {
       setHasStartedTyping(true);
     }
     
+    const reqs = getPasswordRequirements(formData.password);
     const newRequirements = {
-      minLength: formData.password.length >= 8,
-      hasUppercase: /[A-Z]/.test(formData.password),
-      hasLowercase: /[a-z]/.test(formData.password),
-      hasNumber: /[0-9]/.test(formData.password),
-      hasSpecialChar: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(formData.password),
+      minLength: reqs.minLength,
+      hasUppercase: reqs.hasUpper,
+      hasLowercase: reqs.hasLower,
+      hasNumber: reqs.hasNumber,
+      hasSpecialChar: reqs.hasSpecial,
       passwordsMatch: formData.password !== '' && formData.confirmPassword !== '' && formData.password === formData.confirmPassword
     };
     
@@ -108,6 +110,19 @@ const SetNewPasswordContent: React.FC = () => {
           title: t('passwordReset.setNew.alerts.passwordTitle', 'Password '),
           message: t('passwordReset.setNew.alerts.passwordCriteriaMessage', 'Please ensure your password meets all the specified criteria.'),
         });
+      return;
+    }
+
+    // Shared policy gate: catches rules not shown in the checklist (common-word
+    // blocklist, long-sequence rejection) and surfaces the specific reason.
+    const policyError = validatePasswordPolicy(formData.password);
+    if (policyError) {
+      setIsAlertOpen(true);
+      setAlertInfo({
+        type: 'error',
+        title: t('passwordReset.setNew.alerts.passwordTitle', 'Password '),
+        message: policyError,
+      });
       return;
     }
 

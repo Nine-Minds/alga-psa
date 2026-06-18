@@ -7,7 +7,7 @@ export interface ValidationResult {
 }
 
 // Common emoji regex pattern used across validation functions
-const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
+const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{1F900}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
 
 // Disposable/temporary email domains - commonly blocked by professional platforms
 const DISPOSABLE_EMAIL_DOMAINS = [
@@ -342,7 +342,7 @@ export function validatePostalCode(postalCode: string, countryCode: string = 'US
     case 'GB':
     case 'UK':
       // UK postal codes: comprehensive patterns
-      if (!/^(GIR\s?0AA|[A-PR-UWYZ]([0-9]{1,2}|([A-HK-Y][0-9]|[A-HK-Y][0-9][0-9])|[0-9][A-HJKMNP-Y])\s?[0-9][ABD-HJLNP-UW-Z]{2})$/i.test(trimmedCode)) {
+      if (!/^(GIR\s?0AA|[A-PR-UWYZ]([0-9]{1,2}|([A-HK-Y][0-9]|[A-HK-Y][0-9][0-9])|[0-9][A-HJKMNP-Y]|[A-HK-Y][0-9][A-HJKMNP-Y])\s?[0-9][ABD-HJLNP-UW-Z]{2})$/i.test(trimmedCode)) {
         return 'Please enter a valid UK postal code (e.g., SW1A 1AA)';
       }
       break;
@@ -726,20 +726,24 @@ export function validateAnnualRevenue(revenue: string): string | null {
     return 'Annual revenue cannot contain emojis';
   }
 
-  // Professional SaaS approach: Accept both numeric and plain English with currency symbols
-  const lowerRevenue = trimmedRevenue.toLowerCase().replace(/[\s$,£€¥]/g, '');
+  // Professional SaaS approach: Accept both numeric and plain English with currency symbols.
+  // Two normalized forms so each pattern family sees the input it expects:
+  //  - compact: currency symbols, commas and ALL whitespace removed (numeric / abbreviation formats)
+  //  - spaced:  currency symbols and commas removed but words kept space-separated (plain English)
+  const compactRevenue = trimmedRevenue.toLowerCase().replace(/[\s$,£€¥]/g, '');
+  const spacedRevenue = trimmedRevenue.toLowerCase().replace(/[$,£€¥]/g, '').replace(/\s+/g, ' ').trim();
 
-  // Common professional revenue formats (Microsoft/Salesforce patterns)
-  const validFormats = [
-    // Exact numbers with optional currency symbols and commas
-    /^\d+(,\d{3})*(\.\d{2})?$/,
+  // Numeric / abbreviation formats (evaluated against the compact form)
+  const numericFormats = [
+    // Exact numbers (commas already stripped) with optional decimals
+    /^\d+(\.\d+)?$/,
     // Ranges
     /^\d+-\d+$/,
     /^\d+to\d+$/,
     // Abbreviations (K, M, B)
     /^\d+(\.\d+)?[kmb]$/,
-    // Plain English numbers
-    /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/,
+    // Abbreviated ranges, e.g. 10m-50m
+    /^\d+(\.\d+)?[kmb]-\d+(\.\d+)?[kmb]$/,
     // Professional ranges in plain English
     /^(lessthan|under|fewerthan)\d+$/,
     /^(morethan|over|above)\d+$/,
@@ -751,7 +755,13 @@ export function validateAnnualRevenue(revenue: string): string | null {
     /^(notdisclosed|private|confidential|n\/a|na)$/
   ];
 
-  const isValid = validFormats.some(pattern => pattern.test(lowerRevenue));
+  // Plain-English numbers (evaluated against the spaced form so multi-word
+  // amounts like "five million" match — they must not have their spaces stripped)
+  const plainEnglishFormat = /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)( (one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/;
+
+  const isValid =
+    numericFormats.some(pattern => pattern.test(compactRevenue)) ||
+    plainEnglishFormat.test(spacedRevenue);
 
   if (!isValid) {
     return 'Please enter valid annual revenue (e.g., "$1,000,000", "five million", "2.5M", "10M-50M", "not disclosed")';
@@ -761,72 +771,6 @@ export function validateAnnualRevenue(revenue: string): string | null {
 }
 
 // Comprehensive form validation function
-// Password validation with enterprise security standards
-export function validatePassword(password: string): string | null {
-  if (!password) {
-    return 'Password is required';
-  }
-
-  // Check minimum length (8 characters)
-  if (password.length < 8) {
-    return 'Password must be at least 8 characters long';
-  }
-
-  // Check maximum length (to prevent DoS attacks)
-  if (password.length > 128) {
-    return 'Password must be 128 characters or less';
-  }
-
-  // Check for uppercase letter
-  if (!/[A-Z]/.test(password)) {
-    return 'Password must contain at least one uppercase letter';
-  }
-
-  // Check for lowercase letter
-  if (!/[a-z]/.test(password)) {
-    return 'Password must contain at least one lowercase letter';
-  }
-
-  // Check for number
-  if (!/\d/.test(password)) {
-    return 'Password must contain at least one number';
-  }
-
-  // Check for special character
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    return 'Password must contain at least one special character';
-  }
-
-  // Check for common weak patterns
-  const commonPasswords = [
-    'password', 'Password', 'Password1', 'password1', 'password123',
-    '12345678', 'qwerty', 'abc123', 'admin', 'letmein', 'welcome',
-    'iloveyou', 'monkey', 'dragon', 'sunshine', 'princess'
-  ];
-
-  if (commonPasswords.includes(password)) {
-    return 'Password is too common. Please choose a stronger password';
-  }
-
-  // Check for sequential characters
-  if (/123|abc|qwe|asd|zxc/i.test(password)) {
-    return 'Password cannot contain sequential characters';
-  }
-
-  return null;
-}
-
-// Get password requirements for display
-export function getPasswordRequirements(password: string) {
-  return {
-    minLength: password.length >= 8,
-    hasUpper: /[A-Z]/.test(password),
-    hasLower: /[a-z]/.test(password),
-    hasNumber: /\d/.test(password),
-    hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
-  };
-}
-
 export function validateClientForm(formData: {
   clientName: string;
   websiteUrl?: string;
