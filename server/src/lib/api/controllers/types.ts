@@ -27,6 +27,12 @@ export interface ListOptions {
    * Services may ignore this if not supported.
    */
   fields?: string[];
+  /**
+   * Optional row-level authorization predicate (e.g. compiled read-narrowing)
+   * applied to both the data and count queries, so the service paginates and
+   * counts only the authorized set in SQL. Services may ignore this if unsupported.
+   */
+  applyAuthorization?: (query: import('knex').Knex.QueryBuilder) => void;
 }
 
 export interface BaseService {

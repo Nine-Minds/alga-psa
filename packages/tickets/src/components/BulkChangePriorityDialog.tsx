@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { PrioritySelect } from '@alga-psa/ui/components';
+import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from 'react-i18next';
 

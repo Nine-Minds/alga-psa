@@ -8,7 +8,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
-import { ResponseStateBadge } from '@alga-psa/ui/components';
+import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
 import { SlaIndicator } from '@alga-psa/ui/components/sla';
 import type { SlaTimerStatus } from '@alga-psa/types';
 

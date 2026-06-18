@@ -10,7 +10,7 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BulkTicketActionBar from './BulkTicketActionBar';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { PrioritySelect } from '@alga-psa/ui/components';
+import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -18,7 +18,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { TagFilter } from '@alga-psa/ui/components';
+import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {

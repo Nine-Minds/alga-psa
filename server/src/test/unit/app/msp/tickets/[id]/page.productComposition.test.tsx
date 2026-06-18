@@ -37,8 +37,8 @@ vi.mock('@alga-psa/assets/components/AssociatedAssets', () => ({
   default: () => null,
 }));
 
-vi.mock('@alga-psa/msp-composition/tickets', () => ({
-  MspTicketDetailsContainerClient: MspTicketDetailsContainerClientMock,
+vi.mock('@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient', () => ({
+  default: MspTicketDetailsContainerClientMock,
 }));
 
 const { default: TicketDetailsPage } = await import('server/src/app/msp/tickets/[id]/page');

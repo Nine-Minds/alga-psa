@@ -6,6 +6,21 @@ const repoRoot = path.resolve(__dirname, '../../../../..');
 const read = (relativePath: string) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
 describe('tickets modal route infrastructure', () => {
+  it('keeps list and detail composition clients on separate import entrypoints', () => {
+    const listPage = read('server/src/app/msp/tickets/page.tsx');
+    const detailPage = read('server/src/app/msp/tickets/[id]/page.tsx');
+
+    expect(listPage).toContain(
+      "import MspTicketsPageClient from '@alga-psa/msp-composition/tickets/MspTicketsPageClient'",
+    );
+    expect(listPage).not.toContain("from '@alga-psa/msp-composition/tickets'");
+    expect(listPage).not.toContain('MspTicketDetailsContainerClient');
+
+    expect(detailPage).toContain(
+      "import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient'",
+    );
+  });
+
   it('renders the tickets page and modal slot inside the shared tickets provider', () => {
     const layout = read('server/src/app/msp/tickets/layout.tsx');
 
