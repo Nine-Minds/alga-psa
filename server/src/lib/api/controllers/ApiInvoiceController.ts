@@ -451,14 +451,21 @@ export class ApiInvoiceController extends ApiBaseController {
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context.tenant, async () => {
-          // Check permissions
-          await this.checkPermission(apiRequest, 'pdf');
+          // A PDF is a representation of the invoice. Requiring read keeps
+          // machine API access aligned with invoice detail access.
+          await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
           
           const result = await this.invoiceService.generatePDF(id, apiRequest.context);
-          
-          return createSuccessResponse(result);
+
+          return new NextResponse(result.buffer, {
+            headers: {
+              'Content-Type': result.contentType,
+              'Content-Disposition': `attachment; filename="${result.filename}"`,
+              'Cache-Control': 'no-store',
+            },
+          });
         });
       } catch (error) {
         return handleApiError(error);
@@ -477,18 +484,21 @@ export class ApiInvoiceController extends ApiBaseController {
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context.tenant, async () => {
-          // Check permissions
-          await this.checkPermission(apiRequest, 'pdf');
+          // A PDF is a representation of the invoice. Requiring read keeps
+          // machine API access aligned with invoice detail access.
+          await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
           
           const result = await this.invoiceService.generatePDF(id, apiRequest.context);
-          
-          if (result.download_url) {
-            return NextResponse.redirect(result.download_url);
-          }
-          
-          throw new NotFoundError('PDF download URL not available');
+
+          return new NextResponse(result.buffer, {
+            headers: {
+              'Content-Type': result.contentType,
+              'Content-Disposition': `attachment; filename="${result.filename}"`,
+              'Cache-Control': 'no-store',
+            },
+          });
         });
       } catch (error) {
         return handleApiError(error);
@@ -873,13 +883,8 @@ export class ApiInvoiceController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           
-          const invoice = await this.invoiceService.getById(id, apiRequest.context, { include_items: true });
-          
-          if (!invoice) {
-            throw new NotFoundError('Invoice not found');
-          }
-          
-          return createSuccessResponse((invoice as any).invoice_charges || []);
+          const items = await this.invoiceService.getInvoiceLineItems(id, apiRequest.context);
+          return createSuccessResponse(items);
         });
       } catch (error) {
         return handleApiError(error);
@@ -903,13 +908,8 @@ export class ApiInvoiceController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           
-          const invoice = await this.invoiceService.getById(id, apiRequest.context, { include_transactions: true });
-          
-          if (!invoice) {
-            throw new NotFoundError('Invoice not found');
-          }
-          
-          return createSuccessResponse((invoice as any).transactions || []);
+          const transactions = await this.invoiceService.getInvoiceTransactions(id, apiRequest.context);
+          return createSuccessResponse(transactions);
         });
       } catch (error) {
         return handleApiError(error);

@@ -99,6 +99,7 @@ const apiKeySkipPaths = [
   '/api/accounting/csv/',
   '/api/accounting/exports/',
   '/api/webhooks/stripe',
+  '/api/webhooks/alternative-payments',
   '/api/webhooks/ninjaone',
   '/api/webhooks/tacticalrmm',
   // Server-to-server webhooks from nm-store. Authenticated via HMAC

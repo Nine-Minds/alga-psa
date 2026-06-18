@@ -54,6 +54,7 @@ import {
   CreatePaymentMethodRequest,
   UpdatePaymentMethodRequest,
   PaymentMethodResponse,
+  PaymentMethodListQuery,
   
   // Contract Line types
   CreateContractLineRequest,
@@ -464,6 +465,132 @@ export class FinancialService extends BaseService<ITransaction> {
     return {
       data: transactionsWithLinks,
       total: parseInt(count as string)
+    };
+  }
+
+  /**
+   * List invoices for financial operations.
+   */
+  async listInvoices(
+    query: InvoiceListQuery,
+    context: ServiceContext
+  ): Promise<ListResult<FinancialResponse<InvoiceResponse>>> {
+    const { knex } = await this.getKnex();
+
+    const {
+      page = 1,
+      limit = 25,
+      client_id,
+      status,
+      billing_cycle_id,
+      due_date_from,
+      due_date_to,
+      amount_min,
+      amount_max,
+      is_manual,
+      has_credit_applied,
+      search,
+      sort = 'created_at',
+      order = 'desc',
+    } = query;
+
+    const sortableFields = new Set([
+      'created_at',
+      'updated_at',
+      'invoice_number',
+      'invoice_date',
+      'due_date',
+      'total_amount',
+      'status',
+    ]);
+    const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
+
+    let dataQuery = knex('invoices as i')
+      .leftJoin('clients as c', function() {
+        this.on('i.client_id', '=', 'c.client_id')
+          .andOn('i.tenant', '=', 'c.tenant');
+      })
+      .where('i.tenant', context.tenant);
+
+    let countQuery = knex('invoices as i').where('i.tenant', context.tenant);
+
+    if (client_id) {
+      dataQuery = dataQuery.where('i.client_id', client_id);
+      countQuery = countQuery.where('i.client_id', client_id);
+    }
+
+    if (status) {
+      dataQuery = dataQuery.where('i.status', status);
+      countQuery = countQuery.where('i.status', status);
+    }
+
+    if (billing_cycle_id) {
+      dataQuery = dataQuery.where('i.billing_cycle_id', billing_cycle_id);
+      countQuery = countQuery.where('i.billing_cycle_id', billing_cycle_id);
+    }
+
+    if (due_date_from) {
+      dataQuery = dataQuery.where('i.due_date', '>=', due_date_from);
+      countQuery = countQuery.where('i.due_date', '>=', due_date_from);
+    }
+
+    if (due_date_to) {
+      dataQuery = dataQuery.where('i.due_date', '<=', due_date_to);
+      countQuery = countQuery.where('i.due_date', '<=', due_date_to);
+    }
+
+    if (amount_min !== undefined) {
+      dataQuery = dataQuery.where('i.total_amount', '>=', amount_min);
+      countQuery = countQuery.where('i.total_amount', '>=', amount_min);
+    }
+
+    if (amount_max !== undefined) {
+      dataQuery = dataQuery.where('i.total_amount', '<=', amount_max);
+      countQuery = countQuery.where('i.total_amount', '<=', amount_max);
+    }
+
+    if (is_manual !== undefined) {
+      dataQuery = dataQuery.where('i.is_manual', is_manual);
+      countQuery = countQuery.where('i.is_manual', is_manual);
+    }
+
+    if (has_credit_applied !== undefined) {
+      if (has_credit_applied) {
+        dataQuery = dataQuery.where('i.credit_applied', '>', 0);
+        countQuery = countQuery.where('i.credit_applied', '>', 0);
+      } else {
+        dataQuery = dataQuery.where(builder => {
+          builder.whereNull('i.credit_applied').orWhere('i.credit_applied', 0);
+        });
+        countQuery = countQuery.where(builder => {
+          builder.whereNull('i.credit_applied').orWhere('i.credit_applied', 0);
+        });
+      }
+    }
+
+    if (search) {
+      dataQuery = dataQuery.where(builder => {
+        builder.whereILike('i.invoice_number', `%${search}%`)
+          .orWhereILike('c.client_name', `%${search}%`);
+      });
+      countQuery = countQuery.whereILike('i.invoice_number', `%${search}%`);
+    }
+
+    const [invoices, [{ count }]] = await Promise.all([
+      dataQuery
+        .select('i.*', 'c.client_name')
+        .orderBy(`i.${sortField}`, order)
+        .limit(limit)
+        .offset((page - 1) * limit),
+      countQuery.count('* as count'),
+    ]);
+
+    return {
+      data: invoices.map(invoice => ({
+        data: invoice,
+        links: this.generateHATEOASLinks('invoices', invoice.invoice_id, context),
+      })),
+      total: parseInt(count as string, 10),
     };
   }
 
@@ -1141,6 +1268,98 @@ export class FinancialService extends BaseService<ITransaction> {
         ]
       };
     });
+  }
+
+  /**
+   * List payment methods.
+   */
+  async listPaymentMethods(
+    query: PaymentMethodListQuery,
+    context: ServiceContext
+  ): Promise<ListResult<FinancialResponse<PaymentMethodResponse>>> {
+    const { knex } = await this.getKnex();
+
+    const {
+      page = 1,
+      limit = 25,
+      client_id,
+      type,
+      is_default,
+      exclude_deleted = true,
+      search,
+      sort = 'created_at',
+      order = 'desc',
+    } = query;
+
+    const sortableFields = new Set(['created_at', 'updated_at', 'type', 'is_default']);
+    const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
+
+    let dataQuery = knex('payment_methods as pm')
+      .leftJoin('clients as c', function() {
+        this.on('pm.client_id', '=', 'c.client_id')
+          .andOn('pm.tenant', '=', 'c.tenant');
+      })
+      .where('pm.tenant', context.tenant);
+
+    let countQuery = knex('payment_methods as pm').where('pm.tenant', context.tenant);
+
+    if (client_id) {
+      dataQuery = dataQuery.where('pm.client_id', client_id);
+      countQuery = countQuery.where('pm.client_id', client_id);
+    }
+
+    if (type) {
+      dataQuery = dataQuery.where('pm.type', type);
+      countQuery = countQuery.where('pm.type', type);
+    }
+
+    if (is_default !== undefined) {
+      dataQuery = dataQuery.where('pm.is_default', is_default);
+      countQuery = countQuery.where('pm.is_default', is_default);
+    }
+
+    if (exclude_deleted) {
+      dataQuery = dataQuery.where('pm.is_deleted', false);
+      countQuery = countQuery.where('pm.is_deleted', false);
+    }
+
+    if (search) {
+      dataQuery = dataQuery.where(builder => {
+        builder.whereILike('c.client_name', `%${search}%`)
+          .orWhereILike('pm.last4', `%${search}%`);
+      });
+      countQuery = countQuery.whereILike('pm.last4', `%${search}%`);
+    }
+
+    const [paymentMethods, [{ count }]] = await Promise.all([
+      dataQuery
+        .select('pm.*', 'c.client_name')
+        .orderBy(`pm.${sortField}`, order)
+        .limit(limit)
+        .offset((page - 1) * limit),
+      countQuery.count('* as count'),
+    ]);
+
+    return {
+      data: paymentMethods.map(paymentMethod => ({
+        data: paymentMethod,
+        links: [
+          {
+            rel: 'self',
+            href: `/api/v1/financial/payment-methods/${paymentMethod.payment_method_id}`,
+            method: 'GET',
+            description: 'Get payment method details',
+          },
+          {
+            rel: 'client',
+            href: `/api/v1/clients/${paymentMethod.client_id}`,
+            method: 'GET',
+            description: 'View client details',
+          },
+        ],
+      })),
+      total: parseInt(count as string, 10),
+    };
   }
 
   // ============================================================================
@@ -2071,6 +2290,18 @@ export class FinancialService extends BaseService<ITransaction> {
    */
   async getPaymentTerms(context?: ServiceContext): Promise<FinancialResponse<Array<{ id: string; name: string }>>> {
     const { knex } = await this.getKnex();
+
+    const hasPaymentTermsTable = await knex.schema.hasTable('payment_terms');
+    if (!hasPaymentTermsTable) {
+      return {
+        data: [
+          { id: 'due_on_receipt', name: 'Due on receipt' },
+          { id: 'net_15', name: 'Net 15' },
+          { id: 'net_30', name: 'Net 30' },
+        ],
+        links: []
+      };
+    }
 
     const terms = await knex('payment_terms')
       .select('term_code as id', 'term_name as name')

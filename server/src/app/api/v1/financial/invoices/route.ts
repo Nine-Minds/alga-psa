@@ -7,7 +7,7 @@ import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinanc
 
 export async function GET(request: Request) {
   const controller = new ApiFinancialController();
-  return await controller.list()(request as any);
+  return await controller.listInvoices()(request as any);
 }
 
 export const runtime = 'nodejs';
