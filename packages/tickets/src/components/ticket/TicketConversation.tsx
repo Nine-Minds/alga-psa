@@ -11,7 +11,9 @@ import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, InlineReplyComposer, buildCommentThreadGroups } from '@alga-psa/ui/components';
+import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
+import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {

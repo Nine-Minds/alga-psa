@@ -1,4 +1,4 @@
-import { PartialBlock } from '@blocknote/core';
+import type { PartialBlock } from '@blocknote/core';
 
 const EMPTY_TICKET_RICH_TEXT_BLOCK: PartialBlock[] = [
   {

@@ -271,12 +271,12 @@ vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: (...args: unknown[]) => getTeamsMock(...args),
 }));
 
-vi.mock('@alga-psa/msp-composition/tickets', async () => {
+vi.mock('@alga-psa/msp-composition/tickets/MspTicketsPageClient', async () => {
   const ReactModule = await import('react');
   const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 
   return {
-    MspTicketsPageClient: () => {
+    default: () => {
       const { t } = useTranslation('features/tickets');
 
       return (

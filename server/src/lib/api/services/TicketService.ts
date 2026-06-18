@@ -202,6 +202,13 @@ export class TicketService extends BaseService<ITicket> {
     dataQuery = this.applyTicketFilters(dataQuery, filters);
     countQuery = this.applyTicketFilters(countQuery, filters);
 
+    // Push row-level read authorization into SQL (when the caller provides it)
+    // so both the page and the total count reflect only authorized rows.
+    if (options.applyAuthorization) {
+      options.applyAuthorization(dataQuery);
+      options.applyAuthorization(countQuery);
+    }
+
     // Apply sorting
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;

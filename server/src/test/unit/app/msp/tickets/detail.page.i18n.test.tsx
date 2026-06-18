@@ -191,12 +191,12 @@ vi.mock('@alga-psa/assets/components/AssociatedAssets', () => ({
   default: () => null,
 }));
 
-vi.mock('@alga-psa/msp-composition/tickets', async () => {
+vi.mock('@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient', async () => {
   const ReactModule = await import('react');
   const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 
   return {
-    MspTicketDetailsContainerClient: () => {
+    default: () => {
       const { t } = useTranslation('features/tickets');
 
       return (
