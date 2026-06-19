@@ -822,6 +822,29 @@ export const createClientContractFromWizard = withAuth(async (
         : null;
     const contractId = existingContractId ?? uuidv4();
 
+    // Resolve the contract currency. A contract is billed in its client's currency, so for a
+    // NEW contract derive it from the client's configured default currency
+    // (clients.default_currency_code), with the tenant default (default_billing_settings) and
+    // then 'USD' as fallbacks — the client takes precedence over the tenant default. For an
+    // existing draft we keep whatever currency it was created with. This value is used for the
+    // contract record AND for matching service-period prices below, so it must be consistent.
+    let resolvedCurrencyCode: string = submission.currency_code;
+    if (!existingContractId) {
+      const clientRow = await trx('clients')
+        .where({ tenant, client_id: submission.client_id })
+        .select('default_currency_code')
+        .first();
+      if (clientRow?.default_currency_code) {
+        resolvedCurrencyCode = clientRow.default_currency_code;
+      } else {
+        const billingSettings = await trx('default_billing_settings')
+          .where({ tenant })
+          .select('default_currency_code')
+          .first();
+        resolvedCurrencyCode = billingSettings?.default_currency_code || 'USD';
+      }
+    }
+
     const clearExistingContractData = async (targetContractId: string) => {
       await trx('client_contracts')
         .where({ tenant, contract_id: targetContractId })
@@ -905,7 +928,7 @@ export const createClientContractFromWizard = withAuth(async (
           contract_description: submission.description ?? null,
           owner_client_id: submission.client_id,
           billing_frequency: submission.billing_frequency ?? 'monthly',
-          currency_code: submission.currency_code,
+          currency_code: resolvedCurrencyCode,
           is_active: !isDraft,
           status: isDraft ? 'draft' : 'active',
           updated_at: nowIso,
@@ -918,7 +941,7 @@ export const createClientContractFromWizard = withAuth(async (
         contract_description: submission.description ?? null,
         owner_client_id: submission.client_id,
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        currency_code: submission.currency_code,
+        currency_code: resolvedCurrencyCode,
         is_active: !isDraft,
         status: isDraft ? 'draft' : 'active',
         is_template: false,
@@ -944,7 +967,7 @@ export const createClientContractFromWizard = withAuth(async (
       ...filteredUsageServices.map((s) => s.service_id),
     ];
     const serviceCatalogById = new Map<string, any>();
-    const contractCurrency = submission.currency_code || 'USD';
+    const contractCurrency = resolvedCurrencyCode || 'USD';
     let fixedModeDefaultsByServiceId = new Map<string, number>();
     let hourlyModeDefaultsByServiceId = new Map<string, number>();
     let usageModeDefaultsByServiceId = new Map<string, number>();
