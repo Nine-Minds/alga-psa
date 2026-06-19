@@ -19,9 +19,12 @@ interface ExchangeResponse {
   canonicalHost?: string;
 }
 
-type ExchangeOutcome =
-  | { ok: true; redirectTo: string; canonicalHost?: string }
-  | { ok: false; kind: 'http' | 'network'; canonicalHost?: string };
+interface ExchangeOutcome {
+  ok: boolean;
+  redirectTo?: string;
+  canonicalHost?: string;
+  networkError?: boolean;
+}
 
 // Dedupe the OTT exchange by token at module scope. The OTT is single-use, so it
 // must be POSTed at most once even if the handoff component mounts more than once
@@ -43,7 +46,7 @@ async function performExchange(ott: string, returnPath?: string): Promise<Exchan
     const payload: ExchangeResponse = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      return { ok: false, kind: 'http', canonicalHost: payload?.canonicalHost };
+      return { ok: false, canonicalHost: payload?.canonicalHost };
     }
 
     return {
@@ -52,7 +55,7 @@ async function performExchange(ott: string, returnPath?: string): Promise<Exchan
       canonicalHost: payload?.canonicalHost,
     };
   } catch {
-    return { ok: false, kind: 'network' };
+    return { ok: false, networkError: true };
   }
 }
 
@@ -109,12 +112,12 @@ export default function PortalSessionHandoff({
       }
 
       if (outcome.ok) {
-        router.replace(outcome.redirectTo);
+        router.replace(outcome.redirectTo || '/client-portal/dashboard');
         return;
       }
 
       setState('error');
-      if (outcome.kind === 'network') {
+      if (outcome.networkError) {
         setError('We encountered a network issue while finalizing your login.');
         toast.error(t('auth.messages.handoffNetworkIssue'));
       } else {

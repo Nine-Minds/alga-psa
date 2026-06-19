@@ -27,7 +27,7 @@ function buildFallbackLoginUrl(): string {
   }
 }
 
-async function resolveLocale(): Promise<string | null> {
+async function resolveLocale() {
   // The handoff always runs on the tenant's vanity host, so derive the locale
   // from that host (mirrors the client-portal signin page). Wrapping in
   // I18nWrapper also gates rendering until i18next is initialized: without that
