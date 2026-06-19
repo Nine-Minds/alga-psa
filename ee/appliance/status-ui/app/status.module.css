@@ -1011,7 +1011,7 @@
     var(--operator-purple) 18%,
     var(--appliance-sidebar)
   ) !important;
-  color: var(--appliance-text) !important;
+  color: var(--appliance-sidebar-text) !important;
 }
 
 .manageRefreshButton {
