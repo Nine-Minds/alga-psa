@@ -13,6 +13,7 @@ import type {
   NormalizedRmmAlertSeverity,
   RmmAlertRuleActions,
 } from './contracts';
+import { resolveRmmTicketContactId } from './resolveContact';
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
@@ -20,6 +21,7 @@ export interface CreateAlertTicketParams {
   clientId: string;
   assetId?: string | null;
   organizationName?: string | null;
+  mappingDefaultContactId?: string | null;
 }
 
 export interface CreatedAlertTicket {
@@ -48,6 +50,10 @@ export async function createTicketForAlert(
   }
 
   const priorityId = actions.priorityOverride ?? (await resolvePriorityForSeverity(trx, tenantId, event.severity));
+  const contactId = await resolveRmmTicketContactId(trx, tenantId, {
+    clientId: params.clientId,
+    mappingDefaultContactId: params.mappingDefaultContactId,
+  });
 
   const title = renderTemplate(actions.ticketTemplate?.titleTemplate, params) ?? defaultTitle(event);
   const description = renderTemplate(actions.ticketTemplate?.descriptionTemplate, params) ?? defaultDescription(event);
@@ -71,6 +77,7 @@ export async function createTicketForAlert(
       ticket_number: ticketNumber,
       title,
       client_id: params.clientId,
+      contact_name_id: contactId,
       status_id: defaultStatusId,
       priority_id: priorityId ?? null,
       board_id: boardId,

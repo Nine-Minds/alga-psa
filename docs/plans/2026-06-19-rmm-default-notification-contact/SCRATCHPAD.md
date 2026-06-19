@@ -67,3 +67,9 @@ Two independent gaps in the integration create paths:
   - Invalid mapping contacts fall back to the client's `properties.primary_contact_id`; invalid/absent fallback returns `null`.
   - It accepts only a caller-provided `trx` and does not import/use `withAdminTransaction`, so create paths see rows in their current transaction.
   - Added `shared/rmm/alerts/__tests__/resolveContact.test.ts` covering T006-T012.
+- `shared-pipeline-contact` group: threaded `mappingDefaultContactId` through `shared/rmm/alerts/ticketCreator.ts`, `processRmmAlertEvent.ts`, and `createTicketForAlertId.ts`.
+  - `createTicketForAlert` now resolves `contact_name_id` inside the ticket insert transaction using `resolveRmmTicketContactId`.
+  - `processRmmAlertEvent` and `createTicketForAlertId` select `default_contact_id` from `rmm_organization_mappings` and pass it into the shared creator.
+  - Added integration coverage in `ee/server/src/__tests__/integration/rmmAlertPipeline.integration.test.ts` for mapping default, client-default fallback, no-contact behavior, automatic pipeline threading, manual `createTicketForAlertId`, and numbering preservation.
+  - Verification: `npm -w @alga-psa/shared run typecheck` passed.
+  - Verification blocked: `npx vitest run src/__tests__/integration/rmmAlertPipeline.integration.test.ts` from `ee/server` could not connect to local Postgres (`password authentication failed for user "postgres"`).

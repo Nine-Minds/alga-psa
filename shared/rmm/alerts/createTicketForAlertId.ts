@@ -38,6 +38,7 @@ export async function createTicketForAlertId(
 
   let clientId: string | null = null;
   let organizationName: string | null = null;
+  let mappingDefaultContactId: string | null = null;
   if (alert.asset_id) {
     const asset = await knex('assets')
       .where({ tenant: tenantId, asset_id: alert.asset_id })
@@ -57,8 +58,9 @@ export async function createTicketForAlertId(
         integration_id: alert.integration_id,
         external_organization_id: externalOrgId,
       })
-      .first('client_id', 'external_organization_name');
+      .first('client_id', 'external_organization_name', 'default_contact_id');
     organizationName = orgMapping?.external_organization_name ?? null;
+    mappingDefaultContactId = orgMapping?.default_contact_id ?? null;
     if (!clientId) clientId = orgMapping?.client_id ?? null;
   }
   if (!clientId) {
@@ -91,6 +93,7 @@ export async function createTicketForAlertId(
       clientId: clientId!,
       assetId: alert.asset_id,
       organizationName,
+      mappingDefaultContactId,
     });
     await trx('rmm_alerts')
       .where({ tenant: tenantId, alert_id: alertId })

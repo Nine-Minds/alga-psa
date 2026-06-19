@@ -13,12 +13,12 @@
   { "id": "T011", "description": "Resolver returns null when neither a mapping contact nor a client primary contact exists", "implemented": true, "commitGroup": "contact-resolver", "featureIds": ["F009"] },
   { "id": "T012", "description": "Resolver reads rows written earlier in the same transaction (uses the passed trx)", "implemented": true, "commitGroup": "contact-resolver", "featureIds": ["F010"] },
 
-  { "id": "T013", "description": "createTicketForAlert sets contact_name_id from mappingDefaultContactId", "implemented": false, "commitGroup": "shared-pipeline-contact", "featureIds": ["F011", "F012"] },
-  { "id": "T014", "description": "createTicketForAlert sets contact_name_id from the client default when the mapping contact is unset", "implemented": false, "commitGroup": "shared-pipeline-contact", "featureIds": ["F012", "F015"] },
-  { "id": "T015", "description": "createTicketForAlert leaves contact_name_id null when no contact resolves", "implemented": false, "commitGroup": "shared-pipeline-contact", "featureIds": ["F012"] },
-  { "id": "T016", "description": "processRmmAlertEvent threads the org mapping default_contact_id through to the created ticket", "implemented": false, "commitGroup": "shared-pipeline-contact", "featureIds": ["F013"] },
-  { "id": "T017", "description": "createTicketForAlertId threads the org mapping default_contact_id through to the created ticket", "implemented": false, "commitGroup": "shared-pipeline-contact", "featureIds": ["F014"] },
-  { "id": "T018", "description": "Ticket numbering still uses generate_next_number after the contact change (no regression)", "implemented": false, "commitGroup": "shared-pipeline-contact", "featureIds": ["F012"] },
+  { "id": "T013", "description": "createTicketForAlert sets contact_name_id from mappingDefaultContactId", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F011", "F012"] },
+  { "id": "T014", "description": "createTicketForAlert sets contact_name_id from the client default when the mapping contact is unset", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F012", "F015"] },
+  { "id": "T015", "description": "createTicketForAlert leaves contact_name_id null when no contact resolves", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F012"] },
+  { "id": "T016", "description": "processRmmAlertEvent threads the org mapping default_contact_id through to the created ticket", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F013"] },
+  { "id": "T017", "description": "createTicketForAlertId threads the org mapping default_contact_id through to the created ticket", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F014"] },
+  { "id": "T018", "description": "Ticket numbering still uses generate_next_number after the contact change (no regression)", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F012"] },
 
   { "id": "T019", "description": "createHuntressTicket sets contact_name_id from defaultContactId", "implemented": false, "commitGroup": "huntress-contact", "featureIds": ["F016", "F017"] },
   { "id": "T020", "description": "createHuntressTicket falls back to the client default contact", "implemented": false, "commitGroup": "huntress-contact", "featureIds": ["F017"] },

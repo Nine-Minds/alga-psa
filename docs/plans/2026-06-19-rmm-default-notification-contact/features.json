@@ -11,11 +11,11 @@
   { "id": "F009", "description": "Resolver validates the fallback contact (active, belongs to client) and returns null when invalid or absent", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
   { "id": "F010", "description": "Resolver runs entirely on the passed trx (no separate admin transaction)", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
 
-  { "id": "F011", "description": "CreateAlertTicketParams gains optional mappingDefaultContactId", "implemented": false, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
-  { "id": "F012", "description": "createTicketForAlert resolves the contact and sets tickets.contact_name_id on insert", "implemented": false, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Goals"] },
-  { "id": "F013", "description": "processRmmAlertEvent reads the org mapping's default_contact_id and passes it into createTicketForAlert", "implemented": false, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
-  { "id": "F014", "description": "createTicketForAlertId selects default_contact_id from the org mapping and passes it through", "implemented": false, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
-  { "id": "F015", "description": "Unmapped / no-mapping alert passes undefined mappingDefaultContactId so the client-default fallback applies", "implemented": false, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Contact Resolution"] },
+  { "id": "F011", "description": "CreateAlertTicketParams gains optional mappingDefaultContactId", "implemented": true, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
+  { "id": "F012", "description": "createTicketForAlert resolves the contact and sets tickets.contact_name_id on insert", "implemented": true, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Goals"] },
+  { "id": "F013", "description": "processRmmAlertEvent reads the org mapping's default_contact_id and passes it into createTicketForAlert", "implemented": true, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
+  { "id": "F014", "description": "createTicketForAlertId selects default_contact_id from the org mapping and passes it through", "implemented": true, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
+  { "id": "F015", "description": "Unmapped / no-mapping alert passes undefined mappingDefaultContactId so the client-default fallback applies", "implemented": true, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Contact Resolution"] },
 
   { "id": "F016", "description": "CreateHuntressTicketParams gains optional defaultContactId", "implemented": false, "commitGroup": "huntress-contact", "prdRefs": ["Affected Code"] },
   { "id": "F017", "description": "createHuntressTicket resolves the contact and sets contact_name_id on insert", "implemented": false, "commitGroup": "huntress-contact", "prdRefs": ["Goals"] },
