@@ -45,22 +45,25 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       dateTimeFormat: display.dateTimeFormat || DEFAULT_TICKETING_DATETIME_FORMAT,
       responseStateTrackingEnabled: display.responseStateTrackingEnabled ?? true,
       list: {
+        // Default on-screen column set mirrors the "Refined List" design: ticket
+        // number and category fold under the title, created/created-by are off by
+        // default. All remain enableable in ticket display settings.
         columnVisibility: {
-          ticket_number: display?.list?.columnVisibility?.ticket_number ?? true,
+          ticket_number: display?.list?.columnVisibility?.ticket_number ?? false,
           title: display?.list?.columnVisibility?.title ?? true,
           status: display?.list?.columnVisibility?.status ?? true,
           priority: display?.list?.columnVisibility?.priority ?? true,
           sla: display?.list?.columnVisibility?.sla ?? false,
           board: display?.list?.columnVisibility?.board ?? true,
-          category: display?.list?.columnVisibility?.category ?? true,
+          category: display?.list?.columnVisibility?.category ?? false,
           client: display?.list?.columnVisibility?.client ?? true,
           assigned_to: display?.list?.columnVisibility?.assigned_to ?? true,
           due_date: display?.list?.columnVisibility?.due_date ?? true,
-          created: display?.list?.columnVisibility?.created ?? true,
-          created_by: display?.list?.columnVisibility?.created_by ?? true,
+          created: display?.list?.columnVisibility?.created ?? false,
+          created_by: display?.list?.columnVisibility?.created_by ?? false,
           tags: display?.list?.columnVisibility?.tags ?? true,
         },
-        tagsInlineUnderTitle: display?.list?.tagsInlineUnderTitle ?? false,
+        tagsInlineUnderTitle: display?.list?.tagsInlineUnderTitle ?? true,
       },
     };
   } catch (e) {
@@ -70,21 +73,21 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       responseStateTrackingEnabled: true,
       list: {
         columnVisibility: {
-          ticket_number: true,
+          ticket_number: false,
           title: true,
           status: true,
           priority: true,
           sla: false,
           board: true,
-          category: true,
+          category: false,
           client: true,
           assigned_to: true,
           due_date: true,
-          created: true,
-          created_by: true,
+          created: false,
+          created_by: false,
           tags: true,
         },
-        tagsInlineUnderTitle: false,
+        tagsInlineUnderTitle: true,
       },
     };
   }

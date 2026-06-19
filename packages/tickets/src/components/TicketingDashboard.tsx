@@ -41,7 +41,7 @@ import {
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, SlidersHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -283,6 +283,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [rawStatusOptions] = useState<TicketStatusFilterOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
+  // LEVERAGE: pattern datatable-filter-paging — largest instance of the list-query state machine
+  // (filter state + debounced search + reset-page + manual fetch); see docs/plans/leverage-ledger.md
   // Filter values derived from props (single source of truth is Container's activeFilters)
   const selectedBoards = useMemo(() => {
     if (filterValues.boardIds && filterValues.boardIds.length > 0) {
@@ -376,6 +378,26 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
   }, [selectedBoards, excludedBoards, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+
+  // Count of active filter groups (excludes the always-visible search box) — drives
+  // the "Filters" button badge in the candidate #1 collapsed toolbar.
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (selectedBoards.length > 0 || excludedBoards.length > 0) n++;
+    if (selectedClient !== null) n++;
+    if (selectedAssignees.length > 0 || selectedTeams.length > 0 || includeUnassigned) n++;
+    if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) n++;
+    if (selectedResponseState !== 'all') n++;
+    if (selectedPriority !== 'all') n++;
+    if (selectedDueDateFilter !== 'all') n++;
+    if (allowSlaStatusFilter && selectedSlaStatus !== 'all') n++;
+    if (selectedCategories.length > 0 || excludedCategories.length > 0) n++;
+    if (selectedTags.length > 0) n++;
+    return n;
+  }, [selectedBoards, excludedBoards, selectedClient, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags]);
+
+  // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -1680,6 +1702,133 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange, clearSelection]);
 
+  // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
+  // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One
+  // descriptor list { key, isActive, label, clear } per filter would collapse all three.
+  // Active-filter chips (candidate #1): one removable chip per applied filter,
+  // shown above the table so what's filtering is always visible. Labels reuse the
+  // already-localized field/value strings; removal clears just that dimension.
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
+    const boardLabel = t('fields.board', 'Board');
+    const categoryLabel = t('fields.category', 'Category');
+
+    selectedBoards.forEach((boardId) => {
+      const name = boardId === NO_BOARD_VALUE
+        ? 'No board'
+        : boards.find((b) => b.board_id === boardId)?.board_name ?? boardLabel;
+      chips.push({
+        key: `board:${boardId}`,
+        label: `${boardLabel}: ${name}`,
+        onRemove: () => handleBoardSelect(selectedBoards.filter((id) => id !== boardId), excludedBoards),
+      });
+    });
+    excludedBoards.forEach((boardId) => {
+      const name = boards.find((b) => b.board_id === boardId)?.board_name ?? boardLabel;
+      chips.push({
+        key: `board-ex:${boardId}`,
+        label: `${boardLabel} ≠ ${name}`,
+        onRemove: () => handleBoardSelect(selectedBoards, excludedBoards.filter((id) => id !== boardId)),
+      });
+    });
+
+    if (selectedClient) {
+      const name = clients.find((c) => c.client_id === selectedClient)?.client_name ?? t('fields.client', 'Client');
+      chips.push({ key: `client:${selectedClient}`, label: `${t('fields.client', 'Client')}: ${name}`, onRemove: () => handleClientSelect(null) });
+    }
+
+    selectedAssignees.forEach((userId) => {
+      const u = initialUsers.find((x) => x.user_id === userId);
+      const name = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || t('fields.assignedTo', 'Assignee') : t('fields.assignedTo', 'Assignee');
+      chips.push({
+        key: `assignee:${userId}`,
+        label: name,
+        onRemove: () => { const rest = selectedAssignees.filter((id) => id !== userId); onFilterChange({ assignedToIds: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+    selectedTeams.forEach((teamId) => {
+      const name = teams.find((x) => x.team_id === teamId)?.team_name ?? t('fields.team', 'Team');
+      chips.push({
+        key: `team:${teamId}`,
+        label: name,
+        onRemove: () => { const rest = selectedTeams.filter((id) => id !== teamId); onFilterChange({ assignedTeamIds: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+    if (includeUnassigned) {
+      chips.push({ key: 'unassigned', label: t('filters.unassigned', 'Unassigned'), onRemove: () => onFilterChange({ includeUnassigned: false }) });
+    }
+
+    if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) {
+      const label = statusOptions.find((o) => o.value === selectedStatus)?.label ?? selectedStatus;
+      chips.push({ key: 'status', label: `${t('fields.status', 'Status')}: ${label}`, onRemove: () => onFilterChange({ statusId: TICKET_STATUS_FILTER_OPEN, showOpenOnly: true }) });
+    }
+
+    if (selectedResponseState !== 'all') {
+      const map: Record<string, string> = {
+        awaiting_client: t('responseState.awaitingClient', 'Awaiting Client'),
+        awaiting_internal: t('responseState.awaitingInternal', 'Awaiting Internal'),
+        none: t('dashboard.filters.noResponseState', 'No Response State'),
+      };
+      chips.push({ key: 'response', label: `${t('fields.responseState', 'Response State')}: ${map[selectedResponseState] ?? selectedResponseState}`, onRemove: () => onFilterChange({ responseState: undefined }) });
+    }
+
+    if (selectedPriority !== 'all') {
+      const label = priorityOptions.find((o) => o.value === selectedPriority)?.label ?? selectedPriority;
+      chips.push({ key: 'priority', label: `${t('fields.priority', 'Priority')}: ${label}`, onRemove: () => onFilterChange({ priorityId: 'all' }) });
+    }
+
+    if (selectedDueDateFilter !== 'all') {
+      const dateStr = dueDateFilterValue ? dueDateFilterValue.toLocaleDateString() : '';
+      const map: Record<string, string> = {
+        overdue: t('dashboard.filters.overdue', 'Overdue'),
+        today: t('dashboard.filters.dueToday', 'Due Today'),
+        upcoming: t('dashboard.filters.dueNext7Days', 'Due Next 7 Days'),
+        before: dueDateFilterValue ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: dateStr }) : t('dashboard.filters.beforeDate', 'Before Date...'),
+        after: dueDateFilterValue ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: dateStr }) : t('dashboard.filters.afterDate', 'After Date...'),
+        no_due_date: t('dashboard.filters.noDueDate', 'No Due Date'),
+      };
+      chips.push({ key: 'due', label: `${t('fields.dueDate', 'Due Date')}: ${map[selectedDueDateFilter] ?? selectedDueDateFilter}`, onRemove: () => onFilterChange({ dueDateFilter: undefined, dueDateFrom: undefined, dueDateTo: undefined }) });
+    }
+
+    if (allowSlaStatusFilter && selectedSlaStatus !== 'all') {
+      const map: Record<string, string> = {
+        has_sla: t('dashboard.filters.hasSla', 'Has SLA'),
+        no_sla: t('dashboard.filters.noSla', 'No SLA'),
+        on_track: t('dashboard.filters.onTrack', 'On Track'),
+        breached: t('dashboard.filters.breached', 'Breached'),
+        paused: t('dashboard.filters.paused', 'Paused'),
+      };
+      chips.push({ key: 'sla', label: `${t('fields.slaStatus', 'SLA Status')}: ${map[selectedSlaStatus] ?? selectedSlaStatus}`, onRemove: () => onFilterChange({ slaStatusFilter: undefined }) });
+    }
+
+    selectedCategories.forEach((categoryId) => {
+      const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
+      chips.push({
+        key: `cat:${categoryId}`,
+        label: `${categoryLabel}: ${name}`,
+        onRemove: () => handleCategorySelect(selectedCategories.filter((id) => id !== categoryId), excludedCategories),
+      });
+    });
+    excludedCategories.forEach((categoryId) => {
+      const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
+      chips.push({
+        key: `cat-ex:${categoryId}`,
+        label: `${categoryLabel} ≠ ${name}`,
+        onRemove: () => handleCategorySelect(selectedCategories, excludedCategories.filter((id) => id !== categoryId)),
+      });
+    });
+
+    selectedTags.forEach((tag) => {
+      chips.push({
+        key: `tag:${tag}`,
+        label: `#${tag}`,
+        onRemove: () => { const rest = selectedTags.filter((x) => x !== tag); onFilterChange({ tags: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+
+    return chips;
+  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleCategorySelect, onFilterChange, t]);
+
   return (
     <>
     <ReflectionContainer id={id} label="Ticketing Dashboard">
@@ -1741,8 +1890,102 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
+              {/* Candidate #1: always-visible search + Filters toggle + density */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  id={`${id}-search-tickets-input`}
+                  placeholder={t('filters.search', 'Search tickets and comments...')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-[38px] w-full text-sm"
+                  containerClassName="flex-1 min-w-[260px] max-w-[460px]"
+                />
+                <Button
+                  id={`${id}-toggle-filters`}
+                  variant={showFilters ? 'soft' : 'outline'}
+                  onClick={() => setShowFilters((v) => !v)}
+                  className="shrink-0 flex items-center gap-1.5 h-[38px]"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t('filters.button', 'Filters')}
+                  {activeFilterCount > 0 && (
+                    <span className="ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] px-1.5 text-[11px] font-semibold text-[rgb(var(--color-primary-700))]">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+                  id='reset-filters'
+                  disabled={!isFiltered}
+                >
+                  <XCircle className="h-4 w-4" />
+                  {t('resetFilters', 'Reset')}
+                </Button>
+                <div className="ml-auto flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
+                      {t('dashboard.bundledToggle', 'Bundled')}
+                    </Label>
+                    <Switch
+                      id={`${id}-bundle-view-toggle`}
+                      checked={bundleView === 'bundled'}
+                      onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
+                      size={densityClasses.tagSize}
+                    />
+                  </div>
+                  <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                  <div className="shrink-0">
+                    <ViewDensityControl
+                      idPrefix={`${id}-list-density`}
+                      value={ticketListDensityLevel}
+                      onChange={handleTicketListDensityChange}
+                      step={TICKET_LIST_DENSITY_STEP}
+                      compactLabel={t('dashboard.spacing.compact', 'Compact')}
+                      spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
+                      decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
+                      increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
+                      resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {activeFilterChips.length > 0 && (
+                <div className="flex items-center flex-wrap gap-2">
+                  {activeFilterChips.map((chip) => (
+                    <span
+                      key={chip.key}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] py-1 pl-2.5 pr-1.5 text-xs font-medium text-[rgb(var(--color-primary-700))]"
+                    >
+                      <span className="max-w-[220px] truncate">{chip.label}</span>
+                      <button
+                        type="button"
+                        onClick={chip.onRemove}
+                        aria-label={`Remove ${chip.label}`}
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-100))] hover:text-[rgb(var(--color-primary-700))]"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
+                  >
+                    {t('filters.clearFilters', 'Clear filters')}
+                  </button>
+                </div>
+              )}
+
+              {showFilters && (
+              <div className="space-y-3 pt-1 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">
               {/* Row 1: Primary filters */}
-              <div className={`flex items-center ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
+              <div className={`flex items-center flex-wrap ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
                 <BoardFilterPicker
                   id={`${id}-board-picker`}
                   boards={boards}
@@ -1877,8 +2120,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 )}
               </div>
 
-              {/* Row 2: Category, search, tags, reset, bundled, density */}
-              <div className={`flex items-center ${densityClasses.filterGap}`}>
+              {/* Row 2: Category, tags */}
+              <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
                 <div className={`contents ${densityClasses.filterControlClass}`}>
                 <CategoryPicker
                   id={`${id}-category-picker`}
@@ -1918,14 +2161,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   categories={categories}
                   boards={boards}
                 />
-                <Input
-                  id={`${id}-search-tickets-input`}
-                  placeholder={t('filters.search', 'Search tickets and comments...')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] min-w-[350px] text-sm"
-                  containerClassName=""
-                />
                 <TagFilter
                   tags={allUniqueTags}
                   selectedTags={selectedTags}
@@ -1938,44 +2173,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-                  id='reset-filters'
-                  disabled={!isFiltered}
-                >
-                  <XCircle className="h-4 w-4" />
-                  {t('resetFilters', 'Reset')}
-                </Button>
-                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                <div className="flex items-center gap-2 shrink-0">
-                  <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
-                    {t('dashboard.bundledToggle', 'Bundled')}
-                  </Label>
-                  <Switch
-                    id={`${id}-bundle-view-toggle`}
-                    checked={bundleView === 'bundled'}
-                    onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
-                    size={densityClasses.tagSize}
-                  />
-                </div>
-                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                <div className="shrink-0">
-                  <ViewDensityControl
-                    idPrefix={`${id}-list-density`}
-                    value={ticketListDensityLevel}
-                    onChange={handleTicketListDensityChange}
-                    step={TICKET_LIST_DENSITY_STEP}
-                    compactLabel={t('dashboard.spacing.compact', 'Compact')}
-                    spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
-                    decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
-                    increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
-                    resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
-                  />
-                </div>
               </div>
+              </div>
+              )}
             </div>
           </ReflectionContainer>
         </div>

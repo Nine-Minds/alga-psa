@@ -60,6 +60,7 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
   filter state, a 300ms debounce on text search, "reset page to 1" on every filter/size/sort
   change, and either a client-side `filteredX` `useMemo` or a server fetch state machine.
 - **Where (strong instances, marked):**
+  - `packages/tickets/src/components/TicketingDashboard.tsx` (**largest instance** — full server list-query: filter state + 500ms search debounce + reset-page + manual fetch + URL sync; added 2026-06-19 during the ticket-list redesign)
   - `server/src/components/settings/profile/ApiKeysSetup.tsx` (client filter + debounce + reset)
   - `server/src/components/settings/security/AdminApiKeysSetup.tsx` (near-identical to ApiKeysSetup — the two files are ~95% duplicate components, a separate candidate)
   - `server/src/app/msp/email-logs/EmailLogsClient.tsx` (server variant: fetch + debounce + reset + manual sort)
@@ -77,6 +78,25 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Status:** watching.
 
 ---
+
+## filter-descriptor-table — pattern
+
+- **What:** Within a single filtered list, each filter dimension's three facts — *is it active*,
+  *its human label*, and *how to clear it* — get written once per consumer of that knowledge. In
+  `TicketingDashboard` that's now three copies: the toolbar control's `onValueChange`, the
+  `activeFilterCount` memo, and the `activeFilterChips` memo. Adding the chips this session was the
+  third hand-written copy across ~12 dimensions (board, client, assignee, team, unassigned, status,
+  response, priority, due, sla, category, tags).
+- **Where:** `packages/tickets/src/components/TicketingDashboard.tsx` (marked at `activeFilterChips`).
+- **Gate:** frequency 3 copies × ~12 dimensions; cost medium (every new filter or chip must touch
+  all three in sync — drift = a chip that doesn't clear, or a miscount); stability good (filter set
+  is stable); leverage real but **local to one component** so far.
+- **Shape if extracted:** one `FILTER_DESCRIPTORS` list of `{ key, isActive(filters), label(filters,
+  lookups), clear() }`; the count, the chips, and (eventually) the controls all derive from it.
+- **Axis-2:** in-pass/bounded-now — self-contained to this component, no API ripple. Worth doing if
+  a 4th consumer of the per-dimension knowledge appears (e.g. a saved-views feature).
+- **Status:** watching (1 component; revisit if it recurs in another filtered list, at which point
+  it converges with `datatable-filter-paging`).
 
 ## Notes
 
