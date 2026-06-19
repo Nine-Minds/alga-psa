@@ -1500,13 +1500,16 @@ async function formatAccumulatedChanges(
     const items = await Promise.all(
       Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
         const fieldLabel = formatFieldName(field);
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
           const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
           if (oldVal !== undefined && newVal !== undefined) {
             const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
             const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
             return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
           }
+          const presentVal = newVal !== undefined ? newVal : oldVal;
+          const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
+          return renderChangeItemHtml(fieldLabel, null, resolvedValue);
         }
         const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
         return renderChangeItemHtml(fieldLabel, null, resolvedValue);
