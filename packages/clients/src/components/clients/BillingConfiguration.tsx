@@ -19,7 +19,6 @@ import {
   getTaxRatesAsync,
   setClientTemplateAsync,
 } from '../../lib/billingHelpers';
-import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
 import ClientZeroDollarInvoiceSettings from './ClientZeroDollarInvoiceSettings';
@@ -50,9 +49,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         billing_contact_id: client.billing_contact_id || '',
         billing_email: client.billing_email || '',
         region_code: client.region_code || null,
-        // For an existing currency use it directly; otherwise leave it empty here and resolve
-        // the tenant's configured default asynchronously in the effect below (no 'USD' literal).
-        default_currency_code: client.default_currency_code || '',
+        default_currency_code: client.default_currency_code || 'USD',
     });
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,28 +64,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
             const fetchedClientTaxRates = await getClientTaxRates(client.client_id);
             setClientTaxRates(fetchedClientTaxRates);
-
-            // When the client has no explicit currency, default the form to the tenant's
-            // configured default billing currency instead of a hardcoded 'USD'.
-            if (!client.default_currency_code) {
-                try {
-                    const billingSettings = await getDefaultBillingSettings();
-                    const tenantDefaultCurrency = billingSettings?.defaultCurrencyCode || 'USD';
-                    setBillingConfig(prev =>
-                        prev.default_currency_code
-                            ? prev
-                            : { ...prev, default_currency_code: tenantDefaultCurrency }
-                    );
-                } catch (error) {
-                    console.error('Error loading tenant default currency:', error);
-                    setBillingConfig(prev =>
-                        prev.default_currency_code ? prev : { ...prev, default_currency_code: 'USD' }
-                    );
-                }
-            }
         };
         fetchData();
-    }, [client.client_id, client.default_currency_code]);
+    }, [client.client_id]);
 
     const handleSelectChange = (name: string) => async (value: string) => {
         setBillingConfig(prev => ({ ...prev, [name]: value }));
