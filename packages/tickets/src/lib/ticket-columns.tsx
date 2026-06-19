@@ -113,22 +113,26 @@ function getInitials(name: string | null | undefined): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-// Soft status-pill themes. Open statuses get a stable color by name (Alga
-// statuses are per-board and custom, so there's no fixed semantic set); closed
-// statuses always read as muted green.
-const STATUS_PILL_THEMES: Array<{ bg: string; text: string; dot: string }> = [
-  { bg: 'rgb(var(--color-primary-50))', text: 'rgb(var(--color-primary-700))', dot: 'rgb(var(--color-primary-500))' },
-  { bg: 'rgb(var(--color-secondary-50))', text: 'rgb(var(--color-secondary-800))', dot: 'rgb(var(--color-secondary-600))' },
-  { bg: 'rgb(var(--color-accent-50))', text: 'rgb(var(--color-accent-700))', dot: 'rgb(var(--color-accent-600))' },
-  { bg: '#eef2ff', text: '#4338ca', dot: '#6366f1' },
-  { bg: '#fdf2f8', text: '#be185d', dot: '#ec4899' },
-  { bg: '#ecfeff', text: '#0e7490', dot: '#06b6d4' },
+// Status pill hues (space-separated R G B). The pill background is a translucent
+// tint of the hue so it blends with the surface in BOTH light and dark mode
+// (rather than a fixed light fill that glares on a dark card); the solid hue is
+// used for the dot, and pill text stays neutral (--color-text-700, which flips
+// with the theme) so it reads on either background. Open statuses get a stable
+// hue by name (Alga statuses are per-board/custom, no fixed semantic set); closed
+// statuses always read green.
+const STATUS_PILL_HUES = [
+  '138 77 234',  // brand violet
+  '64 207 249',  // brand cyan
+  '255 156 48',  // brand amber
+  '99 102 241',  // indigo
+  '236 72 153',  // pink
+  '20 184 166',  // teal
 ];
-const STATUS_PILL_CLOSED = { bg: '#ecfdf3', text: '#15803d', dot: '#22c55e' };
+const STATUS_PILL_CLOSED_HUE = '34 197 94'; // green
 
-function statusPillTheme(statusName: string, closed: boolean): { bg: string; text: string; dot: string } {
-  if (closed) return STATUS_PILL_CLOSED;
-  return STATUS_PILL_THEMES[hashString(statusName || 'status') % STATUS_PILL_THEMES.length];
+function statusPillHue(statusName: string, closed: boolean): string {
+  if (closed) return STATUS_PILL_CLOSED_HUE;
+  return STATUS_PILL_HUES[hashString(statusName || 'status') % STATUS_PILL_HUES.length];
 }
 
 // Compact relative due label, e.g. "Overdue 2d", "in 5h", "in 3 days".
@@ -145,6 +149,52 @@ function relativeDueLabel(due: Date, now: Date): string {
   else magnitude = `${Math.max(1, Math.round(absMs / 60000))}m`;
   if (overdue) return `Overdue ${magnitude}`;
   return days >= 1 ? `in ${days} days` : `in ${magnitude}`;
+}
+
+// Smart due-date label matching candidate #1: "Overdue 1d" / "Today 4:00 PM" /
+// "Tomorrow 9:00 AM" / "Fri, Jun 21" (year added only when not the current year).
+function formatDuePrimary(due: Date, now: Date): string {
+  if (due.getTime() < now.getTime()) {
+    return relativeDueLabel(due, now); // "Overdue 5h" / "Overdue 1d"
+  }
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const dueDay = new Date(due);
+  dueDay.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round((dueDay.getTime() - startOfToday.getTime()) / 86400000);
+  const isMidnight = due.getHours() === 0 && due.getMinutes() === 0;
+  if (dayDiff === 0) return isMidnight ? 'Today' : `Today ${format(due, 'h:mm a')}`;
+  if (dayDiff === 1) return isMidnight ? 'Tomorrow' : `Tomorrow ${format(due, 'h:mm a')}`;
+  return format(due, due.getFullYear() === now.getFullYear() ? 'EEE, MMM d' : 'MMM d, yyyy');
+}
+
+// Calendar-day count to a future due date, for the secondary "in N days" hint.
+function daysUntil(due: Date, now: Date): number {
+  const a = new Date(now); a.setHours(0, 0, 0, 0);
+  const b = new Date(due); b.setHours(0, 0, 0, 0);
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+// Compact SLA status for the merged Due/SLA cell (candidate #1). Derived from the
+// same calculateSlaStatus the standalone SLA column uses; tone drives urgency color.
+function slaMagnitude(minutes: number): string {
+  const abs = Math.abs(minutes);
+  if (abs >= 1440) return `${Math.round(abs / 1440)}d`;
+  if (abs >= 60) return `${Math.round(abs / 60)}h`;
+  return `${Math.max(1, abs)}m`;
+}
+
+function formatSlaCell(
+  sla: { status: SlaTimerStatus; remainingMinutes: number | undefined; isPaused: boolean } | null
+): { text: string; tone: 'over' | 'soon' | 'ok' } | null {
+  if (!sla) return null;
+  if (sla.status === 'response_breached' || sla.status === 'resolution_breached') {
+    return { text: 'SLA breached', tone: 'over' };
+  }
+  if (sla.status === 'paused') return { text: 'SLA paused', tone: 'ok' };
+  const mag = sla.remainingMinutes !== undefined ? slaMagnitude(sla.remainingMinutes) : null;
+  if (sla.status === 'at_risk') return { text: mag ? `${mag} left` : 'At risk', tone: 'soon' };
+  return { text: mag ? `${mag} left` : 'On track', tone: 'ok' };
 }
 
 // Shared category label resolver, used by both the category column and the
@@ -469,14 +519,14 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           const responseState = (record as any).response_state as TicketResponseState | undefined;
           const showResponseState = displaySettings?.responseStateTrackingEnabled !== false;
           const closed = !!(record as { is_closed?: boolean }).is_closed;
-          const theme = statusPillTheme(value || '', closed);
+          const hue = statusPillHue(value || '', closed);
           return (
             <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap">
               <span
-                className="inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-                style={{ backgroundColor: theme.bg, color: theme.text }}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium text-[rgb(var(--color-text-700))]"
+                style={{ backgroundColor: `rgb(${hue} / 0.14)`, borderColor: `rgb(${hue} / 0.30)` }}
               >
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: theme.dot }} />
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: `rgb(${hue})` }} />
                 <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
               </span>
               {showResponseState && responseState && (
@@ -708,31 +758,55 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     columns.push({
       key: 'due_date',
       col: {
-        title: t('fields.dueDate', 'Due Date'),
+        title: `${t('fields.dueDate', 'Due Date')} / ${t('fields.sla', 'SLA')}`,
         dataIndex: 'due_date',
         width: '9%',
-        render: (value: string | null) => {
-          if (!value) {
-            return <div className="text-sm text-[rgb(var(--color-text-400))]">No due date</div>;
+        render: (value: string | null, record: ITicketListItem) => {
+          const now = new Date();
+          const sla = formatSlaCell(calculateSlaStatus(record));
+          const dueDate = value ? new Date(value) : null;
+
+          const toneClass = (tone: 'over' | 'soon' | 'ok' | 'muted'): string =>
+            tone === 'over' ? 'text-red-600 dark:text-red-400 font-medium'
+              : tone === 'soon' ? 'text-orange-600 dark:text-orange-400'
+                : 'text-[rgb(var(--color-text-400))]';
+
+          // Secondary line: live SLA state when the ticket has an SLA policy;
+          // otherwise a relative "in N days" hint for future dates (overdue / today /
+          // tomorrow are already explicit in the primary label — no redundant line).
+          let secondary: { text: string; tone: 'over' | 'soon' | 'ok' | 'muted' } | null = null;
+          if (sla) {
+            secondary = { text: sla.text, tone: sla.tone };
+          } else if (dueDate && dueDate.getTime() >= now.getTime()) {
+            const d = daysUntil(dueDate, now);
+            if (d >= 2) secondary = { text: `in ${d} days`, tone: 'muted' };
           }
 
-          const dueDate = new Date(value);
-          const now = new Date();
-          const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-          // Midnight (00:00) means a date-only due date — drop the time portion.
-          const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
-          const displayFormat = isMidnight ? 'MMM d, yyyy' : dateTimeFormat;
-
-          // Candidate #1: primary date colored by urgency + a relative secondary line.
+          // Primary date colour: SLA urgency wins, then due-date urgency.
           let primaryClass = 'text-[rgb(var(--color-text-700))]';
-          if (hoursUntilDue < 0) primaryClass = 'text-red-600 dark:text-red-400';
-          else if (hoursUntilDue <= 24) primaryClass = 'text-orange-600 dark:text-orange-400';
+          if (sla?.tone === 'over') primaryClass = 'text-red-600 dark:text-red-400';
+          else if (sla?.tone === 'soon') primaryClass = 'text-orange-600 dark:text-orange-400';
+          else if (dueDate) {
+            const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+            if (hoursUntilDue < 0) primaryClass = 'text-red-600 dark:text-red-400';
+            else if (hoursUntilDue <= 24) primaryClass = 'text-orange-600 dark:text-orange-400';
+          }
+
+          let primaryText: string;
+          if (dueDate) {
+            primaryText = formatDuePrimary(dueDate, now);
+          } else {
+            // No due date — still surface SLA below it if present.
+            if (!secondary) {
+              return <div className="text-sm text-[rgb(var(--color-text-400))]">No due date</div>;
+            }
+            primaryText = 'No due date';
+          }
 
           return (
             <div className="flex flex-col leading-tight">
-              <span className={`text-sm font-medium ${primaryClass}`}>{format(dueDate, displayFormat)}</span>
-              <span className="text-[11px] text-[rgb(var(--color-text-400))]">{relativeDueLabel(dueDate, now)}</span>
+              <span className={dueDate ? `text-sm font-medium ${primaryClass}` : 'text-sm text-[rgb(var(--color-text-400))]'}>{primaryText}</span>
+              {secondary && <span className={`text-[11px] ${toneClass(secondary.tone)}`}>{secondary.text}</span>}
             </div>
           );
         },
