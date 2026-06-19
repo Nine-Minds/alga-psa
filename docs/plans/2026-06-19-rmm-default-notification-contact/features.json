@@ -21,11 +21,11 @@
   { "id": "F017", "description": "createHuntressTicket resolves the contact and sets contact_name_id on insert", "implemented": true, "commitGroup": "huntress-contact", "prdRefs": ["Goals"] },
   { "id": "F018", "description": "incidentProcessor passes mapping.default_contact_id to createHuntressTicket", "implemented": true, "commitGroup": "huntress-contact", "prdRefs": ["Affected Code"] },
 
-  { "id": "F019", "description": "Huntress incidentProcessor publishes TICKET_CREATED after the create transaction commits", "implemented": false, "commitGroup": "event-emission", "prdRefs": ["Goals", "Risks & Rollout"] },
-  { "id": "F020", "description": "Shared processRmmAlertEvent publishes TICKET_CREATED after its create transaction commits, only when a ticket was created", "implemented": false, "commitGroup": "event-emission", "prdRefs": ["Goals"] },
-  { "id": "F021", "description": "createTicketForAlertId publishes TICKET_CREATED after its transaction commits", "implemented": false, "commitGroup": "event-emission", "prdRefs": ["Goals"] },
-  { "id": "F022", "description": "Event uses TicketModelEventPublisher; payload carries tenantId/ticketId/source=provider; publish failures are swallowed and never break ticket creation", "implemented": false, "commitGroup": "event-emission", "prdRefs": ["Data Model / Integration Notes"] },
-  { "id": "F023", "description": "Append-note / status-update paths do NOT emit TICKET_CREATED (only the create path does)", "implemented": false, "commitGroup": "event-emission", "prdRefs": ["Non-Goals"] },
+  { "id": "F019", "description": "Huntress incidentProcessor publishes TICKET_CREATED after the create transaction commits", "implemented": true, "commitGroup": "event-emission", "prdRefs": ["Goals", "Risks & Rollout"] },
+  { "id": "F020", "description": "Shared processRmmAlertEvent publishes TICKET_CREATED after its create transaction commits, only when a ticket was created", "implemented": true, "commitGroup": "event-emission", "prdRefs": ["Goals"] },
+  { "id": "F021", "description": "createTicketForAlertId publishes TICKET_CREATED after its transaction commits", "implemented": true, "commitGroup": "event-emission", "prdRefs": ["Goals"] },
+  { "id": "F022", "description": "Event uses TicketModelEventPublisher; payload carries tenantId/ticketId/source=provider; publish failures are swallowed and never break ticket creation", "implemented": true, "commitGroup": "event-emission", "prdRefs": ["Data Model / Integration Notes"] },
+  { "id": "F023", "description": "Append-note / status-update paths do NOT emit TICKET_CREATED (only the create path does)", "implemented": true, "commitGroup": "event-emission", "prdRefs": ["Non-Goals"] },
 
   { "id": "F024", "description": "RmmOrganizationMapping interface gains default_contact_id?: string", "implemented": false, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },
   { "id": "F025", "description": "getHuntressOrganizationMappings selects default_contact_id", "implemented": false, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },

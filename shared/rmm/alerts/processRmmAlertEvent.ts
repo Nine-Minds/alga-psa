@@ -12,6 +12,7 @@ import { computeDedupKey } from './dedupKey';
 import { evaluateAlertRules } from './ruleEvaluator';
 import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
+import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
 
 /**
@@ -271,6 +272,13 @@ async function processTriggered(
 
   if (result.outcome !== 'suppressed' && result.outcome !== 'skipped') {
     await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, context.assetId);
+    if (result.outcome === 'ticket_created' && result.ticketId) {
+      await publishRmmTicketCreated({
+        tenantId: event.tenantId,
+        ticketId: result.ticketId,
+        source: event.provider,
+      });
+    }
     if (result.outcome === 'ticket_created' && result.matchedRuleId) {
       await notifySafely(ctx, event, result, context.assetId);
     }

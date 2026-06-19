@@ -79,3 +79,13 @@ Two independent gaps in the integration create paths:
   - Added Huntress integration coverage for direct default contact, client primary fallback, mapped incident default, and unmapped fallback/no-contact behavior.
   - Verification blocked: `npm -w sebastian-ee run typecheck` fails on unrelated generated registry/package exports (`@alga-psa/agent-tooling`, `@alga-psa/user-activities`).
   - Verification blocked: `npx vitest run src/__tests__/integration/huntressIncidentProcessor.integration.test.ts` from `ee/server` could not connect to local Postgres (`password authentication failed for user "postgres"`).
+- `event-emission` group: added `shared/rmm/alerts/ticketCreatedEvent.ts` and wired `TICKET_CREATED` publishing into Huntress, `processRmmAlertEvent`, and `createTicketForAlertId`.
+  - Shared raw-transaction paths publish after `knex.transaction(...)` resolves using no-trx `TicketModelEventPublisher`, so publisher failures are swallowed.
+  - Huntress uses the trx-bound publisher inside `withTransaction`, so the event is queued via `registerAfterCommit`.
+  - Append-note / occurrence-appended / status-update paths do not call the ticket-created helper.
+  - Added `packages/tickets/src/lib/adapters/TicketModelEventPublisher.test.ts` for after-commit payload and failure-swallow behavior.
+  - Added `shared/rmm/alerts/__tests__/ticketCreatedEventUsage.contract.test.ts` guarding create-path event usage and non-create path exclusions.
+  - Verification: `npx vitest run src/lib/adapters/TicketModelEventPublisher.test.ts` from `packages/tickets` passed.
+  - Verification: `npx vitest run rmm/alerts/__tests__/ticketCreatedEventUsage.contract.test.ts` from `shared` passed.
+  - Verification: `npm -w @alga-psa/shared run typecheck` passed.
+  - Full DB/email integration verification remains blocked by the local Postgres auth issue noted above.

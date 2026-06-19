@@ -6,6 +6,7 @@ export { computeDedupKey } from './dedupKey';
 export { createTicketForAlert, addAlertInternalNote, providerLabel } from './ticketCreator';
 export { createTicketForAlertId } from './createTicketForAlertId';
 export { resolveRmmTicketContactId } from './resolveContact';
+export { publishRmmTicketCreated } from './ticketCreatedEvent';
 export { isTicketUntouched } from './untouched';
 export { registerRmmAlertOutboundAdapter, getRmmAlertOutboundAdapter } from './outboundRegistry';
 export {

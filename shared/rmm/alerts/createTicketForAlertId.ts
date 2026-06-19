@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { NormalizedRmmAlertEvent, RmmAlertRuleActions } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { createTicketForAlert, type CreatedAlertTicket } from './ticketCreator';
+import { publishRmmTicketCreated } from './ticketCreatedEvent';
 
 export interface CreateTicketForAlertIdArgs {
   tenantId: string;
@@ -86,7 +87,7 @@ export async function createTicketForAlertId(
   };
   const actions = rmmAlertRuleActionsSchema.parse({ createTicket: true, ...(args.overrides ?? {}) });
 
-  return knex.transaction(async (trx) => {
+  const created = await knex.transaction(async (trx) => {
     const created = await createTicketForAlert(trx, {
       event,
       actions,
@@ -100,6 +101,14 @@ export async function createTicketForAlertId(
       .update({ ticket_id: created.ticket_id, updated_at: new Date().toISOString() });
     return created;
   });
+
+  await publishRmmTicketCreated({
+    tenantId,
+    ticketId: created.ticket_id,
+    source: alert.provider,
+  });
+
+  return created;
 }
 
 function safeParse(value: string): unknown {

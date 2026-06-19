@@ -56,6 +56,7 @@
     "@alga-psa/db": "file:../packages/db",
     "@alga-psa/event-bus": "file:../packages/event-bus",
     "@alga-psa/event-schemas": "file:../packages/event-schemas",
+    "@alga-psa/tickets": "file:../packages/tickets",
     "@alga-psa/types": "file:../packages/types",
     "@blocknote/server-util": "^0.47.3",
     "@js-temporal/polyfill": "^0.4.4",
