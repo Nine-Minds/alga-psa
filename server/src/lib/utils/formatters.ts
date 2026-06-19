@@ -2,16 +2,27 @@
  * Utility functions for formatting values
  */
 
+import { LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+
+/**
+ * System default locale used as the final fallback when a caller does not
+ * pass a resolved locale. Prefer threading the recipient/tenant locale from
+ * the hierarchical resolver (user -> client -> tenant -> system) and only
+ * relying on this constant as a last resort. Intl gracefully handles a plain
+ * language code like 'en'.
+ */
+const DEFAULT_LOCALE = LOCALE_CONFIG.defaultLocale;
+
 /**
  * Format a number as currency
  * @param value The number to format
- * @param locale The locale to use (default: 'en-US')
+ * @param locale The locale to use (default: system default locale, currently 'en')
  * @param currency The currency code (default: 'USD')
  * @returns Formatted currency string
  */
 export function formatCurrency(
   value: number,
-  locale: string = 'en-US',
+  locale: string = DEFAULT_LOCALE,
   currency: string = 'USD'
 ): string {
   return new Intl.NumberFormat(locale, {
@@ -28,7 +39,7 @@ export function formatCurrency(
  */
 export function formatCurrencyFromMinorUnits(
   minorUnits: number,
-  locale: string = 'en-US',
+  locale: string = DEFAULT_LOCALE,
   currency: string = 'USD'
 ): string {
   const resolved = new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions();
@@ -45,12 +56,12 @@ export function formatCurrencyFromMinorUnits(
 /**
  * Format a date as a string
  * @param date The date to format
- * @param locale The locale to use (default: 'en-US')
+ * @param locale The locale to use (default: system default locale, currently 'en')
  * @returns Formatted date string
  */
 export function formatDate(
   date: Date | string | null | undefined,
-  locale: string = 'en-US'
+  locale: string = DEFAULT_LOCALE
 ): string {
   if (!date) return '';
 

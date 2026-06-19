@@ -28,6 +28,7 @@ import {
   RetryableAccumulatorError,
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { resolveEffectiveTimeZone } from '../../utils/workDate';
 import { rewriteTicketCommentImagesToCid } from './ticketCommentInlineImageEmail';
 import {
@@ -631,22 +632,22 @@ function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newVa
 /**
  * Format changes record into an HTML fragment for use in the "Changes Made" email box.
  */
-async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC'): Promise<string> {
+async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
   const items = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
       const fieldLabel = formatFieldName(field);
       if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
-          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
-          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
+          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
+          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
           return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
         }
         const presentVal = newVal !== undefined ? newVal : oldVal;
-        const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
+        const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone, locale);
         return renderChangeItemHtml(fieldLabel, null, resolvedValue);
       }
-      const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
+      const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
       return renderChangeItemHtml(fieldLabel, null, resolvedValue);
     })
   );
@@ -659,7 +660,7 @@ async function formatChanges(db: any, changes: Record<string, unknown>, tenantId
 /**
  * Resolve field values to human-readable names
  */
-async function resolveValue(db: any, field: string, value: unknown, tenantId: string, timeZone: string = 'UTC'): Promise<string> {
+async function resolveValue(db: any, field: string, value: unknown, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
   if (value === null || value === undefined) {
     return 'None';
   }
@@ -736,14 +737,14 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
           // Check if time is midnight (no time specified)
           const isMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
           if (isMidnight) {
-            return date.toLocaleDateString('en-US', {
+            return date.toLocaleDateString(locale, {
               year: 'numeric',
               month: 'short',
               day: 'numeric',
               timeZone
             });
           }
-          return date.toLocaleString('en-US', {
+          return date.toLocaleString(locale, {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -815,11 +816,13 @@ function formatValue(value: unknown): string {
 
 /**
  * Format a date/time value for display in ticket emails.
- * Uses the resolved timezone (user -> tenant -> UTC).
+ * Uses the resolved timezone (user -> tenant -> UTC) and the resolved
+ * locale (tenant default -> system default 'en').
  */
 function formatTicketDateTime(
   value: Date | string | null | undefined,
-  timeZone: string
+  timeZone: string,
+  locale: string = 'en'
 ): string {
   if (!value) {
     return 'Not available';
@@ -828,7 +831,7 @@ function formatTicketDateTime(
   if (Number.isNaN(date.getTime())) {
     return typeof value === 'string' ? value : 'Not available';
   }
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -896,6 +899,10 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
 
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
+    // Date/time strings are baked into a shared email context reused across all
+    // recipients, so the exact per-recipient locale isn't known here. Use the
+    // tenant default locale (falls back to system default 'en').
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -904,7 +911,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     const clientName = safeString(ticket.client_name) || 'Unassigned Client';
 
-    const createdAt = formatTicketDateTime(ticket.entered_at as string | Date | null, emailTimeZone);
+    const createdAt = formatTicketDateTime(ticket.entered_at as string | Date | null, emailTimeZone, emailLocale);
     const createdByName = safeString(ticket.created_by_name) || 'System';
     const createdDetails = `${createdAt} · ${createdByName}`;
 
@@ -1215,6 +1222,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     });
 
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, updaterUserId);
+    // Shared context reused across recipients; use tenant default locale
+    // (falls back to system default 'en').
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -1293,7 +1303,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const description = descriptionText || 'No description provided.';
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
+    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
 
     // Get updater's name
     const updater = updaterUserId
@@ -1472,7 +1482,8 @@ async function formatAccumulatedChanges(
   db: any,
   accumulatedChanges: AccumulatedChange[],
   tenantId: string,
-  timeZone: string = 'UTC'
+  timeZone: string = 'UTC',
+  locale: string = 'en'
 ): Promise<string> {
   const formattedSections: string[] = [];
 
@@ -1487,7 +1498,7 @@ async function formatAccumulatedChanges(
       ? `${updater.first_name} ${updater.last_name}`
       : (changeSet.userId || 'System');
 
-    const timestamp = new Date(changeSet.timestamp).toLocaleString('en-US', {
+    const timestamp = new Date(changeSet.timestamp).toLocaleString(locale, {
       month: 'short',
       day: '2-digit',
       year: 'numeric',
@@ -1503,12 +1514,12 @@ async function formatAccumulatedChanges(
         if (typeof value === 'object' && value !== null) {
           const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
           if (oldVal !== undefined && newVal !== undefined) {
-            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
-            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
+            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
+            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
             return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
           }
         }
-        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
+        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
         return renderChangeItemHtml(fieldLabel, null, resolvedValue);
       })
     );
@@ -1676,9 +1687,11 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
 
     // Resolve timezone for email formatting (tenant-level, no single userId for accumulated changes)
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId);
+    // Tenant-level locale (no single recipient); falls back to system default 'en'.
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     // Format all accumulated changes
-    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone);
+    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
 
     // Resolve display name for the "Updated By" row from the set of accumulated updaters.
     const uniqueUpdaterIds = Array.from(
@@ -2821,6 +2834,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     };
 
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, closerUserId);
+    // Shared context reused across recipients; use tenant default locale
+    // (falls back to system default 'en').
+    const emailLocale = await getTenantDefaultLocale(tenantId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -2899,7 +2915,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
-    const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
+    const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
 
     // Get closer's name
     const closer = closerUserId
