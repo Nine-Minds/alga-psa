@@ -5,11 +5,11 @@
   { "id": "F004", "description": "Migration down() drops the FK, index, and column cleanly", "implemented": true, "commitGroup": "migration", "prdRefs": ["Acceptance Criteria"] },
   { "id": "F005", "description": "Migration is Citus-safe: nullable ADD COLUMN + colocated FK; fall back to column+index only if a post-hoc FK is rejected on Citus", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
 
-  { "id": "F006", "description": "New shared helper resolveRmmTicketContactId(trx, tenant, { clientId, mappingDefaultContactId }) in shared/rmm/alerts/resolveContact.ts", "implemented": false, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
-  { "id": "F007", "description": "Resolver returns the mapping contact when it exists, is active, and belongs to the client", "implemented": false, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
-  { "id": "F008", "description": "Resolver falls back to clients.properties.primary_contact_id when no mapping contact is set", "implemented": false, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
-  { "id": "F009", "description": "Resolver validates the fallback contact (active, belongs to client) and returns null when invalid or absent", "implemented": false, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
-  { "id": "F010", "description": "Resolver runs entirely on the passed trx (no separate admin transaction)", "implemented": false, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
+  { "id": "F006", "description": "New shared helper resolveRmmTicketContactId(trx, tenant, { clientId, mappingDefaultContactId }) in shared/rmm/alerts/resolveContact.ts", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
+  { "id": "F007", "description": "Resolver returns the mapping contact when it exists, is active, and belongs to the client", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
+  { "id": "F008", "description": "Resolver falls back to clients.properties.primary_contact_id when no mapping contact is set", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
+  { "id": "F009", "description": "Resolver validates the fallback contact (active, belongs to client) and returns null when invalid or absent", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
+  { "id": "F010", "description": "Resolver runs entirely on the passed trx (no separate admin transaction)", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
 
   { "id": "F011", "description": "CreateAlertTicketParams gains optional mappingDefaultContactId", "implemented": false, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
   { "id": "F012", "description": "createTicketForAlert resolves the contact and sets tickets.contact_name_id on insert", "implemented": false, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Goals"] },

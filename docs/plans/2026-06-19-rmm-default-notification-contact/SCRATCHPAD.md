@@ -62,3 +62,8 @@ Two independent gaps in the integration create paths:
   - Set migration `transaction: false` and catches FK creation failure so Citus deployments can continue with column+index while runtime validation enforces correctness.
   - Down migration drops FK, index, and column with existence checks.
 - Added `server/src/test/unit/migrations/rmmOrganizationMappingDefaultContactMigration.test.ts` covering T001-T005 as a migration contract.
+- `contact-resolver` group: added `shared/rmm/alerts/resolveContact.ts` and exported it from `shared/rmm/alerts/index.ts`.
+  - Resolver validates mapping and fallback contacts with `tenant`, `client_id`, `contact_name_id`, and `is_inactive: false`.
+  - Invalid mapping contacts fall back to the client's `properties.primary_contact_id`; invalid/absent fallback returns `null`.
+  - It accepts only a caller-provided `trx` and does not import/use `withAdminTransaction`, so create paths see rows in their current transaction.
+  - Added `shared/rmm/alerts/__tests__/resolveContact.test.ts` covering T006-T012.
