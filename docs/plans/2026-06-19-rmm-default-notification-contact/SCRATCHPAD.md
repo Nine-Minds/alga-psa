@@ -73,3 +73,9 @@ Two independent gaps in the integration create paths:
   - Added integration coverage in `ee/server/src/__tests__/integration/rmmAlertPipeline.integration.test.ts` for mapping default, client-default fallback, no-contact behavior, automatic pipeline threading, manual `createTicketForAlertId`, and numbering preservation.
   - Verification: `npm -w @alga-psa/shared run typecheck` passed.
   - Verification blocked: `npx vitest run src/__tests__/integration/rmmAlertPipeline.integration.test.ts` from `ee/server` could not connect to local Postgres (`password authentication failed for user "postgres"`).
+- `huntress-contact` group: updated `ee/server/src/lib/integrations/huntress/incidents/ticketCreator.ts` and `incidentProcessor.ts`.
+  - `CreateHuntressTicketParams` now accepts `defaultContactId`; `createHuntressTicket` resolves it with `resolveRmmTicketContactId` and inserts `tickets.contact_name_id`.
+  - `incidentProcessor` passes `mapping.default_contact_id` for mapped tickets and `null` for unmapped fallback routing.
+  - Added Huntress integration coverage for direct default contact, client primary fallback, mapped incident default, and unmapped fallback/no-contact behavior.
+  - Verification blocked: `npm -w sebastian-ee run typecheck` fails on unrelated generated registry/package exports (`@alga-psa/agent-tooling`, `@alga-psa/user-activities`).
+  - Verification blocked: `npx vitest run src/__tests__/integration/huntressIncidentProcessor.integration.test.ts` from `ee/server` could not connect to local Postgres (`password authentication failed for user "postgres"`).

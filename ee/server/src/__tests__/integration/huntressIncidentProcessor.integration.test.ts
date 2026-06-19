@@ -8,6 +8,7 @@ import {
   processIncident,
   type ProcessIncidentDeps,
 } from '@ee/lib/integrations/huntress/incidents/incidentProcessor';
+import { createHuntressTicket } from '@ee/lib/integrations/huntress/incidents/ticketCreator';
 
 const HOOK_TIMEOUT = 180_000;
 
@@ -18,6 +19,8 @@ const tenantId = uuidv4();
 const userId = uuidv4();
 const clientId = uuidv4();
 const fallbackClientId = uuidv4();
+const primaryContactId = uuidv4();
+const mappingDefaultContactId = uuidv4();
 const securityBoardId = uuidv4();
 const triageBoardId = uuidv4();
 const statusOpenId = uuidv4();
@@ -112,6 +115,7 @@ beforeAll(async () => {
       tenant: tenantId,
       client_id: clientId,
       client_name: 'Acme Corp',
+      properties: JSON.stringify({ primary_contact_id: primaryContactId }),
       is_inactive: false,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
@@ -120,6 +124,31 @@ beforeAll(async () => {
       tenant: tenantId,
       client_id: fallbackClientId,
       client_name: 'Internal (Unmapped Security)',
+      properties: JSON.stringify({}),
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    },
+  ]);
+
+  const contactClientColumn = (await hasColumn('contacts', 'client_id')) ? 'client_id' : 'company_id';
+  await db('contacts').insert([
+    {
+      tenant: tenantId,
+      contact_name_id: primaryContactId,
+      full_name: 'Acme Primary Contact',
+      email: 'primary@example.com',
+      [contactClientColumn]: clientId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    },
+    {
+      tenant: tenantId,
+      contact_name_id: mappingDefaultContactId,
+      full_name: 'Acme Mapping Contact',
+      email: 'mapping@example.com',
+      [contactClientColumn]: clientId,
       is_inactive: false,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
@@ -206,6 +235,7 @@ beforeAll(async () => {
     external_organization_id: '500',
     external_organization_name: 'Acme Corp',
     client_id: clientId,
+    default_contact_id: mappingDefaultContactId,
     auto_sync_assets: false,
     auto_create_tickets: true,
   });
@@ -240,6 +270,7 @@ afterAll(async () => {
     'priorities',
     'statuses',
     'boards',
+    'contacts',
     'clients',
     'users',
     'tenants',
@@ -257,6 +288,40 @@ afterAll(async () => {
 // The lifecycle scenarios build on each other (create → reprocess → close),
 // so opt this suite out of the config-level test shuffling.
 describe('processIncident (DB integration)', { shuffle: false }, () => {
+  it('creates direct Huntress tickets with mapping default or client-default contacts', async () => {
+    const mappingTicket = await db.transaction((trx) =>
+      createHuntressTicket(trx, tenantId, {
+        clientId,
+        boardId: securityBoardId,
+        priorityId: pHighId,
+        title: 'Direct mapping contact',
+        body: 'Direct body',
+        note: 'Direct note',
+        sourceReference: 'direct-mapping-contact',
+        defaultContactId: mappingDefaultContactId,
+      }),
+    );
+    const mappingRow = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: mappingTicket.ticket_id })
+      .first();
+    expect(mappingRow.contact_name_id).toBe(mappingDefaultContactId);
+
+    const fallbackTicket = await db.transaction((trx) =>
+      createHuntressTicket(trx, tenantId, {
+        clientId,
+        boardId: securityBoardId,
+        title: 'Direct primary contact',
+        body: 'Direct body',
+        note: 'Direct note',
+        sourceReference: 'direct-primary-contact',
+      }),
+    );
+    const fallbackRow = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: fallbackTicket.ticket_id })
+      .first();
+    expect(fallbackRow.contact_name_id).toBe(primaryContactId);
+  });
+
   it('creates a routed, self-contained ticket for a new mapped incident', async () => {
     const result = await processIncident(db, tenantId, integration, incident(), deps);
     expect(result.ok).toBe(true);
@@ -274,6 +339,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .first();
     expect(ticket.client_id).toBe(clientId);
+    expect(ticket.contact_name_id).toBe(mappingDefaultContactId);
     expect(ticket.board_id).toBe(securityBoardId);
     expect(ticket.priority_id).toBe(pHighId);
     expect(ticket.status_id).toBe(statusOpenId);
@@ -361,6 +427,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .first();
     expect(ticket.client_id).toBe(fallbackClientId);
+    expect(ticket.contact_name_id).toBeNull();
     expect(ticket.board_id).toBe(triageBoardId);
     expect(ticket.title).toContain('[Unmapped Org]');
 

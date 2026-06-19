@@ -7,6 +7,7 @@
  */
 
 import { Knex } from 'knex';
+import { resolveRmmTicketContactId } from '@alga-psa/shared/rmm/alerts';
 
 export interface CreateHuntressTicketParams {
   clientId: string;
@@ -21,6 +22,7 @@ export interface CreateHuntressTicketParams {
   /** Huntress incident id, stringified. */
   sourceReference: string;
   assetId?: string | null;
+  defaultContactId?: string | null;
 }
 
 export interface CreatedHuntressTicket {
@@ -56,6 +58,10 @@ export async function createHuntressTicket(
   if (!ticketNumber) {
     throw new Error('Failed to generate ticket number');
   }
+  const contactId = await resolveRmmTicketContactId(trx, tenantId, {
+    clientId: params.clientId,
+    mappingDefaultContactId: params.defaultContactId,
+  });
   const now = new Date().toISOString();
 
   const [ticket] = await trx('tickets')
@@ -64,6 +70,7 @@ export async function createHuntressTicket(
       ticket_number: ticketNumber,
       title: params.title,
       client_id: params.clientId,
+      contact_name_id: contactId,
       status_id: defaultStatus.status_id,
       priority_id: params.priorityId ?? null,
       board_id: params.boardId,

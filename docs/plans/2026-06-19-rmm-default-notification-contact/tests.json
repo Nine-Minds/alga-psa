@@ -20,10 +20,10 @@
   { "id": "T017", "description": "createTicketForAlertId threads the org mapping default_contact_id through to the created ticket", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F014"] },
   { "id": "T018", "description": "Ticket numbering still uses generate_next_number after the contact change (no regression)", "implemented": true, "commitGroup": "shared-pipeline-contact", "featureIds": ["F012"] },
 
-  { "id": "T019", "description": "createHuntressTicket sets contact_name_id from defaultContactId", "implemented": false, "commitGroup": "huntress-contact", "featureIds": ["F016", "F017"] },
-  { "id": "T020", "description": "createHuntressTicket falls back to the client default contact", "implemented": false, "commitGroup": "huntress-contact", "featureIds": ["F017"] },
-  { "id": "T021", "description": "incidentProcessor passes mapping.default_contact_id to createHuntressTicket", "implemented": false, "commitGroup": "huntress-contact", "featureIds": ["F018"] },
-  { "id": "T022", "description": "Unmapped incident (fallback/triage client) resolves no mapping contact and creates the ticket without error", "implemented": false, "commitGroup": "huntress-contact", "featureIds": ["F015", "F018"] },
+  { "id": "T019", "description": "createHuntressTicket sets contact_name_id from defaultContactId", "implemented": true, "commitGroup": "huntress-contact", "featureIds": ["F016", "F017"] },
+  { "id": "T020", "description": "createHuntressTicket falls back to the client default contact", "implemented": true, "commitGroup": "huntress-contact", "featureIds": ["F017"] },
+  { "id": "T021", "description": "incidentProcessor passes mapping.default_contact_id to createHuntressTicket", "implemented": true, "commitGroup": "huntress-contact", "featureIds": ["F018"] },
+  { "id": "T022", "description": "Unmapped incident (fallback/triage client) resolves no mapping contact and creates the ticket without error", "implemented": true, "commitGroup": "huntress-contact", "featureIds": ["F015", "F018"] },
 
   { "id": "T023", "description": "Huntress create publishes TICKET_CREATED with tenantId and ticketId after commit", "implemented": false, "commitGroup": "event-emission", "featureIds": ["F019", "F022"] },
   { "id": "T024", "description": "Shared processRmmAlertEvent publishes TICKET_CREATED on the create path", "implemented": false, "commitGroup": "event-emission", "featureIds": ["F020"] },

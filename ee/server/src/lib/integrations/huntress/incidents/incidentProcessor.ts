@@ -183,6 +183,7 @@ export async function processIncident(
           note: buildCreationNote(incident),
           sourceReference: externalAlertId,
           assetId: matchedAssetId,
+          defaultContactId: action.unmapped ? null : mapping?.default_contact_id ?? null,
         });
 
         await trx('rmm_alerts')

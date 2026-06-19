@@ -17,9 +17,9 @@
   { "id": "F014", "description": "createTicketForAlertId selects default_contact_id from the org mapping and passes it through", "implemented": true, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Affected Code"] },
   { "id": "F015", "description": "Unmapped / no-mapping alert passes undefined mappingDefaultContactId so the client-default fallback applies", "implemented": true, "commitGroup": "shared-pipeline-contact", "prdRefs": ["Contact Resolution"] },
 
-  { "id": "F016", "description": "CreateHuntressTicketParams gains optional defaultContactId", "implemented": false, "commitGroup": "huntress-contact", "prdRefs": ["Affected Code"] },
-  { "id": "F017", "description": "createHuntressTicket resolves the contact and sets contact_name_id on insert", "implemented": false, "commitGroup": "huntress-contact", "prdRefs": ["Goals"] },
-  { "id": "F018", "description": "incidentProcessor passes mapping.default_contact_id to createHuntressTicket", "implemented": false, "commitGroup": "huntress-contact", "prdRefs": ["Affected Code"] },
+  { "id": "F016", "description": "CreateHuntressTicketParams gains optional defaultContactId", "implemented": true, "commitGroup": "huntress-contact", "prdRefs": ["Affected Code"] },
+  { "id": "F017", "description": "createHuntressTicket resolves the contact and sets contact_name_id on insert", "implemented": true, "commitGroup": "huntress-contact", "prdRefs": ["Goals"] },
+  { "id": "F018", "description": "incidentProcessor passes mapping.default_contact_id to createHuntressTicket", "implemented": true, "commitGroup": "huntress-contact", "prdRefs": ["Affected Code"] },
 
   { "id": "F019", "description": "Huntress incidentProcessor publishes TICKET_CREATED after the create transaction commits", "implemented": false, "commitGroup": "event-emission", "prdRefs": ["Goals", "Risks & Rollout"] },
   { "id": "F020", "description": "Shared processRmmAlertEvent publishes TICKET_CREATED after its create transaction commits, only when a ticket was created", "implemented": false, "commitGroup": "event-emission", "prdRefs": ["Goals"] },
