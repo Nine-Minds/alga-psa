@@ -25,6 +25,7 @@ type ManageStatus = {
   license: {
     edition: string | null;
     expiresAt: string | null;
+    perpetual: boolean;
     status: "active" | "expired" | "unknown";
   };
   appUrl: {
@@ -457,13 +458,15 @@ function LicenseTab({
         <div>
           <dt>Expires</dt>
           <dd>
-            {lic.expiresAt
-              ? new Date(lic.expiresAt).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "—"}
+            {lic.perpetual
+              ? "Perpetual"
+              : lic.expiresAt
+                ? new Date(lic.expiresAt).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : "—"}
           </dd>
         </div>
       </dl>

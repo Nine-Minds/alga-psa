@@ -42,10 +42,19 @@ test('license JWS format check + claim decode + status', () => {
   const status = licenseStatusFromClaims(claims, null);
   assert.equal(status.edition, 'pro');
   assert.equal(status.status, 'active');
+  assert.equal(status.perpetual, false);
+  assert.ok(status.expiresAt, 'a real near-future expiry keeps its date');
 
   const past = licenseStatusFromClaims({ exp: 1 }, 'ee');
   assert.equal(past.status, 'expired');
   assert.equal(past.edition, 'ee');
+
+  // The 9999999999 "all nines" sentinel (= 2286-11-20) reads as perpetual,
+  // not a literal far-future date.
+  const perpetual = licenseStatusFromClaims({ edition: 'pro', exp: 9999999999 }, null);
+  assert.equal(perpetual.perpetual, true);
+  assert.equal(perpetual.status, 'active');
+  assert.equal(perpetual.expiresAt, null);
 });
 
 test('applyLicense rejects an invalid JWS without touching kubectl', async () => {

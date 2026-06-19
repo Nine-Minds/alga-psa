@@ -12,6 +12,11 @@ import { appUrlFromInput, hostFromAppUrl, setYamlScalar } from './setup-engine.m
 
 const JWS_RE = /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/;
 
+// Licenses whose expiry lands beyond this are treated as perpetual. No genuine
+// commercial term runs to 2100; far-future values (e.g. the 9999999999
+// "all nines" sentinel = 2286-11-20) are placeholders meaning "never expires".
+const PERPETUAL_EXP_THRESHOLD_MS = Date.UTC(2100, 0, 1);
+
 function nowMs() {
   return new Date().getTime();
 }
@@ -60,14 +65,22 @@ export function licenseStatusFromClaims(claims, editionFallback) {
   const out = {
     edition: editionFallback || (claims && (claims.edition || claims.tier)) || null,
     expiresAt: null,
+    perpetual: false,
     status: 'unknown'
   };
   const exp = claims && claims.exp;
   if (exp) {
     const ms = Number(exp) * 1000;
     if (Number.isFinite(ms) && ms > 0) {
-      out.expiresAt = new Date(ms).toISOString();
-      out.status = ms > nowMs() ? 'active' : 'expired';
+      if (ms >= PERPETUAL_EXP_THRESHOLD_MS) {
+        // Sentinel / far-future expiry — surface "perpetual" rather than a
+        // literal year-2286 date.
+        out.perpetual = true;
+        out.status = 'active';
+      } else {
+        out.expiresAt = new Date(ms).toISOString();
+        out.status = ms > nowMs() ? 'active' : 'expired';
+      }
     }
   }
   return out;
@@ -314,7 +327,7 @@ export async function collectManageStatus(deps) {
   };
 
   // License.
-  let license = { edition: null, expiresAt: null, status: 'unknown' };
+  let license = { edition: null, expiresAt: null, perpetual: false, status: 'unknown' };
   try {
     license = await readLicenseStatus({ kube, namespace: licenseNamespace, secretName: licenseSecretName });
   } catch { /* best effort */ }
