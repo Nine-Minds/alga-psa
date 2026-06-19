@@ -1,9 +1,9 @@
 [
-  { "id": "F001", "description": "New CE migration in server/migrations/ adds default_contact_id uuid NULL to rmm_organization_mappings", "implemented": false, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
-  { "id": "F002", "description": "Migration adds composite FK (tenant, default_contact_id) -> contacts(tenant, contact_name_id) ON DELETE SET NULL, mirroring the existing client FK", "implemented": false, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
-  { "id": "F003", "description": "Migration adds index (tenant, default_contact_id)", "implemented": false, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
-  { "id": "F004", "description": "Migration down() drops the FK, index, and column cleanly", "implemented": false, "commitGroup": "migration", "prdRefs": ["Acceptance Criteria"] },
-  { "id": "F005", "description": "Migration is Citus-safe: nullable ADD COLUMN + colocated FK; fall back to column+index only if a post-hoc FK is rejected on Citus", "implemented": false, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
+  { "id": "F001", "description": "New CE migration in server/migrations/ adds default_contact_id uuid NULL to rmm_organization_mappings", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
+  { "id": "F002", "description": "Migration adds composite FK (tenant, default_contact_id) -> contacts(tenant, contact_name_id) ON DELETE SET NULL, mirroring the existing client FK", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
+  { "id": "F003", "description": "Migration adds index (tenant, default_contact_id)", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
+  { "id": "F004", "description": "Migration down() drops the FK, index, and column cleanly", "implemented": true, "commitGroup": "migration", "prdRefs": ["Acceptance Criteria"] },
+  { "id": "F005", "description": "Migration is Citus-safe: nullable ADD COLUMN + colocated FK; fall back to column+index only if a post-hoc FK is rejected on Citus", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
 
   { "id": "F006", "description": "New shared helper resolveRmmTicketContactId(trx, tenant, { clientId, mappingDefaultContactId }) in shared/rmm/alerts/resolveContact.ts", "implemented": false, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
   { "id": "F007", "description": "Resolver returns the mapping contact when it exists, is active, and belongs to the client", "implemented": false, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },

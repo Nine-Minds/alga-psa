@@ -54,3 +54,11 @@ Two independent gaps in the integration create paths:
 - E2E local: set default contact on a mapping; drive a Tactical RMM alert (`~/tactical-rmm`) or Huntress incident; confirm ticket `contact_name_id` set + Email Notification Logs shows "Ticket Created Client".
 - MCP spot-check: `mcp__alga-psa__call_api_endpoint` `get-_api_v1_tickets_id` → confirm `contact_name`/`contact_name_id` populated.
 - Per user policy: no git staging/commit/push without explicit request.
+
+## 2026-06-19 progress
+- `migration` group: added `server/migrations/20260619120000_add_default_contact_to_rmm_org_mappings.cjs`.
+  - Adds nullable `default_contact_id`, partial lookup index `(tenant, default_contact_id)`, and tenant-scoped FK to `contacts(tenant, contact_name_id)`.
+  - Used raw SQL for `ON DELETE SET NULL (default_contact_id)` so deleting a contact cannot null the mapping tenant.
+  - Set migration `transaction: false` and catches FK creation failure so Citus deployments can continue with column+index while runtime validation enforces correctness.
+  - Down migration drops FK, index, and column with existence checks.
+- Added `server/src/test/unit/migrations/rmmOrganizationMappingDefaultContactMigration.test.ts` covering T001-T005 as a migration contract.

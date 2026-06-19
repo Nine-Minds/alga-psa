@@ -1,9 +1,9 @@
 [
-  { "id": "T001", "description": "Migration up adds a nullable default_contact_id column to rmm_organization_mappings", "implemented": false, "commitGroup": "migration", "featureIds": ["F001"] },
-  { "id": "T002", "description": "FK rejects a contact from another tenant/client and SET NULLs default_contact_id when the contact is deleted", "implemented": false, "commitGroup": "migration", "featureIds": ["F002"] },
-  { "id": "T003", "description": "Index (tenant, default_contact_id) is created", "implemented": false, "commitGroup": "migration", "featureIds": ["F003"] },
-  { "id": "T004", "description": "Migration down removes the column, FK, and index", "implemented": false, "commitGroup": "migration", "featureIds": ["F004"] },
-  { "id": "T005", "description": "up -> down -> up round-trip succeeds (idempotent)", "implemented": false, "commitGroup": "migration", "featureIds": ["F004", "F005"] },
+  { "id": "T001", "description": "Migration up adds a nullable default_contact_id column to rmm_organization_mappings", "implemented": true, "commitGroup": "migration", "featureIds": ["F001"] },
+  { "id": "T002", "description": "FK rejects a contact from another tenant/client and SET NULLs default_contact_id when the contact is deleted", "implemented": true, "commitGroup": "migration", "featureIds": ["F002"] },
+  { "id": "T003", "description": "Index (tenant, default_contact_id) is created", "implemented": true, "commitGroup": "migration", "featureIds": ["F003"] },
+  { "id": "T004", "description": "Migration down removes the column, FK, and index", "implemented": true, "commitGroup": "migration", "featureIds": ["F004"] },
+  { "id": "T005", "description": "up -> down -> up round-trip succeeds (idempotent)", "implemented": true, "commitGroup": "migration", "featureIds": ["F004", "F005"] },
 
   { "id": "T006", "description": "Resolver returns the mapping contact when it is active and belongs to the client", "implemented": false, "commitGroup": "contact-resolver", "featureIds": ["F007"] },
   { "id": "T007", "description": "Resolver ignores an inactive mapping contact and falls back to the client default", "implemented": false, "commitGroup": "contact-resolver", "featureIds": ["F007", "F008"] },
