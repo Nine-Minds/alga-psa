@@ -155,8 +155,33 @@ export class QuoteService extends BaseService<IQuote> {
     return withTransaction(knex, async (trx) => {
       const { items, ...quoteData } = data;
 
+      // DD-2/F-2: resolve currency when not explicitly provided. Precedence:
+      // explicit input -> quote's client default -> tenant default
+      // (default_billing_settings) -> 'USD'. We replicate resolveClientBillingCurrency()
+      // with a direct, tenant-scoped read here rather than calling the withAuth
+      // action (which would double-resolve auth/tenant and throws on multi-currency
+      // contracts). Set explicitly because quotes.currency_code is NOT NULL DEFAULT 'USD'.
+      let currencyCode = quoteData.currency_code;
+      if (!currencyCode) {
+        if (quoteData.client_id) {
+          const client = await trx('clients')
+            .where({ tenant: context.tenant, client_id: quoteData.client_id })
+            .select('default_currency_code')
+            .first();
+          currencyCode = client?.default_currency_code ?? undefined;
+        }
+        if (!currencyCode) {
+          const billingSettings = await trx('default_billing_settings')
+            .where({ tenant: context.tenant })
+            .select('default_currency_code')
+            .first();
+          currencyCode = billingSettings?.default_currency_code ?? 'USD';
+        }
+      }
+
       const quote = await Quote.create(trx, context.tenant, {
         ...quoteData,
+        currency_code: currencyCode,
         subtotal: 0,
         discount_total: 0,
         tax: 0,

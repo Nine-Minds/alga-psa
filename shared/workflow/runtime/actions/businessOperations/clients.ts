@@ -775,6 +775,18 @@ async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Pro
   return status.status_id;
 }
 
+// Resolve the tenant's configured default billing currency (last-resort fallback 'USD').
+// Mirrors the tenant-default read in resolveClientBillingCurrency so new clients adopt the
+// configured org default at creation instead of a literal 'USD'.
+async function getTenantDefaultBillingCurrency(tx: TenantTxContext): Promise<string> {
+  const billingSettings = await tx.trx('default_billing_settings')
+    .where({ tenant: tx.tenantId })
+    .select('default_currency_code')
+    .first();
+
+  return billingSettings?.default_currency_code || 'USD';
+}
+
 async function appendClientNoteBlock(
   tx: TenantTxContext,
   client: Record<string, any>,
@@ -1159,6 +1171,10 @@ export function registerClientActions(): void {
         const clientColumns = await getTableColumns(tx, 'clients');
         const createdId = uuidv4();
         const nowIso = new Date().toISOString();
+        // When the caller does not specify a currency, adopt the tenant's configured default
+        // (default_billing_settings.default_currency_code) rather than the literal 'USD'.
+        const defaultCurrencyCode =
+          input.default_currency_code ?? (await getTenantDefaultBillingCurrency(tx));
         const createRow = pickExistingFields(
           {
             tenant: tx.tenantId,
@@ -1169,7 +1185,7 @@ export function registerClientActions(): void {
             billing_email: input.email ?? null,
             notes: input.notes ?? null,
             properties: input.properties ? JSON.stringify(input.properties) : null,
-            default_currency_code: input.default_currency_code ?? 'USD',
+            default_currency_code: defaultCurrencyCode,
             parent_client_id: input.parent_client_id ?? null,
             contract_line_id: input.contract_line_id ?? null,
             is_default: input.is_default ?? false,

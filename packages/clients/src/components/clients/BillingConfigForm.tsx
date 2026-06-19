@@ -214,6 +214,9 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
             <div className="space-y-2">
                 <CustomSelect
                     label={t('billingConfigForm.defaultCurrency', { defaultValue: 'Default Currency' })}
+                    // The resolved value (client currency or, for a brand-new client, the tenant's
+                    // configured default) is supplied via billingConfig.default_currency_code by the
+                    // parent. 'USD' is only a transient last-resort before that value resolves.
                     value={billingConfig.default_currency_code || 'USD'}
                     onValueChange={handleSelectChange('default_currency_code')}
                     options={CURRENCY_OPTIONS}
