@@ -12,8 +12,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClients } from '@alga-psa/clients/actions';
-import type { IClient } from '@alga-psa/types';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
+import type { IClient, IContact } from '@alga-psa/types';
 import { Building2, RefreshCw } from 'lucide-react';
 import {
   getHuntressOrganizationMappings,
@@ -44,6 +45,7 @@ function isAutoMatched(mapping: RmmOrganizationMapping): boolean {
 const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMappingChanged }) => {
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
+  const [contacts, setContacts] = useState<IContact[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -52,12 +54,14 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
     setLoading(true);
     setError(null);
     try {
-      const [mappingsResult, clientsResult] = await Promise.all([
+      const [mappingsResult, clientsResult, contactsResult] = await Promise.all([
         getHuntressOrganizationMappings(),
         getAllClients(false),
+        getAllContacts('active'),
       ]);
       setMappings(mappingsResult);
       setClients(clientsResult ?? []);
+      setContacts(contactsResult ?? []);
     } catch {
       setError('Failed to load organization mappings');
     } finally {
@@ -80,8 +84,22 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
 
   const handleClientChange = (mappingId: string, clientId: string | null) => {
     startTransition(async () => {
-      const result = await updateHuntressOrganizationMapping(mappingId, { client_id: clientId });
+      const result = await updateHuntressOrganizationMapping(mappingId, {
+        client_id: clientId,
+        default_contact_id: null,
+      });
       if (!result.success) setError(result.error ?? 'Failed to update mapping');
+      await load();
+      onMappingChanged?.();
+    });
+  };
+
+  const handleDefaultContactChange = (mappingId: string, contactId: string) => {
+    startTransition(async () => {
+      const result = await updateHuntressOrganizationMapping(mappingId, {
+        default_contact_id: contactId || null,
+      });
+      if (!result.success) setError(result.error ?? 'Failed to update default contact');
       await load();
       onMappingChanged?.();
     });
@@ -141,6 +159,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2 pr-4 font-medium">Huntress Organization</th>
                 <th className="py-2 pr-4 font-medium">Alga Client</th>
+                <th className="py-2 pr-4 font-medium">Default Contact</th>
                 <th className="py-2 pr-4 font-medium">Create Tickets</th>
                 <th className="py-2 font-medium">Status</th>
               </tr>
@@ -159,6 +178,19 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
                       onFilterStateChange={() => {}}
                       clientTypeFilter="all"
                       onClientTypeFilterChange={() => {}}
+                    />
+                  </td>
+                  <td className="py-2 pr-4">
+                    <ContactPicker
+                      id={`huntress-default-contact-picker-${mapping.mapping_id}`}
+                      contacts={contacts}
+                      value={mapping.default_contact_id ?? ''}
+                      onValueChange={(contactId) =>
+                        handleDefaultContactChange(mapping.mapping_id, contactId)
+                      }
+                      clientId={mapping.client_id ?? undefined}
+                      disabled={!mapping.client_id}
+                      placeholder="Select contact"
                     />
                   </td>
                   <td className="py-2 pr-4">

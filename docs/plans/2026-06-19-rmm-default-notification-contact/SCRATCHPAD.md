@@ -94,3 +94,9 @@ Two independent gaps in the integration create paths:
   - Existing Huntress `requireSettingsUpdatePermission` and NinjaOne `hasPermission(...settings...)` gating remains in place.
   - Added `ee/server/src/__tests__/unit/integrations/rmmDefaultContactActions.contract.test.ts` covering T030-T035.
   - Verification: `npx vitest run src/__tests__/unit/integrations/rmmDefaultContactActions.contract.test.ts` from `ee/server` passed.
+- `settings-ui` group: updated Huntress and NinjaOne `OrganizationMappingManager.tsx`.
+  - Both managers load active contacts with `getAllContacts('active')`, render a `Default Contact` column with `ContactPicker`, pass `clientId` for client-scoped filtering, and disable the picker when no client is mapped.
+  - Selecting a contact sends `default_contact_id`; clearing sends `null`. Changing the mapped client also clears `default_contact_id` to avoid stale cross-client selections.
+  - Huntress reloads rows after save; NinjaOne updates local row state. Both bind picker value to `mapping.default_contact_id`, so saved values show after reload.
+  - Added `ee/server/src/__tests__/unit/integrations/rmmDefaultContactUi.contract.test.ts` covering T036-T042.
+  - Verification: `npx vitest run src/__tests__/unit/integrations/rmmDefaultContactUi.contract.test.ts` from `ee/server` passed.

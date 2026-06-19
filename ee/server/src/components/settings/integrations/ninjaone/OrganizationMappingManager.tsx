@@ -13,14 +13,16 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Building2, Link2, Link2Off, RefreshCw, Check } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import {
   getNinjaOneOrganizationMappings,
   updateNinjaOneOrganizationMapping,
   syncNinjaOneOrganizations,
 } from '../../../../lib/actions/integrations/ninjaoneActions';
 import { getAllClients } from '@alga-psa/clients/actions';
+import { getAllContacts } from '@alga-psa/clients/actions';
 import { RmmOrganizationMapping } from '../../../../interfaces/rmm.interfaces';
-import type { IClient } from '@alga-psa/types';
+import type { IClient, IContact } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface OrganizationMappingManagerProps {
@@ -39,6 +41,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
   const { t } = useTranslation('msp/integrations');
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
   const [companies, setCompanies] = useState<IClient[]>([]);
+  const [contacts, setContacts] = useState<IContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -49,12 +52,14 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const [mappingsResult, companiesResult] = await Promise.all([
+      const [mappingsResult, companiesResult, contactsResult] = await Promise.all([
         getNinjaOneOrganizationMappings(),
         getAllClients(false), // Only active clients
+        getAllContacts('active'),
       ]);
       setMappings(mappingsResult);
       setCompanies(companiesResult);
+      setContacts(contactsResult ?? []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load organization mappings';
       setError(message);
@@ -109,13 +114,14 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     try {
       const result = await updateNinjaOneOrganizationMapping(mappingId, {
         company_id: companyId,
+        default_contact_id: null,
       });
       if (result.success) {
         // Update local state
         setMappings((prev) =>
           prev.map((m) =>
             m.mapping_id === mappingId
-              ? { ...m, client_id: companyId ?? undefined }
+              ? { ...m, client_id: companyId ?? undefined, default_contact_id: null }
               : m
           )
         );
@@ -126,6 +132,35 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update mapping';
+      setError(message);
+    } finally {
+      setSavingMappingId(null);
+    }
+  };
+
+  const handleDefaultContactChange = async (mappingId: string, contactId: string) => {
+    setSavingMappingId(mappingId);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await updateNinjaOneOrganizationMapping(mappingId, {
+        default_contact_id: contactId || null,
+      });
+      if (result.success) {
+        setMappings((prev) =>
+          prev.map((m) =>
+            m.mapping_id === mappingId
+              ? { ...m, default_contact_id: contactId || null }
+              : m
+          )
+        );
+        setSuccessMessage('Default contact updated successfully');
+        onMappingChanged?.();
+      } else {
+        setError(result.error ?? 'Failed to update default contact');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update default contact';
       setError(message);
     } finally {
       setSavingMappingId(null);
@@ -259,6 +294,9 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
                   <th className="px-4 py-3 text-left text-sm font-medium">
                     Alga Company
                   </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Default Contact
+                  </th>
                   <th className="px-4 py-3 text-center text-sm font-medium">
                     Auto-Sync
                   </th>
@@ -300,6 +338,22 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
                             placeholder={t('ninjaone.selectCompany')}
                             fitContent={true}
                             className="w-full"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
+                          <ContactPicker
+                            id={`ninjaone-default-contact-picker-${mapping.mapping_id}`}
+                            contacts={contacts}
+                            value={mapping.default_contact_id ?? ''}
+                            onValueChange={(contactId) => {
+                              if (isSaving) return;
+                              handleDefaultContactChange(mapping.mapping_id, contactId);
+                            }}
+                            clientId={mapping.client_id ?? undefined}
+                            disabled={!mapping.client_id || isSaving}
+                            placeholder="Select contact"
                           />
                         </div>
                       </td>

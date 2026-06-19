@@ -40,11 +40,11 @@
   { "id": "T034", "description": "updateNinjaOneOrganizationMapping sets and clears default_contact_id", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F028"] },
   { "id": "T035", "description": "Update actions still enforce existing permission/tier gating", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F026", "F028"] },
 
-  { "id": "T036", "description": "Huntress manager renders a Default Contact picker per mapping row", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F029"] },
-  { "id": "T037", "description": "NinjaOne manager renders a Default Contact picker per mapping row", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F030"] },
-  { "id": "T038", "description": "Picker options are limited to the mapped client's contacts", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F031", "F034"] },
-  { "id": "T039", "description": "Picker is disabled when the row has no mapped client", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F032"] },
-  { "id": "T040", "description": "Selecting a contact calls the update action with default_contact_id", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F033"] },
-  { "id": "T041", "description": "Clearing the contact calls the update action with null", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F033"] },
-  { "id": "T042", "description": "Saved default contact is reflected after reload", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F033"] }
+  { "id": "T036", "description": "Huntress manager renders a Default Contact picker per mapping row", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F029"] },
+  { "id": "T037", "description": "NinjaOne manager renders a Default Contact picker per mapping row", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F030"] },
+  { "id": "T038", "description": "Picker options are limited to the mapped client's contacts", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F031", "F034"] },
+  { "id": "T039", "description": "Picker is disabled when the row has no mapped client", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F032"] },
+  { "id": "T040", "description": "Selecting a contact calls the update action with default_contact_id", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] },
+  { "id": "T041", "description": "Clearing the contact calls the update action with null", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] },
+  { "id": "T042", "description": "Saved default contact is reflected after reload", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] }
 ]
