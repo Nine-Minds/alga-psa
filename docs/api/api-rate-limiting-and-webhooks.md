@@ -659,3 +659,82 @@ Webhook delivery also has an outbound cap per webhook. The default is
 
 Test deliveries sent through `POST /api/v1/webhooks/{id}/test` do not consume
 that outbound bucket.
+
+## Alternative Payments Inbound Webhook
+
+The alternative payments inbound webhook is a **fixed, pre-wired endpoint** that
+payment processors call to push payment lifecycle events into Alga PSA. Unlike
+the configurable inbound webhook system (`POST /api/v1/inbound-webhooks`), this
+endpoint is not tenant-configurable and does not use slugged receiver paths.
+
+### Endpoint
+
+```
+POST /api/webhooks/alternative-payments
+GET  /api/webhooks/alternative-payments   ← health check
+```
+
+### Authentication
+
+Alga verifies incoming requests using HMAC-SHA256. The payment processor must
+sign the raw request body and send the digest in **one** of the following headers
+(checked in order):
+
+1. `X-Alternative-Payments-Signature`
+2. `X-Ap-Signature`
+3. `X-Webhook-Signature`
+
+The value is a raw hex-encoded HMAC-SHA256 digest — no prefix, no `t=…` timestamp
+envelope. This differs from the outbound `X-Alga-Signature` format described
+above.
+
+Configure the shared secret on the Alga side by setting:
+
+```
+ALTERNATIVE_PAYMENTS_WEBHOOK_SECRET=<secret-provided-by-processor>
+```
+
+### Tenant Identification
+
+Alga resolves the target tenant from:
+
+1. The `X-Tenant-Id` request header (preferred), or
+2. A `tenant_id` field in the JSON body.
+
+At least one must be present; requests that cannot be resolved to a tenant are
+rejected with `400 Bad Request`.
+
+### Idempotency
+
+Processed events are recorded in the `payment_webhook_events` table. Alga uses
+the processor-supplied event identifier as an idempotency key. Duplicate
+deliveries are acknowledged with `200 OK` but not re-processed.
+
+### Response Shape
+
+**Success (`200 OK`)**
+
+```json
+{ "received": true }
+```
+
+**Signature mismatch (`401 Unauthorized`)**
+
+```json
+{ "error": "Invalid signature" }
+```
+
+**Missing or unresolvable tenant (`400 Bad Request`)**
+
+```json
+{ "error": "Missing tenant_id" }
+```
+
+### Health Check
+
+```
+GET /api/webhooks/alternative-payments
+```
+
+Returns `200 OK` with `{ "status": "ok" }` when the service is reachable. Payment
+processors may poll this endpoint to confirm connectivity before going live.
