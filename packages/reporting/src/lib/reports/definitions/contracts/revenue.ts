@@ -64,8 +64,10 @@ export const contractRevenueReport: ReportDefinition = {
         ]
       },
       formatting: {
+        // Currency intentionally omitted; the ReportEngine resolves the tenant
+        // default currency at run time (formatting.currency path, owned by WS1).
+        // Hardcoding 'USD' here forced USD regardless of tenant settings.
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
@@ -112,8 +114,9 @@ export const contractRevenueReport: ReportDefinition = {
         filters: []
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
