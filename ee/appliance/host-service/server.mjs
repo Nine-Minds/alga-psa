@@ -26,8 +26,8 @@ import {
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
-const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
-const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
+const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/var/lib/alga-appliance/setup-inputs.json';
+const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/var/lib/alga-appliance/release-selection.json';
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);

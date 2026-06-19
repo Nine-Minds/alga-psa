@@ -6,11 +6,12 @@ import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValues
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
-// Must honor ALGA_APPLIANCE_RELEASE_SELECTION_FILE like setup-engine/status-engine do:
-// the control-plane Deployment sets it to /var/lib/alga-appliance (the only writable
-// mount). Hardcoding /etc made POST /api/updates die at write-release-selection with
-// `EACCES: mkdir /etc/alga-appliance`, so the app-channel update flow never worked.
-const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
+// release-selection.json lives in /var/lib/alga-appliance — the writable hostPath
+// mount owned by the service uid (10001). /etc/alga-appliance is root-owned 0750,
+// so an /etc default silently broke updates two ways: the write EACCES'd, and the
+// read returned empty, which made the rebuild reset the app URL (NEXTAUTH_URL) to
+// the placeholder host. Default to the real location; the env override still wins.
+const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/var/lib/alga-appliance/release-selection.json';
 const DEFAULT_UPDATE_HISTORY_FILE = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/var/lib/alga-appliance/update-history.json';
 const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
 
@@ -93,12 +94,42 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
   const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
   const updateHistoryFile = options.updateHistoryFile || DEFAULT_UPDATE_HISTORY_FILE;
 
-  const previousSelection = readJsonFile(releaseSelectionFile) || {};
+  const previousSelection = readJsonFile(releaseSelectionFile);
+  // An app-channel update rebuilds runtime values from the release's baked template
+  // and re-applies the operator's app hostname (and DNS) from the persisted release
+  // selection. If that selection can't be read, the rebuild would silently reset the
+  // app URL (NEXTAUTH_URL) to the placeholder host and break sign-in. Refuse loudly
+  // instead — unless the caller passed an explicit hostname to apply. (A selection
+  // whose runtime.appHostname is an empty string is a deliberate default-host install
+  // and is allowed through.)
+  if (!rawInputs.appHostname && (!previousSelection || !previousSelection.runtime)) {
+    const channel = String(rawInputs.channel || '').trim() || 'stable';
+    const failure = {
+      ok: false,
+      phase: 'registry-release-source',
+      step: 'read-release-selection',
+      message: 'Cannot run app update: the saved release selection (release-selection.json) is missing or unreadable, so the configured app URL cannot be preserved. Re-run setup before updating.',
+      suspectedCause: `Release selection not found or invalid at ${releaseSelectionFile}.`,
+      suggestedNextStep: 'Re-run setup so the app hostname is persisted, then retry the update.',
+      retrySafe: false
+    };
+    writeInstallState({
+      status: 'update-blocked',
+      phase: failure.phase,
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso(),
+      update: { requestedChannel: channel, scope: 'application-only' }
+    }, stateFile);
+    appendUpdateHistory({ at: nowIso(), channel, ok: false, phase: failure.phase, message: failure.message }, updateHistoryFile);
+    return failure;
+  }
+  const selection = previousSelection || {};
   const validated = validateSetupInputs({
     channel: rawInputs.channel,
-    appHostname: rawInputs.appHostname || previousSelection.runtime?.appHostname || '',
-    dnsMode: rawInputs.dnsMode || previousSelection.runtime?.dnsMode || 'system',
-    dnsServers: rawInputs.dnsServers || previousSelection.runtime?.dnsServers || '',
+    appHostname: rawInputs.appHostname || selection.runtime?.appHostname || '',
+    dnsMode: rawInputs.dnsMode || selection.runtime?.dnsMode || 'system',
+    dnsServers: rawInputs.dnsServers || selection.runtime?.dnsServers || '',
     releaseRef: rawInputs.releaseRef || ''
   }, { requireInitialTenant: false });
 
