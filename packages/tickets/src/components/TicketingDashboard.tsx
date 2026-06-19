@@ -283,6 +283,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [rawStatusOptions] = useState<TicketStatusFilterOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
+  // LEVERAGE: pattern datatable-filter-paging — largest instance of the list-query state machine
+  // (filter state + debounced search + reset-page + manual fetch); see docs/plans/leverage-ledger.md
   // Filter values derived from props (single source of truth is Container's activeFilters)
   const selectedBoards = useMemo(() => {
     if (filterValues.boardIds && filterValues.boardIds.length > 0) {
@@ -1700,6 +1702,133 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange, clearSelection]);
 
+  // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
+  // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One
+  // descriptor list { key, isActive, label, clear } per filter would collapse all three.
+  // Active-filter chips (candidate #1): one removable chip per applied filter,
+  // shown above the table so what's filtering is always visible. Labels reuse the
+  // already-localized field/value strings; removal clears just that dimension.
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
+    const boardLabel = t('fields.board', 'Board');
+    const categoryLabel = t('fields.category', 'Category');
+
+    selectedBoards.forEach((boardId) => {
+      const name = boardId === NO_BOARD_VALUE
+        ? 'No board'
+        : boards.find((b) => b.board_id === boardId)?.board_name ?? boardLabel;
+      chips.push({
+        key: `board:${boardId}`,
+        label: `${boardLabel}: ${name}`,
+        onRemove: () => handleBoardSelect(selectedBoards.filter((id) => id !== boardId), excludedBoards),
+      });
+    });
+    excludedBoards.forEach((boardId) => {
+      const name = boards.find((b) => b.board_id === boardId)?.board_name ?? boardLabel;
+      chips.push({
+        key: `board-ex:${boardId}`,
+        label: `${boardLabel} ≠ ${name}`,
+        onRemove: () => handleBoardSelect(selectedBoards, excludedBoards.filter((id) => id !== boardId)),
+      });
+    });
+
+    if (selectedClient) {
+      const name = clients.find((c) => c.client_id === selectedClient)?.client_name ?? t('fields.client', 'Client');
+      chips.push({ key: `client:${selectedClient}`, label: `${t('fields.client', 'Client')}: ${name}`, onRemove: () => handleClientSelect(null) });
+    }
+
+    selectedAssignees.forEach((userId) => {
+      const u = initialUsers.find((x) => x.user_id === userId);
+      const name = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || t('fields.assignedTo', 'Assignee') : t('fields.assignedTo', 'Assignee');
+      chips.push({
+        key: `assignee:${userId}`,
+        label: name,
+        onRemove: () => { const rest = selectedAssignees.filter((id) => id !== userId); onFilterChange({ assignedToIds: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+    selectedTeams.forEach((teamId) => {
+      const name = teams.find((x) => x.team_id === teamId)?.team_name ?? t('fields.team', 'Team');
+      chips.push({
+        key: `team:${teamId}`,
+        label: name,
+        onRemove: () => { const rest = selectedTeams.filter((id) => id !== teamId); onFilterChange({ assignedTeamIds: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+    if (includeUnassigned) {
+      chips.push({ key: 'unassigned', label: t('filters.unassigned', 'Unassigned'), onRemove: () => onFilterChange({ includeUnassigned: false }) });
+    }
+
+    if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) {
+      const label = statusOptions.find((o) => o.value === selectedStatus)?.label ?? selectedStatus;
+      chips.push({ key: 'status', label: `${t('fields.status', 'Status')}: ${label}`, onRemove: () => onFilterChange({ statusId: TICKET_STATUS_FILTER_OPEN, showOpenOnly: true }) });
+    }
+
+    if (selectedResponseState !== 'all') {
+      const map: Record<string, string> = {
+        awaiting_client: t('responseState.awaitingClient', 'Awaiting Client'),
+        awaiting_internal: t('responseState.awaitingInternal', 'Awaiting Internal'),
+        none: t('dashboard.filters.noResponseState', 'No Response State'),
+      };
+      chips.push({ key: 'response', label: `${t('fields.responseState', 'Response State')}: ${map[selectedResponseState] ?? selectedResponseState}`, onRemove: () => onFilterChange({ responseState: undefined }) });
+    }
+
+    if (selectedPriority !== 'all') {
+      const label = priorityOptions.find((o) => o.value === selectedPriority)?.label ?? selectedPriority;
+      chips.push({ key: 'priority', label: `${t('fields.priority', 'Priority')}: ${label}`, onRemove: () => onFilterChange({ priorityId: 'all' }) });
+    }
+
+    if (selectedDueDateFilter !== 'all') {
+      const dateStr = dueDateFilterValue ? dueDateFilterValue.toLocaleDateString() : '';
+      const map: Record<string, string> = {
+        overdue: t('dashboard.filters.overdue', 'Overdue'),
+        today: t('dashboard.filters.dueToday', 'Due Today'),
+        upcoming: t('dashboard.filters.dueNext7Days', 'Due Next 7 Days'),
+        before: dueDateFilterValue ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: dateStr }) : t('dashboard.filters.beforeDate', 'Before Date...'),
+        after: dueDateFilterValue ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: dateStr }) : t('dashboard.filters.afterDate', 'After Date...'),
+        no_due_date: t('dashboard.filters.noDueDate', 'No Due Date'),
+      };
+      chips.push({ key: 'due', label: `${t('fields.dueDate', 'Due Date')}: ${map[selectedDueDateFilter] ?? selectedDueDateFilter}`, onRemove: () => onFilterChange({ dueDateFilter: undefined, dueDateFrom: undefined, dueDateTo: undefined }) });
+    }
+
+    if (allowSlaStatusFilter && selectedSlaStatus !== 'all') {
+      const map: Record<string, string> = {
+        has_sla: t('dashboard.filters.hasSla', 'Has SLA'),
+        no_sla: t('dashboard.filters.noSla', 'No SLA'),
+        on_track: t('dashboard.filters.onTrack', 'On Track'),
+        breached: t('dashboard.filters.breached', 'Breached'),
+        paused: t('dashboard.filters.paused', 'Paused'),
+      };
+      chips.push({ key: 'sla', label: `${t('fields.slaStatus', 'SLA Status')}: ${map[selectedSlaStatus] ?? selectedSlaStatus}`, onRemove: () => onFilterChange({ slaStatusFilter: undefined }) });
+    }
+
+    selectedCategories.forEach((categoryId) => {
+      const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
+      chips.push({
+        key: `cat:${categoryId}`,
+        label: `${categoryLabel}: ${name}`,
+        onRemove: () => handleCategorySelect(selectedCategories.filter((id) => id !== categoryId), excludedCategories),
+      });
+    });
+    excludedCategories.forEach((categoryId) => {
+      const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
+      chips.push({
+        key: `cat-ex:${categoryId}`,
+        label: `${categoryLabel} ≠ ${name}`,
+        onRemove: () => handleCategorySelect(selectedCategories, excludedCategories.filter((id) => id !== categoryId)),
+      });
+    });
+
+    selectedTags.forEach((tag) => {
+      chips.push({
+        key: `tag:${tag}`,
+        label: `#${tag}`,
+        onRemove: () => { const rest = selectedTags.filter((x) => x !== tag); onFilterChange({ tags: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+
+    return chips;
+  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleCategorySelect, onFilterChange, t]);
+
   return (
     <>
     <ReflectionContainer id={id} label="Ticketing Dashboard">
@@ -1824,6 +1953,34 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   </div>
                 </div>
               </div>
+
+              {activeFilterChips.length > 0 && (
+                <div className="flex items-center flex-wrap gap-2">
+                  {activeFilterChips.map((chip) => (
+                    <span
+                      key={chip.key}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] py-1 pl-2.5 pr-1.5 text-xs font-medium text-[rgb(var(--color-primary-700))]"
+                    >
+                      <span className="max-w-[220px] truncate">{chip.label}</span>
+                      <button
+                        type="button"
+                        onClick={chip.onRemove}
+                        aria-label={`Remove ${chip.label}`}
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-100))] hover:text-[rgb(var(--color-primary-700))]"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
+                  >
+                    {t('filters.clearFilters', 'Clear filters')}
+                  </button>
+                </div>
+              )}
 
               {showFilters && (
               <div className="space-y-3 pt-1 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">

@@ -48,6 +48,7 @@
     "allPriorities": "All Priorities",
     "search": "Search tickets and comments...",
     "button": "Filters",
+    "unassigned": "Unassigned",
     "category": "Filter by category",
     "clearFilters": "Clear filters",
     "assignee": "Assignee",
