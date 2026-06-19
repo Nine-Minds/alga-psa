@@ -89,3 +89,8 @@ Two independent gaps in the integration create paths:
   - Verification: `npx vitest run rmm/alerts/__tests__/ticketCreatedEventUsage.contract.test.ts` from `shared` passed.
   - Verification: `npm -w @alga-psa/shared run typecheck` passed.
   - Full DB/email integration verification remains blocked by the local Postgres auth issue noted above.
+- `types-actions` group: updated `RmmOrganizationMapping` with `default_contact_id?: string | null`.
+  - Huntress and NinjaOne mapping reads already select `rom.*`; update actions now accept and persist `default_contact_id`, including `null` clears.
+  - Existing Huntress `requireSettingsUpdatePermission` and NinjaOne `hasPermission(...settings...)` gating remains in place.
+  - Added `ee/server/src/__tests__/unit/integrations/rmmDefaultContactActions.contract.test.ts` covering T030-T035.
+  - Verification: `npx vitest run src/__tests__/unit/integrations/rmmDefaultContactActions.contract.test.ts` from `ee/server` passed.

@@ -33,12 +33,12 @@
   { "id": "T028", "description": "Integration: TICKET_CREATED -> ticketEmailSubscriber sends the client 'Ticket Created' email when a contact resolved", "implemented": true, "commitGroup": "event-emission", "featureIds": ["F019", "F020"] },
   { "id": "T029", "description": "Existing RMM alert pipeline integration test stays green", "implemented": true, "commitGroup": "event-emission", "featureIds": ["F020", "F022"] },
 
-  { "id": "T030", "description": "getHuntressOrganizationMappings returns default_contact_id", "implemented": false, "commitGroup": "types-actions", "featureIds": ["F025"] },
-  { "id": "T031", "description": "updateHuntressOrganizationMapping persists a set default_contact_id", "implemented": false, "commitGroup": "types-actions", "featureIds": ["F026"] },
-  { "id": "T032", "description": "updateHuntressOrganizationMapping clears default_contact_id to null", "implemented": false, "commitGroup": "types-actions", "featureIds": ["F026"] },
-  { "id": "T033", "description": "getNinjaOneOrganizationMappings returns default_contact_id", "implemented": false, "commitGroup": "types-actions", "featureIds": ["F027"] },
-  { "id": "T034", "description": "updateNinjaOneOrganizationMapping sets and clears default_contact_id", "implemented": false, "commitGroup": "types-actions", "featureIds": ["F028"] },
-  { "id": "T035", "description": "Update actions still enforce existing permission/tier gating", "implemented": false, "commitGroup": "types-actions", "featureIds": ["F026", "F028"] },
+  { "id": "T030", "description": "getHuntressOrganizationMappings returns default_contact_id", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F025"] },
+  { "id": "T031", "description": "updateHuntressOrganizationMapping persists a set default_contact_id", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F026"] },
+  { "id": "T032", "description": "updateHuntressOrganizationMapping clears default_contact_id to null", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F026"] },
+  { "id": "T033", "description": "getNinjaOneOrganizationMappings returns default_contact_id", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F027"] },
+  { "id": "T034", "description": "updateNinjaOneOrganizationMapping sets and clears default_contact_id", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F028"] },
+  { "id": "T035", "description": "Update actions still enforce existing permission/tier gating", "implemented": true, "commitGroup": "types-actions", "featureIds": ["F026", "F028"] },
 
   { "id": "T036", "description": "Huntress manager renders a Default Contact picker per mapping row", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F029"] },
   { "id": "T037", "description": "NinjaOne manager renders a Default Contact picker per mapping row", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F030"] },

@@ -27,11 +27,11 @@
   { "id": "F022", "description": "Event uses TicketModelEventPublisher; payload carries tenantId/ticketId/source=provider; publish failures are swallowed and never break ticket creation", "implemented": true, "commitGroup": "event-emission", "prdRefs": ["Data Model / Integration Notes"] },
   { "id": "F023", "description": "Append-note / status-update paths do NOT emit TICKET_CREATED (only the create path does)", "implemented": true, "commitGroup": "event-emission", "prdRefs": ["Non-Goals"] },
 
-  { "id": "F024", "description": "RmmOrganizationMapping interface gains default_contact_id?: string", "implemented": false, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },
-  { "id": "F025", "description": "getHuntressOrganizationMappings selects default_contact_id", "implemented": false, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },
-  { "id": "F026", "description": "updateHuntressOrganizationMapping accepts default_contact_id (set and clear-to-null)", "implemented": false, "commitGroup": "types-actions", "prdRefs": ["Primary Flows"] },
-  { "id": "F027", "description": "getNinjaOneOrganizationMappings selects default_contact_id", "implemented": false, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },
-  { "id": "F028", "description": "updateNinjaOneOrganizationMapping accepts default_contact_id (set and clear-to-null)", "implemented": false, "commitGroup": "types-actions", "prdRefs": ["Primary Flows"] },
+  { "id": "F024", "description": "RmmOrganizationMapping interface gains default_contact_id?: string", "implemented": true, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },
+  { "id": "F025", "description": "getHuntressOrganizationMappings selects default_contact_id", "implemented": true, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },
+  { "id": "F026", "description": "updateHuntressOrganizationMapping accepts default_contact_id (set and clear-to-null)", "implemented": true, "commitGroup": "types-actions", "prdRefs": ["Primary Flows"] },
+  { "id": "F027", "description": "getNinjaOneOrganizationMappings selects default_contact_id", "implemented": true, "commitGroup": "types-actions", "prdRefs": ["Affected Code"] },
+  { "id": "F028", "description": "updateNinjaOneOrganizationMapping accepts default_contact_id (set and clear-to-null)", "implemented": true, "commitGroup": "types-actions", "prdRefs": ["Primary Flows"] },
 
   { "id": "F029", "description": "Huntress OrganizationMappingManager adds a Default Contact column using ContactPicker", "implemented": false, "commitGroup": "settings-ui", "prdRefs": ["Primary Flows", "Acceptance Criteria"] },
   { "id": "F030", "description": "NinjaOne OrganizationMappingManager adds a Default Contact column using ContactPicker", "implemented": false, "commitGroup": "settings-ui", "prdRefs": ["Primary Flows", "Acceptance Criteria"] },
