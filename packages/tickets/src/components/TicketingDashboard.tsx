@@ -41,7 +41,7 @@ import {
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, SlidersHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -376,6 +376,26 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
   }, [selectedBoards, excludedBoards, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+
+  // Count of active filter groups (excludes the always-visible search box) — drives
+  // the "Filters" button badge in the candidate #1 collapsed toolbar.
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (selectedBoards.length > 0 || excludedBoards.length > 0) n++;
+    if (selectedClient !== null) n++;
+    if (selectedAssignees.length > 0 || selectedTeams.length > 0 || includeUnassigned) n++;
+    if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) n++;
+    if (selectedResponseState !== 'all') n++;
+    if (selectedPriority !== 'all') n++;
+    if (selectedDueDateFilter !== 'all') n++;
+    if (allowSlaStatusFilter && selectedSlaStatus !== 'all') n++;
+    if (selectedCategories.length > 0 || excludedCategories.length > 0) n++;
+    if (selectedTags.length > 0) n++;
+    return n;
+  }, [selectedBoards, excludedBoards, selectedClient, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags]);
+
+  // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -1741,8 +1761,74 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
+              {/* Candidate #1: always-visible search + Filters toggle + density */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  id={`${id}-search-tickets-input`}
+                  placeholder={t('filters.search', 'Search tickets and comments...')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-[38px] w-full text-sm"
+                  containerClassName="flex-1 min-w-[260px] max-w-[460px]"
+                />
+                <Button
+                  id={`${id}-toggle-filters`}
+                  variant={showFilters ? 'soft' : 'outline'}
+                  onClick={() => setShowFilters((v) => !v)}
+                  className="shrink-0 flex items-center gap-1.5 h-[38px]"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t('filters.button', 'Filters')}
+                  {activeFilterCount > 0 && (
+                    <span className="ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] px-1.5 text-[11px] font-semibold text-[rgb(var(--color-primary-700))]">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+                  id='reset-filters'
+                  disabled={!isFiltered}
+                >
+                  <XCircle className="h-4 w-4" />
+                  {t('resetFilters', 'Reset')}
+                </Button>
+                <div className="ml-auto flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
+                      {t('dashboard.bundledToggle', 'Bundled')}
+                    </Label>
+                    <Switch
+                      id={`${id}-bundle-view-toggle`}
+                      checked={bundleView === 'bundled'}
+                      onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
+                      size={densityClasses.tagSize}
+                    />
+                  </div>
+                  <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                  <div className="shrink-0">
+                    <ViewDensityControl
+                      idPrefix={`${id}-list-density`}
+                      value={ticketListDensityLevel}
+                      onChange={handleTicketListDensityChange}
+                      step={TICKET_LIST_DENSITY_STEP}
+                      compactLabel={t('dashboard.spacing.compact', 'Compact')}
+                      spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
+                      decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
+                      increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
+                      resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {showFilters && (
+              <div className="space-y-3 pt-1 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">
               {/* Row 1: Primary filters */}
-              <div className={`flex items-center ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
+              <div className={`flex items-center flex-wrap ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
                 <BoardFilterPicker
                   id={`${id}-board-picker`}
                   boards={boards}
@@ -1877,8 +1963,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 )}
               </div>
 
-              {/* Row 2: Category, search, tags, reset, bundled, density */}
-              <div className={`flex items-center ${densityClasses.filterGap}`}>
+              {/* Row 2: Category, tags */}
+              <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
                 <div className={`contents ${densityClasses.filterControlClass}`}>
                 <CategoryPicker
                   id={`${id}-category-picker`}
@@ -1918,14 +2004,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   categories={categories}
                   boards={boards}
                 />
-                <Input
-                  id={`${id}-search-tickets-input`}
-                  placeholder={t('filters.search', 'Search tickets and comments...')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] min-w-[350px] text-sm"
-                  containerClassName=""
-                />
                 <TagFilter
                   tags={allUniqueTags}
                   selectedTags={selectedTags}
@@ -1938,44 +2016,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-                  id='reset-filters'
-                  disabled={!isFiltered}
-                >
-                  <XCircle className="h-4 w-4" />
-                  {t('resetFilters', 'Reset')}
-                </Button>
-                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                <div className="flex items-center gap-2 shrink-0">
-                  <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
-                    {t('dashboard.bundledToggle', 'Bundled')}
-                  </Label>
-                  <Switch
-                    id={`${id}-bundle-view-toggle`}
-                    checked={bundleView === 'bundled'}
-                    onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
-                    size={densityClasses.tagSize}
-                  />
-                </div>
-                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                <div className="shrink-0">
-                  <ViewDensityControl
-                    idPrefix={`${id}-list-density`}
-                    value={ticketListDensityLevel}
-                    onChange={handleTicketListDensityChange}
-                    step={TICKET_LIST_DENSITY_STEP}
-                    compactLabel={t('dashboard.spacing.compact', 'Compact')}
-                    spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
-                    decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
-                    increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
-                    resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
-                  />
-                </div>
               </div>
+              </div>
+              )}
             </div>
           </ReflectionContainer>
         </div>

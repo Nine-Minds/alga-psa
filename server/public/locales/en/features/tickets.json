@@ -47,6 +47,7 @@
     "allClosed": "All Closed Tickets",
     "allPriorities": "All Priorities",
     "search": "Search tickets and comments...",
+    "button": "Filters",
     "category": "Filter by category",
     "clearFilters": "Clear filters",
     "assignee": "Assignee",

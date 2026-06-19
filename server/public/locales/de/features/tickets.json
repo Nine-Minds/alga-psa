@@ -47,6 +47,7 @@
     "allClosed": "Alle geschlossenen Tickets",
     "allPriorities": "Alle Prioritäten",
     "search": "Tickets und Kommentare suchen...",
+    "button": "Filter",
     "category": "Nach Kategorie filtern",
     "clearFilters": "Filter löschen",
     "assignee": "Zuständiger",
