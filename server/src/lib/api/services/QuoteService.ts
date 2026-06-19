@@ -181,7 +181,7 @@ export class QuoteService extends BaseService<IQuote> {
 
       const quote = await Quote.create(trx, context.tenant, {
         ...quoteData,
-        currency_code: currencyCode,
+        currency_code: currencyCode ?? 'USD',
         subtotal: 0,
         discount_total: 0,
         tax: 0,
