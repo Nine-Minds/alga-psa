@@ -1,17 +1,146 @@
 [
-  { "id": "T001", "description": "reconcileFluxAndHelm passes the configured/in-cluster kubeconfig (not the hardcoded /etc/rancher/k3s/k3s.yaml) — host-service engine test with fake flux/kubectl asserting the path", "implemented": false, "featureIds": ["F001"] },
-  { "id": "T002", "description": "Live VM smoke: an app-channel update completes end to end through flux/helm reconcile from the pod and install-state reaches complete", "implemented": false, "featureIds": ["F002", "F031", "F032"] },
-  { "id": "T003", "description": "Manage nav: sidebar shows 'Manage', opens the in-SPA Manage section with all four sub-tabs, and triggers no /setup navigation or 303 (status-ui DOM/smoke test)", "implemented": false, "featureIds": ["F010", "F011", "F012", "F014"] },
-  { "id": "T004", "description": "Auth guard: unauthenticated calls to /api/manage/status, /api/control-plane/upgrade, /api/license/apply, /api/settings/app-url all return 401", "implemented": false, "featureIds": ["F013", "F024", "F043", "F063", "F073"] },
-  { "id": "T005", "description": "GET /api/manage/status aggregates app version+channel, control-plane digests, edition+expiry, and app URL/DNS (engine/route test with fakes)", "implemented": false, "featureIds": ["F020", "F021", "F022", "F023", "F025"] },
-  { "id": "T006", "description": "upgradeAvailable digest compare: true when resolved channel digest != running, false/no-op when equal", "implemented": false, "featureIds": ["F021", "F044", "F045"] },
-  { "id": "T007", "description": "host-agent POST /v1/control-plane/upgrade runs the bootstrap apply with the resolved digest and returns without blocking on the Recreate (host-agent test with fake resolve/ctr/kubectl)", "implemented": false, "featureIds": ["F040", "F041"] },
-  { "id": "T008", "description": "POST /api/control-plane/upgrade forwards to the host-agent socket and returns 202 (route test)", "implemented": false, "featureIds": ["F042"] },
-  { "id": "T009", "description": "Live VM smoke: control-plane upgrade swaps the running digest and the UI reconnects and confirms the new digest", "implemented": false, "featureIds": ["F046", "F047"] },
-  { "id": "T010", "description": "License apply happy path: a valid JWS updates the appliance-license-seed secret and triggers an app rollout restart (engine/route test with fake kubectl)", "implemented": false, "featureIds": ["F060", "F061", "F062"] },
-  { "id": "T011", "description": "License apply rejects an invalid JWS with a clear error and does not mutate the secret", "implemented": false, "featureIds": ["F064"] },
-  { "id": "T012", "description": "License status decodes current edition + expiry from the seed/JWS", "implemented": false, "featureIds": ["F065"] },
-  { "id": "T013", "description": "Settings app-url: rewrites appUrl/host/domainSuffix in the alga-core values, persists release-selection.json runtime.appHostname, and reconciles the HelmRelease; normalizes a full http://host:port input (engine test with fakes)", "implemented": false, "featureIds": ["F070", "F071", "F072", "F074"] },
-  { "id": "T014", "description": "Live VM smoke: editing the app hostname in Settings propagates to NEXTAUTH_URL and sign-in works at the configured URL", "implemented": false, "featureIds": ["F072"] },
-  { "id": "T015", "description": "Each mutating action shows a confirmation step and a result/failure state (representative status-ui interaction test across update/upgrade/license/settings)", "implemented": false, "featureIds": ["F080", "F034", "F048"] }
+  {
+    "id": "T001",
+    "description": "reconcileFluxAndHelm passes the configured/in-cluster kubeconfig (not the hardcoded /etc/rancher/k3s/k3s.yaml) \u2014 host-service engine test with fake flux/kubectl asserting the path",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Live VM smoke: an app-channel update completes end to end through flux/helm reconcile from the pod and install-state reaches complete",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Manage nav: sidebar shows 'Manage', opens the in-SPA Manage section with all four sub-tabs, and triggers no /setup navigation or 303 (status-ui DOM/smoke test)",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F014"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Auth guard: unauthenticated calls to /api/manage/status, /api/control-plane/upgrade, /api/license/apply, /api/settings/app-url all return 401",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F024",
+      "F043",
+      "F063",
+      "F073"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "GET /api/manage/status aggregates app version+channel, control-plane digests, edition+expiry, and app URL/DNS (engine/route test with fakes)",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021",
+      "F022",
+      "F023",
+      "F025"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "upgradeAvailable digest compare: true when resolved channel digest != running, false/no-op when equal",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F044",
+      "F045"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "host-agent POST /v1/control-plane/upgrade runs the bootstrap apply with the resolved digest and returns without blocking on the Recreate (host-agent test with fake resolve/ctr/kubectl)",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "POST /api/control-plane/upgrade forwards to the host-agent socket and returns 202 (route test)",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Live VM smoke: control-plane upgrade swaps the running digest and the UI reconnects and confirms the new digest",
+    "implemented": true,
+    "featureIds": [
+      "F046",
+      "F047"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "License apply happy path: a valid JWS updates the appliance-license-seed secret and triggers an app rollout restart (engine/route test with fake kubectl)",
+    "implemented": true,
+    "featureIds": [
+      "F060",
+      "F061",
+      "F062"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "License apply rejects an invalid JWS with a clear error and does not mutate the secret",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "License status decodes current edition + expiry from the seed/JWS",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Settings app-url: rewrites appUrl/host/domainSuffix in the alga-core values, persists release-selection.json runtime.appHostname, and reconciles the HelmRelease; normalizes a full http://host:port input (engine test with fakes)",
+    "implemented": true,
+    "featureIds": [
+      "F070",
+      "F071",
+      "F072",
+      "F074"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Live VM smoke: editing the app hostname in Settings propagates to NEXTAUTH_URL and sign-in works at the configured URL",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Each mutating action shows a confirmation step and a result/failure state (representative status-ui interaction test across update/upgrade/license/settings)",
+    "implemented": true,
+    "featureIds": [
+      "F080",
+      "F034",
+      "F048"
+    ]
+  }
 ]

@@ -34,3 +34,18 @@ Working memory for this effort. Append freely; curate as decisions change.
 - PR/sequencing: kubeconfig fix as standalone PR first, or bundled?
 - Updates: allow channel switch (stable↔nightly) or trigger-within-current-channel only?
 - License status source/depth for v1.
+
+## Live validation (2026-06-19, VM 192.168.122.215)
+All five flows validated on the libvirt VM with the worktree control-plane image deployed:
+- GET /api/manage/status → real data (license edition ee, appUrl http://192.168.122.215:3000, CP resolvedDigest sha256:dc3d188…). runningDigest null on this VM because it runs the local `:baked` tag (not a channel digest) — compare logic is unit-tested.
+- Settings: POST /api/settings/app-url rewrote the alga-core configmap appUrl, persisted release-selection runtime.appHostname, reconciled the HelmRelease. {ok:true}.
+- License: POST /api/license/apply patched appliance-license-seed LICENSE_TOKEN (decoded == sent JWS) + rolled the app. {ok:true}.
+- Updates: POST /api/updates → 202; install-state reached **update-complete** ("App-channel update applied for stable") — proves the kubeconfig + helmcharts-RBAC prereq fix (was broken at the flux reconcile step before).
+- Manage UI: logged into :8080, sidebar shows **Manage** (was the dead Setup link), opens the in-SPA Manage view with Updates/Control-plane/License/Settings; live status rendered.
+- Control-plane upgrade: host-agent alive with /v1/control-plane/upgrade route; `bootstrap-control-plane.sh --control-plane-only --dry-run` plans only wait→apply (skips k3s/import/storage). Full swap is the proven reboot apply_control_plane path (not run, to keep the test build deployed).
+
+## Deploy procedure (TWO targets — important)
+1. Pod image (server.mjs, update-engine, status-ui, manage-engine): rebuild control-plane image, ctr import, `rollout restart` (deploy already pinned to localhost:baked). Has the Manage backend + UI.
+2. HOST files (host-agent.mjs, bootstrap-control-plane.sh run on the host, NOT the pod): copy to /opt/alga-appliance/{host-service,scripts}/ and `systemctl restart alga-host-agent.service`.
+3. RBAC: `kubectl apply -f control-plane/manifests/rbac.yaml` (helmcharts addition).
+Test management password on the VM was reset to `Manage.Test99` during validation (alga-appliance-reset-admin). Set the password via curl from the workstation Bash tool, NOT the interactive pane — `!` in the password gets history-expanded by the pane's interactive bash and corrupts it.

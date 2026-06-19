@@ -1,49 +1,333 @@
 [
-  { "id": "F001", "description": "reconcileFluxAndHelm honors ALGA_APPLIANCE_KUBECONFIG / in-cluster config instead of the hardcoded /etc/rancher/k3s/k3s.yaml", "implemented": false, "prdRefs": ["Data model / API integration notes", "Risks"] },
-  { "id": "F002", "description": "An app-channel update completes through the flux/helm reconcile from inside the control-plane pod (no '/etc/rancher/k3s/k3s.yaml' error)", "implemented": false, "prdRefs": ["Goals", "Acceptance criteria"] },
-
-  { "id": "F010", "description": "Sidebar 'Setup' entry renamed to 'Manage' and changed from <a href=\"/setup/\"> to an in-SPA section switch (no /setup navigation)", "implemented": false, "prdRefs": ["UX/UI notes"] },
-  { "id": "F011", "description": "Manage section renders with sub-tabs: Updates, Control-plane, License, Settings", "implemented": false, "prdRefs": ["Goals", "UX/UI notes"] },
-  { "id": "F012", "description": "Sub-tab switching within Manage is client-side state (no page reload)", "implemented": false, "prdRefs": ["UX/UI notes"] },
-  { "id": "F013", "description": "Manage area and all its endpoints are gated behind the existing AuthGate / host-service session", "implemented": false, "prdRefs": ["Target users", "Data model / API integration notes"] },
-  { "id": "F014", "description": "First-run wizard (/setup, mode=setup) is unaffected; Manage appears only post-install (mode=status) and the dead-link behavior is gone", "implemented": false, "prdRefs": ["UX/UI notes", "Non-goals"] },
-
-  { "id": "F020", "description": "GET /api/manage/status returns current app version + installed channel", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F021", "description": "GET /api/manage/status returns running control-plane digest, resolved channel controlPlane digest, and an upgradeAvailable flag", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F022", "description": "GET /api/manage/status returns current edition + license expiry", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F023", "description": "GET /api/manage/status returns current app URL + DNS settings", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F024", "description": "GET /api/manage/status requires auth", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F025", "description": "Manage client fetches /api/manage/status and renders per-tab state with loading and error handling", "implemented": false, "prdRefs": ["UX/UI notes"] },
-
-  { "id": "F030", "description": "Updates tab shows the current app version and installed channel", "implemented": false, "prdRefs": ["Target users"] },
-  { "id": "F031", "description": "Update button triggers POST /api/updates within the installed channel (no channel selector)", "implemented": false, "prdRefs": ["Goals", "Non-goals"] },
-  { "id": "F032", "description": "Updates tab polls install-state and reflects running -> complete/blocked", "implemented": false, "prdRefs": ["Target users"] },
-  { "id": "F033", "description": "Updates tab shows 'up to date' vs 'update available' (best-effort version compare)", "implemented": false, "prdRefs": ["UX/UI notes"] },
-  { "id": "F034", "description": "Update blocked/failure surfaces the reason clearly", "implemented": false, "prdRefs": ["UX/UI notes"] },
-
-  { "id": "F040", "description": "host-agent adds POST /v1/control-plane/upgrade", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F041", "description": "host-agent upgrade route runs the bootstrap control-plane apply (resolve channel controlPlane digest -> ctr pull -> kubectl apply -k overlay), reusing bootstrap-control-plane.sh / resolve-control-plane-image.mjs, and returns without blocking on the pod Recreate", "implemented": false, "prdRefs": ["Data model / API integration notes", "Risks"] },
-  { "id": "F042", "description": "host-service POST /api/control-plane/upgrade forwards to the host-agent over the socket and returns 202", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F043", "description": "POST /api/control-plane/upgrade requires auth", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F044", "description": "Control-plane tab shows running digest vs resolved channel digest (upgrade available?)", "implemented": false, "prdRefs": ["UX/UI notes"] },
-  { "id": "F045", "description": "Control-plane tab shows 'up to date' and disables/no-ops the upgrade button when current (idempotent)", "implemented": false, "prdRefs": ["UX/UI notes", "Risks"] },
-  { "id": "F046", "description": "After triggering an upgrade, the UI shows 'upgrading, reconnecting...' and polls health/status until the new pod answers", "implemented": false, "prdRefs": ["UX/UI notes"] },
-  { "id": "F047", "description": "UI confirms the new control-plane digest after reconnect", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F048", "description": "Upgrade failure surfaces the recovery hint (alga-control-plane-reapply); no auto-rollback in v1", "implemented": false, "prdRefs": ["Risks", "Non-goals"] },
-
-  { "id": "F060", "description": "POST /api/license/apply validates the airgap license JWS format (reuse server.mjs check)", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F061", "description": "POST /api/license/apply updates the appliance-license-seed secret (LICENSE_TOKEN + EDITION_CHOICE)", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F062", "description": "POST /api/license/apply rollout-restarts the app to pick up the new license", "implemented": false, "prdRefs": ["Target users"] },
-  { "id": "F063", "description": "POST /api/license/apply requires auth", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F064", "description": "Invalid license JWS is rejected with a clear error and no secret mutation", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F065", "description": "License tab shows current edition + license expiry (decoded from seed/JWS)", "implemented": false, "prdRefs": ["Goals", "UX/UI notes"] },
-
-  { "id": "F070", "description": "POST /api/settings/app-url rewrites appUrl/host/domainSuffix in the alga-core values configmap", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F071", "description": "POST /api/settings/app-url persists release-selection.json runtime.appHostname (+ DNS) to /var/lib", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F072", "description": "POST /api/settings/app-url reconciles the alga-core HelmRelease so NEXTAUTH_URL re-renders", "implemented": false, "prdRefs": ["Goals", "Acceptance criteria"] },
-  { "id": "F073", "description": "POST /api/settings/app-url requires auth", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F074", "description": "app-url input is validated/normalized (reuse appUrlFromInput/hostFromAppUrl; full http://host:port supported)", "implemented": false, "prdRefs": ["Data model / API integration notes"] },
-  { "id": "F075", "description": "Settings tab shows the current app URL + DNS and supports system vs custom DNS resolvers (mirrors setup DNS handling)", "implemented": false, "prdRefs": ["UX/UI notes"] },
-
-  { "id": "F080", "description": "Each mutating action (update, upgrade, license apply, settings apply) shows a confirmation step plus in-progress and result/failure states", "implemented": false, "prdRefs": ["UX/UI notes"] }
+  {
+    "id": "F001",
+    "description": "reconcileFluxAndHelm honors ALGA_APPLIANCE_KUBECONFIG / in-cluster config instead of the hardcoded /etc/rancher/k3s/k3s.yaml",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "An app-channel update completes through the flux/helm reconcile from inside the control-plane pod (no '/etc/rancher/k3s/k3s.yaml' error)",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Sidebar 'Setup' entry renamed to 'Manage' and changed from <a href=\"/setup/\"> to an in-SPA section switch (no /setup navigation)",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Manage section renders with sub-tabs: Updates, Control-plane, License, Settings",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Sub-tab switching within Manage is client-side state (no page reload)",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Manage area and all its endpoints are gated behind the existing AuthGate / host-service session",
+    "implemented": true,
+    "prdRefs": [
+      "Target users",
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "First-run wizard (/setup, mode=setup) is unaffected; Manage appears only post-install (mode=status) and the dead-link behavior is gone",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "GET /api/manage/status returns current app version + installed channel",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "GET /api/manage/status returns running control-plane digest, resolved channel controlPlane digest, and an upgradeAvailable flag",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "GET /api/manage/status returns current edition + license expiry",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "GET /api/manage/status returns current app URL + DNS settings",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "GET /api/manage/status requires auth",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Manage client fetches /api/manage/status and renders per-tab state with loading and error handling",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Updates tab shows the current app version and installed channel",
+    "implemented": true,
+    "prdRefs": [
+      "Target users"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Update button triggers POST /api/updates within the installed channel (no channel selector)",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Updates tab polls install-state and reflects running -> complete/blocked",
+    "implemented": true,
+    "prdRefs": [
+      "Target users"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Updates tab shows 'up to date' vs 'update available' (best-effort version compare)",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Update blocked/failure surfaces the reason clearly",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "host-agent adds POST /v1/control-plane/upgrade",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "host-agent upgrade route runs the bootstrap control-plane apply (resolve channel controlPlane digest -> ctr pull -> kubectl apply -k overlay), reusing bootstrap-control-plane.sh / resolve-control-plane-image.mjs, and returns without blocking on the pod Recreate",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "host-service POST /api/control-plane/upgrade forwards to the host-agent over the socket and returns 202",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "POST /api/control-plane/upgrade requires auth",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Control-plane tab shows running digest vs resolved channel digest (upgrade available?)",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Control-plane tab shows 'up to date' and disables/no-ops the upgrade button when current (idempotent)",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "After triggering an upgrade, the UI shows 'upgrading, reconnecting...' and polls health/status until the new pod answers",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "UI confirms the new control-plane digest after reconnect",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Upgrade failure surfaces the recovery hint (alga-control-plane-reapply); no auto-rollback in v1",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "POST /api/license/apply validates the airgap license JWS format (reuse server.mjs check)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "POST /api/license/apply updates the appliance-license-seed secret (LICENSE_TOKEN + EDITION_CHOICE)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "POST /api/license/apply rollout-restarts the app to pick up the new license",
+    "implemented": true,
+    "prdRefs": [
+      "Target users"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "POST /api/license/apply requires auth",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Invalid license JWS is rejected with a clear error and no secret mutation",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "License tab shows current edition + license expiry (decoded from seed/JWS)",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "POST /api/settings/app-url rewrites appUrl/host/domainSuffix in the alga-core values configmap",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "POST /api/settings/app-url persists release-selection.json runtime.appHostname (+ DNS) to /var/lib",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "POST /api/settings/app-url reconciles the alga-core HelmRelease so NEXTAUTH_URL re-renders",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "POST /api/settings/app-url requires auth",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "app-url input is validated/normalized (reuse appUrlFromInput/hostFromAppUrl; full http://host:port supported)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Settings tab shows the current app URL + DNS and supports system vs custom DNS resolvers (mirrors setup DNS handling)",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Each mutating action (update, upgrade, license apply, settings apply) shows a confirmation step plus in-progress and result/failure states",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI notes"
+    ]
+  }
 ]
