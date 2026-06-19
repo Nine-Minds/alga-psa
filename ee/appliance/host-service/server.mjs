@@ -11,6 +11,12 @@ import { persistSetupInputs, validateSetupInputs, runNetworkChecks } from './set
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
 import {
+  collectManageStatus,
+  applyLicense,
+  applyAppUrl,
+  requestControlPlaneUpgrade,
+} from './manage-engine.mjs';
+import {
   authPhase,
   isAuthenticated,
   getCredentialState,
@@ -30,6 +36,8 @@ const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/var/li
 const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/var/lib/alga-appliance/release-selection.json';
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
+const cpUpgradeStatusFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_STATUS_FILE || '/var/lib/alga-appliance/control-plane-upgrade.json';
+const hostAgentSocket = process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
 const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQUEST_TIMEOUT_MS || 20_000);
 const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
@@ -472,6 +480,49 @@ async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) 
   } catch (error) {
     return { ...result, ok: false, status: 1, value: null, stderr: error instanceof Error ? error.message : 'Invalid JSON from kubectl.' };
   }
+}
+
+// kubectl adapter for manage-engine: json/run/apply/quote backed by the queue.
+const manageKube = {
+  json: (args) => runKubectlJson(args),
+  run: (args) => runQueuedKubectl(kubectlCommand(args)),
+  quote: (value) => shellQuote(value),
+  apply: async (manifest) => {
+    const tmp = path.join(os.tmpdir(), `alga-manage-${process.pid}-${Date.now()}.json`);
+    try {
+      fs.writeFileSync(tmp, JSON.stringify(manifest), { mode: 0o600 });
+      return await runQueuedKubectl(kubectlCommand(`apply -f ${shellQuote(tmp)}`));
+    } finally {
+      try { fs.unlinkSync(tmp); } catch { /* best effort */ }
+    }
+  }
+};
+
+// Resolve the channel-pinned control-plane image ref (best-effort, cached 60s)
+// by running the same resolver bootstrap-control-plane.sh uses.
+const CP_RESOLVE_TTL_MS = 60_000;
+const cpResolveCache = new Map();
+function resolveControlPlaneRef(channel) {
+  const key = String(channel || 'stable');
+  const cached = cpResolveCache.get(key);
+  if (cached && (Date.now() - cached.at) < CP_RESOLVE_TTL_MS) {
+    return Promise.resolve(cached.ref);
+  }
+  return new Promise((resolve) => {
+    const resolver = new URL('./resolve-control-plane-image.mjs', import.meta.url).pathname;
+    const child = spawn(process.execPath, [resolver, '--channel', key, '--selection-file', releaseSelectionFile], {
+      env: process.env,
+      timeout: 12_000
+    });
+    let out = '';
+    child.stdout.on('data', (chunk) => { out += chunk; });
+    child.on('error', () => { resolve(cached ? cached.ref : null); });
+    child.on('close', () => {
+      const ref = out.trim() || null;
+      cpResolveCache.set(key, { ref, at: Date.now() });
+      resolve(ref);
+    });
+  });
 }
 
 function validKubeName(value) {
@@ -926,6 +977,63 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/manage/status') {
+    if (!requireAuth(req, res)) return;
+    const status = await collectManageStatus({
+      kube: manageKube,
+      releaseSelectionFile,
+      installStateFile: stateFile,
+      cpUpgradeStatusFile,
+      resolveControlPlaneRef
+    });
+    jsonResponse(res, 200, status);
+    return;
+  }
+
+  if (url.pathname === '/api/control-plane/upgrade') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const result = await requestControlPlaneUpgrade({ hostAgentSocket });
+    if (result.ok) jsonResponse(res, 202, result.result || { ok: true, started: true });
+    else jsonResponse(res, result.status || 502, { error: result.error });
+    return;
+  }
+
+  if (url.pathname === '/api/license/apply') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await applyLicense({ licenseKey: payload?.licenseKey, kube: manageKube });
+    if (result.ok) jsonResponse(res, 200, { ok: true });
+    else jsonResponse(res, result.status || 400, { error: result.error });
+    return;
+  }
+
+  if (url.pathname === '/api/settings/app-url') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await applyAppUrl({
+      appHostname: payload?.appHostname,
+      dnsMode: payload?.dnsMode,
+      dnsServers: payload?.dnsServers,
+      kube: manageKube,
+      releaseSelectionFile
+    });
+    if (result.ok) jsonResponse(res, 200, { ok: true });
+    else jsonResponse(res, result.status || 400, { error: result.error });
+    return;
+  }
+
   if (url.pathname === '/api/updates') {
     if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
@@ -943,9 +1051,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const result = await runAppChannelUpdate({ channel });
-    res.writeHead(result.ok ? 200 : 412, { 'content-type': 'application/json' });
-    res.end(JSON.stringify(result));
+    // Kick the update off and return immediately. The control-plane pod survives
+    // an app-channel update (only the app pod restarts), so it runs to completion
+    // here while the Manage UI polls /api/manage/status (install-state).
+    runAppChannelUpdate({ channel }).catch(() => {});
+    res.writeHead(202, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, started: true }));
     return;
   }
 

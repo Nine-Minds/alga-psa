@@ -13,7 +13,11 @@ const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/al
 // the placeholder host. Default to the real location; the env override still wins.
 const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/var/lib/alga-appliance/release-selection.json';
 const DEFAULT_UPDATE_HISTORY_FILE = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/var/lib/alga-appliance/update-history.json';
-const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
+// Honor the control plane's configured kubeconfig (the pod's in-cluster
+// kubeconfig at /tmp/alga-appliance/kubeconfig), matching setup-engine/status-engine.
+// Hardcoding the bare-host /etc/rancher/k3s/k3s.yaml made the flux/helm reconcile
+// step fail in the pod with `stat /etc/rancher/k3s/k3s.yaml: no such file`.
+const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 
 function nowIso() {
   return new Date().toISOString();

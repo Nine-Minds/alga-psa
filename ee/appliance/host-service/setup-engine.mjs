@@ -435,14 +435,14 @@ function initialTenantSecretYaml(initialTenant, initialTenantId) {
   return `apiVersion: v1\nkind: Secret\nmetadata:\n  name: appliance-initial-tenant\n  namespace: msp\ntype: Opaque\nstringData:\n  INITIAL_TENANT_NAME: ${yamlString(initialTenant.tenantName)}\n  INITIAL_ADMIN_FIRST_NAME: ${yamlString(initialTenant.adminFirstName)}\n  INITIAL_ADMIN_LAST_NAME: ${yamlString(initialTenant.adminLastName)}\n  INITIAL_ADMIN_EMAIL: ${yamlString(initialTenant.adminEmail)}\n  INITIAL_ADMIN_PASSWORD: ${yamlString(initialTenant.adminPassword)}${tenantIdLine}\n`;
 }
 
-function appUrlFromInput(value) {
+export function appUrlFromInput(value) {
   const trimmed = String(value || '').trim();
   if (!trimmed) return null;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
 }
 
-function hostFromAppUrl(value) {
+export function hostFromAppUrl(value) {
   try {
     return new URL(value).hostname;
   } catch {
@@ -450,7 +450,7 @@ function hostFromAppUrl(value) {
   }
 }
 
-function setYamlScalar(yaml, target, value) {
+export function setYamlScalar(yaml, target, value) {
   const output = [];
   const stack = [];
   let replaced = false;
