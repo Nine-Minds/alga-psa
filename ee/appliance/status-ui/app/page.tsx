@@ -6,10 +6,11 @@ import {
   Boxes,
   ScrollText,
   Server,
-  SlidersHorizontal,
+  Settings2,
 } from "lucide-react";
 import { AlgaLogo } from "./AlgaLogo";
 import { LogoutButton } from "./auth/LogoutButton";
+import { ManageView } from "./manage/ManageView";
 import styles from "./status.module.css";
 
 type RawTierMap = Record<
@@ -140,6 +141,7 @@ type Pod = {
 };
 
 type Tab = "overview" | "deployments" | "pods" | "logs";
+type TopView = "status" | "manage";
 type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
 function apiPath(
@@ -310,6 +312,7 @@ function SkeletonBlock({ lines = 6 }: { lines?: number }) {
 }
 
 export default function StatusPage() {
+  const [topView, setTopView] = useState<TopView>("status");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [setupMode, setSetupMode] = useState<string | null>(null);
@@ -654,24 +657,46 @@ export default function StatusPage() {
               type="button"
               role="tab"
               id={`appliance-tab-${value}`}
-              aria-selected={activeTab === value}
+              aria-selected={topView === "status" && activeTab === value}
               aria-controls={`appliance-panel-${value}`}
-              className={activeTab === value ? styles.activeTab : ""}
-              onClick={() => setActiveTab(value)}
+              className={topView === "status" && activeTab === value ? styles.activeTab : ""}
+              onClick={() => {
+                setTopView("status");
+                setActiveTab(value);
+              }}
             >
               <Icon className={styles.navIcon} aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
         </nav>
-        <a className={styles.setupLink} href="/setup/">
-          <SlidersHorizontal className={styles.navIcon} aria-hidden="true" />
-          <span>Setup</span>
-        </a>
+        <button
+          type="button"
+          className={`${styles.setupLink} ${topView === "manage" ? styles.activeTab : ""}`}
+          onClick={() => setTopView("manage")}
+          aria-pressed={topView === "manage"}
+        >
+          <Settings2 className={styles.navIcon} aria-hidden="true" />
+          <span>Manage</span>
+        </button>
         <LogoutButton />
       </aside>
 
       <section className={styles.workspace}>
+        {topView === "manage" ? (
+          <>
+            <header className={styles.commandBar}>
+              <div>
+                <div className={styles.eyebrow}>Alga PSA appliance</div>
+                <h1>Manage</h1>
+              </div>
+            </header>
+            <ManageView />
+          </>
+        ) : null}
+
+        {topView === "status" ? (
+        <>
         <header className={styles.commandBar}>
           <div>
             <div className={styles.eyebrow}>Alga PSA appliance</div>
@@ -1256,6 +1281,8 @@ export default function StatusPage() {
               </pre>
             )}
           </section>
+        ) : null}
+        </> /* end topView === "status" */
         ) : null}
       </section>
     </main>
