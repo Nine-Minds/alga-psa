@@ -85,6 +85,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
   const [sortBy, setSortBy] = useState<NonNullable<EmailLogFilters['sortBy']>>('sent_at');
   const [sortDirection, setSortDirection] = useState<NonNullable<EmailLogFilters['sortDirection']>>('desc');
 
+  // LEVERAGE: pattern datatable-filter-paging — server variant: filter state + debounced text filters + reset-page-to-1 on every filter/sort change + fetch state machine, re-implemented per table; no list-controller layer
   const [status, setStatus] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');

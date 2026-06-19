@@ -62,6 +62,7 @@ const InteractionTypesSettings: React.FC = () => {
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);

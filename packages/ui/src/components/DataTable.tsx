@@ -465,6 +465,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     [columns, visibleColumnIds, columnLayout, fittedSizeOverrides]
   );
 
+  // LEVERAGE: friction datatable-client-paging — half-controlled paging: the table keeps its own
+  // page/size state AND syncs from controlled props, and renders the items-per-page selector but
+  // delegates the size change back to the parent. So every client-side consumer must re-derive
+  // page/size state + a reset-to-page-1 handler just to use built-in pagination (see ~13 sites).
   const [{ pageIndex, pageSize: currentPageSize }, setPagination] = React.useState({
     pageIndex: currentPage - 1,
     pageSize,
