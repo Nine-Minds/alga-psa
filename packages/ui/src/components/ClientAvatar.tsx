@@ -6,6 +6,8 @@ interface ClientAvatarProps {
   logoUrl: string | null;
   size?: EntityAvatarProps['size'];
   className?: string;
+  /** Companies render as rounded squares by default; pass 'circle' to override. */
+  shape?: EntityAvatarProps['shape'];
 }
 
 // Client-specific initials function that takes first letter of first two words
@@ -25,6 +27,7 @@ const ClientAvatar = ({
   logoUrl,
   size = 'md',
   className,
+  shape = 'square',
 }: ClientAvatarProps) => {
   return (
     <EntityAvatar
@@ -32,6 +35,7 @@ const ClientAvatar = ({
       entityName={clientName}
       imageUrl={logoUrl}
       size={size}
+      shape={shape}
       className={className}
       getInitials={getClientInitials}
       altText={`${clientName} logo`}

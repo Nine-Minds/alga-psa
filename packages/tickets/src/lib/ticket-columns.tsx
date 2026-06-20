@@ -6,6 +6,7 @@ import type { TagSize } from '@alga-psa/ui/components/tags';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
@@ -86,31 +87,14 @@ function calculateSlaStatus(ticket: ITicketListItem): {
 // bars, initials avatars, and a relative Due column.
 // ---------------------------------------------------------------------------
 
-// Deterministic avatar palette so the same client/agent always gets the same hue.
-const AVATAR_PALETTE = [
-  '#8a4dea', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444',
-  '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#3b82f6',
-];
-
+// Hash used for deterministic status-pill hue selection (avatar colors come from
+// the shared ClientAvatar/UserAvatar components, which derive their own hues).
 function hashString(str: string): number {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
     h = (h * 31 + str.charCodeAt(i)) | 0;
   }
   return Math.abs(h);
-}
-
-function avatarColor(seed: string | null | undefined): string {
-  if (!seed) return '#94a3b8';
-  return AVATAR_PALETTE[hashString(seed) % AVATAR_PALETTE.length];
-}
-
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 // Status pill hues (space-separated R G B). The pill background is a translucent
@@ -640,12 +624,18 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           const multiClient = !record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1;
           const body = (
             <span className="flex items-center gap-2 overflow-hidden">
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white"
-                style={{ backgroundColor: hasClient ? avatarColor(record.client_id || value) : '#cbd5e1' }}
-              >
-                {hasClient ? getInitials(value) : '—'}
-              </span>
+              {hasClient ? (
+                <ClientAvatar
+                  clientId={record.client_id || value}
+                  clientName={value}
+                  logoUrl={null}
+                  size="xs"
+                />
+              ) : (
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
+                  —
+                </span>
+              )}
               <span className="flex flex-col gap-0.5 overflow-hidden">
                 <span className="truncate">{value || 'No Client'}</span>
                 {multiClient ? (
@@ -692,12 +682,12 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           return (
             <span className="text-gray-700 flex items-center gap-2">
               {value ? (
-                <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                  style={{ backgroundColor: avatarColor(value) }}
-                >
-                  {getInitials(value)}
-                </span>
+                <UserAvatar
+                  userId={record.assigned_to || value}
+                  userName={value}
+                  avatarUrl={additionalAgentAvatarUrls[record.assigned_to ?? ''] ?? null}
+                  size="xs"
+                />
               ) : (
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[rgb(var(--color-border-400))] text-xs text-[rgb(var(--color-text-400))]">
                   +

@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import Spinner from './Spinner';
 
 export type EntityAvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number;
+export type EntityAvatarShape = 'circle' | 'square';
 export type ImageLoadingStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 export interface EntityAvatarProps {
@@ -14,6 +15,8 @@ export interface EntityAvatarProps {
   entityName: string;
   imageUrl: string | null;
   size?: EntityAvatarSize;
+  /** 'circle' (default) for people; 'square' (rounded) for org/company logos. */
+  shape?: EntityAvatarShape;
   className?: string;
   getInitials?: (name: string) => string;
   altText?: string;
@@ -71,6 +74,7 @@ export const EntityAvatar = ({
   entityName,
   imageUrl,
   size = 'md',
+  shape = 'circle',
   className,
   getInitials = getDefaultInitials,
   altText,
@@ -125,9 +129,13 @@ export const EntityAvatar = ({
     setImageStatus('loaded');
   };
 
+  // Square (org/company) avatars get rounded corners; people stay circular.
+  const radiusClass = shape === 'square' ? 'rounded-md' : 'rounded-full';
+
   // Combine classes: base + size + custom
   const combinedClassName = cn(
-    'inline-flex items-center justify-center rounded-full overflow-hidden',
+    'inline-flex items-center justify-center overflow-hidden',
+    radiusClass,
     sizeClassName,
     className
   );
@@ -162,7 +170,7 @@ export const EntityAvatar = ({
         <div className="relative h-full w-full">
           {/* Loading shimmer effect */}
           {showShimmer && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse rounded-full overflow-hidden">
+            <div className={cn('absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse overflow-hidden', radiusClass)}>
               <Spinner size="sm" className="opacity-70 scale-75" />
             </div>
           )}
