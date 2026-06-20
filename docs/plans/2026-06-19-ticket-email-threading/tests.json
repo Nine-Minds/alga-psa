@@ -57,7 +57,7 @@
   {
     "id": "T006",
     "description": "Unit: resolveTicketThreadAnchor returns inbound id for email-origin and a deterministic synthetic id for UI-origin, stable across repeated calls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",

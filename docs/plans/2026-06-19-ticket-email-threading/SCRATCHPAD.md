@@ -80,6 +80,13 @@
   no parent comment). Reply-token path stays primary.
 - Unit tests pass: `ticketThreadHeaders.test.ts` (7), `ticketSubject.test.ts` (7). email +
   shared packages typecheck clean (server tsc OOMs — verify via dev server / vitest).
+- **DB-backed verification (9/9 PASS)** against the live local DB via
+  `verify-thread-anchor.mts` (run with the consumer's node+tsx loader + `/tmp/consumer.env`):
+  UI-origin synthetic anchor created + persisted to `email_metadata.threadRoot`,
+  In-Reply-To/References chain grows under one shared root, anchor stable across calls;
+  email-origin anchor = inbound Message-ID with no synthetic root. Covers T006 + the
+  data-layer invariants of T001/T002. `applyTicketThreadHeaders` is now exported from
+  `@alga-psa/email`.
 
 ### Smoke-test prerequisites / gotchas (must resolve before driving the matrix)
 - **Load the new code:** the dev server was restarted BEFORE these edits. `packages/email`
