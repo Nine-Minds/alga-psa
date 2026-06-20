@@ -129,12 +129,18 @@ export const EntityAvatar = ({
     setImageStatus('loaded');
   };
 
-  // Square (org/company) avatars get rounded corners; people stay circular.
-  const radiusClass = shape === 'square' ? 'rounded-md' : 'rounded-full';
+  // Square (org/company) avatars get rounded corners; people stay circular —
+  // except at the smallest size, where a tight circle clips the corners of
+  // two-letter initials. There, even circle avatars render as rounded squares
+  // (matching the org avatars) so the placeholder text isn't cut off.
+  const isSmall = size === 'xs';
+  const radiusClass = shape === 'square' || isSmall ? 'rounded-md' : 'rounded-full';
 
-  // Combine classes: base + size + custom
+  // Combine classes: base + size + custom. shrink-0 keeps the avatar a fixed
+  // square in flex rows (e.g. next to a long client name) instead of letting the
+  // layout compress it into a clipped, off-aspect-ratio oval.
   const combinedClassName = cn(
-    'inline-flex items-center justify-center overflow-hidden',
+    'inline-flex shrink-0 items-center justify-center overflow-hidden',
     radiusClass,
     sizeClassName,
     className

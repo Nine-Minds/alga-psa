@@ -106,18 +106,23 @@ function hashString(str: string): number {
 // per-board/custom, no fixed semantic set); closed statuses always read green.
 //
 // The first three entries are live brand tokens, so the pills track the active
-// theme and any tenant rebrand; the remaining three are fixed decorative accents,
-// chosen to harmonize with the brand, that widen the palette (statuses are hashed
-// across all six, so more hues => fewer same-board color collisions). Each entry
-// is anything valid inside CSS rgb(): a space-separated "R G B" literal or a
+// theme and any tenant rebrand; the rest are fixed decorative accents that widen
+// the palette (statuses are hashed across all of them, so more hues => fewer
+// same-board color collisions). The accents are not arbitrary: they all sit on
+// the brand's cool arc (purple -> indigo -> blue -> cyan -> teal), with one
+// desaturated slate for the low-key long tail. Deliberately excluded: pink/red
+// (alarm — this coloring is non-semantic, so a hot hue makes unimportant statuses
+// read as if they stood out) and amber (redundant with the brand orange). Each
+// entry is anything valid inside CSS rgb(): a space-separated "R G B" literal or a
 // var() that resolves to one — both interpolate cleanly into rgb(${hue} / a).
 const STATUS_PILL_HUES = [
   'var(--color-primary-500)',    // brand violet (live token)
   'var(--color-secondary-500)',  // brand cyan (live token)
   'var(--color-accent-500)',     // brand orange (live token)
-  '99 102 241',                  // indigo — fixed decorative accent
-  '236 72 153',                  // pink — fixed decorative accent
-  '20 184 166',                  // teal — fixed decorative accent
+  '99 102 241',                  // indigo — fixed accent (purple↔blue)
+  '59 130 246',                  // blue — fixed accent (indigo↔cyan)
+  '20 184 166',                  // teal — fixed accent (cyan↔green)
+  '100 116 139',                 // slate — fixed accent (desaturated, low-key)
 ];
 const STATUS_PILL_CLOSED_HUE = 'var(--color-status-success)'; // green (live token)
 
