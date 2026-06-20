@@ -641,10 +641,10 @@ async function resolveReplyTargetFromCommentThread(params: {
   });
 }
 
-async function resolveReplyTargetFromOutboundMessageId(params: {
+export async function resolveReplyTargetFromOutboundMessageId(params: {
   tenantId: string;
   rfcMessageId: string;
-}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
   const normalizedMessageId = params.rfcMessageId.trim();
   if (!normalizedMessageId) {
     return null;
@@ -653,25 +653,44 @@ async function resolveReplyTargetFromOutboundMessageId(params: {
   const { withAdminTransaction } = await import('@alga-psa/db');
   const row = await withAdminTransaction(async (trx: any) => {
     return trx('email_sending_logs')
-      .select('comment_thread_id as threadId')
+      .select('comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
       .where({ tenant: params.tenantId, rfc_message_id: normalizedMessageId })
-      .whereNotNull('comment_thread_id')
       .orderBy('created_at', 'desc')
       .first();
   });
 
-  return row?.threadId
-    ? resolveReplyTargetFromCommentThread({
-        tenantId: params.tenantId,
-        threadId: row.threadId,
-      })
-    : null;
+  if (!row) {
+    return null;
+  }
+
+  // Comment-thread match: resolve to the latest comment in the thread.
+  if (row.threadId) {
+    return resolveReplyTargetFromCommentThread({
+      tenantId: params.tenantId,
+      threadId: row.threadId,
+    });
+  }
+
+  // Ticket-scoped match: a reply to any non-comment ticket notification
+  // (created/updated/closed/assigned). Append at ticket level, no parent comment.
+  if (row.entityType === 'ticket' && row.entityId) {
+    const ticketExists = await withAdminTransaction(async (trx: any) => {
+      return trx('tickets')
+        .where({ tenant: params.tenantId, ticket_id: row.entityId })
+        .first('ticket_id');
+    });
+    if (ticketExists?.ticket_id) {
+      return { ticketId: row.entityId, threadId: null, parentCommentId: null };
+    }
+  }
+
+  return null;
 }
 
 async function resolveReplyTargetFromReferences(params: {
   tenantId: string;
   references?: string[];
-}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
   const references = (params.references ?? [])
     .map((value) => value.trim())
     .filter(Boolean);
