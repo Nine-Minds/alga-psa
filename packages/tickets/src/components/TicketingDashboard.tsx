@@ -41,7 +41,7 @@ import {
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, SlidersHorizontal } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -1906,7 +1906,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClick={() => setShowFilters((v) => !v)}
                   className="shrink-0 flex items-center gap-1.5 h-[38px]"
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
+                  <Filter className="h-4 w-4" />
                   {t('filters.button', 'Filters')}
                   {activeFilterCount > 0 && (
                     <span className="ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] px-1.5 text-[11px] font-semibold text-[rgb(var(--color-primary-700))]">
