@@ -106,6 +106,22 @@
 - Ticket defaults: General Email Support → board "General Support", status "Curious Beginning".
 - Gotcha: `/tmp/consumer.env` + `/tmp/run-consumer.sh` are ephemeral (not persisted across reboot).
 
+### Inbound reply round-trip (T003) — logic verified; full e2e blocked by rig infra
+- Slice 5 matching VERIFIED deterministically by `verify-inbound-match.mts` (4/4): a reply's
+  In-Reply-To resolves to the correct ticket via the email_sending_logs ticket-entity row.
+- Inbound pipeline itself works (rig Case A: real email → ticket created).
+- The literal full e2e (send reply → comment appended) is BLOCKED by a rig limitation, not
+  by app code: the unified inbound queue is pointer-based and the **host-run consumer
+  re-fetches the message body over IMAP**, but it reports
+  `source_unavailable:imap_credentials_missing` — the `/tmp/consumer.env` host consumer
+  lacks the secret-provider wiring to read the IMAP password (the in-container email-service
+  has it via the secrets mount). So `processInboundEmailInApp` never runs for the re-fetch.
+  To run the full e2e, launch the consumer with access to the tenant IMAP secret (same
+  secret source as the email-service container).
+- Note: sending outbound test mail to `imap_user@localhost` (the polled mailbox) makes the
+  email-service ingest it as a NEW inbound ticket — send wire-smoke outbound to a NON-polled
+  address (e.g. `contact@external.test`) to avoid junk tickets.
+
 ### Smoke-test prerequisites / gotchas (must resolve before driving the matrix)
 - **Load the new code:** the dev server was restarted BEFORE these edits. `packages/email`
   is a built dep — rebuild it and restart the server (and the consumer, which loads
