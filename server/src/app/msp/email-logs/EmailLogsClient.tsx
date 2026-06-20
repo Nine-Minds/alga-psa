@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogHeader } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import {
   getEmailLogMetrics,
   getEmailLogs,
@@ -60,12 +61,12 @@ function parseEmailList(value: unknown): string[] {
   return [];
 }
 
-function formatSentAt(value: unknown): string {
+function formatSentAt(value: unknown, locale: string): string {
   const date = value instanceof Date ? value : new Date(String(value));
   if (Number.isNaN(date.getTime())) {
     return '—';
   }
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -75,7 +76,9 @@ function formatSentAt(value: unknown): string {
 }
 
 export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLogsClientProps) {
-  const { t } = useTranslation('msp/admin');
+  const { t, i18n } = useTranslation('msp/admin');
+  // Active UI locale from the i18n provider; falls back to the i18next default.
+  const uiLocale = i18n.language || LOCALE_CONFIG.defaultLocale;
   const seedLogs = initialLogs ?? EMPTY_LOGS;
   const [metrics, setMetrics] = useState<EmailLogMetrics>(initialMetrics ?? EMPTY_METRICS);
   const [logs, setLogs] = useState(seedLogs.data);
@@ -166,7 +169,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
       {
         title: t('emailLogs.table.time'),
         dataIndex: 'sent_at',
-        render: (value) => formatSentAt(value),
+        render: (value) => formatSentAt(value, uiLocale),
       },
       {
         title: t('emailLogs.table.ticket'),
@@ -203,7 +206,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
         },
       },
     ];
-  }, [t]);
+  }, [t, uiLocale]);
 
   const failedRatePct = Math.round((metrics.failedRate ?? 0) * 100);
 
@@ -343,7 +346,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.sentAt')}</div>
-                  <div className="text-sm text-[rgb(var(--color-text-900))]">{formatSentAt(selected.sent_at)}</div>
+                  <div className="text-sm text-[rgb(var(--color-text-900))]">{formatSentAt(selected.sent_at, uiLocale)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.status')}</div>

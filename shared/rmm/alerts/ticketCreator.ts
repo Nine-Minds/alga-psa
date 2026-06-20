@@ -52,7 +52,17 @@ export async function createTicketForAlert(
   const title = renderTemplate(actions.ticketTemplate?.titleTemplate, params) ?? defaultTitle(event);
   const description = renderTemplate(actions.ticketTemplate?.descriptionTemplate, params) ?? defaultDescription(event);
 
-  const ticketNumber = await generateTicketNumber(trx, tenantId);
+  // Delegate to the same DB function the UI/API create path uses so alert
+  // tickets share the tenant's configured numbering (prefix + single sequence),
+  // rather than a private max()+default-prefix scheme.
+  const numberResult = await trx.raw(
+    'SELECT generate_next_number(?::uuid, ?::text) as number',
+    [tenantId, 'TICKET']
+  );
+  const ticketNumber = numberResult?.rows?.[0]?.number;
+  if (!ticketNumber) {
+    throw new Error('Failed to generate ticket number');
+  }
   const now = new Date().toISOString();
 
   const [ticket] = await trx('tickets')
@@ -251,20 +261,4 @@ const PROVIDER_LABELS: Record<string, string> = {
 
 export function providerLabel(provider: string): string {
   return PROVIDER_LABELS[provider] ?? provider;
-}
-
-/** Max ticket_number + 1 with the tenant's configured prefix (Huntress/NinjaOne pattern). */
-async function generateTicketNumber(trx: Knex.Transaction, tenantId: string): Promise<string> {
-  const result = await trx('tickets').where({ tenant: tenantId }).max('ticket_number as max_number').first();
-
-  let nextNumber = 1;
-  if (result?.max_number) {
-    const match = String(result.max_number).match(/(\d+)$/);
-    if (match) nextNumber = parseInt(match[1], 10) + 1;
-  }
-
-  const settingsRow = await trx('tenant_settings').where({ tenant: tenantId }).first();
-  const prefix = settingsRow?.settings?.ticket_number_prefix || 'TKT-';
-
-  return `${prefix}${String(nextNumber).padStart(6, '0')}`;
 }

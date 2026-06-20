@@ -7,6 +7,39 @@ import { revalidatePath } from 'next/cache';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { hasMspPermission } from '../lib/authHelpers';
+
+async function canManageContactAvatar(
+  currentUser: IUserWithRoles,
+  tenant: string,
+  contactId: string,
+  knex: Knex
+): Promise<boolean> {
+  if (currentUser.user_type === 'internal') {
+    return hasMspPermission(currentUser, 'contact', 'update', knex);
+  }
+
+  if (currentUser.user_type !== 'client') {
+    return false;
+  }
+
+  if (currentUser.contact_id === contactId) {
+    return true;
+  }
+
+  const linkedUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('users')
+      .select('user_id')
+      .where({
+        contact_id: contactId,
+        user_id: currentUser.user_id,
+        tenant
+      })
+      .first();
+  });
+
+  return !!linkedUser;
+}
 
 /**
  * Upload a contact avatar image
@@ -22,42 +55,7 @@ export const uploadContactAvatar = withAuth(async (
 ): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> => {
   const { knex } = await createTenantKnex();
 
-  // Permission check
-  let canModify = false;
-  if (currentUser.user_type === 'client') {
-    if (currentUser.contact_id === contactId) {
-      canModify = true;
-    } else {
-      const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('contacts')
-          .where({
-            contact_name_id: contactId,
-            tenant
-          })
-          .first();
-      });
-
-      if (userContact) {
-        const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('users')
-            .where({
-              contact_id: contactId,
-              user_id: currentUser.user_id,
-              tenant
-            })
-            .first();
-        });
-
-        if (contactUser) {
-          canModify = true;
-        }
-      }
-    }
-  } else if (currentUser.user_type === 'internal') {
-    canModify = true;
-  }
-
-  if (!canModify) {
+  if (!await canManageContactAvatar(currentUser, tenant, contactId, knex)) {
     return { success: false, message: 'You do not have permission to modify this contact\'s avatar' };
   }
 
@@ -112,42 +110,7 @@ export const deleteContactAvatar = withAuth(async (
 ): Promise<{ success: boolean; message?: string }> => {
   const { knex } = await createTenantKnex();
 
-  // Permission check
-  let canDelete = false;
-  if (currentUser.user_type === 'client') {
-    if (currentUser.contact_id === contactId) {
-      canDelete = true;
-    } else {
-      const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('contacts')
-          .where({
-            contact_name_id: contactId,
-            tenant
-          })
-          .first();
-      });
-
-      if (userContact) {
-        const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('users')
-            .where({
-              contact_id: contactId,
-              user_id: currentUser.user_id,
-              tenant
-            })
-            .first();
-        });
-
-        if (contactUser) {
-          canDelete = true;
-        }
-      }
-    }
-  } else if (currentUser.user_type === 'internal') {
-    canDelete = true;
-  }
-
-  if (!canDelete) {
+  if (!await canManageContactAvatar(currentUser, tenant, contactId, knex)) {
     return { success: false, message: 'You do not have permission to delete this contact\'s avatar' };
   }
 

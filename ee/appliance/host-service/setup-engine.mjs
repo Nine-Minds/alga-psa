@@ -13,7 +13,7 @@ import { redeemInstallCode, deriveApplianceId, licenseSeedFromRedeem } from './i
 // with, falling back to the bare-host locations. This keeps the setup workflow
 // aligned with the pod's mounted paths (token secret, in-cluster kubeconfig,
 // hostPath state) instead of hardcoded bare-host defaults.
-const DEFAULT_SETUP_FILE = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const DEFAULT_SETUP_FILE = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/var/lib/alga-appliance/setup-inputs.json';
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const DEFAULT_RESOLV_CONF = '/etc/resolv.conf';
 // Registry-metadata source of truth: the appliance resolves a channel to an
@@ -22,7 +22,7 @@ const DEFAULT_REGISTRY_HOST = process.env.ALGA_APPLIANCE_REGISTRY_HOST || 'ghcr.
 const DEFAULT_RELEASE_REPOSITORY = process.env.ALGA_APPLIANCE_RELEASE_REPOSITORY || 'nine-minds/alga-appliance-release';
 const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const DEFAULT_TOKEN_FILE = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
-const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
+const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/var/lib/alga-appliance/release-selection.json';
 
 function isValidIpv4(value) {
   const parts = value.split('.');
@@ -435,14 +435,14 @@ function initialTenantSecretYaml(initialTenant, initialTenantId) {
   return `apiVersion: v1\nkind: Secret\nmetadata:\n  name: appliance-initial-tenant\n  namespace: msp\ntype: Opaque\nstringData:\n  INITIAL_TENANT_NAME: ${yamlString(initialTenant.tenantName)}\n  INITIAL_ADMIN_FIRST_NAME: ${yamlString(initialTenant.adminFirstName)}\n  INITIAL_ADMIN_LAST_NAME: ${yamlString(initialTenant.adminLastName)}\n  INITIAL_ADMIN_EMAIL: ${yamlString(initialTenant.adminEmail)}\n  INITIAL_ADMIN_PASSWORD: ${yamlString(initialTenant.adminPassword)}${tenantIdLine}\n`;
 }
 
-function appUrlFromInput(value) {
+export function appUrlFromInput(value) {
   const trimmed = String(value || '').trim();
   if (!trimmed) return null;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
 }
 
-function hostFromAppUrl(value) {
+export function hostFromAppUrl(value) {
   try {
     return new URL(value).hostname;
   } catch {
@@ -450,7 +450,7 @@ function hostFromAppUrl(value) {
   }
 }
 
-function setYamlScalar(yaml, target, value) {
+export function setYamlScalar(yaml, target, value) {
   const output = [];
   const stack = [];
   let replaced = false;

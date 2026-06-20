@@ -17,14 +17,161 @@ const CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const CONTACT_LIST_SEARCH_TYPES = ['contact', 'document', 'interaction'] as const;
 
+type QueryActionUser = {
+  user_id: string;
+  tenant?: string;
+  user_type?: string | null;
+  clientId?: string | null;
+  contact_id?: string | null;
+};
+
+type DbConnection = Knex | Knex.Transaction;
+
+function isClientPortalUser(user: QueryActionUser): boolean {
+  return user.user_type === 'client';
+}
+
+function isMspUser(user: QueryActionUser): boolean {
+  return user.user_type === 'internal';
+}
+
+async function hasMspPermissionForAction(
+  user: QueryActionUser,
+  resource: string,
+  action: string,
+  db?: DbConnection
+): Promise<boolean> {
+  if (!isMspUser(user)) {
+    return false;
+  }
+
+  return hasPermissionAsync(user, resource, action, db);
+}
+
+async function assertMspPermissionForAction(
+  user: QueryActionUser,
+  resource: string,
+  action: string,
+  message: string,
+  db?: DbConnection
+): Promise<void> {
+  if (!await hasMspPermissionForAction(user, resource, action, db)) {
+    throw new Error(message);
+  }
+}
+
+async function getClientPortalUserClientIdForAction(
+  user: QueryActionUser,
+  tenant: string,
+  db: DbConnection
+): Promise<string | null> {
+  if (!isClientPortalUser(user)) {
+    return null;
+  }
+
+  if (typeof user.clientId === 'string' && user.clientId.length > 0) {
+    return user.clientId;
+  }
+
+  if (!user.contact_id) {
+    return null;
+  }
+
+  const contact = await db('contacts')
+    .select('client_id')
+    .where({
+      contact_name_id: user.contact_id,
+      tenant
+    })
+    .first();
+
+  return typeof contact?.client_id === 'string' ? contact.client_id : null;
+}
+
+async function hasClientPortalOwnClientPermissionForAction(
+  user: QueryActionUser,
+  tenant: string,
+  clientId: string,
+  resource: string,
+  action: string,
+  db: DbConnection
+): Promise<boolean> {
+  if (!isClientPortalUser(user)) {
+    return false;
+  }
+
+  const [canUseResource, userClientId] = await Promise.all([
+    hasPermissionAsync(user, resource, action, db),
+    getClientPortalUserClientIdForAction(user, tenant, db)
+  ]);
+
+  return canUseResource && userClientId === clientId;
+}
+
+async function hasMspOrClientPortalOwnClientPermissionForAction(
+  user: QueryActionUser,
+  tenant: string,
+  clientId: string,
+  resource: string,
+  action: string,
+  db: DbConnection
+): Promise<boolean> {
+  if (isMspUser(user)) {
+    return hasPermissionAsync(user, resource, action, db);
+  }
+
+  return hasClientPortalOwnClientPermissionForAction(user, tenant, clientId, resource, action, db);
+}
+
+async function assertMspOrClientPortalOwnClientPermissionForAction(
+  user: QueryActionUser,
+  tenant: string,
+  clientId: string,
+  resource: string,
+  action: string,
+  message: string,
+  db: DbConnection
+): Promise<void> {
+  if (!await hasMspOrClientPortalOwnClientPermissionForAction(user, tenant, clientId, resource, action, db)) {
+    throw new Error(message);
+  }
+}
+
+async function assertCreateOrFindContactPermission(
+  user: QueryActionUser,
+  tenant: string,
+  clientId: string,
+  db: DbConnection
+): Promise<void> {
+  if (isClientPortalUser(user)) {
+    if (!await hasClientPortalOwnClientPermissionForAction(user, tenant, clientId, 'user', 'create', db)) {
+      throw new Error('Permission denied: Cannot create client users');
+    }
+    return;
+  }
+
+  if (!await hasMspPermissionForAction(user, 'contact', 'read', db)) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
+  if (!await hasMspPermissionForAction(user, 'contact', 'create', db)) {
+    throw new Error('Permission denied: Cannot create contacts');
+  }
+}
+
 // --- Client query actions ---
 
 export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClientWithLocation | null> => {
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
-
   const { knex } = await createTenantKnex();
+  await assertMspOrClientPortalOwnClientPermissionForAction(
+    user,
+    tenant,
+    clientId,
+    'client',
+    'read',
+    'Permission denied: Cannot read clients',
+    knex
+  );
 
   const clientData = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients as c')
@@ -61,9 +208,7 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
 });
 
 export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermissionForAction(user, 'client', 'read', 'Permission denied: Cannot read clients');
 
   const { knex: db } = await createTenantKnex();
 
@@ -142,9 +287,7 @@ export const getContactsByClient = withAuth(async (
   sortBy: string = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
-  if (!await hasPermissionAsync(user, 'contact', 'read')) {
-    throw new Error('Permission denied: Cannot read contacts');
-  }
+  await assertMspPermissionForAction(user, 'contact', 'read', 'Permission denied: Cannot read contacts');
 
   const { knex: db } = await createTenantKnex();
 
@@ -233,9 +376,7 @@ export const searchContactListIds = withAuth(async (
   { tenant },
   query: string
 ): Promise<string[]> => {
-  if (!await hasPermissionAsync(user, 'contact', 'read')) {
-    throw new Error('Permission denied: Cannot read contacts');
-  }
+  await assertMspPermissionForAction(user, 'contact', 'read', 'Permission denied: Cannot read contacts');
 
   const rawSearch = query.replace(/\s+/g, ' ').trim();
   if (!rawSearch) {
@@ -243,22 +384,15 @@ export const searchContactListIds = withAuth(async (
   }
 
   const permissions = ['contact:read'];
-  if (await hasPermissionAsync(user, 'document', 'read')) {
+  if (await hasMspPermissionForAction(user, 'document', 'read')) {
     permissions.push('document:read');
   }
-  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+  if (await hasMspPermissionForAction(user, 'interaction', 'read')) {
     permissions.push('interaction:read');
   }
 
   const prefixTsquery = buildContactListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
-  const isInternalUser = user.user_type !== 'client';
-  const clientScopePredicate = isInternalUser
-    ? 'TRUE'
-    : user.clientId
-      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
-      : 'si.client_scope_id IS NULL';
-  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -299,7 +433,6 @@ export const searchContactListIds = withAuth(async (
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND (si.is_internal_only = false OR ?::boolean = true)
             AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND ${clientScopePredicate}
             AND (
               si.search_vector @@ q.tsq
               OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
@@ -331,9 +464,8 @@ export const searchContactListIds = withAuth(async (
         [...CONTACT_LIST_SEARCH_TYPES],
         permissions,
         user.user_id,
-        isInternalUser,
+        true,
         user.user_id,
-        ...clientScopeBindings,
       ]
     );
 
@@ -348,9 +480,7 @@ export const getAllContacts = withAuth(async (
   sortBy: string = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
-  if (!await hasPermissionAsync(user, 'contact', 'read')) {
-    throw new Error('Permission denied: Cannot read contacts');
-  }
+  await assertMspPermissionForAction(user, 'contact', 'read', 'Permission denied: Cannot read contacts');
 
   const { knex: db } = await createTenantKnex();
 
@@ -454,10 +584,12 @@ export const getAllContacts = withAuth(async (
 });
 
 export const findContactByEmailAddress = withAuth(async (
-  _user,
+  user,
   { tenant },
   email: string
 ): Promise<IContact | null> => {
+  await assertMspPermissionForAction(user, 'contact', 'read', 'Permission denied: Cannot read contacts');
+
   try {
     const { knex } = await createTenantKnex();
 
@@ -473,7 +605,7 @@ export const findContactByEmailAddress = withAuth(async (
 });
 
 export const createOrFindContactByEmail = withAuth(async (
-  _user,
+  user,
   { tenant },
   {
     email,
@@ -491,12 +623,18 @@ export const createOrFindContactByEmail = withAuth(async (
 ): Promise<{ contact: IContact & { client_name: string }; isNew: boolean }> => {
   try {
     const { knex } = await createTenantKnex();
+    await assertCreateOrFindContactPermission(user, tenant, clientId, knex);
+    const isClientPortal = isClientPortalUser(user);
+    const normalizedEmail = email.toLowerCase();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingContactInTenant = await ContactModel.getContactByEmail(email.toLowerCase(), tenant, trx);
+      const existingContactInTenant = await ContactModel.getContactByEmail(normalizedEmail, tenant, trx);
 
       if (existingContactInTenant) {
         if (existingContactInTenant.client_id !== clientId) {
+          if (isClientPortal) {
+            throw new Error('EMAIL_EXISTS: This email address is already in use');
+          }
           if (!existingContactInTenant.client_id) {
             throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
           }
@@ -515,7 +653,7 @@ export const createOrFindContactByEmail = withAuth(async (
 
       const newContact = await ContactModel.createContact({
         full_name: name || extractNameFromEmail(email),
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         client_id: clientId,
         phone_numbers: phone ? [{
           phone_number: phone,
@@ -558,10 +696,12 @@ function extractNameFromEmail(email: string): string {
 // --- Interaction query actions ---
 
 export const getInteractionById = withAuth(async (
-  _user,
+  user,
   { tenant },
   interactionId: string
 ): Promise<IInteraction> => {
+  await assertMspPermissionForAction(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+
   try {
     const { knex } = await createTenantKnex();
     const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {

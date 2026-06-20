@@ -352,18 +352,16 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
 
     const knex = await getConnection(session.user.tenant);
 
-    // Get active subscription with related price info
+    // Get active, trialing, or past_due subscription with related price info
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -646,15 +644,16 @@ export async function sendCancellationFeedbackAction(
 
     const knex = await getConnection(session.user.tenant);
 
-    // Get subscription details
+    // Get subscription details (active, trialing, or past_due — all are cancelable)
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({ tenant: session.user.tenant, status: 'active' })
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -729,18 +728,19 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
-    // Get active subscription
+    // Get active, trialing, or past_due subscription. Trialing subs cancel just like
+    // active ones via cancel_at_period_end: Stripe treats the trial as the current
+    // period, so the subscription cancels at trial_end and the customer is never
+    // charged. past_due subs cancel at period end too, stopping further dunning.
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -946,12 +946,10 @@ export async function reduceLicenseCount(
       };
     }
 
-    // Get subscription details for effective date
+    // Get subscription details for effective date (active or trialing)
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: tenantId,
-        status: 'active',
-      })
+      .where({ tenant: tenantId })
+      .whereIn('status', ['active', 'trialing'])
       .first();
 
     if (!subscription || !subscription.current_period_end) {

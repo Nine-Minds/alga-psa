@@ -10,6 +10,7 @@ import { runAsSystem, createSystemContext } from '@alga-psa/db';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
+import type { Knex } from 'knex';
 import type {
   SendInvitationResult,
   VerifyTokenResult,
@@ -51,6 +52,137 @@ function normalizeCreateClientPortalUserError(
   return { message: 'Failed to create client portal user', errorCode: 'CREATE_USER_FAILED' };
 }
 
+type DbConnection = Knex | Knex.Transaction;
+
+interface PortalContactAuthContext {
+  contact_name_id: string;
+  client_id: string | null;
+  is_client_admin?: boolean;
+}
+
+function isClientPortalUser(user: IUserWithRoles): boolean {
+  return user.user_type === 'client';
+}
+
+function isMspUser(user: IUserWithRoles): boolean {
+  return user.user_type === 'internal';
+}
+
+async function getContactAuthContext(
+  db: DbConnection,
+  tenant: string,
+  contactId: string
+): Promise<PortalContactAuthContext | null> {
+  const contact = await db('contacts')
+    .select('contact_name_id', 'client_id', 'is_client_admin')
+    .where({ tenant, contact_name_id: contactId })
+    .first();
+
+  return contact ?? null;
+}
+
+async function getClientPortalActorContact(
+  user: IUserWithRoles,
+  tenant: string,
+  db: DbConnection
+): Promise<PortalContactAuthContext | null> {
+  if (!isClientPortalUser(user) || !user.contact_id) {
+    return null;
+  }
+
+  return getContactAuthContext(db, tenant, user.contact_id);
+}
+
+async function canManageClientPortalTargetClient(
+  user: IUserWithRoles,
+  tenant: string,
+  db: DbConnection,
+  action: 'read' | 'create' | 'update' | 'invite',
+  targetClientId: string | null
+): Promise<boolean> {
+  const canUseAction = await hasPermission(user, 'user', action, db);
+  if (!canUseAction) {
+    return false;
+  }
+
+  if (isMspUser(user)) {
+    return true;
+  }
+
+  if (!isClientPortalUser(user) || !targetClientId) {
+    return false;
+  }
+
+  const actorContact = await getClientPortalActorContact(user, tenant, db);
+  return !!actorContact?.is_client_admin && actorContact.client_id === targetClientId;
+}
+
+async function canManageClientPortalTargetContact(
+  user: IUserWithRoles,
+  tenant: string,
+  db: DbConnection,
+  action: 'read' | 'create' | 'update' | 'invite',
+  targetContactId: string
+): Promise<boolean> {
+  const targetContact = await getContactAuthContext(db, tenant, targetContactId);
+  return canManageClientPortalTargetClient(
+    user,
+    tenant,
+    db,
+    action,
+    targetContact?.client_id ?? null
+  );
+}
+
+async function resolveInvitationTargetClientId(
+  db: DbConnection,
+  tenant: string,
+  invitationId: string
+): Promise<string | null | undefined> {
+  const invitation = await db('portal_invitations as pi')
+    .leftJoin('contacts as c', function() {
+      this.on('pi.tenant', '=', 'c.tenant')
+        .andOn('pi.contact_id', '=', 'c.contact_name_id');
+    })
+    .where({
+      'pi.tenant': tenant,
+      'pi.invitation_id': invitationId
+    })
+    .select('c.client_id')
+    .first();
+
+  if (!invitation) {
+    return undefined;
+  }
+
+  return invitation.client_id ?? null;
+}
+
+async function resolveClientUserTargetClientId(
+  db: DbConnection,
+  tenant: string,
+  userId: string
+): Promise<string | null | undefined> {
+  const targetUser = await db('users as u')
+    .leftJoin('contacts as c', function() {
+      this.on('u.tenant', '=', 'c.tenant')
+        .andOn('u.contact_id', '=', 'c.contact_name_id');
+    })
+    .where({
+      'u.tenant': tenant,
+      'u.user_id': userId,
+      'u.user_type': 'client'
+    })
+    .select('c.client_id')
+    .first();
+
+  if (!targetUser) {
+    return undefined;
+  }
+
+  return targetUser.client_id ?? null;
+}
+
 export const createClientPortalUser = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
@@ -59,8 +191,19 @@ export const createClientPortalUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    // RBAC: ensure user has permission to create users
-    const canCreate = await hasPermission(user, 'user', 'create', knex);
+    const normalizedContactClientId = params.contact?.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
+    const existingContactForAuth = params.contactId
+      ? await getContactAuthContext(knex, tenant, params.contactId)
+      : null;
+    const targetClientIdForAuth = existingContactForAuth?.client_id ?? normalizedContactClientId;
+
+    const canCreate = await canManageClientPortalTargetClient(
+      user,
+      tenant,
+      knex,
+      'create',
+      targetClientIdForAuth
+    );
     if (!canCreate) {
       return {
         success: false,
@@ -218,7 +361,7 @@ export const createClientPortalUser = withAuth(async (
       let targetRoleId: string | undefined = undefined;
       if (params.roleId) {
         const uiRole = await trx('roles')
-          .where({ tenant, role_id: params.roleId })
+          .where({ tenant, role_id: params.roleId, client: true })
           .first();
         if (uiRole) {
           targetRoleId = uiRole.role_id;
@@ -289,8 +432,7 @@ export const sendPortalInvitation = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    // RBAC: ensure user has permission to invite users
-    const canInvite = await hasPermission(user, 'user', 'invite', knex);
+    const canInvite = await canManageClientPortalTargetContact(user, tenant, knex, 'invite', contactId);
     if (!canInvite) {
       return {
         success: false,
@@ -729,11 +871,16 @@ export async function completePortalSetup(
  * Get invitation history for a contact
  */
 export const getPortalInvitations = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   contactId: string
 ): Promise<InvitationHistoryItem[]> => {
   try {
+    const { knex } = await createTenantKnex();
+    if (!await canManageClientPortalTargetContact(user, tenant, knex, 'read', contactId)) {
+      return [];
+    }
+
     const invitations = await PortalInvitationService.getInvitationHistory(contactId);
 
     return invitations.map(invitation => {
@@ -765,11 +912,29 @@ export const getPortalInvitations = withAuth(async (
  * Revoke a portal invitation
  */
 export const revokePortalInvitation = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   invitationId: string
 ): Promise<{ success: boolean; error?: string; errorCode?: PortalInvitationErrorCode }> => {
   try {
+    const { knex } = await createTenantKnex();
+    const targetClientId = await resolveInvitationTargetClientId(knex, tenant, invitationId);
+    if (targetClientId === undefined) {
+      return {
+        success: false,
+        error: 'Invitation not found or already used',
+        errorCode: 'INVITATION_NOT_FOUND'
+      };
+    }
+
+    if (!await canManageClientPortalTargetClient(user, tenant, knex, 'invite', targetClientId)) {
+      return {
+        success: false,
+        error: 'Permission denied: Cannot revoke portal invitations',
+        errorCode: 'PERMISSION_DENIED_INVITE'
+      };
+    }
+
     const revoked = await PortalInvitationService.revokeInvitation(invitationId);
 
     if (!revoked) {
@@ -794,18 +959,31 @@ export const revokePortalInvitation = withAuth(async (
  * Kept here to support MSP contact portal-management flows from a lower layer.
  */
 export const updateClientUser = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   userId: string,
   userData: Partial<IUser>
 ): Promise<IUser | null> => {
   try {
     const { knex } = await createTenantKnex();
+    const targetClientId = await resolveClientUserTargetClientId(knex, tenant, userId);
+    if (targetClientId === undefined) {
+      return null;
+    }
+
+    if (!await canManageClientPortalTargetClient(user, tenant, knex, 'update', targetClientId)) {
+      throw new Error('Permission denied: Cannot update client users');
+    }
+
+    const allowedUpdates: Partial<IUser> = {};
+    if (Object.prototype.hasOwnProperty.call(userData, 'is_inactive')) {
+      allowedUpdates.is_inactive = userData.is_inactive;
+    }
 
     const [updatedUser] = await knex('users')
-      .where({ user_id: userId, tenant })
+      .where({ user_id: userId, tenant, user_type: 'client' })
       .update({
-        ...userData,
+        ...allowedUpdates,
         updated_at: new Date().toISOString()
       })
       .returning('*');
