@@ -7,7 +7,13 @@ import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
 import { withAuth } from '@alga-psa/auth';
-import { hasPermissionAsync } from '../lib/authHelpers';
+import {
+  assertMspOrClientPortalOwnClientPermission,
+  assertMspPermission,
+  hasMspOrClientPortalOwnClientPermission,
+  hasMspPermission,
+  isClientPortalUser,
+} from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { withTransaction } from '@alga-psa/db';
@@ -28,11 +34,46 @@ import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/sha
 
 const CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
+  'website',
+  'industry',
+  'company_size',
+  'annual_revenue',
+]);
 
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
+}
+
+function sanitizeClientPortalClientUpdate(
+  updateData: Partial<Omit<IClient, 'account_manager_full_name'>>
+): Partial<Omit<IClient, 'account_manager_full_name'>> {
+  const sanitized: Partial<Omit<IClient, 'account_manager_full_name'>> = {};
+
+  if (Object.prototype.hasOwnProperty.call(updateData, 'client_name')) {
+    sanitized.client_name = updateData.client_name;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updateData, 'url')) {
+    sanitized.url = updateData.url;
+  }
+
+  if (updateData.properties && typeof updateData.properties === 'object' && !Array.isArray(updateData.properties)) {
+    const sanitizedProperties: Record<string, unknown> = {};
+    for (const propertyName of CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES) {
+      if (Object.prototype.hasOwnProperty.call(updateData.properties, propertyName)) {
+        sanitizedProperties[propertyName] = (updateData.properties as Record<string, unknown>)[propertyName];
+      }
+    }
+
+    if (Object.keys(sanitizedProperties).length > 0) {
+      sanitized.properties = sanitizedProperties as IClient['properties'];
+    }
+  }
+
+  return sanitized;
 }
 
 async function getExistingPublicTables(
@@ -131,15 +172,24 @@ async function cleanupEntraReferencesBeforeClientDelete(
 }
 
 export const updateClient = withAuth(async (user, { tenant }, clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient> => {
-  // Check permission for client updating
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients. Please contact your administrator if you need additional access.');
-  }
+  await assertMspOrClientPortalOwnClientPermission(
+    user,
+    tenant,
+    clientId,
+    'client',
+    'update',
+    'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.'
+  );
+
+  const isClientPortalUpdate = isClientPortalUser(user);
+  const permittedUpdateData = isClientPortalUpdate
+    ? sanitizeClientPortalClientUpdate(updateData)
+    : updateData;
 
   const { knex: db } = await createTenantKnex();
 
   try {
-    console.log('Updating client in database:', clientId, updateData);
+    console.log('Updating client in database:', clientId, permittedUpdateData);
 
     const updateResult = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build update object with explicit null handling
@@ -157,9 +207,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       }
 
       // Handle properties separately
-      if (updateData.properties) {
+      if (permittedUpdateData.properties) {
         const currentProperties = currentClient.properties || {};
-        const newProperties = updateData.properties;
+        const newProperties = permittedUpdateData.properties;
 
         updateObject.properties = { ...currentProperties, ...newProperties };
 
@@ -170,25 +220,25 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       }
 
       // Handle url field to sync with properties.website
-      if (updateData.url !== undefined) {
-        updateObject.url = updateData.url;
+      if (permittedUpdateData.url !== undefined) {
+        updateObject.url = permittedUpdateData.url;
 
         // Update properties.website to match url
         if (!updateObject.properties) {
           updateObject.properties = {
             ...(currentClient.properties || {}),
-            website: updateData.url
+            website: permittedUpdateData.url
           };
         } else {
           updateObject.properties = {
             ...updateObject.properties,
-            website: updateData.url
+            website: permittedUpdateData.url
           };
         }
       }
 
       // Handle all other fields
-      Object.entries(updateData).forEach(([key, value]) => {
+      Object.entries(permittedUpdateData).forEach(([key, value]) => {
         // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), location fields, and partition keys (tenant, client_id)
         const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
         if (!excludedFields.includes(key)) {
@@ -198,15 +248,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       });
 
       // Explicitly set fields to null if they're not in updateData but should be cleared
-      if (!updateData.hasOwnProperty('billing_contact_id')) {
+      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
         updateObject.billing_contact_id = null;
       }
-      if (!updateData.hasOwnProperty('billing_email')) {
+      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_email')) {
         updateObject.billing_email = null;
       }
 
-      if (updateData.hasOwnProperty('account_manager_id')) {
-          updateObject.account_manager_id = updateData.account_manager_id === '' ? null : updateData.account_manager_id;
+      if (permittedUpdateData.hasOwnProperty('account_manager_id')) {
+          updateObject.account_manager_id = permittedUpdateData.account_manager_id === '' ? null : permittedUpdateData.account_manager_id;
       }
 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
@@ -342,10 +392,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 });
 
 export const createClient = withAuth(async (user, { tenant }, client: Omit<IClient, 'client_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: IClient } | { success: false; error: string }> => {
-  // Check permission for client creation
-  if (!await hasPermissionAsync(user, 'client', 'create')) {
-    throw new Error('Permission denied: Cannot create clients');
-  }
+  await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
 
   const { knex } = await createTenantKnex();
 
@@ -694,15 +741,12 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
 }
 
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
-  // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
   const searchPermissions = ['client:read'];
-  if (await hasPermissionAsync(user, 'document', 'read')) {
+  if (await hasMspPermission(user, 'document', 'read')) {
     searchPermissions.push('document:read');
   }
-  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+  if (await hasMspPermission(user, 'interaction', 'read')) {
     searchPermissions.push('interaction:read');
   }
 
@@ -871,14 +915,12 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
   { tenant },
   params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
 ): Promise<PaginatedClientsResponse> => {
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
   const searchPermissions = ['client:read'];
-  if (await hasPermissionAsync(user, 'document', 'read')) {
+  if (await hasMspPermission(user, 'document', 'read')) {
     searchPermissions.push('document:read');
   }
-  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+  if (await hasMspPermission(user, 'interaction', 'read')) {
     searchPermissions.push('interaction:read');
   }
 
@@ -1052,7 +1094,7 @@ export const validateClientDeletion = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<DeletionValidationResult> => {
-  if (!await hasPermissionAsync(user, 'client', 'delete')) {
+  if (!await hasMspPermission(user, 'client', 'delete')) {
     return {
       canDelete: false,
       code: 'PERMISSION_DENIED',
@@ -1142,7 +1184,7 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
   deleted?: boolean;
   counts?: Record<string, number>;
 }> => {
-  if (!await hasPermissionAsync(user, 'client', 'delete')) {
+  if (!await hasMspPermission(user, 'client', 'delete')) {
     throw new Error('Permission denied: Cannot delete clients');
   }
 
@@ -1325,10 +1367,7 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
 });
 
 export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: IClient[]): Promise<string> => {
-  // Check permission for client reading (export is a read operation)
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot export clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot export clients');
 
   const { knex } = await createTenantKnex();
 
@@ -1456,10 +1495,7 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
   clientTypeFilter?: 'all' | 'company' | 'individual';
   selectedTags?: string[];
 } = {}): Promise<string[]> => {
-  // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
 
   const { knex: db } = await createTenantKnex();
 
@@ -1538,10 +1574,7 @@ export const checkExistingClients = withAuth(async (
   { tenant },
   clientNames: string[]
 ): Promise<IClient[]> => {
-  // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
 
   const { knex: db } = await createTenantKnex();
 
@@ -1568,12 +1601,9 @@ export const importClientsFromCSV = withAuth(async (
   clientsData: Array<Record<string, any>>,
   updateExisting: boolean = false
 ): Promise<ImportClientResult[]> => {
-  // Check permissions for both create and update operations since import can do both
-  if (!await hasPermissionAsync(user, 'client', 'create')) {
-    throw new Error('Permission denied: Cannot create clients');
-  }
+  await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
 
-  if (updateExisting && !await hasPermissionAsync(user, 'client', 'update')) {
+  if (updateExisting && !await hasMspPermission(user, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients');
   }
 
@@ -1756,8 +1786,7 @@ export const uploadClientLogo = withAuth(async (
     return { success: false, message: 'No logo file provided' };
   }
 
-  // Check permission for client updating (logo upload is an update operation)
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
+  if (!await hasMspOrClientPortalOwnClientPermission(user, tenant, clientId, 'client', 'update')) {
     return { success: false, message: 'Permission denied: Cannot update client logo' };
   }
 
@@ -1798,8 +1827,7 @@ export const deleteClientLogo = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<{ success: boolean; message?: string }> => {
-  // Check permission for client deletion (logo deletion is a delete operation)
-  if (!await hasPermissionAsync(user, 'client', 'delete')) {
+  if (!await hasMspOrClientPortalOwnClientPermission(user, tenant, clientId, 'client', 'update')) {
     return { success: false, message: 'Permission denied: Cannot delete client logo' };
   }
 
@@ -1842,8 +1870,7 @@ export const deactivateClientContacts = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> => {
-  // Check permission for contact updating
-  if (!await hasPermissionAsync(user, 'contact', 'update')) {
+  if (!await hasMspPermission(user, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
@@ -1897,13 +1924,12 @@ export const markClientInactiveWithContacts = withAuth(async (
   clientId: string,
   deactivateContacts: boolean = true
 ): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> => {
-  // Check permission for client updating
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
+  if (!await hasMspPermission(user, 'client', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
   }
 
   // If deactivating contacts, also check contact permission
-  if (deactivateContacts && !await hasPermissionAsync(user, 'contact', 'update')) {
+  if (deactivateContacts && !await hasMspPermission(user, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
@@ -1978,13 +2004,12 @@ export const markClientActiveWithContacts = withAuth(async (
   clientId: string,
   reactivateContacts: boolean = false
 ): Promise<{ success: boolean; contactsReactivated: number; message?: string }> => {
-  // Check permission for client updating
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
+  if (!await hasMspPermission(user, 'client', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
   }
 
   // If reactivating contacts, also check contact permission
-  if (reactivateContacts && !await hasPermissionAsync(user, 'contact', 'update')) {
+  if (reactivateContacts && !await hasMspPermission(user, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
@@ -2045,8 +2070,7 @@ export const reactivateClientContacts = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<{ success: boolean; contactsReactivated: number; message?: string }> => {
-  // Check permission for contact updating
-  if (!await hasPermissionAsync(user, 'contact', 'update')) {
+  if (!await hasMspPermission(user, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts' };
   }
 

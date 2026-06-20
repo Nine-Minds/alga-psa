@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { hasPermissionAsync } from '../lib/authHelpers';
+import { assertMspPermission, hasMspPermission } from '../lib/authHelpers';
 
 export interface InboundTicketDestinationOption {
   id: string;
@@ -42,8 +42,8 @@ export const listInboundTicketDestinationOptions = withAuth(async (
   { tenant }
 ): Promise<InboundTicketDestinationOption[]> => {
   const [canReadClient, canReadContact] = await Promise.all([
-    hasPermissionAsync(user, 'client', 'read'),
-    hasPermissionAsync(user, 'contact', 'read'),
+    hasMspPermission(user, 'client', 'read'),
+    hasMspPermission(user, 'contact', 'read'),
   ]);
 
   if (!canReadClient && !canReadContact) {
@@ -67,9 +67,7 @@ export const updateClientInboundTicketDestination = withAuth(async (
   clientId: string,
   inboundTicketDefaultsId: string | null
 ): Promise<EntityInboundDestinationUpdateResult> => {
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
 
   const normalizedDefaultsId = normalizeDefaultsId(inboundTicketDefaultsId);
 
@@ -107,9 +105,7 @@ export const updateContactInboundTicketDestination = withAuth(async (
   contactId: string,
   inboundTicketDefaultsId: string | null
 ): Promise<EntityInboundDestinationUpdateResult> => {
-  if (!await hasPermissionAsync(user, 'contact', 'update')) {
-    throw new Error('Permission denied: Cannot update contacts');
-  }
+  await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts');
 
   const normalizedDefaultsId = normalizeDefaultsId(inboundTicketDefaultsId);
 

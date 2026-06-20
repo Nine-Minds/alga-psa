@@ -1,5 +1,4 @@
-'use server'
-
+// Internal server-side helpers. Callers must enforce auth/RBAC before invoking.
 import { revalidatePath } from 'next/cache';
 import type { Knex } from 'knex';
 import type { IInteraction } from '@alga-psa/types';

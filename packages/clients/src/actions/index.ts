@@ -21,7 +21,6 @@ export * from './inboundTicketDestinationActions';
 export * from './countryActions';
 export * from './contact-actions';
 export * from './interactionActions';
-export * from './interactionCreateHelper';
 export * from './interactionTypeActions';
 export * from './onlineMeetingActions';
 export * from './contactAvatarActions';
