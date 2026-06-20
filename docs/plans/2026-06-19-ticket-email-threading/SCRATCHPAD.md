@@ -88,6 +88,24 @@
   data-layer invariants of T001/T002. `applyTicketThreadHeaders` is now exported from
   `@alga-psa/email`.
 
+### Wire-level outbound smoke (T001 + F017) — PASSED
+- `smoke-outbound-wire.mts`: sent 3 ticket emails through a real SMTP provider into
+  GreenMail, read back over IMAP. All checks pass: 3 distinct Message-IDs, **wire
+  Message-IDs equal our recorded rfc ids (nodemailer preserved our headers)**, all
+  References share one root (`<ticket-{id}@domain>`), and the In-Reply-To/References chain
+  is exact (first → root, each later → all prior). Proves the customer fix on the wire.
+- SMTP provider config needs `username`/`password` (GreenMail accepts `imap_user`/`imap_pass`);
+  `secure:false`, host `localhost:3025` from the host. Read back via imapflow on `localhost:3143`.
+
+### Rig final status (from setup agent)
+- Inbound **Case A PASSED**: email → ticket `5e34a2d7-f242-4126-91a9-0d3f8be99b11` created.
+- Provider `dc59ec87` `connected`, `last_error: null`, lease held. GreenMail `imap-test-server:3143`.
+- Dev login rotated to `K4E0hm03u65FcvNG` (glinda@emeraldcity.oz). Consumer in pane
+  `83f57ad7` via `/tmp/run-consumer.sh` (REDIS_HOST=localhost, `/tmp/consumer.env`).
+- email-service webhook URL uses `172.20.0.1:3048` (Linux has no `host.docker.internal`).
+- Ticket defaults: General Email Support → board "General Support", status "Curious Beginning".
+- Gotcha: `/tmp/consumer.env` + `/tmp/run-consumer.sh` are ephemeral (not persisted across reboot).
+
 ### Smoke-test prerequisites / gotchas (must resolve before driving the matrix)
 - **Load the new code:** the dev server was restarted BEFORE these edits. `packages/email`
   is a built dep — rebuild it and restart the server (and the consumer, which loads

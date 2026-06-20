@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Integration (DB): UI-origin ticket -> created + comment + closed; assert each outbound email_sending_logs row has a distinct rfc_message_id, all References share one root, the chain grows monotonically and is capped at root+20",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F004",
@@ -18,7 +18,7 @@
   {
     "id": "T002",
     "description": "Integration (DB): email-origin ticket -> anchor equals the inbound Message-ID; subsequent outbound emails carry In-Reply-To/References pointing at the inbound id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F006",
@@ -68,7 +68,7 @@
   {
     "id": "T007",
     "description": "Integration: SMTP (nodemailer) and Resend providers emit the exact Message-ID/In-Reply-To/References Alga set; recorded rfc_message_id equals the on-wire id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F017",
