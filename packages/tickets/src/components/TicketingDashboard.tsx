@@ -49,7 +49,7 @@ import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { createTicketColumns } from '@alga-psa/tickets/lib';
+import { createTicketColumns, TICKET_COLUMNS } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
@@ -1486,29 +1486,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   ]);
 
   const printColumns = useMemo<PrintColumnOption<ITicketListItem>[]>(() => {
-    const availableColumns = createTicketColumns({
-      categories,
-      boards,
-      displaySettings: {
-        ...displaySettings,
-        list: {
-          ...displaySettings?.list,
-          tagsInlineUnderTitle: false,
-        },
-      },
-      onTicketClick: handleTicketClick,
-      ticketTagsRef,
-      onTagsChange: handleTagsChange,
-      showTags: true,
-      showClient: true,
-      onClientClick: onQuickViewClient,
-      additionalAgentAvatarUrls,
-      teamAvatarUrls,
-      isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
-      onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
-      showAllAvailableColumns: true,
-      t,
-    });
+    // Export is a flat, every-field tabular view — its own concern, not the
+    // interactive Refined List. It reads the shared column catalog and supplies
+    // its own plain-text renderers below (keyed by dataIndex).
 
     const renderByDataIndex: Partial<Record<string, (ticket: ITicketListItem) => React.ReactNode>> = {
       ticket_number: (ticket) => ticket.ticket_number,
@@ -1545,14 +1525,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return availableColumns.map((column) => {
-      const dataIndexKey = Array.isArray(column.dataIndex) ? column.dataIndex.join('.') : column.dataIndex;
+    return TICKET_COLUMNS.map((column) => {
+      const dataIndexKey = column.dataIndex;
+      const label = t(column.titleKey, column.titleFallback);
       const knownRenderer = renderByDataIndex[dataIndexKey];
 
       return {
         key: dataIndexKey,
-        label: column.title,
-        header: column.title,
+        label,
+        header: label,
         className: dataIndexKey === 'ticket_number'
           ? 'tickets-print-number-column'
           : dataIndexKey === 'title'
@@ -1561,25 +1542,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
-          formatTicketPrintValue(getTicketColumnValue(ticket, column.dataIndex))
+          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey))
           || t('dashboard.print.emptyValue', '—')
         )),
       };
     });
   }, [
-    additionalAgentAvatarUrls,
-    boards,
-    bundleView,
     categories,
-    displaySettings,
-    handleTagsChange,
-    handleTicketClick,
-    isBundleExpanded,
-    onQuickViewClient,
     t,
-    teamAvatarUrls,
     ticketTagsRef,
-    toggleBundleExpanded,
   ]);
   const {
     selectedColumnKeys: selectedTicketPrintColumnKeys,

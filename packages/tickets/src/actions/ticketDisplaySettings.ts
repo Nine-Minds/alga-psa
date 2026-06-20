@@ -3,21 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth';
-
-export type TicketListColumnKey =
-  | 'ticket_number'
-  | 'title'
-  | 'status'
-  | 'priority'
-  | 'sla'
-  | 'board'
-  | 'category'
-  | 'client'
-  | 'assigned_to'
-  | 'due_date'
-  | 'created'
-  | 'created_by'
-  | 'tags';
+import { resolveTicketColumnVisibility, type TicketListColumnKey } from '../lib/ticketColumnCatalog';
 
 export type TicketListSettings = {
   columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
@@ -45,24 +31,9 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       dateTimeFormat: display.dateTimeFormat || DEFAULT_TICKETING_DATETIME_FORMAT,
       responseStateTrackingEnabled: display.responseStateTrackingEnabled ?? true,
       list: {
-        // Default on-screen column set mirrors the "Refined List" design: ticket
-        // number and category fold under the title, created/created-by are off by
-        // default. All remain enableable in ticket display settings.
-        columnVisibility: {
-          ticket_number: display?.list?.columnVisibility?.ticket_number ?? false,
-          title: display?.list?.columnVisibility?.title ?? true,
-          status: display?.list?.columnVisibility?.status ?? true,
-          priority: display?.list?.columnVisibility?.priority ?? true,
-          sla: display?.list?.columnVisibility?.sla ?? false,
-          board: display?.list?.columnVisibility?.board ?? true,
-          category: display?.list?.columnVisibility?.category ?? false,
-          client: display?.list?.columnVisibility?.client ?? true,
-          assigned_to: display?.list?.columnVisibility?.assigned_to ?? true,
-          due_date: display?.list?.columnVisibility?.due_date ?? true,
-          created: display?.list?.columnVisibility?.created ?? false,
-          created_by: display?.list?.columnVisibility?.created_by ?? false,
-          tags: display?.list?.columnVisibility?.tags ?? true,
-        },
+        // Defaults (and the "Refined List" fold behavior) come from the shared
+        // ticket-column catalog so this list can't drift from the renderer.
+        columnVisibility: resolveTicketColumnVisibility(display?.list?.columnVisibility),
         tagsInlineUnderTitle: display?.list?.tagsInlineUnderTitle ?? true,
       },
     };
@@ -72,21 +43,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       dateTimeFormat: DEFAULT_TICKETING_DATETIME_FORMAT,
       responseStateTrackingEnabled: true,
       list: {
-        columnVisibility: {
-          ticket_number: false,
-          title: true,
-          status: true,
-          priority: true,
-          sla: false,
-          board: true,
-          category: false,
-          client: true,
-          assigned_to: true,
-          due_date: true,
-          created: false,
-          created_by: false,
-          tags: true,
-        },
+        columnVisibility: resolveTicketColumnVisibility(),
         tagsInlineUnderTitle: true,
       },
     };
