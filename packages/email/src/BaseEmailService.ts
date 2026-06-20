@@ -314,7 +314,7 @@ async function persistCommentThreadReferences(params: {
  *
  * Best-effort: any failure is logged and never blocks the send.
  */
-async function applyTicketThreadHeaders(params: {
+export async function applyTicketThreadHeaders(params: {
   tenantId?: string;
   ticketId?: string;
   fromDomain?: string | null;
