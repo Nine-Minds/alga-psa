@@ -63,5 +63,39 @@
   doesn't override/duplicate; recorded `rfc_message_id` must equal the on-wire id.
 - Restarting the dev server rotates the seeded login password.
 
+### Implementation notes (2026-06-19)
+- `packages/email/src/BaseEmailService.ts`: added `applyTicketThreadHeaders` (ticket-scoped
+  anchor + In-Reply-To/References for ANY ticket email), exported pure
+  `buildTicketThreadHeaders`/`capReferences`, `extractDomainFromAddress`, and changed
+  `buildGeneratedRfcMessageId` to take a real domain (from the From address). `sendEmail`
+  now: computes `effectiveTicketId = replyContext.ticketId ?? (entityType==='ticket' ?
+  entityId : undefined)`; if ticket → `applyTicketThreadHeaders`, else legacy
+  `addCommentThreadReplyHeaders`; always stamps a Message-ID for ticket/comment emails;
+  defaults `entityType='ticket'`/`entityId=ticketId` for logging.
+- `server/src/lib/notifications/sendEventEmail.ts`: prepend `[Ticket #N]` via the new pure
+  `ticketSubject.ts`; append the RFC id (`result.rfcMessageId ?? result.messageId`) to
+  `email_metadata.references` (was `result.messageId`).
+- `shared/services/email/processInboundEmailInApp.ts`: `resolveReplyTargetFromOutboundMessageId`
+  now also matches `entity_type='ticket'` rows → returns the ticket (append at ticket level,
+  no parent comment). Reply-token path stays primary.
+- Unit tests pass: `ticketThreadHeaders.test.ts` (7), `ticketSubject.test.ts` (7). email +
+  shared packages typecheck clean (server tsc OOMs — verify via dev server / vitest).
+
+### Smoke-test prerequisites / gotchas (must resolve before driving the matrix)
+- **Load the new code:** the dev server was restarted BEFORE these edits. `packages/email`
+  is a built dep — rebuild it and restart the server (and the consumer, which loads
+  `shared/` via tsx) so the running processes use the new threading code.
+- **IMAP provider creds missing:** `imap_email_provider_config.last_error='IMAP credentials
+  missing'` for provider `dc59ec87-e668-4e9b-99e9-ecf084e08238`. The email-service can't
+  auth to GreenMail → inbound blocked until the IMAP password secret is stored (create via
+  UI, or write the secret the email-service reads). Needed for the inbound round-trip (T003).
+- **Outbound SMTP provider → GreenMail:** outbound emails go through the tenant's email
+  provider (`tenant_email_settings` / `email_provider_configs`), NOT the inbound IMAP
+  provider. To capture real outbound headers in GreenMail, configure a tenant SMTP provider
+  pointing at GreenMail SMTP (`imap-test-server:3025` / `localhost:3025`). Without it,
+  sendEmail returns "service disabled or not configured" and emails are skipped.
+- **Read raw outbound headers** from GreenMail (IMAP 3143 or HTTP API on 8080) to assert
+  Message-ID / In-Reply-To / References for T001/T002.
+
 ### Links
 - Design: [../2026-06-19-ticket-email-threading-design.md](../2026-06-19-ticket-email-threading-design.md)

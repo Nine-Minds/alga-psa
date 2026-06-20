@@ -3,54 +3,93 @@
     "id": "T001",
     "description": "Integration (DB): UI-origin ticket -> created + comment + closed; assert each outbound email_sending_logs row has a distinct rfc_message_id, all References share one root, the chain grows monotonically and is capped at root+20",
     "implemented": false,
-    "featureIds": ["F001", "F004", "F005", "F006", "F007", "F008", "F011", "F012", "F021"]
+    "featureIds": [
+      "F001",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F011",
+      "F012",
+      "F021"
+    ]
   },
   {
     "id": "T002",
     "description": "Integration (DB): email-origin ticket -> anchor equals the inbound Message-ID; subsequent outbound emails carry In-Reply-To/References pointing at the inbound id",
     "implemented": false,
-    "featureIds": ["F001", "F006", "F007", "F016"]
+    "featureIds": [
+      "F001",
+      "F006",
+      "F007",
+      "F016"
+    ]
   },
   {
     "id": "T003",
     "description": "Integration/e2e (rig): customer replies to a NON-comment notification (e.g. status update) -> reply appends to the same ticket, no duplicate ticket created",
     "implemented": false,
-    "featureIds": ["F011", "F019", "F020"]
+    "featureIds": [
+      "F011",
+      "F019",
+      "F020"
+    ]
   },
   {
     "id": "T004",
     "description": "Unit: References builder dedupes ids, preserves order, and caps to root + last 20",
-    "implemented": false,
-    "featureIds": ["F007"]
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
   },
   {
     "id": "T005",
     "description": "Unit: subject normalizer yields '[Ticket #N] <title>', is idempotent (no double prefix), and preserves 'Re:'",
-    "implemented": false,
-    "featureIds": ["F014", "F015", "F016"]
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016"
+    ]
   },
   {
     "id": "T006",
     "description": "Unit: resolveTicketThreadAnchor returns inbound id for email-origin and a deterministic synthetic id for UI-origin, stable across repeated calls",
     "implemented": false,
-    "featureIds": ["F001", "F002", "F003", "F021"]
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F021"
+    ]
   },
   {
     "id": "T007",
     "description": "Integration: SMTP (nodemailer) and Resend providers emit the exact Message-ID/In-Reply-To/References Alga set; recorded rfc_message_id equals the on-wire id",
     "implemented": false,
-    "featureIds": ["F013", "F017", "F018"]
+    "featureIds": [
+      "F013",
+      "F017",
+      "F018"
+    ]
   },
   {
     "id": "T008",
     "description": "Integration (DB guard): when anchor/header resolution fails (e.g. missing email_metadata), the email still sends successfully without threading headers",
     "implemented": false,
-    "featureIds": ["F010"]
+    "featureIds": [
+      "F010"
+    ]
   },
   {
     "id": "T009",
     "description": "Integration (DB): concurrent first-events on a brand-new ticket converge to a single anchor (no two distinct roots persisted)",
     "implemented": false,
-    "featureIds": ["F002", "F021"]
+    "featureIds": [
+      "F002",
+      "F021"
+    ]
   }
 ]
