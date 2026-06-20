@@ -641,7 +641,7 @@ async function resolveReplyTargetFromCommentThread(params: {
   });
 }
 
-async function resolveReplyTargetFromOutboundMessageId(params: {
+export async function resolveReplyTargetFromOutboundMessageId(params: {
   tenantId: string;
   rfcMessageId: string;
 }): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {

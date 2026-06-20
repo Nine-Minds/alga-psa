@@ -29,7 +29,7 @@
   {
     "id": "T003",
     "description": "Integration/e2e (rig): customer replies to a NON-comment notification (e.g. status update) -> reply appends to the same ticket, no duplicate ticket created",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F019",
