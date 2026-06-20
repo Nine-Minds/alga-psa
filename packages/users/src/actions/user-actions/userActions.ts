@@ -599,6 +599,20 @@ export const updateUser = withAuth(async (
         throwPermissionError('update user');
       }
 
+      // Defense-in-depth against mass-assignment: this generic profile-update
+      // path must never set privileged identity/credential columns. Dedicated
+      // flows exist for password, 2FA, and role/type/tenant changes. Without
+      // this, a user updating their own profile (isOwnProfile, no permission
+      // gate) could escalate by setting e.g. user_type or disabling their 2FA.
+      const PROTECTED_USER_FIELDS: ReadonlyArray<keyof IUser> = [
+        'tenant', 'user_type', 'hashed_password', 'two_factor_secret', 'two_factor_enabled',
+      ];
+      for (const field of PROTECTED_USER_FIELDS) {
+        if (field in userData) {
+          delete (userData as Record<string, unknown>)[field as string];
+        }
+      }
+
       // If user is being deactivated, clear default_assigned_to on boards
       if (userData.is_inactive === true) {
         await trx('boards')

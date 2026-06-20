@@ -1,8 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getSessionCookieName } from 'server/src/lib/auth/sessionCookies';
+
+/**
+ * Constant-time comparison for privileged bypass keys. Using `===` leaks the
+ * secret one byte at a time via response-timing differences; these keys grant a
+ * full API-auth bypass, so they must be compared in constant time.
+ */
+function secureKeyEqual(provided: string | undefined | null, expected: string | undefined | null): boolean {
+  if (!provided || !expected) return false;
+  const a = Buffer.from(provided, 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 // Cache NM Store key to avoid fetching every request
 let NM_STORE_KEY_CACHE: string | null = null;
@@ -233,7 +247,7 @@ export async function apiKeyAuthMiddleware(
 
     if (isNmAllowedPath) {
       const nmKey = await getNmStoreKeyCached();
-      if (nmKey && apiKey === nmKey) {
+      if (secureKeyEqual(apiKey, nmKey)) {
         // For user search we require tenant header
         if (normalizedPath === '/api/v1/users/search') {
           const tenantId = (req.headers['x-tenant-id'] as string) || '';
@@ -279,7 +293,7 @@ export async function apiKeyAuthMiddleware(
           );
         } catch (_) {}
 
-        if (allowKey && apiKey === allowKey) {
+        if (secureKeyEqual(apiKey, allowKey)) {
           return next();
         }
       } catch {
@@ -298,7 +312,7 @@ export async function apiKeyAuthMiddleware(
           );
         } catch (_) {}
 
-        if (allowKey && apiKey === allowKey) {
+        if (secureKeyEqual(apiKey, allowKey)) {
           return next();
         }
       }

@@ -147,7 +147,13 @@ function timingSafeEqualHex(left: string, right: string): boolean {
 function verifySignature(body: string, signature: string | null): boolean {
   const secret = process.env.ALTERNATIVE_PAYMENTS_WEBHOOK_SECRET;
   if (!secret) {
-    return true;
+    // Fail closed: without a configured secret the request cannot be
+    // authenticated. This endpoint records payments against an
+    // attacker-supplied tenant/invoice, so an unsigned request must never be
+    // trusted (previously this returned true, allowing unauthenticated
+    // cross-tenant payment fraud).
+    console.error('[alternative-payments webhook] ALTERNATIVE_PAYMENTS_WEBHOOK_SECRET is not configured; rejecting webhook');
+    return false;
   }
 
   if (!signature) {
