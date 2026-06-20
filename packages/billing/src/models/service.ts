@@ -55,6 +55,14 @@ const baseServiceSchema = z.object({
   cost: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ).nullable().optional(),
+  // DD-2/F-2: `.default('USD')` is kept for the READ path only. This schema does double
+  // duty (validates DB-read rows AND create input); dropping the default would make rows
+  // storing NULL cost_currency surface as null instead of 'USD'. For the CREATE path,
+  // Service.create resolves the tenant's configured default currency
+  // (default_billing_settings.default_currency_code) from the RAW input before insert, so a
+  // service created without an explicit cost_currency inherits the tenant default rather than
+  // this literal. ProductCatalogService.create resolves the tenant default independently (it
+  // does not use this schema).
   cost_currency: z.string().length(3).nullable().optional().default('USD'),
   vendor: z.string().nullable().optional(),
   manufacturer: z.string().nullable().optional(),
@@ -316,6 +324,20 @@ const Service = {
       throw new Error('cost must be a non-negative number');
     }
 
+    // Resolve cost currency: a caller-provided value wins; otherwise inherit the tenant's
+    // configured default currency (default_billing_settings.default_currency_code), and only
+    // then fall back to 'USD'. We read the RAW input (cleanedData) rather than validatedData
+    // because the schema's .default('USD') — kept for the read path — would otherwise mask
+    // "not provided".
+    let resolvedCostCurrency = cleanedData.cost_currency ?? null;
+    if (resolvedCostCurrency == null) {
+      const billingSettings = await knexOrTrx('default_billing_settings')
+        .where({ tenant: effectiveTenant })
+        .select('default_currency_code')
+        .first();
+      resolvedCostCurrency = billingSettings?.default_currency_code || 'USD';
+    }
+
     const newService = {
       service_id: uuidv4(),
       tenant: effectiveTenant,
@@ -331,7 +353,7 @@ const Service = {
       is_active: validatedData.is_active ?? true,
       sku: validatedData.sku ?? null,
       cost: normalizedCost,
-      cost_currency: validatedData.cost_currency ?? 'USD',
+      cost_currency: resolvedCostCurrency,
       vendor: validatedData.vendor ?? null,
       manufacturer: validatedData.manufacturer ?? null,
       product_category: validatedData.product_category ?? null,

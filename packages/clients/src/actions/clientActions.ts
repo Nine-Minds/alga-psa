@@ -413,6 +413,17 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       clientData.properties.website = clientData.url;
     }
 
+    // When no explicit currency is provided, adopt the tenant's configured default
+    // (default_billing_settings.default_currency_code) instead of leaving it null and
+    // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
+    if (!clientData.default_currency_code) {
+      const billingSettings = await knex('default_billing_settings')
+        .where({ tenant })
+        .select('default_currency_code')
+        .first();
+      clientData.default_currency_code = billingSettings?.default_currency_code || 'USD';
+    }
+
     const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const [created] = await trx<IClient>('clients')
         .insert({
@@ -1599,6 +1610,14 @@ export const importClientsFromCSV = withAuth(async (
   const results: ImportClientResult[] = [];
   const { knex: db } = await createTenantKnex();
 
+  // Resolve the tenant's configured default currency once for the whole import so new
+  // clients adopt it instead of inserting null (which downstream resolves to 'USD').
+  const tenantDefaultBillingSettings = await db('default_billing_settings')
+    .where({ tenant })
+    .select('default_currency_code')
+    .first();
+  const tenantDefaultCurrencyCode = tenantDefaultBillingSettings?.default_currency_code || 'USD';
+
   // Start a transaction to ensure all operations succeed or fail together
   await withTransaction(db, async (trx: Knex.Transaction) => {
     for (const clientData of clientsData) {
@@ -1674,6 +1693,7 @@ export const importClientsFromCSV = withAuth(async (
             auto_invoice: clientData.auto_invoice || false,
             invoice_delivery_method: clientData.invoice_delivery_method || '',
             region_code: clientData.region_code || null,
+            default_currency_code: clientData.default_currency_code || tenantDefaultCurrencyCode,
             tax_id_number: clientData.tax_id_number || '',
             tax_exemption_certificate: clientData.tax_exemption_certificate || '',
             notes: clientData.notes || '',
