@@ -10,6 +10,23 @@ import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/r
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
+import { assertMspPermission } from '../lib/authHelpers';
+
+const assertCanReadClientContractLines = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'read',
+    'Permission denied: Cannot read client contract lines'
+  );
+
+const assertCanUpdateClientContractLines = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'update',
+    'Permission denied: Cannot update client contract lines'
+  );
 
 const parseClientContractLineIdentity = (value: string): { clientContractId?: string; contractLineId: string } => {
   const match = value.match(/^contract-([0-9a-fA-F-]{36})-([0-9a-fA-F-]{36})$/);
@@ -231,6 +248,8 @@ export const getClientContractLine = withAuth(async (
   clientId: string,
   clientContractId?: string
 ): Promise<IClientContractLine[]> => {
+  await assertCanReadClientContractLines(_user);
+
   try {
     const { knex: db } = await createTenantKnex();
     const clientContractLine: IClientContractLine[] = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -296,6 +315,8 @@ export const updateClientContractLine = withAuth(async (
   clientContractLineId: string,
   updates: Partial<IClientContractLine>
 ): Promise<void> => {
+  await assertCanUpdateClientContractLines(_user);
+
   try {
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
@@ -342,6 +363,8 @@ export const addClientContractLine = withAuth(async (
   { tenant },
   newBilling: Omit<IClientContractLine, 'client_contract_line_id' | 'tenant'>
 ): Promise<void> => {
+  await assertCanUpdateClientContractLines(_user);
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -450,6 +473,8 @@ export const removeClientContractLine = withAuth(async (
   { tenant },
   clientContractLineId: string
 ): Promise<void> => {
+  await assertCanUpdateClientContractLines(_user);
+
   try {
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
@@ -487,6 +512,8 @@ export const editClientContractLine = withAuth(async (
   clientContractLineId: string,
   updates: Partial<IClientContractLine>
 ): Promise<void> => {
+  await assertCanUpdateClientContractLines(_user);
+
   try {
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));

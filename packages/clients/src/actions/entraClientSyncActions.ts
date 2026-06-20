@@ -1,13 +1,9 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { createTenantKnex } from '@alga-psa/db';
-
-function isClientPortalUser(user: unknown): boolean {
-  return (user as { user_type?: string } | undefined)?.user_type === 'client';
-}
+import { hasMspPermission } from '../lib/authHelpers';
 
 /**
  * Start an Entra sync for a single client.
@@ -21,11 +17,7 @@ export const startClientEntraSync = withAuth(async (
   { tenant },
   input: { clientId: string }
 ) => {
-  if (isClientPortalUser(user)) {
-    return { success: false, error: 'Forbidden' } as const;
-  }
-
-  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  const canUpdate = await hasMspPermission(user, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
