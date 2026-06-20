@@ -19,6 +19,7 @@ import {
   ClientTemplateSnapshot,
 } from '@alga-psa/billing/actions/contractWizardActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
+import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getUnsupportedRecurringAuthoringCombination,
@@ -310,15 +311,20 @@ export function ContractWizard({
         setIsLoadingTemplates(false);
       });
 
-    // Apply tenant default currency for new contracts
-    if (!editingContract) {
-      getDefaultBillingSettings()
-        .then((settings) => {
-          const currency = settings.defaultCurrencyCode || 'USD';
-          setWizardData((prev) => ({
-            ...prev,
-            currency_code: currency,
-          }));
+    // For a new contract opened with a pre-selected client, seed the displayed currency from
+    // that client's configured default currency (client takes precedence over the tenant
+    // default, then 'USD'). When no client is pre-selected, ContractBasicsStep resolves the
+    // currency when the user picks a client. The server (createClientContractFromWizard)
+    // independently resolves the persisted currency the same way.
+    if (!editingContract && initialClientId) {
+      getClientByIdForBilling(initialClientId)
+        .then(async (client) => {
+          let currency = client?.default_currency_code || '';
+          if (!currency) {
+            const settings = await getDefaultBillingSettings();
+            currency = settings.defaultCurrencyCode || 'USD';
+          }
+          setWizardData((prev) => ({ ...prev, currency_code: currency }));
         })
         .catch(() => {});
     }

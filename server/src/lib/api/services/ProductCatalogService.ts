@@ -196,8 +196,25 @@ export class ProductCatalogService extends BaseService<IService> {
       ...rest
     } = rawData;
 
+    // DD-2/F-2: resolve the product cost currency when not explicitly provided.
+    // Products are tenant-scoped (no client_id), so precedence is:
+    // explicit input -> tenant default (default_billing_settings) -> 'USD'.
+    // We read default_billing_settings directly with the tenant-scoped knex
+    // rather than calling resolveClientBillingCurrency() (a withAuth action that
+    // would double-resolve auth/tenant). Set explicitly because
+    // service_catalog.cost_currency DB column defaults to 'USD' when unset.
+    let costCurrency = rest.cost_currency;
+    if (!costCurrency) {
+      const billingSettings = await knex('default_billing_settings')
+        .where({ tenant })
+        .select('default_currency_code')
+        .first();
+      costCurrency = billingSettings?.default_currency_code || 'USD';
+    }
+
     const productData = {
       ...rest,
+      cost_currency: costCurrency,
       item_kind: 'product',
       billing_method: 'usage',
       unit_of_measure: unit_of_measure ?? 'each',
