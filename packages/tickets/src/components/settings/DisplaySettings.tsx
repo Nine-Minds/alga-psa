@@ -9,30 +9,21 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
-  getTicketingDisplaySettings, 
-  updateTicketingDisplaySettings 
+  getTicketingDisplaySettings,
+  updateTicketingDisplaySettings
 } from '@alga-psa/tickets/actions/ticketDisplaySettings';
+import { TOGGLEABLE_TICKET_COLUMNS, resolveTicketColumnVisibility } from '@alga-psa/tickets/lib';
 
 const DisplaySettings = (): React.JSX.Element => {
   const { t, i18n } = useTranslation('features/tickets');
   // Ticket display preferences (tenant-wide)
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
   const [isSavingDisplay, setIsSavingDisplay] = useState<boolean>(false);
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
-    ticket_number: true,
-    title: true,
-    status: true,
-    priority: true,
-    sla: false,
-    board: true,
-    category: true,
-    client: true,
-    assigned_to: true,
-    created: true,
-    created_by: true,
-    due_date: true,
-    tags: true,
-  });
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => resolveTicketColumnVisibility());
+  // LEVERAGE: friction tags-inline-dead — tagsInlineUnderTitle no longer affects
+  // any rendering (on-screen tags are always inline; export always lists tags).
+  // Still loaded/saved but inert. Remove the field across catalog/loader/types
+  // and drop this state in a follow-up.
   const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const sampleDate = new Date(Date.UTC(2025, 7, 22, 13, 23));
@@ -46,20 +37,12 @@ const DisplaySettings = (): React.JSX.Element => {
     { value: 'dd/MM/yyyy HH:mm', label: '22/08/2025 13:23' },
     { value: 'EEE, MMM d, yyyy h:mm a', label: formatDateExample({ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
   ];
-  const columnOptions = [
-    { key: 'ticket_number', label: t('fields.ticketNumber', 'Ticket Number'), required: true },
-    { key: 'title', label: t('fields.title', 'Title'), required: true },
-    { key: 'status', label: t('fields.status', 'Status'), required: false },
-    { key: 'priority', label: t('fields.priority', 'Priority'), required: false },
-    { key: 'sla', label: t('settings.display.columns.sla', 'SLA'), required: false },
-    { key: 'board', label: t('fields.board', 'Board'), required: false },
-    { key: 'category', label: t('fields.category', 'Category'), required: false },
-    { key: 'client', label: t('fields.client', 'Client'), required: false },
-    { key: 'assigned_to', label: t('fields.assignedTo', 'Assigned To'), required: false },
-    { key: 'created', label: t('fields.created', 'Created'), required: false },
-    { key: 'created_by', label: t('settings.display.columns.createdBy', 'Created By'), required: false },
-    { key: 'due_date', label: t('fields.dueDate', 'Due Date'), required: false },
-  ] as const;
+  // Only user-toggleable columns appear here. Title is always shown; ticket
+  // number and category fold into the Title cell, so they're not toggles.
+  const columnOptions = TOGGLEABLE_TICKET_COLUMNS.map((c) => ({
+    key: c.key,
+    label: t(c.titleKey, c.titleFallback),
+  }));
 
   // Track original values to detect changes
   const [originalDisplaySettings, setOriginalDisplaySettings] = useState<{
@@ -69,20 +52,7 @@ const DisplaySettings = (): React.JSX.Element => {
     responseStateTrackingEnabled: boolean;
   }>({
     dateTimeFormat: 'MMM d, yyyy h:mm a',
-    columnVisibility: {
-      ticket_number: true,
-      title: true,
-      status: true,
-      priority: true,
-      board: true,
-      category: true,
-      client: true,
-      assigned_to: true,
-      created: true,
-      created_by: true,
-      due_date: true,
-      tags: true,
-    },
+    columnVisibility: resolveTicketColumnVisibility(),
     tagsInlineUnderTitle: false,
     responseStateTrackingEnabled: true,
   });
@@ -103,21 +73,9 @@ const DisplaySettings = (): React.JSX.Element => {
       try {
         const s = await getTicketingDisplaySettings();
         const loadedDateFormat = s?.dateTimeFormat || 'MMM d, yyyy h:mm a';
-        const loadedColumnVisibility = (s?.list?.columnVisibility as Record<string, boolean>) || {
-          ticket_number: true,
-          title: true,
-          status: true,
-          priority: true,
-          sla: false,
-          board: true,
-          category: true,
-          client: true,
-          assigned_to: true,
-          created: true,
-          created_by: true,
-          due_date: true,
-          tags: true,
-        };
+        const loadedColumnVisibility = resolveTicketColumnVisibility(
+          s?.list?.columnVisibility as Record<string, boolean> | undefined,
+        );
         const loadedTagsInline = s?.list?.tagsInlineUnderTitle || false;
         const loadedResponseStateTracking = s?.responseStateTrackingEnabled ?? true;
 
@@ -219,19 +177,18 @@ const DisplaySettings = (): React.JSX.Element => {
           {t('settings.display.columnsTitle', 'Ticket List Columns')}
         </h4>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {columnOptions.map(({ key, label, required }) => (
+          {columnOptions.map(({ key, label }) => (
             <div key={key} className="[&>div]:mb-0">
               <Checkbox
                 id={`column-${key}`}
-                label={`${label}${required ? ` ${t('settings.display.requiredSuffix', '(required)')}` : ''}`}
+                label={label}
                 checked={!!columnVisibility[key]}
-                disabled={required}
                 onChange={(e) => setColumnVisibility(v => ({ ...v, [key]: (e.target as HTMLInputElement).checked }))}
               />
             </div>
           ))}
         </div>
-        {/* Tags visibility and layout */}
+        {/* Tags visibility (tags always render inline under the title) */}
         <div className="mt-4 space-y-2">
           <div className="[&>div]:mb-0">
             <Checkbox
@@ -241,18 +198,6 @@ const DisplaySettings = (): React.JSX.Element => {
               onChange={(e) => setColumnVisibility(v => ({ ...v, tags: (e.target as HTMLInputElement).checked }))}
             />
           </div>
-          {columnVisibility['tags'] && (
-            <div className="pl-6">
-              <Switch
-                id="tags-layout-switch"
-                checked={tagsInlineUnderTitle}
-                onCheckedChange={(v) => setTagsInlineUnderTitle(Boolean(v))}
-                label={tagsInlineUnderTitle
-                  ? t('settings.display.tagsUnderTitle', 'Display under Title')
-                  : t('settings.display.tagsSeparateColumn', 'Display in separate column')}
-              />
-            </div>
-          )}
         </div>
       </div>
 

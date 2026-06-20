@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
 import { SlaIndicator } from '@alga-psa/ui/components/sla';
 import type { SlaTimerStatus } from '@alga-psa/types';
+import { resolveTicketColumnVisibility, type TicketListColumnKey } from './ticketColumnCatalog';
 
 /**
  * Calculate SLA status from ticket data
@@ -105,18 +106,23 @@ function hashString(str: string): number {
 // per-board/custom, no fixed semantic set); closed statuses always read green.
 //
 // The first three entries are live brand tokens, so the pills track the active
-// theme and any tenant rebrand; the remaining three are fixed decorative accents,
-// chosen to harmonize with the brand, that widen the palette (statuses are hashed
-// across all six, so more hues => fewer same-board color collisions). Each entry
-// is anything valid inside CSS rgb(): a space-separated "R G B" literal or a
+// theme and any tenant rebrand; the rest are fixed decorative accents that widen
+// the palette (statuses are hashed across all of them, so more hues => fewer
+// same-board color collisions). The accents are not arbitrary: they all sit on
+// the brand's cool arc (purple -> indigo -> blue -> cyan -> teal), with one
+// desaturated slate for the low-key long tail. Deliberately excluded: pink/red
+// (alarm — this coloring is non-semantic, so a hot hue makes unimportant statuses
+// read as if they stood out) and amber (redundant with the brand orange). Each
+// entry is anything valid inside CSS rgb(): a space-separated "R G B" literal or a
 // var() that resolves to one — both interpolate cleanly into rgb(${hue} / a).
 const STATUS_PILL_HUES = [
   'var(--color-primary-500)',    // brand violet (live token)
   'var(--color-secondary-500)',  // brand cyan (live token)
   'var(--color-accent-500)',     // brand orange (live token)
-  '99 102 241',                  // indigo — fixed decorative accent
-  '236 72 153',                  // pink — fixed decorative accent
-  '20 184 166',                  // teal — fixed decorative accent
+  '99 102 241',                  // indigo — fixed accent (purple↔blue)
+  '59 130 246',                  // blue — fixed accent (indigo↔cyan)
+  '20 184 166',                  // teal — fixed accent (cyan↔green)
+  '100 116 139',                 // slate — fixed accent (desaturated, low-key)
 ];
 const STATUS_PILL_CLOSED_HUE = 'var(--color-status-success)'; // green (live token)
 
@@ -203,21 +209,6 @@ function formatCategoryLabel(record: ITicketListItem, categories: ITicketCategor
   return category.category_name;
 }
 
-type TicketListColumnKey =
-  | 'ticket_number'
-  | 'title'
-  | 'status'
-  | 'priority'
-  | 'sla'
-  | 'board'
-  | 'category'
-  | 'client'
-  | 'assigned_to'
-  | 'due_date'
-  | 'created'
-  | 'created_by'
-  | 'tags';
-
 type TicketListSettings = {
   columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
   tagsInlineUnderTitle?: boolean;
@@ -247,24 +238,7 @@ interface CreateTicketColumnsOptions {
   isBundleExpanded?: (masterTicketId: string) => boolean;
   onToggleBundleExpanded?: (masterTicketId: string) => void;
   t?: (key: string, fallback: string) => string;
-  showAllAvailableColumns?: boolean;
 }
-
-const ALL_TICKET_LIST_COLUMN_VISIBILITY: Record<TicketListColumnKey, boolean> = {
-  ticket_number: true,
-  title: true,
-  status: true,
-  priority: true,
-  sla: true,
-  board: true,
-  category: true,
-  client: true,
-  assigned_to: true,
-  due_date: true,
-  created: true,
-  created_by: true,
-  tags: true,
-};
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
@@ -283,115 +257,24 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     isBundleExpanded,
     onToggleBundleExpanded,
     t: _t,
-    showAllAvailableColumns = false,
   } = options;
 
   const t = _t ?? ((_key: string, fallback: string) => fallback);
 
-  // Default on-screen column set mirrors redesign candidate #1: ticket number
-  // and category fold under the title, created/created-by and the standalone SLA
-  // column are off by default (still enableable via display settings / print).
-  const columnVisibility = showAllAvailableColumns ? ALL_TICKET_LIST_COLUMN_VISIBILITY : (displaySettings?.list?.columnVisibility || {
-    ticket_number: false,
-    title: true,
-    status: true,
-    priority: true,
-    sla: false,
-    board: true,
-    category: false,
-    client: true,
-    assigned_to: true,
-    due_date: true,
-    created: false,
-    created_by: false,
-    tags: true,
-  });
+  // Visibility + defaults come from the shared ticket-column catalog. Optional
+  // columns honor the tenant's stored choice; folded columns (ticket number,
+  // category) are not standalone here — they always render inside the Title cell.
+  const columnVisibility = resolveTicketColumnVisibility(displaySettings?.list?.columnVisibility);
 
-  const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle ?? true;
-  const showInlineTagsInTitle = columnVisibility.tags && showTags && !showAllAvailableColumns;
+  const showInlineTagsInTitle = columnVisibility.tags && showTags;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
 
-  // When a dedicated ticket-number / category column isn't shown, fold those
-  // values under the title (the candidate #1 "Ticket" cell). Never fold in the
-  // print/export path, which renders every column separately.
-  const foldIntoTitle = !showAllAvailableColumns;
-  const showTicketNumberSubtitle = foldIntoTitle && !columnVisibility.ticket_number;
-  const showCategorySubtitle = foldIntoTitle && !columnVisibility.category;
+  // Ticket number and category always fold into the "Ticket" hero cell; the flat
+  // per-column layout lives only in the export path (see ticketColumnCatalog).
+  const showTicketNumberSubtitle = true;
+  const showCategorySubtitle = true;
 
   const columns: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
-
-  // Ticket Number
-  if (columnVisibility.ticket_number) {
-    columns.push({
-      key: 'ticket_number',
-      col: {
-        title: t('fields.ticketNumber', 'Ticket Number'),
-        dataIndex: 'ticket_number',
-        width: '7%',
-        render: (value: string, record: ITicketListItem) => (
-          <div className="flex flex-col gap-1">
-            <span className="flex items-center gap-2">
-              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && onToggleBundleExpanded ? (
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 relative z-10"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onToggleBundleExpanded(record.ticket_id as string);
-                  }}
-                  aria-label="Toggle bundle children"
-                >
-                  {isBundleExpanded && isBundleExpanded(record.ticket_id as string) ? (
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-600" />
-                  )}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onTicketClick(record.ticket_id as string);
-                }}
-                className="text-blue-600 hover:text-blue-800 whitespace-normal text-left bg-transparent border-none p-0 cursor-pointer"
-              >
-                {value}
-              </button>
-            </span>
-            {(record.master_ticket_id || (!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0)) && (
-              <div className="flex items-center gap-1">
-                {record.master_ticket_id ? (
-                  <span 
-                    className="rounded px-2 py-0.5 text-[11px] font-medium"
-                    style={{
-                      color: 'rgb(var(--color-primary-700))',
-                      backgroundColor: 'rgb(var(--color-primary-100))'
-                    }}
-                  >
-                    Bundled → {record.bundle_master_ticket_number || 'Master'}
-                  </span>
-                ) : null}
-                {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 ? (
-                  <span 
-                    className="rounded px-2 py-0.5 text-[11px] font-medium"
-                    style={{
-                      color: 'rgb(var(--color-secondary-700))',
-                      backgroundColor: 'rgb(var(--color-secondary-100))'
-                    }}
-                  >
-                    Bundle · {record.bundle_child_count}
-                  </span>
-                ) : null}
-              </div>
-            )}
-          </div>
-        ),
-      }
-    });
-  }
 
   // Title — the "Ticket" hero cell: bold title with the mono ticket number and
   // category folded underneath when those columns aren't shown separately.
@@ -600,19 +483,6 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             {value}
           </span>
         ) : <span className="text-[rgb(var(--color-text-400))]">-</span>,
-      }
-    });
-  }
-
-  // Category
-  if (columnVisibility.category) {
-    columns.push({
-      key: 'category',
-      col: {
-        title: t('fields.category', 'Category'),
-        dataIndex: 'category_name',
-        width: '7%',
-        render: (_value: string, record: ITicketListItem) => formatCategoryLabel(record, categories),
       }
     });
   }
@@ -835,33 +705,6 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: t('fields.createdBy', 'Created By'),
         dataIndex: 'entered_by_name',
         width: '6%',
-      }
-    });
-  }
-
-  // Tags (as separate column; retained for print/export column selection, not the default ticket list)
-  if (showAllAvailableColumns && columnVisibility.tags && !tagsInlineUnderTitle && showTags && ticketTagsRef && onTagsChange) {
-    columns.push({
-      key: 'tags',
-      col: {
-        title: t('fields.tags', 'Tags'),
-        dataIndex: 'tags',
-        width: '8%',
-        sortable: false,
-        render: (_value: string, record: ITicketListItem) => {
-          if (!record.ticket_id) return null;
-          return (
-            <div onClick={(e) => e.stopPropagation()}>
-              <TagManager
-                entityId={record.ticket_id}
-                entityType="ticket"
-                initialTags={ticketTagsRef.current[record.ticket_id] || []}
-                onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
-                size={tagSize}
-              />
-            </div>
-          );
-        },
       }
     });
   }

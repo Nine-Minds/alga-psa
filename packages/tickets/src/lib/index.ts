@@ -1,4 +1,10 @@
 export { createTicketColumns } from './ticket-columns';
+export {
+  TICKET_COLUMNS,
+  TOGGLEABLE_TICKET_COLUMNS,
+  resolveTicketColumnVisibility,
+} from './ticketColumnCatalog';
+export type { TicketColumnSpec, TicketColumnKind, TicketListColumnKey } from './ticketColumnCatalog';
 export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
 export { resolveCommentAuthor } from './commentAuthorResolution';
