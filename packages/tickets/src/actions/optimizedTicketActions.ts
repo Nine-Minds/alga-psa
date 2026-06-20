@@ -1867,6 +1867,9 @@ export const getTicketsForList = withAuth(async (
 
     const agentUserIds = new Set<string>();
     ticketListItems.forEach((ticket: ITicketListItem) => {
+      if (ticket.assigned_to) {
+        agentUserIds.add(ticket.assigned_to);
+      }
       ticket.additional_agents?.forEach((agent: { user_id: string }) => {
         agentUserIds.add(agent.user_id);
       });
