@@ -659,3 +659,115 @@ Webhook delivery also has an outbound cap per webhook. The default is
 
 Test deliveries sent through `POST /api/v1/webhooks/{id}/test` do not consume
 that outbound bucket.
+
+## Alternative Payments Inbound Webhook
+
+AlgaPSA exposes a dedicated inbound endpoint that third-party payment processors
+use to push payment notifications. Unlike the tenant-configured outbound webhooks
+above, this endpoint receives events _from_ external processors rather than
+sending them out.
+
+### Endpoint
+
+| Method | Path |
+| --- | --- |
+| `POST` | `/api/webhooks/alternative-payments` |
+| `GET` | `/api/webhooks/alternative-payments` |
+
+`POST` records the payment event. `GET` is a health check.
+
+### Authentication
+
+Requests are authenticated with HMAC-SHA256. Set `ALTERNATIVE_PAYMENTS_WEBHOOK_SECRET`
+on the server. The incoming signature is read from the first matching header:
+
+1. `x-alternative-payments-signature`
+2. `x-ap-signature`
+3. `x-webhook-signature`
+
+Both `sha256=<hex>` and bare `<hex>` formats are accepted. The server computes
+`HMAC-SHA256(secret, raw_body)` and compares using a constant-time comparison.
+Requests with no matching header or a mismatched signature are rejected with
+`401 Unauthorized`.
+
+### Payload Fields
+
+The handler tolerates multiple naming conventions from different processors.
+Fields are extracted from the JSON body using the following fallback order:
+
+| Logical field | Accepted keys (checked left-to-right) |
+| --- | --- |
+| `tenant_id` | `tenant_id`, `tenantId` |
+| `event_id` | `event_id`, `eventId`, `id`, `payment_id`, `paymentId`, `transaction_id`, `transactionId` |
+| `status` | `status`, `payment_status`, `paymentStatus`, `event_type`, `eventType`, `type` |
+| `invoice_id` | `invoice_id`, `invoiceId`, `reference_id`, `referenceId`, `order_id`, `orderId` |
+| `amount_cents` | `amount_cents`, `amountCents`, `amount` |
+| `currency` | `currency`, `currency_code`, `currencyCode` |
+| `reference_number` | `reference_number`, `referenceNumber`, `external_reference`, `externalReference`, `transaction_reference`, `transactionReference` |
+
+`tenant_id` and `event_id` are required; missing either returns `400`.
+`invoice_id` and `amount_cents` are additionally required for a payment record
+to be written — if either is absent the event is acknowledged with HTTP 200 but
+no payment is stored.
+
+### Status Values
+
+A payment is recorded only when `status` resolves to one of the following
+(case-insensitive):
+
+- `paid`
+- `completed`
+- `succeeded`
+- `success`
+
+Any other value causes the event to be acknowledged (HTTP 200) without recording
+a payment.
+
+### Idempotency
+
+Duplicate detection is keyed on `(tenant_id, provider_type, external_event_id)`.
+A duplicate delivery returns HTTP 200 with `"duplicate": true` and no side
+effects.
+
+### Responses
+
+#### POST — payment recorded
+
+```json
+{
+  "received": true,
+  "processed": true,
+  "eventId": "evt_abc123",
+  "paymentRecorded": true,
+  "paymentId": "pay_00000000-0000-0000-0000-000000000001",
+  "invoiceId": "inv_00000000-0000-0000-0000-000000000002"
+}
+```
+
+`paymentRecorded` is `false` when the status is not a success value or required
+fields are missing; `paymentId` and `invoiceId` are omitted in that case.
+
+#### POST — duplicate event
+
+```json
+{
+  "received": true,
+  "processed": false,
+  "duplicate": true,
+  "eventId": "evt_abc123"
+}
+```
+
+#### GET — health check
+
+```json
+{
+  "status": "ok",
+  "provider": "alternative_payments",
+  "message": "Alternative payments webhook receiver is active",
+  "signature": "configured"
+}
+```
+
+`signature` is `"configured"` when `ALTERNATIVE_PAYMENTS_WEBHOOK_SECRET` is set,
+`"not_configured"` otherwise.
