@@ -97,22 +97,28 @@ function hashString(str: string): number {
   return Math.abs(h);
 }
 
-// Status pill hues (space-separated R G B). The pill background is a translucent
-// tint of the hue so it blends with the surface in BOTH light and dark mode
-// (rather than a fixed light fill that glares on a dark card); the solid hue is
-// used for the dot, and pill text stays neutral (--color-text-700, which flips
-// with the theme) so it reads on either background. Open statuses get a stable
-// hue by name (Alga statuses are per-board/custom, no fixed semantic set); closed
-// statuses always read green.
+// Status pill hues. The pill background is a translucent tint of the hue so it
+// blends with the surface in BOTH light and dark mode (rather than a fixed light
+// fill that glares on a dark card); the solid hue is used for the dot, and pill
+// text stays neutral (--color-text-700, which flips with the theme) so it reads
+// on either background. Open statuses get a stable hue by name (Alga statuses are
+// per-board/custom, no fixed semantic set); closed statuses always read green.
+//
+// The first three entries are live brand tokens, so the pills track the active
+// theme and any tenant rebrand; the remaining three are fixed decorative accents,
+// chosen to harmonize with the brand, that widen the palette (statuses are hashed
+// across all six, so more hues => fewer same-board color collisions). Each entry
+// is anything valid inside CSS rgb(): a space-separated "R G B" literal or a
+// var() that resolves to one — both interpolate cleanly into rgb(${hue} / a).
 const STATUS_PILL_HUES = [
-  '138 77 234',  // brand violet
-  '64 207 249',  // brand cyan
-  '255 156 48',  // brand amber
-  '99 102 241',  // indigo
-  '236 72 153',  // pink
-  '20 184 166',  // teal
+  'var(--color-primary-500)',    // brand violet (live token)
+  'var(--color-secondary-500)',  // brand cyan (live token)
+  'var(--color-accent-500)',     // brand orange (live token)
+  '99 102 241',                  // indigo — fixed decorative accent
+  '236 72 153',                  // pink — fixed decorative accent
+  '20 184 166',                  // teal — fixed decorative accent
 ];
-const STATUS_PILL_CLOSED_HUE = '34 197 94'; // green
+const STATUS_PILL_CLOSED_HUE = 'var(--color-status-success)'; // green (live token)
 
 function statusPillHue(statusName: string, closed: boolean): string {
   if (closed) return STATUS_PILL_CLOSED_HUE;
