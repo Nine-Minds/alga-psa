@@ -397,6 +397,12 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       );
     }
   } catch (err) {
+    if (err instanceof Error && err.message === 'tenant_mismatch') {
+      return applyCorsHeaders(
+        NextResponse.json({ error: 'tenant_mismatch' }, { status: 403 }),
+        corsOrigin
+      );
+    }
     console.error('[api/ext] unhandled error in gateway', {
       error: err,
       extensionId,

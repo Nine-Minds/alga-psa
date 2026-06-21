@@ -316,13 +316,16 @@ export async function apiKeyAuthMiddleware(
           return next();
         }
       }
-      // If we got here, allowlist check failed; log reason context
+      // If we got here, allowlist check failed. These runner endpoints expose
+      // cross-tenant install metadata and must not fall through to ordinary
+      // tenant API-key authentication.
       try {
         console.warn(
-          `[auth] runner allowlist did not match; falling back to DB validation`,
+          `[auth] runner allowlist did not match; rejecting request`,
           JSON.stringify({ path: normalizedPath })
         );
       } catch (_) {}
+      return res.status(401).json({ error: 'Unauthorized: Invalid runner API key' });
     }
   } catch (_) {
     // Continue to standard validation path on any error
