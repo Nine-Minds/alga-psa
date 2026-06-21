@@ -4,6 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac'
 import { getInstallConfigByInstallId } from '@ee/lib/extensions/installConfig'
 import { CAP_CLIENT_READ, normalizeCapability } from '@ee/lib/extensions/providers'
 import { getClientSummaryById, listClientSummaries } from '@ee/lib/extensions/clientReadService'
+import { isValidRunnerToken } from '@ee/lib/extensions/runnerAuth'
 
 export type ClientsInternalResponse = { status: number; body: any }
 
@@ -40,12 +41,11 @@ const userSchema = z.object({
 }).optional()
 
 function ensureRunnerAuth(headers: Headers): void {
-  const expected = process.env.RUNNER_STORAGE_API_TOKEN || process.env.RUNNER_SERVICE_TOKEN
-  if (!expected) {
-    throw new ClientsInternalError('UNAUTHORIZED', 401, 'Runner token not configured')
-  }
-  const provided = headers.get('x-runner-auth')
-  if (!provided || provided !== expected) {
+  if (!isValidRunnerToken(
+    headers.get('x-runner-auth'),
+    process.env.RUNNER_STORAGE_API_TOKEN,
+    process.env.RUNNER_SERVICE_TOKEN,
+  )) {
     throw new ClientsInternalError('UNAUTHORIZED', 401, 'Invalid runner token')
   }
 }
