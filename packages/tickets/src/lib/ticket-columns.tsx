@@ -10,7 +10,6 @@ import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
-import { SlaIndicator } from '@alga-psa/ui/components/sla';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import { resolveTicketColumnVisibility, type TicketListColumnKey } from './ticketColumnCatalog';
 
@@ -171,8 +170,8 @@ function daysUntil(due: Date, now: Date): number {
   return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
-// Compact SLA status for the merged Due/SLA cell (candidate #1). Derived from the
-// same calculateSlaStatus the standalone SLA column uses; tone drives urgency color.
+// Compact SLA status for the merged Due/SLA cell — the sole place SLA state is
+// shown in the list. Derived from calculateSlaStatus; tone drives urgency color.
 function slaMagnitude(minutes: number): string {
   const abs = Math.abs(minutes);
   if (abs >= 1440) return `${Math.round(abs / 1440)}d`;
@@ -436,34 +435,6 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               />
               <span className="font-medium text-[rgb(var(--color-text-700))]">{value || 'No Priority'}</span>
             </div>
-          );
-        },
-      }
-    });
-  }
-
-  // SLA Status
-  if (columnVisibility.sla) {
-    columns.push({
-      key: 'sla',
-      col: {
-        title: t('fields.sla', 'SLA'),
-        dataIndex: 'sla_policy_id',
-        width: '5%',
-        sortable: false,
-        render: (_value: string | null, record: ITicketListItem) => {
-          const slaStatus = calculateSlaStatus(record);
-
-          if (!slaStatus) {
-            return <span className="text-gray-400 text-xs">-</span>;
-          }
-
-          return (
-            <SlaIndicator
-              status={slaStatus.status}
-              remainingMinutes={slaStatus.remainingMinutes!}
-              isPaused={slaStatus.isPaused}
-            />
           );
         },
       }

@@ -1495,7 +1495,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       title: (ticket) => ticket.title,
       status_name: (ticket) => ticket.status_name || t('dashboard.print.emptyValue', '—'),
       priority_name: (ticket) => ticket.priority_name || t('dashboard.print.emptyValue', '—'),
-      sla_policy_id: (ticket) => ticket.sla_policy_id ? t('dashboard.print.values.hasSla', 'SLA') : t('dashboard.print.emptyValue', '—'),
       board_name: (ticket) => ticket.board_name || t('dashboard.print.emptyValue', '—'),
       category_name: (ticket) => {
         if (ticket.subcategory_id) {

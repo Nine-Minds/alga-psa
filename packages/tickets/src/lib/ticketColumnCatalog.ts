@@ -46,7 +46,6 @@ export const TICKET_COLUMNS = [
   { key: 'title',         dataIndex: 'title',            kind: 'fixed',    defaultVisible: true,  titleKey: 'fields.title',        titleFallback: 'Title' },
   { key: 'status',        dataIndex: 'status_name',      kind: 'optional', defaultVisible: true,  titleKey: 'fields.status',       titleFallback: 'Status' },
   { key: 'priority',      dataIndex: 'priority_name',    kind: 'optional', defaultVisible: true,  titleKey: 'fields.priority',     titleFallback: 'Priority' },
-  { key: 'sla',           dataIndex: 'sla_policy_id',    kind: 'optional', defaultVisible: false, titleKey: 'fields.sla',          titleFallback: 'SLA' },
   { key: 'board',         dataIndex: 'board_name',       kind: 'optional', defaultVisible: true,  titleKey: 'fields.board',        titleFallback: 'Board' },
   { key: 'category',      dataIndex: 'category_name',    kind: 'folded',   defaultVisible: false, titleKey: 'fields.category',     titleFallback: 'Category' },
   { key: 'client',        dataIndex: 'client_name',      kind: 'optional', defaultVisible: true,  titleKey: 'fields.client',       titleFallback: 'Client' },
