@@ -64,7 +64,6 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- if .Values.waitForBootstrap.enabled }}
-      {{- $useAdmin := and .Values.db.adminPasswordSecret.name .Values.db.adminPasswordSecret.key }}
       initContainers:
         - name: wait-for-bootstrap
           {{- with .Values.securityContext }}
@@ -87,15 +86,9 @@ spec:
               value: "{{ .Values.db.port }}"
             - name: DB_NAME_SERVER
               value: "{{ .Values.db.serverDatabase }}"
-            {{- if $useAdmin }}
-            - name: WAIT_DB_USER
-              value: "{{ .Values.db.adminUser | default "postgres" }}"
-            - name: WAIT_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.db.adminPasswordSecret.name }}
-                  key: {{ .Values.db.adminPasswordSecret.key }}
-            {{- else }}
+            # Use the server (pgbouncer) credentials for the readiness poll: the
+            # superuser may not be authenticated through pgbouncer, and reading
+            # information_schema only needs the app role.
             - name: WAIT_DB_USER
               value: "{{ .Values.db.user }}"
             - name: WAIT_DB_PASSWORD
@@ -103,7 +96,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.db.serverPasswordSecret.name }}
                   key: {{ .Values.db.serverPasswordSecret.key }}
-            {{- end }}
       {{- end }}
       containers:
         - name: email-service
