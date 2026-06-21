@@ -490,6 +490,16 @@ secrets_provider:
     # Path template for tenant secrets
     tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
 
+# Shared tenant-secret store on the single-node appliance. When enabled, mounts
+# a hostPath into the server pod and points the filesystem secret provider at it
+# via SECRET_FS_BASE_PATH, so tenant secrets the server writes are visible to
+# other appliance services (e.g. email-service) that mount the same hostPath.
+# Disabled by default → cloud/hosted rendering is unchanged.
+sharedTenantSecrets:
+  enabled: false
+  hostPath: /var/lib/alga-appliance/tenant-secrets
+  mountPath: /shared-tenant-secrets
+
 # Development environment configuration
 devEnv:
   enabled: false
