@@ -70,4 +70,34 @@ describe('preCheckDeletion permission mapping', () => {
     const [, resource] = hasPermissionMock.mock.calls[0];
     expect(resource).toBe('project');
   });
+
+  it('checks settings:delete (not interaction_type:delete) when validating interaction_type deletion', async () => {
+    getDeletionConfigMock.mockReturnValueOnce({ entityType: 'interaction_type', dependencies: [] });
+
+    await preCheckDeletion('interaction_type', 'it-1');
+
+    const [, resource, action] = hasPermissionMock.mock.calls[0];
+    expect(resource).toBe('settings');
+    expect(action).toBe('delete');
+  });
+
+  it('checks billing:delete (not quote:delete) when validating quote deletion', async () => {
+    getDeletionConfigMock.mockReturnValueOnce({ entityType: 'quote', dependencies: [] });
+
+    await preCheckDeletion('quote', 'q-1');
+
+    const [, resource, action] = hasPermissionMock.mock.calls[0];
+    expect(resource).toBe('billing');
+    expect(action).toBe('delete');
+  });
+
+  it('checks timeentry:delete (not time_entry:delete) when validating time_entry deletion', async () => {
+    getDeletionConfigMock.mockReturnValueOnce({ entityType: 'time_entry', dependencies: [] });
+
+    await preCheckDeletion('time_entry', 'te-1');
+
+    const [, resource, action] = hasPermissionMock.mock.calls[0];
+    expect(resource).toBe('timeentry');
+    expect(action).toBe('delete');
+  });
 });
