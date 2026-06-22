@@ -100,7 +100,13 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "sebastian.fullname" . }}-storage
           {{- end }}
-        {{- end }}        
+        {{- end }}
+        {{- if .Values.sharedTenantSecrets.enabled }}
+        - name: shared-tenant-secrets
+          hostPath:
+            path: {{ .Values.sharedTenantSecrets.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
       {{- if or .Values.setup.runMigrations .Values.setup.runSeeds }}
       initContainers:
         - name: wait-for-bootstrap
@@ -943,6 +949,10 @@ spec:
             value: "{{ .Values.secrets_provider.readChain | default "env,filesystem" }}"
           - name: SECRET_WRITE_PROVIDER
             value: "{{ .Values.secrets_provider.writeProvider | default "filesystem" }}"
+          {{- if .Values.sharedTenantSecrets.enabled }}
+          - name: SECRET_FS_BASE_PATH
+            value: "{{ .Values.sharedTenantSecrets.mountPath }}"
+          {{- end }}
           {{- if .Values.secrets_provider.envPrefix }}
           - name: SECRET_ENV_PREFIX
             value: "{{ .Values.secrets_provider.envPrefix }}"
@@ -974,10 +984,16 @@ spec:
             value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
           {{- end }}
-         {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
+          {{- if or (and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled)) .Values.sharedTenantSecrets.enabled }}
           volumeMounts:
+            {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
             - name: storage-volume
               mountPath: {{ .Values.server.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.sharedTenantSecrets.enabled }}
+            - name: shared-tenant-secrets
+              mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+            {{- end }}
           {{- end }}
           ports:
             - name: http
