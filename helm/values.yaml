@@ -119,6 +119,10 @@ temporal:
   address: "temporal-frontend.temporal.svc.cluster.local:7233"
   namespace: "default"
   portalDomainTaskQueue: "portal-domain-workflows"
+  # Job-runner backend override. Leave empty to let the app pick by edition
+  # (EE -> temporal, CE -> pgboss). Set to "temporal" on EE deployments as a
+  # belt-and-suspenders override of the edition default.
+  jobRunnerType: ""
 
 # Development Pod Configuration
 devPod:
