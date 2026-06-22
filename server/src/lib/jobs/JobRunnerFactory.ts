@@ -131,7 +131,15 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     const runnerType = this.determineRunnerType(config);
     const enterprise = isEnterpriseEdition();
 
-    logger.info(`Initializing job runner`, { type: runnerType, isEnterprise: enterprise });
+    logger.info(`Initializing job runner`, {
+      type: runnerType,
+      isEnterprise: enterprise,
+      // Surface the raw env (which @next/env may have backfilled from a baked
+      // .env) and the explicit config so a silent dotenv override is visible
+      // instead of looking like a paradox.
+      jobRunnerTypeEnv: process.env.JOB_RUNNER_TYPE ?? null,
+      configType: config?.type ?? null,
+    });
 
     // No silent fallback. In EE, Temporal is the durable scheduling/execution
     // authority; failing to bring it up must surface loudly rather than quietly
@@ -163,9 +171,24 @@ export class JobRunnerFactory implements IJobRunnerFactory {
       return config.type;
     }
 
-    // Check environment variable
+    // Check environment variable.
+    // NOTE: process.env.JOB_RUNNER_TYPE is not only the operator-supplied k8s
+    // env — @next/env also backfills it from a baked /app/server/.env (the
+    // image ships .env.example, whose CE default is `pgboss`). So an unset
+    // orchestration var silently surfaces here as `pgboss`. In EE that is never
+    // what we want: Temporal is the durable scheduling authority, so we refuse
+    // an explicit/implicit `pgboss` request rather than honoring a stray dotenv.
+    const enterprise = isEnterpriseEdition();
     const envType = process.env.JOB_RUNNER_TYPE?.toLowerCase();
     if (envType === 'temporal' || envType === 'pgboss') {
+      if (envType === 'pgboss' && enterprise) {
+        logger.warn(
+          'JOB_RUNNER_TYPE=pgboss ignored in Enterprise Edition; Temporal is the durable ' +
+            'scheduling authority. This usually comes from a baked .env default rather than ' +
+            'an explicit operator setting.',
+        );
+        return 'temporal';
+      }
       return envType;
     }
 
@@ -173,7 +196,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     // EE should use Temporal as the durable scheduling/execution authority by default.
     // Call isEnterpriseEdition() (reads process.env) instead of the module-level
     // `isEnterprise` const to stay immune to module-initialization ordering.
-    return isEnterpriseEdition() ? 'temporal' : 'pgboss';
+    return enterprise ? 'temporal' : 'pgboss';
   }
 
   /**
