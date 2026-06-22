@@ -297,12 +297,22 @@ describe('renewal queue scheduling wiring', () => {
   });
 
   it('resolves edition via isEnterpriseEdition() so selection is immune to module init ordering', () => {
-    // The default and the EE gate must re-read the edition via the function
-    // rather than the module-level `isEnterprise` const (which can be read
-    // before the features module finishes initializing, silently selecting pgboss).
-    expect(jobRunnerFactorySource).toContain("return isEnterpriseEdition() ? 'temporal' : 'pgboss';");
+    // Edition is re-read via the function rather than the module-level
+    // `isEnterprise` const (which can be read before the features module
+    // finishes initializing).
     expect(jobRunnerFactorySource).toContain('const enterprise = isEnterpriseEdition();');
+    expect(jobRunnerFactorySource).toContain("return enterprise ? 'temporal' : 'pgboss';");
     expect(jobRunnerFactorySource).toContain("if (runnerType === 'temporal' && enterprise) {");
+  });
+
+  it('refuses a baked/explicit JOB_RUNNER_TYPE=pgboss under Enterprise Edition', () => {
+    // The image bakes .env.example (JOB_RUNNER_TYPE=pgboss) into /app/server/.env
+    // and @next/env backfills the unset var; EE must ignore that stray default
+    // and use Temporal rather than silently downgrading to pg-boss.
+    expect(jobRunnerFactorySource).toContain("if (envType === 'pgboss' && enterprise) {");
+    expect(jobRunnerFactorySource).toContain('JOB_RUNNER_TYPE=pgboss ignored in Enterprise Edition');
+    // And the init log surfaces the raw env so a baked override is visible.
+    expect(jobRunnerFactorySource).toContain('jobRunnerTypeEnv: process.env.JOB_RUNNER_TYPE ?? null,');
   });
 
   it('does NOT silently fall back to pg-boss when temporal bootstrap fails (EE must fail loudly)', () => {
