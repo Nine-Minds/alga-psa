@@ -1026,10 +1026,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const viewFilteredGroups = readyParentGroups.filter(
     (group) => matchesAutomaticInvoiceView(activeView, group.parentSummary) && matchesQuickFilters(group),
   );
-  const viewFilteredObligationCount = viewFilteredGroups.reduce(
-    (sum, group) => sum + group.parentSummary.childCount,
-    0,
-  );
   const hasActiveQuickFilters = Boolean(chargeFilter) || Boolean(currencyFilter) || windowOpenOnly;
 
   const focusedGroup = focusedGroupKey
@@ -1932,13 +1928,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   {t('automaticInvoices.filters.clear', { defaultValue: 'Clear' })}
                 </button>
               ) : null}
-              <span className="ml-auto text-[11px] text-muted-foreground">
-                {t('automaticInvoices.filters.countSummary', {
-                  groups: viewFilteredGroups.length,
-                  obligations: viewFilteredObligationCount,
-                  defaultValue: `${viewFilteredGroups.length} group(s) · ${viewFilteredObligationCount} line item(s)`,
-                })}
-              </span>
             </div>
           </div>
 

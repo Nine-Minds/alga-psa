@@ -259,13 +259,12 @@ describe('AutomaticInvoices i18n wiring contract', () => {
     );
 
     // Pro-Grid redesign: the inline selection hints became the sticky
-    // selection-bar summary (summary.* / filters.countSummary), and the
-    // per-period obligation/included counts were removed (the client cell names
-    // a single line, or counts multiple via groups.item).
+    // selection-bar prompt (summary.empty). Per-period obligation/included counts
+    // and the redundant filter-bar count readout were removed (the view-tab
+    // badges already carry the group count).
     const keyChecks = [
       'automaticInvoices.ready.groupedPreviewUnavailable',
       'automaticInvoices.summary.empty',
-      'automaticInvoices.filters.countSummary',
       'automaticInvoices.ready.needsApproval.title',
       'automaticInvoices.ready.needsApproval.description',
       'automaticInvoices.ready.needsApproval.labels.servicePeriod',
