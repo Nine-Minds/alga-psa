@@ -565,6 +565,16 @@ export interface IRecurringDueWorkInvoiceCandidate {
   memberCount: number;
   canGenerate: boolean;
   blockedReason?: string | null;
+  /**
+   * True when the candidate is not generatable solely because its invoice
+   * window has not opened yet (an arrears period still in progress) — i.e. it
+   * is "not yet due" rather than blocked by a data problem. The UI surfaces
+   * this as a neutral "upcoming" state instead of the alarming "blocked"
+   * treatment used for genuine failures.
+   */
+  notYetDue?: boolean;
+  /** Date the invoice window opens for a notYetDue candidate (earliest member window start). */
+  availableOnDate?: ISO8601String | null;
   approvalBlockedEntryCount?: number;
   hasApprovalBlockers?: boolean;
   attributionSummary?: IRecurringDueWorkCandidateAttributionSummary;

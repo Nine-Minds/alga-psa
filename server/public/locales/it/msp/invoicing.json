@@ -58,7 +58,10 @@
       "canCombine": "Può essere combinato in 1 fattura",
       "separate": "Deve fatturare separatamente",
       "blocked": "Contiene elementi bloccati",
-      "notReady": "Non pronto per la fatturazione"
+      "notReady": "Non pronto per la fatturazione",
+      "upcoming": "Non ancora dovuto",
+      "upcomingDetail": "Questo periodo viene fatturato a consuntivo, quindi diventa disponibile per la fatturazione al termine del periodo di servizio.",
+      "upcomingDetailWithDate": "Questo periodo viene fatturato a consuntivo, quindi diventa disponibile per la fatturazione il {{date}}, al termine del periodo di servizio."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "La finestra della fattura è diversa",
@@ -75,6 +78,7 @@
         "servicePeriod": "Periodo di servizio"
       },
       "pendingAmount": "Importo in sospeso",
+      "billableOn": "Fatturabile il {{date}}",
       "attributionWarning": "Metadati di attribuzione dell'assegnazione mancanti",
       "blockedUntilApproval": "Bloccato fino all'approvazione: {{count}} voce non approvata.",
       "blockedUntilApproval_one": "Bloccato fino all'approvazione: {{count}} voce non approvata.",

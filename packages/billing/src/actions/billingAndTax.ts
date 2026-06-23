@@ -919,6 +919,15 @@ function buildRecurringDueWorkInvoiceCandidates(
                 .slice(-1)[0] as ISO8601String;
             const cadenceSources = Array.from(new Set(members.map((member) => member.cadenceSource))).sort();
             const canGenerate = members.every((member) => member.canGenerate);
+            // A candidate is "not yet due" (rather than blocked) when the only
+            // reason it cannot generate is that its invoice window has not opened
+            // yet — every member is early, and none has a real data problem.
+            const everyMemberEarly = members.length > 0 && members.every((member) => member.isEarly === true);
+            const anyAttributionIncomplete = members.some((member) => member.attribution?.isComplete === false);
+            const notYetDue = !canGenerate && everyMemberEarly && !anyAttributionIncomplete;
+            const availableOnDate = notYetDue
+                ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
+                : null;
             const explicitContractCount = members.filter(
                 (member) => member.attribution?.source === 'explicit_contract',
             ).length;
@@ -960,7 +969,11 @@ function buildRecurringDueWorkInvoiceCandidates(
                 splitReasons: [...candidate.splitReasons],
                 memberCount: members.length,
                 canGenerate,
-                blockedReason: canGenerate ? null : 'One or more included obligations are not eligible for generation.',
+                notYetDue,
+                availableOnDate,
+                blockedReason: canGenerate || notYetDue
+                    ? null
+                    : 'One or more included obligations are not eligible for generation.',
                 attributionSummary: {
                     explicitContractCount,
                     systemManagedDefaultContractCount,
@@ -1046,6 +1059,8 @@ function applyClientCadenceMaterializationGapBlocks(
         return {
             ...candidate,
             canGenerate: false,
+            notYetDue: false,
+            availableOnDate: null,
             blockedReason:
                 'Recurring service periods are partially materialized for this window. Repair service periods before generation.',
         };
@@ -1105,6 +1120,8 @@ function applyRecurringApprovalBlocksToInvoiceCandidates(
             ...candidate,
             members,
             canGenerate: false,
+            notYetDue: false,
+            availableOnDate: null,
             blockedReason: formatApprovalBlockedReason(approvalBlockedEntryCount),
             approvalBlockedEntryCount,
             hasApprovalBlockers: true,

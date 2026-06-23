@@ -58,7 +58,10 @@
       "canCombine": "Kann zu einer Rechnung zusammengefasst werden",
       "separate": "Muss separat in Rechnung gestellt werden",
       "blocked": "Enthält blockierte Elemente",
-      "notReady": "Nicht bereit zur Rechnungsstellung"
+      "notReady": "Nicht bereit zur Rechnungsstellung",
+      "upcoming": "Noch nicht fällig",
+      "upcomingDetail": "Dieser Zeitraum wird nachträglich abgerechnet und kann daher erst nach Ende des Leistungszeitraums in Rechnung gestellt werden.",
+      "upcomingDetailWithDate": "Dieser Zeitraum wird nachträglich abgerechnet und kann daher ab dem {{date}}, nach Ende des Leistungszeitraums, in Rechnung gestellt werden."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Das Rechnungsfenster ist unterschiedlich",
@@ -75,6 +78,7 @@
         "servicePeriod": "Servicezeitraum"
       },
       "pendingAmount": "Ausstehender Betrag",
+      "billableOn": "Abrechenbar am {{date}}",
       "attributionWarning": "Metadaten zur Zuweisungszuordnung fehlen",
       "blockedUntilApproval": "Bis zur Genehmigung blockiert: {{count}} nicht genehmigter Eintrag.",
       "blockedUntilApproval_one": "Bis zur Genehmigung blockiert: {{count}} nicht genehmigter Eintrag.",

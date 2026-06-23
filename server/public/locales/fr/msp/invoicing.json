@@ -58,7 +58,10 @@
       "canCombine": "Peut être combiné en une seule facture",
       "separate": "Doit facturer séparément",
       "blocked": "Contient des éléments bloqués",
-      "notReady": "Pas prêt à facturer"
+      "notReady": "Pas prêt à facturer",
+      "upcoming": "Pas encore exigible",
+      "upcomingDetail": "Cette période est facturée à terme échu, elle ne peut donc être facturée qu’une fois la période de service terminée.",
+      "upcomingDetailWithDate": "Cette période est facturée à terme échu, elle peut donc être facturée à partir du {{date}}, une fois la période de service terminée."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "La fenêtre de facturation diffère",
@@ -75,6 +78,7 @@
         "servicePeriod": "Période de service"
       },
       "pendingAmount": "Montant en attente",
+      "billableOn": "Facturable le {{date}}",
       "attributionWarning": "Métadonnées d'attribution d'attribution manquantes",
       "blockedUntilApproval": "Bloqué jusqu'à approbation : {{count}} entrée non approuvée.",
       "blockedUntilApproval_one": "Bloqué jusqu'à approbation : {{count}} entrée non approuvée.",
