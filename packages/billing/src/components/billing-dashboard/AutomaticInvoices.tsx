@@ -1219,7 +1219,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     const summary = summarizeGroupAmount(group.childExecutionRows);
     if (summary.allKnown) {
       return (
-        <div className="flex items-center justify-end gap-1 font-semibold tabular-nums text-foreground">
+        <div className="flex items-center justify-end gap-1 font-semibold font-mono tabular-nums text-foreground">
           <Check className="h-3.5 w-3.5 text-success" />
           {formatCurrency(summary.knownCents / 100)}
         </div>
@@ -1228,7 +1228,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     if (summary.hasKnown) {
       return (
         <div className="text-right">
-          <div className="font-semibold tabular-nums text-foreground">{formatCurrency(summary.knownCents / 100)}</div>
+          <div className="font-semibold font-mono tabular-nums text-foreground">{formatCurrency(summary.knownCents / 100)}</div>
           <div className="text-[11px] text-muted-foreground">
             {t('automaticInvoices.amount.plusAtGeneration', {
               count: summary.atGenerationCount,
@@ -1944,7 +1944,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 {t('automaticInvoices.filters.countSummary', {
                   groups: viewFilteredGroups.length,
                   obligations: viewFilteredObligationCount,
-                  defaultValue: `${viewFilteredGroups.length} group(s) · ${viewFilteredObligationCount} obligation(s)`,
+                  defaultValue: `${viewFilteredGroups.length} group(s) · ${viewFilteredObligationCount} line item(s)`,
                 })}
               </span>
             </div>
@@ -2125,7 +2125,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <div className="ml-auto text-right leading-tight">
                   {selectionKnownCents > 0 ? (
                     <>
-                      <div className="font-bold tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
+                      <div className="font-bold font-mono tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
                       <div className="text-[11px] text-white/80">
                         {selectionAtGenerationCount > 0
                           ? t('automaticInvoices.summary.knownPlusAtGeneration', {
@@ -2143,7 +2143,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       <div className="text-[11px] text-white/80">
                         {t('automaticInvoices.drawer.obligations', {
                           count: selectionAtGenerationCount,
-                          defaultValue: `${selectionAtGenerationCount} obligation${selectionAtGenerationCount === 1 ? '' : 's'}`,
+                          defaultValue: `${selectionAtGenerationCount} line item${selectionAtGenerationCount === 1 ? '' : 's'}`,
                         })}
                       </div>
                     </>
@@ -2186,14 +2186,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               <>
                 <span className="text-sm font-medium text-muted-foreground">
                   {t('automaticInvoices.summary.empty', {
-                    defaultValue: 'Select groups or obligations to preview or generate invoices.',
+                    defaultValue: 'Select groups or line items to preview or generate invoices.',
                   })}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {t('automaticInvoices.summary.pageScope', {
                     groups: viewFilteredGroups.length,
                     obligations: readyRows.length,
-                    defaultValue: `${viewFilteredGroups.length} group(s) · ${readyRows.length} obligation(s)`,
+                    defaultValue: `${viewFilteredGroups.length} group(s) · ${readyRows.length} line item(s)`,
                   })}
                 </span>
                 <div className="ml-auto flex items-center gap-2">
@@ -2394,28 +2394,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           {group.parentSummary.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
                         </div>
                         <div className="flex flex-wrap gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
-                          <span>
-                            {t('automaticInvoices.groups.item', {
-                              count: group.parentSummary.childCount,
-                              defaultValue: `${group.parentSummary.childCount} item${group.parentSummary.childCount === 1 ? '' : 's'}`,
-                            })}
-                          </span>
-                          {contractNames.length > 0 ? (
-                            <span title={contractNames.join(', ')}>
-                              {t('automaticInvoices.groups.contract', {
-                                count: contractNames.length,
-                                defaultValue: `${contractNames.length} contract${contractNames.length === 1 ? '' : 's'}`,
+                          {/* A single charge names its line (e.g. "MSP Standard - Fixed Fee");
+                              multiple charges show a count. Avoids the redundant
+                              "1 line item · 1 contract · 1 line". */}
+                          {group.parentSummary.childCount === 1 && contractLineNames.length === 1 ? (
+                            <span className="truncate" title={contractLineNames[0]}>{contractLineNames[0]}</span>
+                          ) : (
+                            <span title={contractLineNames.length > 0 ? contractLineNames.join(', ') : undefined}>
+                              {t('automaticInvoices.groups.item', {
+                                count: group.parentSummary.childCount,
+                                defaultValue: `${group.parentSummary.childCount} line item${group.parentSummary.childCount === 1 ? '' : 's'}`,
                               })}
                             </span>
-                          ) : null}
-                          {contractLineNames.length > 0 ? (
-                            <span title={contractLineNames.join(', ')}>
-                              {t('automaticInvoices.groups.line', {
-                                count: contractLineNames.length,
-                                defaultValue: `${contractLineNames.length} line${contractLineNames.length === 1 ? '' : 's'}`,
-                              })}
-                            </span>
-                          ) : null}
+                          )}
                           {currencyCode ? <span>{currencyCode}</span> : null}
                           {poScope ? <span title={poScope}>{formatPoLabel(poScope)}</span> : null}
                           <span>{cadenceSummary}</span>
@@ -2456,7 +2447,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           <div className="text-xs text-warning" data-testid={`contract-metadata-warning-${group.parentSummary.candidateKey}`}>
                             {t('automaticInvoices.groups.attributionMetadataMissing', {
                               count: contractMetadataMissingCount,
-                              defaultValue: `Assignment attribution metadata missing (${contractMetadataMissingCount} obligation${contractMetadataMissingCount === 1 ? '' : 's'})`,
+                              defaultValue: `Assignment attribution metadata missing (${contractMetadataMissingCount} line item${contractMetadataMissingCount === 1 ? '' : 's'})`,
                             })}
                           </div>
                         ) : null}
@@ -2509,16 +2500,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   if (record.kind === 'member') {
                     return <div className="text-sm text-muted-foreground">{formatPeriodLabel(record.member.servicePeriodStart, record.member.servicePeriodEnd)}</div>;
                   }
+                  // Line-item count lives in the client cell ("N line items · N
+                  // contracts · N lines"); don't repeat it here.
                   return (
-                    <div className="space-y-0.5">
-                      <div className="font-medium">{formatPeriodLabel(record.group.candidate.servicePeriodStart, record.group.candidate.servicePeriodEnd)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {t('automaticInvoices.groups.obligationCount', {
-                          count: record.group.parentSummary.childCount,
-                          defaultValue: `${record.group.parentSummary.childCount} obligation${record.group.parentSummary.childCount === 1 ? '' : 's'}`,
-                        })}
-                      </div>
-                    </div>
+                    <div className="font-medium">{formatPeriodLabel(record.group.candidate.servicePeriodStart, record.group.candidate.servicePeriodEnd)}</div>
                   );
                 },
               },
@@ -2574,7 +2559,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         </span>
                       );
                     }
-                    return <span className="font-medium tabular-nums">{formatCurrency(amount / 100)}</span>;
+                    return <span className="font-medium font-mono tabular-nums">{formatCurrency(amount / 100)}</span>;
                   }
                   return renderGroupAmountCell(record.group);
                 },
@@ -2690,7 +2675,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               <span className="shrink-0 tabular-nums">
                                 {amount === null
                                   ? <span className="text-[11px] text-muted-foreground">{t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}</span>
-                                  : <span className="font-medium">{formatCurrency(amount / 100)}</span>}
+                                  : <span className="font-medium font-mono">{formatCurrency(amount / 100)}</span>}
                               </span>
                             </li>
                           );
@@ -2702,7 +2687,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       {amountSummary.hasKnown ? (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">{t('automaticInvoices.drawer.knownNow', { defaultValue: 'Known now' })}</span>
-                          <span className="font-semibold tabular-nums text-foreground">{formatCurrency(amountSummary.knownCents / 100)}</span>
+                          <span className="font-semibold font-mono tabular-nums text-foreground">{formatCurrency(amountSummary.knownCents / 100)}</span>
                         </div>
                       ) : null}
                       {amountSummary.atGenerationCount > 0 ? (
@@ -2711,7 +2696,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           <span className="font-medium text-muted-foreground">
                             {t('automaticInvoices.drawer.obligations', {
                               count: amountSummary.atGenerationCount,
-                              defaultValue: `${amountSummary.atGenerationCount} obligation${amountSummary.atGenerationCount === 1 ? '' : 's'}`,
+                              defaultValue: `${amountSummary.atGenerationCount} line item${amountSummary.atGenerationCount === 1 ? '' : 's'}`,
                             })}
                           </span>
                         </div>

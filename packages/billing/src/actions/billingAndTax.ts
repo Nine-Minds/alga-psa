@@ -867,6 +867,85 @@ async function fetchUnresolvedNonContractDueWorkRows(
     return rows;
 }
 
+/**
+ * Fixed contract-line amounts are deterministic before generation (Σ service
+ * base-rate × qty ± custom rate ± proration), so we surface them in the listing
+ * as confirmed "known now" amounts rather than "calculated at generation". This
+ * reuses the billing engine's own fixed-price calculation (single source of
+ * truth) and is batched per (client, service period) to bound the query cost.
+ * Best-effort: rows that can't be priced are left as pending.
+ */
+async function attachFixedContractLineAmountsToRows(
+    rows: IRecurringDueWorkRow[],
+    dbRows: PersistedRecurringDueWorkDbRow[],
+): Promise<void> {
+    // Client-cadence rows carry contractLineId: null (canonical identity is
+    // execution-window based), so resolve the contract line + invoice window via
+    // the DB row by record_id. The engine prices fixed lines off the INVOICE
+    // WINDOW (it derives the covered service period itself), so we group and
+    // query by window, not by service period.
+    const lineIdByRecordId = new Map<string, string>();
+    const invoiceWindowByRecordId = new Map<string, { start: ISO8601String; end: ISO8601String }>();
+    for (const dbRow of dbRows) {
+        if (!dbRow.record_id) {
+            continue;
+        }
+        if (dbRow.contract_line_id) {
+            lineIdByRecordId.set(dbRow.record_id, dbRow.contract_line_id);
+        }
+        if (dbRow.invoice_window_start && dbRow.invoice_window_end) {
+            invoiceWindowByRecordId.set(dbRow.record_id, {
+                start: normalizeDateOnly(dbRow.invoice_window_start) as ISO8601String,
+                end: normalizeDateOnly(dbRow.invoice_window_end) as ISO8601String,
+            });
+        }
+    }
+    const lineIdForRow = (row: IRecurringDueWorkRow): string | undefined =>
+        (row.contractLineId ?? (row.recordId ? lineIdByRecordId.get(row.recordId) : undefined)) || undefined;
+    const invoiceWindowForRow = (row: IRecurringDueWorkRow) =>
+        row.recordId ? invoiceWindowByRecordId.get(row.recordId) : undefined;
+
+    const fixedRows = rows.filter(
+        (row) =>
+            (row as { chargeType?: string | null }).chargeType === 'Fixed'
+            && Boolean(lineIdForRow(row))
+            && Boolean(invoiceWindowForRow(row))
+            && typeof (row as { amountCents?: number | null }).amountCents !== 'number',
+    );
+    if (fixedRows.length === 0) {
+        return;
+    }
+
+    const engine = new BillingEngine();
+    const groups = new Map<string, { clientId: string; start: ISO8601String; end: ISO8601String; members: IRecurringDueWorkRow[] }>();
+    for (const row of fixedRows) {
+        const window = invoiceWindowForRow(row)!;
+        const key = `${row.clientId}|${window.start}|${window.end}`;
+        let group = groups.get(key);
+        if (!group) {
+            group = { clientId: row.clientId, start: window.start, end: window.end, members: [] };
+            groups.set(key, group);
+        }
+        group.members.push(row);
+    }
+
+    for (const group of groups.values()) {
+        let amounts: Map<string, number>;
+        try {
+            amounts = await engine.previewFixedChargeAmountsForInvoiceWindow(group.clientId, group.start, group.end);
+        } catch {
+            continue;
+        }
+        for (const row of group.members) {
+            const lineId = lineIdForRow(row);
+            const amount = lineId ? amounts.get(String(lineId)) : undefined;
+            if (typeof amount === 'number' && Number.isFinite(amount)) {
+                (row as { amountCents?: number | null }).amountCents = amount;
+            }
+        }
+    }
+}
+
 function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
     metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
@@ -1425,6 +1504,8 @@ export const getAvailableRecurringDueWork = withAuth(async (
             asOf,
             groupingMetadataByRecordId,
         );
+        // Surface deterministic fixed-line amounts as confirmed "known now" values.
+        await attachFixedContractLineAmountsToRows(persistedRows, persistedDbRows);
         const persistedIdentityKeys = new Set(
             persistedRows.map((row) => row.executionIdentityKey),
         );

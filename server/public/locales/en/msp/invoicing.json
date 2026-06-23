@@ -36,24 +36,21 @@
       "pageScopeNote": "{{count}} group(s) on this page"
     },
     "groups": {
-      "item": "{{count}} item",
-      "item_one": "{{count}} item",
-      "item_other": "{{count}} items",
+      "item": "{{count}} line item",
+      "item_one": "{{count}} line item",
+      "item_other": "{{count}} line items",
       "contract": "{{count}} contract",
       "contract_one": "{{count}} contract",
       "contract_other": "{{count}} contracts",
       "line": "{{count}} line",
       "line_one": "{{count}} line",
       "line_other": "{{count}} lines",
-      "obligationCount": "{{count}} obligation",
-      "obligationCount_one": "{{count}} obligation",
-      "obligationCount_other": "{{count}} obligations",
-      "includedCount": "{{count}} item included",
-      "includedCount_one": "{{count}} item included",
-      "includedCount_other": "{{count}} items included",
-      "attributionMetadataMissing": "Assignment attribution metadata missing ({{count}} obligation)",
-      "attributionMetadataMissing_one": "Assignment attribution metadata missing ({{count}} obligation)",
-      "attributionMetadataMissing_other": "Assignment attribution metadata missing ({{count}} obligations)",
+      "includedCount": "{{count}} line item included",
+      "includedCount_one": "{{count}} line item included",
+      "includedCount_other": "{{count}} line items included",
+      "attributionMetadataMissing": "Assignment attribution metadata missing ({{count}} line item)",
+      "attributionMetadataMissing_one": "Assignment attribution metadata missing ({{count}} line item)",
+      "attributionMetadataMissing_other": "Assignment attribution metadata missing ({{count}} line items)",
       "actions": {
         "expand": "Expand",
         "collapse": "Collapse"
@@ -253,8 +250,8 @@
       "breakdown": "{{invoices}} invoice(s) · {{combine}} combined · {{separate}} separate",
       "knownNow": "known now",
       "knownPlusAtGeneration": "known now · {{count}} calculated at generation",
-      "empty": "Select groups or obligations to preview or generate invoices.",
-      "pageScope": "{{groups}} group(s) · {{obligations}} obligation(s)"
+      "empty": "Select groups or line items to preview or generate invoices.",
+      "pageScope": "{{groups}} group(s) · {{obligations}} line item(s)"
     },
     "amount": {
       "atGeneration": "Calculated at generation",
@@ -278,7 +275,7 @@
       "currency": "Currency",
       "any": "any",
       "clear": "Clear",
-      "countSummary": "{{groups}} group(s) · {{obligations}} obligation(s)"
+      "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
     },
     "drawer": {
       "eyebrow": "Focused",
@@ -286,7 +283,7 @@
       "lines": "Lines ({{count}})",
       "knownNow": "Known now",
       "atGeneration": "Calculated at generation",
-      "obligations": "{{count}} obligation(s)",
+      "obligations": "{{count}} line item(s)",
       "note": "The known amount comes from fixed lines. Time, usage and bucket amounts are finalized when you generate — use Preview to see them first.",
       "preview": "Preview invoice",
       "select": "Select for generation",

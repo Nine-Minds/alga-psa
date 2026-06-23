@@ -1662,6 +1662,100 @@ export class BillingEngine {
       };
     }
   }
+  /**
+   * Preview the fixed-price charge total (pre-tax cents) for each Fixed contract
+   * line whose persisted recurring service period settles within the given
+   * INVOICE WINDOW, reusing the EXACT path generation uses for persisted
+   * recurring timing: getClientContractLinesForBillingPeriod(invoiceWindow) +
+   * loadPersistedRecurringTimingSelections + calculateFixedPriceCharges with
+   * recurringTimingSelectionSource='persisted'. The recurring due-work listing
+   * uses this to show confirmed fixed amounts instead of "calculated at
+   * generation".
+   *
+   * The invoice window — not the service period — is the engine's billing-period
+   * axis here: for arrears/advance lines the engine derives the covered service
+   * period from the window, and clamps coverage to the line's activity window.
+   * Passing the service period directly would shift the derivation by one cycle
+   * and zero out coverage for a line's first/last period (its true cause of
+   * "calculated at generation" on otherwise-ready fixed rows).
+   *
+   * Returns a map keyed by BOTH contract_line_id and client_contract_line_id so
+   * callers can match on either id. Best-effort: anything not materialized or not
+   * priceable is omitted (caller falls back to "calculated at generation").
+   */
+  public async previewFixedChargeAmountsForInvoiceWindow(
+    clientId: string,
+    invoiceWindowStart: ISO8601String,
+    invoiceWindowEnd: ISO8601String,
+  ): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    await this.initKnex();
+    if (!this.tenant) {
+      return result;
+    }
+    const billingPeriod = {
+      tenant: this.tenant,
+      startDate: invoiceWindowStart,
+      endDate: invoiceWindowEnd,
+    } as IBillingPeriod;
+    let lines: IClientContractLine[];
+    try {
+      lines = await this.getClientContractLinesForBillingPeriod(clientId, billingPeriod);
+    } catch {
+      return result;
+    }
+    let persistedSelections: RecurringChargeTimingSelections | null;
+    try {
+      persistedSelections = await this.loadPersistedRecurringTimingSelections(
+        billingPeriod,
+        lines,
+      );
+    } catch {
+      return result;
+    }
+    if (!persistedSelections) {
+      // Service periods are not materialized for this window; defer to generation.
+      return result;
+    }
+    for (const line of lines) {
+      if (String(line.contract_line_type ?? "").toLowerCase() !== "fixed") {
+        continue;
+      }
+      const selection = persistedSelections[line.client_contract_line_id];
+      if (!selection) {
+        continue;
+      }
+      let charges: IFixedPriceCharge[] = [];
+      try {
+        charges = await this.calculateFixedPriceCharges(
+          clientId,
+          billingPeriod,
+          line,
+          undefined,
+          selection,
+          "persisted",
+        );
+      } catch {
+        continue;
+      }
+      if (charges.length === 0) {
+        continue;
+      }
+      const total = charges.reduce(
+        (sum, charge) =>
+          sum + (typeof charge.total === "number" && Number.isFinite(charge.total) ? charge.total : 0),
+        0,
+      );
+      if (line.contract_line_id) {
+        result.set(String(line.contract_line_id), total);
+      }
+      if (line.client_contract_line_id) {
+        result.set(String(line.client_contract_line_id), total);
+      }
+    }
+    return result;
+  }
+
   private async calculateFixedPriceCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
