@@ -1880,7 +1880,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   windowOpenOnly ? 'border-primary-200 bg-primary-50 text-primary-700' : 'border-border bg-card text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <span className={`h-1.5 w-1.5 rounded-full ${windowOpenOnly ? 'bg-success' : 'bg-muted-foreground'}`} />
                 {t('automaticInvoices.filters.windowOpen', { defaultValue: 'Window open' })}
               </button>
               {availableChargeTypes.length > 0 ? (
@@ -2094,7 +2093,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     defaultValue: `${selectedExecutionRows.length} selected`,
                   })}
                 </span>
-                <span className="text-xs text-white/85">
+                <span className="text-xs text-white/80">
                   {t('automaticInvoices.summary.breakdown', {
                     invoices: selectionInvoiceCount,
                     combine: selectionCombineCount,
@@ -2523,10 +2522,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               >
                 <div className="flex h-full flex-col">
                   <div className="border-b border-border px-5 py-4">
-                    <div className="text-2xs font-semibold uppercase tracking-wide text-primary-600">
-                      {t('automaticInvoices.drawer.eyebrow', { defaultValue: 'Focused' })}
-                    </div>
-                    <h3 className="mt-1 text-lg font-semibold">
+                    <h3 className="text-lg font-semibold">
                       {summary.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
                     </h3>
                     <div className="mt-0.5 text-sm text-muted-foreground">{formatPeriodLabel(focusedGroup.candidate.servicePeriodStart, focusedGroup.candidate.servicePeriodEnd)}</div>
