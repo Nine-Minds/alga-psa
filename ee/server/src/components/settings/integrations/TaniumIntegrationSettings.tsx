@@ -5,12 +5,13 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import { getAllContacts } from '@alga-psa/clients/actions';
+import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 import type { ColumnDefinition, IClient, IContact } from '@alga-psa/types';
 import {
   disconnectTaniumIntegration,
@@ -33,11 +34,6 @@ type MappingRow = {
   default_contact_id?: string | null;
 };
 
-type ClientRow = {
-  client_id: string;
-  client_name: string;
-};
-
 export default function TaniumIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
   const { renderQuickAddContact } = useQuickAddClient();
@@ -54,7 +50,7 @@ export default function TaniumIntegrationSettings() {
   const [hasApiToken, setHasApiToken] = useState(false);
 
   const [mappings, setMappings] = useState<MappingRow[]>([]);
-  const [clients, setClients] = useState<ClientRow[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
 
   const [error, setError] = useState<string | null>(null);
@@ -71,13 +67,15 @@ export default function TaniumIntegrationSettings() {
     setIsLoading(true);
     setError(null);
     try {
-      const [settingsResult, mappingResult, contactsResult] = await Promise.all([
+      const [settingsResult, mappingResult, contactsResult, clientsResult] = await Promise.all([
         getTaniumSettings(),
         getTaniumOrganizationMappings(),
         getAllContacts('active'),
+        getAllClients(false),
       ]);
 
       setContacts((contactsResult || []) as IContact[]);
+      setClients(clientsResult ?? []);
 
       if (!settingsResult.success) {
         setError(settingsResult.error || t('integrations.rmm.tanium.errors.loadSettings'));
@@ -97,7 +95,6 @@ export default function TaniumIntegrationSettings() {
         setError((prev) => prev || mappingResult.error || t('integrations.rmm.tanium.errors.loadMappings'));
       } else {
         setMappings((mappingResult.mappings || []) as MappingRow[]);
-        setClients((mappingResult.clients || []) as ClientRow[]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('integrations.rmm.tanium.errors.loadState'));
@@ -205,7 +202,7 @@ export default function TaniumIntegrationSettings() {
     });
   };
 
-  const handleMappingClientChange = (mappingId: string, clientId: string) => {
+  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
     void (async () => {
       const result = await updateTaniumOrganizationMapping({
         mappingId,
@@ -250,18 +247,16 @@ export default function TaniumIntegrationSettings() {
       dataIndex: 'client_id',
       sortable: false,
       render: (_v, mapping) => (
-        <select
-          className="h-9 w-full rounded-md border px-2"
-          value={mapping.client_id || ''}
-          onChange={(e) => handleMappingClientChange(mapping.mapping_id, e.target.value)}
-        >
-          <option value="">{t('integrations.rmm.tanium.mappings.unmapped')}</option>
-          {clients.map((client) => (
-            <option key={client.client_id} value={client.client_id}>
-              {client.client_name}
-            </option>
-          ))}
-        </select>
+        <ClientPicker
+          id={`tanium-client-picker-${mapping.mapping_id}`}
+          clients={clients}
+          selectedClientId={mapping.client_id ?? null}
+          onSelect={(clientId) => handleMappingClientChange(mapping.mapping_id, clientId)}
+          filterState="active"
+          onFilterStateChange={() => {}}
+          clientTypeFilter="all"
+          onClientTypeFilterChange={() => {}}
+        />
       ),
     },
     {
@@ -435,7 +430,7 @@ export default function TaniumIntegrationSettings() {
           if (quickAddContactFor) handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
           setQuickAddContactFor(null);
         },
-        clients: clients as unknown as IClient[],
+        clients: clients,
         selectedClientId: quickAddContactFor?.clientId ?? null,
       })}
     </div>

@@ -6,12 +6,13 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import { getAllContacts } from '@alga-psa/clients/actions';
+import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
 import {
   backfillLevelIoAlerts,
@@ -39,11 +40,6 @@ type MappingRow = {
   metadata?: { path?: string } | null;
 };
 
-type ClientRow = {
-  client_id: string;
-  client_name: string;
-};
-
 type WebhookInfo = {
   url: string;
   headerName: string;
@@ -63,7 +59,7 @@ export default function LevelIoIntegrationSettings() {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const [mappings, setMappings] = useState<MappingRow[]>([]);
-  const [clients, setClients] = useState<ClientRow[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const { renderQuickAddContact } = useQuickAddClient();
   const [quickAddContactFor, setQuickAddContactFor] = useState<{ mappingId: string; clientId: string } | null>(null);
@@ -87,15 +83,17 @@ export default function LevelIoIntegrationSettings() {
     if (!background) setIsLoading(true);
     setError(null);
     try {
-      const [settingsResult, mappingResult, webhookResult, summaryResult, contactsResult] = await Promise.all([
+      const [settingsResult, mappingResult, webhookResult, summaryResult, contactsResult, clientsResult] = await Promise.all([
         getLevelIoSettings(),
         listLevelIoOrganizationMappings(),
         getLevelIoWebhookInfo(),
         getLevelIoConnectionSummary(),
         getAllContacts('active'),
+        getAllClients(false),
       ]);
 
       setContacts(contactsResult ?? []);
+      setClients(clientsResult ?? []);
 
       if (!settingsResult.success) {
         setError(settingsResult.error || t('integrations.rmm.levelio.errors.loadSettings', { defaultValue: 'Failed to load Level settings' }));
@@ -113,7 +111,6 @@ export default function LevelIoIntegrationSettings() {
         setError((prev) => prev || mappingResult.error || t('integrations.rmm.levelio.errors.loadMappings', { defaultValue: 'Failed to load Level group mappings' }));
       } else {
         setMappings((mappingResult.mappings || []) as MappingRow[]);
-        setClients((mappingResult.clients || []) as ClientRow[]);
       }
 
       if (!webhookResult.success) {
@@ -247,7 +244,7 @@ export default function LevelIoIntegrationSettings() {
     });
   };
 
-  const handleMappingClientChange = (mappingId: string, clientId: string) => {
+  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
     void (async () => {
       const result = await updateLevelIoOrganizationMapping({
         mappingId,
@@ -308,20 +305,16 @@ export default function LevelIoIntegrationSettings() {
       dataIndex: 'client_id',
       sortable: false,
       render: (_v, mapping) => (
-        <select
-          id={`levelio-mapping-client-${mapping.mapping_id}`}
-          aria-label={t('integrations.rmm.levelio.mappings.mappedClient', { defaultValue: 'Mapped Client' })}
-          className="h-9 w-full rounded-md border px-2"
-          value={mapping.client_id || ''}
-          onChange={(e) => handleMappingClientChange(mapping.mapping_id, e.target.value)}
-        >
-          <option value="">{t('integrations.rmm.levelio.mappings.unmapped', { defaultValue: 'Not mapped' })}</option>
-          {clients.map((client) => (
-            <option key={client.client_id} value={client.client_id}>
-              {client.client_name}
-            </option>
-          ))}
-        </select>
+        <ClientPicker
+          id={`levelio-client-picker-${mapping.mapping_id}`}
+          clients={clients}
+          selectedClientId={mapping.client_id ?? null}
+          onSelect={(clientId) => handleMappingClientChange(mapping.mapping_id, clientId)}
+          filterState="active"
+          onFilterStateChange={() => {}}
+          clientTypeFilter="all"
+          onClientTypeFilterChange={() => {}}
+        />
       ),
     },
     {
@@ -561,7 +554,7 @@ export default function LevelIoIntegrationSettings() {
           }
           setQuickAddContactFor(null);
         },
-        clients: clients as unknown as IClient[],
+        clients,
         selectedClientId: quickAddContactFor?.clientId ?? null,
       })}
     </div>
