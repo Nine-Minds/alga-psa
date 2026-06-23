@@ -24,6 +24,7 @@ import { getAllContacts } from '@alga-psa/clients/actions';
 import { RmmOrganizationMapping } from '../../../../interfaces/rmm.interfaces';
 import type { IClient, IContact } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 interface OrganizationMappingManagerProps {
   onMappingChanged?: () => void;
@@ -39,6 +40,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
   refreshKey,
 }) => {
   const { t } = useTranslation('msp/integrations');
+  const { renderQuickAddContact } = useQuickAddClient();
+  const [quickAddContactFor, setQuickAddContactFor] = useState<{ mappingId: string; clientId: string } | null>(null);
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
   const [companies, setCompanies] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -215,6 +218,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -354,6 +358,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
                             clientId={mapping.client_id ?? undefined}
                             disabled={!mapping.client_id || isSaving}
                             placeholder="Select contact"
+                            onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
                           />
                         </div>
                       </td>
@@ -396,6 +401,22 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         )}
       </CardContent>
     </Card>
+    {renderQuickAddContact({
+      isOpen: !!quickAddContactFor,
+      onClose: () => setQuickAddContactFor(null),
+      onContactAdded: (newContact) => {
+        setContacts((prev) => {
+          const i = prev.findIndex((c) => c.contact_name_id === newContact.contact_name_id);
+          if (i >= 0) { const next = [...prev]; next[i] = newContact; return next; }
+          return [...prev, newContact];
+        });
+        if (quickAddContactFor) handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
+        setQuickAddContactFor(null);
+      },
+      clients: companies,
+      selectedClientId: quickAddContactFor?.clientId ?? null,
+    })}
+    </>
   );
 };
 

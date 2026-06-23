@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 import type { IClient, IContact } from '@alga-psa/types';
 import { Building2, RefreshCw } from 'lucide-react';
@@ -49,6 +50,11 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const { renderQuickAddContact } = useQuickAddClient();
+  const [quickAddContactFor, setQuickAddContactFor] = useState<{
+    mappingId: string;
+    clientId: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -119,6 +125,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
   const unmappedCount = mappings.filter((m) => !m.client_id).length;
 
   return (
+    <>
     <Card id="huntress-org-mappings">
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -191,6 +198,15 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
                       clientId={mapping.client_id ?? undefined}
                       disabled={!mapping.client_id}
                       placeholder="Select contact"
+                      onAddNew={
+                        mapping.client_id
+                          ? () =>
+                              setQuickAddContactFor({
+                                mappingId: mapping.mapping_id,
+                                clientId: mapping.client_id!,
+                              })
+                          : undefined
+                      }
                     />
                   </td>
                   <td className="py-2 pr-4">
@@ -221,6 +237,28 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
         )}
       </CardContent>
     </Card>
+    {renderQuickAddContact({
+      isOpen: !!quickAddContactFor,
+      onClose: () => setQuickAddContactFor(null),
+      onContactAdded: (newContact) => {
+        setContacts((prev) => {
+          const i = prev.findIndex((c) => c.contact_name_id === newContact.contact_name_id);
+          if (i >= 0) {
+            const next = [...prev];
+            next[i] = newContact;
+            return next;
+          }
+          return [...prev, newContact];
+        });
+        if (quickAddContactFor) {
+          handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
+        }
+        setQuickAddContactFor(null);
+      },
+      clients,
+      selectedClientId: quickAddContactFor?.clientId ?? null,
+    })}
+    </>
   );
 };
 
