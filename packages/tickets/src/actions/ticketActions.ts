@@ -163,16 +163,13 @@ async function resolveAuthorizationSubjectForUser(
 }
 
 function toTicketAuthorizationRecord(
-  ticket: Partial<ITicket>,
-  additionalUserIds: string[] = []
+  ticket: Partial<ITicket>
 ): AuthorizationRecord {
-  // `tickets.assigned_to` is the primary assignee; `ticket_resources.additional_user_id`
-  // holds co-assignees ("additional agents"). Both should authorize via own_or_assigned.
+  // Only the primary assignee grants ticket read authorization. Do not trust
+  // `ticket_resources.additional_user_id` as an authorization assignment because
+  // time-entry workflows can create those rows without ticket row-level access.
   const assignees = new Set<string>();
   if (ticket.assigned_to) assignees.add(ticket.assigned_to);
-  for (const id of additionalUserIds) {
-    if (id) assignees.add(id);
-  }
   return {
     id: ticket.ticket_id ?? null,
     ownerUserId: ticket.entered_by ?? null,
@@ -181,28 +178,6 @@ function toTicketAuthorizationRecord(
     boardId: ticket.board_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
-}
-
-async function fetchTicketAdditionalUserIds(
-  trx: Knex.Transaction | Knex,
-  tenant: string,
-  ticketIds: string[]
-): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
-  if (ticketIds.length === 0) {
-    return map;
-  }
-  const rows = await trx('ticket_resources')
-    .where({ tenant })
-    .whereIn('ticket_id', ticketIds)
-    .whereNotNull('additional_user_id')
-    .select<{ ticket_id: string; additional_user_id: string }[]>('ticket_id', 'additional_user_id');
-  for (const row of rows) {
-    const ids = map.get(row.ticket_id) ?? [];
-    ids.push(row.additional_user_id);
-    map.set(row.ticket_id, ids);
-  }
-  return map;
 }
 
 async function resolveClientSelectedBoardIds(
@@ -1402,13 +1377,6 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         })
         .orderBy('t.ticket_id', 'desc');
 
-      const additionalUserIdsByTicket = await fetchTicketAdditionalUserIds(
-        trx,
-        tenant,
-        tickets
-          .map((ticket: any) => ticket.ticket_id)
-          .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
-      );
 
       const decisions = await Promise.all(
         tickets.map((ticket: any) =>
@@ -1419,10 +1387,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
               action: 'read',
               id: ticket.ticket_id,
             },
-            record: toTicketAuthorizationRecord(
-              ticket,
-              additionalUserIdsByTicket.get(ticket.ticket_id) ?? []
-            ),
+            record: toTicketAuthorizationRecord(ticket),
             selectedBoardIds,
             requestCache,
             knex: trx,
@@ -2275,7 +2240,6 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         }
       }
 
-      const additionalUserIdsByTicket = await fetchTicketAdditionalUserIds(trx, tenant, [id]);
       const authorizationDecision = await authorizationKernel.authorizeResource({
         subject: authorizationSubject,
         resource: {
@@ -2283,10 +2247,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
           action: 'read',
           id,
         },
-        record: toTicketAuthorizationRecord(
-          ticket,
-          additionalUserIdsByTicket.get(id) ?? []
-        ),
+        record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds,
         requestCache,
         knex: trx,
