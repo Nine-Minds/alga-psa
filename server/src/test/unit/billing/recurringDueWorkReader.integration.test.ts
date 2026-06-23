@@ -634,7 +634,7 @@ describe('recurring due-work reader', () => {
         servicePeriodEnd: '2025-03-01',
         reason: 'missing_service_period_materialization',
         detail:
-          'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+          "This client's billing schedule changed, so these charges are out of date and need to be rebuilt before they can be invoiced.",
       },
     ]);
     expect(result.invoiceCandidates.map((candidate) => candidate.clientId)).not.toContain('client-2');

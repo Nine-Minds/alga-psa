@@ -8,15 +8,16 @@ import type { ISO8601String } from '@alga-psa/types';
 import {
   ensureUtcMidnightIsoDate,
   normalizeAnchorSettingsForCycle,
-  validateAnchorSettingsForCycle,
   type BillingCycleAnchorSettingsInput,
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
-import { ensureClientBillingSettingsRow } from './billingCycleAnchorActions';
-import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { updateClientBillingSchedule as updateClientBillingScheduleShared } from '@alga-psa/shared/billingClients';
+import { applyClientCadenceChange } from './applyClientCadenceChange';
+import {
+  previewClientCadenceScheduleChange,
+  type ClientCadenceChangePreview,
+} from './clientCadenceScheduleRegeneration';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -105,46 +106,63 @@ export const updateClientBillingSchedule = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
-      .where({ tenant, client_id: input.clientId })
-      .first()
-      .select('client_id', 'billing_cycle');
-    if (!client) {
-      throw new Error('Client not found');
-    }
+    await applyClientCadenceChange(trx, tenant, input);
+  });
 
-    validateAnchorSettingsForCycle(input.billingCycle, input.anchor);
-    const normalized = normalizeAnchorSettingsForCycle(input.billingCycle, input.anchor);
+  return { success: true };
+});
 
-    if (input.billingHistoryStartDate) {
-      await updateClientBillingScheduleShared(trx, tenant, input);
-    } else {
-      if ((client.billing_cycle ?? 'monthly') !== input.billingCycle) {
-        await trx('clients')
-          .where({ tenant, client_id: input.clientId })
-          .update({ billing_cycle: input.billingCycle, updated_at: trx.fn.now() });
-      }
+export type PreviewClientCadenceChangeInput = {
+  clientId: string;
+  billingCycle: BillingCycleType;
+  anchor?: BillingCycleAnchorSettingsInput;
+};
 
-      await ensureClientBillingSettingsRow(trx, { tenant, clientId: input.clientId });
+/**
+ * Dry-run a cadence change so the UI can show the impact before applying it.
+ * Reads only — no scalar, anchor, cycle-window, or ledger rows are written.
+ * When no anchor is supplied (a plain cycle switch) the client's current anchor
+ * is read and adapted to the new cycle, matching what `updateBillingCycle` does.
+ */
+export const previewClientCadenceChange = withAuth(async (
+  user,
+  { tenant },
+  input: PreviewClientCadenceChangeInput
+): Promise<ClientCadenceChangePreview> => {
+  if (!await hasPermission(user as any, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+  const { knex } = await createTenantKnex();
 
-      await trx('client_billing_settings')
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    let anchorInput = input.anchor;
+    if (!anchorInput) {
+      const settings = await trx('client_billing_settings')
         .where({ tenant, client_id: input.clientId })
-        .update({
-          billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
-          billing_cycle_anchor_month_of_year: normalized.monthOfYear,
-          billing_cycle_anchor_day_of_week: normalized.dayOfWeek,
-          billing_cycle_anchor_reference_date: normalized.referenceDate,
-          updated_at: trx.fn.now()
-        });
+        .first()
+        .select(
+          'billing_cycle_anchor_day_of_month',
+          'billing_cycle_anchor_month_of_year',
+          'billing_cycle_anchor_day_of_week',
+          'billing_cycle_anchor_reference_date'
+        );
+      anchorInput = {
+        dayOfMonth: settings?.billing_cycle_anchor_day_of_month ?? null,
+        monthOfYear: settings?.billing_cycle_anchor_month_of_year ?? null,
+        dayOfWeek: settings?.billing_cycle_anchor_day_of_week ?? null,
+        referenceDate: settings?.billing_cycle_anchor_reference_date
+          ? normalizeDbIsoUtcMidnight(settings.billing_cycle_anchor_reference_date)
+          : null,
+      };
     }
 
-    await regenerateClientCadenceServicePeriodsForScheduleChange(trx, {
+    const normalized = normalizeAnchorSettingsForCycle(input.billingCycle, anchorInput);
+
+    return previewClientCadenceScheduleChange(trx, {
       tenant,
       clientId: input.clientId,
       billingCycle: input.billingCycle,
       anchor: normalized,
     });
   });
-
-  return { success: true };
 });

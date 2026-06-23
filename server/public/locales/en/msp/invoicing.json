@@ -196,15 +196,20 @@
       }
     },
     "materializationGap": {
-      "title": "Recurring service period repair required",
-      "description": "These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.",
+      "title": "These billing schedules need to be rebuilt",
+      "description": "A billing schedule changed for these clients, so their upcoming charges are out of date and cannot be invoiced yet. Rebuilding updates the charges to match the current schedule. Charges that were already invoiced are not affected.",
       "labels": {
         "servicePeriod": "Service period",
         "invoiceWindow": "Invoice window",
         "scheduleKey": "Schedule key"
       },
       "reviewLink": "Review Service Periods",
-      "helpText": "Repair the canonical service-period records instead of generating a compatibility invoice row."
+      "helpText": "Repair the canonical service-period records instead of generating a compatibility invoice row.",
+      "fixAll": "Fix all",
+      "fixAllBusy": "Rebuilding…",
+      "fixAllResult": "Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).",
+      "fixAllError": "Could not rebuild service periods. Please try again.",
+      "fixAllDenied": "You do not have permission to rebuild service periods."
     },
     "errors": {
       "title": "Errors occurred while finalizing invoices:",
