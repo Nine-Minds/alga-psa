@@ -11,6 +11,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import {
   listRmmAlertRules,
@@ -518,7 +519,6 @@ function RuleEditorDialog({
       title={title}
       className="max-w-2xl"
       footer={footer}
-      allowOverflow
     >
       <div className="space-y-5">
         {/* Basic fields */}
@@ -567,16 +567,15 @@ function RuleEditorDialog({
             <Label>Severities</Label>
             <div className="flex flex-wrap gap-2">
               {SEVERITIES.map((s) => (
-                <label key={s} className="flex items-center gap-1.5 cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    checked={f.severities.includes(s)}
-                    onChange={() => toggleSeverity(s)}
-                    disabled={saving}
-                    className="rounded"
-                  />
-                  {s}
-                </label>
+                <Checkbox
+                  key={s}
+                  id={`rule-severity-${s}`}
+                  label={s}
+                  checked={f.severities.includes(s)}
+                  onChange={() => toggleSeverity(s)}
+                  disabled={saving}
+                  containerClassName=""
+                />
               ))}
             </div>
           </div>
@@ -646,16 +645,15 @@ function RuleEditorDialog({
               <Label>Organizations (filter)</Label>
               <div className="max-h-36 overflow-y-auto space-y-1 rounded border p-2">
                 {formOptions.organizations.map((org) => (
-                  <label key={org.external_organization_id} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={f.organizationIds.includes(org.external_organization_id)}
-                      onChange={() => toggleOrgId(org.external_organization_id)}
-                      disabled={saving}
-                      className="rounded"
-                    />
-                    {org.external_organization_name || org.external_organization_id}
-                  </label>
+                  <Checkbox
+                    key={org.external_organization_id}
+                    id={`rule-org-${org.external_organization_id}`}
+                    label={org.external_organization_name || org.external_organization_id}
+                    checked={f.organizationIds.includes(org.external_organization_id)}
+                    onChange={() => toggleOrgId(org.external_organization_id)}
+                    disabled={saving}
+                    containerClassName=""
+                  />
                 ))}
               </div>
             </div>
@@ -753,16 +751,15 @@ function RuleEditorDialog({
                   <Label>Notify users</Label>
                   <div className="max-h-28 overflow-y-auto space-y-1 rounded border p-2">
                     {formOptions.users.map((u) => (
-                      <label key={u.user_id} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={f.notifyUserIds.includes(u.user_id)}
-                          onChange={() => toggleNotifyUser(u.user_id)}
-                          disabled={saving}
-                          className="rounded"
-                        />
-                        {`${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email}
-                      </label>
+                      <Checkbox
+                        key={u.user_id}
+                        id={`rule-notify-user-${u.user_id}`}
+                        label={`${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email}
+                        checked={f.notifyUserIds.includes(u.user_id)}
+                        onChange={() => toggleNotifyUser(u.user_id)}
+                        disabled={saving}
+                        containerClassName=""
+                      />
                     ))}
                   </div>
                 </div>
@@ -1000,16 +997,14 @@ function WindowEditorDialog({
               <Label>Days</Label>
               <div className="flex flex-wrap gap-2">
                 {DAY_LABELS.map((label, idx) => (
-                  <label key={idx} className="flex items-center gap-1 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={f.days.includes(idx)}
-                      onChange={() => toggleDay(idx)}
-                      disabled={saving}
-                      className="rounded"
-                    />
-                    {label}
-                  </label>
+                  <Checkbox
+                    key={idx}
+                    id={`rule-day-${idx}`}
+                    label={label}
+                    checked={f.days.includes(idx)}
+                    onChange={() => toggleDay(idx)}
+                    disabled={saving}
+                  />
                 ))}
               </div>
             </div>
