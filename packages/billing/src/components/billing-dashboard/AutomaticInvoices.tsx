@@ -2088,7 +2088,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           >
             {hasSelection ? (
               <>
-                <span className="text-sm font-bold">
+                <span className="text-sm font-semibold">
                   {t('automaticInvoices.summary.selected', {
                     count: selectedExecutionRows.length,
                     defaultValue: `${selectedExecutionRows.length} selected`,
@@ -2526,7 +2526,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     <div className="text-2xs font-semibold uppercase tracking-wide text-primary-600">
                       {t('automaticInvoices.drawer.eyebrow', { defaultValue: 'Focused' })}
                     </div>
-                    <h3 className="mt-1 text-lg font-bold">
+                    <h3 className="mt-1 text-lg font-semibold">
                       {summary.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
                     </h3>
                     <div className="mt-0.5 text-sm text-muted-foreground">{formatPeriodLabel(focusedGroup.candidate.servicePeriodStart, focusedGroup.candidate.servicePeriodEnd)}</div>
