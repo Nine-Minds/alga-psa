@@ -10,17 +10,17 @@ import type {
 import {
   ensureUtcMidnightIsoDate,
   type NormalizedBillingCycleAnchorSettings,
-} from '../lib/billing/billingCycleAnchors';
-import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
-import { getClientBillingCycleAnchor } from '@shared/billingClients/billingSchedule';
+} from './billingCycleAnchors';
+import { materializeClientCadenceServicePeriods } from './materializeClientCadenceServicePeriods';
+import { getClientBillingCycleAnchor } from './billingSchedule';
 import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
-} from '@shared/billingClients/backfillRecurringServicePeriods';
+} from './backfillRecurringServicePeriods';
 import {
   buildPersistedClientCadencePostDropObligationRef,
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-} from '@shared/billingClients/postDropRecurringObligationIdentity';
+} from './postDropRecurringObligationIdentity';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;

@@ -13,14 +13,6 @@
       "types": "./src/actions/index.ts",
       "import": "./dist/actions/index.mjs"
     },
-    "./actions/applyClientCadenceChange": {
-      "types": "./src/actions/applyClientCadenceChange.ts",
-      "import": "./src/actions/applyClientCadenceChange.ts"
-    },
-    "./actions/clientCadenceScheduleRegeneration": {
-      "types": "./src/actions/clientCadenceScheduleRegeneration.ts",
-      "import": "./src/actions/clientCadenceScheduleRegeneration.ts"
-    },
     "./runtime": {
       "types": "./src/runtime.ts",
       "import": "./dist/runtime.mjs"

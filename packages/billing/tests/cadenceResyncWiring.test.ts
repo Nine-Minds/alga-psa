@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 const read = (relPath: string) =>
   readFileSync(new URL(relPath, import.meta.url), 'utf8');
 
-const applyHelper = read('../src/actions/applyClientCadenceChange.ts');
+const applyHelper = read('../../../shared/billingClients/applyClientCadenceChange.ts');
 const cycleActions = read('../src/actions/billingCycleActions.ts');
 const scheduleActions = read('../src/actions/billingScheduleActions.ts');
 const anchorActions = read('../src/actions/billingCycleAnchorActions.ts');
-const regeneration = read('../src/actions/clientCadenceScheduleRegeneration.ts');
+const regeneration = read('../../../shared/billingClients/clientCadenceScheduleRegeneration.ts');
 const rspActions = read('../src/actions/recurringServicePeriodActions.ts');
 const automaticInvoices = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
 // The real cadence editor saves through the clients package helper.
@@ -31,8 +31,10 @@ describe('Cadence-change resync wiring', () => {
   });
 
   it('T011: the client billing-schedule editor path re-materializes too', () => {
-    // packages/clients ClientBillingSchedule.tsx saves via this helper.
-    expect(billingHelpers).toContain("from '@alga-psa/billing/actions/applyClientCadenceChange'");
+    // packages/clients ClientBillingSchedule.tsx saves via this helper, which
+    // wires through the shared cadence entry point.
+    expect(billingHelpers).toContain("from '@alga-psa/shared/billingClients'");
+    expect(billingHelpers).toContain('applyClientCadenceChange');
     expect(billingHelpers).toContain('await applyClientCadenceChange(trx, tenant, input)');
   });
 

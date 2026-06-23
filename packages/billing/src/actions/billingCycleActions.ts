@@ -12,7 +12,7 @@ import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { toPlainDate } from '@alga-psa/core';
-import { applyClientCadenceChange } from './applyClientCadenceChange';
+import { applyClientCadenceChange } from '@alga-psa/shared/billingClients';
 
 
 export const getBillingCycle = withAuth(async (

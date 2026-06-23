@@ -4,9 +4,9 @@ import {
   normalizeAnchorSettingsForCycle,
   validateAnchorSettingsForCycle,
   type BillingCycleAnchorSettingsInput,
-} from '../lib/billing/billingCycleAnchors';
+} from './billingCycleAnchors';
 import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
-import { updateClientBillingSchedule as updateClientBillingScheduleShared } from '@alga-psa/shared/billingClients';
+import { updateClientBillingSchedule as updateClientBillingScheduleShared } from './billingSchedule';
 
 export type ApplyClientCadenceChangeInput = {
   clientId: string;
