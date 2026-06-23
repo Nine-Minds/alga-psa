@@ -2402,13 +2402,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         {!group.parentSummary.canGenerate && group.parentSummary.blockedReason && !group.parentSummary.notYetDue ? (
                           <div className="text-xs text-muted-foreground">{formatBlockedReason(group.parentSummary.blockedReason)}</div>
                         ) : null}
-                        {group.parentSummary.notYetDue ? (
-                          // The pill says "Not yet due" and the window cell shows the open
-                          // date; this only adds the reason. Keep it to one short line.
-                          <div className="text-xs text-muted-foreground" data-testid={`not-yet-due-${group.parentSummary.parentGroupKey}`}>
-                            {t('automaticInvoices.groups.upcomingDetail', { defaultValue: 'Bills in arrears. Available once the service period ends.' })}
-                          </div>
-                        ) : null}
                         {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (
                           <div
                             key={`${group.parentSummary.candidateKey}:assignment:${contextValue}`}
@@ -2460,7 +2453,20 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   if (record.kind === 'member') {
                     return null;
                   }
-                  return renderStatusPill(record.group.parentSummary, countSeparateInvoices(record.group.childExecutionRows));
+                  const summary = record.group.parentSummary;
+                  return (
+                    <div className="space-y-0.5">
+                      {renderStatusPill(summary, countSeparateInvoices(record.group.childExecutionRows))}
+                      {summary.notYetDue && summary.availableOnDate ? (
+                        <div className="text-xs text-muted-foreground">
+                          {t('automaticInvoices.window.opensOn', {
+                            date: formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }),
+                            defaultValue: `Opens ${formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}`,
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
                 },
               },
               {
@@ -2479,40 +2485,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   // contracts · N lines"); don't repeat it here.
                   return (
                     <div className="font-medium">{formatPeriodLabel(record.group.candidate.servicePeriodStart, record.group.candidate.servicePeriodEnd)}</div>
-                  );
-                },
-              },
-              {
-                title: t('automaticInvoices.ready.columns.invoiceWindow', { defaultValue: 'Invoice Window' }),
-                dataIndex: 'window',
-                width: '128px',
-                sortable: false,
-                headerClassName: 'text-[11px] uppercase tracking-wide',
-                cellClassName: 'align-top',
-                render: (_: unknown, rowRecord: unknown) => {
-                  const record = rowRecord as AutomaticInvoiceDisplayRow;
-                  if (record.kind === 'member') {
-                    return null;
-                  }
-                  const summary = record.group.parentSummary;
-                  return (
-                    <div className="space-y-0.5">
-                      <div className="whitespace-nowrap font-medium">{formatPeriodLabel(record.group.candidate.windowStart, record.group.candidate.windowEnd)}</div>
-                      {summary.notYetDue ? (
-                        <div className="text-xs text-muted-foreground">
-                          {summary.availableOnDate
-                            ? t('automaticInvoices.window.opensOn', {
-                                date: formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }),
-                                defaultValue: `Opens ${formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}`,
-                              })
-                            : t('automaticInvoices.window.notOpen', { defaultValue: 'Not open yet' })}
-                        </div>
-                      ) : (
-                        <div className="text-xs font-medium text-success">
-                          {t('automaticInvoices.window.open', { defaultValue: 'Open' })}
-                        </div>
-                      )}
-                    </div>
                   );
                 },
               },

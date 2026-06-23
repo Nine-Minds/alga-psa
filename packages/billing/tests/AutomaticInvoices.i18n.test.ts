@@ -31,10 +31,10 @@ describe('AutomaticInvoices i18n wiring contract', () => {
 
     expect(source).toContain("const { t } = useTranslation('msp/invoicing');");
 
-    // Pro-Grid redesign: the static description/select-all explanation and the
-    // page-scope note were dropped (the view-tab counts and filter-bar summary
-    // already carry the count), and the "Included" column was replaced by
-    // Charge / Status / Amount columns.
+    // Pro-Grid redesign + cleanup: the static description/select-all explanation
+    // and page-scope note were dropped, "Included" became Charge / Status /
+    // Amount, and Service Period + Invoice Window collapsed into one Service
+    // Period column (the open date now rides on the Status pill).
     const keyChecks = [
       'automaticInvoices.ready.title',
       'automaticInvoices.ready.dateRange',
@@ -44,7 +44,6 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       'automaticInvoices.ready.columns.charge',
       'automaticInvoices.ready.columns.status',
       'automaticInvoices.ready.columns.servicePeriod',
-      'automaticInvoices.ready.columns.invoiceWindow',
       'automaticInvoices.ready.columns.amount',
       'automaticInvoices.actions.previewSelected',
       'automaticInvoices.actions.generateSelected',
