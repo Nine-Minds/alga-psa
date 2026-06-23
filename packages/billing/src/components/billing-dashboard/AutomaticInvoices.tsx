@@ -10,7 +10,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Search, AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText } from 'lucide-react';
+import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText } from 'lucide-react';
 import type {
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -1957,14 +1957,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               variant="outline"
               onClick={handleDateRangeSearch}
             >
-              <Search className="h-4 w-4 mr-2" />
-              {t('automaticInvoices.ready.search', { defaultValue: 'Search' })}
+              {t('automaticInvoices.ready.search', { defaultValue: 'Apply' })}
             </Button>
             <Input
               id="filter-clients-input"
               type="text"
               placeholder={t('automaticInvoices.ready.filterPlaceholder', {
-                defaultValue: 'Filter clients...',
+                defaultValue: 'Filter by client',
               })}
               containerClassName=""
               value={clientFilter}
