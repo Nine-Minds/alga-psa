@@ -522,6 +522,17 @@
       "5": "11111",
       "6": "11111",
       "7": "11111"
+    },
+    "reviewError": "11111",
+    "reviewing": "11111",
+    "confirmSave": "11111",
+    "reviewChanges": "11111",
+    "impact": {
+      "title": "11111",
+      "periods": "11111 {{count}} 11111 {{lines}} 11111",
+      "from": "11111 {{date}} 11111",
+      "billedPreserved": "11111",
+      "confirmHint": "11111"
     }
   },
   "clientContractAssignment": {
