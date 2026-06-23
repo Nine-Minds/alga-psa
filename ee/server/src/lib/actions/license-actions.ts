@@ -20,6 +20,14 @@ import {
   IScheduledLicenseChange,
 } from 'server/src/interfaces/subscription.interfaces';
 
+async function hasAccountManagementAccess(): Promise<boolean> {
+  return await checkAccountManagementPermission();
+}
+
+function permissionDenied(error = 'Permission denied') {
+  return { success: false as const, error };
+}
+
 /**
  * Server action to get the current license usage for the session tenant
  * @returns License usage information or error
@@ -83,6 +91,10 @@ export async function getInvoicePreviewAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -155,6 +167,10 @@ export async function createLicenseCheckoutSessionAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -350,6 +366,10 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
+    }
+
     const knex = await getConnection(session.user.tenant);
 
     // Get active, trialing, or past_due subscription with related price info
@@ -419,6 +439,10 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     const knex = await getConnection(session.user.tenant);
@@ -501,6 +525,10 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
@@ -578,6 +606,10 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
@@ -640,6 +672,10 @@ export async function sendCancellationFeedbackAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
     }
 
     const knex = await getConnection(session.user.tenant);
@@ -717,6 +753,10 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
     }
 
     const knex = await getConnection(session.user.tenant);
@@ -1014,6 +1054,10 @@ export async function reduceLicenseCountAction(
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to reduce license count');
+    }
+
     logger.info(
       `[reduceLicenseCountAction] Reducing licenses for tenant ${session.user.tenant} to ${newQuantity}`
     );
@@ -1045,6 +1089,10 @@ export async function getScheduledLicenseChangesAction(): Promise<{
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
     }
 
     logger.info(`[getScheduledLicenseChangesAction] Getting scheduled changes for tenant ${session.user.tenant}`);
