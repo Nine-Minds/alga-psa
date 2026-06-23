@@ -681,7 +681,7 @@ function RuleEditorDialog({
                 <CustomSelect
                   id="rule-board"
                   value={f.boardId}
-                  onValueChange={(v) => setF((p) => ({ ...p, boardId: v }))}
+                  onValueChange={(v) => setF((p) => ({ ...p, boardId: v, autoResolveStatusId: '' }))}
                   options={[
                     { value: '', label: 'Default board' },
                     ...(formOptions?.boards ?? []).map((b) => ({ value: b.board_id, label: b.board_name })),
@@ -786,7 +786,9 @@ function RuleEditorDialog({
                 onValueChange={(v) => setF((p) => ({ ...p, autoResolveStatusId: v }))}
                 options={[
                   { value: '', label: 'Default closed status' },
-                  ...(formOptions?.closedStatuses ?? []).map((s) => ({ value: s.status_id, label: s.name })),
+                  ...(formOptions?.closedStatuses ?? [])
+                    .filter((s) => (f.boardId ? s.board_id === f.boardId : s.board_id == null))
+                    .map((s) => ({ value: s.status_id, label: s.name })),
                 ]}
               />
             </div>
