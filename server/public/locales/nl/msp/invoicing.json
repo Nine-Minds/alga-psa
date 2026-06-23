@@ -28,8 +28,12 @@
         "group": "Groep",
         "servicePeriod": "Serviceperiode",
         "invoiceWindow": "Factuurvenster",
-        "included": "Inbegrepen"
-      }
+        "included": "Inbegrepen",
+        "charge": "Type",
+        "status": "Status",
+        "amount": "Bedrag"
+      },
+      "pageScopeNote": "{{count}} groep(en) op deze pagina"
     },
     "groups": {
       "item": "{{count}}-item",
@@ -213,6 +217,71 @@
     },
     "loading": {
       "billingData": "Factureringsgegevens laden"
+    },
+    "views": {
+      "all": "Alle",
+      "ready": "Klaar",
+      "combinable": "Combineerbaar",
+      "attention": "Aandacht nodig",
+      "notYetDue": "Nog niet verschuldigd"
+    },
+    "status": {
+      "ready": "Klaar",
+      "combine": "Combineren",
+      "separate": "Apart",
+      "notYetDue": "Nog niet verschuldigd",
+      "approval": "Goedkeuring",
+      "blocked": "Geblokkeerd"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} geselecteerd",
+      "breakdown": "{{invoices}} factuur/facturen · {{combine}} gecombineerd · {{separate}} apart",
+      "knownNow": "nu bekend",
+      "knownPlusAtGeneration": "nu bekend · {{count}} berekend bij genereren",
+      "empty": "Selecteer groepen of posten om facturen te bekijken of te genereren.",
+      "pageScope": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "amount": {
+      "atGeneration": "Berekend bij genereren",
+      "plusAtGeneration": "+ {{count}} bij genereren"
+    },
+    "window": {
+      "open": "Open",
+      "opensOn": "Opent {{date}}",
+      "notOpen": "Nog niet open"
+    },
+    "legend": {
+      "confirmed": "Bedrag nu bekend",
+      "atGeneration": "Berekend bij genereren",
+      "combine": "Combineren tot één factuur",
+      "separate": "Moet apart gefactureerd worden",
+      "notYetDue": "Nog niet verschuldigd"
+    },
+    "filters": {
+      "windowOpen": "Venster open",
+      "charge": "Type",
+      "currency": "Valuta",
+      "any": "alle",
+      "clear": "Wissen",
+      "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "drawer": {
+      "eyebrow": "Gefocust",
+      "whySeparate": "Waarom deze apart moeten",
+      "lines": "Regels ({{count}})",
+      "knownNow": "Nu bekend",
+      "atGeneration": "Berekend bij genereren",
+      "obligations": "{{count}} post(en)",
+      "note": "Het bekende bedrag komt uit vaste regels. Tijd-, verbruiks- en bundelbedragen worden bij het genereren bepaald — gebruik Voorbeeld om ze vooraf te zien.",
+      "preview": "Factuur bekijken",
+      "select": "Selecteren om te genereren",
+      "deselect": "Uit selectie verwijderen"
     }
   },
   "manualInvoices": {

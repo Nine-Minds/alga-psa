@@ -28,8 +28,12 @@
         "group": "Groupe",
         "servicePeriod": "Période de service",
         "invoiceWindow": "Fenêtre de facture",
-        "included": "Compris"
-      }
+        "included": "Compris",
+        "charge": "Type",
+        "status": "Statut",
+        "amount": "Montant"
+      },
+      "pageScopeNote": "{{count}} groupe(s) sur cette page"
     },
     "groups": {
       "item": "{{count}} article",
@@ -213,6 +217,71 @@
     },
     "loading": {
       "billingData": "Chargement des données de facturation"
+    },
+    "views": {
+      "all": "Tout",
+      "ready": "Prêt",
+      "combinable": "Combinable",
+      "attention": "Attention requise",
+      "notYetDue": "Pas encore dû"
+    },
+    "status": {
+      "ready": "Prêt",
+      "combine": "Combiner",
+      "separate": "Séparé",
+      "notYetDue": "Pas encore dû",
+      "approval": "Approbation",
+      "blocked": "Bloqué"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} sélectionné(s)",
+      "breakdown": "{{invoices}} facture(s) · {{combine}} combinées · {{separate}} séparées",
+      "knownNow": "connu maintenant",
+      "knownPlusAtGeneration": "connu maintenant · {{count}} calculé à la génération",
+      "empty": "Sélectionnez des groupes ou des éléments pour prévisualiser ou générer des factures.",
+      "pageScope": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculé à la génération",
+      "plusAtGeneration": "+ {{count}} à la génération"
+    },
+    "window": {
+      "open": "Ouverte",
+      "opensOn": "Ouvre le {{date}}",
+      "notOpen": "Pas encore ouverte"
+    },
+    "legend": {
+      "confirmed": "Montant connu maintenant",
+      "atGeneration": "Calculé à la génération",
+      "combine": "Combiner en une facture",
+      "separate": "À facturer séparément",
+      "notYetDue": "Pas encore dû"
+    },
+    "filters": {
+      "windowOpen": "Fenêtre ouverte",
+      "charge": "Type",
+      "currency": "Devise",
+      "any": "tout",
+      "clear": "Effacer",
+      "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "drawer": {
+      "eyebrow": "Sélectionné",
+      "whySeparate": "Pourquoi les séparer",
+      "lines": "Lignes ({{count}})",
+      "knownNow": "Connu maintenant",
+      "atGeneration": "Calculé à la génération",
+      "obligations": "{{count}} élément(s)",
+      "note": "Le montant connu provient des lignes au forfait. Les montants au temps, à l’usage et au bloc sont finalisés à la génération — utilisez l’aperçu pour les voir d’abord.",
+      "preview": "Aperçu de la facture",
+      "select": "Sélectionner pour générer",
+      "deselect": "Retirer de la sélection"
     }
   },
   "manualInvoices": {

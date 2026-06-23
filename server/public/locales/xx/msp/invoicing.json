@@ -28,8 +28,12 @@
         "group": "11111",
         "servicePeriod": "11111",
         "invoiceWindow": "11111",
-        "included": "11111"
-      }
+        "included": "11111",
+        "charge": "11111",
+        "status": "11111",
+        "amount": "11111"
+      },
+      "pageScopeNote": "11111 {{count}} 11111"
     },
     "groups": {
       "item": "11111 {{count}} 11111",
@@ -213,6 +217,71 @@
     },
     "loading": {
       "billingData": "11111"
+    },
+    "views": {
+      "all": "11111",
+      "ready": "11111",
+      "combinable": "11111",
+      "attention": "11111",
+      "notYetDue": "11111"
+    },
+    "status": {
+      "ready": "11111",
+      "combine": "11111",
+      "separate": "11111",
+      "notYetDue": "11111",
+      "approval": "11111",
+      "blocked": "11111"
+    },
+    "chargeTags": {
+      "fixed": "11111",
+      "hourly": "11111",
+      "usage": "11111",
+      "bucket": "11111"
+    },
+    "summary": {
+      "selected": "11111 {{count}} 11111",
+      "breakdown": "11111 {{invoices}} 11111 {{combine}} 11111 {{separate}} 11111",
+      "knownNow": "11111",
+      "knownPlusAtGeneration": "11111 {{count}} 11111",
+      "empty": "11111",
+      "pageScope": "11111 {{groups}} 11111 {{obligations}} 11111"
+    },
+    "amount": {
+      "atGeneration": "11111",
+      "plusAtGeneration": "11111 {{count}} 11111"
+    },
+    "window": {
+      "open": "11111",
+      "opensOn": "11111 {{date}} 11111",
+      "notOpen": "11111"
+    },
+    "legend": {
+      "confirmed": "11111",
+      "atGeneration": "11111",
+      "combine": "11111",
+      "separate": "11111",
+      "notYetDue": "11111"
+    },
+    "filters": {
+      "windowOpen": "11111",
+      "charge": "11111",
+      "currency": "11111",
+      "any": "11111",
+      "clear": "11111",
+      "countSummary": "11111 {{groups}} 11111 {{obligations}} 11111"
+    },
+    "drawer": {
+      "eyebrow": "11111",
+      "whySeparate": "11111",
+      "lines": "11111 {{count}} 11111",
+      "knownNow": "11111",
+      "atGeneration": "11111",
+      "obligations": "11111 {{count}} 11111",
+      "note": "11111",
+      "preview": "11111",
+      "select": "11111",
+      "deselect": "11111"
     }
   },
   "manualInvoices": {

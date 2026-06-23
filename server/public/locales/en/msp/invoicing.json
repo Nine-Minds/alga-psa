@@ -25,11 +25,15 @@
         }
       },
       "columns": {
-        "group": "Group",
+        "group": "Client / Group",
         "servicePeriod": "Service Period",
         "invoiceWindow": "Invoice Window",
-        "included": "Included"
-      }
+        "included": "Included",
+        "charge": "Charge",
+        "status": "Status",
+        "amount": "Amount"
+      },
+      "pageScopeNote": "{{count}} group(s) on this page"
     },
     "groups": {
       "item": "{{count}} item",
@@ -58,7 +62,10 @@
       "canCombine": "Can combine into 1 invoice",
       "separate": "Must invoice separately",
       "blocked": "Contains blocked items",
-      "notReady": "Not ready to invoice"
+      "notReady": "Not ready to invoice",
+      "upcoming": "Not yet due",
+      "upcomingDetail": "This period bills in arrears, so it becomes available to invoice after the service period ends.",
+      "upcomingDetailWithDate": "This period bills in arrears, so it becomes available to invoice on {{date}}, after the service period ends."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Invoice window differs",
@@ -75,6 +82,7 @@
         "servicePeriod": "Service period"
       },
       "pendingAmount": "Pending amount",
+      "billableOn": "Billable on {{date}}",
       "attributionWarning": "Assignment attribution metadata missing",
       "blockedUntilApproval": "Blocked until approval: {{count}} unapproved entry.",
       "blockedUntilApproval_one": "Blocked until approval: {{count}} unapproved entry.",
@@ -196,15 +204,20 @@
       }
     },
     "materializationGap": {
-      "title": "Recurring service period repair required",
-      "description": "These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.",
+      "title": "These billing schedules need to be rebuilt",
+      "description": "A billing schedule changed for these clients, so their upcoming charges are out of date and cannot be invoiced yet. Rebuilding updates the charges to match the current schedule. Charges that were already invoiced are not affected.",
       "labels": {
         "servicePeriod": "Service period",
         "invoiceWindow": "Invoice window",
         "scheduleKey": "Schedule key"
       },
       "reviewLink": "Review Service Periods",
-      "helpText": "Repair the canonical service-period records instead of generating a compatibility invoice row."
+      "helpText": "Repair the canonical service-period records instead of generating a compatibility invoice row.",
+      "fixAll": "Fix all",
+      "fixAllBusy": "Rebuilding…",
+      "fixAllResult": "Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).",
+      "fixAllError": "Could not rebuild service periods. Please try again.",
+      "fixAllDenied": "You do not have permission to rebuild service periods."
     },
     "errors": {
       "title": "Errors occurred while finalizing invoices:",
@@ -213,6 +226,71 @@
     },
     "loading": {
       "billingData": "Loading billing data"
+    },
+    "views": {
+      "all": "All",
+      "ready": "Ready",
+      "combinable": "Combinable",
+      "attention": "Needs attention",
+      "notYetDue": "Not yet due"
+    },
+    "status": {
+      "ready": "Ready",
+      "combine": "Combine",
+      "separate": "Separate",
+      "notYetDue": "Not yet due",
+      "approval": "Approval",
+      "blocked": "Blocked"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} selected",
+      "breakdown": "{{invoices}} invoice(s) · {{combine}} combined · {{separate}} separate",
+      "knownNow": "known now",
+      "knownPlusAtGeneration": "known now · {{count}} calculated at generation",
+      "empty": "Select groups or obligations to preview or generate invoices.",
+      "pageScope": "{{groups}} group(s) · {{obligations}} obligation(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculated at generation",
+      "plusAtGeneration": "+ {{count}} at generation"
+    },
+    "window": {
+      "open": "Open",
+      "opensOn": "Opens {{date}}",
+      "notOpen": "Not open yet"
+    },
+    "legend": {
+      "confirmed": "Amount known now",
+      "atGeneration": "Calculated at generation",
+      "combine": "Combine into one invoice",
+      "separate": "Must invoice separately",
+      "notYetDue": "Not yet due"
+    },
+    "filters": {
+      "windowOpen": "Window open",
+      "charge": "Charge",
+      "currency": "Currency",
+      "any": "any",
+      "clear": "Clear",
+      "countSummary": "{{groups}} group(s) · {{obligations}} obligation(s)"
+    },
+    "drawer": {
+      "eyebrow": "Focused",
+      "whySeparate": "Why these must be separate",
+      "lines": "Lines ({{count}})",
+      "knownNow": "Known now",
+      "atGeneration": "Calculated at generation",
+      "obligations": "{{count}} obligation(s)",
+      "note": "The known amount comes from fixed lines. Time, usage and bucket amounts are finalized when you generate — use Preview to see them first.",
+      "preview": "Preview invoice",
+      "select": "Select for generation",
+      "deselect": "Remove from selection"
     }
   },
   "manualInvoices": {

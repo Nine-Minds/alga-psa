@@ -28,8 +28,12 @@
         "group": "Grupo",
         "servicePeriod": "Período de serviço",
         "invoiceWindow": "Janela de fatura",
-        "included": "Incluído"
-      }
+        "included": "Incluído",
+        "charge": "Cobrança",
+        "status": "Status",
+        "amount": "Valor"
+      },
+      "pageScopeNote": "{{count}} grupo(s) nesta página"
     },
     "groups": {
       "item": "Item {{count}}",
@@ -213,6 +217,71 @@
     },
     "loading": {
       "billingData": "Carregando dados de faturamento"
+    },
+    "views": {
+      "all": "Todos",
+      "ready": "Pronto",
+      "combinable": "Combinável",
+      "attention": "Requer atenção",
+      "notYetDue": "Ainda não vencido"
+    },
+    "status": {
+      "ready": "Pronto",
+      "combine": "Combinar",
+      "separate": "Separado",
+      "notYetDue": "Ainda não vencido",
+      "approval": "Aprovação",
+      "blocked": "Bloqueado"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} selecionado(s)",
+      "breakdown": "{{invoices}} fatura(s) · {{combine}} combinadas · {{separate}} separadas",
+      "knownNow": "conhecido agora",
+      "knownPlusAtGeneration": "conhecido agora · {{count}} calculado na geração",
+      "empty": "Selecione grupos ou itens para visualizar ou gerar faturas.",
+      "pageScope": "{{groups}} grupo(s) · {{obligations}} item(ns)"
+    },
+    "amount": {
+      "atGeneration": "Calculado na geração",
+      "plusAtGeneration": "+ {{count}} na geração"
+    },
+    "window": {
+      "open": "Aberta",
+      "opensOn": "Abre em {{date}}",
+      "notOpen": "Ainda não aberta"
+    },
+    "legend": {
+      "confirmed": "Valor conhecido agora",
+      "atGeneration": "Calculado na geração",
+      "combine": "Combinar em uma fatura",
+      "separate": "Deve ser faturado separadamente",
+      "notYetDue": "Ainda não vencido"
+    },
+    "filters": {
+      "windowOpen": "Janela aberta",
+      "charge": "Cobrança",
+      "currency": "Moeda",
+      "any": "qualquer",
+      "clear": "Limpar",
+      "countSummary": "{{groups}} grupo(s) · {{obligations}} item(ns)"
+    },
+    "drawer": {
+      "eyebrow": "Em foco",
+      "whySeparate": "Por que devem ser separadas",
+      "lines": "Linhas ({{count}})",
+      "knownNow": "Conhecido agora",
+      "atGeneration": "Calculado na geração",
+      "obligations": "{{count}} item(ns)",
+      "note": "O valor conhecido vem das linhas fixas. Os valores de tempo, uso e pacote são finalizados ao gerar — use a visualização para vê-los antes.",
+      "preview": "Visualizar fatura",
+      "select": "Selecionar para gerar",
+      "deselect": "Remover da seleção"
     }
   },
   "manualInvoices": {
