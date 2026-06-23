@@ -1191,3 +1191,14 @@ html.dark {
 .alga-checkbox:focus-visible {
   outline: none !important;
 }
+
+/* Invoicing "Ready to Invoice" grid: lift the single elevated surface off the
+   page background like the v3 mockup (two-layer floating-card shadow). Scoped to
+   this table's container so the rest of the app's tables keep shadow-sm. The
+   compound selector (.datatable-container + attribute) outranks the .shadow-sm
+   utility without !important. Literal slate (15 23 42) rather than the
+   --color-text-900 token, which inverts to near-white in dark mode and would
+   turn the shadow into a glow. */
+.datatable-container[data-automation-id="automatic-invoices-table"] {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 12px 32px rgba(15, 23, 42, 0.08);
+}
