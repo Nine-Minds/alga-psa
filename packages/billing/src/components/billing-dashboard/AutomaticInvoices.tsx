@@ -2169,7 +2169,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       ? t('manualInvoices.actions.processing', { defaultValue: 'Processing...' })
                       : t('automaticInvoices.actions.generateSelected', {
                           count: selectedExecutionRows.length,
-                          defaultValue: `Generate Invoices for Selected Periods (${selectedExecutionRows.length})`,
+                          defaultValue: `Generate Invoices (${selectedExecutionRows.length})`,
                         })}
                   </Button>
                 </div>
@@ -2204,7 +2204,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     <FileText className="mr-2 h-4 w-4" />
                     {t('automaticInvoices.actions.generateSelected', {
                       count: 0,
-                      defaultValue: 'Generate Invoices for Selected Periods (0)',
+                      defaultValue: 'Generate Invoices (0)',
                     })}
                   </Button>
                 </div>
