@@ -1584,6 +1584,14 @@
           "unavailable": "Webhook information unavailable. (Requires settings read permission.)",
           "url": "Webhook URL",
           "urlCopied": "Webhook URL copied to clipboard."
+        },
+        "mappings": {
+          "org": "Tactical Organization",
+          "client": "Alga Client",
+          "defaultContact": "Default Contact"
+        },
+        "contact": {
+          "select": "Select contact"
         }
       },
       "tanium": {
@@ -1703,7 +1711,9 @@
           "loading": "Loading…",
           "mappedClient": "Mapped Client",
           "noGroups": "No groups discovered yet. Run Discover Groups first.",
-          "unmapped": "Not mapped"
+          "unmapped": "Not mapped",
+          "defaultContact": "Default Contact",
+          "selectContact": "Select contact"
         },
         "status": {
           "connected": "Connected",
@@ -1734,6 +1744,76 @@
           "showSecret": "Show secret",
           "title": "Alert Webhook",
           "url": "Webhook URL"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Huntress Organization",
+          "client": "Alga Client",
+          "defaultContact": "Default Contact",
+          "createTickets": "Create Tickets",
+          "status": "Status"
+        },
+        "selectContact": "Select contact",
+        "status": {
+          "autoMatched": "Auto-matched",
+          "mapped": "Mapped",
+          "unmapped": "Unmapped → triage"
+        },
+        "title": "Organization Mapping",
+        "description": "Map Huntress organizations to clients. Incidents for unmapped organizations go to the fallback client and triage board.",
+        "unmappedSuffix": "({{count}} unmapped)",
+        "syncButton": "Sync organizations",
+        "loading": "Loading…",
+        "empty": "No organizations yet — click \"Sync organizations\".",
+        "errors": {
+          "load": "Failed to load organization mappings",
+          "sync": "Sync failed",
+          "updateMapping": "Failed to update mapping",
+          "updateContact": "Failed to update default contact"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "NinjaOne Organization",
+          "company": "Alga Company",
+          "defaultContact": "Default Contact",
+          "autoSync": "Auto-Sync",
+          "status": "Status"
+        },
+        "orgFallback": "Org {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Select company",
+        "selectContact": "Select contact",
+        "status": {
+          "mapped": "Mapped",
+          "unmapped": "Unmapped"
+        },
+        "title": "Organization Mappings",
+        "description": "Map NinjaOne organizations to Alga companies to enable device sync",
+        "loading": "Loading organization mappings...",
+        "syncing": "Syncing...",
+        "refreshButton": "Refresh Organizations",
+        "summary": {
+          "mapped": "{{count}} mapped",
+          "unmapped": "{{count}} unmapped"
+        },
+        "empty": {
+          "title": "No organizations synced yet.",
+          "hint": "Click \"Refresh Organizations\" to fetch organizations from NinjaOne."
+        },
+        "unmappedNote": "Devices from unmapped organizations will not be synced. Map each organization to an Alga company to enable device synchronization.",
+        "success": {
+          "synced": "Synced {{processed}} organizations ({{created}} new, {{updated}} updated)",
+          "mappingUpdated": "Mapping updated successfully",
+          "contactUpdated": "Default contact updated successfully"
+        },
+        "errors": {
+          "load": "Failed to load organization mappings",
+          "sync": "Failed to sync organizations",
+          "updateMapping": "Failed to update mapping",
+          "updateContact": "Failed to update default contact",
+          "updateAutoSync": "Failed to update auto-sync setting"
         }
       }
     },
@@ -2323,8 +2403,5 @@
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Select company"
   }
 }

@@ -65,7 +65,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       setCompanies(companiesResult);
       setContacts(contactsResult ?? []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load organization mappings';
+      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.load', { defaultValue: 'Failed to load organization mappings' });
       setError(message);
     } finally {
       setIsLoading(false);
@@ -98,14 +98,14 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         const result = await syncNinjaOneOrganizations();
         if (result.success) {
           setSuccessMessage(
-            `Synced ${result.items_processed} organizations (${result.items_created} new, ${result.items_updated} updated)`
+            t('integrations.rmm.ninjaone.success.synced', { defaultValue: 'Synced {{processed}} organizations ({{created}} new, {{updated}} updated)', processed: result.items_processed, created: result.items_created, updated: result.items_updated })
           );
           await loadData();
         } else {
-          setError(result.errors?.join('; ') ?? 'Failed to sync organizations');
+          setError(result.errors?.join('; ') ?? t('integrations.rmm.ninjaone.errors.sync', { defaultValue: 'Failed to sync organizations' }));
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to sync organizations';
+        const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.sync', { defaultValue: 'Failed to sync organizations' });
         setError(message);
       }
     });
@@ -129,13 +129,13 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
               : m
           )
         );
-        setSuccessMessage('Mapping updated successfully');
+        setSuccessMessage(t('integrations.rmm.ninjaone.success.mappingUpdated', { defaultValue: 'Mapping updated successfully' }));
         onMappingChanged?.();
       } else {
-        setError(result.error ?? 'Failed to update mapping');
+        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update mapping';
+      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' });
       setError(message);
     } finally {
       setSavingMappingId(null);
@@ -158,13 +158,13 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
               : m
           )
         );
-        setSuccessMessage('Default contact updated successfully');
+        setSuccessMessage(t('integrations.rmm.ninjaone.success.contactUpdated', { defaultValue: 'Default contact updated successfully' }));
         onMappingChanged?.();
       } else {
-        setError(result.error ?? 'Failed to update default contact');
+        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update default contact';
+      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' });
       setError(message);
     } finally {
       setSavingMappingId(null);
@@ -187,10 +187,10 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           )
         );
       } else {
-        setError(result.error ?? 'Failed to update auto-sync setting');
+        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' }));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update auto-sync setting';
+      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' });
       setError(message);
     } finally {
       setSavingMappingId(null);
@@ -206,12 +206,12 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Organization Mappings
+            {t('integrations.rmm.ninjaone.title', { defaultValue: 'Organization Mappings' })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8 text-muted-foreground">
-            Loading organization mappings...
+            {t('integrations.rmm.ninjaone.loading', { defaultValue: 'Loading organization mappings...' })}
           </div>
         </CardContent>
       </Card>
@@ -220,21 +220,21 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
 
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {
-      title: 'NinjaOne Organization',
+      title: t('integrations.rmm.ninjaone.columns.organization', { defaultValue: 'NinjaOne Organization' }),
       dataIndex: 'external_organization_name',
       render: (_v, mapping) => (
         <>
           <div className="font-medium">
-            {mapping.external_organization_name || `Org ${mapping.external_organization_id}`}
+            {mapping.external_organization_name || t('integrations.rmm.ninjaone.orgFallback', { defaultValue: 'Org {{id}}', id: mapping.external_organization_id })}
           </div>
           <div className="text-xs text-muted-foreground">
-            ID: {mapping.external_organization_id}
+            {t('integrations.rmm.ninjaone.idLabel', { defaultValue: 'ID: {{id}}', id: mapping.external_organization_id })}
           </div>
         </>
       ),
     },
     {
-      title: 'Alga Company',
+      title: t('integrations.rmm.ninjaone.columns.company', { defaultValue: 'Alga Company' }),
       dataIndex: 'client_id',
       sortable: false,
       render: (_v, mapping) => {
@@ -253,7 +253,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
               onFilterStateChange={() => {}}
               clientTypeFilter="company"
               onClientTypeFilterChange={() => {}}
-              placeholder={t('ninjaone.selectCompany')}
+              placeholder={t('integrations.rmm.ninjaone.selectCompany', { defaultValue: 'Select company' })}
               fitContent={true}
               className="w-full"
             />
@@ -262,7 +262,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       },
     },
     {
-      title: 'Default Contact',
+      title: t('integrations.rmm.ninjaone.columns.defaultContact', { defaultValue: 'Default Contact' }),
       dataIndex: 'default_contact_id',
       sortable: false,
       render: (_v, mapping) => {
@@ -279,7 +279,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
               }}
               clientId={mapping.client_id ?? undefined}
               disabled={!mapping.client_id || isSaving}
-              placeholder="Select contact"
+              placeholder={t('integrations.rmm.ninjaone.selectContact', { defaultValue: 'Select contact' })}
               onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
             />
           </div>
@@ -287,7 +287,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       },
     },
     {
-      title: 'Auto-Sync',
+      title: t('integrations.rmm.ninjaone.columns.autoSync', { defaultValue: 'Auto-Sync' }),
       dataIndex: 'auto_sync_assets',
       sortable: false,
       headerClassName: 'text-center',
@@ -308,7 +308,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       },
     },
     {
-      title: 'Status',
+      title: t('integrations.rmm.ninjaone.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'client_id',
       sortable: false,
       width: '4rem',
@@ -318,11 +318,11 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         mapping.client_id ? (
           <span className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
             <Check className="mr-1 h-3 w-3" />
-            Mapped
+            {t('integrations.rmm.ninjaone.status.mapped', { defaultValue: 'Mapped' })}
           </span>
         ) : (
           <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground">
-            Unmapped
+            {t('integrations.rmm.ninjaone.status.unmapped', { defaultValue: 'Unmapped' })}
           </span>
         ),
     },
@@ -336,10 +336,10 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Organization Mappings
+              {t('integrations.rmm.ninjaone.title', { defaultValue: 'Organization Mappings' })}
             </CardTitle>
             <CardDescription>
-              Map NinjaOne organizations to Alga companies to enable device sync
+              {t('integrations.rmm.ninjaone.description', { defaultValue: 'Map NinjaOne organizations to Alga companies to enable device sync' })}
             </CardDescription>
           </div>
           <Button
@@ -352,12 +352,12 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
             {isSyncing ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Syncing...
+                {t('integrations.rmm.ninjaone.syncing', { defaultValue: 'Syncing...' })}
               </>
             ) : (
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh Organizations
+                {t('integrations.rmm.ninjaone.refreshButton', { defaultValue: 'Refresh Organizations' })}
               </>
             )}
           </Button>
@@ -380,11 +380,11 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         <div className="flex gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <Link2 className="h-4 w-4 text-green-500" />
-            {mappedCount} mapped
+            {t('integrations.rmm.ninjaone.summary.mapped', { defaultValue: '{{count}} mapped', count: mappedCount })}
           </span>
           <span className="flex items-center gap-1">
             <Link2Off className="h-4 w-4 text-amber-500" />
-            {unmappedCount} unmapped
+            {t('integrations.rmm.ninjaone.summary.unmapped', { defaultValue: '{{count}} unmapped', count: unmappedCount })}
           </span>
         </div>
 
@@ -392,10 +392,10 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           <div className="rounded-lg border border-dashed p-8 text-center">
             <Building2 className="mx-auto h-10 w-10 text-muted-foreground/50" />
             <p className="mt-2 text-sm text-muted-foreground">
-              No organizations synced yet.
+              {t('integrations.rmm.ninjaone.empty.title', { defaultValue: 'No organizations synced yet.' })}
             </p>
             <p className="text-xs text-muted-foreground">
-              Click &quot;Refresh Organizations&quot; to fetch organizations from NinjaOne.
+              {t('integrations.rmm.ninjaone.empty.hint', { defaultValue: 'Click "Refresh Organizations" to fetch organizations from NinjaOne.' })}
             </p>
           </div>
         ) : (
@@ -411,8 +411,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
 
         {unmappedCount > 0 && (
           <p className="text-xs text-muted-foreground">
-            Devices from unmapped organizations will not be synced. Map each organization to an
-            Alga company to enable device synchronization.
+            {t('integrations.rmm.ninjaone.unmappedNote', { defaultValue: 'Devices from unmapped organizations will not be synced. Map each organization to an Alga company to enable device synchronization.' })}
           </p>
         )}
       </CardContent>

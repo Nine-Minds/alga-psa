@@ -14,6 +14,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
@@ -45,6 +46,7 @@ function isAutoMatched(mapping: RmmOrganizationMapping): boolean {
 }
 
 const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMappingChanged }) => {
+  const { t } = useTranslation('msp/integrations');
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -70,7 +72,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       setClients(clientsResult ?? []);
       setContacts(contactsResult ?? []);
     } catch {
-      setError('Failed to load organization mappings');
+      setError(t('integrations.rmm.huntress.errors.load', { defaultValue: 'Failed to load organization mappings' }));
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
   const handleSync = () => {
     startTransition(async () => {
       const result = await syncHuntressOrganizationMappings();
-      if (!result.success) setError(result.error ?? 'Sync failed');
+      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.sync', { defaultValue: 'Sync failed' }));
       await load();
       onMappingChanged?.();
     });
@@ -95,7 +97,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
         client_id: clientId,
         default_contact_id: null,
       });
-      if (!result.success) setError(result.error ?? 'Failed to update mapping');
+      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
       await load();
       onMappingChanged?.();
     });
@@ -106,7 +108,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       const result = await updateHuntressOrganizationMapping(mappingId, {
         default_contact_id: contactId || null,
       });
-      if (!result.success) setError(result.error ?? 'Failed to update default contact');
+      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
       await load();
       onMappingChanged?.();
     });
@@ -117,7 +119,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       const result = await updateHuntressOrganizationMapping(mappingId, {
         auto_create_tickets: enabled,
       });
-      if (!result.success) setError(result.error ?? 'Failed to update mapping');
+      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
       await load();
       onMappingChanged?.();
     });
@@ -127,12 +129,12 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
 
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {
-      title: 'Huntress Organization',
+      title: t('integrations.rmm.huntress.columns.organization', { defaultValue: 'Huntress Organization' }),
       dataIndex: 'external_organization_name',
       render: (_v, mapping) => mapping.external_organization_name,
     },
     {
-      title: 'Alga Client',
+      title: t('integrations.rmm.huntress.columns.client', { defaultValue: 'Alga Client' }),
       dataIndex: 'client_id',
       sortable: false,
       render: (_v, mapping) => (
@@ -149,7 +151,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       ),
     },
     {
-      title: 'Default Contact',
+      title: t('integrations.rmm.huntress.columns.defaultContact', { defaultValue: 'Default Contact' }),
       dataIndex: 'default_contact_id',
       sortable: false,
       render: (_v, mapping) => (
@@ -162,7 +164,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
           }
           clientId={mapping.client_id ?? undefined}
           disabled={!mapping.client_id}
-          placeholder="Select contact"
+          placeholder={t('integrations.rmm.huntress.selectContact', { defaultValue: 'Select contact' })}
           onAddNew={
             mapping.client_id
               ? () =>
@@ -176,7 +178,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       ),
     },
     {
-      title: 'Create Tickets',
+      title: t('integrations.rmm.huntress.columns.createTickets', { defaultValue: 'Create Tickets' }),
       dataIndex: 'auto_create_tickets',
       sortable: false,
       render: (_v, mapping) => (
@@ -189,18 +191,18 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       ),
     },
     {
-      title: 'Status',
+      title: t('integrations.rmm.huntress.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'mapping_id',
       sortable: false,
       render: (_v, mapping) =>
         mapping.client_id ? (
           isAutoMatched(mapping) ? (
-            <Badge variant="secondary">Auto-matched</Badge>
+            <Badge variant="secondary">{t('integrations.rmm.huntress.status.autoMatched', { defaultValue: 'Auto-matched' })}</Badge>
           ) : (
-            <Badge variant="default">Mapped</Badge>
+            <Badge variant="default">{t('integrations.rmm.huntress.status.mapped', { defaultValue: 'Mapped' })}</Badge>
           )
         ) : (
-          <Badge variant="outline">Unmapped → triage</Badge>
+          <Badge variant="outline">{t('integrations.rmm.huntress.status.unmapped', { defaultValue: 'Unmapped → triage' })}</Badge>
         ),
     },
   ];
@@ -212,11 +214,11 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" /> Organization Mapping
+              <Building2 className="h-5 w-5" /> {t('integrations.rmm.huntress.title', { defaultValue: 'Organization Mapping' })}
             </CardTitle>
             <CardDescription>
-              Map Huntress organizations to clients. Incidents for unmapped organizations go to the
-              fallback client and triage board{unmappedCount > 0 ? ` (${unmappedCount} unmapped)` : ''}.
+              {t('integrations.rmm.huntress.description', { defaultValue: 'Map Huntress organizations to clients. Incidents for unmapped organizations go to the fallback client and triage board.' })}
+              {unmappedCount > 0 ? ` ${t('integrations.rmm.huntress.unmappedSuffix', { defaultValue: '({{count}} unmapped)', count: unmappedCount })}` : ''}
             </CardDescription>
           </div>
           <Button
@@ -225,7 +227,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
             onClick={handleSync}
             disabled={isPending}
           >
-            <RefreshCw className="mr-1 h-4 w-4" /> Sync organizations
+            <RefreshCw className="mr-1 h-4 w-4" /> {t('integrations.rmm.huntress.syncButton', { defaultValue: 'Sync organizations' })}
           </Button>
         </div>
       </CardHeader>
@@ -236,10 +238,10 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
           </Alert>
         )}
         {loading ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t('integrations.rmm.huntress.loading', { defaultValue: 'Loading…' })}</p>
         ) : mappings.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            No organizations yet — click "Sync organizations".
+            {t('integrations.rmm.huntress.empty', { defaultValue: 'No organizations yet — click "Sync organizations".' })}
           </p>
         ) : (
           <DataTable
