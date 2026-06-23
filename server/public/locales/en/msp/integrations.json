@@ -1630,11 +1630,13 @@
           "autoSync": "Auto Sync",
           "autoSyncDisabled": "Disabled",
           "autoSyncEnabled": "Enabled",
+          "defaultContact": "Default Contact",
           "externalScope": "External Scope",
           "loading": "Loading mappings...",
           "mappedClient": "Mapped Client",
           "noScopes": "No Tanium scopes discovered yet.",
           "scopeIdLabel": "ID: {{id}}",
+          "selectContact": "Select contact",
           "unmapped": "Unmapped"
         },
         "status": {

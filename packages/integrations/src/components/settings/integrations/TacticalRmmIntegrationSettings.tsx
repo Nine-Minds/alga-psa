@@ -8,10 +8,12 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Eye, EyeOff, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import {
   backfillTacticalRmmAlerts,
   disconnectTacticalRmmIntegration,
@@ -29,8 +31,8 @@ import {
   type TacticalRmmAuthMode,
 } from '@alga-psa/integrations/actions';
 import { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
-import type { IClient } from '@alga-psa/types';
-import { getIntegrationClients } from '../../../actions/clientLookupActions';
+import type { IClient, IContact } from '@alga-psa/types';
+import { getIntegrationClients, getIntegrationContacts } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function TacticalRmmIntegrationSettings() {
@@ -73,6 +75,9 @@ export function TacticalRmmIntegrationSettings() {
   const [connectionSummary, setConnectionSummary] = React.useState<Awaited<ReturnType<typeof getTacticalRmmConnectionSummary>>['summary'] | null>(null);
   const [orgMappings, setOrgMappings] = React.useState<NonNullable<Awaited<ReturnType<typeof listTacticalRmmOrganizationMappings>>['mappings']>>([]);
   const [clients, setClients] = React.useState<IClient[]>([]);
+  const [contacts, setContacts] = React.useState<IContact[]>([]);
+  const { renderQuickAddContact } = useQuickAddClient();
+  const [quickAddContactFor, setQuickAddContactFor] = React.useState<{ mappingId: string; clientId: string } | null>(null);
   const [clientsLoading, setClientsLoading] = React.useState(false);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
@@ -138,10 +143,15 @@ export function TacticalRmmIntegrationSettings() {
     const run = async () => {
       setClientsLoading(true);
       try {
-        const data = await getIntegrationClients(true);
-        setClients(data as any);
+        const [clientsData, contactsData] = await Promise.all([
+          getIntegrationClients(true),
+          getIntegrationContacts(false),
+        ]);
+        setClients(clientsData as any);
+        setContacts((contactsData as any) ?? []);
       } catch (e) {
         setClients([]);
+        setContacts([]);
       } finally {
         setClientsLoading(false);
       }
@@ -284,11 +294,12 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
-  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; autoSyncAssets?: boolean }) => {
+  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }) => {
     setError(null);
     const res = await updateTacticalRmmOrganizationMapping({
       mappingId,
       clientId: patch.clientId,
+      defaultContactId: patch.defaultContactId,
       autoSyncAssets: patch.autoSyncAssets,
     });
     if (!res.success) {
@@ -298,6 +309,12 @@ export function TacticalRmmIntegrationSettings() {
     }
     await loadOrgMappings();
   };
+
+  const handleClientChange = (mappingId: string, clientId: string | null) =>
+    handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
+
+  const handleDefaultContactChange = (mappingId: string, contactId: string) =>
+    handleUpdateMapping(mappingId, { defaultContactId: contactId || null });
 
   const handleBackfillAlerts = async () => {
     setBackfillingAlerts(true);
@@ -673,7 +690,7 @@ export function TacticalRmmIntegrationSettings() {
                         id={`tacticalrmm-org-client-picker-${m.mapping_id}`}
                         clients={clients}
                         selectedClientId={m.client_id || null}
-                        onSelect={(clientId) => handleUpdateMapping(m.mapping_id, { clientId })}
+                        onSelect={(clientId) => handleClientChange(m.mapping_id, clientId)}
                         filterState={clientFilterState}
                         onFilterStateChange={setClientFilterState}
                         clientTypeFilter={clientTypeFilter}
@@ -685,6 +702,21 @@ export function TacticalRmmIntegrationSettings() {
                         triggerVariant="outline"
                         triggerSize="sm"
                         className="min-w-[220px]"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <ContactPicker
+                        id={`tacticalrmm-default-contact-${m.mapping_id}`}
+                        contacts={contacts}
+                        value={m.default_contact_id ?? ''}
+                        onValueChange={(contactId) => handleDefaultContactChange(m.mapping_id, contactId)}
+                        clientId={m.client_id ?? undefined}
+                        disabled={!m.client_id}
+                        buttonWidth="fit"
+                        placeholder={t('integrations.rmm.tactical.contact.select', { defaultValue: 'Select contact' })}
+                        className="min-w-[220px]"
+                        onAddNew={m.client_id ? () => setQuickAddContactFor({ mappingId: m.mapping_id, clientId: m.client_id! }) : undefined}
                       />
                     </div>
 
@@ -866,6 +898,28 @@ export function TacticalRmmIntegrationSettings() {
     {connectionSummary?.isActive && integrationId && (
       <RmmAlertAutomationSettings integrationId={integrationId} provider="tacticalrmm" />
     )}
+
+    {renderQuickAddContact({
+      isOpen: !!quickAddContactFor,
+      onClose: () => setQuickAddContactFor(null),
+      onContactAdded: (newContact) => {
+        setContacts((prev) => {
+          const i = prev.findIndex((c) => c.contact_name_id === newContact.contact_name_id);
+          if (i >= 0) {
+            const next = [...prev];
+            next[i] = newContact;
+            return next;
+          }
+          return [...prev, newContact];
+        });
+        if (quickAddContactFor) {
+          handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
+        }
+        setQuickAddContactFor(null);
+      },
+      clients,
+      selectedClientId: quickAddContactFor?.clientId ?? null,
+    })}
     </>
   );
 }

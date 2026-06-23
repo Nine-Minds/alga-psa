@@ -6,8 +6,12 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useQuickAddClient } from '@alga-psa/ui/context';
+import { getAllContacts } from '@alga-psa/clients/actions';
+import type { IClient, IContact } from '@alga-psa/types';
 import {
   backfillLevelIoAlerts,
   disconnectLevelIoIntegration,
@@ -29,6 +33,7 @@ type MappingRow = {
   external_organization_name?: string | null;
   client_id?: string | null;
   client_name?: string | null;
+  default_contact_id?: string | null;
   auto_sync_assets: boolean;
   metadata?: { path?: string } | null;
 };
@@ -58,6 +63,9 @@ export default function LevelIoIntegrationSettings() {
 
   const [mappings, setMappings] = useState<MappingRow[]>([]);
   const [clients, setClients] = useState<ClientRow[]>([]);
+  const [contacts, setContacts] = useState<IContact[]>([]);
+  const { renderQuickAddContact } = useQuickAddClient();
+  const [quickAddContactFor, setQuickAddContactFor] = useState<{ mappingId: string; clientId: string } | null>(null);
   const [webhook, setWebhook] = useState<WebhookInfo | null>(null);
   const [summary, setSummary] = useState<{ mappedGroups: number; devices: number; activeAlerts: number } | null>(null);
 
@@ -78,12 +86,15 @@ export default function LevelIoIntegrationSettings() {
     if (!background) setIsLoading(true);
     setError(null);
     try {
-      const [settingsResult, mappingResult, webhookResult, summaryResult] = await Promise.all([
+      const [settingsResult, mappingResult, webhookResult, summaryResult, contactsResult] = await Promise.all([
         getLevelIoSettings(),
         listLevelIoOrganizationMappings(),
         getLevelIoWebhookInfo(),
         getLevelIoConnectionSummary(),
+        getAllContacts('active'),
       ]);
+
+      setContacts(contactsResult ?? []);
 
       if (!settingsResult.success) {
         setError(settingsResult.error || t('integrations.rmm.levelio.errors.loadSettings', { defaultValue: 'Failed to load Level settings' }));
@@ -240,6 +251,21 @@ export default function LevelIoIntegrationSettings() {
       const result = await updateLevelIoOrganizationMapping({
         mappingId,
         clientId: clientId || null,
+        defaultContactId: null,
+      });
+      if (!result.success) {
+        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        return;
+      }
+      await refresh(true);
+    })();
+  };
+
+  const handleDefaultContactChange = (mappingId: string, contactId: string) => {
+    void (async () => {
+      const result = await updateLevelIoOrganizationMapping({
+        mappingId,
+        defaultContactId: contactId || null,
       });
       if (!result.success) {
         setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
@@ -375,6 +401,7 @@ export default function LevelIoIntegrationSettings() {
                 <tr>
                   <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.group', { defaultValue: 'Level Group' })}</th>
                   <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.mappedClient', { defaultValue: 'Mapped Client' })}</th>
+                  <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.defaultContact', { defaultValue: 'Default Contact' })}</th>
                   <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.autoSync', { defaultValue: 'Auto Sync' })}</th>
                 </tr>
               </thead>
@@ -406,6 +433,18 @@ export default function LevelIoIntegrationSettings() {
                       </select>
                     </td>
                     <td className="px-3 py-2">
+                      <ContactPicker
+                        id={`levelio-default-contact-${mapping.mapping_id}`}
+                        contacts={contacts}
+                        value={mapping.default_contact_id ?? ''}
+                        onValueChange={(contactId) => handleDefaultContactChange(mapping.mapping_id, contactId)}
+                        clientId={mapping.client_id ?? undefined}
+                        disabled={!mapping.client_id}
+                        placeholder={t('integrations.rmm.levelio.mappings.selectContact', { defaultValue: 'Select contact' })}
+                        onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
                       {mapping.auto_sync_assets
                         ? <Badge variant="default">{t('integrations.rmm.levelio.mappings.autoSyncEnabled', { defaultValue: 'Enabled' })}</Badge>
                         : <Badge variant="outline">{t('integrations.rmm.levelio.mappings.autoSyncDisabled', { defaultValue: 'Disabled' })}</Badge>}
@@ -414,7 +453,7 @@ export default function LevelIoIntegrationSettings() {
                 ))}
                 {!mappings.length ? (
                   <tr>
-                    <td className="px-3 py-3 text-muted-foreground" colSpan={3}>
+                    <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
                       {isLoading
                         ? t('integrations.rmm.levelio.mappings.loading', { defaultValue: 'Loading…' })
                         : t('integrations.rmm.levelio.mappings.noGroups', { defaultValue: 'No groups discovered yet. Run Discover Groups first.' })}
@@ -503,6 +542,27 @@ export default function LevelIoIntegrationSettings() {
       {isActive && integrationId && (
         <RmmAlertAutomationSettings integrationId={integrationId} provider="levelio" />
       )}
+      {renderQuickAddContact({
+        isOpen: !!quickAddContactFor,
+        onClose: () => setQuickAddContactFor(null),
+        onContactAdded: (newContact) => {
+          setContacts((prev) => {
+            const i = prev.findIndex((c) => c.contact_name_id === newContact.contact_name_id);
+            if (i >= 0) {
+              const next = [...prev];
+              next[i] = newContact;
+              return next;
+            }
+            return [...prev, newContact];
+          });
+          if (quickAddContactFor) {
+            handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
+          }
+          setQuickAddContactFor(null);
+        },
+        clients: clients as unknown as IClient[],
+        selectedClientId: quickAddContactFor?.clientId ?? null,
+      })}
     </div>
   );
 }
