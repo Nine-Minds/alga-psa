@@ -42,7 +42,7 @@ export async function assertMasterTenantAccess(request: NextRequest): Promise<Ma
       }
       throw new Error('Access denied: API key not authorized for the appliance console');
     }
-    console.warn('[appliance-installs] Invalid API key');
+    throw new Error('Invalid API key');
   }
 
   // SESSION AUTH (direct browser)
@@ -61,6 +61,8 @@ export async function assertMasterTenantAccess(request: NextRequest): Promise<Ma
 export function isAuthError(error: unknown): boolean {
   return (
     error instanceof Error &&
-    (error.message.includes('Access denied') || error.message.includes('Authentication'))
+    (error.message.includes('Access denied') ||
+      error.message.includes('Authentication') ||
+      error.message.includes('Invalid API key'))
   );
 }
