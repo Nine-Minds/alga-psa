@@ -64,7 +64,7 @@ import {
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { createTicketRelationshipSqlAdapter, fetchTicketAdditionalUserIds } from '../lib/ticketAuthorizationSql';
+import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
@@ -140,16 +140,13 @@ async function resolveAuthorizationSubjectForUser(
 }
 
 function toTicketAuthorizationRecord(
-  ticket: Partial<ITicket>,
-  additionalUserIds: string[] = []
+  ticket: Partial<ITicket>
 ): AuthorizationRecord {
-  // `tickets.assigned_to` is the primary assignee; `ticket_resources.additional_user_id`
-  // holds co-assignees ("additional agents"). Both should authorize via own_or_assigned.
+  // Only the primary assignee grants ticket read authorization. Do not trust
+  // `ticket_resources.additional_user_id` as an authorization assignment because
+  // time-entry workflows can create those rows without ticket row-level access.
   const assignees = new Set<string>();
   if (ticket.assigned_to) assignees.add(ticket.assigned_to);
-  for (const id of additionalUserIds) {
-    if (id) assignees.add(id);
-  }
   return {
     id: ticket.ticket_id ?? null,
     ownerUserId: ticket.entered_by ?? null,
@@ -244,14 +241,6 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
   tickets: T[]
 ): Promise<T[]> {
-  const ticketIds = tickets
-    .map((ticket) => ticket.ticket_id)
-    .filter((id): id is string => typeof id === 'string' && id.length > 0);
-  const additionalUserIdsByTicket = await fetchTicketAdditionalUserIds(
-    trx,
-    context.authorizationSubject.tenant,
-    ticketIds
-  );
 
   const decisions = await Promise.all(
     tickets.map((ticket) => {
@@ -266,10 +255,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
           action: 'read',
           id: ticket.ticket_id,
         },
-        record: toTicketAuthorizationRecord(
-          ticket,
-          additionalUserIdsByTicket.get(ticket.ticket_id) ?? []
-        ),
+        record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds: context.selectedBoardIds,
         requestCache: context.requestCache,
         knex: trx,
