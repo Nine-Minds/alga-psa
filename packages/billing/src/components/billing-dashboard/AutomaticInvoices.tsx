@@ -2163,40 +2163,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 </div>
               </>
             ) : (
-              <>
-                <span className="text-sm font-medium text-muted-foreground">
-                  {t('automaticInvoices.summary.empty', {
-                    defaultValue: 'Select groups or line items to preview or generate invoices.',
-                  })}
-                </span>
-                <div className="ml-auto flex items-center gap-2">
-                  <Button
-                    id="preview-selected-button"
-                    variant="outline"
-                    onClick={() => {
-                      if (selectedSelectionGroups.length > 0) {
-                        handlePreviewSelection(selectedSelectionGroups);
-                      }
-                    }}
-                    disabled
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    {t('automaticInvoices.actions.previewSelected', { defaultValue: 'Preview Selected' })}
-                  </Button>
-                  <Button
-                    id="generate-invoices-button"
-                    onClick={handleGenerateInvoices}
-                    disabled
-                    className="opacity-50"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    {t('automaticInvoices.actions.generateSelected', {
-                      count: 0,
-                      defaultValue: 'Generate Invoices (0)',
-                    })}
-                  </Button>
-                </div>
-              </>
+              // Resting state: just the hint. Disabled Preview/Generate buttons
+              // teach nothing — the action bar fills in once a row is checked.
+              <span className="text-sm font-medium text-muted-foreground">
+                {t('automaticInvoices.summary.empty', {
+                  defaultValue: 'Select groups or line items to preview or generate invoices.',
+                })}
+              </span>
             )}
           </div>
           {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
