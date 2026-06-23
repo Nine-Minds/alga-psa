@@ -66,6 +66,10 @@ export async function cleanupWebhookDeliveriesJob(): Promise<{
 export async function scheduleCleanupWebhookDeliveriesJob(
   cronExpression: string = '*/15 * * * *',
 ): Promise<string | null> {
+  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
+  if (process.env.EDITION === 'enterprise' || process.env.EDITION === 'ee') {
+    return null;
+  }
   try {
     const { initializeScheduler } = await import('server/src/lib/jobs/index');
     const scheduler = await initializeScheduler();

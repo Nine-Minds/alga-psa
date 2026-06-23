@@ -374,6 +374,9 @@ export const scheduleExpiredCreditsJob = async (
   clientId?: string,
   cronExpression: string = '0 0 * * *' // Default: daily at midnight
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<ExpiredCreditsJobData>(
     'expired-credits',
@@ -395,6 +398,9 @@ export const scheduleExpiringCreditsNotificationJob = async (
   clientId?: string,
   cronExpression: string = '0 9 * * *' // Default: daily at 9:00 AM
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<ExpiringCreditsNotificationJobData>(
     'expiring-credits-notification',
@@ -427,6 +433,9 @@ export const scheduleReconcileBucketUsageJob = async (
   tenantId: string,
   cronExpression: string = '0 3 * * *' // Default: daily at 3:00 AM
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<ReconcileBucketUsageJobData>(
     'reconcile-bucket-usage',
@@ -439,6 +448,9 @@ export const scheduleAutoCloseTicketsJob = async (
   tenantId: string,
   cronExpression: string = '*/15 * * * *' // Default: every 15 minutes
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<AutoCloseTicketsJobData>(
     'auto-close-tickets',
@@ -463,6 +475,9 @@ export const scheduleGooglePubSubVerificationJob = async (
   tenantId: string,
   cronExpression: string = '15 * * * *'
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<GooglePubSubVerificationJobData>(
     'verify-google-calendar-pubsub',
@@ -475,6 +490,10 @@ export const scheduleTeamsMeetingArtifactSubscriptionRenewalJob = async (
   tenantId: string,
   cronExpression: string = '*/30 * * * *'
 ): Promise<string | null> => {
+  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
+  if (isEnterpriseWorkflowEdition()) {
+    return null;
+  }
   if (!isEnterpriseWorkflowEdition()) {
     return null;
   }
@@ -490,6 +509,9 @@ export const scheduleGoogleGmailWatchRenewalJob = async (
   tenantId: string,
   cronExpression: string = '*/30 * * * *'
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<GoogleGmailWatchRenewalJobData>(
     'renew-google-gmail-watch',
@@ -501,6 +523,10 @@ export const scheduleGoogleGmailWatchRenewalJob = async (
 export const scheduleCleanupAiSessionKeysJob = async (
   cronExpression: string = '*/10 * * * *'
 ): Promise<string | null> => {
+  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
+  if (isEnterpriseWorkflowEdition()) {
+    return null;
+  }
   if (process.env.EDITION !== 'enterprise') {
     return null;
   }
@@ -526,6 +552,9 @@ export const scheduleCreditReconciliationJob = async (
   clientId?: string,
   cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<CreditReconciliationJobData>(
     'credit-reconciliation',
@@ -545,6 +574,9 @@ export const scheduleEmailWebhookMaintenanceJob = async (
   tenantId?: string,
   cronExpression: string = '0 0 * * *' // Daily at midnight
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (emailWebhookMaintenanceWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<EmailWebhookMaintenanceJobData>(
     'email-webhook-maintenance',
@@ -558,6 +590,9 @@ export const scheduleRenewalQueueProcessingJob = async (
   horizonDays: number = 90,
   cronExpression: string = '0 5 * * *'
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<RenewalQueueProcessorJobData>(
     'process-renewal-queue',
@@ -594,6 +629,10 @@ export const scheduleWorkflowQuotaResumeScanJob = async (
   cronExpression: string = '*/5 * * * *',
   batchSize: number = 100
 ): Promise<string | null> => {
+  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
+  if (isEnterpriseWorkflowEdition()) {
+    return null;
+  }
   if (!isEnterpriseWorkflowEdition()) {
     return null;
   }
@@ -609,6 +648,9 @@ export const scheduleSearchReconcileJob = async (
   tenantId: string,
   cronExpression: string = '0 6 * * *'
 ): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<SearchReconcileJobData>(
     SEARCH_RECONCILE_JOB_NAME,

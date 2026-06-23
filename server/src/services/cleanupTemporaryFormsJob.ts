@@ -52,6 +52,10 @@ export async function cleanupTemporaryFormsJob(): Promise<{ success: boolean; de
 export async function scheduleCleanupTemporaryFormsJob(
   cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
 ): Promise<string | null> {
+  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
+  if (process.env.EDITION === 'enterprise' || process.env.EDITION === 'ee') {
+    return null;
+  }
   try {
     // Import here to avoid circular dependencies
     const { initializeScheduler } = await import('server/src/lib/jobs/index');
