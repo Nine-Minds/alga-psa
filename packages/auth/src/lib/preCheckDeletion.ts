@@ -28,6 +28,15 @@ function permissionEntityFor(entityType: string): string {
   if (entityType === 'board') return 'ticket_settings';
   if (entityType === 'contract_line') return 'billing';
   if (entityType === 'team') return 'settings';
+  // Interaction types are managed as portal settings; deleteInteractionType gates
+  // on settings:update. Without this mapping the check falls through to a
+  // non-existent 'interaction_type' resource and denies everyone (incl. Admin).
+  if (entityType === 'interaction_type') return 'settings';
+  // Quote deletion is a billing operation (deleteQuote requires billing:delete).
+  if (entityType === 'quote') return 'billing';
+  // The permission resource is 'timeentry' (no underscore); the deletion-config
+  // key is 'time_entry'. Map it so the check resolves to the real resource.
+  if (entityType === 'time_entry') return 'timeentry';
   return entityType;
 }
 
