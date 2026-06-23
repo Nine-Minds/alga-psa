@@ -10,7 +10,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText } from 'lucide-react';
+import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -34,6 +34,8 @@ import {
   type BillingPeriodDateRange,
 } from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { formatCurrency } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // Added imports for DropdownMenu
@@ -1024,7 +1026,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const viewFilteredGroups = readyParentGroups.filter(
     (group) => matchesAutomaticInvoiceView(activeView, group.parentSummary) && matchesQuickFilters(group),
   );
-  const hasActiveQuickFilters = Boolean(chargeFilter) || Boolean(currencyFilter) || windowOpenOnly;
+  // Badge on the Filters popover button: count every applied refinement (incl. a
+  // service-period lower bound) so the data-first toolbar still signals hidden state.
+  const activeFilterCount =
+    (chargeFilter ? 1 : 0) +
+    (currencyFilter ? 1 : 0) +
+    (windowOpenOnly ? 1 : 0) +
+    (appliedDateRange.from ? 1 : 0);
 
   const automaticInvoiceDisplayRows: AutomaticInvoiceDisplayRow[] = [];
   for (const group of viewFilteredGroups) {
@@ -1831,116 +1839,169 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </div>
           ) : null}
 
-          {/* Header + saved-view tabs */}
-          <div className="mb-3 space-y-3">
-            <h2 className="text-lg font-semibold">
-              {t('automaticInvoices.ready.title', { defaultValue: 'Ready to Invoice' })}
-            </h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card p-1">
-                {([
-                  { key: 'all', labelKey: 'automaticInvoices.views.all', default: 'All' },
-                  { key: 'ready', labelKey: 'automaticInvoices.views.ready', default: 'Ready' },
-                  { key: 'combinable', labelKey: 'automaticInvoices.views.combinable', default: 'Combinable' },
-                  { key: 'attention', labelKey: 'automaticInvoices.views.attention', default: 'Needs attention' },
-                  { key: 'notYetDue', labelKey: 'automaticInvoices.views.notYetDue', default: 'Not yet due' },
-                ] as Array<{ key: AutomaticInvoiceViewKey; labelKey: string; default: string }>).map((tab) => {
-                  const isActive = activeView === tab.key;
-                  return (
-                    <button
-                      key={tab.key}
-                      id={`automatic-invoices-view-${tab.key}`}
-                      type="button"
-                      onClick={() => setActiveView(tab.key)}
-                      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                        isActive ? 'bg-primary-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t(tab.labelKey, { defaultValue: tab.default })}
-                      <span className={`text-2xs font-semibold ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
-                        {viewCounts[tab.key]}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Data-first toolbar: views · Filters popover · client search — one slim row,
+              the grid sits immediately below. The "Ready to Invoice" heading and the
+              three stacked filter rows (segmented views, quick-filter chips, date range)
+              were collapsed here; rarely-touched refinements live behind the Filters
+              popover so the table starts ~400px higher. */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card p-1">
+              {([
+                { key: 'all', labelKey: 'automaticInvoices.views.all', default: 'All' },
+                { key: 'ready', labelKey: 'automaticInvoices.views.ready', default: 'Ready' },
+                { key: 'combinable', labelKey: 'automaticInvoices.views.combinable', default: 'Combinable' },
+                { key: 'attention', labelKey: 'automaticInvoices.views.attention', default: 'Needs attention' },
+                { key: 'notYetDue', labelKey: 'automaticInvoices.views.notYetDue', default: 'Not yet due' },
+              ] as Array<{ key: AutomaticInvoiceViewKey; labelKey: string; default: string }>).map((tab) => {
+                const isActive = activeView === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    id={`automatic-invoices-view-${tab.key}`}
+                    type="button"
+                    onClick={() => setActiveView(tab.key)}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      isActive ? 'bg-primary-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {t(tab.labelKey, { defaultValue: tab.default })}
+                    <span className={`text-2xs font-semibold ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
+                      {viewCounts[tab.key]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                id="automatic-invoices-filter-window-open"
-                onClick={() => setWindowOpenOnly((value) => !value)}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
-                  windowOpenOnly ? 'border-primary-200 bg-primary-50 text-primary-700' : 'border-border bg-card text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t('automaticInvoices.filters.windowOpen', { defaultValue: 'Window open' })}
-              </button>
-              {availableChargeTypes.length > 0 ? (
-                <label className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                  {t('automaticInvoices.filters.charge', { defaultValue: 'Charge' })}
-                  <select
-                    id="automatic-invoices-filter-charge"
-                    value={chargeFilter}
-                    onChange={(event) => setChargeFilter(event.target.value as RecurringChargeTypeKey | '')}
-                    className="bg-transparent font-semibold text-foreground focus:outline-none"
-                  >
-                    <option value="">{t('automaticInvoices.filters.any', { defaultValue: 'any' })}</option>
-                    {availableChargeTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {t(CHARGE_TAG_META[type].labelKey, { defaultValue: CHARGE_TAG_META[type].default })}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              {availableCurrencies.length > 1 ? (
-                <label className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                  {t('automaticInvoices.filters.currency', { defaultValue: 'Currency' })}
-                  <select
-                    id="automatic-invoices-filter-currency"
-                    value={currencyFilter}
-                    onChange={(event) => setCurrencyFilter(event.target.value)}
-                    className="bg-transparent font-semibold text-foreground focus:outline-none"
-                  >
-                    <option value="">{t('automaticInvoices.filters.any', { defaultValue: 'any' })}</option>
-                    {availableCurrencies.map((code) => (
-                      <option key={code} value={code}>{code}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              {hasActiveQuickFilters ? (
+
+            <Popover>
+              <PopoverTrigger asChild>
                 <button
                   type="button"
-                  id="automatic-invoices-filter-clear"
-                  onClick={() => { setChargeFilter(''); setCurrencyFilter(''); setWindowOpenOnly(false); }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-dashed border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                  id="automatic-invoices-filters-button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeFilterCount > 0
+                      ? 'border-primary-200 bg-primary-50 text-primary-700'
+                      : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  <X className="h-3 w-3" />
-                  {t('automaticInvoices.filters.clear', { defaultValue: 'Clear' })}
+                  <Filter className="h-4 w-4" />
+                  {t('automaticInvoices.filters.title', { defaultValue: 'Filters' })}
+                  {activeFilterCount > 0 ? (
+                    <span className="ml-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary-500 px-1 text-2xs font-bold text-white">
+                      {activeFilterCount}
+                    </span>
+                  ) : null}
                 </button>
-              ) : null}
-            </div>
-          </div>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-80"
+                onInteractOutside={(event) => {
+                  // Keep the Filters popover open while the user interacts with the
+                  // nested DatePicker calendar, which portals its content outside
+                  // this popover's DOM subtree.
+                  const target = event.target as HTMLElement | null;
+                  if (target?.closest('[data-radix-popper-content-wrapper]')) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+                    {t('automaticInvoices.filters.title', { defaultValue: 'Filters' })}
+                  </h4>
+                  {activeFilterCount > 0 ? (
+                    <button
+                      type="button"
+                      id="automatic-invoices-filter-clear"
+                      onClick={() => {
+                        setChargeFilter('');
+                        setCurrencyFilter('');
+                        setWindowOpenOnly(false);
+                        const resetRange: DateRange = { from: undefined, to: getTodayDate() };
+                        setPendingDateRange(resetRange);
+                        setAppliedDateRange(resetRange);
+                      }}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                      {t('automaticInvoices.filters.clear', { defaultValue: 'Clear' })}
+                    </button>
+                  ) : null}
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">
+                      {t('automaticInvoices.filters.windowOpen', { defaultValue: 'Window open' })}
+                    </span>
+                    <Switch
+                      id="automatic-invoices-filter-window-open"
+                      size="sm"
+                      checked={windowOpenOnly}
+                      onCheckedChange={(checked) => setWindowOpenOnly(Boolean(checked))}
+                    />
+                  </div>
+                  {availableChargeTypes.length > 0 ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-foreground">
+                        {t('automaticInvoices.filters.charge', { defaultValue: 'Charge' })}
+                      </span>
+                      <select
+                        id="automatic-invoices-filter-charge"
+                        value={chargeFilter}
+                        onChange={(event) => setChargeFilter(event.target.value as RecurringChargeTypeKey | '')}
+                        className="rounded-md border border-border bg-card px-2 py-1 text-sm font-medium text-foreground focus:outline-none"
+                      >
+                        <option value="">{t('automaticInvoices.filters.any', { defaultValue: 'any' })}</option>
+                        {availableChargeTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {t(CHARGE_TAG_META[type].labelKey, { defaultValue: CHARGE_TAG_META[type].default })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  {availableCurrencies.length > 1 ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-foreground">
+                        {t('automaticInvoices.filters.currency', { defaultValue: 'Currency' })}
+                      </span>
+                      <select
+                        id="automatic-invoices-filter-currency"
+                        value={currencyFilter}
+                        onChange={(event) => setCurrencyFilter(event.target.value)}
+                        className="rounded-md border border-border bg-card px-2 py-1 text-sm font-medium text-foreground focus:outline-none"
+                      >
+                        <option value="">{t('automaticInvoices.filters.any', { defaultValue: 'any' })}</option>
+                        {availableCurrencies.map((code) => (
+                          <option key={code} value={code}>{code}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <DateRangePicker
+                      id="billing-period-date-range"
+                      label={t('automaticInvoices.ready.dateRange', {
+                        defaultValue: 'Service period start date range',
+                      })}
+                      value={pendingDateRange}
+                      onChange={(range) => setPendingDateRange(range)}
+                    />
+                    <Button
+                      id="apply-billing-period-date-filter"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleDateRangeSearch}
+                    >
+                      {t('automaticInvoices.ready.search', { defaultValue: 'Apply' })}
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
-          {/* Filters row */}
-          <div className="flex items-end gap-4 mb-4">
-            <DateRangePicker
-              id="billing-period-date-range"
-              label={t('automaticInvoices.ready.dateRange', {
-                defaultValue: 'Service period start date range',
-              })}
-              value={pendingDateRange}
-              onChange={(range) => setPendingDateRange(range)}
-            />
-            <Button
-              id="apply-billing-period-date-filter"
-              variant="outline"
-              onClick={handleDateRangeSearch}
-            >
-              {t('automaticInvoices.ready.search', { defaultValue: 'Apply' })}
-            </Button>
             <Input
               id="filter-clients-input"
               type="text"

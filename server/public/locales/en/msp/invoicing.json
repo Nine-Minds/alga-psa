@@ -271,6 +271,7 @@
       "notYetDue": "Not yet due"
     },
     "filters": {
+      "title": "Filters",
       "windowOpen": "Window open",
       "charge": "Charge",
       "currency": "Currency",

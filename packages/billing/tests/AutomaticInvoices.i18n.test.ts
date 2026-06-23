@@ -36,8 +36,12 @@ describe('AutomaticInvoices i18n wiring contract', () => {
     // Service Period, Amount. Charge moved to an inline tag on the client cell
     // (chargeTags.*), and Service Period + Invoice Window collapsed into one
     // column (the open date now rides on the Status pill).
+    // Option-3 data-first toolbar: the redundant "Ready to Invoice" heading was
+    // dropped (the page title + view-tab labels already name the context), and the
+    // quick-filter chips + date range moved behind the Filters popover
+    // (filters.title); dateRange/search still resolve from inside it.
     const keyChecks = [
-      'automaticInvoices.ready.title',
+      'automaticInvoices.filters.title',
       'automaticInvoices.ready.dateRange',
       'automaticInvoices.ready.search',
       'automaticInvoices.ready.filterPlaceholder',
