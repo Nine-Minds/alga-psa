@@ -208,7 +208,12 @@
         "scheduleKey": "Chave de agendamento"
       },
       "reviewLink": "Revise os períodos de serviço",
-      "helpText": "Repare os registros canônicos do período de serviço em vez de gerar uma linha de fatura de compatibilidade."
+      "helpText": "Repare os registros canônicos do período de serviço em vez de gerar uma linha de fatura de compatibilidade.",
+      "fixAll": "Corrigir tudo",
+      "fixAllBusy": "Recriando…",
+      "fixAllResult": "{{schedules}} agendamento(s) recriado(s) em {{clients}} cliente(s).",
+      "fixAllError": "Não foi possível recriar os períodos de serviço. Tente novamente.",
+      "fixAllDenied": "Você não tem permissão para recriar os períodos de serviço."
     },
     "errors": {
       "title": "Ocorreram erros ao finalizar faturas:",

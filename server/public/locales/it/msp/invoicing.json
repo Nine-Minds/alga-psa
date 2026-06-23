@@ -208,7 +208,12 @@
         "scheduleKey": "Chiave di pianificazione"
       },
       "reviewLink": "Revisione dei periodi di servizio",
-      "helpText": "Riparare i record canonici del periodo di servizio invece di generare una riga della fattura di compatibilità."
+      "helpText": "Riparare i record canonici del periodo di servizio invece di generare una riga della fattura di compatibilità.",
+      "fixAll": "Correggi tutto",
+      "fixAllBusy": "Ricostruzione…",
+      "fixAllResult": "Ricostruiti {{schedules}} programma/i su {{clients}} cliente/i.",
+      "fixAllError": "Impossibile ricostruire i periodi di servizio. Riprova.",
+      "fixAllDenied": "Non hai l’autorizzazione per ricostruire i periodi di servizio."
     },
     "errors": {
       "title": "Si sono verificati errori durante la finalizzazione delle fatture:",

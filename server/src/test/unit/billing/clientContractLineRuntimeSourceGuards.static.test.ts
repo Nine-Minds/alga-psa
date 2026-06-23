@@ -100,7 +100,7 @@ describe('client-contract-line runtime source guards', () => {
   it('live recurring loaders do not follow template provenance instead of the client-owned contract', () => {
     const findings = findTemplateProvenanceLiveJoinUsages([
       'packages/billing/src/actions/billingAndTax.ts',
-      'packages/billing/src/actions/clientCadenceScheduleRegeneration.ts',
+      'shared/billingClients/clientCadenceScheduleRegeneration.ts',
       'packages/billing/src/lib/billing/billingEngine.ts',
     ]);
 

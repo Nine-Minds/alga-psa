@@ -21,6 +21,7 @@ import {
   previewGroupedInvoicesForSelectionInputs,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
+import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
@@ -479,6 +480,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [isInvoicedLoading, setIsInvoicedLoading] = useState(false);
   const [isPeriodsLoading, setIsPeriodsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isRepairingAll, setIsRepairingAll] = useState(false);
+  const [repairAllMessage, setRepairAllMessage] = useState<string | null>(null);
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
     invoiceId: string;
@@ -642,6 +645,36 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       isMounted = false;
     };
   }, [currentReadyPage, pageSize, appliedDateRange, refreshTrigger]);
+
+  // Rebuild every drifted client-cadence schedule in the tenant in one pass, so
+  // the user does not have to repair each one by hand. Refreshes on success so
+  // the gap panel reflects the healed state.
+  const handleFixAllServicePeriods = async () => {
+    setIsRepairingAll(true);
+    setRepairAllMessage(null);
+    try {
+      const result = await repairAllRecurringServicePeriodsForTenant();
+      if (!result || !('schedulesRepaired' in result)) {
+        setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllDenied', {
+          defaultValue: 'You do not have permission to rebuild service periods.',
+        }));
+        return;
+      }
+      setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllResult', {
+        schedules: result.schedulesRepaired,
+        clients: result.clientsRepaired,
+        defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
+      }));
+      onGenerateSuccess?.();
+    } catch (error) {
+      console.error('Error rebuilding recurring service periods:', error);
+      setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllError', {
+        defaultValue: 'Could not rebuild service periods. Please try again.',
+      }));
+    } finally {
+      setIsRepairingAll(false);
+    }
+  };
 
   const normalizedReadyClientFilter = debouncedClientFilter.trim().toLowerCase();
 
@@ -1502,17 +1535,35 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                   <div className="space-y-3">
-                    <div>
+                    <div className="space-y-2">
                       <h4 className="font-semibold">
                         {t('automaticInvoices.materializationGap.title', {
-                          defaultValue: 'Recurring service period repair required',
+                          defaultValue: 'These billing schedules need to be rebuilt',
                         })}
                       </h4>
                       <p className="text-sm text-muted-foreground">
                         {t('automaticInvoices.materializationGap.description', {
-                          defaultValue: 'These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.',
+                          defaultValue: 'A billing schedule changed for these clients, so their upcoming charges are out of date and cannot be invoiced yet. Rebuilding updates the charges to match the current schedule. Charges that were already invoiced are not affected.',
                         })}
                       </p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                          id="fix-all-service-periods"
+                          variant="default"
+                          size="sm"
+                          onClick={handleFixAllServicePeriods}
+                          disabled={isRepairingAll}
+                        >
+                          {isRepairingAll
+                            ? t('automaticInvoices.materializationGap.fixAllBusy', { defaultValue: 'Rebuilding…' })
+                            : t('automaticInvoices.materializationGap.fixAll', { defaultValue: 'Fix all' })}
+                        </Button>
+                        {repairAllMessage ? (
+                          <span className="text-sm text-muted-foreground" data-testid="fix-all-result">
+                            {repairAllMessage}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <ul className="space-y-3">
                       {materializationGaps.map((gap) => (

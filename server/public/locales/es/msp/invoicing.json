@@ -208,7 +208,12 @@
         "scheduleKey": "Tecla de programación"
       },
       "reviewLink": "Revisar los períodos de servicio",
-      "helpText": "Repare los registros canónicos del período de servicio en lugar de generar una fila de factura de compatibilidad."
+      "helpText": "Repare los registros canónicos del período de servicio en lugar de generar una fila de factura de compatibilidad.",
+      "fixAll": "Reparar todo",
+      "fixAllBusy": "Reconstruyendo…",
+      "fixAllResult": "Se reconstruyeron {{schedules}} programación(es) en {{clients}} cliente(s).",
+      "fixAllError": "No se pudieron reconstruir los períodos de servicio. Inténtelo de nuevo.",
+      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio."
     },
     "errors": {
       "title": "Se produjeron errores al finalizar las facturas:",

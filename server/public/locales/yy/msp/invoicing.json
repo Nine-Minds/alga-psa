@@ -208,7 +208,12 @@
         "scheduleKey": "55555"
       },
       "reviewLink": "55555",
-      "helpText": "55555"
+      "helpText": "55555",
+      "fixAll": "55555",
+      "fixAllBusy": "55555",
+      "fixAllResult": "55555 {{schedules}} 55555 {{clients}} 55555",
+      "fixAllError": "55555",
+      "fixAllDenied": "55555"
     },
     "errors": {
       "title": "55555",

@@ -10,13 +10,17 @@ import type {
 import {
   ensureUtcMidnightIsoDate,
   type NormalizedBillingCycleAnchorSettings,
-} from '../lib/billing/billingCycleAnchors';
-import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
-import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
+} from './billingCycleAnchors';
+import { materializeClientCadenceServicePeriods } from './materializeClientCadenceServicePeriods';
+import { getClientBillingCycleAnchor } from './billingSchedule';
+import {
+  backfillRecurringServicePeriods,
+  type IRecurringServicePeriodBackfillPlan,
+} from './backfillRecurringServicePeriods';
 import {
   buildPersistedClientCadencePostDropObligationRef,
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-} from '@shared/billingClients/postDropRecurringObligationIdentity';
+} from './postDropRecurringObligationIdentity';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
@@ -410,15 +414,35 @@ function clipRecordActivityWindowToObligationBounds(
   };
 }
 
-export async function regenerateClientCadenceServicePeriodsForScheduleChange(
+type ClientCadenceScheduleChangeParams = {
+  tenant: string;
+  clientId: string;
+  billingCycle: BillingCycleType;
+  anchor: NormalizedBillingCycleAnchorSettings;
+};
+
+type ClientCadenceObligationRegenerationPlan = {
+  obligationId: string;
+  scheduleKey: string;
+  regenerationStart: ISO8601String;
+  plan: IRecurringServicePeriodBackfillPlan;
+};
+
+type ClientCadenceRegenerationComputation = {
+  billedBoundaryEnd: ISO8601String | null;
+  obligationPlans: ClientCadenceObligationRegenerationPlan[];
+};
+
+/**
+ * Computes the regeneration plan for every client-cadence obligation of a client
+ * against a new cadence, without persisting anything. Both the persisting
+ * regeneration and the dry-run preview share this so the numbers a user is shown
+ * are exactly what will be written.
+ */
+async function computeClientCadenceRegeneration(
   trx: Knex.Transaction,
-  params: {
-    tenant: string;
-    clientId: string;
-    billingCycle: BillingCycleType;
-    anchor: NormalizedBillingCycleAnchorSettings;
-  },
-): Promise<void> {
+  params: ClientCadenceScheduleChangeParams,
+): Promise<ClientCadenceRegenerationComputation> {
   const billedBoundaryEnd = await loadLastInvoicedClientBillingBoundary(trx, params);
   const obligations = await loadClientCadenceRecurringObligations(trx, params);
   const materializedAt = new Date().toISOString();
@@ -427,6 +451,8 @@ export async function regenerateClientCadenceServicePeriodsForScheduleChange(
     params.anchor,
   );
   const sourceRunKey = `client-schedule-change:${params.clientId}:${materializedAt}`;
+
+  const obligationPlans: ClientCadenceObligationRegenerationPlan[] = [];
 
   for (const obligation of obligations) {
     const obligationStart =
@@ -447,7 +473,7 @@ export async function regenerateClientCadenceServicePeriodsForScheduleChange(
       obligationId: obligation.client_contract_line_id,
     });
 
-    const candidateRecords = materializeClientCadenceServicePeriods({
+    const materialized = materializeClientCadenceServicePeriods({
       asOf: regenerationStart,
       materializedAt,
       billingCycle: params.billingCycle,
@@ -461,11 +487,13 @@ export async function regenerateClientCadenceServicePeriodsForScheduleChange(
       sourceRunKey,
       anchorSettings: params.anchor,
       recordIdFactory: recurringServicePeriodRecordIdFactory,
-    }).records.map((record) =>
+    });
+
+    const candidateRecords = materialized.records.map((record) =>
       clipRecordActivityWindowToObligationBounds(record, obligationStart, obligationEnd),
     );
 
-    const regenerationPlan = backfillRecurringServicePeriods({
+    const plan = backfillRecurringServicePeriods({
       candidateRecords,
       existingRecords,
       backfilledAt: materializedAt,
@@ -476,15 +504,87 @@ export async function regenerateClientCadenceServicePeriodsForScheduleChange(
       recordIdFactory: recurringServicePeriodRecordIdFactory,
     });
 
+    obligationPlans.push({
+      obligationId: obligation.client_contract_line_id,
+      scheduleKey: materialized.scheduleKey,
+      regenerationStart,
+      plan,
+    });
+  }
+
+  return { billedBoundaryEnd, obligationPlans };
+}
+
+export async function regenerateClientCadenceServicePeriodsForScheduleChange(
+  trx: Knex.Transaction,
+  params: ClientCadenceScheduleChangeParams,
+): Promise<void> {
+  const { obligationPlans } = await computeClientCadenceRegeneration(trx, params);
+
+  for (const { plan } of obligationPlans) {
     await persistRecurringServicePeriodRegeneration(trx, {
       tenant: params.tenant,
-      recordsToSupersede: regenerationPlan.supersededRecords,
+      recordsToSupersede: plan.supersededRecords,
       recordsToInsert: [
-        ...regenerationPlan.backfilledRecords,
-        ...regenerationPlan.realignedRecords,
+        ...plan.backfilledRecords,
+        ...plan.realignedRecords,
       ],
     });
   }
+}
+
+export type ClientCadenceChangePreview = {
+  billingCycle: BillingCycleType;
+  unbilledPeriodsToRegenerate: number;
+  linesAffected: number;
+  regenerationStart: ISO8601String | null;
+  billedPeriodsInRange: boolean;
+  affectedScheduleKeys: string[];
+};
+
+/**
+ * Dry-run impact of changing a client's cadence: how many unbilled service
+ * periods would be regenerated, across how many lines, from what date, and
+ * whether billed periods sit in the affected range. Writes nothing.
+ */
+export async function previewClientCadenceScheduleChange(
+  trx: Knex.Transaction,
+  params: ClientCadenceScheduleChangeParams,
+): Promise<ClientCadenceChangePreview> {
+  const { billedBoundaryEnd, obligationPlans } = await computeClientCadenceRegeneration(trx, params);
+
+  let unbilledPeriodsToRegenerate = 0;
+  let linesAffected = 0;
+  let regenerationStart: ISO8601String | null = null;
+  const affectedScheduleKeys = new Set<string>();
+
+  for (const obligationPlan of obligationPlans) {
+    const inserts =
+      obligationPlan.plan.backfilledRecords.length + obligationPlan.plan.realignedRecords.length;
+    const changed = inserts + obligationPlan.plan.supersededRecords.length;
+
+    if (changed > 0) {
+      linesAffected += 1;
+      affectedScheduleKeys.add(obligationPlan.scheduleKey);
+    }
+    unbilledPeriodsToRegenerate += inserts;
+
+    if (
+      regenerationStart === null
+      || compareIsoDateOnly(obligationPlan.regenerationStart, regenerationStart) < 0
+    ) {
+      regenerationStart = obligationPlan.regenerationStart;
+    }
+  }
+
+  return {
+    billingCycle: params.billingCycle,
+    unbilledPeriodsToRegenerate,
+    linesAffected,
+    regenerationStart,
+    billedPeriodsInRange: billedBoundaryEnd != null,
+    affectedScheduleKeys: [...affectedScheduleKeys],
+  };
 }
 
 export async function retireFutureClientCadenceRowsForLine(
@@ -507,4 +607,98 @@ export async function retireFutureClientCadenceRowsForLine(
       lifecycle_state: 'superseded',
       updated_at: params.retiredAt,
     });
+}
+
+async function loadClientsWithClientCadenceObligations(
+  trx: Knex.Transaction,
+  tenant: string,
+): Promise<string[]> {
+  const ids = await trx('client_contracts as cc')
+    .join('contracts as ct', function () {
+      this.on('ct.contract_id', '=', 'cc.contract_id').andOn('ct.tenant', '=', 'cc.tenant');
+    })
+    .join('contract_lines as cl', function () {
+      this.on('cl.contract_id', '=', 'ct.contract_id').andOn('cl.tenant', '=', 'ct.tenant');
+    })
+    .where('cc.tenant', tenant)
+    .where('cc.is_active', true)
+    .where((builder) =>
+      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
+    )
+    .where('cl.cadence_owner', 'client')
+    .whereNotNull('cl.billing_timing')
+    .distinct('cc.client_id')
+    .pluck('cc.client_id');
+
+  return (ids as Array<string | null>).filter((id): id is string => Boolean(id));
+}
+
+export type RepairAllClientCadenceServicePeriodsSummary = {
+  clientsScanned: number;
+  clientsRepaired: number;
+  schedulesRepaired: number;
+  rowsBackfilled: number;
+  rowsRealigned: number;
+  rowsSuperseded: number;
+};
+
+/**
+ * Re-materializes every client-cadence schedule in a tenant against each
+ * client's current cadence, healing any ledger that drifted out of sync (for
+ * example after a billing-cycle change that did not re-materialize). Billed
+ * periods are preserved by the shared regeneration. Idempotent: a client whose
+ * ledger already matches its cadence produces no changes.
+ */
+export async function repairAllClientCadenceServicePeriodsForTenant(
+  trx: Knex.Transaction,
+  params: { tenant: string },
+): Promise<RepairAllClientCadenceServicePeriodsSummary> {
+  const clientIds = await loadClientsWithClientCadenceObligations(trx, params.tenant);
+
+  const summary: RepairAllClientCadenceServicePeriodsSummary = {
+    clientsScanned: clientIds.length,
+    clientsRepaired: 0,
+    schedulesRepaired: 0,
+    rowsBackfilled: 0,
+    rowsRealigned: 0,
+    rowsSuperseded: 0,
+  };
+
+  for (const clientId of clientIds) {
+    const schedule = await getClientBillingCycleAnchor(trx, params.tenant, clientId);
+    const { obligationPlans } = await computeClientCadenceRegeneration(trx, {
+      tenant: params.tenant,
+      clientId,
+      billingCycle: schedule.billingCycle,
+      anchor: schedule.anchor,
+    });
+
+    let clientChanged = false;
+    for (const obligationPlan of obligationPlans) {
+      const { plan } = obligationPlan;
+      const changed =
+        plan.backfilledRecords.length + plan.realignedRecords.length + plan.supersededRecords.length;
+      if (changed === 0) {
+        continue;
+      }
+
+      clientChanged = true;
+      summary.schedulesRepaired += 1;
+      summary.rowsBackfilled += plan.backfilledRecords.length;
+      summary.rowsRealigned += plan.realignedRecords.length;
+      summary.rowsSuperseded += plan.supersededRecords.length;
+
+      await persistRecurringServicePeriodRegeneration(trx, {
+        tenant: params.tenant,
+        recordsToSupersede: plan.supersededRecords,
+        recordsToInsert: [...plan.backfilledRecords, ...plan.realignedRecords],
+      });
+    }
+
+    if (clientChanged) {
+      summary.clientsRepaired += 1;
+    }
+  }
+
+  return summary;
 }

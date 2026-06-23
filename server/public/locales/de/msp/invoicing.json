@@ -208,7 +208,12 @@
         "scheduleKey": "Zeitplanschlüssel"
       },
       "reviewLink": "Überprüfen Sie die Servicezeiträume",
-      "helpText": "Reparieren Sie die kanonischen Servicezeitraumdatensätze, anstatt eine Kompatibilitätsrechnungszeile zu erstellen."
+      "helpText": "Reparieren Sie die kanonischen Servicezeitraumdatensätze, anstatt eine Kompatibilitätsrechnungszeile zu erstellen.",
+      "fixAll": "Alle reparieren",
+      "fixAllBusy": "Wird neu aufgebaut…",
+      "fixAllResult": "{{schedules}} Zeitplan/Zeitpläne über {{clients}} Kunde(n) neu aufgebaut.",
+      "fixAllError": "Leistungszeiträume konnten nicht neu aufgebaut werden. Bitte versuchen Sie es erneut.",
+      "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen."
     },
     "errors": {
       "title": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",

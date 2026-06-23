@@ -208,7 +208,12 @@
         "scheduleKey": "Clé de planification"
       },
       "reviewLink": "Examiner les périodes de service",
-      "helpText": "Réparez les enregistrements canoniques de période de service au lieu de générer une ligne de facture de compatibilité."
+      "helpText": "Réparez les enregistrements canoniques de période de service au lieu de générer une ligne de facture de compatibilité.",
+      "fixAll": "Tout réparer",
+      "fixAllBusy": "Reconstruction…",
+      "fixAllResult": "{{schedules}} planning(s) reconstruit(s) pour {{clients}} client(s).",
+      "fixAllError": "Impossible de reconstruire les périodes de service. Veuillez réessayer.",
+      "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service."
     },
     "errors": {
       "title": "Des erreurs se sont produites lors de la finalisation des factures :",

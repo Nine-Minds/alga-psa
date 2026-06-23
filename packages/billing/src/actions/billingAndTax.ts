@@ -652,7 +652,7 @@ async function fetchClientCadenceMaterializationGaps(
                 servicePeriodEnd: dueWorkRow.servicePeriodEnd,
                 reason: 'missing_service_period_materialization',
                 detail:
-                    'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+                    "This client's billing schedule changed, so these charges are out of date and need to be rebuilt before they can be invoiced.",
             });
         }
     }
