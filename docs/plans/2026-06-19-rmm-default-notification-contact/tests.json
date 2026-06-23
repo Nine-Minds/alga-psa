@@ -1,9 +1,9 @@
 [
   { "id": "T001", "description": "Migration up adds a nullable default_contact_id column to rmm_organization_mappings", "implemented": true, "commitGroup": "migration", "featureIds": ["F001"] },
-  { "id": "T002", "description": "FK rejects a contact from another tenant/client and SET NULLs default_contact_id when the contact is deleted", "implemented": true, "commitGroup": "migration", "featureIds": ["F002"] },
+  { "id": "T002", "description": "Migration contract test asserts no database FK is created (no foreign(...) and no onDelete('SET NULL'))", "implemented": true, "commitGroup": "migration", "featureIds": ["F002"] },
   { "id": "T003", "description": "Index (tenant, default_contact_id) is created", "implemented": true, "commitGroup": "migration", "featureIds": ["F003"] },
-  { "id": "T004", "description": "Migration down removes the column, FK, and index", "implemented": true, "commitGroup": "migration", "featureIds": ["F004"] },
-  { "id": "T005", "description": "up -> down -> up round-trip succeeds (idempotent)", "implemented": true, "commitGroup": "migration", "featureIds": ["F004", "F005"] },
+  { "id": "T004", "description": "Migration down removes the index and column", "implemented": true, "commitGroup": "migration", "featureIds": ["F004"] },
+  { "id": "T005", "description": "Migration up()/down() apply and revert cleanly against a real Postgres (column+index created then dropped; no FK) — verified manually", "implemented": true, "commitGroup": "migration", "featureIds": ["F004", "F005"] },
 
   { "id": "T006", "description": "Resolver returns the mapping contact when it is active and belongs to the client", "implemented": true, "commitGroup": "contact-resolver", "featureIds": ["F007"] },
   { "id": "T007", "description": "Resolver ignores an inactive mapping contact and falls back to the client default", "implemented": true, "commitGroup": "contact-resolver", "featureIds": ["F007", "F008"] },
@@ -46,5 +46,15 @@
   { "id": "T039", "description": "Picker is disabled when the row has no mapped client", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F032"] },
   { "id": "T040", "description": "Selecting a contact calls the update action with default_contact_id", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] },
   { "id": "T041", "description": "Clearing the contact calls the update action with null", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] },
-  { "id": "T042", "description": "Saved default contact is reflected after reload", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] }
+  { "id": "T042", "description": "Saved default contact is reflected after reload", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] },
+
+  { "id": "T043", "description": "Deleting a contact nulls default_contact_id on every RMM mapping referencing it (backend unlink, same transaction)", "implemented": true, "commitGroup": "backend-deletion", "featureIds": ["F035"] },
+
+  { "id": "T044", "description": "Tactical/Level/Tanium update actions persist and clear default_contact_id", "implemented": true, "commitGroup": "rmm-provider-parity", "featureIds": ["F036"] },
+  { "id": "T045", "description": "Tactical/Level/Tanium mapping UIs render a Default Contact picker, filtered to the client and disabled when unmapped (contract test)", "implemented": true, "commitGroup": "rmm-provider-parity", "featureIds": ["F037", "F038", "F039"] },
+
+  { "id": "T046", "description": "onAddNew opens Quick Add Contact scoped to the row's client; the created contact is added to the list and auto-selected as the mapping default", "implemented": true, "commitGroup": "add-new-contact", "featureIds": ["F040"] },
+
+  { "id": "T047", "description": "Add Alert Rule dialog scrolls when its content overflows the viewport", "implemented": true, "commitGroup": "dialog-ui-fixes", "featureIds": ["F041"] },
+  { "id": "T048", "description": "Add Alert Rule checkbox groups render with uniform spacing (no extra mb-4 gap)", "implemented": true, "commitGroup": "dialog-ui-fixes", "featureIds": ["F042"] }
 ]

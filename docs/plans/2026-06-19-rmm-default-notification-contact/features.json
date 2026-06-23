@@ -1,9 +1,9 @@
 [
   { "id": "F001", "description": "New CE migration in server/migrations/ adds default_contact_id uuid NULL to rmm_organization_mappings", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
-  { "id": "F002", "description": "Migration adds composite FK (tenant, default_contact_id) -> contacts(tenant, contact_name_id) ON DELETE SET NULL, mirroring the existing client FK", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
+  { "id": "F002", "description": "Migration adds NO database FK: Citus rejects ON DELETE SET NULL on the tenant distribution column, so the contact reference is cleaned up in the backend on contact deletion (see F035)", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
   { "id": "F003", "description": "Migration adds index (tenant, default_contact_id)", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
-  { "id": "F004", "description": "Migration down() drops the FK, index, and column cleanly", "implemented": true, "commitGroup": "migration", "prdRefs": ["Acceptance Criteria"] },
-  { "id": "F005", "description": "Migration is Citus-safe: nullable ADD COLUMN + colocated FK; fall back to column+index only if a post-hoc FK is rejected on Citus", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
+  { "id": "F004", "description": "Migration down() drops the index and column cleanly", "implemented": true, "commitGroup": "migration", "prdRefs": ["Acceptance Criteria"] },
+  { "id": "F005", "description": "Migration is a plain knex alterTable (nullable column + index, no FK); Citus-safe; verified by applying up()/down() against Postgres", "implemented": true, "commitGroup": "migration", "prdRefs": ["Data Model / Integration Notes"] },
 
   { "id": "F006", "description": "New shared helper resolveRmmTicketContactId(trx, tenant, { clientId, mappingDefaultContactId }) in shared/rmm/alerts/resolveContact.ts", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
   { "id": "F007", "description": "Resolver returns the mapping contact when it exists, is active, and belongs to the client", "implemented": true, "commitGroup": "contact-resolver", "prdRefs": ["Contact Resolution"] },
@@ -38,5 +38,18 @@
   { "id": "F031", "description": "Contact picker options are filtered to the mapped client's contacts (clientId prop)", "implemented": true, "commitGroup": "settings-ui", "prdRefs": ["Primary Flows"] },
   { "id": "F032", "description": "Contact picker is disabled when no client is mapped for the row", "implemented": true, "commitGroup": "settings-ui", "prdRefs": ["Acceptance Criteria"] },
   { "id": "F033", "description": "Selecting or clearing a contact calls the update action and updates the row state", "implemented": true, "commitGroup": "settings-ui", "prdRefs": ["Primary Flows"] },
-  { "id": "F034", "description": "Contacts are loaded via the existing contacts fetch action and passed to the picker", "implemented": true, "commitGroup": "settings-ui", "prdRefs": ["Affected Code"] }
+  { "id": "F034", "description": "Contacts are loaded via the existing contacts fetch action and passed to the picker", "implemented": true, "commitGroup": "settings-ui", "prdRefs": ["Affected Code"] },
+
+  { "id": "F035", "description": "deleteContact nulls rmm_organization_mappings.default_contact_id referencing the deleted contact, inside the delete transaction (replaces the DB-level SET NULL Citus rejects)", "implemented": true, "commitGroup": "backend-deletion", "prdRefs": ["Data Model / Integration Notes"] },
+
+  { "id": "F036", "description": "Tactical/Level/Tanium list+update org-mapping actions select and persist default_contact_id (set and clear-to-null)", "implemented": true, "commitGroup": "rmm-provider-parity", "prdRefs": ["Primary Flows", "Affected Code"] },
+  { "id": "F037", "description": "Tactical mapping UI adds a Default Contact ContactPicker (package-local getIntegrationContacts, since @alga-psa/clients is not a dependency of packages/integrations)", "implemented": true, "commitGroup": "rmm-provider-parity", "prdRefs": ["Primary Flows"] },
+  { "id": "F038", "description": "Level and Tanium mapping UIs add a Default Contact ContactPicker (getAllContacts)", "implemented": true, "commitGroup": "rmm-provider-parity", "prdRefs": ["Primary Flows"] },
+  { "id": "F039", "description": "All five provider pickers filter to the mapped client, disable when no client is mapped, and clear the default contact when the mapped client changes", "implemented": true, "commitGroup": "rmm-provider-parity", "prdRefs": ["Primary Flows"] },
+
+  { "id": "F040", "description": "All five provider Default Contact pickers wire onAddNew to the global Quick Add Contact dialog (useQuickAddClient/renderQuickAddContact), scoped to the row's client; the new contact is added to the list and auto-selected as the mapping default", "implemented": true, "commitGroup": "add-new-contact", "prdRefs": ["Primary Flows"] },
+
+  { "id": "F041", "description": "RMM Add Alert Rule dialog body scrolls (removed allowOverflow; portaled CustomSelect dropdowns unaffected)", "implemented": true, "commitGroup": "dialog-ui-fixes", "prdRefs": ["Affected Code"] },
+  { "id": "F042", "description": "RMM Add Alert Rule dialog checkbox groups use the custom Checkbox with containerClassName='' to remove the default mb-4 gap", "implemented": true, "commitGroup": "dialog-ui-fixes", "prdRefs": ["Affected Code"] },
+  { "id": "F043", "description": "Tactical mapping row renders the Default Contact picker inline with the client picker (removed the stacked label that caused vertical misalignment)", "implemented": true, "commitGroup": "dialog-ui-fixes", "prdRefs": ["Affected Code"] }
 ]

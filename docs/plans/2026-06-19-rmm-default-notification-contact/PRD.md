@@ -21,11 +21,11 @@ Two underlying gaps in the integration ticket-create paths cause this (both conf
 - At ticket-create time, set `tickets.contact_name_id` to: the mapping's `default_contact_id` when set and valid, else the client's primary/default contact when valid, else none.
 - Publish the standard `TICKET_CREATED` event from the integration create paths so the tenant's configured client-facing notifications fire.
 - Apply the fix in the **shared RMM layer** so every provider benefits: Huntress (bespoke path) and NinjaOne / Tactical RMM / Level / Tanium (shared pipeline).
-- Expose the contact picker in the org-mapping UIs that exist today (Huntress, NinjaOne).
+- Expose the contact picker in the org-mapping UIs of **all five RMM providers** (Huntress, NinjaOne, Tactical RMM, Level, Tanium) — each has an org→client mapping screen — with an inline **"Add new contact"** option (same dialog as the new-ticket flow).
 
 ## Non-Goals
 
-- No new org-mapping management UI for providers that don't have one (Tactical RMM, Level, Tanium) — they benefit from the backend fallback + event emission only.
+- No pulling contacts from the RMM itself — the notification recipient must be an AlgaPSA contact. RMM-sourced contacts (only NinjaOne realistically exposes them) are a possible follow-up, not part of this branch. *(Correction: an earlier draft excluded Tactical/Level/Tanium from the UI on the false premise that they lacked an org-mapping screen. All five have one, and all five now have the picker.)*
 - No backfill of `default_contact_id` on existing mappings (null → client-default fallback applies).
 - No change to notification templates, notification-type configuration, or the subscriber logic itself.
 - No new operational tooling, metrics, retries, or feature flags.
@@ -34,7 +34,7 @@ Two underlying gaps in the integration ticket-create paths cause this (both conf
 
 **Persona:** MSP technician/admin configuring an RMM integration.
 
-**Flow A — set a default contact:** Settings → Integration (Huntress/NinjaOne) → Organization Mapping. For a mapped org, pick a **Default Contact** (list filtered to the mapped client's contacts). Saved immediately.
+**Flow A — set a default contact:** Settings → Integration (any of Huntress, NinjaOne, Tactical, Level, Tanium) → Organization Mapping. For a mapped org, pick a **Default Contact** (filtered to the mapped client's contacts) — or **Add new contact** inline. Saved immediately.
 
 **Flow B — incident creates a ticket:** An RMM incident/alert for that org auto-creates a ticket. The ticket is associated with the resolved contact (mapping default → client default), and the client receives the configured "Ticket Created" email.
 
@@ -53,8 +53,8 @@ Mirrors the validation in `findValidClientPrimaryContactId` (`shared/workflow/ac
 ## Data Model / Integration Notes
 
 - **Table:** `rmm_organization_mappings` (CE migration dir `server/migrations/`; created by `20251124000001_create_rmm_integration_tables.cjs`).
-- **New column:** `default_contact_id uuid NULL`; composite FK `(tenant, default_contact_id) → contacts(tenant, contact_name_id) ON DELETE SET NULL` (mirrors the table's existing `(tenant, client_id) → clients` FK and how `tickets` references `contacts`); index `(tenant, default_contact_id)`.
-- **Citus:** nullable `ADD COLUMN` + colocated FK between two tenant-distributed tables (the table already carries a tenant-composite FK, proving colocation). If a post-hoc FK is rejected on Citus, fall back to column + index only — the code resolver already validates the contact.
+- **New column:** `default_contact_id uuid NULL` + index `(tenant, default_contact_id)`. **No database foreign key:** Citus rejects `ON DELETE SET NULL` on a tenant-scoped FK (it would null the distribution column). Instead the reference is cleared in the backend on contact deletion (`deleteContact` nulls it in the same transaction), and the runtime resolver validates the contact on read, so a dangling reference is harmless.
+- **Citus:** plain nullable `ADD COLUMN` + index — fully Citus-safe (no FK, no distribution-column SET NULL). Verified by applying `up()`/`down()` against Postgres.
 - **Event:** publish `TICKET_CREATED` after the create transaction commits via `TicketModelEventPublisher` (`packages/tickets/src/lib/adapters/TicketModelEventPublisher.ts`); the no-trx publisher publishes immediately and swallows publish errors, so it never breaks ticket creation.
 
 ## Affected Code (anchors)
@@ -66,9 +66,12 @@ Mirrors the validation in `findValidClientPrimaryContactId` (`shared/workflow/ac
 | Shared create + threading | `shared/rmm/alerts/ticketCreator.ts`, `processRmmAlertEvent.ts`, `createTicketForAlertId.ts` |
 | Huntress create + threading | `ee/server/src/lib/integrations/huntress/incidents/ticketCreator.ts`, `incidentProcessor.ts` |
 | Type | `ee/server/src/interfaces/rmm.interfaces.ts` (`RmmOrganizationMapping`) |
-| Backend actions | `ee/server/src/lib/actions/integrations/huntressActions.ts`, `ninjaoneActions.ts` |
-| Settings UI | `ee/server/src/components/settings/integrations/{huntress,ninjaone}/OrganizationMappingManager.tsx` |
-| Contact picker | `packages/ui/src/components/ContactPicker.tsx` (reuse) |
+| Backend actions (all 5) | `huntressActions.ts`, `ninjaoneActions.ts`, `tacticalRmmActions.ts`, `levelIoActions.ts`, `taniumActions.ts` |
+| Settings UI (all 5) | Huntress/NinjaOne `OrganizationMappingManager.tsx`; Tactical/Level/Tanium `*IntegrationSettings.tsx` |
+| Backend deletion unlink | `packages/clients/src/actions/contact-actions/contactActions.tsx` (`deleteContact`) |
+| Add-new-contact wiring | `packages/ui/src/context` (`useQuickAddClient`/`renderQuickAddContact`) |
+| Dialog UI fixes | `packages/integrations/.../RmmAlertAutomationSettings.tsx` (scroll + custom `Checkbox`) |
+| Contact picker | `packages/ui/src/components/ContactPicker.tsx` (reuse; `onAddNew`) |
 
 ## Risks & Rollout
 
