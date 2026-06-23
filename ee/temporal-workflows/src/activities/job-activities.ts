@@ -94,6 +94,34 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     throw error;
   }
 
+  // User-defined workflow schedules: after the pg-boss → Temporal cutover these
+  // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
+  // scheduleRecurringJob) that start genericJobWorkflow with jobName
+  // workflow-time-trigger-{once,recurring}. The matching pg-boss registration
+  // lives in server/src/lib/jobs/registerAllHandlers.ts (gated includeEnterprise).
+  try {
+    const {
+      workflowOneTimeScheduledRunHandler,
+      workflowRecurringScheduledRunHandler,
+    } = await import('../../../../server/src/lib/jobs/handlers/workflowScheduledRunHandlers');
+    const {
+      WORKFLOW_ONE_TIME_TRIGGER_JOB,
+      WORKFLOW_RECURRING_TRIGGER_JOB,
+    } = await import('@alga-psa/workflows/lib/workflowScheduleLifecycle');
+
+    registerJobHandlerForActivities(WORKFLOW_ONE_TIME_TRIGGER_JOB, async (jobId, data) => {
+      await workflowOneTimeScheduledRunHandler(jobId, data as any);
+    });
+    registerJobHandlerForActivities(WORKFLOW_RECURRING_TRIGGER_JOB, async (jobId, data) => {
+      await workflowRecurringScheduledRunHandler(jobId, data as any);
+    });
+  } catch (error) {
+    logger.error('Failed to register workflow schedule handlers', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+
   jobHandlersInitialized = true;
   logger.info('Initialized job handler registry for Temporal worker', {
     handlerCount: jobHandlers.size,

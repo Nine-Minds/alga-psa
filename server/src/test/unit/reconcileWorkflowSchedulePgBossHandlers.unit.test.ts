@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getAdminConnectionMock = vi.fn();
 const listSchedulesMock = vi.fn();
 const workflowRecurringScheduledRunHandlerMock = vi.fn();
+const reconcileRegistrationMock = vi.fn();
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: () => getAdminConnectionMock(),
@@ -12,6 +13,14 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowScheduleStateModel: {
     list: (...args: unknown[]) => listSchedulesMock(...args),
   },
+}));
+
+vi.mock('@alga-psa/workflows/lib/workflowScheduleLifecycle', () => ({
+  buildWorkflowScheduleSingletonKey: (workflowId: string, scheduleId: string) =>
+    `workflow-schedule:${workflowId}:${scheduleId}`,
+  WORKFLOW_RECURRING_TRIGGER_JOB: 'workflow-time-trigger-recurring',
+  reconcileWorkflowScheduleRegistration: (...args: unknown[]) =>
+    reconcileRegistrationMock(...args),
 }));
 
 vi.mock('@/lib/jobs/handlers/workflowScheduledRunHandlers', () => ({
@@ -26,6 +35,7 @@ describe('reconcileWorkflowSchedulePgBossHandlers', () => {
     getAdminConnectionMock.mockReset();
     listSchedulesMock.mockReset();
     workflowRecurringScheduledRunHandlerMock.mockReset();
+    reconcileRegistrationMock.mockReset();
   });
 
   it('re-registers only missing recurring workflow schedule queues for PG Boss', async () => {
@@ -122,17 +132,52 @@ describe('reconcileWorkflowSchedulePgBossHandlers', () => {
     expect(result).toEqual({ registered: 1, skipped: 3 });
   });
 
-  it('skips reconciliation for non-PG Boss runners', async () => {
+  it('ensures Temporal Schedules for each schedule on the Temporal runner', async () => {
+    const adminKnex = {};
     const runner = {
       getRunnerType: () => 'temporal' as const,
       registerHandler: vi.fn(),
     };
 
+    getAdminConnectionMock.mockResolvedValue(adminKnex);
+    listSchedulesMock.mockResolvedValue([
+      { id: 'schedule-1', tenant: 'tenant-1', workflow_id: 'workflow-1', trigger_type: 'recurring', cron: '0 9 * * *', enabled: true, status: 'scheduled' },
+      { id: 'schedule-2', tenant: 'tenant-1', workflow_id: 'workflow-2', trigger_type: 'recurring', cron: '15 10 * * *', enabled: true, status: 'scheduled' },
+      { id: 'schedule-3', tenant: 'tenant-1', workflow_id: 'workflow-3', trigger_type: 'recurring', cron: '0 11 * * *', enabled: false, status: 'paused' },
+    ]);
+    reconcileRegistrationMock
+      .mockResolvedValueOnce('ensured')
+      .mockResolvedValueOnce('converged')
+      .mockResolvedValueOnce('skipped');
+
     const result = await reconcileWorkflowSchedulePgBossHandlers(runner as any);
 
-    expect(getAdminConnectionMock).not.toHaveBeenCalled();
-    expect(listSchedulesMock).not.toHaveBeenCalled();
+    expect(reconcileRegistrationMock).toHaveBeenCalledTimes(3);
+    expect(reconcileRegistrationMock).toHaveBeenCalledWith(
+      adminKnex,
+      expect.objectContaining({ id: 'schedule-1' }),
+      'temporal',
+    );
     expect(runner.registerHandler).not.toHaveBeenCalled();
-    expect(result).toEqual({ registered: 0, skipped: 0 });
+    // ensured -> registered; converged + skipped -> skipped
+    expect(result).toEqual({ registered: 1, skipped: 2 });
+  });
+
+  it('counts a failed schedule reconciliation without aborting the rest', async () => {
+    const runner = { getRunnerType: () => 'temporal' as const };
+    getAdminConnectionMock.mockResolvedValue({});
+    listSchedulesMock.mockResolvedValue([
+      { id: 'schedule-1', tenant: 'tenant-1', workflow_id: 'workflow-1', trigger_type: 'recurring', cron: '0 9 * * *', enabled: true, status: 'scheduled' },
+      { id: 'schedule-2', tenant: 'tenant-1', workflow_id: 'workflow-2', trigger_type: 'recurring', cron: '15 10 * * *', enabled: true, status: 'scheduled' },
+    ]);
+    reconcileRegistrationMock
+      .mockRejectedValueOnce(new Error('temporal unavailable'))
+      .mockResolvedValueOnce('ensured');
+
+    const result = await reconcileWorkflowSchedulePgBossHandlers(runner as any);
+
+    expect(reconcileRegistrationMock).toHaveBeenCalledTimes(2);
+    // ensured -> registered; failed -> skipped bucket
+    expect(result).toEqual({ registered: 1, skipped: 1 });
   });
 });
