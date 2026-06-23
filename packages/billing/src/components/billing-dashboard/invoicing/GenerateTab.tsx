@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Coins, FileText, Receipt } from 'lucide-react';
@@ -173,33 +172,33 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
 
   return (
     <>
+      {/* No enclosing card here: every invoice type renders its own elevated surface
+          (the automatic grid, and the manual/prepayment forms each wrap themselves in a
+          Card). Wrapping them again was a pane-on-a-pane. The type selector and content
+          rest directly on the page background — one level of elevation, not three. */}
       <div className="space-y-4">
-        <Card>
-          <div className="p-4">
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
-                {t('generateTab.fields.invoiceType', { defaultValue: 'Invoice Type' })}
-              </label>
-              <CustomSelect
-                value={invoiceType}
-                onValueChange={(value: string) => setInvoiceType(value as InvoiceType)}
-                options={invoiceTypeOptions}
-                className="w-full md:w-80"
-              />
-              <p className="mt-2 text-sm text-muted-foreground">
-                {invoiceTypeDescription[invoiceType]}
-              </p>
-            </div>
+        <div>
+          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
+            {t('generateTab.fields.invoiceType', { defaultValue: 'Invoice Type' })}
+          </label>
+          <CustomSelect
+            value={invoiceType}
+            onValueChange={(value: string) => setInvoiceType(value as InvoiceType)}
+            options={invoiceTypeOptions}
+            className="w-full md:w-80"
+          />
+          <p className="mt-2 text-sm text-muted-foreground">
+            {invoiceTypeDescription[invoiceType]}
+          </p>
+        </div>
 
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-            {renderContent()}
-          </div>
-        </Card>
+        {renderContent()}
       </div>
 
       <SuccessDialog
