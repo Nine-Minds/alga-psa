@@ -1148,7 +1148,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <span
         key={type}
         title={CHARGE_TAG_FULL_NAME[type]}
-        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide ${meta.className}`}
+        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide ${meta.className}`}
       >
         {t(meta.labelKey, { defaultValue: meta.default })}{count > 1 ? ` ×${count}` : ''}
       </span>
@@ -1203,7 +1203,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     const showCount = key === 'separate' && typeof separateCount === 'number' && separateCount > 1;
     return (
       <span
-        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${meta.className}`}
+        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-2xs font-medium ${meta.className}`}
       >
         {statusPillIcon(key)}
         {t(meta.labelKey, { defaultValue: meta.default })}{showCount ? ` ×${separateCount}` : ''}
