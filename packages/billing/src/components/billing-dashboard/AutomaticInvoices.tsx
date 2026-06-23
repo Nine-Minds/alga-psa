@@ -1843,17 +1843,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
           {/* Header + saved-view tabs */}
           <div className="mb-3 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">
-                {t('automaticInvoices.ready.title', { defaultValue: 'Ready to Invoice' })}
-              </h2>
-              <span className="text-xs text-muted-foreground">
-                {t('automaticInvoices.ready.pageScopeNote', {
-                  count: readyParentGroups.length,
-                  defaultValue: `${readyParentGroups.length} group(s) on this page`,
-                })}
-              </span>
-            </div>
+            <h2 className="text-lg font-semibold">
+              {t('automaticInvoices.ready.title', { defaultValue: 'Ready to Invoice' })}
+            </h2>
             <div className="flex flex-wrap items-center gap-3">
               <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card p-1">
                 {([
@@ -2187,13 +2179,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <span className="text-sm font-medium text-muted-foreground">
                   {t('automaticInvoices.summary.empty', {
                     defaultValue: 'Select groups or line items to preview or generate invoices.',
-                  })}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {t('automaticInvoices.summary.pageScope', {
-                    groups: viewFilteredGroups.length,
-                    obligations: readyRows.length,
-                    defaultValue: `${viewFilteredGroups.length} group(s) · ${readyRows.length} line item(s)`,
                   })}
                 </span>
                 <div className="ml-auto flex items-center gap-2">
@@ -2587,15 +2572,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               return isSelected ? 'bg-primary-50' : '';
             }}
           />
-
-          {/* Legend */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Check className="h-3 w-3 text-success" /> {t('automaticInvoices.legend.confirmed', { defaultValue: 'Amount known now' })}</span>
-            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-muted-foreground" /> {t('automaticInvoices.legend.atGeneration', { defaultValue: 'Calculated at generation' })}</span>
-            <span className="inline-flex items-center gap-1"><Link2 className="h-3 w-3 text-primary-600" /> {t('automaticInvoices.legend.combine', { defaultValue: 'Combine into one invoice' })}</span>
-            <span className="inline-flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-warning" /> {t('automaticInvoices.legend.separate', { defaultValue: 'Must invoice separately' })}</span>
-            <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {t('automaticInvoices.legend.notYetDue', { defaultValue: 'Not yet due' })}</span>
-          </div>
 
           {/* Focused-group detail drawer */}
           {focusedGroup ? (() => {

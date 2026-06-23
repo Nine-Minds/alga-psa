@@ -129,7 +129,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
 
   const invoiceTypeDescription = {
     automatic: t('generateTab.descriptions.automatic', {
-      defaultValue: 'Use invoice windows to review due recurring service periods before generating a recurring batch.',
+      defaultValue: 'Generate invoices for the recurring service periods that are due.',
     }),
     manual: t('generateTab.descriptions.manual', {
       defaultValue: 'Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.',
