@@ -58,7 +58,10 @@
       "canCombine": "11111",
       "separate": "11111",
       "blocked": "11111",
-      "notReady": "11111"
+      "notReady": "11111",
+      "upcoming": "11111",
+      "upcomingDetail": "11111",
+      "upcomingDetailWithDate": "11111 {{date}} 11111"
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "11111",
@@ -75,6 +78,7 @@
         "servicePeriod": "11111"
       },
       "pendingAmount": "11111",
+      "billableOn": "11111 {{date}} 11111",
       "attributionWarning": "11111",
       "blockedUntilApproval": "11111 {{count}} 11111",
       "blockedUntilApproval_one": "11111 {{count}} 11111",

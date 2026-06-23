@@ -58,7 +58,10 @@
       "canCombine": "Pode combinar em 1 fatura",
       "separate": "Deve faturar separadamente",
       "blocked": "Contém itens bloqueados",
-      "notReady": "Não estou pronto para faturar"
+      "notReady": "Não estou pronto para faturar",
+      "upcoming": "Ainda não vencido",
+      "upcomingDetail": "Este período é faturado no vencimento, portanto fica disponível para faturamento após o término do período de serviço.",
+      "upcomingDetailWithDate": "Este período é faturado no vencimento, portanto fica disponível para faturamento em {{date}}, após o término do período de serviço."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "A janela da fatura é diferente",
@@ -75,6 +78,7 @@
         "servicePeriod": "Período de serviço"
       },
       "pendingAmount": "Valor pendente",
+      "billableOn": "Faturável em {{date}}",
       "attributionWarning": "Faltam metadados de atribuição de atribuição",
       "blockedUntilApproval": "Bloqueado até aprovação: {{count}} entrada não aprovada.",
       "blockedUntilApproval_one": "Bloqueado até aprovação: {{count}} entrada não aprovada.",
