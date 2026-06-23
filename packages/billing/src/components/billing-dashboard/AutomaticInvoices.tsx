@@ -2105,7 +2105,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <div className="ml-auto text-right leading-tight">
                   {selectionKnownCents > 0 ? (
                     <>
-                      <div className="font-bold font-mono tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
+                      <div className="font-semibold font-mono tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
                       <div className="text-2xs text-white/80">
                         {selectionAtGenerationCount > 0
                           ? t('automaticInvoices.summary.knownPlusAtGeneration', {
@@ -2580,7 +2580,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               <span className="shrink-0 tabular-nums">
                                 {amount === null
                                   ? <span className="text-2xs text-muted-foreground">{t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}</span>
-                                  : <span className="font-medium font-mono">{formatCurrency(amount / 100)}</span>}
+                                  : <span className="font-medium font-mono tabular-nums">{formatCurrency(amount / 100)}</span>}
                               </span>
                             </li>
                           );
