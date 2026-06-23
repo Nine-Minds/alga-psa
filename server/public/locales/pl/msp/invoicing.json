@@ -224,7 +224,12 @@
         "scheduleKey": "Klucz harmonogramu"
       },
       "reviewLink": "Przejrzyj okresy świadczenia usług",
-      "helpText": "Napraw kanoniczne rekordy okresu serwisowego zamiast generować wiersz faktury dotyczącej zgodności."
+      "helpText": "Napraw kanoniczne rekordy okresu serwisowego zamiast generować wiersz faktury dotyczącej zgodności.",
+      "fixAll": "Napraw wszystko",
+      "fixAllBusy": "Przebudowywanie…",
+      "fixAllResult": "Przebudowano {{schedules}} harmonogram(y) dla {{clients}} klient(ów).",
+      "fixAllError": "Nie udało się przebudować okresów usług. Spróbuj ponownie.",
+      "fixAllDenied": "Nie masz uprawnień do przebudowy okresów usług."
     },
     "errors": {
       "title": "Wystąpiły błędy podczas finalizowania faktur:",

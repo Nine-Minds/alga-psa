@@ -204,7 +204,12 @@
         "scheduleKey": "Schema sleutel"
       },
       "reviewLink": "Bekijk serviceperioden",
-      "helpText": "Herstel de canonieke serviceperioderecords in plaats van een compatibiliteitsfactuurrij te genereren."
+      "helpText": "Herstel de canonieke serviceperioderecords in plaats van een compatibiliteitsfactuurrij te genereren.",
+      "fixAll": "Alles herstellen",
+      "fixAllBusy": "Opnieuw opbouwen…",
+      "fixAllResult": "{{schedules}} planning(en) opnieuw opgebouwd voor {{clients}} klant(en).",
+      "fixAllError": "Kan serviceperioden niet opnieuw opbouwen. Probeer het opnieuw.",
+      "fixAllDenied": "Je hebt geen toestemming om serviceperioden opnieuw op te bouwen."
     },
     "errors": {
       "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",

@@ -204,7 +204,12 @@
         "scheduleKey": "11111"
       },
       "reviewLink": "11111",
-      "helpText": "11111"
+      "helpText": "11111",
+      "fixAll": "11111",
+      "fixAllBusy": "11111",
+      "fixAllResult": "11111 {{schedules}} 11111 {{clients}} 11111",
+      "fixAllError": "11111",
+      "fixAllDenied": "11111"
     },
     "errors": {
       "title": "11111",
