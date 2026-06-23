@@ -1905,7 +1905,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   </select>
                 </label>
               ) : null}
-              {availableCurrencies.length > 0 ? (
+              {availableCurrencies.length > 1 ? (
                 <label className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                   {t('automaticInvoices.filters.currency', { defaultValue: 'Currency' })}
                   <select
@@ -2375,22 +2375,34 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         <div className="break-words font-semibold leading-snug">
                           {group.parentSummary.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
                         </div>
-                        <div className="flex flex-wrap gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
-                          {/* A single charge names its line (e.g. "MSP Standard - Fixed Fee");
-                              multiple charges show a count. Avoids the redundant
-                              "1 line item · 1 contract · 1 line". */}
-                          {group.parentSummary.childCount === 1 && contractLineNames.length === 1 ? (
-                            <span className="truncate" title={contractLineNames[0]}>{contractLineNames[0]}</span>
-                          ) : (
-                            <span title={contractLineNames.length > 0 ? contractLineNames.join(', ') : undefined}>
-                              {t('automaticInvoices.groups.item', {
-                                count: group.parentSummary.childCount,
-                                defaultValue: `${group.parentSummary.childCount} line item${group.parentSummary.childCount === 1 ? '' : 's'}`,
-                              })}
-                            </span>
-                          )}
-                          {currencyCode ? <span>{currencyCode}</span> : null}
-                          {poScope ? <span title={poScope}>{formatPoLabel(poScope)}</span> : null}
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                          {/* A single charge names its line; multiple charges show a count.
+                              Currency only when the page mixes currencies. Items joined by "·". */}
+                          {(() => {
+                            const meta: React.ReactNode[] = [
+                              group.parentSummary.childCount === 1 && contractLineNames.length === 1 ? (
+                                <span key="line" className="truncate" title={contractLineNames[0]}>{contractLineNames[0]}</span>
+                              ) : (
+                                <span key="line" title={contractLineNames.length > 0 ? contractLineNames.join(', ') : undefined}>
+                                  {t('automaticInvoices.groups.item', {
+                                    count: group.parentSummary.childCount,
+                                    defaultValue: `${group.parentSummary.childCount} line item${group.parentSummary.childCount === 1 ? '' : 's'}`,
+                                  })}
+                                </span>
+                              ),
+                            ];
+                            if (currencyCode && availableCurrencies.length > 1) {
+                              meta.push(<span key="currency">{currencyCode}</span>);
+                            }
+                            if (poScope) {
+                              meta.push(<span key="po" title={poScope}>{formatPoLabel(poScope)}</span>);
+                            }
+                            return meta.flatMap((node, index) =>
+                              index === 0
+                                ? [node]
+                                : [<span key={`sep-${index}`} aria-hidden="true" className="text-muted-foreground/50">·</span>, node],
+                            );
+                          })()}
                         </div>
                         {!group.parentSummary.isCombinable && group.parentSummary.incompatibilityReasons.length > 0 ? (
                           <div className="text-xs text-muted-foreground" data-testid={`combinability-reasons-${group.parentSummary.parentGroupKey}`}>
