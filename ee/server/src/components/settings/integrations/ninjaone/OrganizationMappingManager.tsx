@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Building2, Link2, Link2Off, RefreshCw, Check } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import {
   getNinjaOneOrganizationMappings,
   updateNinjaOneOrganizationMapping,
@@ -22,7 +23,7 @@ import {
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import { RmmOrganizationMapping } from '../../../../interfaces/rmm.interfaces';
-import type { IClient, IContact } from '@alga-psa/types';
+import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 
@@ -217,6 +218,116 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     );
   }
 
+  const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
+    {
+      title: 'NinjaOne Organization',
+      dataIndex: 'external_organization_name',
+      render: (_v, mapping) => (
+        <>
+          <div className="font-medium">
+            {mapping.external_organization_name || `Org ${mapping.external_organization_id}`}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            ID: {mapping.external_organization_id}
+          </div>
+        </>
+      ),
+    },
+    {
+      title: 'Alga Company',
+      dataIndex: 'client_id',
+      sortable: false,
+      render: (_v, mapping) => {
+        const isSaving = savingMappingId === mapping.mapping_id;
+        return (
+          <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
+            <ClientPicker
+              id={`ninjaone-company-picker-${mapping.mapping_id}`}
+              clients={companies}
+              selectedClientId={mapping.client_id ?? null}
+              onSelect={(clientId) => {
+                if (isSaving) return;
+                handleCompanyChange(mapping.mapping_id, clientId);
+              }}
+              filterState="active"
+              onFilterStateChange={() => {}}
+              clientTypeFilter="company"
+              onClientTypeFilterChange={() => {}}
+              placeholder={t('ninjaone.selectCompany')}
+              fitContent={true}
+              className="w-full"
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Default Contact',
+      dataIndex: 'default_contact_id',
+      sortable: false,
+      render: (_v, mapping) => {
+        const isSaving = savingMappingId === mapping.mapping_id;
+        return (
+          <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
+            <ContactPicker
+              id={`ninjaone-default-contact-picker-${mapping.mapping_id}`}
+              contacts={contacts}
+              value={mapping.default_contact_id ?? ''}
+              onValueChange={(contactId) => {
+                if (isSaving) return;
+                handleDefaultContactChange(mapping.mapping_id, contactId);
+              }}
+              clientId={mapping.client_id ?? undefined}
+              disabled={!mapping.client_id || isSaving}
+              placeholder="Select contact"
+              onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Auto-Sync',
+      dataIndex: 'auto_sync_assets',
+      sortable: false,
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
+      render: (_v, mapping) => {
+        const isSaving = savingMappingId === mapping.mapping_id;
+        return (
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300"
+            checked={mapping.auto_sync_assets}
+            onChange={(e) =>
+              handleAutoSyncChange(mapping.mapping_id, e.target.checked)
+            }
+            disabled={isSaving}
+          />
+        );
+      },
+    },
+    {
+      title: 'Status',
+      dataIndex: 'client_id',
+      sortable: false,
+      width: '4rem',
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
+      render: (_v, mapping) =>
+        mapping.client_id ? (
+          <span className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+            <Check className="mr-1 h-3 w-3" />
+            Mapped
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground">
+            Unmapped
+          </span>
+        ),
+    },
+  ];
+
   return (
     <>
     <Card>
@@ -289,107 +400,12 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           </div>
         ) : (
           <div className="rounded-lg border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-sm font-medium">
-                    NinjaOne Organization
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">
-                    Alga Company
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">
-                    Default Contact
-                  </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium">
-                    Auto-Sync
-                  </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium w-16">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {mappings.map((mapping) => {
-                  const isSaving = savingMappingId === mapping.mapping_id;
-                  return (
-                    <tr
-                      key={mapping.mapping_id}
-                      className="border-b last:border-b-0 hover:bg-muted/30"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="font-medium">
-                          {mapping.external_organization_name || `Org ${mapping.external_organization_id}`}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          ID: {mapping.external_organization_id}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
-                          <ClientPicker
-                            id={`ninjaone-company-picker-${mapping.mapping_id}`}
-                            clients={companies}
-                            selectedClientId={mapping.client_id ?? null}
-                            onSelect={(clientId) => {
-                              if (isSaving) return;
-                              handleCompanyChange(mapping.mapping_id, clientId);
-                            }}
-                            filterState="active"
-                            onFilterStateChange={() => {}}
-                            clientTypeFilter="company"
-                            onClientTypeFilterChange={() => {}}
-                            placeholder={t('ninjaone.selectCompany')}
-                            fitContent={true}
-                            className="w-full"
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
-                          <ContactPicker
-                            id={`ninjaone-default-contact-picker-${mapping.mapping_id}`}
-                            contacts={contacts}
-                            value={mapping.default_contact_id ?? ''}
-                            onValueChange={(contactId) => {
-                              if (isSaving) return;
-                              handleDefaultContactChange(mapping.mapping_id, contactId);
-                            }}
-                            clientId={mapping.client_id ?? undefined}
-                            disabled={!mapping.client_id || isSaving}
-                            placeholder="Select contact"
-                            onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300"
-                          checked={mapping.auto_sync_assets}
-                          onChange={(e) =>
-                            handleAutoSyncChange(mapping.mapping_id, e.target.checked)
-                          }
-                          disabled={isSaving}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {mapping.client_id ? (
-                          <span className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
-                            <Check className="mr-1 h-3 w-3" />
-                            Mapped
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground">
-                            Unmapped
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <DataTable
+              id="ninjaone-org-mappings"
+              data={mappings}
+              columns={columns}
+              pagination
+            />
           </div>
         )}
 

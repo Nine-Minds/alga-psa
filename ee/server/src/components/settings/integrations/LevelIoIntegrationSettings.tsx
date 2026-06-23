@@ -7,11 +7,12 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { getAllContacts } from '@alga-psa/clients/actions';
-import type { IClient, IContact } from '@alga-psa/types';
+import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
 import {
   backfillLevelIoAlerts,
   disconnectLevelIoIntegration,
@@ -287,6 +288,71 @@ export default function LevelIoIntegrationSettings() {
       ? t('integrations.rmm.levelio.webhook.copied', { defaultValue: 'Copied' })
       : t('integrations.rmm.levelio.webhook.copy', { defaultValue: 'Copy' });
 
+  const columns: ColumnDefinition<MappingRow>[] = [
+    {
+      title: t('integrations.rmm.levelio.mappings.group', { defaultValue: 'Level Group' }),
+      dataIndex: 'external_organization_id',
+      render: (_v, mapping) => (
+        <>
+          <div className="font-medium">
+            {mapping.metadata?.path || mapping.external_organization_name || mapping.external_organization_id}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {t('integrations.rmm.levelio.mappings.groupIdLabel', { defaultValue: 'ID: {{id}}', id: mapping.external_organization_id })}
+          </div>
+        </>
+      ),
+    },
+    {
+      title: t('integrations.rmm.levelio.mappings.mappedClient', { defaultValue: 'Mapped Client' }),
+      dataIndex: 'client_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <select
+          id={`levelio-mapping-client-${mapping.mapping_id}`}
+          aria-label={t('integrations.rmm.levelio.mappings.mappedClient', { defaultValue: 'Mapped Client' })}
+          className="h-9 w-full rounded-md border px-2"
+          value={mapping.client_id || ''}
+          onChange={(e) => handleMappingClientChange(mapping.mapping_id, e.target.value)}
+        >
+          <option value="">{t('integrations.rmm.levelio.mappings.unmapped', { defaultValue: 'Not mapped' })}</option>
+          {clients.map((client) => (
+            <option key={client.client_id} value={client.client_id}>
+              {client.client_name}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    {
+      title: t('integrations.rmm.levelio.mappings.defaultContact', { defaultValue: 'Default Contact' }),
+      dataIndex: 'default_contact_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <ContactPicker
+          id={`levelio-default-contact-${mapping.mapping_id}`}
+          contacts={contacts}
+          value={mapping.default_contact_id ?? ''}
+          onValueChange={(contactId) => handleDefaultContactChange(mapping.mapping_id, contactId)}
+          clientId={mapping.client_id ?? undefined}
+          disabled={!mapping.client_id}
+          placeholder={t('integrations.rmm.levelio.mappings.selectContact', { defaultValue: 'Select contact' })}
+          onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
+        />
+      ),
+    },
+    {
+      title: t('integrations.rmm.levelio.mappings.autoSync', { defaultValue: 'Auto Sync' }),
+      dataIndex: 'auto_sync_assets',
+      sortable: false,
+      render: (_v, mapping) => (
+        mapping.auto_sync_assets
+          ? <Badge variant="default">{t('integrations.rmm.levelio.mappings.autoSyncEnabled', { defaultValue: 'Enabled' })}</Badge>
+          : <Badge variant="outline">{t('integrations.rmm.levelio.mappings.autoSyncDisabled', { defaultValue: 'Disabled' })}</Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6" id="levelio-integration-settings">
       {error ? (
@@ -396,72 +462,7 @@ export default function LevelIoIntegrationSettings() {
           ) : null}
 
           <div className="overflow-x-auto rounded-md border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.group', { defaultValue: 'Level Group' })}</th>
-                  <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.mappedClient', { defaultValue: 'Mapped Client' })}</th>
-                  <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.defaultContact', { defaultValue: 'Default Contact' })}</th>
-                  <th className="px-3 py-2 text-left">{t('integrations.rmm.levelio.mappings.autoSync', { defaultValue: 'Auto Sync' })}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mappings.map((mapping) => (
-                  <tr key={mapping.mapping_id} className="border-t">
-                    <td className="px-3 py-2">
-                      <div className="font-medium">
-                        {mapping.metadata?.path || mapping.external_organization_name || mapping.external_organization_id}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {t('integrations.rmm.levelio.mappings.groupIdLabel', { defaultValue: 'ID: {{id}}', id: mapping.external_organization_id })}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        id={`levelio-mapping-client-${mapping.mapping_id}`}
-                        aria-label={t('integrations.rmm.levelio.mappings.mappedClient', { defaultValue: 'Mapped Client' })}
-                        className="h-9 w-full rounded-md border px-2"
-                        value={mapping.client_id || ''}
-                        onChange={(e) => handleMappingClientChange(mapping.mapping_id, e.target.value)}
-                      >
-                        <option value="">{t('integrations.rmm.levelio.mappings.unmapped', { defaultValue: 'Not mapped' })}</option>
-                        {clients.map((client) => (
-                          <option key={client.client_id} value={client.client_id}>
-                            {client.client_name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      <ContactPicker
-                        id={`levelio-default-contact-${mapping.mapping_id}`}
-                        contacts={contacts}
-                        value={mapping.default_contact_id ?? ''}
-                        onValueChange={(contactId) => handleDefaultContactChange(mapping.mapping_id, contactId)}
-                        clientId={mapping.client_id ?? undefined}
-                        disabled={!mapping.client_id}
-                        placeholder={t('integrations.rmm.levelio.mappings.selectContact', { defaultValue: 'Select contact' })}
-                        onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      {mapping.auto_sync_assets
-                        ? <Badge variant="default">{t('integrations.rmm.levelio.mappings.autoSyncEnabled', { defaultValue: 'Enabled' })}</Badge>
-                        : <Badge variant="outline">{t('integrations.rmm.levelio.mappings.autoSyncDisabled', { defaultValue: 'Disabled' })}</Badge>}
-                    </td>
-                  </tr>
-                ))}
-                {!mappings.length ? (
-                  <tr>
-                    <td className="px-3 py-3 text-muted-foreground" colSpan={4}>
-                      {isLoading
-                        ? t('integrations.rmm.levelio.mappings.loading', { defaultValue: 'Loading…' })
-                        : t('integrations.rmm.levelio.mappings.noGroups', { defaultValue: 'No groups discovered yet. Run Discover Groups first.' })}
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+            <DataTable id="levelio-org-mappings" data={mappings} columns={columns} pagination />
           </div>
         </CardContent>
       </Card>

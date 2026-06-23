@@ -13,9 +13,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
-import type { IClient, IContact } from '@alga-psa/types';
+import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
 import { Building2, RefreshCw } from 'lucide-react';
 import {
   getHuntressOrganizationMappings,
@@ -124,6 +125,86 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
 
   const unmappedCount = mappings.filter((m) => !m.client_id).length;
 
+  const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
+    {
+      title: 'Huntress Organization',
+      dataIndex: 'external_organization_name',
+      render: (_v, mapping) => mapping.external_organization_name,
+    },
+    {
+      title: 'Alga Client',
+      dataIndex: 'client_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <ClientPicker
+          id={`huntress-client-picker-${mapping.mapping_id}`}
+          clients={clients}
+          selectedClientId={mapping.client_id ?? null}
+          onSelect={(clientId) => handleClientChange(mapping.mapping_id, clientId)}
+          filterState="active"
+          onFilterStateChange={() => {}}
+          clientTypeFilter="all"
+          onClientTypeFilterChange={() => {}}
+        />
+      ),
+    },
+    {
+      title: 'Default Contact',
+      dataIndex: 'default_contact_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <ContactPicker
+          id={`huntress-default-contact-picker-${mapping.mapping_id}`}
+          contacts={contacts}
+          value={mapping.default_contact_id ?? ''}
+          onValueChange={(contactId) =>
+            handleDefaultContactChange(mapping.mapping_id, contactId)
+          }
+          clientId={mapping.client_id ?? undefined}
+          disabled={!mapping.client_id}
+          placeholder="Select contact"
+          onAddNew={
+            mapping.client_id
+              ? () =>
+                  setQuickAddContactFor({
+                    mappingId: mapping.mapping_id,
+                    clientId: mapping.client_id!,
+                  })
+              : undefined
+          }
+        />
+      ),
+    },
+    {
+      title: 'Create Tickets',
+      dataIndex: 'auto_create_tickets',
+      sortable: false,
+      render: (_v, mapping) => (
+        <input
+          id={`huntress-auto-create-${mapping.mapping_id}`}
+          type="checkbox"
+          checked={mapping.auto_create_tickets !== false}
+          onChange={(e) => handleAutoCreateToggle(mapping.mapping_id, e.target.checked)}
+        />
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'mapping_id',
+      sortable: false,
+      render: (_v, mapping) =>
+        mapping.client_id ? (
+          isAutoMatched(mapping) ? (
+            <Badge variant="secondary">Auto-matched</Badge>
+          ) : (
+            <Badge variant="default">Mapped</Badge>
+          )
+        ) : (
+          <Badge variant="outline">Unmapped → triage</Badge>
+        ),
+    },
+  ];
+
   return (
     <>
     <Card id="huntress-org-mappings">
@@ -161,79 +242,12 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
             No organizations yet — click "Sync organizations".
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2 pr-4 font-medium">Huntress Organization</th>
-                <th className="py-2 pr-4 font-medium">Alga Client</th>
-                <th className="py-2 pr-4 font-medium">Default Contact</th>
-                <th className="py-2 pr-4 font-medium">Create Tickets</th>
-                <th className="py-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mappings.map((mapping) => (
-                <tr key={mapping.mapping_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{mapping.external_organization_name}</td>
-                  <td className="py-2 pr-4">
-                    <ClientPicker
-                      id={`huntress-client-picker-${mapping.mapping_id}`}
-                      clients={clients}
-                      selectedClientId={mapping.client_id ?? null}
-                      onSelect={(clientId) => handleClientChange(mapping.mapping_id, clientId)}
-                      filterState="active"
-                      onFilterStateChange={() => {}}
-                      clientTypeFilter="all"
-                      onClientTypeFilterChange={() => {}}
-                    />
-                  </td>
-                  <td className="py-2 pr-4">
-                    <ContactPicker
-                      id={`huntress-default-contact-picker-${mapping.mapping_id}`}
-                      contacts={contacts}
-                      value={mapping.default_contact_id ?? ''}
-                      onValueChange={(contactId) =>
-                        handleDefaultContactChange(mapping.mapping_id, contactId)
-                      }
-                      clientId={mapping.client_id ?? undefined}
-                      disabled={!mapping.client_id}
-                      placeholder="Select contact"
-                      onAddNew={
-                        mapping.client_id
-                          ? () =>
-                              setQuickAddContactFor({
-                                mappingId: mapping.mapping_id,
-                                clientId: mapping.client_id!,
-                              })
-                          : undefined
-                      }
-                    />
-                  </td>
-                  <td className="py-2 pr-4">
-                    <input
-                      id={`huntress-auto-create-${mapping.mapping_id}`}
-                      type="checkbox"
-                      checked={mapping.auto_create_tickets !== false}
-                      onChange={(e) =>
-                        handleAutoCreateToggle(mapping.mapping_id, e.target.checked)
-                      }
-                    />
-                  </td>
-                  <td className="py-2">
-                    {mapping.client_id ? (
-                      isAutoMatched(mapping) ? (
-                        <Badge variant="secondary">Auto-matched</Badge>
-                      ) : (
-                        <Badge variant="default">Mapped</Badge>
-                      )
-                    ) : (
-                      <Badge variant="outline">Unmapped → triage</Badge>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            id="huntress-org-mappings"
+            data={mappings}
+            columns={columns}
+            pagination
+          />
         )}
       </CardContent>
     </Card>
