@@ -48,7 +48,6 @@ import {
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog'; // Corrected import
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import Drawer from '@alga-psa/ui/components/Drawer';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface AutomaticInvoicesProps {
@@ -604,7 +603,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
   const [activeView, setActiveView] = useState<AutomaticInvoiceViewKey>('all');
-  const [focusedGroupKey, setFocusedGroupKey] = useState<string | null>(null);
   const [chargeFilter, setChargeFilter] = useState<RecurringChargeTypeKey | ''>('');
   const [currencyFilter, setCurrencyFilter] = useState<string>('');
   const [windowOpenOnly, setWindowOpenOnly] = useState<boolean>(false);
@@ -1027,10 +1025,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     (group) => matchesAutomaticInvoiceView(activeView, group.parentSummary) && matchesQuickFilters(group),
   );
   const hasActiveQuickFilters = Boolean(chargeFilter) || Boolean(currencyFilter) || windowOpenOnly;
-
-  const focusedGroup = focusedGroupKey
-    ? readyParentGroups.find((group) => group.parentSummary.parentGroupKey === focusedGroupKey) ?? null
-    : null;
 
   const automaticInvoiceDisplayRows: AutomaticInvoiceDisplayRow[] = [];
   for (const group of viewFilteredGroups) {
@@ -2120,7 +2114,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
                       </div>
                       <div className="text-2xs text-white/80">
-                        {t('automaticInvoices.drawer.obligations', {
+                        {t('automaticInvoices.summary.atGenerationLines', {
                           count: selectionAtGenerationCount,
                           defaultValue: `${selectionAtGenerationCount} line item${selectionAtGenerationCount === 1 ? '' : 's'}`,
                         })}
@@ -2484,12 +2478,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
             totalItems={normalizedReadyClientFilter.length > 0 ? filteredPeriods.length : totalPeriods}
-            onRowClick={(rowRecord: unknown) => {
-              const record = rowRecord as AutomaticInvoiceDisplayRow;
-              if (record.kind === 'group') {
-                setFocusedGroupKey(record.group.parentSummary.parentGroupKey);
-              }
-            }}
             rowClassName={(rowRecord: unknown) => {
               const record = rowRecord as AutomaticInvoiceDisplayRow;
               if (record.kind === 'member') {
@@ -2500,153 +2488,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               return isSelected ? 'bg-primary-50' : '';
             }}
           />
-
-          {/* Focused-group detail drawer */}
-          {focusedGroup ? (() => {
-            const summary = focusedGroup.parentSummary;
-            const amountSummary = summarizeGroupAmount(focusedGroup.childExecutionRows);
-            const focusedSelectionGroup: RecurringSelectionGroup = {
-              groupKey: summary.parentSelectionKey,
-              selectorInputs: focusedGroup.childExecutionRows.map((member) => member.selectorInput),
-              billingCycleId: resolveSelectionGroupBillingCycleId(focusedGroup.childExecutionRows),
-            };
-            const isSelected = selectedTargets.has(summary.parentSelectionKey);
-            const canSelect = summary.canGenerate && summary.isCombinable;
-            const currencyCode = focusedGroup.candidate.currencyCode?.trim();
-            return (
-              <Drawer
-                id="automatic-invoice-detail-drawer"
-                isOpen={!!focusedGroup}
-                onClose={() => setFocusedGroupKey(null)}
-                width="400px"
-              >
-                <div className="flex h-full flex-col">
-                  <div className="border-b border-border px-5 py-4">
-                    <h3 className="text-lg font-semibold">
-                      {summary.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
-                    </h3>
-                    <div className="mt-0.5 text-sm text-muted-foreground">{formatPeriodLabel(focusedGroup.candidate.servicePeriodStart, focusedGroup.candidate.servicePeriodEnd)}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatPeriodLabel(focusedGroup.candidate.windowStart, focusedGroup.candidate.windowEnd)}{currencyCode ? ` · ${currencyCode}` : ''}
-                    </div>
-                    <div className="mt-2">{renderStatusPill(summary, countSeparateInvoices(focusedGroup.childExecutionRows))}</div>
-                  </div>
-
-                  <div className="flex-1 space-y-4 overflow-auto px-5 py-4">
-                    {!summary.isCombinable && summary.incompatibilityReasons.length > 0 ? (
-                      <div>
-                        <div className="mb-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t('automaticInvoices.drawer.whySeparate', { defaultValue: 'Why these must be separate' })}
-                        </div>
-                        <ul className="space-y-0">
-                          {summary.incompatibilityReasons.map((reasonKey) => (
-                            <li key={reasonKey} className="flex items-center justify-between border-b border-border/60 py-1.5 text-sm">
-                              <span className="text-muted-foreground">
-                                {t(`automaticInvoices.incompatibilityReasons.${reasonKey}`, { defaultValue: AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS[reasonKey] })}
-                              </span>
-                              <X className="h-3.5 w-3.5 shrink-0 text-warning" />
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    <div>
-                      <div className="mb-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {t('automaticInvoices.drawer.lines', {
-                          count: summary.childCount,
-                          defaultValue: `Lines (${summary.childCount})`,
-                        })}
-                      </div>
-                      <ul className="space-y-0">
-                        {focusedGroup.childExecutionRows.map((member) => {
-                          const amount = amountCentsOf(member as { amountCents?: number | null });
-                          const chargeType = (member as { chargeType?: string | null }).chargeType;
-                          const title =
-                            member.contractName?.trim()
-                            || member.contractLineName?.trim()
-                            || translateAssignmentContext(getRecurringAssignmentContext(member))
-                            || member.executionIdentityKey;
-                          return (
-                            <li key={member.executionIdentityKey} className="flex items-center justify-between gap-2 border-b border-border/60 py-1.5 text-sm">
-                              <span className="flex min-w-0 items-center gap-1.5">
-                                {isRecurringChargeTypeKey(chargeType) ? renderChargeTag(chargeType, 1) : null}
-                                <span className="truncate">{title}</span>
-                              </span>
-                              <span className="shrink-0 tabular-nums">
-                                {amount === null
-                                  ? <span className="text-2xs text-muted-foreground">{t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}</span>
-                                  : <span className="font-medium font-mono tabular-nums">{formatCurrency(amount / 100)}</span>}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-
-                    <div className="rounded-lg border border-primary-200 bg-primary-50 px-3 py-2.5">
-                      {amountSummary.hasKnown ? (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t('automaticInvoices.drawer.knownNow', { defaultValue: 'Known now' })}</span>
-                          <span className="font-semibold font-mono tabular-nums text-foreground">{formatCurrency(amountSummary.knownCents / 100)}</span>
-                        </div>
-                      ) : null}
-                      {amountSummary.atGenerationCount > 0 ? (
-                        <div className="mt-1 flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{t('automaticInvoices.drawer.atGeneration', { defaultValue: 'Calculated at generation' })}</span>
-                          <span className="font-medium text-muted-foreground">
-                            {t('automaticInvoices.drawer.obligations', {
-                              count: amountSummary.atGenerationCount,
-                              defaultValue: `${amountSummary.atGenerationCount} line item${amountSummary.atGenerationCount === 1 ? '' : 's'}`,
-                            })}
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {t('automaticInvoices.drawer.note', {
-                        defaultValue: 'The known amount comes from fixed lines. Time, usage and bucket amounts are finalized when you generate — use Preview to see them first.',
-                      })}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-2 border-t border-border px-5 py-4">
-                    <Button
-                      id="drawer-preview-invoice"
-                      variant="outline"
-                      disabled={!summary.canGenerate || isPreviewLoading}
-                      onClick={() => handlePreviewSelection([focusedSelectionGroup])}
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      {isPreviewLoading
-                        ? t('common.actions.loading', { defaultValue: 'Loading...' })
-                        : t('automaticInvoices.drawer.preview', { defaultValue: 'Preview invoice' })}
-                    </Button>
-                    <Button
-                      id="drawer-toggle-select"
-                      disabled={!canSelect}
-                      onClick={() => {
-                        setSelectedTargets((previous) => {
-                          const next = new Set(previous);
-                          if (next.has(summary.parentSelectionKey)) {
-                            next.delete(summary.parentSelectionKey);
-                          } else {
-                            next.add(summary.parentSelectionKey);
-                          }
-                          return next;
-                        });
-                      }}
-                    >
-                      {isSelected
-                        ? t('automaticInvoices.drawer.deselect', { defaultValue: 'Remove from selection' })
-                        : t('automaticInvoices.drawer.select', { defaultValue: 'Select for generation' })}
-                    </Button>
-                  </div>
-                </div>
-              </Drawer>
-            );
-          })() : null}
         </div>
 
         <div>

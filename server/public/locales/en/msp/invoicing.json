@@ -250,6 +250,7 @@
       "breakdown": "{{invoices}} invoice(s) · {{combine}} combined · {{separate}} separate",
       "knownNow": "known now",
       "knownPlusAtGeneration": "known now · {{count}} calculated at generation",
+      "atGenerationLines": "{{count}} line item(s)",
       "empty": "Select groups or line items to preview or generate invoices.",
       "pageScope": "{{groups}} group(s) · {{obligations}} line item(s)"
     },
@@ -276,18 +277,6 @@
       "any": "any",
       "clear": "Clear",
       "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
-    },
-    "drawer": {
-      "eyebrow": "Focused",
-      "whySeparate": "Why these must be separate",
-      "lines": "Lines ({{count}})",
-      "knownNow": "Known now",
-      "atGeneration": "Calculated at generation",
-      "obligations": "{{count}} line item(s)",
-      "note": "The known amount comes from fixed lines. Time, usage and bucket amounts are finalized when you generate — use Preview to see them first.",
-      "preview": "Preview invoice",
-      "select": "Select for generation",
-      "deselect": "Remove from selection"
     }
   },
   "manualInvoices": {
