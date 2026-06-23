@@ -17,7 +17,8 @@ import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useRouter } from 'next/navigation';
+import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
@@ -66,13 +67,13 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   initialUsers = []
 }) => {
   const { t } = useTranslation('msp/clients');
+  const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [displaySettings, setDisplaySettings] = useState<TicketingDisplaySettings | null>(null);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
 
   const { openDrawer } = useDrawer();
 
@@ -310,10 +311,18 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
     setExcludedCategories(newExcludedCategories);
   }, []);
 
-  const handleTicketAdded = useCallback(() => {
-    // Refresh the tickets list
-    loadTickets(undefined, true);
-    setIsQuickAddTicketOpen(false);
+  // Tickets are created via the create-ticket modal route now. This list fetches
+  // client-side, so it won't react to router.refresh(); reload it on the cross-feature
+  // "created" event (mirrored in CreateTicketRouteClient).
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'ticket') {
+        loadTickets(undefined, true);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
   }, [loadTickets]);
 
   const handleLoadMore = () => {
@@ -338,7 +347,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
           <h3 className="text-lg font-semibold text-gray-900">{t('clientTabs.tickets.title', { defaultValue: 'Client Tickets' })}</h3>
           <Button
             id="add-client-ticket-btn"
-            onClick={() => setIsQuickAddTicketOpen(true)}
+            onClick={() => router.push(buildCreateTicketHref({ client: { id: clientId, name: clientName } }))}
             className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
           >
             {t('clientTabs.tickets.addTicket', { defaultValue: 'Add Ticket' })}
@@ -478,17 +487,6 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
           </div>
         )}
       </div>
-
-      {/* Quick Add Ticket Dialog */}
-      <QuickAddTicket
-        open={isQuickAddTicketOpen}
-        onOpenChange={setIsQuickAddTicketOpen}
-        onTicketAdded={handleTicketAdded}
-        prefilledClient={{
-          id: clientId,
-          name: clientName
-        }}
-      />
     </div>
   );
 };

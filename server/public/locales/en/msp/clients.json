@@ -195,6 +195,7 @@
     "clientOnly": "Client Only",
     "accountManager": "Account Manager",
     "clientName": "Client Name",
+    "clientNameRequired": "Client name is required",
     "clientType": "Client Type",
     "industry": "Industry",
     "companySize": "Company Size",
@@ -227,6 +228,7 @@
     "reactivateError": "An error occurred while reactivating the client. Please try again.",
     "entraSyncError": "Failed to start Entra sync.",
     "entraSyncStarted": "Entra sync started. Run ID: {{runId}}",
+    "entraSyncStatusUnknown": "Sync status unavailable",
     "inboundDomainAdded": "Inbound email domain added",
     "inboundDomainAddFailed": "Failed to add domain",
     "inboundDomainRemoved": "Inbound email domain removed",
@@ -252,6 +254,8 @@
     "syncEntraNow": "Sync Entra Now",
     "deactivateClient": "Deactivate Client",
     "reactivateClient": "Reactivate Client",
+    "deactivateClientAndContacts": "Deactivate Client & Contacts",
+    "reactivateClientAndContacts": "Reactivate Client & Contacts",
     "deactivatePrompt": "This client has {{count}} active contact(s). Would you like to deactivate them as well?",
     "reactivatePrompt": "This client has {{count}} inactive contact(s). Would you like to reactivate them as well?",
     "deactivatePortalWarning": "Deactivated users will not be able to log into the client portal.",
@@ -518,6 +522,17 @@
       "5": "Friday",
       "6": "Saturday",
       "7": "Sunday"
+    },
+    "reviewError": "Failed to check the impact of this change",
+    "reviewing": "Checking impact...",
+    "confirmSave": "Confirm & save",
+    "reviewChanges": "Review changes",
+    "impact": {
+      "title": "Review before you apply",
+      "periods": "{{count}} upcoming charge period(s) across {{lines}} contract line(s) will be rebuilt to match the new schedule.",
+      "from": "Rebuilt from {{date}} onward.",
+      "billedPreserved": "Charges that were already invoiced are preserved and will not change.",
+      "confirmHint": "Choose \"Confirm & save\" to apply."
     }
   },
   "clientContractAssignment": {

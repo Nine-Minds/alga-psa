@@ -41,12 +41,23 @@ export type NotificationEventType =
   | 'notification.stats'
   | 'notification.resolve_recipients';
 
+// Appliance console events (NineMinds Appliance Console extension)
+export type ApplianceEventType =
+  | 'appliance.list'
+  | 'appliance.view'
+  | 'appliance.access'
+  | 'appliance.reissue'
+  | 'appliance.resend'
+  | 'appliance.revoke'
+  | 'appliance.suspend'
+  | 'appliance.resign';
+
 // General events
 export type GeneralEventType = 'extension.access';
 
-export type AuditEventType = ReportEventType | TenantEventType | NotificationEventType | GeneralEventType;
+export type AuditEventType = ReportEventType | TenantEventType | NotificationEventType | ApplianceEventType | GeneralEventType;
 
-export type ResourceType = 'report' | 'tenant' | 'user' | 'subscription' | 'notification';
+export type ResourceType = 'report' | 'tenant' | 'user' | 'subscription' | 'notification' | 'appliance';
 export type AuditStatus = 'pending' | 'completed' | 'failed' | 'running';
 
 export interface AuditLogEntry {

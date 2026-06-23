@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { hasPermissionAsync } from '../lib/authHelpers';
+import { assertMspPermission } from '../lib/authHelpers';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface ClientNameAlias {
@@ -45,9 +45,7 @@ export const listClientNameAliases = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<ClientNameAlias[]> => {
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -65,9 +63,7 @@ export const addClientNameAlias = withAuth(async (
   clientId: string,
   rawAlias: string
 ): Promise<ClientNameAlias> => {
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
 
   const alias = normalizeAliasInput(rawAlias);
   if (!alias) {
@@ -113,9 +109,7 @@ export const removeClientNameAlias = withAuth(async (
   clientId: string,
   aliasId: string
 ): Promise<{ success: true }> => {
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {

@@ -454,8 +454,33 @@ export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteI
     created_by: input.created_by ?? getActorUserId(user),
   }));
 
+  // DD-2/F-2: resolve currency when not explicitly provided. Precedence:
+  // explicit input -> quote's client default -> tenant default
+  // (default_billing_settings) -> 'USD'. We replicate resolveClientBillingCurrency()
+  // with a direct, tenant-scoped read here rather than calling the withAuth action
+  // (which would double-resolve auth/tenant and throws on multi-currency contracts).
+  // Set explicitly because quotes.currency_code is NOT NULL DEFAULT 'USD'.
+  let currencyCode = parsedInput.currency_code;
+  if (!currencyCode) {
+    if (parsedInput.client_id) {
+      const client = await knex('clients')
+        .where({ tenant, client_id: parsedInput.client_id })
+        .select('default_currency_code')
+        .first();
+      currencyCode = client?.default_currency_code ?? undefined;
+    }
+    if (!currencyCode) {
+      const billingSettings = await knex('default_billing_settings')
+        .where({ tenant })
+        .select('default_currency_code')
+        .first();
+      currencyCode = billingSettings?.default_currency_code ?? 'USD';
+    }
+  }
+
   const createdQuote = await Quote.create(knex, tenant, {
     ...parsedInput,
+    currency_code: currencyCode,
     subtotal: input.subtotal ?? 0,
     discount_total: input.discount_total ?? 0,
     tax: input.tax ?? 0,

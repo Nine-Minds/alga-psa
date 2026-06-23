@@ -33,8 +33,12 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { authorizeApiResourceRead } from './authorizationKernel';
+import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { compileResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
+import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
   ApiRequest,
@@ -53,6 +57,45 @@ import {
   updateBundleSettingsSchema
 } from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
+
+// Resolve a read-authorization predicate that mirrors the global authorization
+// kernel for ticket:read (no built-in relationship rules; bundle narrowing only —
+// empty in CE, populated in EE). Returns null when a rule isn't representable in
+// SQL so the caller falls back to the per-row JS kernel. RBAC is gated upstream
+// by checkPermission('read'), exactly as the per-row path relies on.
+async function resolveTicketReadAuthorizationApplier(
+  apiRequest: AuthenticatedApiRequest,
+  knex: Knex
+): Promise<((query: Knex.QueryBuilder) => void) | null> {
+  const subject = buildAuthorizationPrincipalSubject(
+    apiRequest.context.user,
+    apiRequest.context.apiKeyId
+  );
+  subject.tenant = apiRequest.context.tenant;
+
+  const bundleRules = await resolveBundleNarrowingRulesForEvaluation(knex, {
+    subject,
+    resource: { type: 'ticket', action: 'read' },
+    knex,
+  });
+  const adapter = createTicketRelationshipSqlAdapter(knex, subject.tenant);
+  const compile = (query: Knex.QueryBuilder) =>
+    compileResourceReadAuthorizationSql(query, {
+      resourceType: 'ticket',
+      action: 'read',
+      builtinRules: [],
+      bundleRules,
+      ctx: { subject, adapter },
+    });
+
+  // Probe representability on a throwaway builder before committing to SQL.
+  if (!compile(knex('tickets as t').where('t.tenant', subject.tenant)).supported) {
+    return null;
+  }
+  return (query: Knex.QueryBuilder) => {
+    compile(query);
+  };
+}
 
 export class ApiTicketController extends ApiBaseController {
   private ticketService: TicketService;
@@ -77,11 +120,16 @@ export class ApiTicketController extends ApiBaseController {
     this.ticketService = ticketService;
   }
 
+  // A ticket is "assigned" only to its primary `assigned_to` for read authorization.
+  // Do not trust `ticket_resources.additional_user_id` as a read grant because
+  // time-entry workflows can create those rows without ticket row-level authorization.
   private buildTicketRecordContext(ticket: Record<string, any>) {
+    const assignedUserIds = new Set<string>();
+    if (typeof ticket.assigned_to === 'string') assignedUserIds.add(ticket.assigned_to);
     return {
       id: ticket.ticket_id,
       ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
-      assignedUserIds: typeof ticket.assigned_to === 'string' ? [ticket.assigned_to] : [],
+      assignedUserIds: Array.from(assignedUserIds),
       clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
       boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
       teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
@@ -100,13 +148,14 @@ export class ApiTicketController extends ApiBaseController {
       throw new NotFoundError('ticket not found');
     }
 
+    const ticketRow = ticket as Record<string, any>;
     const allowed = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
       resource: 'ticket',
-      recordContext: this.buildTicketRecordContext(ticket as Record<string, any>),
+      recordContext: this.buildTicketRecordContext(ticketRow),
     });
 
     if (!allowed) {
@@ -256,6 +305,37 @@ export class ApiTicketController extends ApiBaseController {
           delete filters.fields;
 
           const knex = await getConnection(apiRequest.context.tenant);
+
+          // Preferred path: push read-authorization into SQL so the database
+          // paginates and counts only the authorized set (one data + one count
+          // query, accurate total). RBAC was already enforced by checkPermission
+          // above. Falls back to the per-row JS kernel when a narrowing rule
+          // isn't representable in SQL.
+          const applyAuthorization = await resolveTicketReadAuthorizationApplier(apiRequest, knex);
+          if (applyAuthorization) {
+            const authorizedResult = await this.ticketService.list(
+              {
+                page,
+                limit,
+                filters,
+                sort,
+                order,
+                fields: fields.length > 0 ? fields : undefined,
+                applyAuthorization,
+              },
+              apiRequest.context
+            );
+
+            return createPaginatedResponse(
+              authorizedResult.data,
+              authorizedResult.total,
+              page,
+              limit,
+              { sort, order, filters },
+              apiRequest
+            );
+          }
+
           const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
             page,
             limit,
@@ -264,15 +344,16 @@ export class ApiTicketController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit, filters, sort, order, fields: fields.length > 0 ? fields : undefined },
                 apiRequest.context
               ),
-            authorizeRecord: (ticket) =>
-              authorizeApiResourceRead({
+            authorizeRecord: async (ticket) => {
+              return authorizeApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
                 resource: 'ticket',
                 recordContext: this.buildTicketRecordContext(ticket),
-              }),
+              });
+            },
             scanLimit: 100,
           });
 

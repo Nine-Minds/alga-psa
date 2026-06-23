@@ -123,7 +123,7 @@ spec:
                   status: 'installing',
                   siteId: 'appliance-single-node',
                   timestamp: now,
-                  release: { selectedReleaseVersion: null, appVersion: null, channel: null, gitRevision: null },
+                  release: { selectedReleaseVersion: null, appVersion: null, channel: null, sourceRevision: null, manifestDigest: null },
                   urls: { statusUrl: hostIp ? `http://${hostIp}:8080` : null, loginUrl },
                   loginUrl,
                   rollup: {
@@ -837,9 +837,7 @@ spec:
                   nextAction = backgroundReady ? 'Open the login URL.' : (blockers[0]?.nextAction || 'Open the login URL and review background blockers.');
                 }
 
-                const releaseBranch = selectionJson?.data?.releaseBranch || null;
                 const sourceRevision = sources.find((entry) => entry.name === 'alga-appliance')?.revision || null;
-                const gitRevision = sourceRevision && releaseBranch ? `${releaseBranch}@${sourceRevision}` : releaseBranch || sourceRevision;
                 const result = {
                   service: 'appliance-status',
                   status: rollupState,
@@ -850,7 +848,10 @@ spec:
                     appVersion: selectionJson?.data?.appVersion || null,
                     channel: selectionJson?.data?.selectedChannel || selectionJson?.data?.channel || null,
                     selectedChannel: selectionJson?.data?.selectedChannel || selectionJson?.data?.channel || null,
-                    gitRevision,
+                    sourceRevision,
+                    manifestDigest: selectionJson?.data?.manifestDigest || null,
+                    registryHost: selectionJson?.data?.registryHost || null,
+                    repository: selectionJson?.data?.repository || null,
                   },
                   urls: { statusUrl: hostIp ? `http://${hostIp}:8080` : null, loginUrl: appUrl },
                   loginUrl: appUrl,
@@ -972,41 +973,77 @@ spec:
               async function kubePatch(requestPath, body) { return kubeRequest('PATCH', requestPath, body, 'application/merge-patch+json'); }
               async function kubePost(requestPath, body) { return kubeRequest('POST', requestPath, body); }
 
-              function download(url, destination) {
+              const REGISTRY_HOST = process.env.ALGA_APPLIANCE_REGISTRY_HOST || 'ghcr.io';
+              const RELEASE_REPOSITORY = process.env.ALGA_APPLIANCE_RELEASE_REPOSITORY || 'nine-minds/alga-appliance-release';
+              const OCI_MANIFEST_ACCEPT = [
+                'application/vnd.oci.image.manifest.v1+json',
+                'application/vnd.oci.image.index.v1+json',
+                'application/vnd.docker.distribution.manifest.v2+json'
+              ].join(', ');
+
+              function httpRequest(url, options = {}) {
                 return new Promise((resolve, reject) => {
                   const parsed = new URL(url);
                   const lib = parsed.protocol === 'https:' ? https : http;
-                  const req = lib.get(parsed, { timeout: 30000 }, (res) => {
-                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                      download(new URL(res.headers.location, parsed).toString(), destination).then(resolve, reject);
-                      return;
-                    }
-                    if (res.statusCode !== 200) {
-                      reject(new Error('download failed with ' + res.statusCode + ' from ' + url));
+                  const req = lib.request(parsed, { method: options.method || 'GET', headers: options.headers || {}, timeout: options.timeout || 30000 }, (res) => {
+                    if (options.followRedirects && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                       res.resume();
+                      httpRequest(new URL(res.headers.location, parsed).toString(), options).then(resolve, reject);
                       return;
                     }
-                    const stream = fs.createWriteStream(destination);
-                    res.pipe(stream);
-                    stream.on('finish', () => stream.close(resolve));
-                    stream.on('error', reject);
+                    let text = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { text += chunk; });
+                    res.on('end', () => resolve({ statusCode: res.statusCode, headers: res.headers, body: text }));
                   });
-                  req.on('timeout', () => req.destroy(new Error('download timed out: ' + url)));
+                  req.on('timeout', () => req.destroy(new Error('request timed out: ' + url)));
                   req.on('error', reject);
+                  req.end();
                 });
               }
 
-              function findFile(root, suffix) {
-                const stack = [root];
-                while (stack.length) {
-                  const current = stack.pop();
-                  for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-                    const full = path.join(current, entry.name);
-                    if (entry.isDirectory()) stack.push(full);
-                    else if (full.endsWith(suffix)) return full;
-                  }
-                }
-                return null;
+              async function registryToken() {
+                const scope = encodeURIComponent('repository:' + RELEASE_REPOSITORY + ':pull');
+                const url = 'https://' + REGISTRY_HOST + '/token?service=' + encodeURIComponent(REGISTRY_HOST) + '&scope=' + scope;
+                const response = await httpRequest(url, { headers: { Accept: 'application/json' } });
+                if (response.statusCode < 200 || response.statusCode >= 300) throw new Error('Registry token request failed with ' + response.statusCode);
+                const parsed = JSON.parse(response.body || '{}');
+                const token = parsed.token || parsed.access_token;
+                if (!token) throw new Error('Registry token response did not include a token');
+                return token;
+              }
+
+              function registryUrl(kind, reference) {
+                return 'https://' + REGISTRY_HOST + '/v2/' + RELEASE_REPOSITORY + '/' + kind + '/' + reference;
+              }
+
+              async function resolveRelease(channel) {
+                const token = await registryToken();
+                const headers = { Authorization: 'Bearer ' + token };
+                const manifestUrl = registryUrl('manifests', channel);
+                const manifestResponse = await httpRequest(manifestUrl, { headers: { ...headers, Accept: OCI_MANIFEST_ACCEPT } });
+                if (manifestResponse.statusCode < 200 || manifestResponse.statusCode >= 300) throw new Error('GET ' + manifestUrl + ' returned ' + manifestResponse.statusCode);
+                const ociManifest = JSON.parse(manifestResponse.body || '{}');
+                const configDigest = ociManifest?.config?.digest;
+                if (!configDigest) throw new Error('OCI release artifact for ' + channel + ' has no config descriptor');
+                const blobUrl = registryUrl('blobs', configDigest);
+                const blobResponse = await httpRequest(blobUrl, { headers: { ...headers, Accept: 'application/json' }, followRedirects: true });
+                if (blobResponse.statusCode < 200 || blobResponse.statusCode >= 300) throw new Error('GET ' + blobUrl + ' returned ' + blobResponse.statusCode);
+                const release = JSON.parse(blobResponse.body || '{}');
+                const releaseVersion = String(release.version || '').trim();
+                if (!releaseVersion) throw new Error('OCI release manifest is missing version');
+                if (!release.images?.algaCore && !release.app?.images?.algaCore) throw new Error('OCI release manifest is missing images.algaCore');
+                return {
+                  channelJson: {
+                    channel,
+                    releaseVersion,
+                    registryHost: REGISTRY_HOST,
+                    repository: RELEASE_REPOSITORY,
+                    manifestDigest: manifestResponse.headers['docker-content-digest'] || ''
+                  },
+                  releaseVersion,
+                  release
+                };
               }
 
               function yamlString(value) {
@@ -1048,36 +1085,6 @@ spec:
                 }
               }
 
-              async function sourceTree() {
-                const git = await kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/ocirepositories/alga-appliance');
-                const artifactUrl = git?.status?.artifact?.url;
-                if (!artifactUrl) throw new Error('OCIRepository alga-appliance does not have a source artifact yet');
-                const work = fs.mkdtempSync('/tmp/appliance-update-');
-                const archive = path.join(work, 'source.tar.gz');
-                const extractDir = path.join(work, 'src');
-                fs.mkdirSync(extractDir);
-                console.log('downloading source artifact:', artifactUrl);
-                await download(artifactUrl, archive);
-                execFileSync('tar', ['-xzf', archive, '-C', extractDir], { stdio: 'inherit' });
-                return extractDir;
-              }
-
-              function readJson(filePath) {
-                return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-              }
-
-              async function resolveRelease(channel) {
-                const root = await sourceTree();
-                const channelPath = findFile(root, '/ee/appliance/releases/channels/' + channel + '.json');
-                if (!channelPath) throw new Error('Channel file not found in source artifact: ' + channel);
-                const channelJson = readJson(channelPath);
-                const releaseVersion = channelJson.releaseVersion;
-                if (!releaseVersion) throw new Error('Channel ' + channel + ' does not specify releaseVersion');
-                const releasePath = findFile(root, '/ee/appliance/releases/' + releaseVersion + '/release.json');
-                if (!releasePath) throw new Error('Release manifest not found in source artifact: ' + releaseVersion);
-                return { channelJson, releaseVersion, release: readJson(releasePath) };
-              }
-
               async function currentChannel() {
                 try {
                   const selection = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection');
@@ -1094,40 +1101,64 @@ spec:
                 return existing || preferred;
               }
 
-              async function patchValuesConfigMap(name, profile, mutate) {
+              async function patchValuesConfigMap(name, profile, mutate, sourceOverride) {
                 const cm = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name);
                 const key = configKey(cm, name, profile);
-                const source = cm?.data?.[key];
+                const source = sourceOverride ?? cm?.data?.[key];
                 if (source == null) throw new Error('ConfigMap appliance-values-' + name + ' does not contain ' + key);
                 const updated = mutate(source);
                 await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name, { data: { [key]: updated } });
                 console.log('updated values configmap:', name, key);
               }
 
+              async function patchFluxSource(release) {
+                const config = release?.config || {};
+                if (!config.repository || !config.digest) return;
+                await kubePatch('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/ocirepositories/alga-appliance', {
+                  spec: {
+                    url: 'oci://' + config.repository,
+                    ref: { digest: config.digest }
+                  }
+                });
+                console.log('updated OCIRepository alga-appliance to', config.digest);
+              }
+
               async function applyRelease(channel) {
-                const { releaseVersion, release } = await resolveRelease(channel);
-                const profile = release?.app?.valuesProfile || 'single-node';
-                const images = release?.app?.images || {};
+                const { channelJson, releaseVersion, release } = await resolveRelease(channel);
+                const profile = release?.valuesProfile || release?.app?.valuesProfile || 'single-node';
+                const images = release?.images || release?.app?.images || {};
+                const profileValues = release?.profileValues || {};
                 console.log('applying channel:', channel, 'release:', releaseVersion, 'profile:', profile);
 
+                await patchFluxSource(release);
+
                 await patchValuesConfigMap('alga-core', profile, (yaml) => {
-                  let out = setYamlValue(yaml, 'setup.image.tag', yamlString(images.algaCore));
-                  out = setYamlValue(out, 'server.image.tag', yamlString(images.algaCore));
+                  let out = images.algaCore ? setYamlValue(yaml, 'setup.image.tag', yamlString(images.algaCore)) : yaml;
+                  out = images.algaCore ? setYamlValue(out, 'server.image.tag', yamlString(images.algaCore)) : out;
                   return out;
-                });
-                await patchValuesConfigMap('workflow-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.workflowWorker)));
-                await patchValuesConfigMap('email-service', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.emailService)));
-                await patchValuesConfigMap('temporal-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.temporalWorker)));
+                }, profileValues['alga-core.' + profile + '.yaml']);
+                await patchValuesConfigMap('workflow-worker', profile, (yaml) => images.workflowWorker ? setYamlValue(yaml, 'image.tag', yamlString(images.workflowWorker)) : yaml, profileValues['workflow-worker.' + profile + '.yaml']);
+                await patchValuesConfigMap('email-service', profile, (yaml) => images.emailService ? setYamlValue(yaml, 'image.tag', yamlString(images.emailService)) : yaml, profileValues['email-service.' + profile + '.yaml']);
+                await patchValuesConfigMap('temporal-worker', profile, (yaml) => images.temporalWorker ? setYamlValue(yaml, 'image.tag', yamlString(images.temporalWorker)) : yaml, profileValues['temporal-worker.' + profile + '.yaml']);
+                for (const name of ['pgbouncer', 'temporal']) {
+                  const key = name + '.' + profile + '.yaml';
+                  if (typeof profileValues[key] === 'string') {
+                    await patchValuesConfigMap(name, profile, (yaml) => yaml, profileValues[key]);
+                  }
+                }
 
                 const selectionData = {
                   releaseVersion,
                   selectedChannel: channel,
-                  appVersion: release?.app?.version || '',
-                  releaseBranch: release?.app?.releaseBranch || '',
+                  appVersion: release?.version || '',
+                  registryHost: channelJson.registryHost || '',
+                  repository: channelJson.repository || '',
+                  manifestDigest: channelJson.manifestDigest || '',
                   algaCoreTag: images.algaCore || '',
                   workflowWorkerTag: images.workflowWorker || '',
                   emailServiceTag: images.emailService || '',
                   temporalWorkerTag: images.temporalWorker || '',
+                  controlPlaneTag: release?.controlPlane || '',
                 };
                 try {
                   await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection', { data: selectionData });
@@ -1459,7 +1490,7 @@ spec:
                             <div class="kv">
                               <div class="row"><span class="label">Selected channel</span><span id="update-current-channel" class="value">-</span></div>
                               <div class="row"><span class="label">Resolved release</span><span id="update-release" class="value">-</span></div>
-                              <div class="row"><span class="label">Flux revision</span><span id="update-revision" class="value">-</span></div>
+                              <div class="row"><span class="label">Flux source</span><span id="update-revision" class="value">-</span></div>
                             </div>
                             <div class="toolbar"><label class="muted">Channel <select id="update-channel"><option value="stable">stable</option><option value="nightly">nightly</option></select></label><button id="update-check" class="action-button">Check for updates</button><button id="update-apply" class="action-button">Apply channel upgrade</button></div>
                             <div id="update-message" class="muted">No update job has run yet.</div>
@@ -1496,7 +1527,7 @@ spec:
                       function renderBlockers(blockers){ const el=document.getElementById('blockers'); if(!blockers||!blockers.length){el.textContent='No action-required blockers detected.';return;} el.innerHTML=blockers.map((b)=>'<div class="blocker '+(b.loginBlocking===false?'background':'')+'"><strong>'+esc(b.component||b.layer)+'</strong><div>'+esc(b.reason)+'</div><div class="muted">'+esc(b.nextAction||'')+'</div>'+(b.loginBlocking===false?'<div class="muted">background / non-login-blocking</div>':'')+'</div>').join(''); }
                       function renderBootstrap(bootstrap){ const status=document.getElementById('bootstrap-log-status'); const pre=document.getElementById('bootstrap-log'); const logs=bootstrap?.logs; if(!logs?.available){ status.textContent=bootstrap?.job?.name ? 'No log excerpt available for '+bootstrap.job.name+'.' : 'No bootstrap job log available yet.'; pre.hidden=true; return; } status.innerHTML='<strong>'+esc(logs.pod)+'</strong> / '+esc(logs.container)+(logs.detectedErrors?.length?'<div class="blocker"><strong>Detected error</strong><div>'+esc(logs.detectedErrors.at(-1))+'</div></div>':''); pre.hidden=false; pre.textContent=(logs.tail||[]).join('\\n'); }
                       function renderEvents(events){ const el=document.getElementById('events'); const rows=(events||[]).slice(-8).reverse(); if(!rows.length){ el.textContent='No recent events.'; return; } el.innerHTML=rows.map((ev)=>'<div class="event"><strong>'+esc(ev.type)+' '+esc(ev.reason)+'</strong> <span class="muted">'+esc(ev.namespace)+' '+esc(ev.involvedObject||'')+'</span><div>'+esc(ev.message)+'</div></div>').join(''); }
-                      async function loadStatus(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; const channel=data.release?.selectedChannel||data.release?.channel||'unknown'; document.getElementById('update-current-channel').textContent=channel; if(channel==='stable'||channel==='nightly') document.getElementById('update-channel').value=channel; document.getElementById('update-release').textContent=data.release?.selectedReleaseVersion||'unknown'; document.getElementById('update-revision').textContent=data.release?.gitRevision||'unknown'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); document.getElementById('diag').textContent=JSON.stringify(data,null,2); }
+                      async function loadStatus(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; const channel=data.release?.selectedChannel||data.release?.channel||'unknown'; document.getElementById('update-current-channel').textContent=channel; if(channel==='stable'||channel==='nightly') document.getElementById('update-channel').value=channel; document.getElementById('update-release').textContent=data.release?.selectedReleaseVersion||'unknown'; document.getElementById('update-revision').textContent=data.release?.sourceRevision||data.release?.manifestDigest||'unknown'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); document.getElementById('diag').textContent=JSON.stringify(data,null,2); }
                       function fmtAge(s){ return fmtSeconds(s); }
                       function renderPods(){ const body=document.getElementById('pods-body'); body.innerHTML=podRows.map((pod,idx)=>'<tr data-index="'+idx+'" class="'+(selectedPod&&selectedPod.namespace===pod.namespace&&selectedPod.name===pod.name?'selected':'')+'"><td>'+esc(pod.namespace)+'</td><td>'+esc(pod.name)+'</td><td><span class="'+badgeClass(pod.status)+'">'+esc(pod.status)+'</span></td><td>'+esc(pod.readyText)+'</td><td>'+esc(pod.restarts)+'</td><td>'+fmtAge(pod.ageSeconds)+'</td><td>'+esc(pod.nodeName||'-')+'</td></tr>').join(''); [...body.querySelectorAll('tr')].forEach((tr)=>tr.addEventListener('click',()=>selectPod(podRows[Number(tr.dataset.index)]))); document.getElementById('pods-status').textContent=podRows.length+' pods loaded.'; }
                       async function loadPods(){ const ns=document.getElementById('pod-namespace').value || 'appliance'; const r=await fetch('/api/pods?namespace='+encodeURIComponent(ns)+'&'+window.location.search.slice(1)); if(!r.ok) throw new Error('Unable to load pods'); const data=await r.json(); podRows=data.pods||[]; if(selectedPod&&!podRows.some((p)=>p.namespace===selectedPod.namespace&&p.name===selectedPod.name)){ selectedPod=null; podLogTailLines=300; document.getElementById('pod-log-status').textContent='Select a pod to view logs.'; document.getElementById('pod-log').hidden=true; } renderPods(); }

@@ -62,7 +62,10 @@
       "canCombine": "55555",
       "separate": "55555",
       "blocked": "55555",
-      "notReady": "55555"
+      "notReady": "55555",
+      "upcoming": "55555",
+      "upcomingDetail": "55555",
+      "upcomingDetailWithDate": "55555 {{date}} 55555"
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "55555",
@@ -79,6 +82,7 @@
         "servicePeriod": "55555"
       },
       "pendingAmount": "55555",
+      "billableOn": "55555 {{date}} 55555",
       "attributionWarning": "55555",
       "blockedUntilApproval": "55555 {{count}} 55555",
       "blockedUntilApproval_one": "55555 {{count}} 55555",
@@ -208,7 +212,12 @@
         "scheduleKey": "55555"
       },
       "reviewLink": "55555",
-      "helpText": "55555"
+      "helpText": "55555",
+      "fixAll": "55555",
+      "fixAllBusy": "55555",
+      "fixAllResult": "55555 {{schedules}} 55555 {{clients}} 55555",
+      "fixAllError": "55555",
+      "fixAllDenied": "55555"
     },
     "errors": {
       "title": "55555",

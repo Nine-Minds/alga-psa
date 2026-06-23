@@ -62,7 +62,10 @@
       "canCombine": "Combineerbaar tot 1 factuur",
       "separate": "Moet apart factureren",
       "blocked": "Bevat geblokkeerde items",
-      "notReady": "Niet klaar om te factureren"
+      "notReady": "Niet klaar om te factureren",
+      "upcoming": "Nog niet verschuldigd",
+      "upcomingDetail": "Deze periode wordt achteraf gefactureerd en is daarom pas beschikbaar om te factureren nadat de serviceperiode is afgelopen.",
+      "upcomingDetailWithDate": "Deze periode wordt achteraf gefactureerd en is daarom beschikbaar om te factureren op {{date}}, nadat de serviceperiode is afgelopen."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Factuurvenster verschilt",
@@ -79,6 +82,7 @@
         "servicePeriod": "Serviceperiode"
       },
       "pendingAmount": "Bedrag in behandeling",
+      "billableOn": "Factureerbaar op {{date}}",
       "attributionWarning": "Metagegevens van toewijzingsattributie ontbreken",
       "blockedUntilApproval": "Geblokkeerd tot goedkeuring: {{count}} niet-goedgekeurde invoer.",
       "blockedUntilApproval_one": "Geblokkeerd tot goedkeuring: {{count}} niet-goedgekeurde invoer.",
@@ -208,7 +212,12 @@
         "scheduleKey": "Schema sleutel"
       },
       "reviewLink": "Bekijk serviceperioden",
-      "helpText": "Herstel de canonieke serviceperioderecords in plaats van een compatibiliteitsfactuurrij te genereren."
+      "helpText": "Herstel de canonieke serviceperioderecords in plaats van een compatibiliteitsfactuurrij te genereren.",
+      "fixAll": "Alles herstellen",
+      "fixAllBusy": "Opnieuw opbouwen…",
+      "fixAllResult": "{{schedules}} planning(en) opnieuw opgebouwd voor {{clients}} klant(en).",
+      "fixAllError": "Kan serviceperioden niet opnieuw opbouwen. Probeer het opnieuw.",
+      "fixAllDenied": "Je hebt geen toestemming om serviceperioden opnieuw op te bouwen."
     },
     "errors": {
       "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",

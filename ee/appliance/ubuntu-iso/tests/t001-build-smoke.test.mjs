@@ -129,7 +129,7 @@ test('T001 build smoke: remastered ISO is branded and includes the offline appli
   assert.equal(fs.existsSync(path.join(overlayRoot, 'scripts')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'manifests', 'local-path-storage.yaml')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'flux')), true);
-  assert.equal(fs.existsSync(path.join(overlayRoot, 'releases', 'channels')), true);
+  assert.equal(fs.existsSync(path.join(overlayRoot, 'releases')), false);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'status-ui', 'dist', 'index.html')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'status-ui', 'dist', 'setup', 'index.html')), true);
 
@@ -137,7 +137,7 @@ test('T001 build smoke: remastered ISO is branded and includes the offline appli
   assert.equal(fs.readFileSync(path.join(isoRoot, '.disk', 'info'), 'utf8'), 'AlgaPSA Install\n');
   assert.equal(fs.readFileSync(build.labelFile, 'utf8'), 'ALGAPSA_INSTALL\n');
   assert.equal(fs.existsSync(path.join(isoRoot, 'alga-overlay', 'opt', 'alga-appliance', 'host-service')), true);
-  assert.equal(fs.existsSync(path.join(isoRoot, 'alga-overlay', 'opt', 'alga-appliance', 'releases', 'channels')), true);
+  assert.equal(fs.existsSync(path.join(isoRoot, 'alga-overlay', 'opt', 'alga-appliance', 'releases')), false);
 
   const grubConfig = fs.readFileSync(path.join(isoRoot, 'boot', 'grub', 'grub.cfg'), 'utf8');
   assert.match(grubConfig, /menuentry "AlgaPSA Install"/);

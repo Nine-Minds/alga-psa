@@ -34,7 +34,7 @@ export const ClientSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   is_inactive: z.boolean(),
-  client_type: z.string().optional(),
+  client_type: z.enum(['company', 'individual']).optional(),
   tax_id_number: z.string().optional(),
   notes: z.string().optional(),
   properties: ClientPropertiesSchema,

@@ -37,8 +37,8 @@ vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: getTeamsMock,
 }));
 
-vi.mock('@alga-psa/msp-composition/tickets', () => ({
-  MspTicketsPageClient: MspTicketsPageClientMock,
+vi.mock('@alga-psa/msp-composition/tickets/MspTicketsPageClient', () => ({
+  default: MspTicketsPageClientMock,
 }));
 
 const { default: TicketsPage } = await import('server/src/app/msp/tickets/page');

@@ -17,10 +17,10 @@ The repository should own the schematic, release metadata, and artifact-resoluti
 `ee/appliance/` should own Talos image intent and release metadata. The current Flux deployment profile remains in place, but image generation moves to a new schematic-driven path:
 
 - `ee/appliance/schematics/metal-amd64.yaml`
-- `ee/appliance/scripts/build-images.sh`
-- `ee/appliance/releases/<version>/release.json`
-- `ee/appliance/releases/schema.json`
-- `ee/appliance/releases/channels/{candidate,stable}.json`
+- `historical removed image-build script`
+- `historical local release metadata (removed)`
+- `historical local release metadata (removed)schema.json`
+- `historical local channel metadata (removed)`
 
 The script flow is:
 
@@ -65,7 +65,7 @@ Behavior:
 This pass should:
 
 - add the in-repo schematic file
-- add a real Image Factory-backed `build-images.sh`
+- add a real Image Factory-backed `historical removed image-build script`
 - add release schema and release channel scaffolding
 - add docs/tests for the new image build path
 

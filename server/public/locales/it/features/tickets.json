@@ -47,6 +47,8 @@
     "allClosed": "Tutti i ticket chiusi",
     "allPriorities": "Tutte le priorità",
     "search": "Cerca ticket e commenti...",
+    "button": "Filtri",
+    "unassigned": "Non assegnato",
     "category": "Filtra per categoria",
     "clearFilters": "Pulisci filtri",
     "assignee": "Assegnatario",

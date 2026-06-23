@@ -12,7 +12,7 @@ import { useDrawer, useClientDrawer } from '@alga-psa/ui';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { ITag } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import ClientDetails from '../clients/ClientDetails';
+import ClientQuickView from '../clients/ClientQuickView';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
@@ -236,11 +236,9 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         const client = await getClientById(contact.client_id);
         if (client) {
           openDrawer(
-            <ClientDetails
+            <ClientQuickView
               id={`${id}-client-details`}
               client={client}
-              documents={[]}
-              contacts={[]}
               isInDrawer={true}
               quickView={true}
             />

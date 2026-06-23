@@ -102,7 +102,7 @@ function startMockTacticalServer(expectedApiKey: string): Promise<{
 
     res.setHeader('content-type', 'application/json');
 
-    if (method === 'GET' && url.pathname === '/api/beta/v1/client/') {
+    if (method === 'GET' && url.pathname === '/beta/v1/client/') {
       calls.clientList += 1;
       const apiKey = String(req.headers['x-api-key'] || '');
       calls.lastApiKey = apiKey;

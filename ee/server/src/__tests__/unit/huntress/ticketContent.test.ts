@@ -9,6 +9,7 @@ import {
 import type {
   HuntressAgent,
   HuntressIncidentReport,
+  HuntressRemediationParameter,
 } from '@ee/interfaces/huntress.interfaces';
 
 const incident: HuntressIncidentReport = {
@@ -109,6 +110,35 @@ describe('buildTicketBody', () => {
     const body = buildTicketBody(incident, agent, url, { unmapped: true, orgName: 'Acme' });
     expect(body).toContain('not mapped to a client');
     expect(body).toContain('Acme');
+  });
+
+  // Regression: the live Huntress API has returned array-typed fields (notably a
+  // remediation's `parameters`) as objects, throwing "(a.parameters ?? []).map is
+  // not a function". That throw failed the whole poll and, since the cursor only
+  // advances past successes, the same incident was retried forever and wedged the
+  // integration. Content building must tolerate malformed shapes.
+  it('does not throw when the API returns non-array fields for array-typed properties', () => {
+    const malformed = {
+      ...incident,
+      indicator_types: { footholds: 1 } as unknown as string[],
+      remediations: {
+        total_count: 1,
+        has_more: false,
+        items: [
+          {
+            id: 1,
+            type: 'manual',
+            action: 'Delete File',
+            status: 'pending',
+            parameters: { path: 'c:\\bad\\task' } as unknown as HuntressRemediationParameter[],
+          },
+        ],
+      },
+    } as HuntressIncidentReport;
+
+    expect(() => buildTicketBody(malformed, agent, url, { unmapped: false })).not.toThrow();
+    // The remediation line still renders (just without its parameters suffix).
+    expect(buildTicketBody(malformed, agent, url, { unmapped: false })).toContain('Delete File');
   });
 });
 

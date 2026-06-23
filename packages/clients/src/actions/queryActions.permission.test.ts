@@ -5,7 +5,7 @@ const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -32,7 +32,7 @@ describe('queryActions contact read permissions', () => {
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
     expect(hasPermissionAsyncMock).toHaveBeenCalledWith(
-      { user_id: 'user-1' },
+      { user_id: 'user-1', user_type: 'internal' },
       'contact',
       'read'
     );
@@ -48,7 +48,7 @@ describe('queryActions contact read permissions', () => {
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
     expect(hasPermissionAsyncMock).toHaveBeenCalledWith(
-      { user_id: 'user-1' },
+      { user_id: 'user-1', user_type: 'internal' },
       'contact',
       'read'
     );

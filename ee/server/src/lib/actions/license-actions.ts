@@ -20,6 +20,14 @@ import {
   IScheduledLicenseChange,
 } from 'server/src/interfaces/subscription.interfaces';
 
+async function hasAccountManagementAccess(): Promise<boolean> {
+  return await checkAccountManagementPermission();
+}
+
+function permissionDenied(error = 'Permission denied') {
+  return { success: false as const, error };
+}
+
 /**
  * Server action to get the current license usage for the session tenant
  * @returns License usage information or error
@@ -83,6 +91,10 @@ export async function getInvoicePreviewAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -155,6 +167,10 @@ export async function createLicenseCheckoutSessionAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -350,20 +366,22 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
+    }
+
     const knex = await getConnection(session.user.tenant);
 
-    // Get active subscription with related price info
+    // Get active, trialing, or past_due subscription with related price info
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -421,6 +439,10 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     const knex = await getConnection(session.user.tenant);
@@ -503,6 +525,10 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
@@ -580,6 +606,10 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
@@ -644,17 +674,22 @@ export async function sendCancellationFeedbackAction(
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
+    }
+
     const knex = await getConnection(session.user.tenant);
 
-    // Get subscription details
+    // Get subscription details (active, trialing, or past_due — all are cancelable)
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({ tenant: session.user.tenant, status: 'active' })
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -720,6 +755,10 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
+    }
+
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
@@ -729,18 +768,19 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
-    // Get active subscription
+    // Get active, trialing, or past_due subscription. Trialing subs cancel just like
+    // active ones via cancel_at_period_end: Stripe treats the trial as the current
+    // period, so the subscription cancels at trial_end and the customer is never
+    // charged. past_due subs cancel at period end too, stopping further dunning.
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+      .where({ tenant: session.user.tenant })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -946,12 +986,10 @@ export async function reduceLicenseCount(
       };
     }
 
-    // Get subscription details for effective date
+    // Get subscription details for effective date (active or trialing)
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: tenantId,
-        status: 'active',
-      })
+      .where({ tenant: tenantId })
+      .whereIn('status', ['active', 'trialing'])
       .first();
 
     if (!subscription || !subscription.current_period_end) {
@@ -1016,6 +1054,10 @@ export async function reduceLicenseCountAction(
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to reduce license count');
+    }
+
     logger.info(
       `[reduceLicenseCountAction] Reducing licenses for tenant ${session.user.tenant} to ${newQuantity}`
     );
@@ -1047,6 +1089,10 @@ export async function getScheduledLicenseChangesAction(): Promise<{
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
     }
 
     logger.info(`[getScheduledLicenseChangesAction] Getting scheduled changes for tenant ${session.user.tenant}`);

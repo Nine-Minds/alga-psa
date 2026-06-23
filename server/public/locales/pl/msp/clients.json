@@ -288,6 +288,10 @@
       "helper": "Ustaw status klienta jako aktywny lub nieaktywny"
     },
     "entraSyncStarted": "Rozpoczęto synchronizację Entra. Identyfikator uruchomienia: {{runId}}",
+    "entraSyncStatusUnknown": "Status synchronizacji niedostępny",
+    "clientNameRequired": "Nazwa klienta jest wymagana",
+    "deactivateClientAndContacts": "Dezaktywuj klienta i kontakty",
+    "reactivateClientAndContacts": "Aktywuj ponownie klienta i kontakty",
     "inboundDomainAdded": "Dodano przychodzącą domenę e-mail",
     "inboundDomainAddFailed": "Nie udało się dodać domeny",
     "inboundDomainRemoved": "Usunięto przychodzącą domenę e-mail",
@@ -548,6 +552,17 @@
       "5": "Piątek",
       "6": "Sobota",
       "7": "Niedziela"
+    },
+    "reviewError": "Nie można sprawdzić skutków tej zmiany",
+    "reviewing": "Sprawdzanie skutków…",
+    "confirmSave": "Potwierdź i zapisz",
+    "reviewChanges": "Przejrzyj zmiany",
+    "impact": {
+      "title": "Sprawdź przed zastosowaniem",
+      "periods": "{{count}} nadchodzących okresów rozliczeniowych w {{lines}} pozycjach umowy zostanie przebudowanych zgodnie z nowym harmonogramem.",
+      "from": "Przebudowano od {{date}}.",
+      "billedPreserved": "Już zafakturowane opłaty są zachowane i nie ulegną zmianie.",
+      "confirmHint": "Wybierz „Potwierdź i zapisz”, aby zastosować."
     }
   },
   "clientContractAssignment": {

@@ -24,7 +24,7 @@ Options:
   --reset-namespace <name>     Temporary namespace for the wipe job (default: appliance-reset)
   --storage-path <path>        Host path used by local-path storage (default: /var/mnt/alga-data/local-path-provisioner)
   --flux-namespace <name>      Flux namespace containing appliance source objects (default: flux-system)
-  --gitops-source <name>       GitRepository name to delete before reset (default: alga-appliance)
+  --gitops-source <name>       Flux source name to delete before reset (default: alga-appliance)
   --gitops-kustomization <name>
                                Kustomization name to delete before reset (default: alga-appliance)
   --force                      Confirm destructive wipe
@@ -81,12 +81,14 @@ delete_namespace() {
 delete_gitops_objects() {
   if $DRY_RUN; then
     echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n $FLUX_NAMESPACE delete kustomization.kustomize.toolkit.fluxcd.io/$GITOPS_KUSTOMIZATION_NAME --ignore-not-found=true"
+    echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n $FLUX_NAMESPACE delete ocirepository.source.toolkit.fluxcd.io/$GITOPS_SOURCE_NAME --ignore-not-found=true"
     echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n $FLUX_NAMESPACE delete gitrepository.source.toolkit.fluxcd.io/$GITOPS_SOURCE_NAME --ignore-not-found=true"
     return 0
   fi
 
   if namespace_exists "$FLUX_NAMESPACE"; then
     kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$FLUX_NAMESPACE" delete "kustomization.kustomize.toolkit.fluxcd.io/$GITOPS_KUSTOMIZATION_NAME" --ignore-not-found=true >/dev/null
+    kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$FLUX_NAMESPACE" delete "ocirepository.source.toolkit.fluxcd.io/$GITOPS_SOURCE_NAME" --ignore-not-found=true >/dev/null
     kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$FLUX_NAMESPACE" delete "gitrepository.source.toolkit.fluxcd.io/$GITOPS_SOURCE_NAME" --ignore-not-found=true >/dev/null
   fi
 }

@@ -39,7 +39,7 @@ import { materializeContractCadenceServicePeriods } from '@shared/billingClients
 import {
   repairAllClientCadenceServicePeriodsForTenant,
   type RepairAllClientCadenceServicePeriodsSummary,
-} from './clientCadenceScheduleRegeneration';
+} from '@alga-psa/shared/billingClients';
 
 const RECURRING_SERVICE_PERIOD_PERMISSION_RESOURCE = 'billing.recurring_service_periods';
 const recurringServicePeriodRecordIdFactory = () => uuidv4();

@@ -5,17 +5,12 @@ import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
-import { QuickAddTicket } from './QuickAddTicket';
+import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BulkTicketActionBar from './BulkTicketActionBar';
-import BulkAssignTicketsDialog from './BulkAssignTicketsDialog';
-import BulkAddTagsDialog from './BulkAddTagsDialog';
-import BulkSetDueDateDialog from './BulkSetDueDateDialog';
-import BulkChangeStatusDialog from './BulkChangeStatusDialog';
-import BulkChangePriorityDialog from './BulkChangePriorityDialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { PrioritySelect } from '@alga-psa/ui/components';
+import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -23,7 +18,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { TagFilter } from '@alga-psa/ui/components';
+import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -42,19 +37,11 @@ import { ColumnDefinition } from '@alga-psa/types';
 import {
   deleteTickets,
   moveTicketsToBoard,
-  bulkAssignTickets,
-  bulkAddTagsToTickets,
-  bulkUpdateTicketDueDate,
-  bulkUpdateTicketStatus,
-  bulkUpdateTicketPriority,
-  type BulkTicketAssignSelection,
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
-import TicketExportDialog from './TicketExportDialog';
-import TicketImportDialog from './TicketImportDialog';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -62,7 +49,7 @@ import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { createTicketColumns } from '@alga-psa/tickets/lib';
+import { createTicketColumns, TICKET_COLUMNS } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
@@ -80,6 +67,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
   type TicketStatusFilterOption,
 } from '../lib/ticketStatusFilter';
+import { useTicketsRouteState } from './TicketsRouteProvider';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -249,7 +237,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
-  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const {
+    selectedTicketIds,
+    setSelectedTicketIds,
+    setFilters: setTicketsRouteFilters,
+    setTotalCount: setTicketsRouteTotalCount,
+    setSelectedTicketDetails: setTicketsRouteSelectedTicketDetails,
+    setSelectedTicketsSharedBoardId: setTicketsRouteSelectedTicketsSharedBoardId,
+    setIsResolvingSelectedBoards: setTicketsRouteIsResolvingSelectedBoards,
+    setPriorityOptions: setTicketsRoutePriorityOptions,
+  } = useTicketsRouteState();
   const [allMatchingMode, setAllMatchingMode] = useState(false);
   // Boards resolved on demand for selected tickets that aren't on the current page
   // (paginate-then-select / select-all-matching). Maps ticket_id -> board_id (or null).
@@ -277,28 +274,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleExistingMasterIds, setBundleExistingMasterIds] = useState<Set<string>>(new Set());
   const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
-
-  const [isBulkAssignDialogOpen, setIsBulkAssignDialogOpen] = useState(false);
-  const [isBulkAssigning, setIsBulkAssigning] = useState(false);
-  const [bulkAssignErrors, setBulkAssignErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [isBulkTagsDialogOpen, setIsBulkTagsDialogOpen] = useState(false);
-  const [isBulkAddingTags, setIsBulkAddingTags] = useState(false);
-  const [bulkTagsErrors, setBulkTagsErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [isBulkDueDateDialogOpen, setIsBulkDueDateDialogOpen] = useState(false);
-  const [isBulkUpdatingDueDate, setIsBulkUpdatingDueDate] = useState(false);
-  const [bulkDueDateErrors, setBulkDueDateErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [isBulkStatusDialogOpen, setIsBulkStatusDialogOpen] = useState(false);
-  const [isBulkUpdatingStatus, setIsBulkUpdatingStatus] = useState(false);
-  const [bulkStatusErrors, setBulkStatusErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [bulkStatusOptions, setBulkStatusOptions] = useState<SelectOption[]>([]);
-  const [isLoadingBulkStatusOptions, setIsLoadingBulkStatusOptions] = useState(false);
-  const [isBulkPriorityDialogOpen, setIsBulkPriorityDialogOpen] = useState(false);
-  const [isBulkUpdatingPriority, setIsBulkUpdatingPriority] = useState(false);
-  const [bulkPriorityErrors, setBulkPriorityErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -306,6 +283,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [rawStatusOptions] = useState<TicketStatusFilterOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
+  // LEVERAGE: pattern datatable-filter-paging — largest instance of the list-query state machine
+  // (filter state + debounced search + reset-page + manual fetch); see docs/plans/leverage-ledger.md
   // Filter values derived from props (single source of truth is Container's activeFilters)
   const selectedBoards = useMemo(() => {
     if (filterValues.boardIds && filterValues.boardIds.length > 0) {
@@ -367,8 +346,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const openQuickAddTicket = useCallback(() => setIsQuickAddOpen(true), []);
+  // Create-ticket is a routed modal now (keeps the rich-text editor out of this route's
+  // bundle). Navigate instead of rendering QuickAddTicket inline; the route renders the
+  // dialog (intercepted as an overlay over the list) and refreshes the list on success.
+  const openQuickAddTicket = useCallback(
+    () => router.push(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
+    [router, useAlgaDeskQuickAddForm],
+  );
   usePageCreateShortcut(openQuickAddTicket);
 
   // Tag filter values from props
@@ -394,6 +378,26 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
   }, [selectedBoards, excludedBoards, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+
+  // Count of active filter groups (excludes the always-visible search box) — drives
+  // the "Filters" button badge in the candidate #1 collapsed toolbar.
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (selectedBoards.length > 0 || excludedBoards.length > 0) n++;
+    if (selectedClient !== null) n++;
+    if (selectedAssignees.length > 0 || selectedTeams.length > 0 || includeUnassigned) n++;
+    if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) n++;
+    if (selectedResponseState !== 'all') n++;
+    if (selectedPriority !== 'all') n++;
+    if (selectedDueDateFilter !== 'all') n++;
+    if (allowSlaStatusFilter && selectedSlaStatus !== 'all') n++;
+    if (selectedCategories.length > 0 || excludedCategories.length > 0) n++;
+    if (selectedTags.length > 0) n++;
+    return n;
+  }, [selectedBoards, excludedBoards, selectedClient, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags]);
+
+  // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -1322,256 +1326,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [selectedTicketIdsArray, clearSelection, currentUser, t]);
 
-  const handleConfirmBulkAssign = useCallback(async (selection: BulkTicketAssignSelection) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.assignRequired', 'You must be logged in to reassign tickets'));
-      return;
-    }
-
-    setIsBulkAssigning(true);
-    setBulkAssignErrors([]);
-
-    try {
-      const result = await bulkAssignTickets(selectedTicketIdsArray, selection);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkAssignErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.assign.partialFailure', 'Some tickets could not be reassigned'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.assign.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? '{{count}} ticket reassigned' : '{{count}} tickets reassigned',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.assign.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? '{{count}} ticket reassigned' : '{{count}} tickets reassigned',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkAssignDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.assign.failure', 'Failed to reassign selected tickets'));
-    } finally {
-      setIsBulkAssigning(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  const handleConfirmBulkAddTags = useCallback(async (tagTexts: string[]) => {
-    if (selectedTicketIdsArray.length === 0 || tagTexts.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.tagsRequired', 'You must be logged in to add tags'));
-      return;
-    }
-
-    setIsBulkAddingTags(true);
-    setBulkTagsErrors([]);
-
-    try {
-      const result = await bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkTagsErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.tags.partialFailure', 'Tags could not be added to some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.tags.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Tags added to {{count}} ticket' : 'Tags added to {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.tags.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Tags added to {{count}} ticket' : 'Tags added to {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkTagsDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.tags.failure', 'Failed to add tags to selected tickets'));
-    } finally {
-      setIsBulkAddingTags(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  const handleConfirmBulkDueDate = useCallback(async (dueDateIso: string | null) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.dueDateRequired', 'You must be logged in to update tickets'));
-      return;
-    }
-
-    setIsBulkUpdatingDueDate(true);
-    setBulkDueDateErrors([]);
-
-    try {
-      const result = await bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkDueDateErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.dueDate.partialFailure', 'Due date could not be updated on some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.dueDate.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Due date updated on {{count}} ticket' : 'Due date updated on {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.dueDate.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Due date updated on {{count}} ticket' : 'Due date updated on {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkDueDateDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.dueDate.failure', 'Failed to update due date on selected tickets'));
-    } finally {
-      setIsBulkUpdatingDueDate(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  // Load statuses for the selected tickets' shared board when the Status dialog opens.
-  useEffect(() => {
-    if (!isBulkStatusDialogOpen) return;
-    if (!selectedTicketsSharedBoardId) {
-      setBulkStatusOptions([]);
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingBulkStatusOptions(true);
-    getBoardTicketStatuses(selectedTicketsSharedBoardId)
-      .then(statuses => {
-        if (cancelled) return;
-        setBulkStatusOptions(statuses.map((s: { status_id: string; name: string }) => ({
-          value: s.status_id,
-          label: s.name,
-        })));
-      })
-      .catch(error => {
-        if (cancelled) return;
-        console.error('[TicketingDashboard] Failed to load bulk status options:', error);
-        setBulkStatusOptions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingBulkStatusOptions(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isBulkStatusDialogOpen, selectedTicketsSharedBoardId]);
-
-  const handleConfirmBulkStatus = useCallback(async (statusId: string) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.statusRequired', 'You must be logged in to update tickets'));
-      return;
-    }
-
-    setIsBulkUpdatingStatus(true);
-    setBulkStatusErrors([]);
-
-    try {
-      const result = await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkStatusErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.status.partialFailure', 'Status could not be updated on some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.status.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Status updated on {{count}} ticket' : 'Status updated on {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.status.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Status updated on {{count}} ticket' : 'Status updated on {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkStatusDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.status.failure', 'Failed to update status on selected tickets'));
-    } finally {
-      setIsBulkUpdatingStatus(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
-  const handleConfirmBulkPriority = useCallback(async (priorityId: string) => {
-    if (selectedTicketIdsArray.length === 0) return;
-    if (!currentUser) {
-      toast.error(t('bulk.auth.priorityRequired', 'You must be logged in to update tickets'));
-      return;
-    }
-
-    setIsBulkUpdatingPriority(true);
-    setBulkPriorityErrors([]);
-
-    try {
-      const result = await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId);
-
-      if (result.updatedIds.length > 0) {
-        onFilterChange({});
-      }
-
-      if (result.failed.length > 0) {
-        setBulkPriorityErrors(result.failed);
-        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
-        toast.error(t('bulk.priority.partialFailure', 'Priority could not be updated on some tickets'));
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.priority.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Priority updated on {{count}} ticket' : 'Priority updated on {{count}} tickets',
-          }));
-        }
-      } else {
-        if (result.updatedIds.length > 0) {
-          toast.success(t('bulk.priority.success', {
-            count: result.updatedIds.length,
-            defaultValue: result.updatedIds.length === 1 ? 'Priority updated on {{count}} ticket' : 'Priority updated on {{count}} tickets',
-          }));
-        }
-        // Keep the selection so the user can run more bulk actions on the same tickets.
-        setIsBulkPriorityDialogOpen(false);
-      }
-    } catch (error) {
-      handleError(error, t('bulk.priority.failure', 'Failed to update priority on selected tickets'));
-    } finally {
-      setIsBulkUpdatingPriority(false);
-    }
-  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
-
   // When the bundle dialog opens, check which of the selected tickets are already
   // bundle masters of other bundles. Masters can't be added as children, so we must
   // either force them to BE the master or block the operation entirely.
@@ -1709,37 +1463,38 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
   ]);
 
+  useEffect(() => {
+    setTicketsRouteFilters(exportFilters);
+    setTicketsRouteTotalCount(totalCount);
+    setTicketsRouteSelectedTicketDetails(selectedTicketDetails);
+    setTicketsRouteSelectedTicketsSharedBoardId(selectedTicketsSharedBoardId);
+    setTicketsRouteIsResolvingSelectedBoards(isResolvingSelectedBoards);
+    setTicketsRoutePriorityOptions(priorityOptions);
+  }, [
+    exportFilters,
+    isResolvingSelectedBoards,
+    priorityOptions,
+    selectedTicketDetails,
+    selectedTicketsSharedBoardId,
+    setTicketsRouteFilters,
+    setTicketsRouteIsResolvingSelectedBoards,
+    setTicketsRoutePriorityOptions,
+    setTicketsRouteSelectedTicketDetails,
+    setTicketsRouteSelectedTicketsSharedBoardId,
+    setTicketsRouteTotalCount,
+    totalCount,
+  ]);
+
   const printColumns = useMemo<PrintColumnOption<ITicketListItem>[]>(() => {
-    const availableColumns = createTicketColumns({
-      categories,
-      boards,
-      displaySettings: {
-        ...displaySettings,
-        list: {
-          ...displaySettings?.list,
-          tagsInlineUnderTitle: false,
-        },
-      },
-      onTicketClick: handleTicketClick,
-      ticketTagsRef,
-      onTagsChange: handleTagsChange,
-      showTags: true,
-      showClient: true,
-      onClientClick: onQuickViewClient,
-      additionalAgentAvatarUrls,
-      teamAvatarUrls,
-      isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
-      onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
-      showAllAvailableColumns: true,
-      t,
-    });
+    // Export is a flat, every-field tabular view — its own concern, not the
+    // interactive Refined List. It reads the shared column catalog and supplies
+    // its own plain-text renderers below (keyed by dataIndex).
 
     const renderByDataIndex: Partial<Record<string, (ticket: ITicketListItem) => React.ReactNode>> = {
       ticket_number: (ticket) => ticket.ticket_number,
       title: (ticket) => ticket.title,
       status_name: (ticket) => ticket.status_name || t('dashboard.print.emptyValue', '—'),
       priority_name: (ticket) => ticket.priority_name || t('dashboard.print.emptyValue', '—'),
-      sla_policy_id: (ticket) => ticket.sla_policy_id ? t('dashboard.print.values.hasSla', 'SLA') : t('dashboard.print.emptyValue', '—'),
       board_name: (ticket) => ticket.board_name || t('dashboard.print.emptyValue', '—'),
       category_name: (ticket) => {
         if (ticket.subcategory_id) {
@@ -1769,14 +1524,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return availableColumns.map((column) => {
-      const dataIndexKey = Array.isArray(column.dataIndex) ? column.dataIndex.join('.') : column.dataIndex;
+    return TICKET_COLUMNS.map((column) => {
+      const dataIndexKey = column.dataIndex;
+      const label = t(column.titleKey, column.titleFallback);
       const knownRenderer = renderByDataIndex[dataIndexKey];
 
       return {
         key: dataIndexKey,
-        label: column.title,
-        header: column.title,
+        label,
+        header: label,
         className: dataIndexKey === 'ticket_number'
           ? 'tickets-print-number-column'
           : dataIndexKey === 'title'
@@ -1785,25 +1541,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
-          formatTicketPrintValue(getTicketColumnValue(ticket, column.dataIndex))
+          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey))
           || t('dashboard.print.emptyValue', '—')
         )),
       };
     });
   }, [
-    additionalAgentAvatarUrls,
-    boards,
-    bundleView,
     categories,
-    displaySettings,
-    handleTagsChange,
-    handleTicketClick,
-    isBundleExpanded,
-    onQuickViewClient,
     t,
-    teamAvatarUrls,
     ticketTagsRef,
-    toggleBundleExpanded,
   ]);
   const {
     selectedColumnKeys: selectedTicketPrintColumnKeys,
@@ -1855,78 +1601,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     onAfterPrint: cleanupPrintTickets,
   });
 
-  const handleTicketAdded = useCallback((newTicket: ITicket) => {
-    // Store tags for the new ticket if provided
-    if (newTicket.ticket_id && newTicket.tags && newTicket.tags.length > 0) {
-      ticketTagsRef.current[newTicket.ticket_id] = newTicket.tags;
-
-      // Update unique tags list with any new tags
-      setAllUniqueTags(prevTags => {
-        const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
-        const newUniqueTags = newTicket.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
-        if (newUniqueTags.length > 0) {
-          return [...prevTags, ...newUniqueTags];
-        }
-        return prevTags;
-      });
-    }
-
-    // Add the new ticket to the local state
-    setTickets(prevTickets => {
-      const status = rawStatusOptions.find(s => s.value === newTicket.status_id);
-      const priority = priorityOptions.find(p => p.value === newTicket.priority_id);
-      const board = boards.find(c => c.board_id === newTicket.board_id);
-
-      let categoryName = '';
-      if (newTicket.category_id) {
-        const category = categories.find(c => c.category_id === newTicket.category_id);
-        if (category) {
-          categoryName = category.category_name;
-        }
-      }
-
-      // Find the client name
-      const client = initialClients.find(c => c.client_id === newTicket.client_id);
-      const clientName = client ? client.client_name : t('properties.unknown', 'Unknown');
-
-      // Convert the new ticket to match the ITicketListItem format
-      const newTicketListItem: ITicketListItem = {
-        ticket_id: newTicket.ticket_id,
-        ticket_number: newTicket.ticket_number,
-        title: newTicket.title,
-        url: newTicket.url,
-        status_id: newTicket.status_id,
-        status_name: typeof status?.label === 'string' ? status.label : '',
-        priority_id: newTicket.priority_id ?? null,
-        priority_name: typeof priority?.label === 'string' ? priority.label : '',
-        board_id: newTicket.board_id,
-        board_name: board?.board_name || '',
-        category_id: newTicket.category_id,
-        subcategory_id: newTicket.subcategory_id,
-        category_name: categoryName,
-        client_id: newTicket.client_id,
-        client_name: clientName,
-        contact_name_id: newTicket.contact_name_id,
-        entered_by: newTicket.entered_by,
-        entered_by_name: currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : '',
-        updated_by: newTicket.updated_by,
-        closed_by: newTicket.closed_by,
-        assigned_to: newTicket.assigned_to,
-        assigned_to_name: null,
-        entered_at: newTicket.entered_at,
-        updated_at: newTicket.updated_at,
-        closed_at: newTicket.closed_at,
-        attributes: newTicket.attributes,
-        tenant: newTicket.tenant,
-        tags: newTicket.tags
-      };
-
-      return [newTicketListItem, ...prevTickets];
-    });
-
-    // Close the quick add dialog
-    setIsQuickAddOpen(false);
-  }, [rawStatusOptions, priorityOptions, boards, categories, currentUser, initialClients, t]);
 
   const handleBoardSelect = useCallback((newSelectedBoards: string[], newExcludedBoards: string[]) => {
     // Status options are board-scoped; only scope when exactly one real board is selected.
@@ -1998,6 +1672,133 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange, clearSelection]);
 
+  // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
+  // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One
+  // descriptor list { key, isActive, label, clear } per filter would collapse all three.
+  // Active-filter chips (candidate #1): one removable chip per applied filter,
+  // shown above the table so what's filtering is always visible. Labels reuse the
+  // already-localized field/value strings; removal clears just that dimension.
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
+    const boardLabel = t('fields.board', 'Board');
+    const categoryLabel = t('fields.category', 'Category');
+
+    selectedBoards.forEach((boardId) => {
+      const name = boardId === NO_BOARD_VALUE
+        ? 'No board'
+        : boards.find((b) => b.board_id === boardId)?.board_name ?? boardLabel;
+      chips.push({
+        key: `board:${boardId}`,
+        label: `${boardLabel}: ${name}`,
+        onRemove: () => handleBoardSelect(selectedBoards.filter((id) => id !== boardId), excludedBoards),
+      });
+    });
+    excludedBoards.forEach((boardId) => {
+      const name = boards.find((b) => b.board_id === boardId)?.board_name ?? boardLabel;
+      chips.push({
+        key: `board-ex:${boardId}`,
+        label: `${boardLabel} ≠ ${name}`,
+        onRemove: () => handleBoardSelect(selectedBoards, excludedBoards.filter((id) => id !== boardId)),
+      });
+    });
+
+    if (selectedClient) {
+      const name = clients.find((c) => c.client_id === selectedClient)?.client_name ?? t('fields.client', 'Client');
+      chips.push({ key: `client:${selectedClient}`, label: `${t('fields.client', 'Client')}: ${name}`, onRemove: () => handleClientSelect(null) });
+    }
+
+    selectedAssignees.forEach((userId) => {
+      const u = initialUsers.find((x) => x.user_id === userId);
+      const name = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || t('fields.assignedTo', 'Assignee') : t('fields.assignedTo', 'Assignee');
+      chips.push({
+        key: `assignee:${userId}`,
+        label: name,
+        onRemove: () => { const rest = selectedAssignees.filter((id) => id !== userId); onFilterChange({ assignedToIds: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+    selectedTeams.forEach((teamId) => {
+      const name = teams.find((x) => x.team_id === teamId)?.team_name ?? t('fields.team', 'Team');
+      chips.push({
+        key: `team:${teamId}`,
+        label: name,
+        onRemove: () => { const rest = selectedTeams.filter((id) => id !== teamId); onFilterChange({ assignedTeamIds: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+    if (includeUnassigned) {
+      chips.push({ key: 'unassigned', label: t('filters.unassigned', 'Unassigned'), onRemove: () => onFilterChange({ includeUnassigned: false }) });
+    }
+
+    if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) {
+      const label = statusOptions.find((o) => o.value === selectedStatus)?.label ?? selectedStatus;
+      chips.push({ key: 'status', label: `${t('fields.status', 'Status')}: ${label}`, onRemove: () => onFilterChange({ statusId: TICKET_STATUS_FILTER_OPEN, showOpenOnly: true }) });
+    }
+
+    if (selectedResponseState !== 'all') {
+      const map: Record<string, string> = {
+        awaiting_client: t('responseState.awaitingClient', 'Awaiting Client'),
+        awaiting_internal: t('responseState.awaitingInternal', 'Awaiting Internal'),
+        none: t('dashboard.filters.noResponseState', 'No Response State'),
+      };
+      chips.push({ key: 'response', label: `${t('fields.responseState', 'Response State')}: ${map[selectedResponseState] ?? selectedResponseState}`, onRemove: () => onFilterChange({ responseState: undefined }) });
+    }
+
+    if (selectedPriority !== 'all') {
+      const label = priorityOptions.find((o) => o.value === selectedPriority)?.label ?? selectedPriority;
+      chips.push({ key: 'priority', label: `${t('fields.priority', 'Priority')}: ${label}`, onRemove: () => onFilterChange({ priorityId: 'all' }) });
+    }
+
+    if (selectedDueDateFilter !== 'all') {
+      const dateStr = dueDateFilterValue ? dueDateFilterValue.toLocaleDateString() : '';
+      const map: Record<string, string> = {
+        overdue: t('dashboard.filters.overdue', 'Overdue'),
+        today: t('dashboard.filters.dueToday', 'Due Today'),
+        upcoming: t('dashboard.filters.dueNext7Days', 'Due Next 7 Days'),
+        before: dueDateFilterValue ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: dateStr }) : t('dashboard.filters.beforeDate', 'Before Date...'),
+        after: dueDateFilterValue ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: dateStr }) : t('dashboard.filters.afterDate', 'After Date...'),
+        no_due_date: t('dashboard.filters.noDueDate', 'No Due Date'),
+      };
+      chips.push({ key: 'due', label: `${t('fields.dueDate', 'Due Date')}: ${map[selectedDueDateFilter] ?? selectedDueDateFilter}`, onRemove: () => onFilterChange({ dueDateFilter: undefined, dueDateFrom: undefined, dueDateTo: undefined }) });
+    }
+
+    if (allowSlaStatusFilter && selectedSlaStatus !== 'all') {
+      const map: Record<string, string> = {
+        has_sla: t('dashboard.filters.hasSla', 'Has SLA'),
+        no_sla: t('dashboard.filters.noSla', 'No SLA'),
+        on_track: t('dashboard.filters.onTrack', 'On Track'),
+        breached: t('dashboard.filters.breached', 'Breached'),
+        paused: t('dashboard.filters.paused', 'Paused'),
+      };
+      chips.push({ key: 'sla', label: `${t('fields.slaStatus', 'SLA Status')}: ${map[selectedSlaStatus] ?? selectedSlaStatus}`, onRemove: () => onFilterChange({ slaStatusFilter: undefined }) });
+    }
+
+    selectedCategories.forEach((categoryId) => {
+      const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
+      chips.push({
+        key: `cat:${categoryId}`,
+        label: `${categoryLabel}: ${name}`,
+        onRemove: () => handleCategorySelect(selectedCategories.filter((id) => id !== categoryId), excludedCategories),
+      });
+    });
+    excludedCategories.forEach((categoryId) => {
+      const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
+      chips.push({
+        key: `cat-ex:${categoryId}`,
+        label: `${categoryLabel} ≠ ${name}`,
+        onRemove: () => handleCategorySelect(selectedCategories, excludedCategories.filter((id) => id !== categoryId)),
+      });
+    });
+
+    selectedTags.forEach((tag) => {
+      chips.push({
+        key: `tag:${tag}`,
+        label: `#${tag}`,
+        onRemove: () => { const rest = selectedTags.filter((x) => x !== tag); onFilterChange({ tags: rest.length > 0 ? rest : undefined }); },
+      });
+    });
+
+    return chips;
+  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleCategorySelect, onFilterChange, t]);
+
   return (
     <>
     <ReflectionContainer id={id} label="Ticketing Dashboard">
@@ -2038,7 +1839,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       defaultValue: 'Export selected ({{count}})',
                     })
                   : t('dashboard.exportAction', { defaultValue: 'Export CSV' }),
-                onSelect: () => setIsExportDialogOpen(true),
+                onSelect: () => router.push('/msp/tickets/export'),
                 disabled: !hasSelection,
                 separator: true,
               },
@@ -2046,7 +1847,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 id: `${id}-share-import`,
                 icon: Upload,
                 label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
-                onSelect: () => setIsImportDialogOpen(true),
+                onSelect: () => router.push('/msp/tickets/import'),
               },
             ] satisfies ShareAction[]}
           />
@@ -2059,8 +1860,102 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
+              {/* Candidate #1: always-visible search + Filters toggle + density */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  id={`${id}-search-tickets-input`}
+                  placeholder={t('filters.search', 'Search tickets and comments...')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-[38px] w-full text-sm"
+                  containerClassName="flex-1 min-w-[260px] max-w-[460px]"
+                />
+                <Button
+                  id={`${id}-toggle-filters`}
+                  variant={showFilters ? 'soft' : 'outline'}
+                  onClick={() => setShowFilters((v) => !v)}
+                  className="shrink-0 flex items-center gap-1.5 h-[38px]"
+                >
+                  <Filter className="h-4 w-4" />
+                  {t('filters.button', 'Filters')}
+                  {activeFilterCount > 0 && (
+                    <span className="ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] px-1.5 text-[11px] font-semibold text-[rgb(var(--color-primary-700))]">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+                  id='reset-filters'
+                  disabled={!isFiltered}
+                >
+                  <XCircle className="h-4 w-4" />
+                  {t('resetFilters', 'Reset')}
+                </Button>
+                <div className="ml-auto flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
+                      {t('dashboard.bundledToggle', 'Bundled')}
+                    </Label>
+                    <Switch
+                      id={`${id}-bundle-view-toggle`}
+                      checked={bundleView === 'bundled'}
+                      onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
+                      size={densityClasses.tagSize}
+                    />
+                  </div>
+                  <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                  <div className="shrink-0">
+                    <ViewDensityControl
+                      idPrefix={`${id}-list-density`}
+                      value={ticketListDensityLevel}
+                      onChange={handleTicketListDensityChange}
+                      step={TICKET_LIST_DENSITY_STEP}
+                      compactLabel={t('dashboard.spacing.compact', 'Compact')}
+                      spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
+                      decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
+                      increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
+                      resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {activeFilterChips.length > 0 && (
+                <div className="flex items-center flex-wrap gap-2">
+                  {activeFilterChips.map((chip) => (
+                    <span
+                      key={chip.key}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] py-1 pl-2.5 pr-1.5 text-xs font-medium text-[rgb(var(--color-primary-700))]"
+                    >
+                      <span className="max-w-[220px] truncate">{chip.label}</span>
+                      <button
+                        type="button"
+                        onClick={chip.onRemove}
+                        aria-label={`Remove ${chip.label}`}
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-100))] hover:text-[rgb(var(--color-primary-700))]"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
+                  >
+                    {t('filters.clearFilters', 'Clear filters')}
+                  </button>
+                </div>
+              )}
+
+              {showFilters && (
+              <div className="space-y-3 pt-1 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">
               {/* Row 1: Primary filters */}
-              <div className={`flex items-center ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
+              <div className={`flex items-center flex-wrap ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
                 <BoardFilterPicker
                   id={`${id}-board-picker`}
                   boards={boards}
@@ -2195,8 +2090,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 )}
               </div>
 
-              {/* Row 2: Category, search, tags, reset, bundled, density */}
-              <div className={`flex items-center ${densityClasses.filterGap}`}>
+              {/* Row 2: Category, tags */}
+              <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
                 <div className={`contents ${densityClasses.filterControlClass}`}>
                 <CategoryPicker
                   id={`${id}-category-picker`}
@@ -2236,14 +2131,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   categories={categories}
                   boards={boards}
                 />
-                <Input
-                  id={`${id}-search-tickets-input`}
-                  placeholder={t('filters.search', 'Search tickets and comments...')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] min-w-[350px] text-sm"
-                  containerClassName=""
-                />
                 <TagFilter
                   tags={allUniqueTags}
                   selectedTags={selectedTags}
@@ -2256,44 +2143,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-                  id='reset-filters'
-                  disabled={!isFiltered}
-                >
-                  <XCircle className="h-4 w-4" />
-                  {t('resetFilters', 'Reset')}
-                </Button>
-                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                <div className="flex items-center gap-2 shrink-0">
-                  <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
-                    {t('dashboard.bundledToggle', 'Bundled')}
-                  </Label>
-                  <Switch
-                    id={`${id}-bundle-view-toggle`}
-                    checked={bundleView === 'bundled'}
-                    onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
-                    size={densityClasses.tagSize}
-                  />
-                </div>
-                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                <div className="shrink-0">
-                  <ViewDensityControl
-                    idPrefix={`${id}-list-density`}
-                    value={ticketListDensityLevel}
-                    onChange={handleTicketListDensityChange}
-                    step={TICKET_LIST_DENSITY_STEP}
-                    compactLabel={t('dashboard.spacing.compact', 'Compact')}
-                    spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
-                    decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
-                    increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
-                    resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
-                  />
-                </div>
               </div>
+              </div>
+              )}
             </div>
           </ReflectionContainer>
         </div>
@@ -2430,13 +2282,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       />
 
-      <QuickAddTicket
-        id={`${id}-quick-add`}
-        open={isQuickAddOpen}
-        onOpenChange={setIsQuickAddOpen}
-        onTicketAdded={handleTicketAdded}
-        isAlgaDeskMode={useAlgaDeskQuickAddForm}
-      />
       <ConfirmationDialog
         id={`${id}-bundle-multi-client-confirm`}
         isOpen={isMultiClientBundleConfirmOpen}
@@ -2774,13 +2619,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       </Dialog>
         );
       })()}
-      <TicketExportDialog
-        isOpen={isExportDialogOpen}
-        onClose={() => setIsExportDialogOpen(false)}
-        filters={exportFilters}
-        totalCount={totalCount}
-        selectedTicketIds={selectedTicketIdsArray}
-      />
       <BulkTicketActionBar
         idPrefix={`${id}-bulk`}
         count={selectedTicketIds.size}
@@ -2811,25 +2649,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBundleDialogOpen(true);
         }}
         onAssign={() => {
-          setBulkAssignErrors([]);
-          setIsBulkAssignDialogOpen(true);
+          router.push('/msp/tickets/bulk-assign');
         }}
         onStatus={() => {
-          setBulkStatusErrors([]);
-          setBulkStatusOptions([]);
-          setIsBulkStatusDialogOpen(true);
+          router.push('/msp/tickets/bulk-status');
         }}
         onPriority={() => {
-          setBulkPriorityErrors([]);
-          setIsBulkPriorityDialogOpen(true);
+          router.push('/msp/tickets/bulk-priority');
         }}
         onTags={() => {
-          setBulkTagsErrors([]);
-          setIsBulkTagsDialogOpen(true);
+          router.push('/msp/tickets/bulk-tags');
         }}
         onDueDate={() => {
-          setBulkDueDateErrors([]);
-          setIsBulkDueDateDialogOpen(true);
+          router.push('/msp/tickets/bulk-due-date');
         }}
         onDelete={() => {
           setBulkDeleteErrors([]);
@@ -2837,84 +2669,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }}
         onClear={clearSelection}
       />
-      <BulkAssignTicketsDialog
-        idPrefix={`${id}-bulk-assign`}
-        isOpen={isBulkAssignDialogOpen && hasSelection}
-        onClose={() => setIsBulkAssignDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        users={initialUsers}
-        failed={bulkAssignErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkAssigning}
-        onConfirm={handleConfirmBulkAssign}
-      />
-      <BulkAddTagsDialog
-        idPrefix={`${id}-bulk-tags`}
-        isOpen={isBulkTagsDialogOpen && hasSelection}
-        onClose={() => setIsBulkTagsDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        failed={bulkTagsErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkAddingTags}
-        onConfirm={handleConfirmBulkAddTags}
-      />
-      <BulkSetDueDateDialog
-        idPrefix={`${id}-bulk-due-date`}
-        isOpen={isBulkDueDateDialogOpen && hasSelection}
-        onClose={() => setIsBulkDueDateDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        failed={bulkDueDateErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkUpdatingDueDate}
-        onConfirm={handleConfirmBulkDueDate}
-      />
-      <BulkChangeStatusDialog
-        idPrefix={`${id}-bulk-status`}
-        isOpen={isBulkStatusDialogOpen && hasSelection && !!selectedTicketsSharedBoardId}
-        onClose={() => setIsBulkStatusDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        statuses={bulkStatusOptions}
-        isLoadingStatuses={isLoadingBulkStatusOptions}
-        failed={bulkStatusErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkUpdatingStatus}
-        onConfirm={handleConfirmBulkStatus}
-      />
-      <BulkChangePriorityDialog
-        idPrefix={`${id}-bulk-priority`}
-        isOpen={isBulkPriorityDialogOpen && hasSelection}
-        onClose={() => setIsBulkPriorityDialogOpen(false)}
-        ticketCount={selectedTicketIds.size}
-        options={priorityOptions}
-        failed={bulkPriorityErrors.map(err => ({
-          ...err,
-          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
-        }))}
-        isSubmitting={isBulkUpdatingPriority}
-        onConfirm={handleConfirmBulkPriority}
-      />
     </ReflectionContainer>
-    {isImportDialogOpen && (
-      <TicketImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
-        initialBoards={boards}
-        initialClients={clients}
-        initialUsers={initialUsers}
-        onImportComplete={() => {
-          setIsImportDialogOpen(false);
-          router.refresh();
-        }}
-      />
-    )}
     </>
   );
 };

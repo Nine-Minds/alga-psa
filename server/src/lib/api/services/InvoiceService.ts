@@ -32,7 +32,6 @@ import {
   generateInvoiceNumber,
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
-import { getDueDate } from '@alga-psa/billing/actions/billingAndTax';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
@@ -82,6 +81,7 @@ import {
   calculateAndDistributeTax,
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
+import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 
 type DeferredEvent = () => Promise<void>;
 
@@ -123,6 +123,12 @@ export interface InvoiceAnalytics {
     amount: number;
     averageDaysOverdue: number;
   };
+}
+
+export interface InvoicePDFResult {
+  buffer: Buffer;
+  filename: string;
+  contentType: 'application/pdf';
 }
 
 export interface InvoiceHATEOASLinks {
@@ -185,6 +191,30 @@ export class InvoiceService extends BaseService<IInvoice> {
   private async getInvoiceRecurringProvenance(trx: Knex.Transaction, tenant: string, invoiceId: string) {
     const charges = await InvoiceModel.getInvoiceCharges(trx, tenant, invoiceId);
     return summarizeInvoiceRecurringProvenance(charges);
+  }
+
+  private getPaymentTermDays(paymentTerms?: string | null): number {
+    switch (paymentTerms) {
+      case 'net_15':
+        return 15;
+      case 'due_on_receipt':
+        return 0;
+      case 'net_30':
+      default:
+        return 30;
+    }
+  }
+
+  private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
+    const client = await trx('clients')
+      .where({ client_id: clientId, tenant })
+      .select('payment_terms')
+      .first();
+
+    const plainInvoiceDate = Temporal.PlainDate.from(invoiceDate);
+    return plainInvoiceDate
+      .add({ days: this.getPaymentTermDays(client?.payment_terms) })
+      .toString();
   }
 
   private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
@@ -391,11 +421,17 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Calculate taxes if needed
       let taxCalculation: { tax_amount: number; tax_region: string; tax_rate: number; calculation_date: string } | null = null;
       if (data.items?.length) {
-        taxCalculation = await this.calculateTaxes({
-          client_id: data.client_id,
-          amount: data.subtotal,
-          tax_region: 'US' // Default, should come from client
-        }, context);
+        const taxRegion = await this.resolveTaxRegion(trx, context.tenant, data.client_id);
+        // Only calculate tax when the client has a configured tax region. We do not
+        // fabricate a region (no hardcoded 'US' / inferred default), so a client with
+        // no configured region simply has no tax applied here.
+        if (taxRegion) {
+          taxCalculation = await this.calculateTaxes({
+            client_id: data.client_id,
+            amount: data.subtotal,
+            tax_region: taxRegion
+          }, context);
+        }
       }
 
       // Prepare invoice data
@@ -805,30 +841,38 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Validate invoice has required data
-      const lineItems = await trx('invoice_line_items')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant });
+      const hasInvoiceChargesTable = await trx.schema.hasTable('invoice_charges');
+      const lineItems = hasInvoiceChargesTable
+        ? await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id)
+        : await trx('invoice_line_items')
+          .where({ invoice_id: data.invoice_id, tenant: context.tenant });
 
       if (!lineItems.length) {
         throw new Error('Invoice must have line items to be finalized');
       }
 
       // Calculate final amounts
-      const subtotal = lineItems.reduce((sum: number, item: any) => sum + item.total_price, 0);
-      const taxAmount = lineItems.reduce((sum: number, item: any) => sum + (item.tax_amount || 0), 0);
+      const subtotal = lineItems.reduce((sum: number, item: any) => sum + Number(item.total_price || 0), 0);
+      const taxAmount = lineItems.reduce((sum: number, item: any) => sum + Number(item.tax_amount || 0), 0);
       const totalAmount = subtotal + taxAmount;
+
+      const invoiceUpdate: Record<string, any> = {
+        status: 'sent', // Change to sent instead of finalized
+        subtotal,
+        tax: taxAmount,
+        total_amount: totalAmount,
+        finalized_at: data.finalized_at || new Date().toISOString().split('T')[0],
+        updated_at: new Date()
+      };
+
+      if (await trx.schema.hasColumn('invoices', 'updated_by')) {
+        invoiceUpdate.updated_by = context.userId;
+      }
 
       // Update invoice status and amounts
       await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
-        .update({
-          status: 'sent', // Change to sent instead of finalized
-          subtotal,
-          tax: taxAmount,
-          total_amount: totalAmount,
-          finalized_at: data.finalized_at || new Date().toISOString().split('T')[0],
-          updated_by: context.userId,
-          updated_at: new Date()
-        });
+        .update(invoiceUpdate);
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
@@ -1662,6 +1706,22 @@ export class InvoiceService extends BaseService<IInvoice> {
   /**
    * Calculate taxes for an invoice
    */
+  /**
+   * Resolve the tax region for an invoice from the client's configured default tax
+   * region (via getClientDefaultTaxRegionCode).
+   *
+   * Returns null when the client has no configured region. Callers must skip tax
+   * calculation in that case rather than fabricate a region — we deliberately do NOT
+   * fall back to a hardcoded country (e.g. 'US') or infer a tenant-wide default region.
+   */
+  private async resolveTaxRegion(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string
+  ): Promise<string | null> {
+    return getClientDefaultTaxRegionCode(trx, tenant, clientId);
+  }
+
   async calculateTaxes(data: TaxCalculationRequest, context: ServiceContext): Promise<TaxCalculationResponse> {
     await this.validatePermissions(context, 'invoice', 'calculate_tax');
 
@@ -1748,13 +1808,13 @@ export class InvoiceService extends BaseService<IInvoice> {
     const numberingService = new NumberingService({ knex, tenant });
     const invoiceNumber = await numberingService.getNextNumber('INVOICE');
     const currentDate = Temporal.Now.plainDateISO().toString();
-    const computedDueDate = await getDueDate(data.clientId, currentDate);
     const sessionLike = { user: { id: context.userId } } as { user: { id: string } };
 
     let createdInvoice: InvoiceViewModel | null = null;
 
     await withTransaction(knex, async (trx) => {
       const client = await getClientDetails(trx, tenant, data.clientId);
+      const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
 
       await trx('invoices').insert({
         invoice_id: invoiceId,
@@ -1881,7 +1941,31 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   async generatePDF(id: string, context: InvoiceServiceContext): Promise<any> {
-    throw new Error('generatePDF not yet implemented');
+    await this.validatePermissions(context, 'invoice', 'read');
+
+    const { knex } = await this.getKnex();
+    const invoice = await knex('invoices')
+      .where({ invoice_id: id, tenant: context.tenant })
+      .select('invoice_id', 'invoice_number')
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    const buffer = await this.getPdfService(context.tenant).generatePDF({
+      invoiceId: id,
+      userId: context.userId,
+    });
+
+    const safeInvoiceNumber = String(invoice.invoice_number || invoice.invoice_id)
+      .replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    return {
+      buffer,
+      filename: `Invoice_${safeInvoiceNumber}.pdf`,
+      contentType: 'application/pdf' as const,
+    };
   }
 
   async search(query: any, context: InvoiceServiceContext, options?: any): Promise<{ data: IInvoice[]; total: number }> {
@@ -2062,18 +2146,51 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   // Additional helper methods...
-  private async getInvoiceLineItems(
+  async getInvoiceLineItems(
     invoiceId: string,
-    trx: Knex.Transaction,
-    context: ServiceContext
+    trxOrContext: Knex.Transaction | ServiceContext,
+    maybeContext?: ServiceContext
   ): Promise<IInvoiceCharge[]> {
-    return InvoiceModel.getInvoiceCharges(trx, context.tenant, invoiceId);
+    if (maybeContext) {
+      return InvoiceModel.getInvoiceCharges(trxOrContext as Knex.Transaction, maybeContext.tenant, invoiceId);
+    }
+
+    const context = trxOrContext as ServiceContext;
+    await this.validatePermissions(context, 'invoice', 'read');
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      const exists = await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant: context.tenant })
+        .select('invoice_id')
+        .first();
+
+      if (!exists) {
+        throw new Error('Invoice not found');
+      }
+
+      return InvoiceModel.getInvoiceCharges(trx, context.tenant, invoiceId);
+    });
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('clients')
-      .where({ client_id: clientId, tenant: context.tenant })
-      .select('client_id', 'client_name', 'billing_address', 'email', 'phone_no')
+    return trx('clients as c')
+      .leftJoin('client_locations as cl', function() {
+        this.on('c.client_id', '=', 'cl.client_id')
+          .andOn('c.tenant', '=', 'cl.tenant')
+          .andOn(function() {
+            this.on('cl.is_billing_address', '=', trx.raw('true'))
+              .orOn('cl.is_default', '=', trx.raw('true'));
+          });
+      })
+      .where({ 'c.client_id': clientId, 'c.tenant': context.tenant })
+      .select(
+        'c.client_id',
+        'c.client_name',
+        'c.billing_email as email',
+        trx.raw(`CONCAT_WS(', ', cl.address_line1, cl.address_line2, cl.city, cl.state_province, cl.postal_code, cl.country_name) as billing_address`),
+        'cl.phone as phone_no'
+      )
+      .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
       .first();
   }
 
@@ -2089,13 +2206,50 @@ export class InvoiceService extends BaseService<IInvoice> {
       .first();
   }
 
+  async getInvoiceTransactions(invoiceId: string, context: ServiceContext): Promise<any[]> {
+    await this.validatePermissions(context, 'invoice', 'read');
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const exists = await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant: context.tenant })
+        .select('invoice_id')
+        .first();
+
+      if (!exists) {
+        throw new Error('Invoice not found');
+      }
+
+      const [payments, credits] = await Promise.all([
+        this.getInvoicePayments(invoiceId, trx, context),
+        this.getInvoiceCredits(invoiceId, trx, context),
+      ]);
+
+      return [...payments, ...credits].sort((a, b) => {
+        const aDate = new Date(a.payment_date || a.applied_date || a.created_at || 0).getTime();
+        const bDate = new Date(b.payment_date || b.applied_date || b.created_at || 0).getTime();
+        return bDate - aDate;
+      });
+    });
+  }
+
   private async getInvoicePayments(invoiceId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any[]> {
+    const hasTable = await trx.schema.hasTable('invoice_payments');
+    if (!hasTable) {
+      return [];
+    }
+
     return trx('invoice_payments')
       .where({ invoice_id: invoiceId, tenant: context.tenant })
       .orderBy('payment_date', 'desc');
   }
 
   private async getInvoiceCredits(invoiceId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any[]> {
+    const hasTable = await trx.schema.hasTable('invoice_credits');
+    if (!hasTable) {
+      return [];
+    }
+
     return trx('invoice_credits')
       .where({ invoice_id: invoiceId, tenant: context.tenant })
       .orderBy('applied_date', 'desc');

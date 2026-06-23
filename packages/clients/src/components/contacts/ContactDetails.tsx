@@ -39,7 +39,7 @@ import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { getClientById } from '@alga-psa/clients/actions';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
-import ClientDetails from '../clients/ClientDetails';
+import ClientQuickView from '../clients/ClientQuickView';
 import { ContactPortalTab } from './ContactPortalTab';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';
 import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
@@ -548,10 +548,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           const delay = quickView ? 0 : 10;
           setTimeout(() => {
             drawer.openDrawer(
-              <ClientDetails
+              <ClientQuickView
                 client={client}
-                documents={[]}
-                contacts={[]}
                 isInDrawer={true}
                 quickView={true}
               />

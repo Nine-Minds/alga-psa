@@ -10,8 +10,6 @@ import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 
-import { getInvoiceForRendering } from '../actions/invoiceQueries';
-import { getInvoiceTemplate, getInvoiceTemplates } from '../actions/invoiceTemplates';
 import {
   enrichInvoiceViewModelWithLocations,
   mapDbInvoiceToWasmViewModel,
@@ -27,6 +25,7 @@ import {
   getStandardTemplateAstByCode,
   STANDARD_INVOICE_BY_LOCATION_CODE,
 } from '../lib/invoice-template-ast/standardTemplates';
+import Invoice from '../models/invoice';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
 import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelection';
 import { browserPoolService } from './browserPoolService';
@@ -183,7 +182,7 @@ export class PDFGenerationService {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
 
-      const dbInvoiceData = await getInvoiceForRendering(options.invoiceId);
+      const dbInvoiceData = await this.getInvoiceForRendering(knex, options.invoiceId);
       if (!dbInvoiceData) {
         throw new Error(`Invoice ${options.invoiceId} not found`);
       }
@@ -195,11 +194,11 @@ export class PDFGenerationService {
         if (!templateId) {
           throw new Error('No invoice templates available');
         }
-        const templates = await getInvoiceTemplates();
+        const templates = await this.getInvoiceTemplates(knex);
         const selected = templates.find((t: any) => t.template_id === templateId);
         templateAst = (selected?.templateAst ?? null) as TemplateAst | null;
         if (!templateAst) {
-          const canonical = await getInvoiceTemplate(templateId);
+          const canonical = await this.getInvoiceTemplate(knex, templateId);
           templateAst = (canonical?.templateAst ?? null) as TemplateAst | null;
         }
       }
@@ -259,7 +258,7 @@ export class PDFGenerationService {
 
     try {
       const client = await knex('clients')
-        .where({ client_id: dbInvoiceData.client_id })
+        .where({ client_id: dbInvoiceData.client_id, tenant: this.tenant })
         .first();
       if (client?.invoice_template_id) {
         templateId = client.invoice_template_id;
@@ -269,7 +268,7 @@ export class PDFGenerationService {
     }
 
     if (!templateId) {
-      const templates = await getInvoiceTemplates();
+      const templates = await this.getInvoiceTemplates(knex);
       const defaultTemplate = templates.find((t: any) => t.is_default || t.isTenantDefault) ?? templates[0];
       templateId = defaultTemplate?.template_id ?? null;
     }
@@ -282,16 +281,15 @@ export class PDFGenerationService {
     overrideTemplateId?: string
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null }> {
     return runWithTenant(this.tenant, async () => {
+      const { knex } = await createTenantKnex();
       const [dbInvoiceData, templates] = await Promise.all([
-        getInvoiceForRendering(invoiceId),
-        getInvoiceTemplates(),
+        this.getInvoiceForRendering(knex, invoiceId),
+        this.getInvoiceTemplates(knex),
       ]);
 
       if (!dbInvoiceData) {
         throw new Error(`Invoice ${invoiceId} not found`);
       }
-
-      const { knex } = await createTenantKnex();
 
       const templateId = overrideTemplateId || await this.resolveInvoiceTemplateId(knex, dbInvoiceData);
 
@@ -302,7 +300,7 @@ export class PDFGenerationService {
       const selectedTemplate = templates.find((entry: any) => entry.template_id === templateId) ?? null;
       let templateAst = (selectedTemplate?.templateAst ?? null) as TemplateAst | null;
       if (!templateAst && templateId) {
-        const canonicalTemplate = await getInvoiceTemplate(templateId);
+        const canonicalTemplate = await this.getInvoiceTemplate(knex, templateId);
         templateAst = (canonicalTemplate?.templateAst ?? null) as TemplateAst | null;
       }
 
@@ -372,6 +370,19 @@ export class PDFGenerationService {
     } catch {
       return dbData;
     }
+  }
+
+  private async getInvoiceForRendering(knex: Knex | Knex.Transaction, invoiceId: string): Promise<any> {
+    return Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+  }
+
+  private async getInvoiceTemplates(knex: Knex | Knex.Transaction): Promise<any[]> {
+    return Invoice.getAllTemplates(knex, this.tenant);
+  }
+
+  private async getInvoiceTemplate(knex: Knex | Knex.Transaction, templateId: string): Promise<any | null> {
+    const templates = await this.getInvoiceTemplates(knex);
+    return templates.find((template: any) => template.template_id === templateId) ?? null;
   }
 
   // ---- Quote HTML ----------------------------------------------------------

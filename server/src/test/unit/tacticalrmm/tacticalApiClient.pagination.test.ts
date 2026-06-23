@@ -26,7 +26,7 @@ describe('TacticalRmmClient.listAllBeta pagination', () => {
       });
 
     const res = await client.listAllBeta<{ id: number }>({
-      path: '/api/beta/v1/site/',
+      path: '/beta/v1/site/',
       pageSize: 5000,
     });
 
@@ -50,14 +50,14 @@ describe('TacticalRmmClient.listAllBeta pagination', () => {
       .spyOn(client, 'request')
       .mockImplementation(async (args: any) => {
         expect(args.method).toBe('GET');
-        expect(args.path).toBe('/api/beta/v1/client/');
+        expect(args.path).toBe('/beta/v1/client/');
         expect(args.params?.page).toBe(1);
         expect(args.params?.page_size).toBe(1000);
         return [{ id: 1 }, { id: 2 }] as any;
       });
 
     const res = await client.listAllBeta<{ id: number }>({
-      path: '/api/beta/v1/client/',
+      path: '/beta/v1/client/',
     });
 
     expect(res.map((r) => r.id)).toEqual([1, 2]);

@@ -1,0 +1,190 @@
+[
+  {
+    "id": "F001",
+    "description": "Add resolveTicketThreadAnchor(tenantId, ticketId): returns the canonical root Message-ID for a ticket \u2014 inbound email_metadata.messageId for email-origin tickets, else a deterministic synthetic <ticket-{ticketId}@{sendingDomain}>",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Persist the resolved synthetic root to tickets.email_metadata.threadRoot on first resolution; idempotent so repeated calls return the same anchor",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add sending-domain resolver (tenant email/sending domain -> fallback configured app domain) used for generated ids; stop minting *.alga-psa.local",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add applyTicketThreadHeaders({tenantId, ticketId, headers}) in the email service that sets Message-ID/In-Reply-To/References for any ticket email (replaces the comment-only gate)",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Always set a fresh per-message Message-ID <evt-{uuid}@{sendingDomain}> on every ticket email; remove the commentId-only condition at BaseEmailService.ts:407",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Problem"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Set In-Reply-To to the most recent prior outbound rfc_message_id for the ticket (from email_sending_logs), else the root anchor",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Build References = [root, ...prior ticket message-ids], deduped and capped to root + last 20",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Invoke applyTicketThreadHeaders for all ticket event types (created/updated/closed/assigned/comment) including accumulated-update flushes; ensure replyContext always carries ticketId",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Primary flows"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Layer the existing comment sub-thread headers under the ticket anchor without conflict (comment path keeps working; ticket anchor is the base of References)",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Wrap threading-header resolution in try/catch so failure never blocks or fails the actual send (best-effort contract)",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Record rfc_message_id for every outbound ticket email in email_sending_logs scoped to the ticket (entity_type='ticket', entity_id=ticketId), in addition to any comment-thread linkage",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Append the outbound message-id to the ticket references chain in tickets.email_metadata for all event types (extend existing sendEventEmail.ts:478 logic), capped",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Capture the provider-returned Message-ID and reconcile it with the generated one so the recorded rfc_message_id equals the on-wire id",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Central subject normalizer applied post-template-compile in sendEventEmail producing '[Ticket #<number>] <title>'; idempotent (no double-prefix); preserves 'Re:' for replies",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Ensure ticket_number is present in the subject render context for all handlers",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "For email-origin tickets preserve the customer's normalized subject so it matches their original thread",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI notes",
+      "Primary flows"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Verify/ensure SMTPEmailProvider (nodemailer) emits our Message-ID/In-Reply-To/References unchanged; reconcile the messageId option vs headers to avoid override/duplication",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Verify/ensure ResendEmailProvider forwards threading headers via payload.headers unchanged",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Inbound resolver maps a ticket-entity email_sending_logs row (entity_type='ticket') back to its ticket when matching In-Reply-To/References (today leans on comment_thread_id)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model / API integration notes",
+      "Primary flows"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Reply-token path stays primary; header-based ticket match is the fallback; no duplicate-ticket regression on replies to any notification type",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria",
+      "Primary flows"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Deterministic, concurrency-safe anchor creation so simultaneous first-events on a new ticket converge to a single root (no two anchors)",
+    "implemented": true,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Preserve bundle/child-ticket fan-out: each child ticket threads under its own anchor (handleTicketCommentAdded child fan-out)",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals"
+    ]
+  }
+]

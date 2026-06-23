@@ -297,6 +297,7 @@ export default function ServiceRequestsManagementPage() {
         </div>
       </div>
 
+      {/* LEVERAGE: friction datatable-client-paging — no-op variant: passes dummy currentPage/onPageChange because the paging props feel required even for plain client-side data */}
       <DataTable
         id="service-requests-management-table"
         data={visibleDefinitions}

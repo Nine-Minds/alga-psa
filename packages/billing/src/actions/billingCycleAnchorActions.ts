@@ -23,7 +23,7 @@ import {
   type ClientCadenceScheduleContext
 } from '@shared/billingClients/clientCadenceScheduleContext';
 import { ensureClientBillingSettingsRow } from '@shared/billingClients/billingSettings';
-import { applyClientCadenceChange } from './applyClientCadenceChange';
+import { applyClientCadenceChange } from '@alga-psa/shared/billingClients';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';

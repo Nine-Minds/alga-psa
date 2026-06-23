@@ -3,7 +3,7 @@ import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@a
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { getTeams } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
-import { MspTicketsPageClient } from '@alga-psa/msp-composition/tickets';
+import MspTicketsPageClient from '@alga-psa/msp-composition/tickets/MspTicketsPageClient';
 import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,

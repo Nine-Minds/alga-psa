@@ -42,9 +42,9 @@ Prefer selectors or deterministic device identification over brittle assumptions
 
 ## Installer Configuration
 
-The machine config should reference the installer image that belongs to the selected release manifest. This keeps installs aligned with the ISO and schematic pair recorded in `release.json`.
+This Talos-era guidance is historical. Supported Ubuntu/k3s appliances no longer use Talos installer image selection, and release metadata is resolved from OCI artifacts rather than local repository files.
 
-Do not hand-edit installer image references without also re-establishing which release manifest the node now represents.
+Do not hand-edit installer image references without also re-establishing which published appliance release the node now represents.
 
 ## Boot Media Rule
 

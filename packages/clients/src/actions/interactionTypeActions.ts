@@ -8,8 +8,11 @@ import { IInteractionType, ISystemInteractionType, DeletionValidationResult } fr
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { assertMspPermission } from '../lib/authHelpers';
 
 export const getAllInteractionTypes = withAuth(async (user, { tenant }): Promise<IInteractionType[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction types');
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -29,7 +32,9 @@ export const getAllInteractionTypes = withAuth(async (user, { tenant }): Promise
   }
 });
 
-export const getSystemInteractionTypes = withAuth(async (_user, { tenant }): Promise<ISystemInteractionType[]> => {
+export const getSystemInteractionTypes = withAuth(async (user, { tenant }): Promise<ISystemInteractionType[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction types');
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -45,10 +50,12 @@ export const getSystemInteractionTypes = withAuth(async (_user, { tenant }): Pro
 });
 
 export const getSystemInteractionTypeById = withAuth(async (
-  _user,
+  user,
   { tenant },
   typeId: string
 ): Promise<ISystemInteractionType | null> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction types');
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -69,6 +76,8 @@ export const createInteractionType = withAuth(async (
   { tenant },
   interactionType: Omit<IInteractionType, 'type_id' | 'tenant'>
 ): Promise<IInteractionType> => {
+  await assertMspPermission(user, 'settings', 'update', 'Permission denied: Cannot manage interaction type settings');
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -104,11 +113,13 @@ export const createInteractionType = withAuth(async (
 });
 
 export const updateInteractionType = withAuth(async (
-  _user,
+  user,
   { tenant },
   typeId: string,
   data: Partial<Omit<IInteractionType, 'type_id' | 'tenant'>>
 ): Promise<IInteractionType> => {
+  await assertMspPermission(user, 'settings', 'update', 'Permission denied: Cannot manage interaction type settings');
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -144,10 +155,12 @@ export const updateInteractionType = withAuth(async (
 });
 
 export const deleteInteractionType = withAuth(async (
-  _user,
+  user,
   { tenant },
   typeId: string
 ): Promise<DeletionValidationResult & { deleted?: boolean }> => {
+  await assertMspPermission(user, 'settings', 'update', 'Permission denied: Cannot manage interaction type settings');
+
   try {
     const { knex } = await createTenantKnex();
     return await deleteEntityWithValidation('interaction_type', typeId, knex, tenant, async (trx, tenantId) => {
@@ -166,10 +179,12 @@ export const deleteInteractionType = withAuth(async (
 });
 
 export const getInteractionTypeById = withAuth(async (
-  _user,
+  user,
   { tenant },
   typeId: string
 ): Promise<IInteractionType | null> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction types');
+
   try {
     const { knex: db } = await createTenantKnex();
 

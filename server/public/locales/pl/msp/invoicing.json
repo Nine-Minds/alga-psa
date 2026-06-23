@@ -65,6 +65,9 @@
       "separate": "Należy wystawić osobną fakturę",
       "blocked": "Zawiera zablokowane elementy",
       "notReady": "Brak gotowości do wystawienia faktury",
+      "upcoming": "Jeszcze nie wymagalne",
+      "upcomingDetail": "Ten okres jest rozliczany z dołu, więc staje się dostępny do zafakturowania po zakończeniu okresu świadczenia usługi.",
+      "upcomingDetailWithDate": "Ten okres jest rozliczany z dołu, więc staje się dostępny do zafakturowania w dniu {{date}}, po zakończeniu okresu świadczenia usługi.",
       "attributionMetadataMissing_few": "Brak metadanych przypisania przypisania ({{count}} obowiązki)",
       "attributionMetadataMissing_many": "Brak metadanych przypisania przypisania ({{count}} obowiązków)",
       "contract_few": "{{count}} kontrakty",
@@ -93,6 +96,7 @@
         "servicePeriod": "Okres świadczenia usług"
       },
       "pendingAmount": "Oczekująca kwota",
+      "billableOn": "Możliwe do zafakturowania dnia {{date}}",
       "attributionWarning": "Brak metadanych przypisania przypisania",
       "blockedUntilApproval": "Zablokowany do czasu zatwierdzenia: wpis niezatwierdzony {{count}}.",
       "blockedUntilApproval_one": "Zablokowany do czasu zatwierdzenia: wpis niezatwierdzony {{count}}.",
@@ -228,7 +232,12 @@
         "scheduleKey": "Klucz harmonogramu"
       },
       "reviewLink": "Przejrzyj okresy świadczenia usług",
-      "helpText": "Napraw kanoniczne rekordy okresu serwisowego zamiast generować wiersz faktury dotyczącej zgodności."
+      "helpText": "Napraw kanoniczne rekordy okresu serwisowego zamiast generować wiersz faktury dotyczącej zgodności.",
+      "fixAll": "Napraw wszystko",
+      "fixAllBusy": "Przebudowywanie…",
+      "fixAllResult": "Przebudowano {{schedules}} harmonogram(y) dla {{clients}} klient(ów).",
+      "fixAllError": "Nie udało się przebudować okresów usług. Spróbuj ponownie.",
+      "fixAllDenied": "Nie masz uprawnień do przebudowy okresów usług."
     },
     "errors": {
       "title": "Wystąpiły błędy podczas finalizowania faktur:",

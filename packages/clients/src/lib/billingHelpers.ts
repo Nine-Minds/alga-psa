@@ -58,13 +58,11 @@ import {
   type PaginatedServicesResponse,
   type UpdateClientBillingScheduleInput,
   type ClientTaxSourceInfo,
-} from '@alga-psa/shared/billingClients';
-import { withAuth, withAuthCheck } from '@alga-psa/auth';
-import { applyClientCadenceChange } from '@alga-psa/billing/actions/applyClientCadenceChange';
-import {
+  applyClientCadenceChange,
   previewClientCadenceScheduleChange,
   type ClientCadenceChangePreview,
-} from '@alga-psa/billing/actions/clientCadenceScheduleRegeneration';
+} from '@alga-psa/shared/billingClients';
+import { withAuth, withAuthCheck } from '@alga-psa/auth';
 
 export const createDefaultTaxSettingsAsync = withAuth(async (
   _user,

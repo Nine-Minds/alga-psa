@@ -55,7 +55,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
     (fn: (...args: any[]) => any) =>
     (...args: any[]) =>
       fn(
-        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        { user_id: 'po-test-user', tenant: tenantId, user_type: 'internal', roles: [] },
         { tenant: tenantId },
         ...args
       ),
@@ -66,7 +66,7 @@ vi.mock('@alga-psa/auth', () => ({
     (fn: (...args: any[]) => any) =>
     (...args: any[]) =>
       fn(
-        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        { user_id: 'po-test-user', tenant: tenantId, user_type: 'internal', roles: [] },
         { tenant: tenantId },
         ...args
       ),
@@ -74,7 +74,7 @@ vi.mock('@alga-psa/auth', () => ({
     (fn: (...args: any[]) => any) =>
     (...args: any[]) =>
       fn(
-        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        { user_id: 'po-test-user', tenant: tenantId, user_type: 'internal', roles: [] },
         { tenant: tenantId },
         ...args
       ),
@@ -82,7 +82,7 @@ vi.mock('@alga-psa/auth', () => ({
     (fn: (...args: any[]) => any) =>
     (...args: any[]) =>
       fn(
-        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        { user_id: 'po-test-user', tenant: tenantId, user_type: 'internal', roles: [] },
         ...args
       ),
   // test-utils/testMocks.ts re-points these via vi.mocked(...) in setupCommonMocks,

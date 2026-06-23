@@ -21,10 +21,10 @@ test('T006 setup/status UI package uses session-based auth (no query token)', ()
 
   // The auth gate wraps every page; requests ride the session cookie, not ?token=.
   assert.match(layout, /<AuthGate>\{children\}<\/AuthGate>/);
-  assert.match(statusPage, /fetch\(apiPath\('\/api\/status'\)/);
+  assert.match(statusPage, /fetch\(apiPath\(["']\/api\/status["']\)/);
   assert.match(statusPage, /href="\/setup\/"/);
-  assert.match(setupPage, /fetch\('\/api\/setup\/config'/);
-  assert.match(setupPage, /fetch\('\/api\/setup'/);
+  assert.match(setupPage, /fetch\(["']\/api\/setup\/config["']/);
+  assert.match(setupPage, /fetch\(["']\/api\/setup["']/);
 
   // No leftover query-token threading anywhere.
   for (const source of [statusPage, setupPage]) {

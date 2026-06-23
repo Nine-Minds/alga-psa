@@ -39,6 +39,13 @@ export type {
   EmailSendResult
 } from './BaseEmailService';
 
+// Ticket-scoped email threading helpers (also used by verification scripts/tests).
+export {
+  applyTicketThreadHeaders,
+  buildTicketThreadHeaders,
+  capReferences
+} from './BaseEmailService';
+
 // Individual email sending functions
 export { sendPasswordResetEmail } from './sendPasswordResetEmail';
 export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';

@@ -622,6 +622,19 @@ export class ApiUserController extends ApiBaseController {
             
             // Then assign new roles if any
             if (role_ids.length > 0) {
+              // Validate that every role_id belongs to the caller's tenant before
+              // inserting. Without this, the raw insert would attach any UUID the
+              // caller supplies (e.g. a privileged role) and bypass the tenant
+              // checks enforced by UserService.assignRoles().
+              const validRoleIds: string[] = await trx('roles')
+                .where('tenant', apiRequest.context!.tenant)
+                .whereIn('role_id', role_ids)
+                .pluck('role_id');
+              const invalidRoleIds = role_ids.filter((roleId: string) => !validRoleIds.includes(roleId));
+              if (invalidRoleIds.length > 0) {
+                throw new ValidationError(`Invalid role_ids for this tenant: ${invalidRoleIds.join(', ')}`);
+              }
+
               const userRoles = role_ids.map(roleId => ({
                 tenant: apiRequest.context!.tenant,
                 user_id: targetUserId,

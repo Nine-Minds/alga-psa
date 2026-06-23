@@ -291,19 +291,40 @@ describe('renewal queue scheduling wiring', () => {
     expect(jobRunnerFactorySource).toContain('private determineRunnerType(');
     expect(jobRunnerFactorySource).toContain('const envType = process.env.JOB_RUNNER_TYPE?.toLowerCase();');
     expect(jobRunnerFactorySource).toContain("if (envType === 'temporal' || envType === 'pgboss') {");
-    expect(jobRunnerFactorySource).toContain('if (runnerType === \'temporal\' && isEnterprise) {');
+    expect(jobRunnerFactorySource).toContain("if (runnerType === 'temporal' && enterprise) {");
     expect(renewalHandlerSource).not.toContain('process.env.EDITION');
     expect(renewalHandlerSource).not.toContain('JOB_RUNNER_TYPE');
   });
 
-  it('falls back gracefully to pg-boss when temporal bootstrap is unavailable', () => {
-    expect(jobRunnerFactorySource).toContain("if (runnerType === 'temporal' && isEnterprise) {");
+  it('resolves edition via isEnterpriseEdition() so selection is immune to module init ordering', () => {
+    // Edition is re-read via the function rather than the module-level
+    // `isEnterprise` const (which can be read before the features module
+    // finishes initializing).
+    expect(jobRunnerFactorySource).toContain('const enterprise = isEnterpriseEdition();');
+    expect(jobRunnerFactorySource).toContain("return enterprise ? 'temporal' : 'pgboss';");
+    expect(jobRunnerFactorySource).toContain("if (runnerType === 'temporal' && enterprise) {");
+  });
+
+  it('refuses a baked/explicit JOB_RUNNER_TYPE=pgboss under Enterprise Edition', () => {
+    // The image bakes .env.example (JOB_RUNNER_TYPE=pgboss) into /app/server/.env
+    // and @next/env backfills the unset var; EE must ignore that stray default
+    // and use Temporal rather than silently downgrading to pg-boss.
+    expect(jobRunnerFactorySource).toContain("if (envType === 'pgboss' && enterprise) {");
+    expect(jobRunnerFactorySource).toContain('JOB_RUNNER_TYPE=pgboss ignored in Enterprise Edition');
+    // And the init log surfaces the raw env so a baked override is visible.
+    expect(jobRunnerFactorySource).toContain('jobRunnerTypeEnv: process.env.JOB_RUNNER_TYPE ?? null,');
+  });
+
+  it('does NOT silently fall back to pg-boss when temporal bootstrap fails (EE must fail loudly)', () => {
+    expect(jobRunnerFactorySource).toContain("if (runnerType === 'temporal' && enterprise) {");
     expect(jobRunnerFactorySource).toContain('return await this.createTemporalRunner(config);');
-    expect(jobRunnerFactorySource).toContain('if (');
-    expect(jobRunnerFactorySource).toContain("runnerType === 'temporal' &&");
-    expect(jobRunnerFactorySource).toContain('config?.fallbackToPgBoss !== false');
-    expect(jobRunnerFactorySource).toContain("logger.warn('Falling back to PG Boss job runner');");
-    expect(jobRunnerFactorySource).toContain('return await this.createPgBossRunner(config);');
+    // The silent fallback path and the dummy no-op runner are gone: a failed
+    // Temporal bootstrap must propagate, not quietly degrade to PG Boss.
+    expect(jobRunnerFactorySource).not.toContain('fallbackToPgBoss');
+    expect(jobRunnerFactorySource).not.toContain('Falling back to PG Boss job runner');
+    expect(jobRunnerFactorySource).not.toContain('DummyJobRunner');
+    expect(jobRunnerFactorySource).toContain('refusing to fall back');
+    expect(jobRunnerFactorySource).toContain('throw error;');
     expect(jobRunnerFactorySource).toContain("logger.error('Failed to load TemporalJobRunner:', error);");
     expect(jobRunnerFactorySource).toContain(
       "'TemporalJobRunner not available. Ensure EE modules are properly installed.'"

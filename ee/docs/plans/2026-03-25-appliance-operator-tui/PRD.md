@@ -114,7 +114,7 @@ Primary flows:
 - The tool must provide an interactive terminal UI entrypoint.
 - The tool must provide a non-interactive command surface using the same operator core.
 - The interactive entrypoint must be an Ink-based full-screen interface, not a `readline` prompt loop.
-- The bootstrap flow must gather the current bootstrap inputs already required by `bootstrap-appliance.sh`.
+- The bootstrap flow must gather the current bootstrap inputs already required by `historical removed bootstrap script`.
 - The bootstrap flow must invoke the existing bootstrap script rather than reimplementing Talos bootstrap logic.
 - The upgrade flow must consume appliance release manifests and invoke the current upgrade behavior rather than asking for raw image tags.
 - The reset flow must invoke the current reset helper and require strong confirmation.
@@ -156,12 +156,12 @@ Primary flows:
 
 ## Data / API / Integrations
 - Inputs:
-  - appliance release manifests under `ee/appliance/releases/<version>/release.json`
+  - appliance release manifests under `historical local release metadata (removed)`
   - persistent config directories under `~/nm-kube-config/alga-psa/talos/...`
   - current shell scripts under `ee/appliance/scripts/`
 - Runtime integrations:
-  - `bootstrap-appliance.sh`
-  - `upgrade-appliance.sh`
+  - `historical removed bootstrap script`
+  - `historical removed upgrade script`
   - `reset-appliance-data.sh`
   - `collect-support-bundle.sh`
   - `talosctl`

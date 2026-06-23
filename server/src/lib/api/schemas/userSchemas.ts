@@ -4,11 +4,12 @@
  */
 
 import { z } from 'zod';
-import { 
-  uuidSchema, 
-  emailSchema, 
-  phoneSchema, 
-  createListQuerySchema, 
+import { passwordSchema as sharedPasswordSchema } from '@alga-psa/validation';
+import {
+  uuidSchema,
+  emailSchema,
+  phoneSchema,
+  createListQuerySchema,
   createUpdateSchema,
   baseFilterSchema,
   booleanTransform,
@@ -16,14 +17,14 @@ import {
   numberTransform
 } from './common';
 
-// Password validation schema with security requirements
-export const passwordSchema = z.string()
-  .min(8, 'Password must be at least 8 characters long')
-  .max(128, 'Password must not exceed 128 characters')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one number')
-  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+// Password validation schema — single source of truth lives in @alga-psa/validation
+// (delegates to validatePassword: length, character classes, common-word blocklist,
+// and long-sequence rejection). Re-exported here for existing importers.
+export const passwordSchema = sharedPasswordSchema;
+
+// Current password is verified against the stored hash, not graded for strength, so the
+// new-password policy must not apply to it — it only needs to be present.
+const currentPasswordSchema = z.string().min(1, 'Current password is required');
 
 // Password criteria validation schema
 export const passwordCriteriaSchema = z.object({
@@ -213,7 +214,7 @@ export const bulkTeamMembershipSchema = z.object({
 // Authentication and security schemas
 export const changePasswordSchema = z.object({
   user_id: uuidSchema.optional(), // Optional for self-service
-  current_password: passwordSchema.optional(), // Required for self-service
+  current_password: currentPasswordSchema.optional(), // Verified against stored hash, not re-graded
   new_password: passwordSchema,
   confirm_password: z.string()
 }).refine((data) => data.new_password === data.confirm_password, {

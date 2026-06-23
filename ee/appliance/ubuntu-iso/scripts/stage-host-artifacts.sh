@@ -111,7 +111,6 @@ cp -R "$SRC_APPLIANCE_ROOT/operator" "$DEST_ROOT/operator"
 cp -R "$SRC_APPLIANCE_ROOT/scripts" "$DEST_ROOT/scripts"
 cp -R "$SRC_APPLIANCE_ROOT/manifests" "$DEST_ROOT/manifests"
 cp -R "$SRC_APPLIANCE_ROOT/flux" "$DEST_ROOT/flux"
-cp -R "$SRC_APPLIANCE_ROOT/releases" "$DEST_ROOT/releases"
 mkdir -p "$DEST_ROOT/status-ui"
 
 if [[ -f "$SRC_APPLIANCE_ROOT/status-ui/package.json" && "${ALGA_APPLIANCE_STATUS_UI_SKIP_BUILD:-0}" != "1" ]]; then
@@ -194,7 +193,6 @@ Staged host appliance artifacts:
 - $DEST_ROOT/scripts
 - $DEST_ROOT/manifests
 - $DEST_ROOT/flux
-- $DEST_ROOT/releases
 - $DEST_ROOT/status-ui
 - $DEST_ROOT/control-plane
 MSG

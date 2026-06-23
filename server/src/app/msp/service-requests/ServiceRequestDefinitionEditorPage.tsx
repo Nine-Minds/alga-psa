@@ -33,7 +33,7 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
-import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
+import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

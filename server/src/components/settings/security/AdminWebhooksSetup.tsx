@@ -527,6 +527,7 @@ function InboundWebhooksListView() {
   const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   const [tableCurrentPage, setTableCurrentPage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(10);
   const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
@@ -2043,6 +2044,7 @@ function OutboundWebhooksSetup() {
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'deliveries'>('list');
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   const [tableCurrentPage, setTableCurrentPage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(10);
 

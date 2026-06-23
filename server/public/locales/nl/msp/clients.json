@@ -258,6 +258,10 @@
       "helper": "Stel de clientstatus in op actief of inactief"
     },
     "entraSyncStarted": "Entra-synchronisatie gestart. Uitvoerings-ID: {{runId}}",
+    "entraSyncStatusUnknown": "Synchronisatiestatus niet beschikbaar",
+    "clientNameRequired": "Klantnaam is vereist",
+    "deactivateClientAndContacts": "Klant en contacten deactiveren",
+    "reactivateClientAndContacts": "Klant en contacten opnieuw activeren",
     "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
     "inboundDomainAddFailed": "Kan domein niet toevoegen",
     "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
@@ -518,6 +522,17 @@
       "5": "Vrijdag",
       "6": "Zaterdag",
       "7": "Zondag"
+    },
+    "reviewError": "Kan de impact van deze wijziging niet controleren",
+    "reviewing": "Impact controleren…",
+    "confirmSave": "Bevestigen en opslaan",
+    "reviewChanges": "Wijzigingen bekijken",
+    "impact": {
+      "title": "Controleer voordat je toepast",
+      "periods": "{{count}} aankomende factureringsperiode(n) over {{lines}} contractregel(s) worden opnieuw opgebouwd volgens het nieuwe schema.",
+      "from": "Opnieuw opgebouwd vanaf {{date}}.",
+      "billedPreserved": "Reeds gefactureerde kosten blijven behouden en veranderen niet.",
+      "confirmHint": "Kies ‘Bevestigen en opslaan’ om toe te passen."
     }
   },
   "clientContractAssignment": {

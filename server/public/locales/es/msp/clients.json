@@ -258,6 +258,10 @@
       "helper": "Establecer el estado del cliente como activo o inactivo"
     },
     "entraSyncStarted": "Sincronización de Entra iniciada. ID de ejecución: {{runId}}",
+    "entraSyncStatusUnknown": "Estado de sincronización no disponible",
+    "clientNameRequired": "El nombre del cliente es obligatorio",
+    "deactivateClientAndContacts": "Desactivar cliente y contactos",
+    "reactivateClientAndContacts": "Reactivar cliente y contactos",
     "inboundDomainAdded": "Dominio de correo entrante añadido",
     "inboundDomainAddFailed": "Error al añadir el dominio",
     "inboundDomainRemoved": "Dominio de correo entrante eliminado",
@@ -518,6 +522,17 @@
       "5": "Viernes",
       "6": "Sábado",
       "7": "Domingo"
+    },
+    "reviewError": "No se pudo comprobar el impacto de este cambio",
+    "reviewing": "Comprobando impacto…",
+    "confirmSave": "Confirmar y guardar",
+    "reviewChanges": "Revisar cambios",
+    "impact": {
+      "title": "Revisar antes de aplicar",
+      "periods": "Se reconstruirán {{count}} período(s) de cargo próximos en {{lines}} línea(s) de contrato para ajustarse al nuevo calendario.",
+      "from": "Reconstruido a partir del {{date}}.",
+      "billedPreserved": "Los cargos ya facturados se conservan y no cambiarán.",
+      "confirmHint": "Elija «Confirmar y guardar» para aplicar."
     }
   },
   "clientContractAssignment": {

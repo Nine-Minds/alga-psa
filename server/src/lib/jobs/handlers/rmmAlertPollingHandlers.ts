@@ -24,7 +24,6 @@
  * dynamic @enterprise imports, which resolve to CE stubs in community builds.
  */
 
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { createTenantKnex } from '@alga-psa/db';
@@ -39,8 +38,6 @@ import type { IJobRunner } from '../interfaces';
 
 export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 export const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
-
-const HUNTRESS_FEATURE_FLAG = 'huntress-rmm-integration';
 
 const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
 
@@ -155,16 +152,6 @@ export async function huntressIncidentPollHandler(
     .first('integration_id');
   if (!row) {
     logger.info('[HuntressIncidentPollJob] Skipping: integration inactive', data);
-    return;
-  }
-
-  // Ported from the deleted huntress/scheduling.ts dispatcher: scheduled
-  // polls skip tenants without the Huntress feature flag.
-  const flagEnabled = await isFeatureFlagEnabled(HUNTRESS_FEATURE_FLAG, {
-    tenantId: data.tenantId,
-  });
-  if (!flagEnabled) {
-    logger.info('[HuntressIncidentPollJob] Skipping: feature flag disabled', data);
     return;
   }
 

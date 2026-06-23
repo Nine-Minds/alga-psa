@@ -29,8 +29,6 @@ test('T004 control-plane workflow persists setup, release/runtime selection, ini
       channel: 'stable',
       appHostname: 'http://psa.example.com:3000',
       dnsMode: 'system',
-      repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-      repoBranch: 'release/1.0.0',
       tenantName: 'Acme MSP',
       adminFirstName: 'Ava',
       adminLastName: 'Admin',

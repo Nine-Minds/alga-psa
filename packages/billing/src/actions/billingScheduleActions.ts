@@ -13,11 +13,11 @@ import {
 } from '../lib/billing/billingCycleAnchors';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { applyClientCadenceChange } from './applyClientCadenceChange';
 import {
+  applyClientCadenceChange,
   previewClientCadenceScheduleChange,
   type ClientCadenceChangePreview,
-} from './clientCadenceScheduleRegeneration';
+} from '@alga-psa/shared/billingClients';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';

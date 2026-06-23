@@ -62,7 +62,7 @@
   },
   {
     "id": "F008",
-    "description": "Drive bootstrap through the existing bootstrap-appliance.sh script rather than reimplementing Talos or Flux bootstrap logic.",
+    "description": "Drive bootstrap through the existing historical removed bootstrap script script rather than reimplementing Talos or Flux bootstrap logic.",
     "implemented": true,
     "prdRefs": [
       "Functional Requirements",
@@ -98,7 +98,7 @@
   },
   {
     "id": "F012",
-    "description": "Drive upgrades through the existing upgrade-appliance.sh behavior and release manifest model instead of asking for raw component tags.",
+    "description": "Drive upgrades through the existing historical removed upgrade script behavior and release manifest model instead of asking for raw component tags.",
     "implemented": true,
     "prdRefs": [
       "Functional Requirements",

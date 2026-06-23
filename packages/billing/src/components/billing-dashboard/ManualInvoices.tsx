@@ -673,7 +673,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     .filter((service) => service.is_active !== false)
     .map((service): ServiceOption => {
       const currencyRate = service.prices?.find((p) => p.currency_code === currencyCode)?.rate;
-      const rate = currencyRate ?? service.default_rate ?? 0;
+      // `service.default_rate` is the legacy, untagged (effectively USD-only) rate. Only fall
+      // back to it when the invoice currency is USD; for any other currency a service without a
+      // matching `service_prices` entry has no valid rate (0) — the user enters the correct
+      // amount rather than seeing a USD price relabeled in the client's currency.
+      const rate = currencyRate ?? (currencyCode === 'USD' ? service.default_rate : undefined) ?? 0;
       const label =
         `${service.item_kind === 'product' ? '[Product] ' : ''}${service.service_name}` +
         (service.sku ? ` (${service.sku})` : '');

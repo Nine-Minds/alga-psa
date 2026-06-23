@@ -69,12 +69,12 @@ describe('Tactical RMM connection test (Knox) re-auth on 401', () => {
   it('retries login once when token verification returns 401, using Authorization: Token ...', async () => {
     const postSpy = vi.spyOn(axios, 'post').mockImplementation(async (url: any, data: any) => {
       const u = String(url);
-      if (u.endsWith('/api/v2/checkcreds/')) {
+      if (u.endsWith('/v2/checkcreds/')) {
         return { data: { totp: false } } as any;
       }
-      if (u.endsWith('/api/v2/login/')) {
+      if (u.endsWith('/v2/login/')) {
         // Return token1 then token2.
-        const current = (postSpy as any).mock.calls.filter((c: any[]) => String(c[0]).endsWith('/api/v2/login/')).length;
+        const current = (postSpy as any).mock.calls.filter((c: any[]) => String(c[0]).endsWith('/v2/login/')).length;
         return { data: { token: current === 1 ? 'token1' : 'token2' } } as any;
       }
       throw new Error(`Unexpected POST: ${u}`);
@@ -98,8 +98,8 @@ describe('Tactical RMM connection test (Knox) re-auth on 401', () => {
     expect(res.success).toBe(true);
 
     // checkcreds once, login twice
-    expect(postSpy.mock.calls.filter((c) => String(c[0]).endsWith('/api/v2/checkcreds/')).length).toBe(1);
-    expect(postSpy.mock.calls.filter((c) => String(c[0]).endsWith('/api/v2/login/')).length).toBe(2);
+    expect(postSpy.mock.calls.filter((c) => String(c[0]).endsWith('/v2/checkcreds/')).length).toBe(1);
+    expect(postSpy.mock.calls.filter((c) => String(c[0]).endsWith('/v2/login/')).length).toBe(2);
 
     // verify token called twice with proper header.
     expect(getSpy).toHaveBeenCalledTimes(2);

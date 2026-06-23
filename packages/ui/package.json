@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss",
+    "*.css",
+    "*.scss"
+  ],
   "main": "./dist/index.mjs",
   "types": "./src/index.ts",
   "exports": {

@@ -13,7 +13,8 @@ import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/user-composit
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from 'react-i18next';
-import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
+import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
+import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface TaskCommentThreadProps {

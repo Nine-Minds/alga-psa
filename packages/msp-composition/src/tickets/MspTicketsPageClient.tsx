@@ -2,9 +2,9 @@
 
 import React, { useCallback } from 'react';
 import TicketingDashboardContainer from '@alga-psa/tickets/components/TicketingDashboardContainer';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import type { IClient } from '@alga-psa/types';
-import { MspClientCrossFeatureProvider } from '../clients/MspClientCrossFeatureProvider';
+import { MspClientQuickViewProvider } from '../clients/MspClientQuickViewProvider';
 
 type MspTicketsPageClientProps = Omit<
   React.ComponentProps<typeof TicketingDashboardContainer>,
@@ -14,12 +14,11 @@ type MspTicketsPageClientProps = Omit<
 export default function MspTicketsPageClient(props: MspTicketsPageClientProps) {
   const renderClientDetails = useCallback(({ id, client }: { id: string; client: IClient }) => {
     return (
-      <MspClientCrossFeatureProvider>
-        <ClientDetails id={id} client={client} isInDrawer={true} quickView={true} />
-      </MspClientCrossFeatureProvider>
+      <MspClientQuickViewProvider>
+        <ClientQuickView id={id} client={client} isInDrawer={true} quickView={true} />
+      </MspClientQuickViewProvider>
     );
   }, []);
 
   return <TicketingDashboardContainer {...props} renderClientDetails={renderClientDetails} />;
 }
-

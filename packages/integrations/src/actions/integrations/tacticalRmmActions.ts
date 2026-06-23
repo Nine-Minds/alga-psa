@@ -468,7 +468,7 @@ export const testTacticalRmmConnection = withAuth(async (
       const apiKey = await secretProvider.getTenantSecret(tenant, TACTICAL_API_KEY_SECRET);
       if (!apiKey) return { success: false, error: 'API key is not configured' };
 
-      await axios.get(new URL('/api/beta/v1/client/', instanceUrl).toString(), {
+      await axios.get(new URL('/beta/v1/client/', instanceUrl).toString(), {
         headers: { 'X-API-KEY': apiKey },
         timeout: 15_000,
       });
@@ -479,7 +479,7 @@ export const testTacticalRmmConnection = withAuth(async (
         return { success: false, error: 'Username/password are not configured' };
       }
 
-      const check = await axios.post(new URL('/api/v2/checkcreds/', instanceUrl).toString(), {
+      const check = await axios.post(new URL('/v2/checkcreds/', instanceUrl).toString(), {
         username,
         password,
       }, { timeout: 15_000 });
@@ -502,7 +502,7 @@ export const testTacticalRmmConnection = withAuth(async (
 
       const doLogin = async (): Promise<string> => {
         const login = await axios.post(
-          new URL('/api/v2/login/', instanceUrl).toString(),
+          new URL('/v2/login/', instanceUrl).toString(),
           buildLoginPayload(),
           { timeout: 15_000 }
         );
@@ -513,7 +513,7 @@ export const testTacticalRmmConnection = withAuth(async (
       };
 
       const verifyToken = async (token: string): Promise<void> => {
-        await axios.get(new URL('/api/beta/v1/client/', instanceUrl).toString(), {
+        await axios.get(new URL('/beta/v1/client/', instanceUrl).toString(), {
           headers: { Authorization: `Token ${token}` },
           timeout: 15_000,
         });
@@ -591,7 +591,7 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       authMode,
     });
 
-    const remoteClients = await client.listAllBeta<any>({ path: '/api/beta/v1/client/' });
+    const remoteClients = await client.listAllBeta<any>({ path: '/beta/v1/client/' });
 
     const existingRows = await knex('rmm_organization_mappings')
       .where({ tenant, integration_id: integration.integration_id })
@@ -818,7 +818,7 @@ export const syncTacticalRmmDevices = withAuth(async (
       .andWhere('auto_sync_assets', true)
       .select(['external_organization_id', 'client_id']);
 
-    const sites = await client.listAllBeta<any>({ path: '/api/beta/v1/site/' });
+    const sites = await client.listAllBeta<any>({ path: '/beta/v1/site/' });
     const siteById = new Map<string, any>();
     for (const s of sites) {
       const id = String((s as any).id ?? (s as any).pk ?? '');
@@ -834,7 +834,7 @@ export const syncTacticalRmmDevices = withAuth(async (
       const algaClientId = String((org as any).client_id);
 
       const agents = await client.listAllBeta<any>({
-        path: '/api/beta/v1/agent/',
+        path: '/beta/v1/agent/',
         params: { client_id: externalOrgId },
       });
 
@@ -1481,7 +1481,7 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
       authMode,
     });
 
-    const res = await client.request<any>({ method: 'GET', path: '/api/software/' });
+    const res = await client.request<any>({ method: 'GET', path: '/software/' });
 
     const rows: any[] = Array.isArray(res)
       ? res
@@ -1579,7 +1579,7 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
       authMode,
     });
 
-    const agent = await client.request<any>({ method: 'GET', path: `/api/beta/v1/agent/${encodeURIComponent(agentId)}/` });
+    const agent = await client.request<any>({ method: 'GET', path: `/beta/v1/agent/${encodeURIComponent(agentId)}/` });
 
     const mapping = await knex('tenant_external_entity_mappings')
       .where({

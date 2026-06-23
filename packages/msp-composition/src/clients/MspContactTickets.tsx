@@ -18,13 +18,14 @@ import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTi
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useRouter } from 'next/navigation';
+import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import { getClientById } from '@alga-psa/clients/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -74,13 +75,13 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   initialUsers = []
 }) => {
   const { t } = useTranslation('msp/contacts');
+  const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [displaySettings, setDisplaySettings] = useState<TicketingDisplaySettings | null>(null);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const { openDrawer } = useDrawer();
 
   // Filter states
@@ -227,10 +228,8 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       if (client) {
         openDrawer(
           <MspClientCrossFeatureProvider>
-            <ClientDetails
+            <ClientQuickView
               client={client}
-              documents={[]}
-              contacts={[]}
               isInDrawer={true}
               quickView={true}
             />
@@ -323,10 +322,18 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
     setIncludeUnassigned(false);
   };
 
-  const handleTicketAdded = useCallback(() => {
-    // Refresh the tickets list
-    loadTickets(undefined, true);
-    setIsQuickAddTicketOpen(false);
+  // Tickets are created via the create-ticket modal route now. This list fetches
+  // client-side, so it won't react to router.refresh(); reload it on the cross-feature
+  // "created" event (mirrored in CreateTicketRouteClient).
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'ticket') {
+        loadTickets(undefined, true);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
   }, [loadTickets]);
 
   if (!currentUser) {
@@ -346,7 +353,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
             <h3 className="text-lg font-semibold text-gray-900">{t('contactTabs.tickets.title', { defaultValue: 'Contact Tickets' })}</h3>
             <Button
               id="add-contact-ticket-btn"
-              onClick={() => setIsQuickAddTicketOpen(true)}
+              onClick={() => router.push(buildCreateTicketHref({ client: { id: clientId, name: clientName }, contact: { id: contactId, name: contactName } }))}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
               {t('contactTabs.tickets.addTicket', { defaultValue: 'Add Ticket' })}
@@ -513,20 +520,6 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           )}
         </div>
 
-        {/* Quick Add Ticket Dialog */}
-        <QuickAddTicket
-          open={isQuickAddTicketOpen}
-          onOpenChange={setIsQuickAddTicketOpen}
-          onTicketAdded={handleTicketAdded}
-          prefilledClient={{
-            id: clientId,
-            name: clientName
-          }}
-          prefilledContact={{
-            id: contactId,
-            name: contactName
-          }}
-        />
       </div>
     </ReflectionContainer>
   );

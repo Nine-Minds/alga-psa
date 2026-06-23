@@ -1,0 +1,54 @@
+[
+  { "id": "F001", "description": "[Baseline] Capture and record current production-style perf trace of /msp/tickets (LCP, render delay, first-load JS, prefetch count) in SCRATCHPAD as the before-state", "implemented": true, "prdRefs": ["9"] },
+  { "id": "F002", "description": "[Baseline] Record `next build` first-load JS for the tickets-list route and the chunk graph membership of the 7 dialogs + ClientDetails", "implemented": true, "prdRefs": ["9"] },
+
+  { "id": "F010", "description": "[A] Add prefetch={false} to the ticket-number column <Link> in ticket-columns.tsx (~line 219)", "implemented": true, "prdRefs": ["6.A", "2"] },
+  { "id": "F011", "description": "[A] Add prefetch={false} to the title column <Link> in ticket-columns.tsx (~line 273)", "implemented": true, "prdRefs": ["6.A", "2"] },
+  { "id": "F012", "description": "[A] Verify ticket row click still opens the ticket via onTicketClick (no behavior change)", "implemented": true, "prdRefs": ["6.A", "9"] },
+  { "id": "F013", "description": "[A] Verify middle-click / cmd+click / open-in-new-tab on a row still navigates to /msp/tickets/[id]", "implemented": true, "prdRefs": ["6.A"] },
+
+  { "id": "F020", "description": "[B] Extract the ClientDetails 'details' tab content (tabContent[0]) into a standalone lightweight component that does NOT statically import the contacts/billing/interactions/notes/Hudu tabs", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F021", "description": "[B] Rebuild ClientQuickView.tsx to render the lightweight details-tab component directly instead of wrapping full <ClientDetails quickView />", "implemented": true, "prdRefs": ["6.B", "3"] },
+  { "id": "F022", "description": "[B] Ensure ClientQuickView output is visually identical to the previous quickView details tab (header, fields, drawer chrome)", "implemented": true, "prdRefs": ["6.B", "4", "C1"] },
+  { "id": "F023", "description": "[B] Refactor full-page ClientDetails to consume the same extracted details-tab component (single source of truth, no duplication)", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F024", "description": "[B] Wire tickets-list drawer (MspTicketsPageClient.tsx:18) to ClientQuickView", "implemented": true, "prdRefs": ["6.B", "3"] },
+  { "id": "F025", "description": "[B] Wire ticket-detail client drawer (MspTicketDetailsContainerClient.tsx:71) to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F026", "description": "[B] Wire MspClientDrawerProvider.tsx:36 to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F027", "description": "[B] Wire MspBillingDashboardClient.tsx:18 to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F028", "description": "[B] Wire MspClientIntegrationProvider.tsx:44 (projects integration) to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F029", "description": "[B] Wire clients page quick view (Clients.tsx:1779) to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F030", "description": "[B] Wire interactions client quick view (InteractionDetails.tsx:209) to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F031", "description": "[B] Wire projects client quick view (Projects.tsx renderClientDetails ~1024) to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F032", "description": "[B] Wire settings user list client quick view (UserList.tsx:206) to ClientQuickView", "implemented": true, "prdRefs": ["6.B"] },
+  { "id": "F033", "description": "[B] Classify contact-context <ClientDetails> usages (Contacts.tsx:697, MspContactTickets.tsx:230) and migrate to ClientQuickView if they are client quick views (per OQ4)", "implemented": true, "prdRefs": ["6.B", "10"] },
+  { "id": "F034", "description": "[B] Confirm full ClientDetails (all tabs) is no longer in the tickets-list route chunk graph after rewiring", "implemented": true, "prdRefs": ["6.B", "9"] },
+
+  { "id": "F040", "description": "[C-infra] Add server/src/app/msp/tickets/layout.tsx hosting {children} + @modal parallel slot", "implemented": true, "prdRefs": ["6.C"] },
+  { "id": "F041", "description": "[C-infra] Add server/src/app/msp/tickets/@modal/default.tsx returning null (closed state)", "implemented": true, "prdRefs": ["6.C"] },
+  { "id": "F042", "description": "[C-infra] Create a tickets-segment client context provider (in tickets/layout.tsx) exposing current filters", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F043", "description": "[C-infra] Extend the tickets-segment context to expose the current selectedTicketIds, lifted out of TicketingDashboard local state", "implemented": true, "prdRefs": ["6.C", "R2"] },
+  { "id": "F044", "description": "[C-infra] Update TicketingDashboard to read/write selection + filters via the shared context (no behavior change)", "implemented": true, "prdRefs": ["6.C", "R2"] },
+  { "id": "F045", "description": "[C-infra] Prototype Import dialog end-to-end as an intercepting route to validate the pattern (focus, scroll, back, refresh)", "implemented": true, "prdRefs": ["6.C", "R1"] },
+
+  { "id": "F050", "description": "[C-import] Create msp/tickets/import route segment + (.)import intercepting modal rendering TicketImportDialog", "implemented": true, "prdRefs": ["6.C"] },
+  { "id": "F051", "description": "[C-import] Replace the in-list Import trigger to navigate to the import route instead of toggling isImportDialogOpen", "implemented": true, "prdRefs": ["6.C"] },
+  { "id": "F052", "description": "[C-import] Remove TicketImportDialog import from TicketingDashboard", "implemented": true, "prdRefs": ["6.C", "G4"] },
+
+  { "id": "F053", "description": "[C-export] Create msp/tickets/export route segment + (.)export intercepting modal rendering TicketExportDialog", "implemented": true, "prdRefs": ["6.C"] },
+  { "id": "F054", "description": "[C-export] Ensure export reads the current filters from the shared context and exports the filtered set", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F055", "description": "[C-export] Replace in-list Export trigger with navigation; remove TicketExportDialog import from TicketingDashboard", "implemented": true, "prdRefs": ["6.C", "G4"] },
+
+  { "id": "F060", "description": "[C-bulk] Bulk Assign: route segment + (.) intercepting modal, reads selection+filters from context, calls existing bulk-assign action", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F061", "description": "[C-bulk] Bulk Add Tags: route segment + intercepting modal wired to context + existing action", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F062", "description": "[C-bulk] Bulk Set Due Date: route segment + intercepting modal wired to context + existing action", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F063", "description": "[C-bulk] Bulk Change Status: route segment + intercepting modal wired to context + existing action", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F064", "description": "[C-bulk] Bulk Change Priority: route segment + intercepting modal wired to context + existing action", "implemented": true, "prdRefs": ["6.C", "C2"] },
+  { "id": "F065", "description": "[C-bulk] Remove all 5 bulk dialog imports from TicketingDashboard once routes are live", "implemented": true, "prdRefs": ["6.C", "G4"] },
+  { "id": "F066", "description": "[C-bulk] Preserve BulkTicketActionBar (selection toolbar) on the list as the trigger surface (lightweight, stays)", "implemented": true, "prdRefs": ["6.C", "C1"] },
+
+  { "id": "F070", "description": "[Verify] Confirm 0 per-row RSC prefetch requests fire on list load (DoD-3)", "implemented": true, "prdRefs": ["9"] },
+  { "id": "F071", "description": "[Verify] Confirm the 7 dialogs are absent from the tickets-list route chunk graph in next build (DoD-2)", "implemented": true, "prdRefs": ["9"] },
+  { "id": "F072", "description": "[Verify] Re-run perf trace; record new LCP / render delay / first-load JS vs baseline in SCRATCHPAD (DoD-1)", "implemented": true, "prdRefs": ["9"] },
+  { "id": "F073", "description": "[Verify] Confirm no next/dynamic / React.lazy / import() introduced anywhere in the changes (DoD-6)", "implemented": true, "prdRefs": ["3", "C3"] },
+  { "id": "F074", "description": "[Verify] Visual diff / manual pass confirming no end-user visual change to dialogs or client drawer (DoD-5, C1)", "implemented": true, "prdRefs": ["4", "9"] }
+]

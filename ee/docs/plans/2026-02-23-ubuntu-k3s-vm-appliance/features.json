@@ -37,7 +37,7 @@
   },
   {
     "id": "F007",
-    "description": "Add scripted image build entrypoint ee/appliance/scripts/build-images.sh supporting OVA and QCOW2 targets.",
+    "description": "Add scripted image build entrypoint historical removed image-build script supporting OVA and QCOW2 targets.",
     "implemented": false,
     "prdRefs": ["Public Interfaces / Contracts"]
   },
@@ -79,13 +79,13 @@
   },
   {
     "id": "F014",
-    "description": "Add scripted site bootstrap command ee/appliance/scripts/bootstrap-site.sh for non-interactive initial deployment.",
+    "description": "Add scripted site bootstrap command historical removed bootstrap wrapper for non-interactive initial deployment.",
     "implemented": false,
     "prdRefs": ["Public Interfaces / Contracts"]
   },
   {
     "id": "F015",
-    "description": "Define release manifest schema in ee/appliance/releases/<version>/release.json and enforce required fields.",
+    "description": "Define release manifest schema in historical local release metadata (removed) and enforce required fields.",
     "implemented": false,
     "prdRefs": ["Public Interfaces / Contracts"]
   },

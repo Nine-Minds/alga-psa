@@ -15,7 +15,7 @@ Status reports:
 
 - current phase and last action
 - readiness tiers
-- failure classification (`network`, `dns`, `github-release-source`, `k3s`, `flux`, `storage`, `app-bootstrap`, `app-readiness`, `background-services`)
+- failure classification (`network`, `dns`, `registry-release-source`, `k3s`, `flux`, `storage`, `app-bootstrap`, `app-readiness`, `background-services`)
 - suspected cause, suggested next step, retry safety, and log hints
 
 ## Support Bundle

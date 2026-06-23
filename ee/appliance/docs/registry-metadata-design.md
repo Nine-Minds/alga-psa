@@ -4,12 +4,12 @@
 
 Remove git/branch coupling from the appliance install path. A booted appliance
 must resolve a **channel** (`stable`/`nightly`) to an **immutable set of
-registry artifacts** and install from them. No `repoBranch`, no
-`raw.githubusercontent`, no git clone at install time.
+registry artifacts** and install from them. No git branch override, no raw
+GitHub content fetch, no git clone at install time.
 
-This replaces the prior design where `setup-engine` read `release.json` /
-`channels/*.json` / profile values from git and `applyFluxSource` created a
-Flux `GitRepository` (which also served the helm charts via `chart: ./helm`).
+This replaces the prior design where `setup-engine` read local release metadata
+and profile values from git and `applyFluxSource` created a Flux `GitRepository`
+(which also served the helm charts via `chart: ./helm`).
 
 ## Artifacts (all in ghcr, published by the Argo pipeline)
 
@@ -74,12 +74,13 @@ UI/engine changes still require an ISO. To finish that goal:
 - `applyFluxSource`: create a Flux **OCIRepository** (`source.toolkit.fluxcd.io`) at `config.repository` pinned to `config.digest`, plus a Kustomization with `sourceRef: { kind: OCIRepository }`. No GitRepository.
 - Image tags come from `manifest.images`, injected into the per-release values ConfigMap exactly as today.
 - The flux-base HelmReleases (inside the config bundle) reference OCI charts pinned to `manifest.charts[name]`.
-- `validateSetupInputs`: **drop `repoBranch`/`repoUrl`**. Keep `channel`. (Optional advanced override: pin to a specific `version`/digest.)
+- `validateSetupInputs`: keep `channel`; optional advanced override pins to a specific `version`/digest.
 
 ## Publish side (Argo, `~/nm-kube-config/alga-psa/workflows`)
 
-Add a publish stage (gated on a release/promote run; auth via the existing
-`github-token` secret, user `robertisaacs`):
+The publish stage is owned by the `~/nm-kube-config` Argo workflow and is gated
+on release/promote parameters (auth via the existing `github-token` secret, user
+`robertisaacs`):
 
 1. `helm package` + `helm push oci://ghcr.io/nine-minds/charts/<name>` for each chart.
 2. Render `ee/appliance/flux/` with chart sources rewritten to OCI refs+versions; `flux push artifact oci://ghcr.io/nine-minds/alga-appliance-config:<version>` (capture digest).

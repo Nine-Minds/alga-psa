@@ -1509,7 +1509,8 @@
         },
         "fields": {
           "instanceUrl": "URL d'instance",
-          "instanceUrlHelp": "Utilisez votre URL de base Tactical (sans /api final)."
+          "instanceUrlHelp": "Utilisez l'hôte de l'API Tactical — le sous-domaine api., par ex. https://api.example.com. Pas l'URL du tableau de bord (rmm.) et sans /api à la fin.",
+          "betaApiNote": "Nécessite l'activation de l'API Bêta de Tactical sur le serveur : définissez BETA_API_ENABLED = True dans Tactical, puis redémarrez-le. Sans l'API Bêta, le test de connexion et la synchronisation échoueront."
         },
         "lastError": "Dernière erreur : {{error}}",
         "loadingSettings": "Chargement des paramètres Tactical RMM...",
