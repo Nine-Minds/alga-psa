@@ -2548,7 +2548,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               <span className="text-muted-foreground">
                                 {t(`automaticInvoices.incompatibilityReasons.${reasonKey}`, { defaultValue: AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS[reasonKey] })}
                               </span>
-                              <span className="font-semibold text-warning">✗</span>
+                              <X className="h-3.5 w-3.5 shrink-0 text-warning" />
                             </li>
                           ))}
                         </ul>
@@ -2846,7 +2846,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         )}
       >
         <DialogContent>
-          <div className="flex items-center gap-2 text-red-600 mb-4">
+          <div className="flex items-center gap-2 text-destructive mb-4">
             <AlertTriangle className="h-5 w-5" />
             <span className="font-semibold">
               {t('automaticInvoices.dialogs.reverse.warningTitle', {
@@ -2973,7 +2973,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           {errors.preview ? (
             <div className="text-center py-8">
               {/* Display error message if present */}
-              <p className="text-red-600">{errors.preview}</p>
+              <p className="text-destructive">{errors.preview}</p>
             </div>
           ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
