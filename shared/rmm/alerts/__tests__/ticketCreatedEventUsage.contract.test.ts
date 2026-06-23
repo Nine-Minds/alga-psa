@@ -9,14 +9,16 @@ function readRepoFile(relativePath: string): string {
 }
 
 describe('RMM ticket-created event usage', () => {
-  it('uses TicketModelEventPublisher with source metadata for RMM ticket-created events', () => {
+  it('publishes TICKET_CREATED via the event bus (no @alga-psa/tickets dependency cycle)', () => {
     const helper = readRepoFile('shared/rmm/alerts/ticketCreatedEvent.ts');
 
-    expect(helper).toContain(
-      "import { TicketModelEventPublisher } from '@alga-psa/tickets/lib/adapters/TicketModelEventPublisher'",
-    );
-    expect(helper).toContain('new TicketModelEventPublisher(trx)');
-    expect(helper).toContain("metadata: { source }");
+    // Must NOT import from @alga-psa/tickets — that creates a shared -> tickets cycle.
+    expect(helper).not.toContain("from '@alga-psa/tickets");
+    expect(helper).toContain("import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers'");
+    expect(helper).toContain("import { registerAfterCommit } from '@alga-psa/db'");
+    expect(helper).toContain("eventType: 'TICKET_CREATED' as any");
+    expect(helper).toContain('payload: { tenantId, ticketId, source }');
+    expect(helper).toContain('registerAfterCommit(trx, publish');
   });
 
   it('shared automatic processing publishes TICKET_CREATED only for created tickets', () => {

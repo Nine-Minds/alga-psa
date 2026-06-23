@@ -33,8 +33,6 @@
       "@alga-psa/auth/sso/entry": ["../packages/auth/src/components/SsoProviderButtons.tsx"],
       "@alga-psa/tags": ["../packages/tags/src"],
       "@alga-psa/tags/*": ["../packages/tags/src/*"],
-      "@alga-psa/tickets": ["../packages/tickets/src"],
-      "@alga-psa/tickets/*": ["../packages/tickets/src/*"],
       "@alga-psa/sla": ["../packages/sla/src"],
       "@alga-psa/sla/*": ["../packages/sla/src/*"],
       "next-auth": ["../node_modules/next-auth"],
