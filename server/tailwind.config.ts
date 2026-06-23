@@ -42,6 +42,13 @@ const config: Config = {
           'monospace',
         ],
       },
+      fontSize: {
+        // One deliberate caption tier below text-xs (12px): used for uppercase
+        // column headers, micro tags/badges, and small captions. Replaces the
+        // ad-hoc text-[10px]/text-[11px] magic numbers so "small" has a single
+        // defined rung instead of three indistinguishable ones.
+        '2xs': ['0.6875rem', { lineHeight: '0.875rem' }], // 11px / 14px
+      },
       gridTemplateColumns: {
         '24': 'repeat(24, minmax(0, 1fr))',
         '96': 'repeat(96, minmax(0, 1fr))',

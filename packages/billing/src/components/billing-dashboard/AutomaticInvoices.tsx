@@ -1148,7 +1148,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <span
         key={type}
         title={CHARGE_TAG_FULL_NAME[type]}
-        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${meta.className}`}
+        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide ${meta.className}`}
       >
         {t(meta.labelKey, { defaultValue: meta.default })}{count > 1 ? ` ×${count}` : ''}
       </span>
@@ -1225,7 +1225,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       return (
         <div className="text-right">
           <div className="font-semibold font-mono tabular-nums text-foreground">{formatCurrency(summary.knownCents / 100)}</div>
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-2xs text-muted-foreground">
             {t('automaticInvoices.amount.plusAtGeneration', {
               count: summary.atGenerationCount,
               defaultValue: `+ ${summary.atGenerationCount} at generation`,
@@ -1235,7 +1235,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       );
     }
     return (
-      <div className="text-right text-[11px] font-medium text-muted-foreground">
+      <div className="text-right text-2xs font-medium text-muted-foreground">
         {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
       </div>
     );
@@ -1863,7 +1863,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       }`}
                     >
                       {t(tab.labelKey, { defaultValue: tab.default })}
-                      <span className={`text-[11px] font-semibold ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
+                      <span className={`text-2xs font-semibold ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
                         {viewCounts[tab.key]}
                       </span>
                     </button>
@@ -2106,7 +2106,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   {selectionKnownCents > 0 ? (
                     <>
                       <div className="font-bold font-mono tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
-                      <div className="text-[11px] text-white/80">
+                      <div className="text-2xs text-white/80">
                         {selectionAtGenerationCount > 0
                           ? t('automaticInvoices.summary.knownPlusAtGeneration', {
                               count: selectionAtGenerationCount,
@@ -2120,7 +2120,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       <div className="text-sm font-semibold">
                         {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
                       </div>
-                      <div className="text-[11px] text-white/80">
+                      <div className="text-2xs text-white/80">
                         {t('automaticInvoices.drawer.obligations', {
                           count: selectionAtGenerationCount,
                           defaultValue: `${selectionAtGenerationCount} line item${selectionAtGenerationCount === 1 ? '' : 's'}`,
@@ -2257,7 +2257,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 dataIndex: 'title',
                 width: '34%',
                 sortable: false,
-                headerClassName: 'text-[11px] uppercase tracking-wide',
+                headerClassName: 'text-2xs uppercase tracking-wide',
                 cellClassName: 'align-top',
                 render: (_: unknown, rowRecord: unknown) => {
                   const record = rowRecord as AutomaticInvoiceDisplayRow;
@@ -2413,7 +2413,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 dataIndex: 'status',
                 width: '120px',
                 sortable: false,
-                headerClassName: 'text-[11px] uppercase tracking-wide',
+                headerClassName: 'text-2xs uppercase tracking-wide',
                 cellClassName: 'align-top',
                 render: (_: unknown, rowRecord: unknown) => {
                   const record = rowRecord as AutomaticInvoiceDisplayRow;
@@ -2441,7 +2441,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 dataIndex: 'servicePeriod',
                 width: '128px',
                 sortable: false,
-                headerClassName: 'text-[11px] uppercase tracking-wide',
+                headerClassName: 'text-2xs uppercase tracking-wide',
                 cellClassName: 'align-top',
                 render: (_: unknown, rowRecord: unknown) => {
                   const record = rowRecord as AutomaticInvoiceDisplayRow;
@@ -2460,7 +2460,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 dataIndex: 'amount',
                 width: '150px',
                 sortable: false,
-                headerClassName: 'text-[11px] uppercase tracking-wide text-right',
+                headerClassName: 'text-2xs uppercase tracking-wide text-right',
                 cellClassName: 'align-top text-right',
                 render: (_: unknown, rowRecord: unknown) => {
                   const record = rowRecord as AutomaticInvoiceDisplayRow;
@@ -2468,7 +2468,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     const amount = amountCentsOf(record.member as { amountCents?: number | null });
                     if (amount === null) {
                       return (
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-2xs text-muted-foreground">
                           {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
                         </span>
                       );
@@ -2523,7 +2523,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               >
                 <div className="flex h-full flex-col">
                   <div className="border-b border-border px-5 py-4">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-primary-600">
+                    <div className="text-2xs font-semibold uppercase tracking-wide text-primary-600">
                       {t('automaticInvoices.drawer.eyebrow', { defaultValue: 'Focused' })}
                     </div>
                     <h3 className="mt-1 text-lg font-bold">
@@ -2539,7 +2539,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   <div className="flex-1 space-y-4 overflow-auto px-5 py-4">
                     {!summary.isCombinable && summary.incompatibilityReasons.length > 0 ? (
                       <div>
-                        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <div className="mb-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {t('automaticInvoices.drawer.whySeparate', { defaultValue: 'Why these must be separate' })}
                         </div>
                         <ul className="space-y-0">
@@ -2556,7 +2556,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     ) : null}
 
                     <div>
-                      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <div className="mb-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {t('automaticInvoices.drawer.lines', {
                           count: summary.childCount,
                           defaultValue: `Lines (${summary.childCount})`,
@@ -2579,7 +2579,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                               </span>
                               <span className="shrink-0 tabular-nums">
                                 {amount === null
-                                  ? <span className="text-[11px] text-muted-foreground">{t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}</span>
+                                  ? <span className="text-2xs text-muted-foreground">{t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}</span>
                                   : <span className="font-medium font-mono">{formatCurrency(amount / 100)}</span>}
                               </span>
                             </li>
