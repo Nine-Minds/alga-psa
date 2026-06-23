@@ -2318,7 +2318,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       : t('recurringServicePeriods.values.arrears', { defaultValue: 'Arrears' });
                     return (
                       <div className="min-w-0 space-y-0.5 pl-8">
-                        <div className="font-medium leading-snug">{childTitle}</div>
+                        <div className="flex items-center gap-2 font-medium leading-snug">
+                          <span className="min-w-0 truncate">{childTitle}</span>
+                          {distinctChargeTags([member]).map(({ type }) => renderChargeTag(type, 1))}
+                        </div>
                         {member.contractLineName?.trim() && member.contractLineName.trim() !== childTitle ? (
                           <div className="text-xs text-muted-foreground">{member.contractLineName.trim()}</div>
                         ) : null}
@@ -2374,6 +2377,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       <div className="min-w-0 space-y-1">
                         <div className="break-words font-semibold leading-snug">
                           {group.parentSummary.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
+                          {(() => {
+                            const tags = distinctChargeTags(group.childExecutionRows);
+                            return tags.length > 0 ? (
+                              <span className="ml-2 inline-flex gap-1 align-middle">
+                                {tags.map(({ type, count }) => renderChargeTag(type, count))}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
                         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
                           {/* A single charge names its line; multiple charges show a count.
@@ -2434,23 +2445,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       </div>
                     </div>
                   );
-                },
-              },
-              {
-                title: t('automaticInvoices.ready.columns.charge', { defaultValue: 'Charge' }),
-                dataIndex: 'tags',
-                width: '76px',
-                sortable: false,
-                headerClassName: 'text-[11px] uppercase tracking-wide',
-                cellClassName: 'align-top',
-                render: (_: unknown, rowRecord: unknown) => {
-                  const record = rowRecord as AutomaticInvoiceDisplayRow;
-                  const members = record.kind === 'member' ? [record.member] : record.group.childExecutionRows;
-                  const tags = distinctChargeTags(members);
-                  if (tags.length === 0) {
-                    return <span className="text-xs text-muted-foreground">—</span>;
-                  }
-                  return <div className="flex flex-wrap gap-1">{tags.map(({ type, count }) => renderChargeTag(type, count))}</div>;
                 },
               },
               {
