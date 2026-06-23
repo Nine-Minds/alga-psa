@@ -2078,7 +2078,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
           {/* Selection / summary bar */}
           <div
-            className={`sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 shadow-sm ${
+            className={`sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-4 py-3 shadow-sm ${
               hasSelection
                 ? 'border-transparent bg-gradient-to-r from-primary-600 to-primary-500 text-white'
                 : 'border-border bg-card text-foreground'
@@ -2973,7 +2973,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </div>
           ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
-              <div className="rounded border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
+              <div className="rounded-md border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
                 {previewState.invoiceCount === 1
                   ? t('automaticInvoices.dialogs.preview.summaryCombined', {
                     defaultValue: 'This selection will generate one combined invoice.',
@@ -2984,7 +2984,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   })}
               </div>
               {previewState.previews.map((previewEntry, previewIndex) => (
-                <div key={previewEntry.previewGroupKey} className="space-y-4 rounded border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>
+                <div key={previewEntry.previewGroupKey} className="space-y-4 rounded-md border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>
                   <h3 className="font-semibold">
                     {t('automaticInvoices.dialogs.preview.invoiceTitle', {
                       index: previewIndex + 1,
