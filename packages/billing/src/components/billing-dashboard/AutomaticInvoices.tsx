@@ -54,7 +54,7 @@ interface AutomaticInvoicesProps {
   refreshTrigger?: number;
 }
 
-type AutomaticInvoiceGroupLabelKey = 'ready' | 'canCombine' | 'separate' | 'blocked' | 'notReady';
+type AutomaticInvoiceGroupLabelKey = 'ready' | 'canCombine' | 'separate' | 'blocked' | 'notReady' | 'upcoming';
 type AutomaticInvoiceIncompatibilityReasonKey =
   | 'invoiceWindowDiffers'
   | 'clientDiffers'
@@ -82,6 +82,8 @@ interface RecurringInvoiceParentGroup {
     incompatibilityReasons: AutomaticInvoiceIncompatibilityReasonKey[];
     canGenerate: boolean;
     blockedReason: string | null;
+    notYetDue: boolean;
+    availableOnDate: string | null;
   };
   childExecutionRows: ReadyPeriod['members'];
   candidate: ReadyPeriod;
@@ -99,16 +101,19 @@ const AUTOMATIC_INVOICE_GROUP_LABELS: Record<AutomaticInvoiceGroupLabelKey, stri
   separate: 'Must invoice separately',
   blocked: 'Contains blocked items',
   notReady: 'Not ready to invoice',
+  upcoming: 'Not yet due',
 };
 
 const getParentGroupSummary = ({
   isCombinable,
   canGenerate,
+  notYetDue,
   incompatibilityReasons,
   childCount,
 }: {
   isCombinable: boolean;
   canGenerate: boolean;
+  notYetDue: boolean;
   incompatibilityReasons: AutomaticInvoiceIncompatibilityReasonKey[];
   childCount: number;
 }): {
@@ -119,6 +124,15 @@ const getParentGroupSummary = ({
     return {
       labelKey: childCount > 1 ? 'canCombine' : 'ready',
       className: 'border-border/70 text-foreground',
+    };
+  }
+
+  // A period that simply hasn't reached its invoice window yet is "upcoming",
+  // not blocked — keep it visually neutral so it doesn't read like an error.
+  if (notYetDue) {
+    return {
+      labelKey: 'upcoming',
+      className: 'border-border/60 text-muted-foreground',
     };
   }
 
@@ -153,9 +167,11 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
         : null;
     const incompatibilityReasons = resolveIncompatibilityReasons(candidate);
     const isCombinable = candidate.canGenerate && incompatibilityReasons.length === 0;
+    const notYetDue = candidate.notYetDue === true;
     const parentGroupSummary = getParentGroupSummary({
       isCombinable,
       canGenerate: candidate.canGenerate,
+      notYetDue,
       incompatibilityReasons,
       childCount: candidate.memberCount,
     });
@@ -175,6 +191,8 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       incompatibilityReasons,
       canGenerate: candidate.canGenerate,
       blockedReason: candidate.blockedReason ?? null,
+      notYetDue,
+      availableOnDate: candidate.availableOnDate ?? null,
     },
     childExecutionRows: candidate.members,
     candidate,
@@ -1714,6 +1732,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                   className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 font-medium ${getParentGroupSummary({
                                     isCombinable: record.parentSummary.isCombinable,
                                     canGenerate: record.parentSummary.canGenerate,
+                                    notYetDue: record.parentSummary.notYetDue,
                                     incompatibilityReasons: record.parentSummary.incompatibilityReasons,
                                     childCount: record.parentSummary.childCount,
                                   }).className}`}
@@ -1740,6 +1759,21 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
                               <div className="text-xs text-muted-foreground">
                                 {formatBlockedReason(record.parentSummary.blockedReason)}
+                              </div>
+                            ) : null}
+                            {record.parentSummary.notYetDue ? (
+                              <div
+                                className="text-xs text-muted-foreground"
+                                data-testid={`not-yet-due-${record.parentSummary.parentGroupKey}`}
+                              >
+                                {record.parentSummary.availableOnDate
+                                  ? t('automaticInvoices.groups.upcomingDetailWithDate', {
+                                    date: formatDate(record.parentSummary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }),
+                                    defaultValue: `This period bills in arrears, so it becomes available to invoice on ${formatDate(record.parentSummary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}, after the service period ends.`,
+                                  })
+                                  : t('automaticInvoices.groups.upcomingDetail', {
+                                    defaultValue: 'This period bills in arrears, so it becomes available to invoice after the service period ends.',
+                                  })}
                               </div>
                             ) : null}
                             {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (
@@ -1909,6 +1943,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                   {!member.canGenerate && (member as { blockedReason?: string | null }).blockedReason ? (
                                     <div className="text-xs text-muted-foreground">
                                       {formatBlockedReason((member as { blockedReason?: string | null }).blockedReason)}
+                                    </div>
+                                  ) : !member.canGenerate && member.isEarly ? (
+                                    <div
+                                      className="text-xs text-muted-foreground"
+                                      data-testid={`child-not-yet-due-${member.executionIdentityKey}`}
+                                    >
+                                      {t('automaticInvoices.executionRows.billableOn', {
+                                        date: formatDate(member.invoiceWindowStart, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }),
+                                        defaultValue: `Billable on ${formatDate(member.invoiceWindowStart, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}`,
+                                      })}
                                     </div>
                                   ) : null}
                                 </div>

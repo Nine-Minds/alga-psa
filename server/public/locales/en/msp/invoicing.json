@@ -58,7 +58,10 @@
       "canCombine": "Can combine into 1 invoice",
       "separate": "Must invoice separately",
       "blocked": "Contains blocked items",
-      "notReady": "Not ready to invoice"
+      "notReady": "Not ready to invoice",
+      "upcoming": "Not yet due",
+      "upcomingDetail": "This period bills in arrears, so it becomes available to invoice after the service period ends.",
+      "upcomingDetailWithDate": "This period bills in arrears, so it becomes available to invoice on {{date}}, after the service period ends."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Invoice window differs",
@@ -75,6 +78,7 @@
         "servicePeriod": "Service period"
       },
       "pendingAmount": "Pending amount",
+      "billableOn": "Billable on {{date}}",
       "attributionWarning": "Assignment attribution metadata missing",
       "blockedUntilApproval": "Blocked until approval: {{count}} unapproved entry.",
       "blockedUntilApproval_one": "Blocked until approval: {{count}} unapproved entry.",
