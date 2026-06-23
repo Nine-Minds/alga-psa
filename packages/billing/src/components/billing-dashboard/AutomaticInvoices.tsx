@@ -2395,9 +2395,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           {currencyCode ? <span>{currencyCode}</span> : null}
                           {poScope ? <span title={poScope}>{formatPoLabel(poScope)}</span> : null}
                           <span>{cadenceSummary}</span>
-                          {group.childExecutionRows.some((member) => !member.billingCycleId) ? (
-                            <span>{t('automaticInvoices.history.badges.servicePeriodBacked', { defaultValue: 'Service-period-backed' })}</span>
-                          ) : null}
                         </div>
                         {!group.parentSummary.isCombinable && group.parentSummary.incompatibilityReasons.length > 0 ? (
                           <div className="text-xs text-muted-foreground" data-testid={`combinability-reasons-${group.parentSummary.parentGroupKey}`}>
@@ -2410,13 +2407,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           <div className="text-xs text-muted-foreground">{formatBlockedReason(group.parentSummary.blockedReason)}</div>
                         ) : null}
                         {group.parentSummary.notYetDue ? (
+                          // The pill says "Not yet due" and the window cell shows the open
+                          // date; this only adds the reason. Keep it to one short line.
                           <div className="text-xs text-muted-foreground" data-testid={`not-yet-due-${group.parentSummary.parentGroupKey}`}>
-                            {group.parentSummary.availableOnDate
-                              ? t('automaticInvoices.groups.upcomingDetailWithDate', {
-                                  date: formatDate(group.parentSummary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }),
-                                  defaultValue: `This period bills in arrears, so it becomes available to invoice on ${formatDate(group.parentSummary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}, after the service period ends.`,
-                                })
-                              : t('automaticInvoices.groups.upcomingDetail', { defaultValue: 'This period bills in arrears, so it becomes available to invoice after the service period ends.' })}
+                            {t('automaticInvoices.groups.upcomingDetail', { defaultValue: 'Bills in arrears. Available once the service period ends.' })}
                           </div>
                         ) : null}
                         {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (

@@ -61,7 +61,7 @@
       "blocked": "Contains blocked items",
       "notReady": "Not ready to invoice",
       "upcoming": "Not yet due",
-      "upcomingDetail": "This period bills in arrears, so it becomes available to invoice after the service period ends.",
+      "upcomingDetail": "Bills in arrears. Available once the service period ends.",
       "upcomingDetailWithDate": "This period bills in arrears, so it becomes available to invoice on {{date}}, after the service period ends."
     },
     "incompatibilityReasons": {
