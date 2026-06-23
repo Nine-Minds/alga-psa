@@ -2351,9 +2351,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   ));
                   const attributionSummaryLabels = group.candidate.attributionSummary?.labels ?? [];
                   const assignmentLabels = Array.from(new Set([...attributionSummaryLabels, ...assignmentContexts]));
-                  const cadenceSummary = Array.from(new Set(
-                    ((group.candidate.cadenceSources ?? []).length > 0 ? group.candidate.cadenceSources : [null]).map((source) => formatCadenceSourceText(source)),
-                  )).join(' + ');
                   const shouldShowAssignmentContexts = !isExpanded && contractNames.length === 0 && contractLineNames.length === 0 && assignmentLabels.length > 0;
                   const poScope = group.candidate.purchaseOrderScopeKey?.trim();
                   const currencyCode = group.candidate.currencyCode?.trim();
@@ -2394,7 +2391,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           )}
                           {currencyCode ? <span>{currencyCode}</span> : null}
                           {poScope ? <span title={poScope}>{formatPoLabel(poScope)}</span> : null}
-                          <span>{cadenceSummary}</span>
                         </div>
                         {!group.parentSummary.isCombinable && group.parentSummary.incompatibilityReasons.length > 0 ? (
                           <div className="text-xs text-muted-foreground" data-testid={`combinability-reasons-${group.parentSummary.parentGroupKey}`}>
