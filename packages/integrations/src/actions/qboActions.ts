@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { ISecretProvider } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { notifyQboConnectionChanged } from '../lib/qbo/qboConnectionChangeProvider';
 import {
   QboClientService,
   QBO_CLIENT_ID_SECRET_NAME,
@@ -324,6 +325,7 @@ async function deleteTenantQboCredentials(secretProvider: ISecretProvider, tenan
   await secretProvider.deleteTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
   logger.info('QBO credentials secret deleted', { tenantId });
   clearAllCatalogCachesForTenant(tenantId);
+  await notifyQboConnectionChanged(tenantId);
 }
 
 async function revokeQboTokens(tenantId: string, credentialMap: QboCredentialsMap): Promise<void> {

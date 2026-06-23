@@ -28,6 +28,7 @@ import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
+import { registerQboConnectionChangeHandler } from '@alga-psa/integrations/lib/qbo/qboConnectionChangeProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -133,6 +134,13 @@ export async function initializeApp() {
       EmailProviderManager: EmailProviderManager as any,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
+    // Converge the accounting-sync schedule the moment a tenant connects or
+    // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
+    // next startup reconcile.
+    registerQboConnectionChangeHandler(async (tenantId) => {
+      const { scheduleAccountingSyncCycleJob } = await import('./jobs/handlers/accountingSyncCycleHandler');
+      await scheduleAccountingSyncCycleJob(tenantId);
+    });
     logger.info('Email provider registries initialized');
 
     // Schedule entries are now read directly by @alga-psa/user-activities via the
