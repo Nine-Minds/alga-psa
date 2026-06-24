@@ -23,7 +23,10 @@ export async function createAgent(_input: unknown): Promise<never> {
 export async function listAgents(_tenant: string): Promise<unknown[]> {
   return [];
 }
-export async function setAgentActive(): Promise<void> {
+export async function setAgentActive(_tenant?: string, _agentId?: string, _active?: boolean): Promise<void> {
+  /* no-op in CE */
+}
+export async function deleteAgent(_tenant?: string, _agentId?: string): Promise<void> {
   /* no-op in CE */
 }
 export async function addTrustedIdp(_input: unknown): Promise<never> {
@@ -41,9 +44,39 @@ export async function listAssignableRoles(_tenant: string): Promise<unknown[]> {
 export async function getIdpSuggestions(_tenant: string): Promise<Record<string, unknown>> {
   return {};
 }
-export async function exportAgentAudit(_tenant: string, _filter?: unknown): Promise<unknown[]> {
-  return [];
+export async function exportAgentAudit(_tenant: string, _filter?: unknown): Promise<{ rows: unknown[]; total: number }> {
+  return { rows: [], total: 0 };
 }
 export async function authenticateMcpAdmin(_req: unknown): Promise<McpAdminContext | null> {
   return null;
+}
+
+// "Connect with Microsoft/Google" + hosted platform providers (EE-only). These
+// shapes mirror @ee/lib/mcp/connectOAuth so the route shells type-check against
+// either edition's seam entry.
+export interface PlatformProvider {
+  provider: 'microsoft' | 'google';
+  label: string;
+  issuer: string | null;
+  available: boolean;
+}
+export interface ConnectIdentity {
+  provider: 'microsoft' | 'google';
+  issuer: string;
+  subject: string;
+  label: string;
+}
+export interface ConnectStart {
+  authUrl: string;
+  stateCookie: { name: string; value: string; maxAgeSeconds: number };
+}
+
+export async function listPlatformProviders(_tenant: string): Promise<PlatformProvider[]> {
+  return [];
+}
+export async function buildConnectAuthUrl(_params: unknown): Promise<ConnectStart> {
+  throw new Error('MCP is an Enterprise feature.');
+}
+export async function completeConnectCallback(_params: unknown): Promise<ConnectIdentity> {
+  throw new Error('MCP is an Enterprise feature.');
 }

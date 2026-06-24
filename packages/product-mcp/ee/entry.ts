@@ -5,6 +5,7 @@ export {
   createAgent,
   listAgents,
   setAgentActive,
+  deleteAgent,
   addTrustedIdp,
   listTrustedIdps,
   listAllActiveIssuers,
@@ -13,3 +14,9 @@ export {
 } from '@ee/lib/mcp/agents';
 export { exportAgentAudit } from '@ee/lib/mcp/agentAudit';
 export { authenticateMcpAdmin } from '@ee/lib/mcp/adminAuth';
+export {
+  buildConnectAuthUrl,
+  completeConnectCallback,
+  listPlatformProviders,
+} from '@ee/lib/mcp/connectOAuth';
+export type { PlatformProvider, ConnectIdentity, ConnectStart, ConnectProvider } from '@ee/lib/mcp/connectOAuth';

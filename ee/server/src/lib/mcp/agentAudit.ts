@@ -37,17 +37,33 @@ export async function writeAgentAudit(entry: AgentAuditEntry): Promise<void> {
 export interface AgentAuditExportFilter {
   agentId?: string;
   limit?: number;
+  offset?: number;
 }
 
+export interface AgentAuditPage {
+  rows: unknown[];
+  total: number;
+}
+
+/**
+ * One page of the agent-action audit, newest first. Returns the page rows plus
+ * the total row count so the caller can drive server-side pagination — an agent
+ * can log hundreds of calls in a burst, so we never load the whole log.
+ */
 export async function exportAgentAudit(
   tenant: string,
   filter: AgentAuditExportFilter = {},
-): Promise<unknown[]> {
+): Promise<AgentAuditPage> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    let q = knex('mcp_agent_audit').where({ tenant }).orderBy('created_at', 'desc');
-    if (filter.agentId) q = q.where({ agent_id: filter.agentId });
-    q = q.limit(Math.max(1, Math.min(filter.limit ?? 1000, 10000)));
-    return q;
+    const scoped = () => {
+      const q = knex('mcp_agent_audit').where({ tenant });
+      return filter.agentId ? q.where({ agent_id: filter.agentId }) : q;
+    };
+    const limit = Math.max(1, Math.min(filter.limit ?? 25, 200));
+    const offset = Math.max(0, filter.offset ?? 0);
+    const countRow = await scoped().count<{ count: string }>('* as count').first();
+    const rows = await scoped().orderBy('created_at', 'desc').limit(limit).offset(offset);
+    return { rows, total: countRow ? Number(countRow.count) : 0 };
   });
 }

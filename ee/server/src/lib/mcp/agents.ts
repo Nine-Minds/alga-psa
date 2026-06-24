@@ -143,6 +143,31 @@ export async function setAgentActive(tenant: string, agentId: string, active: bo
   });
 }
 
+/**
+ * Permanently remove an agent and everything provisioned for it. There are no DB
+ * cascades (tenant isolation + relations are app-enforced), so we tear down each
+ * relation explicitly in one transaction: role grants, the audit trail, any
+ * agent-scoped API keys, and the backing internal user. Idempotent.
+ */
+export async function deleteAgent(tenant: string, agentId: string): Promise<void> {
+  await runWithTenant(tenant, async () => {
+    const { knex } = await createTenantKnex(tenant);
+    const agent = (await knex('agents').where({ tenant, agent_id: agentId }).first()) as AgentRecord | undefined;
+    if (!agent) return;
+    const userId = backingUserId(agent);
+    await knex.transaction(async (trx) => {
+      await trx('agent_roles').where({ tenant, agent_id: agentId }).del();
+      await trx('mcp_agent_audit').where({ tenant, agent_id: agentId }).del();
+      await trx('api_keys').where({ tenant, agent_id: agentId }).del();
+      if (userId) {
+        await trx('user_roles').where({ tenant, user_id: userId }).del();
+        await trx('users').where({ tenant, user_id: userId }).del();
+      }
+      await trx('agents').where({ tenant, agent_id: agentId }).del();
+    });
+  });
+}
+
 export interface TrustedIdpInput {
   tenant: string;
   /** Preset: 'google' | 'microsoft' | 'custom' (default 'custom'). */
