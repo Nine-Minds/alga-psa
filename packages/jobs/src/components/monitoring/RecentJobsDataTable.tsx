@@ -47,6 +47,13 @@ const StatusBadge: React.FC<{ status: string; label: string }> = ({ status, labe
   );
 };
 
+// Recurring job types carry runner-queue routing ids as colon-suffixes
+// (e.g. "accounting-sync-cycle:<tenant-uuid>" or
+// "rmm-alert-reconciliation:<tenant-uuid>:<scheduled-id>"). The page is
+// tenant-scoped, so those ids are constant plumbing — strip every uuid segment.
+const ID_SUFFIX = /:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const displayJobType = (type: string): string => type.replace(ID_SUFFIX, '');
+
 interface RecentJobsDataTableProps {
   initialData?: JobRecord[];
 }
@@ -140,7 +147,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       dataIndex: 'type',
       render: (type: string, record: JobRecord) => (
         <div className="flex flex-col">
-          <span className="font-medium text-[rgb(var(--color-text-900))]">{type}</span>
+          <span className="font-medium text-[rgb(var(--color-text-900))]">{displayJobType(type)}</span>
           {record.job_id && (
             <span className="text-xs text-[rgb(var(--color-text-400))] font-mono mt-0.5">
               {record.job_id.slice(0, 8)}
@@ -176,7 +183,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       ),
     },
     {
-      title: t('recentTable.columns.completed', { defaultValue: 'Completed' }),
+      title: t('recentTable.columns.completed', { defaultValue: 'Ended' }),
       dataIndex: 'updated_at',
       render: (value?: Date, record?: JobRecord) => {
         if (record?.status === 'processing' || record?.status === 'pending') {
@@ -196,7 +203,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       key: 'job',
       label: t('recentTable.print.columns.jobName', { defaultValue: 'Job Name' }),
       header: t('recentTable.print.columns.jobName', { defaultValue: 'Job Name' }),
-      render: (job) => job.type,
+      render: (job) => displayJobType(job.type),
     },
     {
       key: 'status',
@@ -218,8 +225,8 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     },
     {
       key: 'completed',
-      label: t('recentTable.print.columns.completed', { defaultValue: 'Completed' }),
-      header: t('recentTable.print.columns.completed', { defaultValue: 'Completed' }),
+      label: t('recentTable.print.columns.completed', { defaultValue: 'Ended' }),
+      header: t('recentTable.print.columns.completed', { defaultValue: 'Ended' }),
       render: (job) => job.status === 'processing' || job.status === 'pending'
         ? t('shared.fallbacks.empty', { defaultValue: '-' })
         : formatRelativeTime(job.updated_at),

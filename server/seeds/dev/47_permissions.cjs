@@ -245,7 +245,10 @@ exports.seed = async function(knex) {
         { resource: 'service', action: 'create', msp: true, client: false, description: 'Create services/products in the service catalog' },
         { resource: 'service', action: 'read', msp: true, client: false, description: 'View services/products in the service catalog' },
         { resource: 'service', action: 'update', msp: true, client: false, description: 'Update services/products in the service catalog' },
-        { resource: 'service', action: 'delete', msp: true, client: false, description: 'Archive/delete services/products in the service catalog' }
+        { resource: 'service', action: 'delete', msp: true, client: false, description: 'Archive/delete services/products in the service catalog' },
+
+        // Job monitoring
+        { resource: 'job', action: 'delete', msp: true, client: false, description: 'Clear job monitoring history' }
     ];
 
     // Process each tenant

@@ -21,7 +21,7 @@
       "status": "Estado",
       "duration": "Duración",
       "started": "Comenzó",
-      "completed": "Terminado"
+      "completed": "Finalizado"
     },
     "time": {
       "justNow": "En este momento",
@@ -45,7 +45,7 @@
         "status": "Estado",
         "duration": "Duración",
         "started": "Iniciado",
-        "completed": "Completado"
+        "completed": "Finalizado"
       },
       "optionsDialog": {
         "title": "Opciones de impresión",
@@ -63,9 +63,12 @@
       "pending": "Pendiente",
       "processing": "Tratamiento",
       "pgboss": "Jefe PG",
-      "temporal": "Temporal"
+      "temporal": "Temporal",
+      "queued": "En cola",
+      "running": "En ejecución"
     },
-    "successRate": "{{count}}% tasa de éxito"
+    "successRate": "{{count}}% tasa de éxito",
+    "successRateNone": "Aún no hay trabajos finalizados"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "Imprimir",
     "printOptions": "Opciones de impresión"
+  },
+  "clearHistory": {
+    "button": "Borrar historial",
+    "dialog": {
+      "title": "Borrar historial de trabajos",
+      "warning": "Esto elimina permanentemente el historial de trabajos de esta lista y no se puede deshacer. No detiene ni cancela los trabajos que aún se están ejecutando.",
+      "daysLabel": "Antigüedad en días",
+      "daysError": "Introduce un número entero de días (1 o más).",
+      "cancel": "Cancelar",
+      "clearing": "Borrando…",
+      "confirm": "Borrar historial"
+    },
+    "scope": {
+      "finished": {
+        "label": "Solo finalizados",
+        "description": "Trabajos completados y fallidos. Se conservan los pendientes, en cola y en ejecución."
+      },
+      "all": {
+        "label": "Todos los estados",
+        "description": "Todos los trabajos, incluidos los pendientes, en cola y aún en ejecución."
+      }
+    },
+    "age": {
+      "toggle": "Eliminar solo los trabajos más antiguos que la antigüedad indicada"
+    },
+    "toast": {
+      "success_one": "Se eliminó {{count}} trabajo del historial.",
+      "success_other": "Se eliminaron {{count}} trabajos del historial.",
+      "none": "No hay trabajos que coincidan para borrar.",
+      "error": "No se pudo borrar el historial de trabajos. Inténtalo de nuevo."
+    }
   }
 }
