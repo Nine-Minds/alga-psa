@@ -7,7 +7,6 @@ const { runMaintenanceJobActivity } = proxyActivities<typeof activities>({
 
 export interface MaintenanceJobWorkflowInput {
   jobName: string;
-  concurrency?: number;
 }
 
 // Thin schedule-driven workflow: one global Temporal Schedule per maintenance

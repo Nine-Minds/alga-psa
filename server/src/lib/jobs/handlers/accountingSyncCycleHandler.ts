@@ -81,8 +81,11 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
   });
 }
 
+// Throws if credentials can't be read (e.g. a transient secret-store error) so
+// the caller can distinguish "genuinely disconnected" from "couldn't tell" — the
+// latter must NOT cancel a connected tenant's schedule.
 async function tenantHasConnectedRealm(tenantId: string): Promise<boolean> {
-  const credentials = await getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, unknown>));
+  const credentials = await getStoredQboCredentialsMap(tenantId);
   return Object.keys(credentials).length > 0;
 }
 
@@ -121,7 +124,21 @@ export async function scheduleAccountingSyncCycleJob(tenantId: string): Promise<
 
   const singletonKey = `${JOB_NAME}:${tenantId}`;
 
-  if (!(await tenantHasConnectedRealm(tenantId))) {
+  let hasRealm: boolean;
+  try {
+    hasRealm = await tenantHasConnectedRealm(tenantId);
+  } catch (error) {
+    // Couldn't read credentials (e.g. a transient secret-store blip). Don't treat
+    // that as "disconnected" — leave any existing schedule untouched rather than
+    // cancelling a connected tenant's cycle. The next convergence retries.
+    logger.warn('[accountingSync] Realm check failed; leaving schedule unchanged', {
+      tenantId,
+      error: error instanceof Error ? error.message : error,
+    });
+    return null;
+  }
+
+  if (!hasRealm) {
     await cancelAccountingSyncCycle(tenantId, singletonKey);
     return null;
   }
