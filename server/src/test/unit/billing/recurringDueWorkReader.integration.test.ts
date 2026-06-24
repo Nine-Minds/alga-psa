@@ -508,7 +508,7 @@ describe('recurring due-work reader', () => {
     expect(result.invoiceCandidates).toEqual([]);
   });
 
-  it('T117: client-arrears rows stay visible by service-period filter but remain blocked until the selected to-date reaches the invoice window start', async () => {
+  it('T117: client-arrears rows stay visible by service-period filter but surface as not-yet-due until the selected to-date reaches the invoice window start', async () => {
     const beforeWindowStarts = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
@@ -521,11 +521,17 @@ describe('recurring due-work reader', () => {
       (candidate) => candidate.clientId === 'client-3',
     );
 
+    // The invoice window has not opened yet, so the candidate is "not yet due"
+    // (an arrears period still in progress) rather than blocked by a data
+    // problem. It carries no alarming blockedReason and exposes the date the
+    // window opens so the UI can say "Billable on <date>".
     expect(blockedCandidate).toMatchObject({
       servicePeriodStart: '2025-03-01',
       windowStart: '2025-04-01',
       canGenerate: false,
-      blockedReason: 'One or more included obligations are not eligible for generation.',
+      notYetDue: true,
+      availableOnDate: '2025-04-01',
+      blockedReason: null,
     });
 
     const afterWindowStarts = await getAvailableRecurringDueWork({
@@ -544,6 +550,7 @@ describe('recurring due-work reader', () => {
       servicePeriodStart: '2025-03-01',
       windowStart: '2025-04-01',
       canGenerate: true,
+      notYetDue: false,
       blockedReason: null,
     });
   });
@@ -634,7 +641,7 @@ describe('recurring due-work reader', () => {
         servicePeriodEnd: '2025-03-01',
         reason: 'missing_service_period_materialization',
         detail:
-          'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+          "This client's billing schedule changed, so these charges are out of date and need to be rebuilt before they can be invoiced.",
       },
     ]);
     expect(result.invoiceCandidates.map((candidate) => candidate.clientId)).not.toContain('client-2');

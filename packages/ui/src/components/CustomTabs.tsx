@@ -42,6 +42,11 @@ export interface CustomTabsProps {
   };
   extraContent?: React.ReactNode;
   /**
+   * Optional content rendered at the START of the tab list, before the triggers
+   * (e.g. a page title sharing the tab-bar row). Mirrors extraContent (end).
+   */
+  startContent?: React.ReactNode;
+  /**
    * Optional prefix applied to tab trigger ids to satisfy unique id requirements
    */
   idPrefix?: string;
@@ -57,6 +62,7 @@ export const CustomTabs = ({
   beforeTabChange,
   tabStyles,
   extraContent,
+  startContent,
   idPrefix,
   orientation = 'horizontal',
 }: CustomTabsProps & AutomationProps) => {
@@ -193,6 +199,7 @@ export const CustomTabs = ({
       }}
     >
       <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
+        {startContent}
         {renderGroupedTabs ? (
           groups.map((group, groupIndex) => {
             const isExpanded = expandedSections[groupIndex] !== false; // Default to true

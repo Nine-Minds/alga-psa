@@ -1584,6 +1584,14 @@
           "unavailable": "Información del webhook no disponible. (Requiere permiso de lectura de configuración.)",
           "url": "URL del webhook",
           "urlCopied": "URL del webhook copiada al portapapeles."
+        },
+        "mappings": {
+          "org": "Organización de Tactical",
+          "client": "Cliente de Alga",
+          "defaultContact": "Contacto predeterminado"
+        },
+        "contact": {
+          "select": "Seleccionar contacto"
         }
       },
       "tanium": {
@@ -1635,7 +1643,9 @@
           "mappedClient": "Cliente asignado",
           "noScopes": "Aún no se han descubierto ámbitos de Tanium.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Sin asignar"
+          "unmapped": "Sin asignar",
+          "defaultContact": "Contacto predeterminado",
+          "selectContact": "Seleccionar contacto"
         },
         "status": {
           "connected": "Conectado",
@@ -1701,7 +1711,9 @@
           "loading": "Cargando…",
           "mappedClient": "Cliente asignado",
           "noGroups": "Aún no se han descubierto grupos. Ejecute primero Descubrir grupos.",
-          "unmapped": "Sin asignar"
+          "unmapped": "Sin asignar",
+          "defaultContact": "Contacto predeterminado",
+          "selectContact": "Seleccionar contacto"
         },
         "status": {
           "connected": "Conectado",
@@ -1732,6 +1744,76 @@
           "showSecret": "Mostrar secreto",
           "title": "Webhook de alertas",
           "url": "URL del webhook"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Organización de Huntress",
+          "client": "Cliente de Alga",
+          "defaultContact": "Contacto predeterminado",
+          "createTickets": "Crear tickets",
+          "status": "Estado"
+        },
+        "selectContact": "Seleccionar contacto",
+        "status": {
+          "autoMatched": "Coincidencia automática",
+          "mapped": "Asignado",
+          "unmapped": "Sin asignar → triaje"
+        },
+        "title": "Asignación de organizaciones",
+        "description": "Asigna organizaciones de Huntress a clientes. Las incidencias de organizaciones sin asignar van al cliente de reserva y al tablero de triaje.",
+        "unmappedSuffix": "({{count}} sin asignar)",
+        "syncButton": "Sincronizar organizaciones",
+        "loading": "Cargando…",
+        "empty": "Aún no hay organizaciones: haz clic en «Sincronizar organizaciones».",
+        "errors": {
+          "load": "No se pudieron cargar las asignaciones de organizaciones",
+          "sync": "Error de sincronización",
+          "updateMapping": "No se pudo actualizar la asignación",
+          "updateContact": "No se pudo actualizar el contacto predeterminado"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "Organización de NinjaOne",
+          "company": "Empresa de Alga",
+          "defaultContact": "Contacto predeterminado",
+          "autoSync": "Sincronización automática",
+          "status": "Estado"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Seleccionar empresa",
+        "selectContact": "Seleccionar contacto",
+        "status": {
+          "mapped": "Asignado",
+          "unmapped": "Sin asignar"
+        },
+        "title": "Asignaciones de organizaciones",
+        "description": "Asigna organizaciones de NinjaOne a empresas de Alga para habilitar la sincronización de dispositivos.",
+        "loading": "Cargando asignaciones de organizaciones...",
+        "syncing": "Sincronizando...",
+        "refreshButton": "Actualizar organizaciones",
+        "summary": {
+          "mapped": "{{count}} asignadas",
+          "unmapped": "{{count}} sin asignar"
+        },
+        "empty": {
+          "title": "Aún no se han sincronizado organizaciones.",
+          "hint": "Haz clic en «Actualizar organizaciones» para obtener organizaciones de NinjaOne."
+        },
+        "unmappedNote": "Los dispositivos de organizaciones sin asignar no se sincronizarán. Asigna cada organización a una empresa de Alga para habilitar la sincronización de dispositivos.",
+        "success": {
+          "synced": "Se sincronizaron {{processed}} organizaciones ({{created}} nuevas, {{updated}} actualizadas)",
+          "mappingUpdated": "Asignación actualizada correctamente",
+          "contactUpdated": "Contacto predeterminado actualizado correctamente"
+        },
+        "errors": {
+          "load": "No se pudieron cargar las asignaciones de organizaciones",
+          "sync": "No se pudieron sincronizar las organizaciones",
+          "updateMapping": "No se pudo actualizar la asignación",
+          "updateContact": "No se pudo actualizar el contacto predeterminado",
+          "updateAutoSync": "No se pudo actualizar la configuración de sincronización automática"
         }
       }
     },
@@ -2321,8 +2403,5 @@
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Seleccionar empresa"
   }
 }

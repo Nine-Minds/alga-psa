@@ -76,6 +76,7 @@ export interface RmmOrganizationMapping {
   external_organization_id: string;
   external_organization_name?: string;
   client_id?: string;
+  default_contact_id?: string | null;
   auto_sync_assets: boolean;
   auto_create_tickets?: boolean;
   last_synced_at?: string;

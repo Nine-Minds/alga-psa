@@ -354,7 +354,7 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     user,
     { tenant },
     mappingId: string,
-    updates: { client_id?: string | null; auto_create_tickets?: boolean }
+    updates: { client_id?: string | null; default_contact_id?: string | null; auto_create_tickets?: boolean }
   ): Promise<{ success: boolean; error?: string }> => {
     await requireSettingsUpdatePermission(user);
 
@@ -376,6 +376,9 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     }
     if (updates.auto_create_tickets !== undefined) {
       changes.auto_create_tickets = updates.auto_create_tickets;
+    }
+    if (updates.default_contact_id !== undefined) {
+      changes.default_contact_id = updates.default_contact_id;
     }
 
     await knex('rmm_organization_mappings')

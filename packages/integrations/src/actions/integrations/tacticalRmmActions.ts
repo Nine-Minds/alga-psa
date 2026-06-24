@@ -1106,6 +1106,7 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
     external_organization_id: string;
     external_organization_name: string | null;
     client_id: string | null;
+    default_contact_id: string | null;
     company_name?: string | null;
     auto_sync_assets: boolean;
     metadata?: Record<string, unknown> | null;
@@ -1139,6 +1140,7 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
         'rom.external_organization_id',
         'rom.external_organization_name',
         'rom.client_id',
+        'rom.default_contact_id',
         'rom.auto_sync_assets',
         'rom.metadata',
         knex.raw('c.client_name as company_name'),
@@ -1154,7 +1156,7 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
 export const updateTacticalRmmOrganizationMapping = withAuth(async (
   user,
   { tenant },
-  input: { mappingId: string; clientId?: string | null; autoSyncAssets?: boolean }
+  input: { mappingId: string; clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }
 ): Promise<{ success: boolean; error?: string }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
@@ -1163,6 +1165,7 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
     const { knex } = await createTenantKnex();
     const patch: Record<string, any> = {};
     if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId;
+    if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (!Object.keys(patch).length) return { success: true };
 

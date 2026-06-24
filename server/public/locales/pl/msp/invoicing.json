@@ -30,8 +30,12 @@
         "group": "Grupa",
         "servicePeriod": "Okres usługi",
         "invoiceWindow": "Okno faktury",
-        "included": "Dołączony"
-      }
+        "included": "Dołączony",
+        "charge": "Rodzaj",
+        "status": "Status",
+        "amount": "Kwota"
+      },
+      "pageScopeNote": "{{count}} grup(y) na tej stronie"
     },
     "groups": {
       "item": "Pozycja {{count}}",
@@ -43,9 +47,6 @@
       "line": "Linia {{count}}",
       "line_one": "Linia {{count}}",
       "line_other": "Linie {{count}}",
-      "obligationCount": "Obowiązek {{count}}",
-      "obligationCount_one": "Obowiązek {{count}}",
-      "obligationCount_other": "Obowiązki {{count}}",
       "includedCount": "Uwzględniono element {{count}}",
       "includedCount_one": "Uwzględniono element {{count}}",
       "includedCount_other": "Uwzględniono elementy {{count}}",
@@ -61,6 +62,9 @@
       "separate": "Należy wystawić osobną fakturę",
       "blocked": "Zawiera zablokowane elementy",
       "notReady": "Brak gotowości do wystawienia faktury",
+      "upcoming": "Jeszcze nie wymagalne",
+      "upcomingDetail": "Ten okres jest rozliczany z dołu, więc staje się dostępny do zafakturowania po zakończeniu okresu świadczenia usługi.",
+      "upcomingDetailWithDate": "Ten okres jest rozliczany z dołu, więc staje się dostępny do zafakturowania w dniu {{date}}, po zakończeniu okresu świadczenia usługi.",
       "attributionMetadataMissing_few": "Brak metadanych przypisania przypisania ({{count}} obowiązki)",
       "attributionMetadataMissing_many": "Brak metadanych przypisania przypisania ({{count}} obowiązków)",
       "contract_few": "{{count}} kontrakty",
@@ -70,9 +74,7 @@
       "item_few": "{{count}} elementy",
       "item_many": "{{count}} elementów",
       "line_few": "{{count}} linie",
-      "line_many": "{{count}} linii",
-      "obligationCount_few": "{{count}} obowiązki",
-      "obligationCount_many": "{{count}} obowiązków"
+      "line_many": "{{count}} linii"
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Okno faktury jest inne",
@@ -89,6 +91,7 @@
         "servicePeriod": "Okres świadczenia usług"
       },
       "pendingAmount": "Oczekująca kwota",
+      "billableOn": "Możliwe do zafakturowania dnia {{date}}",
       "attributionWarning": "Brak metadanych przypisania przypisania",
       "blockedUntilApproval": "Zablokowany do czasu zatwierdzenia: wpis niezatwierdzony {{count}}.",
       "blockedUntilApproval_one": "Zablokowany do czasu zatwierdzenia: wpis niezatwierdzony {{count}}.",
@@ -224,7 +227,12 @@
         "scheduleKey": "Klucz harmonogramu"
       },
       "reviewLink": "Przejrzyj okresy świadczenia usług",
-      "helpText": "Napraw kanoniczne rekordy okresu serwisowego zamiast generować wiersz faktury dotyczącej zgodności."
+      "helpText": "Napraw kanoniczne rekordy okresu serwisowego zamiast generować wiersz faktury dotyczącej zgodności.",
+      "fixAll": "Napraw wszystko",
+      "fixAllBusy": "Przebudowywanie…",
+      "fixAllResult": "Przebudowano {{schedules}} harmonogram(y) dla {{clients}} klient(ów).",
+      "fixAllError": "Nie udało się przebudować okresów usług. Spróbuj ponownie.",
+      "fixAllDenied": "Nie masz uprawnień do przebudowy okresów usług."
     },
     "errors": {
       "title": "Wystąpiły błędy podczas finalizowania faktur:",
@@ -233,6 +241,61 @@
     },
     "loading": {
       "billingData": "Ładowanie danych rozliczeniowych"
+    },
+    "views": {
+      "all": "Wszystkie",
+      "ready": "Gotowe",
+      "combinable": "Łączalne",
+      "attention": "Wymaga uwagi",
+      "notYetDue": "Jeszcze nie wymagalne"
+    },
+    "status": {
+      "ready": "Gotowe",
+      "combine": "Połącz",
+      "separate": "Osobno",
+      "notYetDue": "Jeszcze nie wymagalne",
+      "approval": "Zatwierdzenie",
+      "blocked": "Zablokowane"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "Wybrano: {{count}}",
+      "breakdown": "{{invoices}} faktur(y) · {{combine}} połączonych · {{separate}} osobnych",
+      "knownNow": "znane teraz",
+      "knownPlusAtGeneration": "znane teraz · {{count}} obliczane przy generowaniu",
+      "atGenerationLines": "{{count}} pozycj(e)",
+      "empty": "Wybierz grupy lub pozycje, aby wyświetlić podgląd lub wygenerować faktury.",
+      "pageScope": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
+    },
+    "amount": {
+      "atGeneration": "Obliczane przy generowaniu",
+      "plusAtGeneration": "+ {{count}} przy generowaniu"
+    },
+    "window": {
+      "open": "Otwarte",
+      "opensOn": "Otwiera się {{date}}",
+      "notOpen": "Jeszcze nieotwarte"
+    },
+    "legend": {
+      "confirmed": "Kwota znana teraz",
+      "atGeneration": "Obliczane przy generowaniu",
+      "combine": "Połącz w jedną fakturę",
+      "separate": "Musi być fakturowane osobno",
+      "notYetDue": "Jeszcze nie wymagalne"
+    },
+    "filters": {
+      "title": "Filtry",
+      "windowOpen": "Okno otwarte",
+      "charge": "Rodzaj",
+      "currency": "Waluta",
+      "any": "dowolne",
+      "clear": "Wyczyść",
+      "countSummary": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
     }
   },
   "manualInvoices": {

@@ -6,7 +6,7 @@ import {
 import {
   regenerateClientCadenceServicePeriodsForScheduleChange,
   retireFutureClientCadenceRowsForLine,
-} from './clientCadenceScheduleRegeneration';
+} from '@alga-psa/shared/billingClients';
 
 type LiveContractLineCadenceRow = {
   contract_line_id: string;

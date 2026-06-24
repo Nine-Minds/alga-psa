@@ -23,7 +23,7 @@ import { TIER_FEATURES } from '@alga-psa/types';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
-import { HuduClient } from '../../integrations/hudu/huduClient';
+import { HuduClient, buildHuduApiBaseUrl } from '../../integrations/hudu/huduClient';
 import type { HuduErrorKind, HuduValidationResult } from '../../integrations/hudu/huduClient';
 import { HUDU_SECRET_KEYS, resolveHuduCredentials } from '../../integrations/hudu/secrets';
 import { clearHuduReferenceCacheForTenant } from '../../integrations/hudu/referenceData';
@@ -59,8 +59,9 @@ export interface HuduCredentialsInput {
 }
 
 /**
- * Connect input. `apiKey` may be omitted to keep using the already-stored key
- * (the UI never round-trips the stored value, so "blank key" means "keep").
+ * Connect input. `apiKey` may be omitted only when revalidating the currently
+ * stored base URL with the already-stored key (the UI never round-trips the
+ * stored value, so "blank key" means "keep" for the same instance).
  */
 export interface HuduConnectInput {
   baseUrl: string;
@@ -106,6 +107,30 @@ function toIso(value: Date | string | null | undefined): string | null {
   return value instanceof Date ? value.toISOString() : String(value);
 }
 
+function sameHuduBaseUrl(left: string, right: string): boolean {
+  return buildHuduApiBaseUrl(left) === buildHuduApiBaseUrl(right);
+}
+
+async function resolveCredentialsForCandidate(
+  tenant: string,
+  baseUrl: string | undefined,
+  apiKey: string | undefined
+): Promise<HuduCredentialsInput | null> {
+  if (baseUrl && apiKey) {
+    return { baseUrl, apiKey };
+  }
+
+  const stored = await resolveHuduCredentials(tenant);
+  const candidateBaseUrl = baseUrl || stored.baseUrl;
+  const candidateApiKey = apiKey || stored.apiKey;
+
+  if (!baseUrl || apiKey || sameHuduBaseUrl(candidateBaseUrl, stored.baseUrl)) {
+    return { baseUrl: candidateBaseUrl, apiKey: candidateApiKey };
+  }
+
+  return null;
+}
+
 function settingsPasswordAccess(settings: Record<string, unknown> | null | undefined): boolean {
   return settings?.password_access === true;
 }
@@ -132,18 +157,17 @@ export const connectHudu = withHuduSettingsAccess(
   async (_user, { tenant }, input: HuduConnectInput): Promise<HuduActionResult<HuduConnectionStatusData>> => {
     try {
       const baseUrl = input?.baseUrl?.trim();
-      let apiKey = input?.apiKey?.trim();
-      if (baseUrl && !apiKey) {
-        // Keep-existing-key: fall back to the stored credential.
-        apiKey = await resolveHuduCredentials(tenant)
-          .then((stored) => stored.apiKey)
-          .catch(() => undefined);
-      }
-      if (!baseUrl || !apiKey) {
+      const apiKey = input?.apiKey?.trim();
+      if (!baseUrl) {
         return { success: false, error: 'Hudu base URL and API key are required.' };
       }
 
-      const validation = await validateCandidate(tenant, { baseUrl, apiKey });
+      const credentials = await resolveCredentialsForCandidate(tenant, baseUrl, apiKey).catch(() => null);
+      if (!credentials) {
+        return { success: false, error: 'Hudu API key is required when changing the base URL.' };
+      }
+
+      const validation = await validateCandidate(tenant, credentials);
       if (!validation.ok || !validation.connected) {
         return {
           success: false,
@@ -153,12 +177,12 @@ export const connectHudu = withHuduSettingsAccess(
       }
 
       const secretProvider = await getSecretProviderInstance();
-      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.apiKey, apiKey);
-      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.baseUrl, baseUrl);
+      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.apiKey, credentials.apiKey);
+      await secretProvider.setTenantSecret(tenant, HUDU_SECRET_KEYS.baseUrl, credentials.baseUrl);
 
       const { knex } = await createTenantKnex(tenant);
       const row = await upsertHuduIntegration(knex, tenant, {
-        base_url: baseUrl,
+        base_url: credentials.baseUrl,
         is_active: true,
         connected_at: new Date().toISOString(),
         settings: { password_access: validation.passwordAccess },
@@ -196,18 +220,12 @@ export const testHuduConnection = withHuduSettingsAccess(
       const baseUrl = input?.baseUrl?.trim();
       const apiKey = input?.apiKey?.trim();
 
-      let validation: HuduValidationResult;
-      if (baseUrl && apiKey) {
-        validation = await validateCandidate(tenant, { baseUrl, apiKey });
-      } else {
-        // Merge partial candidates with the stored credentials so a blank key
-        // (or blank base URL) means "use the stored value".
-        const stored = await resolveHuduCredentials(tenant);
-        validation = await validateCandidate(tenant, {
-          baseUrl: baseUrl || stored.baseUrl,
-          apiKey: apiKey || stored.apiKey,
-        });
+      const credentials = await resolveCredentialsForCandidate(tenant, baseUrl, apiKey);
+      if (!credentials) {
+        return { success: false, error: 'Hudu API key is required when changing the base URL.' };
       }
+
+      const validation: HuduValidationResult = await validateCandidate(tenant, credentials);
 
       if (!validation.ok || !validation.connected) {
         return {

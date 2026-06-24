@@ -23,7 +23,7 @@ import {
   type ClientCadenceScheduleContext
 } from '@shared/billingClients/clientCadenceScheduleContext';
 import { ensureClientBillingSettingsRow } from '@shared/billingClients/billingSettings';
-import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
+import { applyClientCadenceChange } from '@alga-psa/shared/billingClients';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -117,39 +117,12 @@ export const updateClientBillingCycleAnchor = withAuth(async (
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Ensure client exists and cycle matches what the UI is editing.
-    const client = await trx('clients')
-      .where({ tenant, client_id: input.clientId })
-      .first()
-      .select('billing_cycle');
-    if (!client) {
-      throw new Error('Client not found');
-    }
-
-    const billingCycle = input.billingCycle;
-    validateAnchorSettingsForCycle(billingCycle, input.anchor);
-    const normalized = normalizeAnchorSettingsForCycle(billingCycle, input.anchor);
-
-    await ensureClientBillingSettingsRow(trx, {
-      tenant,
-      clientId: input.clientId
-    });
-
-    await trx('client_billing_settings')
-      .where({ tenant, client_id: input.clientId })
-      .update({
-        billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
-        billing_cycle_anchor_month_of_year: normalized.monthOfYear,
-        billing_cycle_anchor_day_of_week: normalized.dayOfWeek,
-        billing_cycle_anchor_reference_date: normalized.referenceDate,
-        updated_at: trx.fn.now()
-      });
-
-    await regenerateClientCadenceServicePeriodsForScheduleChange(trx, {
-      tenant,
+    // Anchor edits go through the same shared layer as cycle changes so the
+    // scalar, anchor, cycle windows, and service-period ledger never drift.
+    await applyClientCadenceChange(trx, tenant, {
       clientId: input.clientId,
-      billingCycle,
-      anchor: normalized,
+      billingCycle: input.billingCycle,
+      anchor: input.anchor,
     });
   });
 

@@ -10,7 +10,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Search, AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown } from 'lucide-react';
+import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -21,6 +21,7 @@ import {
   previewGroupedInvoicesForSelectionInputs,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
+import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
@@ -33,6 +34,8 @@ import {
   type BillingPeriodDateRange,
 } from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { formatCurrency } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // Added imports for DropdownMenu
@@ -54,7 +57,7 @@ interface AutomaticInvoicesProps {
   refreshTrigger?: number;
 }
 
-type AutomaticInvoiceGroupLabelKey = 'ready' | 'canCombine' | 'separate' | 'blocked' | 'notReady';
+type AutomaticInvoiceGroupLabelKey = 'ready' | 'canCombine' | 'separate' | 'blocked' | 'notReady' | 'upcoming';
 type AutomaticInvoiceIncompatibilityReasonKey =
   | 'invoiceWindowDiffers'
   | 'clientDiffers'
@@ -82,6 +85,8 @@ interface RecurringInvoiceParentGroup {
     incompatibilityReasons: AutomaticInvoiceIncompatibilityReasonKey[];
     canGenerate: boolean;
     blockedReason: string | null;
+    notYetDue: boolean;
+    availableOnDate: string | null;
   };
   childExecutionRows: ReadyPeriod['members'];
   candidate: ReadyPeriod;
@@ -99,16 +104,19 @@ const AUTOMATIC_INVOICE_GROUP_LABELS: Record<AutomaticInvoiceGroupLabelKey, stri
   separate: 'Must invoice separately',
   blocked: 'Contains blocked items',
   notReady: 'Not ready to invoice',
+  upcoming: 'Not yet due',
 };
 
 const getParentGroupSummary = ({
   isCombinable,
   canGenerate,
+  notYetDue,
   incompatibilityReasons,
   childCount,
 }: {
   isCombinable: boolean;
   canGenerate: boolean;
+  notYetDue: boolean;
   incompatibilityReasons: AutomaticInvoiceIncompatibilityReasonKey[];
   childCount: number;
 }): {
@@ -119,6 +127,15 @@ const getParentGroupSummary = ({
     return {
       labelKey: childCount > 1 ? 'canCombine' : 'ready',
       className: 'border-border/70 text-foreground',
+    };
+  }
+
+  // A period that simply hasn't reached its invoice window yet is "upcoming",
+  // not blocked — keep it visually neutral so it doesn't read like an error.
+  if (notYetDue) {
+    return {
+      labelKey: 'upcoming',
+      className: 'border-border/60 text-muted-foreground',
     };
   }
 
@@ -153,9 +170,11 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
         : null;
     const incompatibilityReasons = resolveIncompatibilityReasons(candidate);
     const isCombinable = candidate.canGenerate && incompatibilityReasons.length === 0;
+    const notYetDue = candidate.notYetDue === true;
     const parentGroupSummary = getParentGroupSummary({
       isCombinable,
       canGenerate: candidate.canGenerate,
+      notYetDue,
       incompatibilityReasons,
       childCount: candidate.memberCount,
     });
@@ -175,6 +194,8 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       incompatibilityReasons,
       canGenerate: candidate.canGenerate,
       blockedReason: candidate.blockedReason ?? null,
+      notYetDue,
+      availableOnDate: candidate.availableOnDate ?? null,
     },
     childExecutionRows: candidate.members,
     candidate,
@@ -368,6 +389,153 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoice
   return reasons;
 };
 
+// --- Pro-grid presentation helpers --------------------------------------------
+// Each obligation is tagged by how its amount is determined. Colors come from the
+// brand palette (primary = purple, secondary = cyan, accent = orange) plus the
+// semantic warning token; the family also tells the user whether the dollar
+// figure is known up front (Fixed) or only finalized at generation.
+type RecurringChargeTypeKey = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+
+const CHARGE_TAG_META: Record<RecurringChargeTypeKey, {
+  labelKey: string;
+  default: string;
+  className: string;
+  /** Fixed lines have a known amount before generation; the rest are computed at run time. */
+  knownUpFront: boolean;
+}> = {
+  Fixed: {
+    labelKey: 'automaticInvoices.chargeTags.fixed',
+    default: 'FIX',
+    className: 'border-primary-200 bg-primary-50 text-primary-700',
+    knownUpFront: true,
+  },
+  Hourly: {
+    labelKey: 'automaticInvoices.chargeTags.hourly',
+    default: 'T&M',
+    className: 'border-accent-200 bg-accent-50 text-accent-700',
+    knownUpFront: false,
+  },
+  Usage: {
+    labelKey: 'automaticInvoices.chargeTags.usage',
+    default: 'USE',
+    className: 'border-secondary-200 bg-secondary-50 text-secondary-700',
+    knownUpFront: false,
+  },
+  Bucket: {
+    labelKey: 'automaticInvoices.chargeTags.bucket',
+    default: 'BKT',
+    className: 'border-warning/40 bg-warning/10 text-warning',
+    knownUpFront: false,
+  },
+};
+
+// Full names for the charge-tag tooltips (terse codes show in the column).
+const CHARGE_TAG_FULL_NAME: Record<RecurringChargeTypeKey, string> = {
+  Fixed: 'Fixed fee',
+  Hourly: 'Time & materials',
+  Usage: 'Usage-based',
+  Bucket: 'Bucket / retainer',
+};
+
+const isRecurringChargeTypeKey = (value: unknown): value is RecurringChargeTypeKey =>
+  value === 'Fixed' || value === 'Hourly' || value === 'Usage' || value === 'Bucket';
+
+// Status of a parent group, derived from its combinability summary plus the
+// not-yet-due / blocked flags. Drives the colored pill in the Status column.
+type AutomaticInvoiceStatusKey = 'ready' | 'combine' | 'separate' | 'notYetDue' | 'approval' | 'blocked';
+
+const STATUS_PILL_META: Record<AutomaticInvoiceStatusKey, {
+  labelKey: string;
+  default: string;
+  className: string;
+}> = {
+  ready: {
+    labelKey: 'automaticInvoices.status.ready',
+    default: 'Ready',
+    className: 'border-success/30 bg-success/10 text-success',
+  },
+  combine: {
+    labelKey: 'automaticInvoices.status.combine',
+    default: 'Combine',
+    className: 'border-primary-200 bg-primary-50 text-primary-700',
+  },
+  separate: {
+    labelKey: 'automaticInvoices.status.separate',
+    default: 'Separate',
+    className: 'border-warning/40 bg-warning/10 text-warning',
+  },
+  notYetDue: {
+    labelKey: 'automaticInvoices.status.notYetDue',
+    default: 'Not yet due',
+    className: 'border-border bg-muted text-muted-foreground',
+  },
+  approval: {
+    labelKey: 'automaticInvoices.status.approval',
+    default: 'Approval',
+    className: 'border-accent-200 bg-accent-50 text-accent-700',
+  },
+  blocked: {
+    labelKey: 'automaticInvoices.status.blocked',
+    default: 'Blocked',
+    className: 'border-border bg-muted text-muted-foreground',
+  },
+};
+
+const resolveStatusKey = (summary: {
+  isCombinable: boolean;
+  canGenerate: boolean;
+  notYetDue: boolean;
+  combinabilitySummaryKey: AutomaticInvoiceGroupLabelKey;
+  approvalBlockedEntryCount: number;
+}): AutomaticInvoiceStatusKey => {
+  if (summary.approvalBlockedEntryCount > 0) {
+    return 'approval';
+  }
+  if (summary.notYetDue) {
+    return 'notYetDue';
+  }
+  switch (summary.combinabilitySummaryKey) {
+    case 'ready':
+      return 'ready';
+    case 'canCombine':
+      return 'combine';
+    case 'separate':
+      return 'separate';
+    case 'blocked':
+    case 'notReady':
+    default:
+      return summary.isCombinable ? 'ready' : 'blocked';
+  }
+};
+
+// Saved views shown as the segmented control above the grid. Each is a pure
+// predicate over the already-loaded page of candidates, so counts and filtering
+// stay honest about what is on screen (server pagination still applies).
+type AutomaticInvoiceViewKey = 'all' | 'ready' | 'combinable' | 'attention' | 'notYetDue';
+
+const matchesAutomaticInvoiceView = (
+  view: AutomaticInvoiceViewKey,
+  summary: RecurringInvoiceParentGroup['parentSummary'],
+): boolean => {
+  switch (view) {
+    case 'all':
+      return true;
+    case 'ready':
+      return summary.isCombinable && summary.canGenerate;
+    case 'combinable':
+      return summary.isCombinable && summary.childCount > 1;
+    case 'attention':
+      // "Needs attention" = a problem that needs action (not combinable / can't
+      // generate), excluding the benign not-yet-due state. Approval-blocked work
+      // is surfaced in its own panel and is filtered out of readyParentGroups.
+      return !summary.notYetDue && (!summary.canGenerate || summary.incompatibilityReasons.length > 0);
+    case 'notYetDue':
+      return summary.notYetDue;
+    default:
+      return true;
+  }
+};
+
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
@@ -436,6 +604,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // Drawer removed: client details quick view no longer used here
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
+  const [activeView, setActiveView] = useState<AutomaticInvoiceViewKey>('all');
+  const [chargeFilter, setChargeFilter] = useState<RecurringChargeTypeKey | ''>('');
+  const [currencyFilter, setCurrencyFilter] = useState<string>('');
+  const [windowOpenOnly, setWindowOpenOnly] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -461,6 +633,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [isInvoicedLoading, setIsInvoicedLoading] = useState(false);
   const [isPeriodsLoading, setIsPeriodsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isRepairingAll, setIsRepairingAll] = useState(false);
+  const [repairAllMessage, setRepairAllMessage] = useState<string | null>(null);
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
     invoiceId: string;
@@ -625,6 +799,36 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   }, [currentReadyPage, pageSize, appliedDateRange, refreshTrigger]);
 
+  // Rebuild every drifted client-cadence schedule in the tenant in one pass, so
+  // the user does not have to repair each one by hand. Refreshes on success so
+  // the gap panel reflects the healed state.
+  const handleFixAllServicePeriods = async () => {
+    setIsRepairingAll(true);
+    setRepairAllMessage(null);
+    try {
+      const result = await repairAllRecurringServicePeriodsForTenant();
+      if (!result || !('schedulesRepaired' in result)) {
+        setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllDenied', {
+          defaultValue: 'You do not have permission to rebuild service periods.',
+        }));
+        return;
+      }
+      setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllResult', {
+        schedules: result.schedulesRepaired,
+        clients: result.clientsRepaired,
+        defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
+      }));
+      onGenerateSuccess?.();
+    } catch (error) {
+      console.error('Error rebuilding recurring service periods:', error);
+      setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllError', {
+        defaultValue: 'Could not rebuild service periods. Please try again.',
+      }));
+    } finally {
+      setIsRepairingAll(false);
+    }
+  };
+
   const normalizedReadyClientFilter = debouncedClientFilter.trim().toLowerCase();
 
   // Client filtering is intentionally scoped to Needs Approval + Ready to Invoice only.
@@ -766,6 +970,278 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       });
     },
   });
+
+  // --- Pro-grid view model -----------------------------------------------------
+  type AutomaticInvoiceDisplayRow =
+    | { kind: 'group'; rowId: string; group: RecurringInvoiceParentGroup }
+    | {
+        kind: 'member';
+        rowId: string;
+        group: RecurringInvoiceParentGroup;
+        member: RecurringInvoiceParentGroup['childExecutionRows'][number];
+      };
+
+  // View counts reflect the candidates on the loaded page (server pagination still
+  // governs how many candidates are fetched at a time).
+  const viewCounts: Record<AutomaticInvoiceViewKey, number> = {
+    all: readyParentGroups.length,
+    ready: 0,
+    combinable: 0,
+    attention: 0,
+    notYetDue: 0,
+  };
+  for (const group of readyParentGroups) {
+    if (matchesAutomaticInvoiceView('ready', group.parentSummary)) viewCounts.ready += 1;
+    if (matchesAutomaticInvoiceView('combinable', group.parentSummary)) viewCounts.combinable += 1;
+    if (matchesAutomaticInvoiceView('attention', group.parentSummary)) viewCounts.attention += 1;
+    if (matchesAutomaticInvoiceView('notYetDue', group.parentSummary)) viewCounts.notYetDue += 1;
+  }
+
+  // Quick filter chips operate on the loaded page alongside the saved view.
+  const availableCurrencies = Array.from(
+    new Set(
+      readyParentGroups
+        .map((group) => group.candidate.currencyCode?.trim())
+        .filter((code): code is string => Boolean(code)),
+    ),
+  ).sort();
+  const availableChargeTypes = (['Fixed', 'Hourly', 'Usage', 'Bucket'] as RecurringChargeTypeKey[]).filter((type) =>
+    readyParentGroups.some((group) =>
+      group.childExecutionRows.some((member) => (member as { chargeType?: string | null }).chargeType === type),
+    ),
+  );
+  const matchesQuickFilters = (group: RecurringInvoiceParentGroup): boolean => {
+    if (windowOpenOnly && group.parentSummary.notYetDue) {
+      return false;
+    }
+    if (currencyFilter && group.candidate.currencyCode?.trim() !== currencyFilter) {
+      return false;
+    }
+    if (chargeFilter && !group.childExecutionRows.some((member) => (member as { chargeType?: string | null }).chargeType === chargeFilter)) {
+      return false;
+    }
+    return true;
+  };
+
+  const viewFilteredGroups = readyParentGroups.filter(
+    (group) => matchesAutomaticInvoiceView(activeView, group.parentSummary) && matchesQuickFilters(group),
+  );
+  // Badge on the Filters popover button: count every applied refinement (incl. a
+  // service-period lower bound) so the data-first toolbar still signals hidden state.
+  const activeFilterCount =
+    (chargeFilter ? 1 : 0) +
+    (currencyFilter ? 1 : 0) +
+    (windowOpenOnly ? 1 : 0) +
+    (appliedDateRange.from ? 1 : 0);
+
+  const automaticInvoiceDisplayRows: AutomaticInvoiceDisplayRow[] = [];
+  for (const group of viewFilteredGroups) {
+    automaticInvoiceDisplayRows.push({
+      kind: 'group',
+      rowId: group.parentSummary.parentGroupKey,
+      group,
+    });
+    if (expandedParentGroups.has(group.parentSummary.parentGroupKey)) {
+      for (const member of group.childExecutionRows) {
+        automaticInvoiceDisplayRows.push({
+          kind: 'member',
+          rowId: `${group.parentSummary.parentGroupKey}:${member.executionIdentityKey}`,
+          group,
+          member,
+        });
+      }
+    }
+  }
+
+  const amountCentsOf = (member: { amountCents?: number | null }): number | null =>
+    typeof member.amountCents === 'number' && Number.isFinite(member.amountCents) ? member.amountCents : null;
+
+  // Compact date-range label: a whole calendar month collapses to "Jun 2026";
+  // other ranges show "Jun 15 – Jul 15, 2026" (year shown once) or span years
+  // explicitly. Falls back to the raw ISO range if the dates don't parse.
+  const formatPeriodLabel = (startISO?: string | null, endISO?: string | null): string => {
+    if (!startISO || !endISO) return '';
+    const s = startISO.slice(0, 10).split('-').map(Number);
+    const e = endISO.slice(0, 10).split('-').map(Number);
+    if (s.length !== 3 || e.length !== 3 || [...s, ...e].some((n) => Number.isNaN(n))) {
+      return `${startISO.slice(0, 10)} – ${endISO.slice(0, 10)}`;
+    }
+    const [sy, sm, sd] = s;
+    const [ey, em, ed] = e;
+    const nextY = sm === 12 ? sy + 1 : sy;
+    const nextM = sm === 12 ? 1 : sm + 1;
+    if (sd === 1 && ed === 1 && ey === nextY && em === nextM) {
+      return formatDate(startISO, { timeZone: 'UTC', month: 'short', year: 'numeric' });
+    }
+    if (sy === ey) {
+      const startStr = formatDate(startISO, { timeZone: 'UTC', month: 'short', day: 'numeric' });
+      const endStr = formatDate(endISO, { timeZone: 'UTC', month: 'short', day: 'numeric' });
+      return `${startStr} – ${endStr}, ${sy}`;
+    }
+    const startStrY = formatDate(startISO, { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
+    const endStrY = formatDate(endISO, { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
+    return `${startStrY} – ${endStrY}`;
+  };
+
+  // Running totals for the selection bar. Only amounts the system already knows
+  // (Fixed lines + already-calculated unresolved charges) are summed as "known
+  // now"; the rest are finalized when the batch is generated.
+  let selectionKnownCents = 0;
+  let selectionAtGenerationCount = 0;
+  for (const member of selectedExecutionRows) {
+    const amount = amountCentsOf(member as { amountCents?: number | null });
+    if (amount === null) {
+      selectionAtGenerationCount += 1;
+    } else {
+      selectionKnownCents += amount;
+    }
+  }
+  const selectionInvoiceCount = selectedSelectionGroups.length;
+  const selectionCombineCount = selectedSelectionGroups.filter((group) => group.selectorInputs.length > 1).length;
+  const selectionSeparateCount = selectedSelectionGroups.filter((group) => group.selectorInputs.length === 1).length;
+  const hasSelection = selectedExecutionRows.length > 0;
+
+  const summarizeGroupAmount = (members: RecurringInvoiceParentGroup['childExecutionRows']): {
+    knownCents: number;
+    atGenerationCount: number;
+    hasKnown: boolean;
+    allKnown: boolean;
+  } => {
+    let knownCents = 0;
+    let atGenerationCount = 0;
+    let sawKnown = false;
+    for (const member of members) {
+      const amount = amountCentsOf(member as { amountCents?: number | null });
+      if (amount === null) {
+        atGenerationCount += 1;
+      } else {
+        knownCents += amount;
+        sawKnown = true;
+      }
+    }
+    return {
+      knownCents,
+      atGenerationCount,
+      hasKnown: sawKnown,
+      allKnown: members.length > 0 && atGenerationCount === 0,
+    };
+  };
+
+  const distinctChargeTags = (members: RecurringInvoiceParentGroup['childExecutionRows']): Array<{
+    type: RecurringChargeTypeKey;
+    count: number;
+  }> => {
+    const counts = new Map<RecurringChargeTypeKey, number>();
+    for (const member of members) {
+      const type = (member as { chargeType?: string | null }).chargeType;
+      if (isRecurringChargeTypeKey(type)) {
+        counts.set(type, (counts.get(type) ?? 0) + 1);
+      }
+    }
+    const order: RecurringChargeTypeKey[] = ['Fixed', 'Hourly', 'Usage', 'Bucket'];
+    return order
+      .filter((type) => counts.has(type))
+      .map((type) => ({ type, count: counts.get(type) ?? 0 }));
+  };
+
+  const renderChargeTag = (type: RecurringChargeTypeKey, count: number) => {
+    const meta = CHARGE_TAG_META[type];
+    return (
+      <span
+        key={type}
+        title={CHARGE_TAG_FULL_NAME[type]}
+        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide ${meta.className}`}
+      >
+        {t(meta.labelKey, { defaultValue: meta.default })}{count > 1 ? ` ×${count}` : ''}
+      </span>
+    );
+  };
+
+  const statusPillIcon = (key: AutomaticInvoiceStatusKey) => {
+    switch (key) {
+      case 'ready':
+        return <Check className="h-3 w-3" />;
+      case 'combine':
+        return <Link2 className="h-3 w-3" />;
+      case 'separate':
+        return <AlertTriangle className="h-3 w-3" />;
+      case 'notYetDue':
+        return <Clock className="h-3 w-3" />;
+      case 'approval':
+        return <Hourglass className="h-3 w-3" />;
+      default:
+        return null;
+    }
+  };
+
+  // For a group that must be invoiced separately, how many distinct invoices it
+  // splits into (one per incompatible scope bucket) — surfaced as "Separate ×N".
+  const countSeparateInvoices = (members: RecurringInvoiceParentGroup['childExecutionRows']): number => {
+    const eligible = members.filter((member) => member.canGenerate);
+    const source = eligible.length > 0 ? eligible : members;
+    const buckets = new Set(
+      source.map((member) => [
+        normalizeScopeValue(member.invoiceWindowStart),
+        normalizeScopeValue(member.invoiceWindowEnd),
+        normalizeScopeValue(member.clientId),
+        normalizeScopeValue(member.currencyCode),
+        normalizeScopeValue(member.purchaseOrderScopeKey),
+        normalizeScopeValue(member.taxSource),
+        normalizeScopeValue(member.exportShapeKey),
+      ].join('|')),
+    );
+    return Math.max(buckets.size, 1);
+  };
+
+  const renderStatusPill = (summary: RecurringInvoiceParentGroup['parentSummary'], separateCount?: number) => {
+    const key = resolveStatusKey({
+      isCombinable: summary.isCombinable,
+      canGenerate: summary.canGenerate,
+      notYetDue: summary.notYetDue,
+      combinabilitySummaryKey: summary.combinabilitySummaryKey,
+      approvalBlockedEntryCount: 0,
+    });
+    const meta = STATUS_PILL_META[key];
+    const showCount = key === 'separate' && typeof separateCount === 'number' && separateCount > 1;
+    return (
+      <span
+        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-2xs font-medium ${meta.className}`}
+      >
+        {statusPillIcon(key)}
+        {t(meta.labelKey, { defaultValue: meta.default })}{showCount ? ` ×${separateCount}` : ''}
+      </span>
+    );
+  };
+
+  const renderGroupAmountCell = (group: RecurringInvoiceParentGroup) => {
+    const summary = summarizeGroupAmount(group.childExecutionRows);
+    if (summary.allKnown) {
+      return (
+        <div className="flex items-center justify-end gap-1 font-semibold font-mono tabular-nums text-foreground">
+          <Check className="h-3.5 w-3.5 text-success" />
+          {formatCurrency(summary.knownCents / 100)}
+        </div>
+      );
+    }
+    if (summary.hasKnown) {
+      return (
+        <div className="text-right">
+          <div className="font-semibold font-mono tabular-nums text-foreground">{formatCurrency(summary.knownCents / 100)}</div>
+          <div className="text-2xs text-muted-foreground">
+            {t('automaticInvoices.amount.plusAtGeneration', {
+              count: summary.atGenerationCount,
+              defaultValue: `+ ${summary.atGenerationCount} at generation`,
+            })}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="text-right text-2xs font-medium text-muted-foreground">
+        {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
+      </div>
+    );
+  };
 
   // Debounce invoiced search term
   useEffect(() => {
@@ -1363,87 +1839,174 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </div>
           ) : null}
 
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h2 className="text-lg font-semibold">
-                {t('automaticInvoices.ready.title', { defaultValue: 'Ready to Invoice' })}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t('automaticInvoices.ready.description', {
-                  defaultValue: 'Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.',
-                })}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t('automaticInvoices.ready.selectAllExplanation', {
-                  defaultValue: 'Select All chooses parent rows when a group is combinable and falls back to individual child rows when a group is not combinable.',
-                })}
-              </p>
+          {/* Data-first toolbar: views · Filters popover · client search — one slim row,
+              the grid sits immediately below. The "Ready to Invoice" heading and the
+              three stacked filter rows (segmented views, quick-filter chips, date range)
+              were collapsed here; rarely-touched refinements live behind the Filters
+              popover so the table starts ~400px higher. */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card p-1">
+              {([
+                { key: 'all', labelKey: 'automaticInvoices.views.all', default: 'All' },
+                { key: 'ready', labelKey: 'automaticInvoices.views.ready', default: 'Ready' },
+                { key: 'combinable', labelKey: 'automaticInvoices.views.combinable', default: 'Combinable' },
+                { key: 'attention', labelKey: 'automaticInvoices.views.attention', default: 'Needs attention' },
+                { key: 'notYetDue', labelKey: 'automaticInvoices.views.notYetDue', default: 'Not yet due' },
+              ] as Array<{ key: AutomaticInvoiceViewKey; labelKey: string; default: string }>).map((tab) => {
+                const isActive = activeView === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    id={`automatic-invoices-view-${tab.key}`}
+                    type="button"
+                    onClick={() => setActiveView(tab.key)}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      isActive ? 'bg-primary-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {t(tab.labelKey, { defaultValue: tab.default })}
+                    <span className={`text-2xs font-semibold ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
+                      {viewCounts[tab.key]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex gap-2 items-end">
-              <Button
-                id='preview-selected-button'
-                variant="outline"
-                onClick={() => {
-                  if (selectedSelectionGroups.length > 0) {
-                    handlePreviewSelection(selectedSelectionGroups);
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  id="automatic-invoices-filters-button"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeFilterCount > 0
+                      ? 'border-primary-200 bg-primary-50 text-primary-700'
+                      : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Filter className="h-4 w-4" />
+                  {t('automaticInvoices.filters.title', { defaultValue: 'Filters' })}
+                  {activeFilterCount > 0 ? (
+                    <span className="ml-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary-500 px-1 text-2xs font-bold text-white">
+                      {activeFilterCount}
+                    </span>
+                  ) : null}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-80"
+                onInteractOutside={(event) => {
+                  // Keep the Filters popover open while the user interacts with the
+                  // nested DatePicker calendar, which portals its content outside
+                  // this popover's DOM subtree.
+                  const target = event.target as HTMLElement | null;
+                  if (target?.closest('[data-radix-popper-content-wrapper]')) {
+                    event.preventDefault();
                   }
                 }}
-                disabled={
-                  selectedSelectionGroups.length === 0
-                  || isPreviewLoading
-                }
               >
-                <Eye className="h-4 w-4 mr-2" />
-                {isPreviewLoading
-                  ? t('common.actions.loading', { defaultValue: 'Loading...' })
-                  : t('automaticInvoices.actions.previewSelected', { defaultValue: 'Preview Selected' })}
-              </Button>
-              {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
-                <span className="text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
-                  {t('automaticInvoices.ready.groupedPreviewUnavailable', {
-                    defaultValue: 'Preview supports grouped selections; direct "Generate from preview" remains single-selection only.',
-                  })}
-                </span>
-              ) : null}
-              <Button
-                id='generate-invoices-button'
-                onClick={handleGenerateInvoices}
-                disabled={selectedExecutionRows.length === 0 || isGenerating}
-                className={selectedExecutionRows.length === 0 ? 'opacity-50' : ''}
-              >
-                {isGenerating
-                  ? t('manualInvoices.actions.processing', { defaultValue: 'Processing...' })
-                  : t('automaticInvoices.actions.generateSelected', {
-                    count: selectedExecutionRows.length,
-                    defaultValue: `Generate Invoices for Selected Periods (${selectedExecutionRows.length})`,
-                  })}
-              </Button>
-            </div>
-          </div>
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+                    {t('automaticInvoices.filters.title', { defaultValue: 'Filters' })}
+                  </h4>
+                  {activeFilterCount > 0 ? (
+                    <button
+                      type="button"
+                      id="automatic-invoices-filter-clear"
+                      onClick={() => {
+                        setChargeFilter('');
+                        setCurrencyFilter('');
+                        setWindowOpenOnly(false);
+                        const resetRange: DateRange = { from: undefined, to: getTodayDate() };
+                        setPendingDateRange(resetRange);
+                        setAppliedDateRange(resetRange);
+                      }}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                      {t('automaticInvoices.filters.clear', { defaultValue: 'Clear' })}
+                    </button>
+                  ) : null}
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">
+                      {t('automaticInvoices.filters.windowOpen', { defaultValue: 'Window open' })}
+                    </span>
+                    <Switch
+                      id="automatic-invoices-filter-window-open"
+                      size="sm"
+                      checked={windowOpenOnly}
+                      onCheckedChange={(checked) => setWindowOpenOnly(Boolean(checked))}
+                    />
+                  </div>
+                  {availableChargeTypes.length > 0 ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-foreground">
+                        {t('automaticInvoices.filters.charge', { defaultValue: 'Charge' })}
+                      </span>
+                      <select
+                        id="automatic-invoices-filter-charge"
+                        value={chargeFilter}
+                        onChange={(event) => setChargeFilter(event.target.value as RecurringChargeTypeKey | '')}
+                        className="rounded-md border border-border bg-card px-2 py-1 text-sm font-medium text-foreground focus:outline-none"
+                      >
+                        <option value="">{t('automaticInvoices.filters.any', { defaultValue: 'any' })}</option>
+                        {availableChargeTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {t(CHARGE_TAG_META[type].labelKey, { defaultValue: CHARGE_TAG_META[type].default })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  {availableCurrencies.length > 1 ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-foreground">
+                        {t('automaticInvoices.filters.currency', { defaultValue: 'Currency' })}
+                      </span>
+                      <select
+                        id="automatic-invoices-filter-currency"
+                        value={currencyFilter}
+                        onChange={(event) => setCurrencyFilter(event.target.value)}
+                        className="rounded-md border border-border bg-card px-2 py-1 text-sm font-medium text-foreground focus:outline-none"
+                      >
+                        <option value="">{t('automaticInvoices.filters.any', { defaultValue: 'any' })}</option>
+                        {availableCurrencies.map((code) => (
+                          <option key={code} value={code}>{code}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <DateRangePicker
+                      id="billing-period-date-range"
+                      label={t('automaticInvoices.ready.dateRange', {
+                        defaultValue: 'Service period start date range',
+                      })}
+                      value={pendingDateRange}
+                      onChange={(range) => setPendingDateRange(range)}
+                    />
+                    <Button
+                      id="apply-billing-period-date-filter"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleDateRangeSearch}
+                    >
+                      {t('automaticInvoices.ready.search', { defaultValue: 'Apply' })}
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
-          {/* Filters row */}
-          <div className="flex items-end gap-4 mb-4">
-            <DateRangePicker
-              id="billing-period-date-range"
-              label={t('automaticInvoices.ready.dateRange', {
-                defaultValue: 'Service period start date range',
-              })}
-              value={pendingDateRange}
-              onChange={(range) => setPendingDateRange(range)}
-            />
-            <Button
-              id="apply-billing-period-date-filter"
-              variant="outline"
-              onClick={handleDateRangeSearch}
-            >
-              <Search className="h-4 w-4 mr-2" />
-              {t('automaticInvoices.ready.search', { defaultValue: 'Search' })}
-            </Button>
             <Input
               id="filter-clients-input"
               type="text"
               placeholder={t('automaticInvoices.ready.filterPlaceholder', {
-                defaultValue: 'Filter clients...',
+                defaultValue: 'Filter by client',
               })}
               containerClassName=""
               value={clientFilter}
@@ -1484,17 +2047,35 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                   <div className="space-y-3">
-                    <div>
+                    <div className="space-y-2">
                       <h4 className="font-semibold">
                         {t('automaticInvoices.materializationGap.title', {
-                          defaultValue: 'Recurring service period repair required',
+                          defaultValue: 'These billing schedules need to be rebuilt',
                         })}
                       </h4>
                       <p className="text-sm text-muted-foreground">
                         {t('automaticInvoices.materializationGap.description', {
-                          defaultValue: 'These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.',
+                          defaultValue: 'A billing schedule changed for these clients, so their upcoming charges are out of date and cannot be invoiced yet. Rebuilding updates the charges to match the current schedule. Charges that were already invoiced are not affected.',
                         })}
                       </p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                          id="fix-all-service-periods"
+                          variant="default"
+                          size="sm"
+                          onClick={handleFixAllServicePeriods}
+                          disabled={isRepairingAll}
+                        >
+                          {isRepairingAll
+                            ? t('automaticInvoices.materializationGap.fixAllBusy', { defaultValue: 'Rebuilding…' })
+                            : t('automaticInvoices.materializationGap.fixAll', { defaultValue: 'Fix all' })}
+                        </Button>
+                        {repairAllMessage ? (
+                          <span className="text-sm text-muted-foreground" data-testid="fix-all-result">
+                            {repairAllMessage}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <ul className="space-y-3">
                       {materializationGaps.map((gap) => (
@@ -1550,18 +2131,117 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </Alert>
           ) : null}
 
+          {/* Selection / summary bar */}
+          <div
+            className={`sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-4 py-3 shadow-sm ${
+              hasSelection
+                ? 'border-transparent bg-gradient-to-r from-primary-600 to-primary-500 text-white'
+                : 'border-border bg-card text-foreground'
+            }`}
+            data-testid="automatic-invoices-summary-bar"
+          >
+            {hasSelection ? (
+              <>
+                <span className="text-sm font-semibold">
+                  {t('automaticInvoices.summary.selected', {
+                    count: selectedExecutionRows.length,
+                    defaultValue: `${selectedExecutionRows.length} selected`,
+                  })}
+                </span>
+                <span className="text-xs text-white/80">
+                  {t('automaticInvoices.summary.breakdown', {
+                    invoices: selectionInvoiceCount,
+                    combine: selectionCombineCount,
+                    separate: selectionSeparateCount,
+                    defaultValue: `${selectionInvoiceCount} invoice(s) · ${selectionCombineCount} combined · ${selectionSeparateCount} separate`,
+                  })}
+                </span>
+                <div className="ml-auto text-right leading-tight">
+                  {selectionKnownCents > 0 ? (
+                    <>
+                      <div className="font-semibold font-mono tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
+                      <div className="text-2xs text-white/80">
+                        {selectionAtGenerationCount > 0
+                          ? t('automaticInvoices.summary.knownPlusAtGeneration', {
+                              count: selectionAtGenerationCount,
+                              defaultValue: `known now · ${selectionAtGenerationCount} calculated at generation`,
+                            })
+                          : t('automaticInvoices.summary.knownNow', { defaultValue: 'known now' })}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm font-semibold">
+                        {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
+                      </div>
+                      <div className="text-2xs text-white/80">
+                        {t('automaticInvoices.summary.atGenerationLines', {
+                          count: selectionAtGenerationCount,
+                          defaultValue: `${selectionAtGenerationCount} line item${selectionAtGenerationCount === 1 ? '' : 's'}`,
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    id="preview-selected-button"
+                    variant="outline"
+                    className="border-white/40 bg-white/10 text-white hover:bg-white/20"
+                    onClick={() => {
+                      if (selectedSelectionGroups.length > 0) {
+                        handlePreviewSelection(selectedSelectionGroups);
+                      }
+                    }}
+                    disabled={selectedSelectionGroups.length === 0 || isPreviewLoading}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    {isPreviewLoading
+                      ? t('common.actions.loading', { defaultValue: 'Loading...' })
+                      : t('automaticInvoices.actions.previewSelected', { defaultValue: 'Preview Selected' })}
+                  </Button>
+                  <Button
+                    id="generate-invoices-button"
+                    className="bg-white text-primary-700 hover:bg-white/90"
+                    onClick={handleGenerateInvoices}
+                    disabled={selectedExecutionRows.length === 0 || isGenerating}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    {isGenerating
+                      ? t('manualInvoices.actions.processing', { defaultValue: 'Processing...' })
+                      : t('automaticInvoices.actions.generateSelected', {
+                          count: selectedExecutionRows.length,
+                          defaultValue: `Generate Invoices (${selectedExecutionRows.length})`,
+                        })}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              // Resting state: just the hint. Disabled Preview/Generate buttons
+              // teach nothing — the action bar fills in once a row is checked.
+              <span className="text-sm font-medium text-muted-foreground">
+                {t('automaticInvoices.summary.empty', {
+                  defaultValue: 'Select groups or line items to preview or generate invoices.',
+                })}
+              </span>
+            )}
+          </div>
+          {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
+            <p className="mb-2 text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
+              {t('automaticInvoices.ready.groupedPreviewUnavailable', {
+                defaultValue: 'Preview supports grouped selections; direct "Generate from preview" remains single-selection only.',
+              })}
+            </p>
+          ) : null}
+
+          {/* LEVERAGE: friction datatable-column-sizing — column proportions here are coaxed via
+              per-column dataIndex tricks (select/tags → compact ids) + mixed px/% widths because
+              DataTable's auto-fit overrides plain widths; a first-class "column width spec" on
+              DataTable would remove this dance. */}
           <DataTable
             id="automatic-invoices-table"
-            key={`${currentReadyPage}-${pageSize}`}
-            data={readyParentGroups}
-            // Add onRowClick prop - implementation depends on DataTable component
-            // Assuming it takes a function like this:
-            // Temporarily disabled invoice preview on row click
-            // onRowClick={(record: Period) => {
-            //   if (record.billing_cycle_id) {
-            //     handlePreviewInvoice(record.billing_cycle_id);
-            //   }
-            // }
+            key={`${currentReadyPage}-${pageSize}-${activeView}`}
+            data={automaticInvoiceDisplayRows as unknown as RecurringInvoiceParentGroup[]}
             columns={[
               {
                 title: (
@@ -1575,27 +2255,45 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     />
                   </div>
                 ),
-                dataIndex: 'candidateKey',
-                width: '6rem',
+                dataIndex: 'select',
+                width: '48px',
+                sortable: false,
                 headerClassName: 'px-2 text-center',
-                cellClassName: 'px-2 text-center',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
-                  const isParentSelected = selectedTargets.has(record.parentSummary.parentSelectionKey);
-                  const selectedChildrenCount = record.childExecutionRows.filter((member) =>
+                cellClassName: 'px-2 text-center align-top',
+                render: (_: unknown, rowRecord: unknown) => {
+                  const record = rowRecord as AutomaticInvoiceDisplayRow;
+                  if (record.kind === 'member') {
+                    const isChildSelected = selectedTargets.has(childSelectionKeyForMember(record.member));
+                    return (
+                      <div className="flex justify-center">
+                        <Checkbox
+                          id={`select-child-${record.group.parentSummary.parentGroupKey}-${record.member.executionIdentityKey}`}
+                          checked={isChildSelected}
+                          disabled={!record.member.canGenerate}
+                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                            event.stopPropagation();
+                            handleSelectChild(record.group, record.member, event);
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+                  const group = record.group;
+                  const isParentSelected = selectedTargets.has(group.parentSummary.parentSelectionKey);
+                  const selectedChildrenCount = group.childExecutionRows.filter((member) =>
                     selectedTargets.has(childSelectionKeyForMember(member)),
                   ).length;
                   const isPartiallySelected = !isParentSelected && selectedChildrenCount > 0;
                   return (
                     <div className="flex justify-center">
                       <Checkbox
-                        id={`select-${record.parentSummary.parentGroupKey}`}
+                        id={`select-${group.parentSummary.parentGroupKey}`}
                         checked={isParentSelected}
                         indeterminate={isPartiallySelected}
-                        disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
-                        // Stop propagation to prevent row click when clicking checkbox
+                        disabled={!group.parentSummary.canGenerate || !group.parentSummary.isCombinable}
                         onClick={(event: React.MouseEvent<HTMLInputElement>) => {
                           event.stopPropagation();
-                          parentGroupRangeSelect.handleSelect(record.parentSummary.parentSelectionKey, {
+                          parentGroupRangeSelect.handleSelect(group.parentSummary.parentSelectionKey, {
                             shiftKey: event.shiftKey,
                             selected: !isParentSelected,
                             preventDefault: () => event.preventDefault(),
@@ -1606,329 +2304,250 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       />
                     </div>
                   );
-                }
+                },
               },
-	              {
-	                title: t('automaticInvoices.ready.columns.group', { defaultValue: 'Group' }),
-	                dataIndex: 'parentGroupKey',
-                    width: '18rem',
-	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
-	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
-                    const contractNames = Array.from(
-                      new Set(
-                        record.childExecutionRows
-                          .map((member) => member.contractName?.trim())
-                          .filter((name): name is string => Boolean(name)),
-                      ),
-                    );
-                    const contractLineNames = Array.from(
-                      new Set(
-                        record.childExecutionRows
-                          .map((member) => member.contractLineName?.trim())
-                          .filter((name): name is string => Boolean(name)),
-                      ),
-                    );
-                    const contractMetadataMissingCount = record.childExecutionRows.filter((member) => {
-                      return member.attribution?.isComplete === false;
-                    }).length;
-                    const assignmentContexts = Array.from(
-                      new Set(
-                        record.childExecutionRows
-                          .map((member) => getRecurringAssignmentContext(member))
-                          .filter((value): value is string => Boolean(value)),
-                      ),
-                    );
-                    const attributionSummaryLabels = record.candidate.attributionSummary?.labels ?? [];
-                    const assignmentLabels = Array.from(new Set([...attributionSummaryLabels, ...assignmentContexts]));
-	                    const cadenceSummary = Array.from(
-                        new Set(
-                          ((record.candidate.cadenceSources ?? []).length > 0
-                            ? record.candidate.cadenceSources
-                            : [null]).map((source) => formatCadenceSourceText(source)),
-                        ),
-                      ).join(' + ');
-                      const shouldShowAssignmentContexts =
-                        !isExpanded
-                        && contractNames.length === 0
-                        && contractLineNames.length === 0
-                        && assignmentLabels.length > 0;
-	                  return (
-                      <div className="min-w-0 max-w-full space-y-2">
-                        <div className="flex min-w-0 items-start gap-2">
-                          <Button
-                            id={`toggle-group-${record.parentSummary.parentGroupKey}`}
-                            variant="ghost"
-                            size="sm"
-                            className="mt-0.5 h-8 w-8 shrink-0 p-0"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleParentGroupExpansion(record.parentSummary.parentGroupKey);
-                            }}
-                            aria-label={isExpanded
-                              ? t('automaticInvoices.groups.actions.collapse', { defaultValue: 'Collapse' })
-                              : t('automaticInvoices.groups.actions.expand', { defaultValue: 'Expand' })}
-                          >
-                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          </Button>
-                          <div className="min-w-0 space-y-1">
-                            <div className="break-words font-medium leading-snug">
-                              {record.parentSummary.clientName ?? t('common.labels.unknownClient', {
-                                defaultValue: 'Unknown client',
-                              })}
-                            </div>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              <span>
-                                {t('automaticInvoices.groups.item', {
-                                  count: record.parentSummary.childCount,
-                                  defaultValue: `${record.parentSummary.childCount} item${record.parentSummary.childCount === 1 ? '' : 's'}`,
-                                })}
-                              </span>
-                              {contractNames.length > 0 ? (
-                                <span title={contractNames.join(', ')}>
-                                  {t('automaticInvoices.groups.contract', {
-                                    count: contractNames.length,
-                                    defaultValue: `${contractNames.length} contract${contractNames.length === 1 ? '' : 's'}`,
-                                  })}
-                                </span>
-                              ) : null}
-                              {contractLineNames.length > 0 ? (
-                                <span title={contractLineNames.join(', ')}>
-                                  {t('automaticInvoices.groups.line', {
-                                    count: contractLineNames.length,
-                                    defaultValue: `${contractLineNames.length} line${contractLineNames.length === 1 ? '' : 's'}`,
-                                  })}
-                                </span>
-                              ) : null}
-                              <span>{cadenceSummary}</span>
-                              {record.childExecutionRows.some((member) => !member.billingCycleId) ? (
-                                <span>
-                                  {t('automaticInvoices.history.badges.servicePeriodBacked', {
-                                    defaultValue: 'Service-period-backed',
-                                  })}
-                                </span>
-                              ) : null}
-                            </div>
-                            {record.parentSummary.combinabilitySummaryKey !== 'ready' ? (
-                              <div className="flex flex-wrap gap-2 text-xs">
-                                <span
-                                  className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 font-medium ${getParentGroupSummary({
-                                    isCombinable: record.parentSummary.isCombinable,
-                                    canGenerate: record.parentSummary.canGenerate,
-                                    incompatibilityReasons: record.parentSummary.incompatibilityReasons,
-                                    childCount: record.parentSummary.childCount,
-                                  }).className}`}
-                                >
-                                  {t(`automaticInvoices.groups.${record.parentSummary.combinabilitySummaryKey}`, {
-                                    defaultValue: AUTOMATIC_INVOICE_GROUP_LABELS[record.parentSummary.combinabilitySummaryKey],
-                                  })}
-                                </span>
-                              </div>
-                            ) : null}
-                            {!record.parentSummary.isCombinable && record.parentSummary.incompatibilityReasons.length > 0 ? (
-                              <div
-                                className="text-xs text-muted-foreground"
-                                data-testid={`combinability-reasons-${record.parentSummary.parentGroupKey}`}
-                              >
-                                {record.parentSummary.incompatibilityReasons
-                                  .map((reasonKey) =>
-                                    t(`automaticInvoices.incompatibilityReasons.${reasonKey}`, {
-                                      defaultValue: AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS[reasonKey],
-                                    }))
-                                  .join(', ')}
-                              </div>
-                            ) : null}
-                            {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
-                              <div className="text-xs text-muted-foreground">
-                                {formatBlockedReason(record.parentSummary.blockedReason)}
-                              </div>
-                            ) : null}
-                            {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (
-                              <div
-                                key={`${record.parentSummary.candidateKey}:assignment:${contextValue}`}
-                                className="text-xs text-muted-foreground"
-                                data-testid={`contract-assignment-context-${record.parentSummary.candidateKey}`}
-                              >
-                                {translateAssignmentContext(contextValue)}
-                              </div>
-                            )) : null}
-                            {contractMetadataMissingCount > 0 ? (
-                              <div
-                                className="text-xs text-warning"
-                                data-testid={`contract-metadata-warning-${record.parentSummary.candidateKey}`}
-                              >
-                                {t('automaticInvoices.groups.attributionMetadataMissing', {
-                                  count: contractMetadataMissingCount,
-                                  defaultValue: `Assignment attribution metadata missing (${contractMetadataMissingCount} obligation${contractMetadataMissingCount === 1 ? '' : 's'})`,
-                                })}
-                              </div>
-                            ) : null}
-                          </div>
+              {
+                title: t('automaticInvoices.ready.columns.group', { defaultValue: 'Client / Group' }),
+                dataIndex: 'title',
+                width: '34%',
+                sortable: false,
+                headerClassName: 'text-2xs uppercase tracking-wide',
+                cellClassName: 'align-top',
+                render: (_: unknown, rowRecord: unknown) => {
+                  const record = rowRecord as AutomaticInvoiceDisplayRow;
+                  if (record.kind === 'member') {
+                    const member = record.member;
+                    const assignmentContext = translateAssignmentContext(getRecurringAssignmentContext(member));
+                    const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
+                    const childTitle =
+                      member.contractName?.trim()
+                      || assignmentContext
+                      || member.contractLineName?.trim()
+                      || member.executionIdentityKey;
+                    const cadenceSourceBadge = formatCadenceSourceBadge(member.cadenceSource);
+                    const cadenceSource = cadenceSourceBadge.labelKey
+                      ? t(cadenceSourceBadge.labelKey, { defaultValue: cadenceSourceBadge.label })
+                      : cadenceSourceBadge.label;
+                    const billingTiming = member.duePosition === 'advance'
+                      ? t('recurringServicePeriods.values.advance', { defaultValue: 'Advance' })
+                      : t('recurringServicePeriods.values.arrears', { defaultValue: 'Arrears' });
+                    return (
+                      <div className="min-w-0 space-y-0.5 pl-8">
+                        <div className="flex items-center gap-2 font-medium leading-snug">
+                          <span className="min-w-0 truncate">{childTitle}</span>
+                          {distinctChargeTags([member]).map(({ type }) => renderChargeTag(type, 1))}
                         </div>
+                        {member.contractLineName?.trim() && member.contractLineName.trim() !== childTitle ? (
+                          <div className="text-xs text-muted-foreground">{member.contractLineName.trim()}</div>
+                        ) : null}
+                        {nonContractSelection ? (
+                          <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
+                            {t('automaticInvoices.executionRows.assignmentContext.unresolvedWork', { defaultValue: 'Unresolved work' })}
+                          </div>
+                        ) : null}
+                        <div className="text-xs text-muted-foreground">{cadenceSource} · {billingTiming}</div>
+                        {member.attribution?.isComplete === false ? (
+                          <div className="text-xs text-warning" data-testid={`child-attribution-warning-${member.executionIdentityKey}`}>
+                            {t('automaticInvoices.executionRows.attributionWarning', { defaultValue: 'Assignment attribution metadata missing' })}
+                          </div>
+                        ) : null}
                       </div>
-	                  );
-	                },
-	              },
-	              {
-	                title: t('automaticInvoices.ready.columns.servicePeriod', { defaultValue: 'Service Period' }),
-	                dataIndex: 'servicePeriodLabel',
-                    width: '17rem',
-	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
-	                  <div className="space-y-1">
-	                    <div>{record.parentSummary.servicePeriodLabel}</div>
-	                    <div className="text-xs text-muted-foreground">
-	                      {t('automaticInvoices.groups.obligationCount', {
-                          count: record.parentSummary.childCount,
-                          defaultValue: `${record.parentSummary.childCount} obligation${record.parentSummary.childCount === 1 ? '' : 's'}`,
-                        })}
-	                    </div>
-	                    {record.parentSummary.aggregateAmountCents !== null ? (
-	                      <div
-	                        className="text-sm font-medium"
-	                        data-testid={`group-amount-${record.parentSummary.parentGroupKey}`}
-	                      >
-	                        {formatCurrency(record.parentSummary.aggregateAmountCents / 100)}
-	                      </div>
-	                    ) : null}
-	                  </div>
-	                ),
-	              },
-	              {
-	                title: t('automaticInvoices.ready.columns.invoiceWindow', { defaultValue: 'Invoice Window' }),
-	                dataIndex: 'windowLabel',
-                    width: '17rem',
-	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
-                    <div className="space-y-1">
-                      <div className="whitespace-nowrap">{record.parentSummary.windowLabel}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {record.parentSummary.isCombinable
-                          ? t('automaticInvoices.ready.selectionHintCombined', {
-                            defaultValue: '1 invoice if parent selected',
-                          })
-                          : t('automaticInvoices.ready.selectionHintSeparate', {
-                            defaultValue: 'Select items individually',
-                          })}
+                    );
+                  }
+
+                  const group = record.group;
+                  const isExpanded = expandedParentGroups.has(group.parentSummary.parentGroupKey);
+                  const contractNames = Array.from(new Set(
+                    group.childExecutionRows.map((member) => member.contractName?.trim()).filter((name): name is string => Boolean(name)),
+                  ));
+                  const contractLineNames = Array.from(new Set(
+                    group.childExecutionRows.map((member) => member.contractLineName?.trim()).filter((name): name is string => Boolean(name)),
+                  ));
+                  const contractMetadataMissingCount = group.childExecutionRows.filter((member) => member.attribution?.isComplete === false).length;
+                  const assignmentContexts = Array.from(new Set(
+                    group.childExecutionRows.map((member) => getRecurringAssignmentContext(member)).filter((value): value is string => Boolean(value)),
+                  ));
+                  const attributionSummaryLabels = group.candidate.attributionSummary?.labels ?? [];
+                  const assignmentLabels = Array.from(new Set([...attributionSummaryLabels, ...assignmentContexts]));
+                  const shouldShowAssignmentContexts = !isExpanded && contractNames.length === 0 && contractLineNames.length === 0 && assignmentLabels.length > 0;
+                  const poScope = group.candidate.purchaseOrderScopeKey?.trim();
+                  const currencyCode = group.candidate.currencyCode?.trim();
+                  return (
+                    <div className="flex min-w-0 items-start gap-2">
+                      <Button
+                        id={`toggle-group-${group.parentSummary.parentGroupKey}`}
+                        variant="ghost"
+                        size="sm"
+                        className="mt-0.5 h-7 w-7 shrink-0 p-0"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleParentGroupExpansion(group.parentSummary.parentGroupKey);
+                        }}
+                        aria-label={isExpanded
+                          ? t('automaticInvoices.groups.actions.collapse', { defaultValue: 'Collapse' })
+                          : t('automaticInvoices.groups.actions.expand', { defaultValue: 'Expand' })}
+                      >
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </Button>
+                      <div className="min-w-0 space-y-1">
+                        <div className="break-words font-semibold leading-snug">
+                          {group.parentSummary.clientName ?? t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
+                          {(() => {
+                            const tags = distinctChargeTags(group.childExecutionRows);
+                            return tags.length > 0 ? (
+                              <span className="ml-2 inline-flex gap-1 align-middle">
+                                {tags.map(({ type, count }) => renderChargeTag(type, count))}
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                          {/* A single charge names its line; multiple charges show a count.
+                              Currency only when the page mixes currencies. Items joined by "·". */}
+                          {(() => {
+                            const meta: React.ReactNode[] = [
+                              group.parentSummary.childCount === 1 && contractLineNames.length === 1 ? (
+                                <span key="line" className="truncate" title={contractLineNames[0]}>{contractLineNames[0]}</span>
+                              ) : (
+                                <span key="line" title={contractLineNames.length > 0 ? contractLineNames.join(', ') : undefined}>
+                                  {t('automaticInvoices.groups.item', {
+                                    count: group.parentSummary.childCount,
+                                    defaultValue: `${group.parentSummary.childCount} line item${group.parentSummary.childCount === 1 ? '' : 's'}`,
+                                  })}
+                                </span>
+                              ),
+                            ];
+                            if (currencyCode && availableCurrencies.length > 1) {
+                              meta.push(<span key="currency">{currencyCode}</span>);
+                            }
+                            if (poScope) {
+                              meta.push(<span key="po" title={poScope}>{formatPoLabel(poScope)}</span>);
+                            }
+                            return meta.flatMap((node, index) =>
+                              index === 0
+                                ? [node]
+                                : [<span key={`sep-${index}`} aria-hidden="true" className="text-muted-foreground/50">·</span>, node],
+                            );
+                          })()}
+                        </div>
+                        {!group.parentSummary.isCombinable && group.parentSummary.incompatibilityReasons.length > 0 ? (
+                          <div className="text-xs text-muted-foreground" data-testid={`combinability-reasons-${group.parentSummary.parentGroupKey}`}>
+                            {group.parentSummary.incompatibilityReasons
+                              .map((reasonKey) => t(`automaticInvoices.incompatibilityReasons.${reasonKey}`, { defaultValue: AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS[reasonKey] }))
+                              .join(', ')}
+                          </div>
+                        ) : null}
+                        {!group.parentSummary.canGenerate && group.parentSummary.blockedReason && !group.parentSummary.notYetDue ? (
+                          <div className="text-xs text-muted-foreground">{formatBlockedReason(group.parentSummary.blockedReason)}</div>
+                        ) : null}
+                        {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (
+                          <div
+                            key={`${group.parentSummary.candidateKey}:assignment:${contextValue}`}
+                            className="text-xs text-muted-foreground"
+                            data-testid={`contract-assignment-context-${group.parentSummary.candidateKey}`}
+                          >
+                            {translateAssignmentContext(contextValue)}
+                          </div>
+                        )) : null}
+                        {contractMetadataMissingCount > 0 ? (
+                          <div className="text-xs text-warning" data-testid={`contract-metadata-warning-${group.parentSummary.candidateKey}`}>
+                            {t('automaticInvoices.groups.attributionMetadataMissing', {
+                              count: contractMetadataMissingCount,
+                              defaultValue: `Assignment attribution metadata missing (${contractMetadataMissingCount} line item${contractMetadataMissingCount === 1 ? '' : 's'})`,
+                            })}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
-                  ),
-	              },
-	              {
-	                title: t('automaticInvoices.ready.columns.included', { defaultValue: 'Included' }),
-	                dataIndex: 'childExecutionRows',
-                    width: '12rem',
-	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
-	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
-	                  if (!isExpanded) {
-	                    return (
-	                      <div className="text-xs text-muted-foreground">
-	                        {t('automaticInvoices.groups.includedCount', {
-                          count: record.parentSummary.childCount,
-                          defaultValue: `${record.parentSummary.childCount} item${record.parentSummary.childCount === 1 ? '' : 's'} included`,
-                        })}
-	                      </div>
-	                    );
-	                  }
-
-	                  return (
-	                    <div className="min-w-[20rem] space-y-2">
-	                      {record.childExecutionRows.map((member) => {
-		                        const assignmentContext = translateAssignmentContext(getRecurringAssignmentContext(member));
-	                          const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
-                                const cadenceSourceBadge = formatCadenceSourceBadge(member.cadenceSource);
-		                        const cadenceSource = cadenceSourceBadge.labelKey
-                                  ? t(cadenceSourceBadge.labelKey, {
-                                    defaultValue: cadenceSourceBadge.label,
-                                  })
-                                  : cadenceSourceBadge.label;
-		                        const billingTiming = member.duePosition === 'advance'
-                                  ? t('recurringServicePeriods.values.advance', { defaultValue: 'Advance' })
-                                  : t('recurringServicePeriods.values.arrears', { defaultValue: 'Arrears' });
-		                        const amountCents = (member as { amountCents?: number | null }).amountCents;
-	                        const isChildSelected = selectedTargets.has(childSelectionKeyForMember(member));
-                          const childTitle =
-                            member.contractName?.trim()
-                            || assignmentContext
-                            || member.contractLineName?.trim()
-                            || member.executionIdentityKey;
-
-	                        return (
-	                          <div
-	                            key={`${record.parentSummary.parentGroupKey}:${member.executionIdentityKey}`}
-	                            className="rounded-md border border-border/60 bg-background p-3"
-	                            data-testid={`child-row-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
-	                          >
-	                            <div className="flex items-start gap-3">
-	                              <Checkbox
-	                                id={`select-child-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
-	                                checked={isChildSelected}
-	                                disabled={!member.canGenerate}
-                                  className="mt-0.5"
-	                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-	                                  event.stopPropagation();
-	                                  handleSelectChild(record, member, event);
-	                                }}
-	                              />
-                                <div className="min-w-0 flex-1 space-y-1">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                      <div className="font-medium">{childTitle}</div>
-                                      {member.contractLineName?.trim() && member.contractLineName?.trim() !== childTitle ? (
-                                        <div className="text-sm text-muted-foreground">{member.contractLineName.trim()}</div>
-                                      ) : null}
-                                      {nonContractSelection ? (
-                                        <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
-                                          {t('automaticInvoices.executionRows.assignmentContext.unresolvedWork', {
-                                            defaultValue: 'Unresolved work',
-                                          })}
-                                        </div>
-                                      ) : null}
-                                      {member.attribution?.isComplete === false ? (
-                                        <div className="text-xs text-warning" data-testid={`child-attribution-warning-${member.executionIdentityKey}`}>
-                                          {t('automaticInvoices.executionRows.attributionWarning', {
-                                            defaultValue: 'Assignment attribution metadata missing',
-                                          })}
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                    <div className="shrink-0 text-sm font-medium">
-                                      {typeof amountCents === 'number'
-                                        ? formatCurrency(amountCents / 100)
-                                        : t('automaticInvoices.executionRows.pendingAmount', {
-                                          defaultValue: 'Pending amount',
-                                        })}
-                                    </div>
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {t('automaticInvoices.executionRows.labels.cadence', { defaultValue: 'Cadence' })}: {cadenceSource}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {t('automaticInvoices.executionRows.labels.billingTiming', { defaultValue: 'Billing timing' })}: {billingTiming}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {t('automaticInvoices.executionRows.labels.servicePeriod', { defaultValue: 'Service period' })}: {member.servicePeriodLabel}
-                                  </div>
-                                  {!member.canGenerate && (member as { blockedReason?: string | null }).blockedReason ? (
-                                    <div className="text-xs text-muted-foreground">
-                                      {formatBlockedReason((member as { blockedReason?: string | null }).blockedReason)}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-	                          </div>
-	                        );
-	                      })}
-	                    </div>
-	                  );
-	                },
-	              },
-	            ]}
+                  );
+                },
+              },
+              {
+                title: t('automaticInvoices.ready.columns.status', { defaultValue: 'Status' }),
+                dataIndex: 'status',
+                width: '120px',
+                sortable: false,
+                headerClassName: 'text-2xs uppercase tracking-wide',
+                cellClassName: 'align-top',
+                render: (_: unknown, rowRecord: unknown) => {
+                  const record = rowRecord as AutomaticInvoiceDisplayRow;
+                  if (record.kind === 'member') {
+                    return null;
+                  }
+                  const summary = record.group.parentSummary;
+                  return (
+                    <div className="space-y-0.5">
+                      {renderStatusPill(summary, countSeparateInvoices(record.group.childExecutionRows))}
+                      {summary.notYetDue && summary.availableOnDate ? (
+                        <div className="text-xs text-muted-foreground">
+                          {t('automaticInvoices.window.opensOn', {
+                            date: formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }),
+                            defaultValue: `Opens ${formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}`,
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                },
+              },
+              {
+                title: t('automaticInvoices.ready.columns.servicePeriod', { defaultValue: 'Service Period' }),
+                dataIndex: 'servicePeriod',
+                width: '128px',
+                sortable: false,
+                headerClassName: 'text-2xs uppercase tracking-wide',
+                cellClassName: 'align-top',
+                render: (_: unknown, rowRecord: unknown) => {
+                  const record = rowRecord as AutomaticInvoiceDisplayRow;
+                  if (record.kind === 'member') {
+                    return <div className="text-sm text-muted-foreground">{formatPeriodLabel(record.member.servicePeriodStart, record.member.servicePeriodEnd)}</div>;
+                  }
+                  // Line-item count lives in the client cell ("N line items · N
+                  // contracts · N lines"); don't repeat it here.
+                  return (
+                    <div className="font-medium">{formatPeriodLabel(record.group.candidate.servicePeriodStart, record.group.candidate.servicePeriodEnd)}</div>
+                  );
+                },
+              },
+              {
+                title: t('automaticInvoices.ready.columns.amount', { defaultValue: 'Amount' }),
+                dataIndex: 'amount',
+                width: '150px',
+                sortable: false,
+                headerClassName: 'text-2xs uppercase tracking-wide text-right',
+                cellClassName: 'align-top text-right',
+                render: (_: unknown, rowRecord: unknown) => {
+                  const record = rowRecord as AutomaticInvoiceDisplayRow;
+                  if (record.kind === 'member') {
+                    const amount = amountCentsOf(record.member as { amountCents?: number | null });
+                    if (amount === null) {
+                      return (
+                        <span className="text-2xs text-muted-foreground">
+                          {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
+                        </span>
+                      );
+                    }
+                    return <span className="font-medium font-mono tabular-nums">{formatCurrency(amount / 100)}</span>;
+                  }
+                  return renderGroupAmountCell(record.group);
+                },
+              },
+            ]}
             pagination={true}
             currentPage={currentReadyPage}
             onPageChange={handleReadyPageChange}
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
             totalItems={normalizedReadyClientFilter.length > 0 ? filteredPeriods.length : totalPeriods}
-            // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
-            rowClassName={() => ""}
+            rowClassName={(rowRecord: unknown) => {
+              const record = rowRecord as AutomaticInvoiceDisplayRow;
+              if (record.kind === 'member') {
+                return 'bg-muted/30';
+              }
+              const isSelected = selectedTargets.has(record.group.parentSummary.parentSelectionKey)
+                || record.group.childExecutionRows.some((member) => selectedTargets.has(childSelectionKeyForMember(member)));
+              return isSelected ? 'bg-primary-50' : '';
+            }}
           />
         </div>
 
@@ -2125,7 +2744,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         )}
       >
         <DialogContent>
-          <div className="flex items-center gap-2 text-red-600 mb-4">
+          <div className="flex items-center gap-2 text-destructive mb-4">
             <AlertTriangle className="h-5 w-5" />
             <span className="font-semibold">
               {t('automaticInvoices.dialogs.reverse.warningTitle', {
@@ -2252,11 +2871,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           {errors.preview ? (
             <div className="text-center py-8">
               {/* Display error message if present */}
-              <p className="text-red-600">{errors.preview}</p>
+              <p className="text-destructive">{errors.preview}</p>
             </div>
           ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
-              <div className="rounded border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
+              <div className="rounded-md border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
                 {previewState.invoiceCount === 1
                   ? t('automaticInvoices.dialogs.preview.summaryCombined', {
                     defaultValue: 'This selection will generate one combined invoice.',
@@ -2267,7 +2886,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   })}
               </div>
               {previewState.previews.map((previewEntry, previewIndex) => (
-                <div key={previewEntry.previewGroupKey} className="space-y-4 rounded border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>
+                <div key={previewEntry.previewGroupKey} className="space-y-4 rounded-md border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>
                   <h3 className="font-semibold">
                     {t('automaticInvoices.dialogs.preview.invoiceTitle', {
                       index: previewIndex + 1,

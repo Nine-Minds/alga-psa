@@ -267,6 +267,10 @@ spec:
             value: "{{ .Values.temporal.namespace }}"
           - name: TEMPORAL_PORTAL_DOMAIN_TASK_QUEUE
             value: "{{ .Values.temporal.portalDomainTaskQueue }}"
+          {{- if .Values.temporal.jobRunnerType }}
+          - name: JOB_RUNNER_TYPE
+            value: "{{ .Values.temporal.jobRunnerType }}"
+          {{- end }}
 
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}

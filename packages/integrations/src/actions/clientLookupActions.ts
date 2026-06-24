@@ -79,6 +79,29 @@ export const getIntegrationClients = withAuth(async (
   }) as unknown as IClient[];
 });
 
+export const getIntegrationContacts = withAuth(async (
+  _user,
+  { tenant },
+  includeInactive: boolean = false
+): Promise<IContact[]> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const query = trx('contacts')
+      .select('*')
+      .where('tenant', tenant)
+      .orderBy('full_name', 'asc');
+
+    if (!includeInactive) {
+      query.andWhere(function activeOnly(this: Knex.QueryBuilder) {
+        this.where('is_inactive', false).orWhereNull('is_inactive');
+      });
+    }
+
+    return query;
+  }) as unknown as IContact[];
+});
+
 export const findIntegrationContactByEmailAddress = withAuth(async (
   _user,
   { tenant },
