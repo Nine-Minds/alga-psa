@@ -41,6 +41,27 @@ function agentProvider(a: Agent, idps: TrustedIdp[]): string {
   return a.idp_issuer ? hostOf(a.idp_issuer) : '—';
 }
 
+/**
+ * What to enter as the Agent ID depends on the chosen provider and the claim it
+ * identifies agents by — the value must match whatever lands in that claim of the
+ * agent's token (see resolveAgentByIdp in ee/.../mcp/idpToken.ts).
+ */
+function agentIdHelp(idp?: TrustedIdp): { placeholder: string; helper: string } {
+  if (!idp) {
+    return { placeholder: "the agent's identifier", helper: 'Pick a provider to see what to enter.' };
+  }
+  const claim = (idp.subject_claim || '').toLowerCase();
+  if (idp.kind === 'microsoft') {
+    return claim === 'oid' || claim === 'sub'
+      ? { placeholder: 'e.g. 00000000-0000-0000-0000-000000000000', helper: "The agent's user object ID (oid) from Entra." }
+      : { placeholder: 'e.g. 00000000-0000-0000-0000-000000000000', helper: "The app's Application (client) ID from Entra." };
+  }
+  if (idp.kind === 'google') {
+    return { placeholder: 'e.g. 113029283849283742983', helper: "The service account's ID (the sub value in its token)." };
+  }
+  return { placeholder: 'value of your subject claim', helper: `The value of the "${idp.subject_claim || 'sub'}" claim in the agent's token.` };
+}
+
 /** A card header that carries its place in the setup sequence. */
 function StepHeading({ step, title, description }: { step: number; title: string; description: string }) {
   return (
@@ -184,6 +205,8 @@ export default function McpServerSettings() {
       render: (_v, p) => <Badge variant={p.active ? 'success' : 'default-muted'}>{p.active ? 'Active' : 'Inactive'}</Badge>,
     },
   ];
+
+  const agentIdGuide = agentIdHelp(idps.find((p) => p.issuer === agentForm.idpIssuer));
 
   const agentColumns: ColumnDefinition<Agent>[] = [
     {
@@ -395,7 +418,7 @@ export default function McpServerSettings() {
                 options={idps.map((p) => ({ value: p.issuer, label: `${providerLabel(p.kind)} · ${providerDirectory(p)}` }))}
               />
             </div>
-            <div><Label htmlFor="agent-subject">Agent ID</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder="e.g. support-bot@acme.com" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">The agent's own identifier at your provider.</p></div>
+            <div><Label htmlFor="agent-subject">Agent ID</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder={agentIdGuide.placeholder} /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{agentIdGuide.helper}</p></div>
           </div>
           <div>
             <Label>Roles</Label>
