@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { aclPredicateSql, verifyResultVisibility } from '../../lib/search/acl';
+import { aclPredicateSql, verifyResultVisibility } from '@alga-psa/search/acl';
 
 describe('search ACL SQL predicate', () => {
   it('T105 filters required_permission through the user permission set', () => {

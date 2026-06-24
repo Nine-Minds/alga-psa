@@ -1584,6 +1584,14 @@
           "unavailable": "Informations du webhook indisponibles. (Nécessite l'autorisation de lecture des paramètres.)",
           "url": "URL du webhook",
           "urlCopied": "URL du webhook copiée dans le presse-papiers."
+        },
+        "mappings": {
+          "org": "Organisation Tactical",
+          "client": "Client Alga",
+          "defaultContact": "Contact par défaut"
+        },
+        "contact": {
+          "select": "Sélectionner un contact"
         }
       },
       "tanium": {
@@ -1635,7 +1643,9 @@
           "mappedClient": "Client mappé",
           "noScopes": "Aucune portée Tanium découverte pour le moment.",
           "scopeIdLabel": "ID : {{id}}",
-          "unmapped": "Non mappé"
+          "unmapped": "Non mappé",
+          "defaultContact": "Contact par défaut",
+          "selectContact": "Sélectionner un contact"
         },
         "status": {
           "connected": "Connecté",
@@ -1701,7 +1711,9 @@
           "loading": "Chargement…",
           "mappedClient": "Client mappé",
           "noGroups": "Aucun groupe découvert pour le moment. Lancez d'abord Découvrir les groupes.",
-          "unmapped": "Non mappé"
+          "unmapped": "Non mappé",
+          "defaultContact": "Contact par défaut",
+          "selectContact": "Sélectionner un contact"
         },
         "status": {
           "connected": "Connecté",
@@ -1732,6 +1744,76 @@
           "showSecret": "Afficher le secret",
           "title": "Webhook d'alertes",
           "url": "URL du webhook"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Organisation Huntress",
+          "client": "Client Alga",
+          "defaultContact": "Contact par défaut",
+          "createTickets": "Créer des tickets",
+          "status": "Statut"
+        },
+        "selectContact": "Sélectionner un contact",
+        "status": {
+          "autoMatched": "Associé automatiquement",
+          "mapped": "Associé",
+          "unmapped": "Non associé → triage"
+        },
+        "title": "Mappage des organisations",
+        "description": "Associez les organisations Huntress à des clients. Les incidents des organisations non associées sont dirigés vers le client de repli et le tableau de triage.",
+        "unmappedSuffix": "({{count}} non associées)",
+        "syncButton": "Synchroniser les organisations",
+        "loading": "Chargement…",
+        "empty": "Aucune organisation pour l'instant — cliquez sur « Synchroniser les organisations ».",
+        "errors": {
+          "load": "Échec du chargement des mappages d'organisations",
+          "sync": "Échec de la synchronisation",
+          "updateMapping": "Échec de la mise à jour du mappage",
+          "updateContact": "Échec de la mise à jour du contact par défaut"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "Organisation NinjaOne",
+          "company": "Entreprise Alga",
+          "defaultContact": "Contact par défaut",
+          "autoSync": "Synchronisation auto",
+          "status": "Statut"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID : {{id}}",
+        "selectCompany": "Sélectionner une entreprise",
+        "selectContact": "Sélectionner un contact",
+        "status": {
+          "mapped": "Associé",
+          "unmapped": "Non associé"
+        },
+        "title": "Mappages des organisations",
+        "description": "Associez les organisations NinjaOne aux entreprises Alga pour activer la synchronisation des appareils.",
+        "loading": "Chargement des mappages d'organisations…",
+        "syncing": "Synchronisation…",
+        "refreshButton": "Actualiser les organisations",
+        "summary": {
+          "mapped": "{{count}} associées",
+          "unmapped": "{{count}} non associées"
+        },
+        "empty": {
+          "title": "Aucune organisation synchronisée pour l'instant.",
+          "hint": "Cliquez sur « Actualiser les organisations » pour récupérer les organisations depuis NinjaOne."
+        },
+        "unmappedNote": "Les appareils des organisations non associées ne seront pas synchronisés. Associez chaque organisation à une entreprise Alga pour activer la synchronisation des appareils.",
+        "success": {
+          "synced": "{{processed}} organisations synchronisées ({{created}} nouvelles, {{updated}} mises à jour)",
+          "mappingUpdated": "Mappage mis à jour avec succès",
+          "contactUpdated": "Contact par défaut mis à jour avec succès"
+        },
+        "errors": {
+          "load": "Échec du chargement des mappages d'organisations",
+          "sync": "Échec de la synchronisation des organisations",
+          "updateMapping": "Échec de la mise à jour du mappage",
+          "updateContact": "Échec de la mise à jour du contact par défaut",
+          "updateAutoSync": "Échec de la mise à jour du paramètre de synchronisation automatique"
         }
       }
     },
@@ -2321,8 +2403,5 @@
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Sélectionner une entreprise"
   }
 }

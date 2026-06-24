@@ -1,7 +1,29 @@
 import { createLogger, format, transports } from 'winston';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
+import {
+  workflowOneTimeScheduledRunHandler,
+  workflowRecurringScheduledRunHandler,
+} from '@alga-psa/jobs/handlers/workflowScheduledRunHandlers';
+import {
+  WORKFLOW_ONE_TIME_TRIGGER_JOB,
+  WORKFLOW_RECURRING_TRIGGER_JOB,
+} from '@alga-psa/workflows/lib/workflowScheduleLifecycle';
 import type { JobStatus } from '../types/job.js';
+import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
+import { TemporalJobRunner } from '@alga-psa/jobs/runners/TemporalJobRunner';
+import { extensionScheduledInvocationHandler } from '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+
+// rmm/huntress poll handlers import the src-consumed @alga-psa/integrations
+// vertical, which the plain-Node-ESM worker cannot load. They run server-side:
+// the worker forwards a MAINTENANCE_JOB_REQUESTED event (with the original jobId
+// + data) and a server subscriber runs the registered handler (registerAllHandlers).
+// Job-name constants are inlined here because importing them would pull the
+// unresolvable handler module back into the worker's static graph.
+const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
+const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
+const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
 const logger = createLogger({
@@ -48,13 +70,18 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     return;
   }
 
+  // Provide a Temporal job runner to shared handlers that schedule follow-up
+  // jobs. The worker registers the Temporal runner directly so shared handlers
+  // (e.g. RMM polling) stay decoupled from the server-bound JobRunnerFactory.
+  registerJobRunnerAccessor(async () => TemporalJobRunner.create({
+    address: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233',
+    namespace: process.env.TEMPORAL_NAMESPACE || 'default',
+    taskQueue: process.env.TEMPORAL_JOB_TASK_QUEUE || 'alga-jobs',
+  }) as any);
+
   // Register EE extension schedule invocation handler so Temporal can execute
   // extension cron jobs on the shared alga-jobs queue.
   try {
-    const { extensionScheduledInvocationHandler } = await import(
-      '../../../../server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
-    );
-
     registerJobHandlerForActivities(
       'extension-scheduled-invocation',
       async (jobId, data) => {
@@ -68,27 +95,43 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     throw error;
   }
 
-  // RMM polling handlers: in EE these recurring jobs arrive as Temporal
-  // Schedules (TemporalJobRunner.scheduleRecurringJob) that start
-  // genericJobWorkflow, which executes whatever is registered here. The same
-  // handler code runs on pg-boss in CE — see
-  // server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts for the model.
-  try {
-    const {
-      rmmAlertReconciliationHandler,
-      huntressIncidentPollHandler,
-      RMM_ALERT_RECONCILIATION_JOB,
-      HUNTRESS_INCIDENT_POLL_JOB,
-    } = await import('../../../../server/src/lib/jobs/handlers/rmmAlertPollingHandlers');
+  // RMM/Huntress polling: in EE these recurring jobs arrive as Temporal Schedules
+  // that start genericJobWorkflow, which executes whatever is registered here. The
+  // handlers import the src-consumed @alga-psa/integrations vertical, which the
+  // plain-Node-ESM worker cannot load, so they run server-side: forward the job to
+  // the server (which has them registered via registerAllHandlers) over the event
+  // bus and let a subscriber execute the real handler for the tenant.
+  const forwardJobToServer = (jobName: string) =>
+    async (jobId: string, data: Record<string, unknown>) => {
+      await publishEvent({
+        eventType: 'MAINTENANCE_JOB_REQUESTED',
+        payload: {
+          tenantId: (data?.tenantId as string) ?? SYSTEM_TENANT_ID,
+          occurredAt: new Date().toISOString(),
+          jobName,
+          jobId,
+          data: data ?? {},
+        },
+      });
+    };
+  registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
+  registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
 
-    registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, async (jobId, data) => {
-      await rmmAlertReconciliationHandler(jobId, data as any);
+  // User-defined workflow schedules: after the pg-boss → Temporal cutover these
+  // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
+  // scheduleRecurringJob) that start genericJobWorkflow with jobName
+  // workflow-time-trigger-{once,recurring}. The handler code and trigger-name
+  // constants are shared via @alga-psa/jobs and @alga-psa/workflows (no server
+  // dependency), so they are imported statically at module load.
+  try {
+    registerJobHandlerForActivities(WORKFLOW_ONE_TIME_TRIGGER_JOB, async (jobId, data) => {
+      await workflowOneTimeScheduledRunHandler(jobId, data as any);
     });
-    registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, async (jobId, data) => {
-      await huntressIncidentPollHandler(jobId, data as any);
+    registerJobHandlerForActivities(WORKFLOW_RECURRING_TRIGGER_JOB, async (jobId, data) => {
+      await workflowRecurringScheduledRunHandler(jobId, data as any);
     });
   } catch (error) {
-    logger.error('Failed to register RMM polling handlers', {
+    logger.error('Failed to register workflow schedule handlers', {
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;

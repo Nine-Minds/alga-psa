@@ -3,6 +3,15 @@ import { createHash } from 'node:crypto';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
+  detectAutomatedInboundMessage,
+  extractRelevantInboundHeaders,
+  type AutomatedMessageSignal,
+} from '../../lib/email/automatedMessage';
+import {
+  checkInboundReopenRateLimit,
+  type InboundReopenRateLimitResult,
+} from './inboundReopenRateLimiter';
+import {
   processInboundEmailArtifactsBestEffort,
   type ProcessInboundEmailArtifactsResult,
 } from './processInboundEmailArtifacts';
@@ -47,6 +56,8 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
     from: string | null;
     to: string[];
     subject: string | null;
+    /** Standards-relevant headers (Auto-Submitted, Precedence, List-*, etc.) for loop diagnostics. */
+    relevantHeaders?: Record<string, string>;
   };
   threading: {
     tokenLookupAttempted: boolean;
@@ -156,6 +167,10 @@ type InboundReplyDecisionMetadata = {
   action: 'reopen' | 'comment_only' | 'new_ticket';
   reopenTargetSource?: 'explicit' | 'board_default' | null;
   reopenTargetStatusId?: string | null;
+  /** RFC 3834/5230 automated-message classification used to suppress reopen. */
+  automated: AutomatedMessageSignal;
+  /** Redis reopen rate-limit outcome; set only when a reopen was otherwise going to apply. */
+  reopenRateLimit?: InboundReopenRateLimitResult | null;
   aiSuppression: {
     enabled: boolean;
     attempted: boolean;
@@ -202,6 +217,7 @@ function buildDiagnostics(params: {
       from: params.senderEmail,
       to: (params.emailData.to ?? []).map((recipient) => recipient.email),
       subject: params.emailData.subject ?? null,
+      relevantHeaders: extractRelevantInboundHeaders(params.emailData),
     },
     threading: {
       tokenLookupAttempted: Boolean(params.conversationToken),
@@ -641,10 +657,10 @@ async function resolveReplyTargetFromCommentThread(params: {
   });
 }
 
-async function resolveReplyTargetFromOutboundMessageId(params: {
+export async function resolveReplyTargetFromOutboundMessageId(params: {
   tenantId: string;
   rfcMessageId: string;
-}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
   const normalizedMessageId = params.rfcMessageId.trim();
   if (!normalizedMessageId) {
     return null;
@@ -653,25 +669,44 @@ async function resolveReplyTargetFromOutboundMessageId(params: {
   const { withAdminTransaction } = await import('@alga-psa/db');
   const row = await withAdminTransaction(async (trx: any) => {
     return trx('email_sending_logs')
-      .select('comment_thread_id as threadId')
+      .select('comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
       .where({ tenant: params.tenantId, rfc_message_id: normalizedMessageId })
-      .whereNotNull('comment_thread_id')
       .orderBy('created_at', 'desc')
       .first();
   });
 
-  return row?.threadId
-    ? resolveReplyTargetFromCommentThread({
-        tenantId: params.tenantId,
-        threadId: row.threadId,
-      })
-    : null;
+  if (!row) {
+    return null;
+  }
+
+  // Comment-thread match: resolve to the latest comment in the thread.
+  if (row.threadId) {
+    return resolveReplyTargetFromCommentThread({
+      tenantId: params.tenantId,
+      threadId: row.threadId,
+    });
+  }
+
+  // Ticket-scoped match: a reply to any non-comment ticket notification
+  // (created/updated/closed/assigned). Append at ticket level, no parent comment.
+  if (row.entityType === 'ticket' && row.entityId) {
+    const ticketExists = await withAdminTransaction(async (trx: any) => {
+      return trx('tickets')
+        .where({ tenant: params.tenantId, ticket_id: row.entityId })
+        .first('ticket_id');
+    });
+    if (ticketExists?.ticket_id) {
+      return { ticketId: row.entityId, threadId: null, parentCommentId: null };
+    }
+  }
+
+  return null;
 }
 
 async function resolveReplyTargetFromReferences(params: {
   tenantId: string;
   references?: string[];
-}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
   const references = (params.references ?? [])
     .map((value) => value.trim())
     .filter(Boolean);
@@ -1126,6 +1161,10 @@ export async function processInboundEmailInApp(
       rawOutput: null,
     };
 
+    // RFC 3834/5230: classify the message once so the reopen decision (and the persisted
+    // decision metadata) can suppress reopen for auto-replies, bounces, and bulk/list mail.
+    const automatedSignal = detectAutomatedInboundMessage(emailData);
+
     let decisionMetadata: InboundReplyDecisionMetadata = {
       policyEnabled: Boolean(policyContext?.inboundReplyReopenEnabled),
       wasClosedTicketMatch: Boolean(policyContext?.ticketIsClosed),
@@ -1135,6 +1174,7 @@ export async function processInboundEmailInApp(
       action: 'comment_only',
       reopenTargetSource: null,
       reopenTargetStatusId: null,
+      automated: automatedSignal,
       aiSuppression: aiSuppressionDefault,
     };
 
@@ -1165,7 +1205,22 @@ export async function processInboundEmailInApp(
           return null;
         }
 
-        if (matchedSenderIsInternalUser) {
+        if (automatedSignal.isAutomated) {
+          // RFC 3834/5230: never reopen a closed ticket on an automated message
+          // (auto-reply, vacation/OOO, delivery-status bounce, or bulk/list mail).
+          // This breaks the notification -> auto-reply -> reopen email loop. The reply
+          // is still recorded as a comment; only the reopen transition is suppressed.
+          decisionMetadata.action = 'comment_only';
+          console.info('processInboundEmailInApp: suppressing reopen for automated inbound message (RFC 3834)', {
+            tenantId,
+            providerId,
+            emailId: emailData.id,
+            ticketId: params.ticketId,
+            matchedBy: params.matchedBy,
+            reason: automatedSignal.reason,
+            detail: automatedSignal.detail,
+          });
+        } else if (matchedSenderIsInternalUser) {
           shouldReopen = true;
         } else {
           const aiSuppressionEnabled = policyContext.inboundReplyAiAckSuppressionEnabled;
@@ -1199,20 +1254,44 @@ export async function processInboundEmailInApp(
     }
 
     if (shouldReopen && policyContext?.ticketIsClosed) {
-      const reopenTarget = await resolveBoardReopenStatusTarget({
-        tenantId,
-        boardId: policyContext.boardId,
-        explicitStatusId: policyContext.inboundReplyReopenStatusId,
-      });
-      await applyInboundReplyReopenTransition({
+      // RFC 5230 backstop: cap inbound-triggered reopens per ticket per window so that an
+      // auto-responder which slips past the auto-reply header detection cannot drive a
+      // runaway reopen loop. Only consulted on the reopen path so ordinary comment-only
+      // replies are not counted. Fails open (see inboundReopenRateLimiter).
+      const reopenRateLimit = await checkInboundReopenRateLimit({
         tenantId,
         ticketId: params.ticketId,
-        statusId: reopenTarget.statusId,
-        updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
       });
-      decisionMetadata.action = 'reopen';
-      decisionMetadata.reopenTargetSource = reopenTarget.source;
-      decisionMetadata.reopenTargetStatusId = reopenTarget.statusId;
+      decisionMetadata.reopenRateLimit = reopenRateLimit;
+
+      if (!reopenRateLimit.allowed) {
+        decisionMetadata.action = 'comment_only';
+        console.warn('processInboundEmailInApp: suppressing reopen; inbound reopen rate limit exceeded', {
+          tenantId,
+          providerId,
+          emailId: emailData.id,
+          ticketId: params.ticketId,
+          matchedBy: params.matchedBy,
+          count: reopenRateLimit.count,
+          limit: reopenRateLimit.limit,
+          windowSeconds: reopenRateLimit.windowSeconds,
+        });
+      } else {
+        const reopenTarget = await resolveBoardReopenStatusTarget({
+          tenantId,
+          boardId: policyContext.boardId,
+          explicitStatusId: policyContext.inboundReplyReopenStatusId,
+        });
+        await applyInboundReplyReopenTransition({
+          tenantId,
+          ticketId: params.ticketId,
+          statusId: reopenTarget.statusId,
+          updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
+        });
+        decisionMetadata.action = 'reopen';
+        decisionMetadata.reopenTargetSource = reopenTarget.source;
+        decisionMetadata.reopenTargetStatusId = reopenTarget.statusId;
+      }
     }
 
     const watchListRecipients = mergeTicketWatchListRecipients(

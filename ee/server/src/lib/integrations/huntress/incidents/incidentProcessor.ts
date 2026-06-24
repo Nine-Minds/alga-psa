@@ -7,6 +7,7 @@
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { publishRmmTicketCreated } from '@alga-psa/shared/rmm/alerts';
 import type {
   HuntressAgent,
   HuntressIncidentReport,
@@ -183,11 +184,19 @@ export async function processIncident(
           note: buildCreationNote(incident),
           sourceReference: externalAlertId,
           assetId: matchedAssetId,
+          defaultContactId: action.unmapped ? null : mapping?.default_contact_id ?? null,
         });
 
         await trx('rmm_alerts')
           .where({ tenant: tenantId, alert_id: alertId })
           .update({ ticket_id: ticket.ticket_id, asset_id: matchedAssetId });
+
+        await publishRmmTicketCreated({
+          trx,
+          tenantId,
+          ticketId: ticket.ticket_id,
+          source: 'huntress',
+        });
 
         if (matchedAssetId && agent) {
           await upsertEntityMapping(trx, tenantId, incident, agent, matchedAssetId);

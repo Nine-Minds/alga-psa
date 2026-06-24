@@ -9,6 +9,8 @@ import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
+import { normalizeTicketSubject } from './ticketSubject';
+import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
@@ -377,6 +379,13 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
 
+    // For ticket emails, prepend a stable [Ticket #N] token (idempotent) so all
+    // event types present consistently and clients have a subject grouping signal.
+    if (params.replyContext?.ticketId) {
+      const ticketNumber = (params.context as { ticket?: { id?: unknown } } | undefined)?.ticket?.id;
+      subject = normalizeTicketSubject(subject, ticketNumber);
+    }
+
     logger.debug('[SendEventEmail] Template rendered with Handlebars:', {
       originalContentLength: templateContent.length,
       finalContentLength: html.length,
@@ -432,7 +441,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       notificationSubtypeId: params.notificationSubtypeId,
       replyContext: effectiveReplyContext,
       templateProcessor: processor,
-      headers: params.headers,
+      // RFC 3834: mark event-driven notifications as auto-generated so compliant
+      // recipient systems do not auto-reply (caller-supplied headers win on conflict).
+      headers: { ...AUTO_GENERATED_MAIL_HEADERS, ...params.headers },
       attachments: params.attachments,
       providerId: params.providerId,
       from: params.from,
@@ -475,9 +486,12 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       });
     }
 
-    // Store the outbound Message-ID in the ticket's email_metadata references
-    // This enables In-Reply-To threading even if the token is stripped
-    if (result.success && result.messageId && params.replyContext?.ticketId) {
+    // Store the outbound RFC Message-ID in the ticket's email_metadata references.
+    // This is the accumulating thread chain that applyTicketThreadHeaders reads to
+    // build In-Reply-To/References on the NEXT email, and that inbound matching falls
+    // back to. Use the RFC id (the on-wire Message-ID), not the provider's own id.
+    const outboundRfcMessageId = result.rfcMessageId ?? result.messageId;
+    if (result.success && outboundRfcMessageId && params.replyContext?.ticketId) {
       try {
         // We use a raw query to append to the JSONB array safely
         await knex('tickets')
@@ -485,18 +499,18 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
           .update({
             email_metadata: knex.raw(
               `jsonb_set(
-                COALESCE(email_metadata, '{}'::jsonb), 
-                '{references}', 
+                COALESCE(email_metadata, '{}'::jsonb),
+                '{references}',
                 (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
               )`,
-              [result.messageId]
+              [outboundRfcMessageId]
             ),
             updated_at: new Date() // Good practice to touch updated_at
           });
-          
+
         logger.debug('[SendEventEmail] Linked outbound Message-ID to ticket:', {
           ticketId: params.replyContext.ticketId,
-          messageId: result.messageId
+          messageId: outboundRfcMessageId
         });
       } catch (error) {
         logger.warn('[SendEventEmail] Failed to link outbound Message-ID to ticket:', {

@@ -234,6 +234,37 @@ async function restorePreviousScheduleRegistration(
   });
 }
 
+// Ensure an enabled recurring schedule is registered on the currently active
+// job runner. Idempotent: converges when the schedule's job row is already
+// backed by the active runner with a matching interval, so it is safe to run
+// on every boot. Used by the startup reconciler to migrate pre-cutover
+// pg-boss schedules onto Temporal (and vice versa) without operator action.
+export async function reconcileWorkflowScheduleRegistration(
+  knex: Knex,
+  existing: WorkflowScheduleStateRecord,
+  runnerType: 'pgboss' | 'temporal'
+): Promise<'ensured' | 'converged' | 'skipped'> {
+  const isRecurring =
+    existing.enabled === true &&
+    existing.status === 'scheduled' &&
+    existing.trigger_type === 'recurring' &&
+    typeof existing.cron === 'string' &&
+    existing.cron.trim().length > 0;
+  if (!isRecurring) return 'skipped';
+
+  if (existing.job_id) {
+    const job = await knex('jobs')
+      .where({ job_id: existing.job_id, tenant: existing.tenant })
+      .first('runner_type', knex.raw(`metadata->>'interval' as interval`));
+    if (job?.runner_type === runnerType && job.interval === existing.cron) {
+      return 'converged';
+    }
+  }
+
+  await restorePreviousScheduleRegistration(knex, existing);
+  return 'ensured';
+}
+
 async function persistScheduleCreate(
   knex: Knex,
   params: {

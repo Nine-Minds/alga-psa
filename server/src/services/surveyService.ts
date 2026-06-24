@@ -9,6 +9,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant } from '../lib/db';
 import { issueSurveyToken } from '@alga-psa/surveys/actions/surveyTokenService';
 import { TenantEmailService } from '@alga-psa/email';
+import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { isValidEmail } from '@alga-psa/core';
 import { DatabaseTemplateProcessor } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -283,6 +284,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         templateProcessor: processor,
         templateData,
         locale,
+        // RFC 3834: survey invitations are auto-generated; suppress recipient auto-replies.
+        headers: { ...AUTO_GENERATED_MAIL_HEADERS },
       });
 
       if (!sendResult.success) {

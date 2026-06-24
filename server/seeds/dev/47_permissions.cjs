@@ -29,7 +29,13 @@ exports.seed = async function(knex) {
         { resource: 'contact', action: 'read', msp: true, client: false, description: 'View contacts' },
         { resource: 'contact', action: 'update', msp: true, client: false, description: 'Update contacts' },
         { resource: 'contact', action: 'delete', msp: true, client: false, description: 'Delete contacts' },
-        
+
+        // Interaction permissions (calls, notes, check-ins, activity — gated by interactionActions)
+        { resource: 'interaction', action: 'create', msp: true, client: false, description: 'Create interactions (calls, notes, check-ins, activity)' },
+        { resource: 'interaction', action: 'read', msp: true, client: false, description: 'View interactions' },
+        { resource: 'interaction', action: 'update', msp: true, client: false, description: 'Update interactions' },
+        { resource: 'interaction', action: 'delete', msp: true, client: false, description: 'Delete interactions' },
+
         // Credit permissions
         { resource: 'credit', action: 'create', msp: true, client: false, description: 'Create credits' },
         { resource: 'credit', action: 'read', msp: true, client: false, description: 'View credits' },

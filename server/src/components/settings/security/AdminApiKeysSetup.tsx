@@ -69,10 +69,12 @@ export default function AdminApiKeysSetup() {
   const [savingRateLimitKeyId, setSavingRateLimitKeyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // LEVERAGE: pattern datatable-filter-paging — filter state + debounced search + reset-page-to-1 + client filtering re-implemented per table; no list-controller layer
   // Filter state
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');

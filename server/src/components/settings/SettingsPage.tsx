@@ -348,6 +348,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   };
 
   // Create a map of tab content by label for easy lookup
+  // LEVERAGE: pattern settings-tabs-twice — this tab set is duplicated by settingsNavigationSections in menuConfig.ts (the sidebar's settings menu); they drift. The EE+flag gate below adds 'mcp-server' here, but there's no matching entry/gate over there, so the tab has no side-menu link. Both should derive from one gated registry.
   const allTabs = useMemo(() => {
     const tabs = [...baseTabContent, extensionsTab];
     if (isEEAvailable && mcpServerUiEnabled) {

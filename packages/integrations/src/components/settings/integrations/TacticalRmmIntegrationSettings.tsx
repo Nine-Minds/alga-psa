@@ -8,10 +8,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Eye, EyeOff, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import {
   backfillTacticalRmmAlerts,
   disconnectTacticalRmmIntegration,
@@ -29,8 +32,8 @@ import {
   type TacticalRmmAuthMode,
 } from '@alga-psa/integrations/actions';
 import { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
-import type { IClient } from '@alga-psa/types';
-import { getIntegrationClients } from '../../../actions/clientLookupActions';
+import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
+import { getIntegrationClients, getIntegrationContacts } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function TacticalRmmIntegrationSettings() {
@@ -73,6 +76,9 @@ export function TacticalRmmIntegrationSettings() {
   const [connectionSummary, setConnectionSummary] = React.useState<Awaited<ReturnType<typeof getTacticalRmmConnectionSummary>>['summary'] | null>(null);
   const [orgMappings, setOrgMappings] = React.useState<NonNullable<Awaited<ReturnType<typeof listTacticalRmmOrganizationMappings>>['mappings']>>([]);
   const [clients, setClients] = React.useState<IClient[]>([]);
+  const [contacts, setContacts] = React.useState<IContact[]>([]);
+  const { renderQuickAddContact } = useQuickAddClient();
+  const [quickAddContactFor, setQuickAddContactFor] = React.useState<{ mappingId: string; clientId: string } | null>(null);
   const [clientsLoading, setClientsLoading] = React.useState(false);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
@@ -138,10 +144,15 @@ export function TacticalRmmIntegrationSettings() {
     const run = async () => {
       setClientsLoading(true);
       try {
-        const data = await getIntegrationClients(true);
-        setClients(data as any);
+        const [clientsData, contactsData] = await Promise.all([
+          getIntegrationClients(true),
+          getIntegrationContacts(false),
+        ]);
+        setClients(clientsData as any);
+        setContacts((contactsData as any) ?? []);
       } catch (e) {
         setClients([]);
+        setContacts([]);
       } finally {
         setClientsLoading(false);
       }
@@ -284,11 +295,12 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
-  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; autoSyncAssets?: boolean }) => {
+  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }) => {
     setError(null);
     const res = await updateTacticalRmmOrganizationMapping({
       mappingId,
       clientId: patch.clientId,
+      defaultContactId: patch.defaultContactId,
       autoSyncAssets: patch.autoSyncAssets,
     });
     if (!res.success) {
@@ -298,6 +310,12 @@ export function TacticalRmmIntegrationSettings() {
     }
     await loadOrgMappings();
   };
+
+  const handleClientChange = (mappingId: string, clientId: string | null) =>
+    handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
+
+  const handleDefaultContactChange = (mappingId: string, contactId: string) =>
+    handleUpdateMapping(mappingId, { defaultContactId: contactId || null });
 
   const handleBackfillAlerts = async () => {
     setBackfillingAlerts(true);
@@ -346,6 +364,78 @@ export function TacticalRmmIntegrationSettings() {
       setIngestingSoftware(false);
     }
   };
+
+  const orgMappingColumns: ColumnDefinition<(typeof orgMappings)[number]>[] = [
+    {
+      title: t('integrations.rmm.tactical.mappings.org', { defaultValue: 'Tactical Organization' }),
+      dataIndex: 'external_organization_name',
+      render: (_v, m) => (
+        <div className="min-w-0">
+          <div className="text-sm font-medium truncate">
+            {m.external_organization_name || m.external_organization_id}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">
+            {t('integrations.rmm.tactical.tacticalIdLabel', { defaultValue: 'Tactical ID: {{id}}', id: m.external_organization_id })}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: t('integrations.rmm.tactical.mappings.client', { defaultValue: 'Alga Client' }),
+      dataIndex: 'client_id',
+      sortable: false,
+      render: (_v, m) => (
+        <ClientPicker
+          id={`tacticalrmm-org-client-picker-${m.mapping_id}`}
+          clients={clients}
+          selectedClientId={m.client_id || null}
+          onSelect={(clientId) => handleClientChange(m.mapping_id, clientId)}
+          filterState={clientFilterState}
+          onFilterStateChange={setClientFilterState}
+          clientTypeFilter={clientTypeFilter}
+          onClientTypeFilterChange={setClientTypeFilter}
+          placeholder={clientsLoading
+            ? t('integrations.rmm.tactical.client.loading', { defaultValue: 'Loading clients…' })
+            : t('integrations.rmm.tactical.client.select', { defaultValue: 'Select client' })}
+          fitContent
+          triggerVariant="outline"
+          triggerSize="sm"
+          className="min-w-[220px]"
+        />
+      ),
+    },
+    {
+      title: t('integrations.rmm.tactical.mappings.defaultContact', { defaultValue: 'Default Contact' }),
+      dataIndex: 'default_contact_id',
+      sortable: false,
+      render: (_v, m) => (
+        <ContactPicker
+          id={`tacticalrmm-default-contact-${m.mapping_id}`}
+          contacts={contacts}
+          value={m.default_contact_id ?? ''}
+          onValueChange={(contactId) => handleDefaultContactChange(m.mapping_id, contactId)}
+          clientId={m.client_id ?? undefined}
+          disabled={!m.client_id}
+          buttonWidth="fit"
+          placeholder={t('integrations.rmm.tactical.contact.select', { defaultValue: 'Select contact' })}
+          className="min-w-[220px]"
+          onAddNew={m.client_id ? () => setQuickAddContactFor({ mappingId: m.mapping_id, clientId: m.client_id! }) : undefined}
+        />
+      ),
+    },
+    {
+      title: t('integrations.rmm.tactical.autoSync', { defaultValue: 'Auto-sync' }),
+      dataIndex: 'auto_sync_assets',
+      sortable: false,
+      render: (_v, m) => (
+        <Switch
+          id={`tacticalrmm-org-autosync-${m.mapping_id}`}
+          checked={Boolean(m.auto_sync_assets)}
+          onCheckedChange={(checked) => handleUpdateMapping(m.mapping_id, { autoSyncAssets: checked })}
+        />
+      ),
+    },
+  ];
 
   return (
     <>
@@ -656,49 +746,12 @@ export function TacticalRmmIntegrationSettings() {
                 {t('integrations.rmm.tactical.sections.orgMappingEmpty', { defaultValue: 'No organizations found. Run "Sync Clients" first.' })}
               </div>
             ) : (
-              <div className="space-y-2">
-                {orgMappings.map((m) => (
-                  <div key={m.mapping_id} className="flex flex-col lg:flex-row lg:items-center gap-3 rounded border p-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {m.external_organization_name || m.external_organization_id}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {t('integrations.rmm.tactical.tacticalIdLabel', { defaultValue: 'Tactical ID: {{id}}', id: m.external_organization_id })}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <ClientPicker
-                        id={`tacticalrmm-org-client-picker-${m.mapping_id}`}
-                        clients={clients}
-                        selectedClientId={m.client_id || null}
-                        onSelect={(clientId) => handleUpdateMapping(m.mapping_id, { clientId })}
-                        filterState={clientFilterState}
-                        onFilterStateChange={setClientFilterState}
-                        clientTypeFilter={clientTypeFilter}
-                        onClientTypeFilterChange={setClientTypeFilter}
-                        placeholder={clientsLoading
-                          ? t('integrations.rmm.tactical.client.loading', { defaultValue: 'Loading clients…' })
-                          : t('integrations.rmm.tactical.client.select', { defaultValue: 'Select client' })}
-                        fitContent
-                        triggerVariant="outline"
-                        triggerSize="sm"
-                        className="min-w-[220px]"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={`tacticalrmm-org-autosync-${m.mapping_id}`}
-                        checked={Boolean(m.auto_sync_assets)}
-                        onCheckedChange={(checked) => handleUpdateMapping(m.mapping_id, { autoSyncAssets: checked })}
-                      />
-                      <span className="text-sm">{t('integrations.rmm.tactical.autoSync', { defaultValue: 'Auto-sync' })}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <DataTable
+                id="tacticalrmm-org-mappings"
+                data={orgMappings}
+                columns={orgMappingColumns}
+                pagination
+              />
             )}
           </div>
 
@@ -866,6 +919,28 @@ export function TacticalRmmIntegrationSettings() {
     {connectionSummary?.isActive && integrationId && (
       <RmmAlertAutomationSettings integrationId={integrationId} provider="tacticalrmm" />
     )}
+
+    {renderQuickAddContact({
+      isOpen: !!quickAddContactFor,
+      onClose: () => setQuickAddContactFor(null),
+      onContactAdded: (newContact) => {
+        setContacts((prev) => {
+          const i = prev.findIndex((c) => c.contact_name_id === newContact.contact_name_id);
+          if (i >= 0) {
+            const next = [...prev];
+            next[i] = newContact;
+            return next;
+          }
+          return [...prev, newContact];
+        });
+        if (quickAddContactFor) {
+          handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
+        }
+        setQuickAddContactFor(null);
+      },
+      clients,
+      selectedClientId: quickAddContactFor?.clientId ?? null,
+    })}
     </>
   );
 }

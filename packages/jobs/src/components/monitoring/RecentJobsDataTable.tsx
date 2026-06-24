@@ -64,6 +64,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
   const [data, setData] = React.useState<JobRecord[]>(initialData);
   const intervalRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
@@ -345,6 +346,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
         onPrint={() => triggerPrintJobs()}
         isPrinting={isPreparingJobPrint}
       />
+      {/* LEVERAGE: friction datatable-paging-remount — remounts the whole table via key to force paging to apply (works around DataTable's internal paging state) */}
       <DataTable
         key={`${currentPage}-${pageSize}`}
         data={data}

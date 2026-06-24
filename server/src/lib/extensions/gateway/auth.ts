@@ -109,22 +109,24 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
 }
 
 export async function getTenantFromAuth(req: NextRequest): Promise<string> {
-  // Minimal scaffolding:
-  // - Prefer internal header `x-alga-tenant` (e.g., set by edge/auth middleware)
-  // - Fallback to DEV_TENANT_ID for local development
-  // - Otherwise, reject (to avoid running as a fake tenant)
-  const h = req.headers.get('x-alga-tenant');
-  if (h && h.trim()) return h.trim();
-
-  // Accept legacy header used by admin/publishing clients.
-  const legacy = req.headers.get('x-tenant-id');
-  if (legacy && legacy.trim()) return legacy.trim();
-
   const session = await getSession();
   const sessionTenant = (session?.user as any)?.tenant;
+  const h = req.headers.get('x-alga-tenant')?.trim();
+  const legacy = req.headers.get('x-tenant-id')?.trim();
+
   if (sessionTenant && String(sessionTenant).trim()) {
-    return String(sessionTenant).trim();
+    const tenant = String(sessionTenant).trim();
+    if ((h && h !== tenant) || (legacy && legacy !== tenant)) {
+      throw new Error('tenant_mismatch');
+    }
+    return tenant;
   }
+
+  // Header-based tenant selection is only allowed for non-browser/internal callers
+  // that do not already have a session tenant. A browser user must never be able
+  // to switch tenants by supplying x-alga-tenant/x-tenant-id.
+  if (h) return h;
+  if (legacy) return legacy;
 
   const dev = process.env.DEV_TENANT_ID;
   if (dev && dev.trim()) return dev.trim();

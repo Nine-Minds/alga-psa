@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
-import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
+import {
+  requirePermission,
+  throwActionError,
+  withTenantTransaction
+} from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
 
@@ -61,28 +65,32 @@ async function requireHuntressIntegration(ctx: ActionContext): Promise<{
   if (!tenantId) {
     throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'tenantId is required' });
   }
-  const knex = ctx.knex;
-  if (!knex) {
-    throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
-  }
+  const { integrationId, instanceUrl } = await withTenantTransaction(ctx, async (tx) => {
+    await requirePermission(ctx, tx, { resource: 'settings', action: 'update' });
 
-  const integration = await knex('rmm_integrations')
-    .where({ tenant: tenantId, provider: PROVIDER, is_active: true })
-    .whereNotNull('connected_at')
-    .first();
-  if (!integration) {
-    throwActionError(ctx, {
-      category: 'ActionError',
-      code: 'INTEGRATION_INACTIVE',
-      message: 'Huntress integration is not active for this tenant. Connect it under Settings > Integrations > RMM.'
-    });
-  }
+    const integration = await tx.trx('rmm_integrations')
+      .where({ tenant: tenantId, provider: PROVIDER, is_active: true })
+      .whereNotNull('connected_at')
+      .first();
+    if (!integration) {
+      throwActionError(ctx, {
+        category: 'ActionError',
+        code: 'INTEGRATION_INACTIVE',
+        message: 'Huntress integration is not active for this tenant. Connect it under Settings > Integrations > RMM.'
+      });
+    }
+
+    return {
+      integrationId: String(integration.integration_id),
+      instanceUrl: integration.instance_url ? String(integration.instance_url) : undefined
+    };
+  });
 
   return {
     tenantId,
-    knex,
-    integrationId: String(integration.integration_id),
-    instanceUrl: integration.instance_url ? String(integration.instance_url) : undefined
+    knex: ctx.knex,
+    integrationId,
+    instanceUrl
   };
 }
 

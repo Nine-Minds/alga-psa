@@ -5,8 +5,14 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useQuickAddClient } from '@alga-psa/ui/context';
+import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
+import type { ColumnDefinition, IClient, IContact } from '@alga-psa/types';
 import {
   disconnectTaniumIntegration,
   getTaniumOrganizationMappings,
@@ -25,15 +31,13 @@ type MappingRow = {
   client_id?: string | null;
   client_name?: string | null;
   auto_sync_assets: boolean;
-};
-
-type ClientRow = {
-  client_id: string;
-  client_name: string;
+  default_contact_id?: string | null;
 };
 
 export default function TaniumIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
+  const { renderQuickAddContact } = useQuickAddClient();
+  const [quickAddContactFor, setQuickAddContactFor] = useState<{ mappingId: string; clientId: string } | null>(null);
   const [gatewayUrl, setGatewayUrl] = useState('');
   const [assetApiUrl, setAssetApiUrl] = useState('');
   const [apiToken, setApiToken] = useState('');
@@ -46,7 +50,8 @@ export default function TaniumIntegrationSettings() {
   const [hasApiToken, setHasApiToken] = useState(false);
 
   const [mappings, setMappings] = useState<MappingRow[]>([]);
-  const [clients, setClients] = useState<ClientRow[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [contacts, setContacts] = useState<IContact[]>([]);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -62,10 +67,15 @@ export default function TaniumIntegrationSettings() {
     setIsLoading(true);
     setError(null);
     try {
-      const [settingsResult, mappingResult] = await Promise.all([
+      const [settingsResult, mappingResult, contactsResult, clientsResult] = await Promise.all([
         getTaniumSettings(),
         getTaniumOrganizationMappings(),
+        getAllContacts('active'),
+        getAllClients(false),
       ]);
+
+      setContacts((contactsResult || []) as IContact[]);
+      setClients(clientsResult ?? []);
 
       if (!settingsResult.success) {
         setError(settingsResult.error || t('integrations.rmm.tanium.errors.loadSettings'));
@@ -85,7 +95,6 @@ export default function TaniumIntegrationSettings() {
         setError((prev) => prev || mappingResult.error || t('integrations.rmm.tanium.errors.loadMappings'));
       } else {
         setMappings((mappingResult.mappings || []) as MappingRow[]);
-        setClients((mappingResult.clients || []) as ClientRow[]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('integrations.rmm.tanium.errors.loadState'));
@@ -193,11 +202,12 @@ export default function TaniumIntegrationSettings() {
     });
   };
 
-  const handleMappingClientChange = (mappingId: string, clientId: string) => {
+  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
     void (async () => {
       const result = await updateTaniumOrganizationMapping({
         mappingId,
         clientId: clientId || null,
+        defaultContactId: null,
       });
       if (!result.success) {
         setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
@@ -206,6 +216,77 @@ export default function TaniumIntegrationSettings() {
       await refresh();
     })();
   };
+
+  const handleDefaultContactChange = (mappingId: string, contactId: string) => {
+    void (async () => {
+      const result = await updateTaniumOrganizationMapping({
+        mappingId,
+        defaultContactId: contactId || null,
+      });
+      if (!result.success) {
+        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
+        return;
+      }
+      await refresh();
+    })();
+  };
+
+  const columns: ColumnDefinition<MappingRow>[] = [
+    {
+      title: t('integrations.rmm.tanium.mappings.externalScope'),
+      dataIndex: 'external_organization_name',
+      render: (_v, mapping) => (
+        <>
+          <div className="font-medium">{mapping.external_organization_name || mapping.external_organization_id}</div>
+          <div className="text-xs text-muted-foreground">{t('integrations.rmm.tanium.mappings.scopeIdLabel', { id: mapping.external_organization_id })}</div>
+        </>
+      ),
+    },
+    {
+      title: t('integrations.rmm.tanium.mappings.mappedClient'),
+      dataIndex: 'client_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <ClientPicker
+          id={`tanium-client-picker-${mapping.mapping_id}`}
+          clients={clients}
+          selectedClientId={mapping.client_id ?? null}
+          onSelect={(clientId) => handleMappingClientChange(mapping.mapping_id, clientId)}
+          filterState="active"
+          onFilterStateChange={() => {}}
+          clientTypeFilter="all"
+          onClientTypeFilterChange={() => {}}
+        />
+      ),
+    },
+    {
+      title: t('integrations.rmm.tanium.mappings.defaultContact'),
+      dataIndex: 'default_contact_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <ContactPicker
+          id={`tanium-default-contact-${mapping.mapping_id}`}
+          contacts={contacts}
+          value={mapping.default_contact_id ?? ''}
+          onValueChange={(contactId) => handleDefaultContactChange(mapping.mapping_id, contactId)}
+          clientId={mapping.client_id ?? undefined}
+          disabled={!mapping.client_id}
+          placeholder={t('integrations.rmm.tanium.mappings.selectContact')}
+          onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
+        />
+      ),
+    },
+    {
+      title: t('integrations.rmm.tanium.mappings.autoSync'),
+      dataIndex: 'auto_sync_assets',
+      sortable: false,
+      render: (_v, mapping) => (
+        mapping.auto_sync_assets
+          ? <Badge variant="default">{t('integrations.rmm.tanium.mappings.autoSyncEnabled')}</Badge>
+          : <Badge variant="outline">{t('integrations.rmm.tanium.mappings.autoSyncDisabled')}</Badge>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6" id="tanium-integration-settings">
@@ -327,56 +408,31 @@ export default function TaniumIntegrationSettings() {
           </div>
 
           <div className="overflow-x-auto rounded-md border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-3 py-2 text-left">{t('integrations.rmm.tanium.mappings.externalScope')}</th>
-                  <th className="px-3 py-2 text-left">{t('integrations.rmm.tanium.mappings.mappedClient')}</th>
-                  <th className="px-3 py-2 text-left">{t('integrations.rmm.tanium.mappings.autoSync')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mappings.map((mapping) => (
-                  <tr key={mapping.mapping_id} className="border-t">
-                    <td className="px-3 py-2">
-                      <div className="font-medium">{mapping.external_organization_name || mapping.external_organization_id}</div>
-                      <div className="text-xs text-muted-foreground">{t('integrations.rmm.tanium.mappings.scopeIdLabel', { id: mapping.external_organization_id })}</div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        className="h-9 w-full rounded-md border px-2"
-                        value={mapping.client_id || ''}
-                        onChange={(e) => handleMappingClientChange(mapping.mapping_id, e.target.value)}
-                      >
-                        <option value="">{t('integrations.rmm.tanium.mappings.unmapped')}</option>
-                        {clients.map((client) => (
-                          <option key={client.client_id} value={client.client_id}>
-                            {client.client_name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      {mapping.auto_sync_assets
-                        ? <Badge variant="default">{t('integrations.rmm.tanium.mappings.autoSyncEnabled')}</Badge>
-                        : <Badge variant="outline">{t('integrations.rmm.tanium.mappings.autoSyncDisabled')}</Badge>}
-                    </td>
-                  </tr>
-                ))}
-                {!mappings.length ? (
-                  <tr>
-                    <td className="px-3 py-3 text-muted-foreground" colSpan={3}>
-                      {isLoading
-                        ? t('integrations.rmm.tanium.mappings.loading')
-                        : t('integrations.rmm.tanium.mappings.noScopes')}
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+            <DataTable
+              id="tanium-org-mappings"
+              data={mappings}
+              columns={columns}
+              pagination
+            />
           </div>
         </CardContent>
       </Card>
+
+      {renderQuickAddContact({
+        isOpen: !!quickAddContactFor,
+        onClose: () => setQuickAddContactFor(null),
+        onContactAdded: (newContact) => {
+          setContacts((prev) => {
+            const i = prev.findIndex((c) => c.contact_name_id === newContact.contact_name_id);
+            if (i >= 0) { const next = [...prev]; next[i] = newContact; return next; }
+            return [...prev, newContact];
+          });
+          if (quickAddContactFor) handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
+          setQuickAddContactFor(null);
+        },
+        clients: clients,
+        selectedClientId: quickAddContactFor?.clientId ?? null,
+      })}
     </div>
   );
 }

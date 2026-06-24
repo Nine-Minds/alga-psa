@@ -1,5 +1,10 @@
 # Job Scheduler System
 
+> **Running handlers in the Temporal (EE) worker?** Read
+> [temporal-worker-job-execution.md](./temporal-worker-job-execution.md) first —
+> the worker runs on plain Node ESM and cannot import vertical feature packages,
+> so handlers that need them run server-side via event-bus triggers.
+
 ## Overview
 
 The job scheduler system provides a robust and scalable solution for managing background tasks and scheduled jobs. It supports two execution backends:

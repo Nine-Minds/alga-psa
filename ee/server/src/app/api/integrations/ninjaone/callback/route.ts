@@ -390,7 +390,7 @@ export async function GET(request: NextRequest) {
     // connection starts polling without waiting for the periodic reconciler.
     try {
       const { reconcileRmmPollingSchedules } = await import(
-        'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+        '@alga-psa/jobs/handlers/rmmAlertPollingHandlers'
       );
       const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
       await reconcileRmmPollingSchedules(await initializeJobRunner());

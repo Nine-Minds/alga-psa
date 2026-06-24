@@ -11,22 +11,22 @@ const mocks = vi.hoisted(() => ({
   registeredObjectTypes: vi.fn(),
 }));
 
-vi.mock('../../lib/search/acl', () => ({
+vi.mock('@alga-psa/search/acl', () => ({
   resolveSearchAclPrincipal: mocks.resolveSearchAclPrincipal,
   verifyResultVisibility: mocks.verifyResultVisibility,
 }));
 
-vi.mock('../../lib/search/query', () => ({
+vi.mock('@alga-psa/search/query', () => ({
   runSearchQuery: mocks.runSearchQuery,
   countSearchMatchesByType: mocks.countSearchMatchesByType,
   encodeSearchCursor: mocks.encodeSearchCursor,
 }));
 
-vi.mock('../../lib/search/index', () => ({
+vi.mock('@alga-psa/search/index', () => ({
   registeredObjectTypes: mocks.registeredObjectTypes,
 }));
 
-import { runAppSearch } from '../../lib/search/runAppSearch';
+import { runAppSearch } from '@alga-psa/search/runAppSearch';
 
 const knex = { fake: 'knex' } as any;
 

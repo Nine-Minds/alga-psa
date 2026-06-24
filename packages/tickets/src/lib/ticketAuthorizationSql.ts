@@ -6,15 +6,14 @@ type TicketDbConnection = Knex | Knex.Transaction;
 /**
  * Physical mapping the shared read-authorization SQL compiler needs for the
  * `tickets` table. Mirrors `toTicketAuthorizationRecord`: a ticket is
- * "assigned" to its primary `assigned_to` OR any `ticket_resources`
- * `additional_user_id` co-assignee.
+ * "assigned" only to its primary `assigned_to`.
  *
  * Shared by the web server-action list and the public API list so both paths
  * authorize identically — a single source of truth for the ticket adapter.
  */
 export function createTicketRelationshipSqlAdapter(
-  conn: TicketDbConnection,
-  tenant: string
+  _conn: TicketDbConnection,
+  _tenant: string
 ): RelationshipSqlAdapter {
   return {
     ownerColumn: 't.entered_by',
@@ -37,29 +36,15 @@ export function createTicketRelationshipSqlAdapter(
       } else {
         query.whereIn('t.assigned_to', normalizedUserIds);
       }
-
-      query.orWhereExists(function () {
-        this.select(conn.raw('1'))
-          .from('ticket_resources as tr_auth')
-          .whereRaw('tr_auth.tenant = t.tenant')
-          .whereRaw('tr_auth.ticket_id = t.ticket_id')
-          .andWhere('tr_auth.tenant', tenant)
-          .whereNotNull('tr_auth.additional_user_id');
-
-        if (normalizedUserIds.length === 1) {
-          this.andWhere('tr_auth.additional_user_id', normalizedUserIds[0]);
-        } else {
-          this.whereIn('tr_auth.additional_user_id', normalizedUserIds);
-        }
-      });
     },
   };
 }
 
 /**
  * Batch-fetch `ticket_resources.additional_user_id` (co-assignees) keyed by
- * ticket_id. Used to build JS authorization records that count co-assignees the
- * same way `createTicketRelationshipSqlAdapter` does in SQL.
+ * ticket_id. Used by non-authorization ticket features that need additional
+ * agent metadata. These rows are intentionally not used as read grants because
+ * some workflows can create them without ticket row-level authorization.
  */
 export async function fetchTicketAdditionalUserIds(
   conn: TicketDbConnection,

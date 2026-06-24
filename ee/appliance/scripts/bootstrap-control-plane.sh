@@ -7,6 +7,7 @@ SETUP_PORT="${ALGA_APPLIANCE_PORT:-8080}"
 TOKEN_FILE="${ALGA_APPLIANCE_TOKEN_FILE:-/var/lib/alga-appliance/setup-token}"
 K3S_READY_TIMEOUT_SECONDS="${ALGA_K3S_READY_TIMEOUT_SECONDS:-180}"
 DRY_RUN=false
+CONTROL_PLANE_ONLY=false
 
 usage() {
   cat <<'EOF'
@@ -23,6 +24,8 @@ Options:
   --kubeconfig <path>      k3s kubeconfig path (default: /etc/rancher/k3s/k3s.yaml)
   --token-file <path>      Setup token file (default: /var/lib/alga-appliance/setup-token)
   --port <port>            Setup UI host port (default: 8080)
+  --control-plane-only     Re-apply only the control plane (channel upgrade): re-resolve
+                           the channel-pinned image and apply it; skip k3s/import/storage
   --dry-run                Print the planned operations without mutating the host
   --help                   Show this help
 EOF
@@ -45,6 +48,10 @@ while [ "$#" -gt 0 ]; do
     --port)
       SETUP_PORT="$2"
       shift 2
+      ;;
+    --control-plane-only)
+      CONTROL_PLANE_ONLY=true
+      shift
       ;;
     --dry-run)
       DRY_RUN=true
@@ -365,9 +372,20 @@ Logs: sudo journalctl -u alga-appliance-bootstrap.service -u k3s -f
 EOF
 }
 
-ensure_k3s_started
-wait_for_kubernetes_api
-import_control_plane_images
-apply_local_storage
-apply_control_plane
-report_handoff
+if [ "$CONTROL_PLANE_ONLY" = "true" ]; then
+  # Self-service control-plane upgrade (host-agent driven): re-resolve the
+  # channel-pinned control-plane image and re-apply only the control plane.
+  # k3s is already up, baked images are already imported, and local-path storage
+  # is already applied, so skip those steps. apply_control_plane pulls the new
+  # digest and applies the kustomize overlay, which triggers the Recreate.
+  wait_for_kubernetes_api
+  apply_control_plane
+  log "control-plane upgrade applied"
+else
+  ensure_k3s_started
+  wait_for_kubernetes_api
+  import_control_plane_images
+  apply_local_storage
+  apply_control_plane
+  report_handoff
+fi

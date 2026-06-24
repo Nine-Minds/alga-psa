@@ -7,7 +7,7 @@ import {
   runSearchQuery,
   sanitizeHeadline,
   SearchQueryError,
-} from '../../lib/search/query';
+} from '@alga-psa/search/query';
 
 describe('search query parsing', () => {
   it('T089 rejects queries longer than 200 characters with a typed error', () => {

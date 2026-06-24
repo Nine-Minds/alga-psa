@@ -10,7 +10,7 @@ import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
-import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
+import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
 

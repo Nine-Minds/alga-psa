@@ -1,65 +1,11 @@
 import logger from '@alga-psa/core/logger';
-import { isEnterprise } from '../features';
+import { isEnterprise, isEnterpriseEdition } from '../features';
 import {
   IJobRunner,
   IJobRunnerFactory,
   JobRunnerConfig,
 } from './interfaces';
 import { PgBossJobRunner } from './runners/PgBossJobRunner';
-
-/**
- * Dummy job runner that logs operations but doesn't execute jobs
- * Used as a fallback when no job runner can be initialized
- */
-class DummyJobRunner implements IJobRunner {
-  constructor() {
-    logger.warn('Using DummyJobRunner - job processing will be disabled');
-  }
-
-  getRunnerType(): 'pgboss' | 'temporal' {
-    return 'pgboss';
-  }
-
-  registerHandler(): void {
-    logger.warn('DummyJobRunner: Attempted to register handler');
-  }
-
-  async scheduleJob(): Promise<{ jobId: string; externalId: null }> {
-    logger.warn('DummyJobRunner: Attempted to schedule job');
-    return { jobId: 'dummy', externalId: null };
-  }
-
-  async scheduleJobAt(): Promise<{ jobId: string; externalId: null }> {
-    logger.warn('DummyJobRunner: Attempted to schedule job at time');
-    return { jobId: 'dummy', externalId: null };
-  }
-
-  async scheduleRecurringJob(): Promise<{ jobId: string; externalId: null }> {
-    logger.warn('DummyJobRunner: Attempted to schedule recurring job');
-    return { jobId: 'dummy', externalId: null };
-  }
-
-  async cancelJob(): Promise<boolean> {
-    logger.warn('DummyJobRunner: Attempted to cancel job');
-    return false;
-  }
-
-  async getJobStatus(): Promise<null> {
-    return null;
-  }
-
-  async start(): Promise<void> {
-    logger.warn('DummyJobRunner: start() called');
-  }
-
-  async stop(): Promise<void> {
-    logger.warn('DummyJobRunner: stop() called');
-  }
-
-  async isHealthy(): Promise<boolean> {
-    return false;
-  }
-}
 
 /**
  * Factory for creating job runner instances
@@ -156,7 +102,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     if (isEnterprise) {
       try {
         // Dynamic import to avoid bundling EE code in CE
-        import('@enterprise/lib/jobs/runners/TemporalJobRunner')
+        import('@alga-psa/jobs/runners/TemporalJobRunner')
           .then(({ TemporalJobRunner }) => {
             TemporalJobRunner.reset();
           })
@@ -177,36 +123,40 @@ export class JobRunnerFactory implements IJobRunnerFactory {
   private async initializeJobRunner(
     config?: Partial<JobRunnerConfig>
   ): Promise<IJobRunner> {
-    // Determine runner type based on config, environment, and edition
+    // Determine runner type based on config, environment, and edition.
+    // Re-evaluate the edition via isEnterpriseEdition() (reads process.env)
+    // rather than the module-level `isEnterprise` const: the const can be read
+    // before the features module finishes initializing, which previously made
+    // EE silently resolve to PG Boss.
     const runnerType = this.determineRunnerType(config);
+    const enterprise = isEnterpriseEdition();
 
-    logger.info(`Initializing job runner`, { type: runnerType, isEnterprise });
+    logger.info(`Initializing job runner`, {
+      type: runnerType,
+      isEnterprise: enterprise,
+      // Surface the raw env (which @next/env may have backfilled from a baked
+      // .env) and the explicit config so a silent dotenv override is visible
+      // instead of looking like a paradox.
+      jobRunnerTypeEnv: process.env.JOB_RUNNER_TYPE ?? null,
+      configType: config?.type ?? null,
+    });
 
+    // No silent fallback. In EE, Temporal is the durable scheduling/execution
+    // authority; failing to bring it up must surface loudly rather than quietly
+    // degrading to PG Boss (which strands recurring schedules on a backend with
+    // no durable consumer). Let the error propagate to the caller.
     try {
-      if (runnerType === 'temporal' && isEnterprise) {
+      if (runnerType === 'temporal' && enterprise) {
         return await this.createTemporalRunner(config);
-      } else {
-        return await this.createPgBossRunner(config);
       }
+      return await this.createPgBossRunner(config);
     } catch (error) {
-      logger.error('Failed to initialize job runner:', error);
-
-      // If Temporal fails and fallback is enabled, try PG Boss
-      if (
-        runnerType === 'temporal' &&
-        config?.fallbackToPgBoss !== false
-      ) {
-        logger.warn('Falling back to PG Boss job runner');
-        try {
-          return await this.createPgBossRunner(config);
-        } catch (fallbackError) {
-          logger.error('Fallback to PG Boss also failed:', fallbackError);
-        }
-      }
-
-      // Return dummy runner as last resort
-      logger.warn('Using DummyJobRunner as fallback');
-      return new DummyJobRunner();
+      logger.error('Failed to initialize job runner; refusing to fall back', {
+        runnerType,
+        isEnterprise: enterprise,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
   }
 
@@ -221,15 +171,32 @@ export class JobRunnerFactory implements IJobRunnerFactory {
       return config.type;
     }
 
-    // Check environment variable
+    // Check environment variable.
+    // NOTE: process.env.JOB_RUNNER_TYPE is not only the operator-supplied k8s
+    // env — @next/env also backfills it from a baked /app/server/.env (the
+    // image ships .env.example, whose CE default is `pgboss`). So an unset
+    // orchestration var silently surfaces here as `pgboss`. In EE that is never
+    // what we want: Temporal is the durable scheduling authority, so we refuse
+    // an explicit/implicit `pgboss` request rather than honoring a stray dotenv.
+    const enterprise = isEnterpriseEdition();
     const envType = process.env.JOB_RUNNER_TYPE?.toLowerCase();
     if (envType === 'temporal' || envType === 'pgboss') {
+      if (envType === 'pgboss' && enterprise) {
+        logger.warn(
+          'JOB_RUNNER_TYPE=pgboss ignored in Enterprise Edition; Temporal is the durable ' +
+            'scheduling authority. This usually comes from a baked .env default rather than ' +
+            'an explicit operator setting.',
+        );
+        return 'temporal';
+      }
       return envType;
     }
 
     // Default based on edition.
     // EE should use Temporal as the durable scheduling/execution authority by default.
-    return isEnterprise ? 'temporal' : 'pgboss';
+    // Call isEnterpriseEdition() (reads process.env) instead of the module-level
+    // `isEnterprise` const to stay immune to module-initialization ordering.
+    return enterprise ? 'temporal' : 'pgboss';
   }
 
   /**
@@ -247,7 +214,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
   private async createTemporalRunner(
     config?: Partial<JobRunnerConfig>
   ): Promise<IJobRunner> {
-    if (!isEnterprise) {
+    if (!isEnterpriseEdition()) {
       throw new Error('Temporal job runner is only available in Enterprise Edition');
     }
 
@@ -261,7 +228,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     // Dynamically import the EE Temporal runner to avoid bundling in CE
     try {
       const { TemporalJobRunner } = await import(
-        '@enterprise/lib/jobs/runners/TemporalJobRunner'
+        '@alga-psa/jobs/runners/TemporalJobRunner'
       );
       return (await TemporalJobRunner.create(temporalConfig)) as unknown as IJobRunner;
     } catch (error) {

@@ -90,6 +90,9 @@ export default defineConfig({
       { find: '@enterprise', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
       { find: '@alga-psa/shared', replacement: path.resolve(__dirname, '../shared') },
+      // @alga-psa/search export names mirror its src layout, so a prefix alias
+      // resolves all subpaths (./sql, ./indexers/*, ...) to source for Vitest.
+      { find: '@alga-psa/search', replacement: path.resolve(__dirname, '../packages/search/src') },
 
       // Workspace packages are not guaranteed to be linked into node_modules in all dev/test setups.
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.
@@ -157,6 +160,11 @@ export default defineConfig({
       { find: /^@alga-psa\/reporting\/actions$/, replacement: path.resolve(__dirname, '../packages/reporting/src/actions/index.ts') },
       { find: /^@alga-psa\/reporting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reporting/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
+      { find: /^@alga-psa\/jobs\/fanout$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/fanout/index.ts') },
+      { find: /^@alga-psa\/jobs\/runner$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobRunnerAccessor.ts') },
+      { find: /^@alga-psa\/jobs\/handlers\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handlers/$1') },
+      { find: /^@alga-psa\/jobs\/handler-utils\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handler-utils/$1') },
+      { find: /^@alga-psa\/jobs\/runners\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobs/runners/$1') },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
       { find: /^@alga-psa\/teams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/teams/src/$1') },
@@ -188,6 +196,11 @@ export default defineConfig({
       { find: /^@alga-psa\/client-portal$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/index.ts') },
       { find: /^@alga-psa\/client-portal\/(.*)$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
+      { find: /^@alga-psa\/jobs\/fanout$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/fanout/index.ts') },
+      { find: /^@alga-psa\/jobs\/runner$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobRunnerAccessor.ts') },
+      { find: /^@alga-psa\/jobs\/handlers\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handlers/$1') },
+      { find: /^@alga-psa\/jobs\/handler-utils\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handler-utils/$1') },
+      { find: /^@alga-psa\/jobs\/runners\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobs/runners/$1') },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/sla$/, replacement: path.resolve(__dirname, '../packages/sla/src/index.ts') },
       { find: /^@alga-psa\/sla\/(.*)$/, replacement: path.resolve(__dirname, '../packages/sla/src/$1') },

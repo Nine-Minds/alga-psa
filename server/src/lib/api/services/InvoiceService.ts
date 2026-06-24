@@ -81,6 +81,7 @@ import {
   calculateAndDistributeTax,
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
+import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 
 type DeferredEvent = () => Promise<void>;
 
@@ -420,11 +421,17 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Calculate taxes if needed
       let taxCalculation: { tax_amount: number; tax_region: string; tax_rate: number; calculation_date: string } | null = null;
       if (data.items?.length) {
-        taxCalculation = await this.calculateTaxes({
-          client_id: data.client_id,
-          amount: data.subtotal,
-          tax_region: 'US' // Default, should come from client
-        }, context);
+        const taxRegion = await this.resolveTaxRegion(trx, context.tenant, data.client_id);
+        // Only calculate tax when the client has a configured tax region. We do not
+        // fabricate a region (no hardcoded 'US' / inferred default), so a client with
+        // no configured region simply has no tax applied here.
+        if (taxRegion) {
+          taxCalculation = await this.calculateTaxes({
+            client_id: data.client_id,
+            amount: data.subtotal,
+            tax_region: taxRegion
+          }, context);
+        }
       }
 
       // Prepare invoice data
@@ -1699,6 +1706,22 @@ export class InvoiceService extends BaseService<IInvoice> {
   /**
    * Calculate taxes for an invoice
    */
+  /**
+   * Resolve the tax region for an invoice from the client's configured default tax
+   * region (via getClientDefaultTaxRegionCode).
+   *
+   * Returns null when the client has no configured region. Callers must skip tax
+   * calculation in that case rather than fabricate a region — we deliberately do NOT
+   * fall back to a hardcoded country (e.g. 'US') or infer a tenant-wide default region.
+   */
+  private async resolveTaxRegion(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string
+  ): Promise<string | null> {
+    return getClientDefaultTaxRegionCode(trx, tenant, clientId);
+  }
+
   async calculateTaxes(data: TaxCalculationRequest, context: ServiceContext): Promise<TaxCalculationResponse> {
     await this.validatePermissions(context, 'invoice', 'calculate_tax');
 

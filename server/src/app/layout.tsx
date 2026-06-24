@@ -15,9 +15,26 @@ import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import '@mantine/core/styles.css';
 import 'reactflow/dist/style.css';
+// Loaded last so the Inter font-token overrides win over Mantine/Radix defaults.
+import './font-overrides.css';
 
-// Removed Google Fonts to avoid network fetch during build
-const inter = { className: "" } as const;
+// Self-hosted Inter (variable) — no build-time network fetch (font files live
+// in ./fonts and are read locally by next/font/local).
+import localFont from 'next/font/local';
+const inter = localFont({
+  src: [
+    { path: './fonts/InterVariable.woff2', style: 'normal', weight: '100 900' },
+    { path: './fonts/InterVariable-Italic.woff2', style: 'italic', weight: '100 900' },
+  ],
+  variable: '--font-inter',
+  display: 'swap',
+});
+// Self-hosted JetBrains Mono (variable) for tabular/number figures.
+const jetbrainsMono = localFont({
+  src: [{ path: './fonts/JetBrainsMono.woff2', style: 'normal', weight: '100 800' }],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const dynamic = 'force-dynamic';
 //export const revalidate = false;
@@ -102,7 +119,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
@@ -114,7 +131,7 @@ export default async function RootLayout({
           />
         )}
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${inter.className} ${inter.variable}`} suppressHydrationWarning>
         <PostHogProvider>
            <MainContent>{children}</MainContent>
         </PostHogProvider>

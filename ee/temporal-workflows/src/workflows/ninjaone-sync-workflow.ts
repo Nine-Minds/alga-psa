@@ -1,7 +1,7 @@
 import { proxyActivities, log } from '@temporalio/workflow';
 
 import type { RmmSyncResult } from '@ee/interfaces/rmm.interfaces';
-import type { Asset } from '@/interfaces/asset.interfaces';
+import type { Asset } from '@alga-psa/types';
 
 export interface SyncOptions {
   organizationIds?: number[];

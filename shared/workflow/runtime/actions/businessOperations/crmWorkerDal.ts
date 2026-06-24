@@ -206,13 +206,13 @@ function calculateThresholdBasedTax(
 
 async function getApplicableTaxHoliday(
   knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
   taxRateId: string,
   date: string
 ): Promise<Record<string, unknown> | undefined> {
   const currentDate = new Date(date);
+  // tax_holidays has no tenant column; tax_rate_id (already tenant-scoped) gates isolation.
   const holidays = await knexOrTrx('tax_holidays')
-    .where({ tenant, tax_rate_id: taxRateId })
+    .where({ tax_rate_id: taxRateId })
     .orderBy('start_date');
 
   return holidays.find((holiday) =>
@@ -222,12 +222,11 @@ async function getApplicableTaxHoliday(
 
 async function calculateComponentTax(
   knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
   component: Record<string, unknown>,
   amount: number,
   date: string
 ): Promise<number> {
-  const holiday = await getApplicableTaxHoliday(knexOrTrx, tenant, String(component.tax_rate_id), date);
+  const holiday = await getApplicableTaxHoliday(knexOrTrx, String(component.tax_rate_id), date);
   if (holiday) return 0;
   return Math.ceil((amount * toNumber(component.rate)) / 100);
 }
@@ -310,11 +309,9 @@ async function calculateTaxWithConnection(
   }
 
   if (taxRate.is_composite) {
+    // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
     const components = await knexOrTrx('tax_components')
-      .join('composite_tax_mappings', function joinMappings() {
-        this.on('tax_components.tax_component_id', '=', 'composite_tax_mappings.tax_component_id')
-          .andOn('tax_components.tenant', '=', 'composite_tax_mappings.tenant');
-      })
+      .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
       .where({
         'tax_components.tenant': tenant,
         'composite_tax_mappings.composite_tax_id': taxRate.tax_rate_id,
@@ -326,7 +323,7 @@ async function calculateTaxWithConnection(
     let taxableAmount = netAmount;
     for (const component of components) {
       if (!isDateApplicable(component, date)) continue;
-      const componentTax = await calculateComponentTax(knexOrTrx, tenant, component, taxableAmount, date);
+      const componentTax = await calculateComponentTax(knexOrTrx, component, taxableAmount, date);
       totalTaxAmount += componentTax;
       if (component.is_compound) taxableAmount += componentTax;
     }
@@ -337,8 +334,9 @@ async function calculateTaxWithConnection(
     };
   }
 
+  // tax_rate_thresholds has no tenant column; tax_rate_id (already tenant-scoped above) gates isolation.
   const thresholds = await knexOrTrx('tax_rate_thresholds')
-    .where({ tenant, tax_rate_id: taxRate.tax_rate_id })
+    .where({ tax_rate_id: taxRate.tax_rate_id })
     .orderBy('min_amount');
 
   if (thresholds.length > 0) {

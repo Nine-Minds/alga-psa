@@ -79,6 +79,12 @@ pgbouncer:
     name: pgbouncer
     port: 6432
 
+# Share the tenant-secret store with email-service via a host directory so the
+# IMAP passwords written here by the filesystem secret provider are readable by
+# the email-service pod.
+sharedTenantSecrets:
+  enabled: true
+
 config:
   storage:
     default_provider: local

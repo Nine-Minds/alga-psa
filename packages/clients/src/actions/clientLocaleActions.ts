@@ -5,23 +5,34 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { assertMspOrClientPortalOwnClientPermission } from '../lib/authHelpers';
 
 /**
  * Update client's default locale for all contacts
  */
 export const updateClientLocaleAction = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   locale: SupportedLocale
 ) => {
-  if (!isSupportedLocale(locale)) {
-    throw new Error(`Unsupported locale: ${locale}`);
-  }
-
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'client',
+      'update',
+      'Permission denied: Cannot update client locale',
+      trx
+    );
+
+    if (!isSupportedLocale(locale)) {
+      throw new Error(`Unsupported locale: ${locale}`);
+    }
+
     // Get existing client
     const client = await trx('clients')
       .where({
@@ -70,6 +81,16 @@ export const getClientLocaleAction = withOptionalAuth(async (
   const { knex } = await createTenantKnex();
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'client',
+      'read',
+      'Permission denied: Cannot read client locale',
+      trx
+    );
+
     return await trx('clients')
       .where({
         client_id: clientId,

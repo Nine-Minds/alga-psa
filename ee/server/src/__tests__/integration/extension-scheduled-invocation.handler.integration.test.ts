@@ -73,7 +73,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId });
@@ -138,7 +138,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow(
@@ -178,7 +178,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow(
@@ -213,7 +213,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow(
@@ -243,7 +243,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId });
@@ -283,7 +283,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow(
@@ -320,7 +320,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow(
@@ -342,7 +342,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     installConfigByInstallId.mockResolvedValueOnce(null);
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow(
@@ -367,7 +367,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     installConfigByInstallId.mockResolvedValueOnce(null);
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow();
@@ -397,7 +397,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     await db('extension_api_endpoint').where({ id: endpointId }).del();
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     await expect(extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId })).rejects.toThrow(
@@ -440,7 +440,7 @@ describe('extension-scheduled-invocation handler – DB integration', () => {
     });
 
     const { extensionScheduledInvocationHandler } = await import(
-      'server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     const first = extensionScheduledInvocationHandler('job-1', { tenantId, installId, scheduleId });

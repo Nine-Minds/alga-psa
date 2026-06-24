@@ -522,6 +522,17 @@
       "5": "Friday",
       "6": "Saturday",
       "7": "Sunday"
+    },
+    "reviewError": "Não foi possível verificar o impacto desta alteração",
+    "reviewing": "Verificando o impacto…",
+    "confirmSave": "Confirmar e salvar",
+    "reviewChanges": "Revisar alterações",
+    "impact": {
+      "title": "Revise antes de aplicar",
+      "periods": "{{count}} período(s) de cobrança futuros em {{lines}} linha(s) de contrato serão reconstruídos para corresponder ao novo cronograma.",
+      "from": "Reconstruído a partir de {{date}}.",
+      "billedPreserved": "As cobranças já faturadas são preservadas e não serão alteradas.",
+      "confirmHint": "Escolha \"Confirmar e salvar\" para aplicar."
     }
   },
   "clientContractAssignment": {

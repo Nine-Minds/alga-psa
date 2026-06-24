@@ -1,0 +1,135 @@
+[
+  {
+    "id": "T001",
+    "implemented": false,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F009"
+    ],
+    "description": "Integration: changing a client billing cycle via updateBillingCycle re-materializes recurring_service_periods to the new cadence (core regression for the IT initiative bug)"
+  },
+  {
+    "id": "T002",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F004"
+    ],
+    "description": "Integration: after a cycle change, getAvailableRecurringDueWork returns zero materialization gaps for that client"
+  },
+  {
+    "id": "T003",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F028"
+    ],
+    "description": "Integration: previewClientCadenceChange / Cancel writes nothing \u2014 no mutation of clients.billing_cycle, client_billing_cycles, or recurring_service_periods"
+  },
+  {
+    "id": "T004",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013"
+    ],
+    "description": "Integration: a cadence change supersedes only unbilled rows and never touches billed or invoice-linked rows"
+  },
+  {
+    "id": "T005",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F020"
+    ],
+    "description": "Integration: a cadence change overlapping billed periods sets the billed-preserved warning and regenerates only the unbilled tail"
+  },
+  {
+    "id": "T006",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ],
+    "description": "Integration: applyClientCadenceChange is atomic \u2014 an induced failure mid-way rolls back the scalar, cycle windows, and RSP rows together (no partial drift)"
+  },
+  {
+    "id": "T007",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F030"
+    ],
+    "description": "Integration: repair-all heals a seeded drifted tenant (stale monthly RSP rows + weekly cycle) and clears all gaps"
+  },
+  {
+    "id": "T008",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ],
+    "description": "Integration: repair-all is idempotent \u2014 a second run on a now-clean tenant makes no changes"
+  },
+  {
+    "id": "T009",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ],
+    "description": "Integration: repair-all preserves billed periods on a tenant that has both billed and stale-unbilled schedules"
+  },
+  {
+    "id": "T010",
+    "implemented": false,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019"
+    ],
+    "description": "Unit: previewClientCadenceChange reports correct counts (unbilled periods, lines affected, regeneration start) for a known fixture"
+  },
+  {
+    "id": "T011",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007",
+      "F008"
+    ],
+    "description": "Integration: no cadence-mutating action updates clients.billing_cycle without re-materializing \u2014 every path routes through the shared helper"
+  },
+  {
+    "id": "T012",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F024",
+      "F027",
+      "F028"
+    ],
+    "description": "UI: the cycle-change dialog shows preview counts, applies only on confirm, and is a no-op on cancel"
+  },
+  {
+    "id": "T013",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F036",
+      "F037"
+    ],
+    "description": "UI: the gap panel shows plain-language copy and a working 'Fix all' that triggers repair-all and reports a summary"
+  },
+  {
+    "id": "T014",
+    "implemented": false,
+    "featureIds": [
+      "F041",
+      "F042",
+      "F034"
+    ],
+    "description": "Integration: permissions \u2014 a cadence change without billing:update is rejected, and repair / repair-all without the regenerate permission is rejected"
+  }
+]
