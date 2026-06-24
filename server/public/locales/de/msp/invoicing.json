@@ -45,9 +45,6 @@
       "line": "{{count}}-Zeile",
       "line_one": "{{count}}-Zeile",
       "line_other": "{{count}}-Zeilen",
-      "obligationCount": "{{count}}-Verpflichtung",
-      "obligationCount_one": "{{count}}-Verpflichtung",
-      "obligationCount_other": "{{count}}-Verpflichtungen",
       "includedCount": "{{count}}-Artikel enthalten",
       "includedCount_one": "{{count}}-Artikel enthalten",
       "includedCount_other": "{{count}}-Artikel enthalten",
@@ -253,6 +250,7 @@
       "breakdown": "{{invoices}} Rechnung(en) · {{combine}} kombiniert · {{separate}} getrennt",
       "knownNow": "jetzt bekannt",
       "knownPlusAtGeneration": "jetzt bekannt · {{count}} bei Erstellung berechnet",
+      "atGenerationLines": "{{count}} Posten",
       "empty": "Wählen Sie Gruppen oder Posten, um Rechnungen anzuzeigen oder zu erstellen.",
       "pageScope": "{{groups}} Gruppe(n) · {{obligations}} Posten"
     },
@@ -273,24 +271,13 @@
       "notYetDue": "Noch nicht fällig"
     },
     "filters": {
+      "title": "Filter",
       "windowOpen": "Fenster offen",
       "charge": "Leistung",
       "currency": "Währung",
       "any": "alle",
       "clear": "Zurücksetzen",
       "countSummary": "{{groups}} Gruppe(n) · {{obligations}} Posten"
-    },
-    "drawer": {
-      "eyebrow": "Fokussiert",
-      "whySeparate": "Warum müssen diese getrennt werden",
-      "lines": "Posten ({{count}})",
-      "knownNow": "Jetzt bekannt",
-      "atGeneration": "Bei Erstellung berechnet",
-      "obligations": "{{count}} Posten",
-      "note": "Der bekannte Betrag stammt aus Pauschalposten. Zeit-, Verbrauchs- und Kontingentbeträge werden bei der Erstellung ermittelt – nutzen Sie die Vorschau, um sie vorab zu sehen.",
-      "preview": "Rechnung anzeigen",
-      "select": "Zur Erstellung auswählen",
-      "deselect": "Aus Auswahl entfernen"
     }
   },
   "manualInvoices": {

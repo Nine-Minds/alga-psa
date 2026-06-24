@@ -45,9 +45,6 @@
       "line": "{{count}}-lijn",
       "line_one": "{{count}}-lijn",
       "line_other": "{{count}}-lijnen",
-      "obligationCount": "{{count}}-verplichting",
-      "obligationCount_one": "{{count}}-verplichting",
-      "obligationCount_other": "{{count}}-verplichtingen",
       "includedCount": "{{count}}-item inbegrepen",
       "includedCount_one": "{{count}}-item inbegrepen",
       "includedCount_other": "{{count}}-items inbegrepen",
@@ -253,6 +250,7 @@
       "breakdown": "{{invoices}} factuur/facturen · {{combine}} gecombineerd · {{separate}} apart",
       "knownNow": "nu bekend",
       "knownPlusAtGeneration": "nu bekend · {{count}} berekend bij genereren",
+      "atGenerationLines": "{{count}} post(en)",
       "empty": "Selecteer groepen of posten om facturen te bekijken of te genereren.",
       "pageScope": "{{groups}} groep(en) · {{obligations}} post(en)"
     },
@@ -273,24 +271,13 @@
       "notYetDue": "Nog niet verschuldigd"
     },
     "filters": {
+      "title": "Filters",
       "windowOpen": "Venster open",
       "charge": "Type",
       "currency": "Valuta",
       "any": "alle",
       "clear": "Wissen",
       "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
-    },
-    "drawer": {
-      "eyebrow": "Gefocust",
-      "whySeparate": "Waarom deze apart moeten",
-      "lines": "Regels ({{count}})",
-      "knownNow": "Nu bekend",
-      "atGeneration": "Berekend bij genereren",
-      "obligations": "{{count}} post(en)",
-      "note": "Het bekende bedrag komt uit vaste regels. Tijd-, verbruiks- en bundelbedragen worden bij het genereren bepaald — gebruik Voorbeeld om ze vooraf te zien.",
-      "preview": "Factuur bekijken",
-      "select": "Selecteren om te genereren",
-      "deselect": "Uit selectie verwijderen"
     }
   },
   "manualInvoices": {

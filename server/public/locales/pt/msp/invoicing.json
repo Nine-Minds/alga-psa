@@ -45,9 +45,6 @@
       "line": "Linha {{count}}",
       "line_one": "Linha {{count}}",
       "line_other": "Linhas {{count}}",
-      "obligationCount": "Obrigação {{count}}",
-      "obligationCount_one": "Obrigação {{count}}",
-      "obligationCount_other": "Obrigações {{count}}",
       "includedCount": "Item {{count}} incluído",
       "includedCount_one": "Item {{count}} incluído",
       "includedCount_other": "Itens {{count}} incluídos",
@@ -253,6 +250,7 @@
       "breakdown": "{{invoices}} fatura(s) · {{combine}} combinadas · {{separate}} separadas",
       "knownNow": "conhecido agora",
       "knownPlusAtGeneration": "conhecido agora · {{count}} calculado na geração",
+      "atGenerationLines": "{{count}} item(ns)",
       "empty": "Selecione grupos ou itens para visualizar ou gerar faturas.",
       "pageScope": "{{groups}} grupo(s) · {{obligations}} item(ns)"
     },
@@ -273,24 +271,13 @@
       "notYetDue": "Ainda não vencido"
     },
     "filters": {
+      "title": "Filtros",
       "windowOpen": "Janela aberta",
       "charge": "Cobrança",
       "currency": "Moeda",
       "any": "qualquer",
       "clear": "Limpar",
       "countSummary": "{{groups}} grupo(s) · {{obligations}} item(ns)"
-    },
-    "drawer": {
-      "eyebrow": "Em foco",
-      "whySeparate": "Por que devem ser separadas",
-      "lines": "Linhas ({{count}})",
-      "knownNow": "Conhecido agora",
-      "atGeneration": "Calculado na geração",
-      "obligations": "{{count}} item(ns)",
-      "note": "O valor conhecido vem das linhas fixas. Os valores de tempo, uso e pacote são finalizados ao gerar — use a visualização para vê-los antes.",
-      "preview": "Visualizar fatura",
-      "select": "Selecionar para gerar",
-      "deselect": "Remover da seleção"
     }
   },
   "manualInvoices": {

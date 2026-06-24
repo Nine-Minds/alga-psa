@@ -45,9 +45,6 @@
       "line": "Ligne {{count}}",
       "line_one": "Ligne {{count}}",
       "line_other": "Lignes {{count}}",
-      "obligationCount": "Obligation {{count}}",
-      "obligationCount_one": "Obligation {{count}}",
-      "obligationCount_other": "Obligations {{count}}",
       "includedCount": "{{count}} article inclus",
       "includedCount_one": "{{count}} article inclus",
       "includedCount_other": "Articles {{count}} inclus",
@@ -253,6 +250,7 @@
       "breakdown": "{{invoices}} facture(s) · {{combine}} combinées · {{separate}} séparées",
       "knownNow": "connu maintenant",
       "knownPlusAtGeneration": "connu maintenant · {{count}} calculé à la génération",
+      "atGenerationLines": "{{count}} élément(s)",
       "empty": "Sélectionnez des groupes ou des éléments pour prévisualiser ou générer des factures.",
       "pageScope": "{{groups}} groupe(s) · {{obligations}} élément(s)"
     },
@@ -273,24 +271,13 @@
       "notYetDue": "Pas encore dû"
     },
     "filters": {
+      "title": "Filtres",
       "windowOpen": "Fenêtre ouverte",
       "charge": "Type",
       "currency": "Devise",
       "any": "tout",
       "clear": "Effacer",
       "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
-    },
-    "drawer": {
-      "eyebrow": "Sélectionné",
-      "whySeparate": "Pourquoi les séparer",
-      "lines": "Lignes ({{count}})",
-      "knownNow": "Connu maintenant",
-      "atGeneration": "Calculé à la génération",
-      "obligations": "{{count}} élément(s)",
-      "note": "Le montant connu provient des lignes au forfait. Les montants au temps, à l’usage et au bloc sont finalisés à la génération — utilisez l’aperçu pour les voir d’abord.",
-      "preview": "Aperçu de la facture",
-      "select": "Sélectionner pour générer",
-      "deselect": "Retirer de la sélection"
     }
   },
   "manualInvoices": {

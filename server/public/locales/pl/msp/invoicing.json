@@ -47,9 +47,6 @@
       "line": "Linia {{count}}",
       "line_one": "Linia {{count}}",
       "line_other": "Linie {{count}}",
-      "obligationCount": "Obowiązek {{count}}",
-      "obligationCount_one": "Obowiązek {{count}}",
-      "obligationCount_other": "Obowiązki {{count}}",
       "includedCount": "Uwzględniono element {{count}}",
       "includedCount_one": "Uwzględniono element {{count}}",
       "includedCount_other": "Uwzględniono elementy {{count}}",
@@ -77,9 +74,7 @@
       "item_few": "{{count}} elementy",
       "item_many": "{{count}} elementów",
       "line_few": "{{count}} linie",
-      "line_many": "{{count}} linii",
-      "obligationCount_few": "{{count}} obowiązki",
-      "obligationCount_many": "{{count}} obowiązków"
+      "line_many": "{{count}} linii"
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Okno faktury jest inne",
@@ -273,6 +268,7 @@
       "breakdown": "{{invoices}} faktur(y) · {{combine}} połączonych · {{separate}} osobnych",
       "knownNow": "znane teraz",
       "knownPlusAtGeneration": "znane teraz · {{count}} obliczane przy generowaniu",
+      "atGenerationLines": "{{count}} pozycj(e)",
       "empty": "Wybierz grupy lub pozycje, aby wyświetlić podgląd lub wygenerować faktury.",
       "pageScope": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
     },
@@ -293,24 +289,13 @@
       "notYetDue": "Jeszcze nie wymagalne"
     },
     "filters": {
+      "title": "Filtry",
       "windowOpen": "Okno otwarte",
       "charge": "Rodzaj",
       "currency": "Waluta",
       "any": "dowolne",
       "clear": "Wyczyść",
       "countSummary": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
-    },
-    "drawer": {
-      "eyebrow": "Wybrane",
-      "whySeparate": "Dlaczego muszą być osobno",
-      "lines": "Pozycje ({{count}})",
-      "knownNow": "Znane teraz",
-      "atGeneration": "Obliczane przy generowaniu",
-      "obligations": "{{count}} pozycj(e)",
-      "note": "Znana kwota pochodzi z pozycji stałych. Kwoty za czas, zużycie i pulę są ustalane przy generowaniu — użyj podglądu, aby zobaczyć je wcześniej.",
-      "preview": "Podgląd faktury",
-      "select": "Wybierz do wygenerowania",
-      "deselect": "Usuń z wyboru"
     }
   },
   "manualInvoices": {

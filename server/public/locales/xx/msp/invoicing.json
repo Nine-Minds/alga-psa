@@ -45,9 +45,6 @@
       "line": "11111 {{count}} 11111",
       "line_one": "11111 {{count}} 11111",
       "line_other": "11111 {{count}} 11111",
-      "obligationCount": "11111 {{count}} 11111",
-      "obligationCount_one": "11111 {{count}} 11111",
-      "obligationCount_other": "11111 {{count}} 11111",
       "includedCount": "11111 {{count}} 11111",
       "includedCount_one": "11111 {{count}} 11111",
       "includedCount_other": "11111 {{count}} 11111",
@@ -253,6 +250,7 @@
       "breakdown": "11111 {{invoices}} 11111 {{combine}} 11111 {{separate}} 11111",
       "knownNow": "11111",
       "knownPlusAtGeneration": "11111 {{count}} 11111",
+      "atGenerationLines": "11111 {{count}} 11111",
       "empty": "11111",
       "pageScope": "11111 {{groups}} 11111 {{obligations}} 11111"
     },
@@ -273,24 +271,13 @@
       "notYetDue": "11111"
     },
     "filters": {
+      "title": "11111",
       "windowOpen": "11111",
       "charge": "11111",
       "currency": "11111",
       "any": "11111",
       "clear": "11111",
       "countSummary": "11111 {{groups}} 11111 {{obligations}} 11111"
-    },
-    "drawer": {
-      "eyebrow": "11111",
-      "whySeparate": "11111",
-      "lines": "11111 {{count}} 11111",
-      "knownNow": "11111",
-      "atGeneration": "11111",
-      "obligations": "11111 {{count}} 11111",
-      "note": "11111",
-      "preview": "11111",
-      "select": "11111",
-      "deselect": "11111"
     }
   },
   "manualInvoices": {

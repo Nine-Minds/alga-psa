@@ -45,9 +45,6 @@
       "line": "Linea {{count}}",
       "line_one": "Linea {{count}}",
       "line_other": "Linee {{count}}",
-      "obligationCount": "Obbligo di {{count}}",
-      "obligationCount_one": "Obbligo di {{count}}",
-      "obligationCount_other": "Obblighi {{count}}",
       "includedCount": "Articolo {{count}} incluso",
       "includedCount_one": "Articolo {{count}} incluso",
       "includedCount_other": "Articoli {{count}} inclusi",
@@ -253,6 +250,7 @@
       "breakdown": "{{invoices}} fattura/e · {{combine}} combinate · {{separate}} separate",
       "knownNow": "noto ora",
       "knownPlusAtGeneration": "noto ora · {{count}} calcolato alla generazione",
+      "atGenerationLines": "{{count}} voce/i",
       "empty": "Seleziona gruppi o voci per visualizzare l’anteprima o generare le fatture.",
       "pageScope": "{{groups}} gruppo/i · {{obligations}} voce/i"
     },
@@ -273,24 +271,13 @@
       "notYetDue": "Non ancora dovuto"
     },
     "filters": {
+      "title": "Filtri",
       "windowOpen": "Finestra aperta",
       "charge": "Tariffa",
       "currency": "Valuta",
       "any": "tutte",
       "clear": "Cancella",
       "countSummary": "{{groups}} gruppo/i · {{obligations}} voce/i"
-    },
-    "drawer": {
-      "eyebrow": "In focus",
-      "whySeparate": "Perché devono essere separate",
-      "lines": "Voci ({{count}})",
-      "knownNow": "Noto ora",
-      "atGeneration": "Calcolato alla generazione",
-      "obligations": "{{count}} voce/i",
-      "note": "L’importo noto proviene dalle voci fisse. Gli importi a tempo, consumo e monte ore vengono finalizzati alla generazione — usa l’anteprima per vederli prima.",
-      "preview": "Anteprima fattura",
-      "select": "Seleziona per generare",
-      "deselect": "Rimuovi dalla selezione"
     }
   },
   "manualInvoices": {
