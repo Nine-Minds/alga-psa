@@ -11,6 +11,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdentity } from './mcpTypes';
 import { getMcpDemoMode, demoState, demoAuditPage, demoConnectResult } from './mcpDemoData';
@@ -112,6 +113,7 @@ export default function McpServerSettings() {
   const [auditTotal, setAuditTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<Agent | null>(null);
 
   // Add-IdP form
   const [idpForm, setIdpForm] = useState({ kind: 'microsoft', entraTenantId: '', issuer: '', jwksUri: '', audience: '', subjectClaim: '' });
@@ -278,8 +280,23 @@ export default function McpServerSettings() {
     run(async () => {
       setAgents((list) => list.map((x) => (x.agent_id === a.agent_id ? { ...x, active } : x)));
       if (!demoMode) {
-        await api('/api/v1/mcp/agents', { method: 'POST', body: JSON.stringify({ ...a, deactivate: !active }) });
+        await api('/api/v1/mcp/agents', { method: 'PATCH', body: JSON.stringify({ agentId: a.agent_id, active }) });
       }
+    });
+
+  const removeAgent = (a: Agent) =>
+    run(async () => {
+      if (demoMode) {
+        setAgents((list) => list.filter((x) => x.agent_id !== a.agent_id));
+      } else {
+        await api(`/api/v1/mcp/agents?agentId=${encodeURIComponent(a.agent_id)}`, { method: 'DELETE' });
+        await reloadAgents();
+      }
+      if (auditAgent?.agent_id === a.agent_id) {
+        setAudit([]);
+        setAuditAgent(null);
+      }
+      setRemoveTarget(null);
     });
 
   const idpColumns: ColumnDefinition<TrustedIdp>[] = [
@@ -293,7 +310,7 @@ export default function McpServerSettings() {
       title: 'Directory',
       dataIndex: 'issuer',
       render: (_v, p) => (
-        <span className="font-mono text-xs text-[rgb(var(--color-text-700))]" title={p.issuer}>{providerDirectory(p)}</span>
+        <span className="font-mono text-xs text-[rgb(var(--color-text-700))]">{providerDirectory(p)}</span>
       ),
     },
     {
@@ -330,7 +347,7 @@ export default function McpServerSettings() {
       title: 'Agent ID',
       dataIndex: 'idp_subject',
       render: (_v, a) => (
-        <span className="font-mono text-xs text-[rgb(var(--color-text-700))]" title={a.idp_subject ?? ''}>{a.idp_subject ?? '—'}</span>
+        <span className="font-mono text-xs text-[rgb(var(--color-text-700))]">{a.idp_subject ?? '—'}</span>
       ),
     },
     {
@@ -357,10 +374,11 @@ export default function McpServerSettings() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem id={`mcp-audit-${a.agent_id}`} onClick={() => loadAudit(a)}>View activity</DropdownMenuItem>
               {a.active ? (
-                <DropdownMenuItem id={`mcp-deactivate-${a.agent_id}`} className="text-destructive focus:text-destructive" disabled={busy} onClick={() => setAgentActive(a, false)}>Deactivate</DropdownMenuItem>
+                <DropdownMenuItem id={`mcp-deactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, false)}>Deactivate</DropdownMenuItem>
               ) : (
                 <DropdownMenuItem id={`mcp-reactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, true)}>Reactivate</DropdownMenuItem>
               )}
+              <DropdownMenuItem id={`mcp-remove-${a.agent_id}`} className="text-destructive focus:text-destructive" disabled={busy} onClick={() => setRemoveTarget(a)}>Remove…</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -658,6 +676,22 @@ export default function McpServerSettings() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmationDialog
+        id="mcp-remove-agent-dialog"
+        isOpen={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={() => (removeTarget ? removeAgent(removeTarget) : undefined)}
+        title="Remove agent"
+        message={
+          removeTarget
+            ? `Remove "${removeTarget.name}"? This permanently deletes the agent, its role grants, and its activity log. It can't be undone.`
+            : ''
+        }
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        isConfirming={busy}
+      />
     </div>
   );
 }

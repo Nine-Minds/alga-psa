@@ -23,7 +23,10 @@ export async function createAgent(_input: unknown): Promise<never> {
 export async function listAgents(_tenant: string): Promise<unknown[]> {
   return [];
 }
-export async function setAgentActive(): Promise<void> {
+export async function setAgentActive(_tenant?: string, _agentId?: string, _active?: boolean): Promise<void> {
+  /* no-op in CE */
+}
+export async function deleteAgent(_tenant?: string, _agentId?: string): Promise<void> {
   /* no-op in CE */
 }
 export async function addTrustedIdp(_input: unknown): Promise<never> {

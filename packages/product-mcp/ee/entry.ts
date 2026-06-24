@@ -5,6 +5,7 @@ export {
   createAgent,
   listAgents,
   setAgentActive,
+  deleteAgent,
   addTrustedIdp,
   listTrustedIdps,
   listAllActiveIssuers,
