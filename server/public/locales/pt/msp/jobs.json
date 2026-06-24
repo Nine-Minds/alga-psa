@@ -21,7 +21,7 @@
       "status": "Status",
       "duration": "Duration",
       "started": "Started",
-      "completed": "Completed"
+      "completed": "Terminada"
     },
     "time": {
       "justNow": "Just now",
@@ -45,7 +45,7 @@
         "status": "Status",
         "duration": "Duração",
         "started": "Iniciado",
-        "completed": "Concluído"
+        "completed": "Terminada"
       },
       "optionsDialog": {
         "title": "Opções de impressão",
@@ -63,9 +63,12 @@
       "pending": "Pending",
       "processing": "Processing",
       "pgboss": "PG Boss",
-      "temporal": "Temporal"
+      "temporal": "Temporal",
+      "queued": "Em fila",
+      "running": "Em execução"
     },
-    "successRate": "{{count}}% success rate"
+    "successRate": "{{count}}% success rate",
+    "successRateNone": "Ainda não há tarefas concluídas"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "Imprimir",
     "printOptions": "Opções de impressão"
+  },
+  "clearHistory": {
+    "button": "Limpar histórico",
+    "dialog": {
+      "title": "Limpar histórico de tarefas",
+      "warning": "Isto remove permanentemente o histórico de tarefas desta lista e não pode ser desfeito. Não para nem cancela as tarefas que ainda estão em execução.",
+      "daysLabel": "Idade em dias",
+      "daysError": "Insira um número inteiro de dias (1 ou mais).",
+      "cancel": "Cancelar",
+      "clearing": "A limpar…",
+      "confirm": "Limpar histórico"
+    },
+    "scope": {
+      "finished": {
+        "label": "Apenas concluídas",
+        "description": "Tarefas concluídas e com falha. As tarefas pendentes, em fila e em execução são mantidas."
+      },
+      "all": {
+        "label": "Todos os estados",
+        "description": "Todas as tarefas, incluindo as pendentes, em fila e ainda em execução."
+      }
+    },
+    "age": {
+      "toggle": "Eliminar apenas tarefas mais antigas do que uma idade definida"
+    },
+    "toast": {
+      "none": "Nenhuma tarefa correspondente para limpar.",
+      "error": "Falha ao limpar o histórico de tarefas. Tente novamente.",
+      "success_one": "{{count}} tarefa removida do histórico.",
+      "success_other": "{{count}} tarefas removidas do histórico."
+    }
   }
 }

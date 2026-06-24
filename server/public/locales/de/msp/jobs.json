@@ -21,7 +21,7 @@
       "status": "Status",
       "duration": "Dauer",
       "started": "Begonnen",
-      "completed": "Vollendet"
+      "completed": "Beendet"
     },
     "time": {
       "justNow": "Soeben",
@@ -45,7 +45,7 @@
         "status": "Status",
         "duration": "Dauer",
         "started": "Gestartet",
-        "completed": "Abgeschlossen"
+        "completed": "Beendet"
       },
       "optionsDialog": {
         "title": "Druckoptionen",
@@ -63,9 +63,12 @@
       "pending": "Ausstehend",
       "processing": "Verarbeitung",
       "pgboss": "PG-Chef",
-      "temporal": "Zeitlich"
+      "temporal": "Zeitlich",
+      "queued": "In Warteschlange",
+      "running": "Läuft"
     },
-    "successRate": "{{count}} % Erfolgsquote"
+    "successRate": "{{count}} % Erfolgsquote",
+    "successRateNone": "Noch keine abgeschlossenen Jobs"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "Drucken",
     "printOptions": "Druckoptionen"
+  },
+  "clearHistory": {
+    "button": "Verlauf löschen",
+    "dialog": {
+      "title": "Job-Verlauf löschen",
+      "warning": "Dadurch wird der Job-Verlauf dauerhaft aus dieser Liste entfernt und kann nicht rückgängig gemacht werden. Laufende Jobs werden weder gestoppt noch abgebrochen.",
+      "daysLabel": "Alter in Tagen",
+      "daysError": "Geben Sie eine ganze Zahl von Tagen ein (1 oder mehr).",
+      "cancel": "Abbrechen",
+      "clearing": "Wird gelöscht…",
+      "confirm": "Verlauf löschen"
+    },
+    "scope": {
+      "finished": {
+        "label": "Nur abgeschlossene",
+        "description": "Abgeschlossene und fehlgeschlagene Jobs. Ausstehende, eingereihte und laufende Jobs bleiben erhalten."
+      },
+      "all": {
+        "label": "Alle Status",
+        "description": "Jeder Job, einschließlich ausstehender, eingereihter und noch laufender."
+      }
+    },
+    "age": {
+      "toggle": "Nur Jobs löschen, die älter als ein festgelegtes Alter sind"
+    },
+    "toast": {
+      "success_one": "{{count}} Job aus dem Verlauf gelöscht.",
+      "success_other": "{{count}} Jobs aus dem Verlauf gelöscht.",
+      "none": "Keine passenden Jobs zum Löschen.",
+      "error": "Job-Verlauf konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    }
   }
 }
