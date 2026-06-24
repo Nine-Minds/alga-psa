@@ -52,24 +52,44 @@ async function importModule(absPath) {
 }
 
 async function main() {
-  for (const relPath of [
+  // The Temporal worker statically references the job handlers in @alga-psa/jobs,
+  // which fan out across the vertical domain packages (billing/tickets/integrations/
+  // ...). All of their dist must exist before the worker bundle is imported below,
+  // so build every @alga-psa workspace package. Foundation first (a few have
+  // build-time ordering needs); the rest externalize @alga-psa/* so order is moot.
+  const FOUNDATION = [
     'packages/core',
     'packages/types',
     'packages/event-bus',
     'packages/validation',
     'packages/db',
-    // shared/workflow/runtime/actions/businessOperations/crm.ts imports
-    // @alga-psa/authorization/{kernel,bundles/service}; the smoke test
-    // resolves these from packages/authorization/dist at runtime, so build
-    // it before shared.
+    // shared imports @alga-psa/authorization/{kernel,bundles/service} and resolves
+    // them from packages/authorization/dist at runtime, so build it before shared.
     'packages/authorization',
-  ]) {
+  ];
+  const workspacePkgs = ['packages', 'ee/packages'].flatMap((root) => {
+    const rootAbs = path.join(REPO_ROOT, root);
+    if (!fs.existsSync(rootAbs)) return [];
+    return fs
+      .readdirSync(rootAbs)
+      .map((name) => `${root}/${name}`)
+      .filter((rel) => fs.existsSync(path.join(REPO_ROOT, rel, 'package.json')));
+  });
+  for (const relPath of FOUNDATION) {
     buildWorkspaceIfScriptExists(relPath);
+  }
+  for (const relPath of workspacePkgs.filter((p) => !FOUNDATION.includes(p))) {
+    try {
+      buildWorkspaceIfScriptExists(relPath);
+    } catch (err) {
+      // Some workspace packages are empty stubs (tsup "No input files") or simply
+      // aren't on the worker's import path. Skip their build failures here; if the
+      // worker actually needs a package's dist, the dist-import step below fails loudly.
+      console.warn(`Skipping build for ${relPath}: ${err.message}`);
+    }
   }
   console.log('Building shared for dist import smoke test...');
   run('npm', ['--prefix', 'shared', 'run', 'build']);
-  console.log('Building ee/packages/workflows for dist import smoke test...');
-  run('npm', ['--prefix', 'ee/packages/workflows', 'run', 'build']);
   console.log('Building ee/temporal-workflows for dist import smoke test...');
   run('npm', ['--prefix', 'ee/temporal-workflows', 'run', 'build']);
   ensureEventSchemasDistBuilt();

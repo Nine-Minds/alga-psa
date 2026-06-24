@@ -68,6 +68,7 @@
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/notifications": "*",
     "@alga-psa/scheduling": "*",

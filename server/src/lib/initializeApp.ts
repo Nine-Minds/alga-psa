@@ -1,6 +1,6 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
-import { logger, registerFeatureFlagChecker } from '@alga-psa/core';
+import { logger, registerFeatureFlagChecker, registerJobEnqueuer } from '@alga-psa/core';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
@@ -134,6 +134,17 @@ export async function initializeApp() {
       EmailProviderManager: EmailProviderManager as any,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
+    // Let vertical packages (billing, client-portal) enqueue jobs without
+    // importing @alga-psa/jobs (which would create a vertical -> jobs cycle).
+    registerJobEnqueuer(async (jobName, data) => {
+      const jobService = await JobService.create();
+      const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
+        jobName,
+        data as Parameters<typeof jobService.createAndScheduleJob>[1],
+        'immediate',
+      );
+      return { jobId: jobRecord.id as string, scheduledJobId };
+    });
     // Converge the accounting-sync schedule the moment a tenant connects or
     // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
     // next startup reconcile.

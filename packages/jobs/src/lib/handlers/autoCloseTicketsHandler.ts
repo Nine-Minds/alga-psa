@@ -1,7 +1,7 @@
-import { createTenantKnex, withTransaction, buildTenantPortalSlug } from '@alga-psa/db';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { getEmailNotificationService } from '@alga-psa/notifications';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { updateTicketInTransaction } from '@alga-psa/tickets/actions';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -35,9 +35,6 @@ import {
 export interface AutoCloseTicketsJobData extends Record<string, unknown> {
   tenantId: string;
 }
-
-const WARNING_SUBTYPE_NAME = 'Ticket Auto-Close Warning';
-const WARNING_TEMPLATE_NAME = 'ticket-auto-close-warning';
 
 /**
  * Audit events written by the engine itself must not count as ticket activity,
@@ -191,15 +188,6 @@ async function syncAutoCloseState(
   }
 }
 
-function formatCloseDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function buildPortalTicketUrl(tenant: string, ticketId: string): string {
-  const base = (process.env.APP_URL || '').replace(/\/$/, '');
-  return `${base}/client-portal/tickets/${ticketId}?tenant=${buildTenantPortalSlug(tenant)}`;
-}
-
 async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
   const now = new Date();
   const due = await knex('ticket_auto_close_state as s')
@@ -227,48 +215,26 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
 
   if (!due.length) return;
 
-  const subtype = await knex('notification_subtypes').where({ name: WARNING_SUBTYPE_NAME }).first();
-  if (!subtype) {
-    logger.warn(`[auto-close] Notification subtype '${WARNING_SUBTYPE_NAME}' not found; skipping warnings`);
-    return;
-  }
-
-  const notificationService = getEmailNotificationService();
-
   for (const row of due) {
     try {
-      let outcome = 'no_recipient';
-      const contact = row.contact_name_id
-        ? await knex('contacts').where({ tenant, contact_name_id: row.contact_name_id }).first()
-        : null;
-
-      if (contact?.email) {
-        const portalUser = await knex('users')
-          .where({ tenant, contact_id: row.contact_name_id })
-          .first('user_id');
-        // Recipient is the contact; the user id only anchors preference lookup
-        // and the notification log, so fall back to an MSP-side user when the
-        // contact has no portal account.
-        const userIdForLog = portalUser?.user_id ?? row.assigned_to ?? row.entered_by;
-
-        await notificationService.sendNotification({
-          tenant,
-          userId: userIdForLog,
-          subtypeId: subtype.id,
-          emailAddress: contact.email,
-          templateName: WARNING_TEMPLATE_NAME,
-          data: {
-            ticket: {
-              id: row.ticket_number,
-              title: row.title,
-              metaLine: `Ticket #${row.ticket_number}`,
-              scheduledCloseDate: formatCloseDate(new Date(row.scheduled_close_at)),
-              url: buildPortalTicketUrl(tenant, row.ticket_id),
-            },
-          },
-        });
-        outcome = 'sent_if_enabled';
-      }
+      // The handler runs in the Temporal worker (plain Node ESM) and must not
+      // depend on @alga-psa/notifications. It only emits a domain event; the
+      // server-side ticketAutoCloseWarningSubscriber resolves the contact email
+      // and portal user and sends the actual warning notification.
+      await publishEvent({
+        eventType: 'TICKET_AUTO_CLOSE_WARNING',
+        payload: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          ticketId: row.ticket_id,
+          ticketNumber: row.ticket_number,
+          title: row.title,
+          scheduledCloseAt: new Date(row.scheduled_close_at).toISOString(),
+          contactNameId: row.contact_name_id ?? null,
+          assignedTo: row.assigned_to ?? null,
+          enteredBy: row.entered_by ?? null,
+        },
+      });
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
         await trx('ticket_auto_close_state')
@@ -284,8 +250,8 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
           source: TICKET_ACTIVITY_SOURCE.SYSTEM,
           details: {
             scheduled_close_at: new Date(row.scheduled_close_at).toISOString(),
-            recipient: contact?.email ?? null,
-            outcome,
+            recipient: null,
+            outcome: 'warning_emitted',
           },
         });
       });

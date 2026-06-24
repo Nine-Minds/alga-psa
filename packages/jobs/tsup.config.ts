@@ -16,6 +16,8 @@ export default defineConfig({
     'src/lib/fanout/index.ts',
     'src/lib/handlers/*.ts',
     'src/lib/handler-utils/*.ts',
+    'src/lib/jobs/runners/*.ts',
+    'src/lib/jobs/jobHandlerRegistry.ts',
     'src/lib/jobRunnerAccessor.ts',
     'src/lib/jobSchedulerAccessor.ts',
     'src/lib/jobService.ts',
