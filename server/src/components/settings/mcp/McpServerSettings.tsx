@@ -43,7 +43,13 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    const friendly =
+      res.status === 404 ? "MCP settings aren't available here. The MCP server may be turned off." :
+      res.status === 401 ? 'Your session expired. Sign in again.' :
+      `Something went wrong (${res.status}).`;
+    throw new Error(body?.error || friendly);
+  }
   return body as T;
 }
 
@@ -115,7 +121,7 @@ export default function McpServerSettings() {
       <div>
         <h2 className="text-xl font-semibold text-[rgb(var(--color-text-900))]">MCP Server</h2>
         <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Govern AI-agent access to AlgaPSA: trust your identity provider, provision agents, scope them to roles, and review their activity.
+          Let AI agents sign in to AlgaPSA and act with the roles you give them.
         </p>
       </div>
 
@@ -128,8 +134,8 @@ export default function McpServerSettings() {
       {/* Trusted IdPs */}
       <Card>
         <CardHeader>
-          <CardTitle>Trusted Identity Providers</CardTitle>
-          <CardDescription>OAuth issuers whose tokens are accepted for agent authentication.</CardDescription>
+          <CardTitle>Identity providers</CardTitle>
+          <CardDescription>Agents sign in through these providers. Add the ones your agents use.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <table className="w-full text-sm">
@@ -139,7 +145,7 @@ export default function McpServerSettings() {
               </tr>
             </thead>
             <tbody>
-              {idps.length === 0 && <tr><td colSpan={4} className="py-2 text-[rgb(var(--color-text-500))]">No trusted IdPs yet.</td></tr>}
+              {idps.length === 0 && <tr><td colSpan={4} className="py-2 text-[rgb(var(--color-text-500))]">No identity providers yet.</td></tr>}
               {idps.map((p) => (
                 <tr key={p.issuer} className="border-t border-[rgb(var(--color-border-200))]">
                   <td className="py-1 font-mono text-xs">{p.issuer}</td>
@@ -152,13 +158,13 @@ export default function McpServerSettings() {
           </table>
           {suggestion.microsoft && !idps.some((p) => p.kind === 'microsoft') && (
             <div id="mcp-ms-suggestion" className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))] px-3 py-2 text-sm dark:bg-[rgb(var(--color-primary-400)/0.15)]">
-              <span>You're already connected to Microsoft{suggestion.microsoft.displayName ? ` (${suggestion.microsoft.displayName})` : ''} — enable agent access with that directory?</span>
+              <span>You're already connected to Microsoft{suggestion.microsoft.displayName ? ` (${suggestion.microsoft.displayName})` : ''}. Use this directory for agents?</span>
               <Button
                 id="mcp-use-ms-connection"
                 size="sm"
                 onClick={() => setIdpForm({ ...idpForm, kind: 'microsoft', entraTenantId: suggestion.microsoft!.entraTenantId })}
               >
-                Use it
+                Use this directory
               </Button>
             </div>
           )}
@@ -179,9 +185,9 @@ export default function McpServerSettings() {
 
             {idpForm.kind === 'microsoft' && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div><Label htmlFor="idp-entra-tid">Entra tenant ID</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="your directory (tenant) id" /></div>
-                <div><Label htmlFor="idp-audience">Audience (optional)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="the agent app's resource/aud" /></div>
-                <div><Label htmlFor="idp-claim-ms">Subject claim</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">App-only token: <code>azp</code>/<code>appid</code>. User token: <code>oid</code>/<code>sub</code>.</p></div>
+                <div><Label htmlFor="idp-entra-tid">Entra tenant ID</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="e.g. 00000000-0000-0000-0000-000000000000" /></div>
+                <div><Label htmlFor="idp-audience">Audience (optional)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" /></div>
+                <div><Label htmlFor="idp-claim-ms">Subject claim</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">Leave blank unless your provider tells you otherwise.</p></div>
               </div>
             )}
 
@@ -203,7 +209,7 @@ export default function McpServerSettings() {
             onClick={addIdp}
             disabled={busy || (idpForm.kind === 'microsoft' && !idpForm.entraTenantId) || (idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri))}
           >
-            Add trusted IdP
+            Add provider
           </Button>
         </CardContent>
       </Card>
@@ -212,12 +218,12 @@ export default function McpServerSettings() {
       <Card>
         <CardHeader>
           <CardTitle>Agents</CardTitle>
-          <CardDescription>Provisioned AI agents, each bound to an IdP subject and scoped to roles.</CardDescription>
+          <CardDescription>Each agent signs in as itself and gets the roles you assign.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[rgb(var(--color-text-600))]"><th className="py-1">Name</th><th>IdP subject</th><th>Status</th><th></th></tr>
+              <tr className="text-left text-[rgb(var(--color-text-600))]"><th className="py-1">Name</th><th>Agent ID</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               {agents.length === 0 && <tr><td colSpan={4} className="py-2 text-[rgb(var(--color-text-500))]">No agents yet.</td></tr>}
@@ -239,7 +245,7 @@ export default function McpServerSettings() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div><Label htmlFor="agent-name">Name</Label><Input id="agent-name" value={agentForm.name} onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })} placeholder="Support triage bot" /></div>
             <div><Label htmlFor="agent-issuer">IdP issuer</Label><Input id="agent-issuer" value={agentForm.idpIssuer} onChange={(e) => setAgentForm({ ...agentForm, idpIssuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
-            <div><Label htmlFor="agent-subject">IdP subject / client_id</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder="the agent's IdP identifier" /></div>
+            <div><Label htmlFor="agent-subject">Agent ID</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder="the agent's client_id or sub" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">The agent's own identifier at your provider.</p></div>
           </div>
           <div>
             <Label>Roles</Label>
@@ -252,14 +258,14 @@ export default function McpServerSettings() {
               ))}
             </div>
           </div>
-          <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name}>Provision agent</Button>
+          <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name}>Add agent</Button>
         </CardContent>
       </Card>
 
       {/* Audit */}
       {audit.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Agent audit</CardTitle><CardDescription>Recent tool invocations for the selected agent.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Activity</CardTitle><CardDescription>What this agent did, and whether each action was allowed.</CardDescription></CardHeader>
           <CardContent>
             <table className="w-full text-sm">
               <thead><tr className="text-left text-[rgb(var(--color-text-600))]"><th className="py-1">When</th><th>Tool</th><th>Decision</th><th>Status</th></tr></thead>
