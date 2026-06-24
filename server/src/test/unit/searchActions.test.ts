@@ -49,7 +49,7 @@ import {
   searchAppInputSchema,
   searchAppResultSchema,
   SearchRateLimitError,
-} from '../../lib/actions/searchActionShared';
+} from '@alga-psa/search/actions/searchActionShared';
 
 describe('search actions', () => {
   beforeEach(() => {
