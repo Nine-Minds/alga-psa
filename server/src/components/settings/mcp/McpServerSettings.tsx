@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MoreVertical } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
@@ -238,16 +239,26 @@ export default function McpServerSettings() {
     {
       title: '',
       dataIndex: 'agent_id',
-      width: '190px',
+      width: '64px',
       sortable: false,
       render: (_v, a) => (
-        <div className="flex justify-end gap-2">
-          <Button id={`mcp-audit-${a.agent_id}`} variant="outline" size="sm" onClick={() => loadAudit(a)}>View activity</Button>
-          {a.active ? (
-            <Button id={`mcp-deactivate-${a.agent_id}`} variant="outline" size="sm" disabled={busy} onClick={() => setAgentActive(a, false)}>Deactivate</Button>
-          ) : (
-            <Button id={`mcp-reactivate-${a.agent_id}`} variant="outline" size="sm" disabled={busy} onClick={() => setAgentActive(a, true)}>Reactivate</Button>
-          )}
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id={`mcp-agent-actions-${a.agent_id}`} variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                <span className="sr-only">Open agent actions</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem id={`mcp-audit-${a.agent_id}`} onClick={() => loadAudit(a)}>View activity</DropdownMenuItem>
+              {a.active ? (
+                <DropdownMenuItem id={`mcp-deactivate-${a.agent_id}`} className="text-destructive focus:text-destructive" disabled={busy} onClick={() => setAgentActive(a, false)}>Deactivate</DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem id={`mcp-reactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, true)}>Reactivate</DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
