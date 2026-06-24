@@ -350,13 +350,21 @@ export default function McpServerSettings() {
               </div>
             )}
           </div>
-          <Button
-            id="mcp-add-idp"
-            onClick={addIdp}
-            disabled={busy || (idpForm.kind === 'microsoft' && !idpForm.entraTenantId) || (idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri))}
-          >
-            Add provider
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              id="mcp-add-idp"
+              onClick={addIdp}
+              disabled={busy || (idpForm.kind === 'microsoft' && !idpForm.entraTenantId) || (idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri))}
+            >
+              Add provider
+            </Button>
+            {idpForm.kind === 'microsoft' && !idpForm.entraTenantId && (
+              <span className="text-xs text-[rgb(var(--color-text-500))]">Enter your Entra tenant ID to continue.</span>
+            )}
+            {idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri) && (
+              <span className="text-xs text-[rgb(var(--color-text-500))]">Enter the issuer and signing keys URL to continue.</span>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -403,7 +411,14 @@ export default function McpServerSettings() {
               ))}
             </div>
           </div>
-          <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || (idps.length > 0 && !agentForm.idpIssuer)}>Add agent</Button>
+          <div className="flex items-center gap-3">
+            <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || (idps.length > 0 && !agentForm.idpIssuer)}>Add agent</Button>
+            {!agentForm.name ? (
+              <span className="text-xs text-[rgb(var(--color-text-500))]">Name the agent to continue.</span>
+            ) : idps.length > 0 && !agentForm.idpIssuer ? (
+              <span className="text-xs text-[rgb(var(--color-text-500))]">Choose a provider to continue.</span>
+            ) : null}
+          </div>
             </>
           )}
         </CardContent>
