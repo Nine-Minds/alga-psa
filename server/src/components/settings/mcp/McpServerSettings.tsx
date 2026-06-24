@@ -281,7 +281,7 @@ export default function McpServerSettings() {
         <StepHeading step={1} title="Identity providers" description="Agents sign in through these providers. Add the ones your agents use." />
         <CardContent className="space-y-4">
           {idps.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">No identity providers yet.</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">No providers yet.</p>
           ) : (
             <DataTable data={idps} columns={idpColumns} pagination={false} />
           )}
@@ -308,7 +308,7 @@ export default function McpServerSettings() {
                 options={[
                   { value: 'microsoft', label: 'Microsoft Entra' },
                   { value: 'google', label: 'Google' },
-                  { value: 'custom', label: 'Custom (advanced)' },
+                  { value: 'custom', label: 'Custom' },
                 ]}
               />
             </div>
@@ -329,7 +329,7 @@ export default function McpServerSettings() {
                 {showAdvanced && (
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div><Label htmlFor="idp-audience">Audience (optional)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" /></div>
-                    <div><Label htmlFor="idp-claim-ms">Subject claim</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">Leave blank unless your provider tells you otherwise.</p></div>
+                    <div><Label htmlFor="idp-claim-ms">Identify agents by</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">Leave blank unless your provider tells you otherwise.</p></div>
                   </div>
                 )}
               </div>
@@ -342,9 +342,9 @@ export default function McpServerSettings() {
             {idpForm.kind === 'custom' && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div><Label htmlFor="idp-issuer">Issuer</Label><Input id="idp-issuer" value={idpForm.issuer} onChange={(e) => setIdpForm({ ...idpForm, issuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
-                <div><Label htmlFor="idp-jwks">JWKS URI</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
-                <div><Label htmlFor="idp-audience-c">Audience (resource)</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" /></div>
-                <div><Label htmlFor="idp-claim-c">Subject claim</Label><Input id="idp-claim-c" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
+                <div><Label htmlFor="idp-jwks">Signing keys URL</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
+                <div><Label htmlFor="idp-audience-c">Audience</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" /></div>
+                <div><Label htmlFor="idp-claim-c">Identify agents by</Label><Input id="idp-claim-c" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
               </div>
             )}
           </div>
@@ -363,7 +363,7 @@ export default function McpServerSettings() {
         <StepHeading step={2} title="Agents" description="Each agent signs in as itself and gets the roles you assign." />
         <CardContent className="space-y-4">
           {idps.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">Add an identity provider in step 1 first. Then add agents that sign in through it.</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">Add a provider in step 1 first. Then add agents that sign in through it.</p>
           ) : (
             <>
           {agents.length === 0 ? (
@@ -374,7 +374,7 @@ export default function McpServerSettings() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div><Label htmlFor="agent-name">Name</Label><Input id="agent-name" value={agentForm.name} onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })} placeholder="Support triage bot" /></div>
             <div>
-              <Label htmlFor="agent-issuer">Identity provider</Label>
+              <Label htmlFor="agent-issuer">Provider</Label>
               <CustomSelect
                 id="agent-issuer"
                 className="w-full"
@@ -385,7 +385,7 @@ export default function McpServerSettings() {
                 options={idps.map((p) => ({ value: p.issuer, label: `${providerLabel(p.kind)} · ${providerDirectory(p)}` }))}
               />
             </div>
-            <div><Label htmlFor="agent-subject">Agent ID</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder="the agent's client_id or sub" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">The agent's own identifier at your provider.</p></div>
+            <div><Label htmlFor="agent-subject">Agent ID</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder="e.g. support-bot@acme.com" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">The agent's own identifier at your provider.</p></div>
           </div>
           <div>
             <Label>Roles</Label>
