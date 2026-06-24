@@ -30,8 +30,12 @@
         "group": "Grupa",
         "servicePeriod": "Okres usługi",
         "invoiceWindow": "Okno faktury",
-        "included": "Dołączony"
-      }
+        "included": "Dołączony",
+        "charge": "Rodzaj",
+        "status": "Status",
+        "amount": "Kwota"
+      },
+      "pageScopeNote": "{{count}} grup(y) na tej stronie"
     },
     "groups": {
       "item": "Pozycja {{count}}",
@@ -242,6 +246,71 @@
     },
     "loading": {
       "billingData": "Ładowanie danych rozliczeniowych"
+    },
+    "views": {
+      "all": "Wszystkie",
+      "ready": "Gotowe",
+      "combinable": "Łączalne",
+      "attention": "Wymaga uwagi",
+      "notYetDue": "Jeszcze nie wymagalne"
+    },
+    "status": {
+      "ready": "Gotowe",
+      "combine": "Połącz",
+      "separate": "Osobno",
+      "notYetDue": "Jeszcze nie wymagalne",
+      "approval": "Zatwierdzenie",
+      "blocked": "Zablokowane"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "Wybrano: {{count}}",
+      "breakdown": "{{invoices}} faktur(y) · {{combine}} połączonych · {{separate}} osobnych",
+      "knownNow": "znane teraz",
+      "knownPlusAtGeneration": "znane teraz · {{count}} obliczane przy generowaniu",
+      "empty": "Wybierz grupy lub pozycje, aby wyświetlić podgląd lub wygenerować faktury.",
+      "pageScope": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
+    },
+    "amount": {
+      "atGeneration": "Obliczane przy generowaniu",
+      "plusAtGeneration": "+ {{count}} przy generowaniu"
+    },
+    "window": {
+      "open": "Otwarte",
+      "opensOn": "Otwiera się {{date}}",
+      "notOpen": "Jeszcze nieotwarte"
+    },
+    "legend": {
+      "confirmed": "Kwota znana teraz",
+      "atGeneration": "Obliczane przy generowaniu",
+      "combine": "Połącz w jedną fakturę",
+      "separate": "Musi być fakturowane osobno",
+      "notYetDue": "Jeszcze nie wymagalne"
+    },
+    "filters": {
+      "windowOpen": "Okno otwarte",
+      "charge": "Rodzaj",
+      "currency": "Waluta",
+      "any": "dowolne",
+      "clear": "Wyczyść",
+      "countSummary": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
+    },
+    "drawer": {
+      "eyebrow": "Wybrane",
+      "whySeparate": "Dlaczego muszą być osobno",
+      "lines": "Pozycje ({{count}})",
+      "knownNow": "Znane teraz",
+      "atGeneration": "Obliczane przy generowaniu",
+      "obligations": "{{count}} pozycj(e)",
+      "note": "Znana kwota pochodzi z pozycji stałych. Kwoty za czas, zużycie i pulę są ustalane przy generowaniu — użyj podglądu, aby zobaczyć je wcześniej.",
+      "preview": "Podgląd faktury",
+      "select": "Wybierz do wygenerowania",
+      "deselect": "Usuń z wyboru"
     }
   },
   "manualInvoices": {

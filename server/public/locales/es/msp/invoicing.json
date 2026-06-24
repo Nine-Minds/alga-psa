@@ -28,8 +28,12 @@
         "group": "Grupo",
         "servicePeriod": "Período de servicio",
         "invoiceWindow": "Ventana de factura",
-        "included": "Incluido"
-      }
+        "included": "Incluido",
+        "charge": "Cargo",
+        "status": "Estado",
+        "amount": "Importe"
+      },
+      "pageScopeNote": "{{count}} grupo(s) en esta página"
     },
     "groups": {
       "item": "Artículo {{count}}",
@@ -222,6 +226,71 @@
     },
     "loading": {
       "billingData": "Cargando datos de facturación"
+    },
+    "views": {
+      "all": "Todos",
+      "ready": "Listo",
+      "combinable": "Combinable",
+      "attention": "Requiere atención",
+      "notYetDue": "Aún no vence"
+    },
+    "status": {
+      "ready": "Listo",
+      "combine": "Combinar",
+      "separate": "Separar",
+      "notYetDue": "Aún no vence",
+      "approval": "Aprobación",
+      "blocked": "Bloqueado"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} seleccionado(s)",
+      "breakdown": "{{invoices}} factura(s) · {{combine}} combinadas · {{separate}} separadas",
+      "knownNow": "conocido ahora",
+      "knownPlusAtGeneration": "conocido ahora · {{count}} calculado al generar",
+      "empty": "Seleccione grupos o cargos para previsualizar o generar facturas.",
+      "pageScope": "{{groups}} grupo(s) · {{obligations}} cargo(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculado al generar",
+      "plusAtGeneration": "+ {{count}} al generar"
+    },
+    "window": {
+      "open": "Abierta",
+      "opensOn": "Abre el {{date}}",
+      "notOpen": "Aún no abierta"
+    },
+    "legend": {
+      "confirmed": "Importe conocido ahora",
+      "atGeneration": "Calculado al generar",
+      "combine": "Combinar en una factura",
+      "separate": "Debe facturarse por separado",
+      "notYetDue": "Aún no vence"
+    },
+    "filters": {
+      "windowOpen": "Ventana abierta",
+      "charge": "Cargo",
+      "currency": "Moneda",
+      "any": "cualquiera",
+      "clear": "Limpiar",
+      "countSummary": "{{groups}} grupo(s) · {{obligations}} cargo(s)"
+    },
+    "drawer": {
+      "eyebrow": "Enfocado",
+      "whySeparate": "Por qué deben separarse",
+      "lines": "Líneas ({{count}})",
+      "knownNow": "Conocido ahora",
+      "atGeneration": "Calculado al generar",
+      "obligations": "{{count}} cargo(s)",
+      "note": "El importe conocido proviene de líneas fijas. Los importes de tiempo, uso y bolsa se finalizan al generar; use Previsualizar para verlos antes.",
+      "preview": "Previsualizar factura",
+      "select": "Seleccionar para generar",
+      "deselect": "Quitar de la selección"
     }
   },
   "manualInvoices": {
