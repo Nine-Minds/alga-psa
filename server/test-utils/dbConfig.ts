@@ -152,6 +152,13 @@ async function recreateDatabase(
     $$;`);
     await adminConnection.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${appUser}`);
     await adminConnection.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${appUser}`);
+    // Some migrations and test helpers run CREATE ROLE / ALTER ... OWNER TO postgres
+    // as the app user; make the app role a member of the admin role so those
+    // succeed (resetDatabase used to do this before initialize was collapsed to a
+    // single bootstrap).
+    if (adminUser !== appUser) {
+      await adminConnection.raw(`GRANT ${adminUser} TO ${appUser}`);
+    }
   } finally {
     await adminConnection.destroy().catch(() => undefined);
   }
