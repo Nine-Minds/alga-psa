@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -82,6 +83,7 @@ export default function McpServerSettings() {
 
   // Add-IdP form
   const [idpForm, setIdpForm] = useState({ kind: 'microsoft', entraTenantId: '', issuer: '', jwksUri: '', audience: '', subjectClaim: '' });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   // Create-agent form
   const [agentForm, setAgentForm] = useState({ name: '', idpIssuer: '', idpSubject: '', roleIds: [] as string[] });
   const [suggestion, setSuggestion] = useState<{ microsoft?: { entraTenantId: string; displayName: string | null } }>({});
@@ -312,15 +314,29 @@ export default function McpServerSettings() {
             </div>
 
             {idpForm.kind === 'microsoft' && (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div><Label htmlFor="idp-entra-tid">Entra tenant ID</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="e.g. 00000000-0000-0000-0000-000000000000" /></div>
-                <div><Label htmlFor="idp-audience">Audience (optional)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" /></div>
-                <div><Label htmlFor="idp-claim-ms">Subject claim</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">Leave blank unless your provider tells you otherwise.</p></div>
+              <div className="space-y-3">
+                <div className="md:w-1/2"><Label htmlFor="idp-entra-tid">Entra tenant ID</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="e.g. 00000000-0000-0000-0000-000000000000" /></div>
+                <button
+                  type="button"
+                  id="mcp-idp-advanced-toggle"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  aria-expanded={showAdvanced}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))]"
+                >
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? '' : '-rotate-90'}`} />
+                  Advanced options
+                </button>
+                {showAdvanced && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div><Label htmlFor="idp-audience">Audience (optional)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" /></div>
+                    <div><Label htmlFor="idp-claim-ms">Subject claim</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">Leave blank unless your provider tells you otherwise.</p></div>
+                  </div>
+                )}
               </div>
             )}
 
             {idpForm.kind === 'google' && (
-              <p className="text-sm text-[rgb(var(--color-text-600))]">Nothing to configure — Google's issuer &amp; keys are well-known. An agent's subject is its service-account id (<code>sub</code>).</p>
+              <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">Google needs no setup. Agents sign in with their Google service-account ID.</div>
             )}
 
             {idpForm.kind === 'custom' && (
