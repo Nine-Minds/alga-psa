@@ -23,6 +23,7 @@ import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { ArrowLeft } from 'lucide-react';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
+import QuoteRichText from './QuoteRichText';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -1021,7 +1022,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
         <section className="space-y-2 rounded-lg border border-border p-4">
           <h3 className="text-base font-semibold">{t('quoteDetail.sections.scopeOfWork', { defaultValue: 'Scope of Work' })}</h3>
-          <p className="whitespace-pre-wrap text-sm text-foreground">{quote.description || '—'}</p>
+          <QuoteRichText content={quote.description} className="text-sm text-foreground" />
         </section>
 
         {quote.status === 'accepted' && (

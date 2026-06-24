@@ -113,7 +113,7 @@ const buildStandardQuoteDefaultAst = (): TemplateAst => ({
         style: { inline: { margin: '0 0 20px 0', gap: '8px' } },
         children: [
           { id: 'quote-heading', type: 'text', content: { type: 'binding', bindingId: 'title' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.3 } } },
-          { id: 'scope-text', type: 'text', content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
+          { id: 'scope-text', type: 'text', richText: true, content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
         ],
       },
       // ── Line items table ──────────────────────────────────────────
@@ -305,7 +305,7 @@ const buildStandardQuoteDetailedAst = (): TemplateAst => ({
         style: { inline: { margin: '0 0 20px 0', gap: '8px' } },
         children: [
           { id: 'quote-heading', type: 'text', content: { type: 'binding', bindingId: 'title' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.3 } } },
-          { id: 'scope-text', type: 'text', content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
+          { id: 'scope-text', type: 'text', richText: true, content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
           { id: 'client-notes-text', type: 'text', content: { type: 'binding', bindingId: 'clientNotes' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontStyle: 'italic' } } },
         ],
       },
@@ -503,7 +503,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
         style: { inline: { margin: '0 0 20px 0', gap: '8px' } },
         children: [
           { id: 'quote-heading', type: 'text', content: { type: 'binding', bindingId: 'title' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.3 } } },
-          { id: 'scope-text', type: 'text', content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
+          { id: 'scope-text', type: 'text', richText: true, content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
         ],
       },
       // ── Monthly items table ───────────────────────────────────────
@@ -732,7 +732,7 @@ const buildStandardQuoteByLocationAst = (): TemplateAst => ({
         style: { inline: { margin: '0 0 20px 0', gap: '8px' } },
         children: [
           { id: 'quote-heading', type: 'text', content: { type: 'binding', bindingId: 'title' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.3 } } },
-          { id: 'scope-text', type: 'text', content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
+          { id: 'scope-text', type: 'text', richText: true, content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
         ],
       },
       // ── Per-location bands: header + items table + subtotal row ───
