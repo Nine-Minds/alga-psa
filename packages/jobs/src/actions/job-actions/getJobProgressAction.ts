@@ -4,7 +4,10 @@ import { withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 
-import { JobStatus } from '@alga-psa/jobs';
+// Concrete module, not the '@alga-psa/jobs' barrel — this file is reached via the
+// barrel's `export * from './actions'`, so importing the JobStatus runtime enum
+// back through the barrel risks an undefined value under a load-order cycle.
+import { JobStatus } from '../../types/job';
 import type { JobHeader, JobDetail } from '@alga-psa/jobs';
 import { JobMetrics } from '@alga-psa/jobs/actions';
 
