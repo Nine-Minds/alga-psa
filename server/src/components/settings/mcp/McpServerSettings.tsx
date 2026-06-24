@@ -40,6 +40,21 @@ function agentProvider(a: Agent, idps: TrustedIdp[]): string {
   return a.idp_issuer ? hostOf(a.idp_issuer) : '—';
 }
 
+/** A card header that carries its place in the setup sequence. */
+function StepHeading({ step, title, description }: { step: number; title: string; description: string }) {
+  return (
+    <CardHeader>
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] text-xs font-semibold text-[rgb(var(--color-primary-700))]">
+          {step}
+        </span>
+        <CardTitle>{title}</CardTitle>
+      </div>
+      <CardDescription>{description}</CardDescription>
+    </CardHeader>
+  );
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     credentials: 'same-origin',
@@ -259,12 +274,9 @@ export default function McpServerSettings() {
         </div>
       )}
 
-      {/* Trusted IdPs */}
+      {/* Step 1 — Trusted providers */}
       <Card>
-        <CardHeader>
-          <CardTitle>Identity providers</CardTitle>
-          <CardDescription>Agents sign in through these providers. Add the ones your agents use.</CardDescription>
-        </CardHeader>
+        <StepHeading step={1} title="Identity providers" description="Agents sign in through these providers. Add the ones your agents use." />
         <CardContent className="space-y-4">
           {idps.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-500))]">No identity providers yet.</p>
@@ -332,11 +344,12 @@ export default function McpServerSettings() {
 
       {/* Agents */}
       <Card>
-        <CardHeader>
-          <CardTitle>Agents</CardTitle>
-          <CardDescription>Each agent signs in as itself and gets the roles you assign.</CardDescription>
-        </CardHeader>
+        <StepHeading step={2} title="Agents" description="Each agent signs in as itself and gets the roles you assign." />
         <CardContent className="space-y-4">
+          {idps.length === 0 ? (
+            <p className="text-sm text-[rgb(var(--color-text-500))]">Add an identity provider in step 1 first. Then add agents that sign in through it.</p>
+          ) : (
+            <>
           {agents.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-500))]">No agents yet.</p>
           ) : (
@@ -373,6 +386,8 @@ export default function McpServerSettings() {
             </div>
           </div>
           <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || (idps.length > 0 && !agentForm.idpIssuer)}>Add agent</Button>
+            </>
+          )}
         </CardContent>
       </Card>
 
