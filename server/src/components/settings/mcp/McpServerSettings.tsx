@@ -45,8 +45,8 @@ function agentProvider(a: Agent, idps: TrustedIdp[]): string {
 function StepHeading({ step, title, description }: { step: number; title: string; description: string }) {
   return (
     <CardHeader>
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] text-xs font-semibold text-[rgb(var(--color-primary-700))]">
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-primary-600))] text-xs font-semibold text-white">
           {step}
         </span>
         <CardTitle>{title}</CardTitle>
@@ -286,7 +286,7 @@ export default function McpServerSettings() {
             <DataTable data={idps} columns={idpColumns} pagination={false} />
           )}
           {suggestion.microsoft && !idps.some((p) => p.kind === 'microsoft') && (
-            <div id="mcp-ms-suggestion" className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))] px-3 py-2 text-sm dark:bg-[rgb(var(--color-primary-400)/0.15)]">
+            <div id="mcp-ms-suggestion" className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">
               <span>You're already connected to Microsoft{suggestion.microsoft.displayName ? ` (${suggestion.microsoft.displayName})` : ''}. Use this directory for agents?</span>
               <Button
                 id="mcp-use-ms-connection"
@@ -321,7 +321,7 @@ export default function McpServerSettings() {
                   id="mcp-idp-advanced-toggle"
                   onClick={() => setShowAdvanced((v) => !v)}
                   aria-expanded={showAdvanced}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))]"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
                 >
                   <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? '' : '-rotate-90'}`} />
                   Advanced options
