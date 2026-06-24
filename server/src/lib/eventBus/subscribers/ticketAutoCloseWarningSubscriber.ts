@@ -131,5 +131,9 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
     logger.error('[TicketAutoCloseWarningSubscriber] Failed to handle event', {
       error: error instanceof Error ? error.message : String(error),
     });
+    // Rethrow so the event bus redelivers. The handler already set
+    // warning_sent_at (so the scan won't re-publish), so swallowing here would
+    // drop the warning permanently; redelivery retries the send until it lands.
+    throw error;
   }
 }

@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 
 import { getConnection } from '@alga-psa/db';
+import { isEnterprise } from '@alga-psa/core';
 import { getJobScheduler } from '../jobSchedulerAccessor';
 
 const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
@@ -68,7 +69,7 @@ export async function scheduleCleanupWebhookDeliveriesJob(
   cronExpression: string = '*/15 * * * *',
 ): Promise<string | null> {
   // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
-  if (process.env.EDITION === 'enterprise' || process.env.EDITION === 'ee') {
+  if (isEnterprise) {
     return null;
   }
   try {

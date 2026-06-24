@@ -12,7 +12,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
 }));
 
-vi.mock('../../lib/search/upsert', () => ({
+vi.mock('@alga-psa/search/upsert', () => ({
   upsertSearchDoc: mocks.upsertSearchDoc,
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));
@@ -21,19 +21,19 @@ vi.mock('../../lib/jobs', () => ({
   scheduleSearchVisibleUserReindexJob: mocks.scheduleSearchVisibleUserReindexJob,
 }));
 
-import { clientIndexer } from '../../lib/search/indexers/client';
-import { userIndexer } from '../../lib/search/indexers/user';
-import { ticketIndexer } from '../../lib/search/indexers/ticket';
-import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
-import { invoiceIndexer } from '../../lib/search/indexers/invoice';
-import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
-import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
-import { projectIndexer } from '../../lib/search/indexers/project';
-import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
-import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
-import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
-import { documentIndexer } from '../../lib/search/indexers/document';
-import { statusIndexer } from '../../lib/search/indexers/status';
+import { clientIndexer } from '@alga-psa/search/indexers/client';
+import { userIndexer } from '@alga-psa/search/indexers/user';
+import { ticketIndexer } from '@alga-psa/search/indexers/ticket';
+import { ticketCommentIndexer } from '@alga-psa/search/indexers/ticket_comment';
+import { invoiceIndexer } from '@alga-psa/search/indexers/invoice';
+import { invoiceItemIndexer } from '@alga-psa/search/indexers/invoice_item';
+import { invoiceAnnotationIndexer } from '@alga-psa/search/indexers/invoice_annotation';
+import { projectIndexer } from '@alga-psa/search/indexers/project';
+import { projectPhaseIndexer } from '@alga-psa/search/indexers/project_phase';
+import { projectTaskIndexer } from '@alga-psa/search/indexers/project_task';
+import { projectTaskCommentIndexer } from '@alga-psa/search/indexers/project_task_comment';
+import { documentIndexer } from '@alga-psa/search/indexers/document';
+import { statusIndexer } from '@alga-psa/search/indexers/status';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import { runSearchBackfill } from '../../scripts/search-backfill';
 import type { SearchDoc } from '@alga-psa/types';

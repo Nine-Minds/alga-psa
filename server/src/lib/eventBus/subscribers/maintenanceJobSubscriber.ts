@@ -12,7 +12,12 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { runMaintenanceJob } from '@alga-psa/jobs/fanout';
+import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
+// IMPORTANT: use the SERVER-LOCAL registry — registerAllHandlers populates
+// server/src/lib/jobs/jobHandlerRegistry (a different singleton than the
+// @alga-psa/jobs one), so rmm/huntress are only registered there.
+import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
+import { runWithTenant } from '@alga-psa/db';
 
 let isRegistered = false;
 
@@ -40,14 +45,26 @@ export async function unregisterMaintenanceJobSubscriber(): Promise<void> {
 
 async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
   const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse(event);
-  const { jobName } = validated.payload;
+  const { jobName, jobId, data, tenantId } = validated.payload;
 
   try {
-    logger.info(`[MaintenanceJobSubscriber] Running maintenance job '${jobName}'`);
-    const result = await runMaintenanceJob(jobName);
-    logger.info(`[MaintenanceJobSubscriber] Maintenance job '${jobName}' complete`, result);
+    if (isKnownMaintenanceJob(jobName)) {
+      // Global maintenance fan-out: run once / across all tenants.
+      logger.info(`[MaintenanceJobSubscriber] Running maintenance job '${jobName}'`);
+      const result = await runMaintenanceJob(jobName);
+      logger.info(`[MaintenanceJobSubscriber] Maintenance job '${jobName}' complete`, result);
+    } else {
+      // Worker-scheduled job (e.g. rmm/huntress) forwarded for server-side
+      // execution because its handler imports src-consumed packages the worker
+      // can't load. Run the registered handler directly for the tenant.
+      logger.info(`[MaintenanceJobSubscriber] Running forwarded job '${jobName}' for tenant ${tenantId}`);
+      await runWithTenant(tenantId, () =>
+        executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any),
+      );
+      logger.info(`[MaintenanceJobSubscriber] Forwarded job '${jobName}' complete`);
+    }
   } catch (error) {
-    logger.error(`[MaintenanceJobSubscriber] Maintenance job '${jobName}' failed`, { error });
+    logger.error(`[MaintenanceJobSubscriber] Job '${jobName}' failed`, { error });
     throw error;
   }
 }

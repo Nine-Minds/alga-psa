@@ -182,5 +182,8 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
     logger.error('[CreditExpiringSubscriber] Failed to handle event', {
       error: error instanceof Error ? error.message : String(error),
     });
+    // Rethrow so the event bus redelivers (matches maintenanceJobSubscriber);
+    // swallowing would silently drop the expiring-credit notification.
+    throw error;
   }
 }

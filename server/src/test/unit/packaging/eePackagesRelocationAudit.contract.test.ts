@@ -205,4 +205,21 @@ describe('EE package relocation audits', () => {
     expect(fs.existsSync(repoPath('ee/packages/sla'))).toBe(false);
     expect(fs.existsSync(repoPath('ee/packages/licensing'))).toBe(false);
   });
+
+  it('keeps the Temporal worker (ee/temporal-workflows) free of OSS server-code imports', () => {
+    // The worker runs on plain Node ESM and must not import the Next.js server
+    // (server/src), the server-local '@/' alias, or '@enterprise' (which the
+    // worker tsconfig maps to ../server/src). Handlers that need server-side code
+    // run there via the event bus — see
+    // docs/architecture/temporal-worker-job-execution.md.
+    const serverImport = /(?:from|import\()\s*['"](?:server\/src|@\/|@enterprise)/;
+    for (const sourcePath of listSourceFiles('ee/temporal-workflows/src')) {
+      if (/(?:__tests__|\.test\.|\.spec\.)/.test(sourcePath)) continue;
+      const source = readSource(sourcePath);
+      expect(
+        source,
+        `${sourcePath} must not import OSS server code (server/src, @/, @enterprise)`,
+      ).not.toMatch(serverImport);
+    }
+  });
 });

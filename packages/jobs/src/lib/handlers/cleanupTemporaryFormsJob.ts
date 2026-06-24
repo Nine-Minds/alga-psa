@@ -6,6 +6,7 @@
  */
 
 import { withAdminTransaction } from '@alga-psa/db';
+import { isEnterprise } from '@alga-psa/core';
 import { getTaskInboxService } from '@alga-psa/shared/task-inbox';
 import logger from '@alga-psa/core/logger';
 import { getJobScheduler } from '../jobSchedulerAccessor';
@@ -54,7 +55,7 @@ export async function scheduleCleanupTemporaryFormsJob(
   cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
 ): Promise<string | null> {
   // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
-  if (process.env.EDITION === 'enterprise' || process.env.EDITION === 'ee') {
+  if (isEnterprise) {
     return null;
   }
   try {

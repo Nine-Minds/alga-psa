@@ -90,6 +90,9 @@ export default defineConfig({
       { find: '@enterprise', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
       { find: '@alga-psa/shared', replacement: path.resolve(__dirname, '../shared') },
+      // @alga-psa/search export names mirror its src layout, so a prefix alias
+      // resolves all subpaths (./sql, ./indexers/*, ...) to source for Vitest.
+      { find: '@alga-psa/search', replacement: path.resolve(__dirname, '../packages/search/src') },
 
       // Workspace packages are not guaranteed to be linked into node_modules in all dev/test setups.
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.

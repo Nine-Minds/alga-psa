@@ -224,6 +224,17 @@ const nextConfig = {
       '@alga-psa/notifications/hooks': '../packages/notifications/src/hooks/index.ts',
       '@alga-psa/scheduling': '../packages/scheduling/src',
       '@alga-psa/scheduling/': '../packages/scheduling/src/',
+      // @alga-psa/jobs: export names don't mirror src (./fanout -> src/lib/fanout),
+      // so lib/ subpaths get explicit overrides (longest-match wins). search mirrors src.
+      '@alga-psa/jobs': '../packages/jobs/src',
+      '@alga-psa/jobs/fanout': '../packages/jobs/src/lib/fanout',
+      '@alga-psa/jobs/runner': '../packages/jobs/src/lib/jobRunnerAccessor.ts',
+      '@alga-psa/jobs/scheduler': '../packages/jobs/src/lib/jobSchedulerAccessor.ts',
+      '@alga-psa/jobs/handlers': '../packages/jobs/src/lib/handlers',
+      '@alga-psa/jobs/handler-utils': '../packages/jobs/src/lib/handler-utils',
+      '@alga-psa/jobs/runners': '../packages/jobs/src/lib/jobs/runners',
+      '@alga-psa/search': '../packages/search/src',
+      '@alga-psa/search/': '../packages/search/src/',
       '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : './src/empty/index.ts',
@@ -565,6 +576,18 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
+      // mirror its src layout (./fanout -> src/lib/fanout, ./handlers/* ->
+      // src/lib/handlers/*), so the lib/ subpaths need explicit overrides
+      // (longest-match wins over the bare prefix alias). search mirrors src.
+      '@alga-psa/jobs': path.join(__dirname, '../packages/jobs/src'),
+      '@alga-psa/jobs/fanout': path.join(__dirname, '../packages/jobs/src/lib/fanout'),
+      '@alga-psa/jobs/runner': path.join(__dirname, '../packages/jobs/src/lib/jobRunnerAccessor.ts'),
+      '@alga-psa/jobs/scheduler': path.join(__dirname, '../packages/jobs/src/lib/jobSchedulerAccessor.ts'),
+      '@alga-psa/jobs/handlers': path.join(__dirname, '../packages/jobs/src/lib/handlers'),
+      '@alga-psa/jobs/handler-utils': path.join(__dirname, '../packages/jobs/src/lib/handler-utils'),
+      '@alga-psa/jobs/runners': path.join(__dirname, '../packages/jobs/src/lib/jobs/runners'),
+      '@alga-psa/search': path.join(__dirname, '../packages/search/src'),
       '@alga-psa/agent-tooling': path.join(__dirname, '../packages/agent-tooling/src'),
       '@alga-psa/agent-tooling/': `${path.join(__dirname, '../packages/agent-tooling/src')}/`,
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),

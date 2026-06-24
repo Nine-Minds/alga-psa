@@ -499,9 +499,6 @@ export const scheduleTeamsMeetingArtifactSubscriptionRenewalJob = async (
   if (isEnterpriseWorkflowEdition()) {
     return null;
   }
-  if (!isEnterpriseWorkflowEdition()) {
-    return null;
-  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData>(
     'renew-teams-meeting-artifact-subscriptions',
@@ -636,9 +633,6 @@ export const scheduleWorkflowQuotaResumeScanJob = async (
 ): Promise<string | null> => {
   // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
   if (isEnterpriseWorkflowEdition()) {
-    return null;
-  }
-  if (!isEnterpriseWorkflowEdition()) {
     return null;
   }
   const scheduler = await initializeScheduler();
