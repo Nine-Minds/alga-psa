@@ -41,8 +41,8 @@ export async function listAssignableRoles(_tenant: string): Promise<unknown[]> {
 export async function getIdpSuggestions(_tenant: string): Promise<Record<string, unknown>> {
   return {};
 }
-export async function exportAgentAudit(_tenant: string, _filter?: unknown): Promise<unknown[]> {
-  return [];
+export async function exportAgentAudit(_tenant: string, _filter?: unknown): Promise<{ rows: unknown[]; total: number }> {
+  return { rows: [], total: 0 };
 }
 export async function authenticateMcpAdmin(_req: unknown): Promise<McpAdminContext | null> {
   return null;

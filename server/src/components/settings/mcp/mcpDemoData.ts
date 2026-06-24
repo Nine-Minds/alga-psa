@@ -97,34 +97,38 @@ export const DEMO_SUGGESTION = {
   microsoft: { entraTenantId: MS_TENANT, displayName: 'Acme Corp' },
 };
 
-export function demoAudit(agentId: string): AuditRow[] {
+// A burst of synthetic agent calls, newest first, large enough to span many pages
+// so server-style pagination is exercisable.
+const DEMO_AUDIT_COUNT = 137;
+const DEMO_AUDIT_TOOLS = [
+  'tickets.list', 'tickets.update', 'tickets.get', 'tickets.comment',
+  'contacts.search', 'contacts.get', 'companies.get', 'projects.list',
+  'time_entries.create', 'assets.search', 'invoices.create', 'invoices.send',
+  'schedules.update',
+];
+
+function demoAuditAll(agentId: string): AuditRow[] {
   const base = Date.parse('2026-06-24T14:00:00Z');
-  const mins = (n: number) => new Date(base - n * 60_000).toISOString();
-  // Enough rows to span more than one page, so the activity log's pager shows.
-  const events: Array<[string, boolean, string, number]> = [
-    ['tickets.list', true, 'allow', 200],
-    ['tickets.update', true, 'allow', 200],
-    ['invoices.create', false, 'deny', 403],
-    ['contacts.search', true, 'allow', 200],
-    ['tickets.get', true, 'allow', 200],
-    ['time_entries.create', true, 'allow', 201],
-    ['projects.list', true, 'allow', 200],
-    ['invoices.send', false, 'deny', 403],
-    ['assets.search', true, 'allow', 200],
-    ['tickets.comment', true, 'allow', 201],
-    ['companies.get', true, 'allow', 200],
-    ['schedules.update', false, 'deny', 409],
-    ['tickets.list', true, 'allow', 200],
-    ['contacts.get', true, 'allow', 200],
-  ];
-  return events.map(([tool, ok, decision, status_code], i) => ({
-    agent_id: agentId,
-    tool,
-    ok,
-    decision,
-    status_code,
-    created_at: mins((i + 1) * 7),
-  }));
+  const rows: AuditRow[] = [];
+  for (let i = 0; i < DEMO_AUDIT_COUNT; i++) {
+    const blocked = i % 9 === 4;
+    rows.push({
+      agent_id: agentId,
+      tool: DEMO_AUDIT_TOOLS[i % DEMO_AUDIT_TOOLS.length],
+      ok: !blocked,
+      decision: blocked ? 'deny' : 'allow',
+      status_code: blocked ? 403 : 200,
+      created_at: new Date(base - (i + 1) * 4_000).toISOString(),
+    });
+  }
+  return rows;
+}
+
+/** One server-style page of the demo audit: the slice plus the full total. */
+export function demoAuditPage(agentId: string, page: number, pageSize: number): { rows: AuditRow[]; total: number } {
+  const all = demoAuditAll(agentId);
+  const start = Math.max(0, (page - 1) * pageSize);
+  return { rows: all.slice(start, start + pageSize), total: all.length };
 }
 
 export function demoState(mode: McpDemoMode): {

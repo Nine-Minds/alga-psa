@@ -13,7 +13,9 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow } from './mcpTypes';
-import { getMcpDemoMode, demoState, demoAudit } from './mcpDemoData';
+import { getMcpDemoMode, demoState, demoAuditPage } from './mcpDemoData';
+
+const AUDIT_PAGE_SIZE = 10;
 
 function providerLabel(kind?: TrustedIdp['kind']): string {
   if (kind === 'microsoft') return 'Microsoft Entra';
@@ -101,6 +103,8 @@ export default function McpServerSettings() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [auditAgent, setAuditAgent] = useState<Agent | null>(null);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotal, setAuditTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -159,15 +163,22 @@ export default function McpServerSettings() {
       await reloadAgents();
     });
 
-  const loadAudit = (agent: Agent) =>
+  const loadAudit = (agent: Agent, page = 1) =>
     run(async () => {
       setAuditAgent(agent);
       if (demoMode) {
-        setAudit(demoAudit(agent.agent_id));
+        const { rows, total } = demoAuditPage(agent.agent_id, page, AUDIT_PAGE_SIZE);
+        setAudit(rows);
+        setAuditTotal(total);
+        setAuditPage(page);
         return;
       }
-      const r = await api<{ data: AuditRow[] }>(`/api/v1/mcp/audit?agentId=${encodeURIComponent(agent.agent_id)}&limit=200`);
+      const r = await api<{ data: AuditRow[]; total: number }>(
+        `/api/v1/mcp/audit?agentId=${encodeURIComponent(agent.agent_id)}&page=${page}&pageSize=${AUDIT_PAGE_SIZE}`,
+      );
       setAudit(r.data);
+      setAuditTotal(r.total);
+      setAuditPage(page);
     });
 
   const toggleRole = (roleId: string) =>
@@ -463,7 +474,14 @@ export default function McpServerSettings() {
         <Card>
           <CardHeader><CardTitle>{auditAgent ? `Activity — ${auditAgent.name}` : 'Activity'}</CardTitle><CardDescription>What it did, and whether each action was allowed.</CardDescription></CardHeader>
           <CardContent>
-            <DataTable data={audit} columns={auditColumns} />
+            <DataTable
+              data={audit}
+              columns={auditColumns}
+              totalItems={auditTotal}
+              currentPage={auditPage}
+              pageSize={AUDIT_PAGE_SIZE}
+              onPageChange={(page) => auditAgent && loadAudit(auditAgent, page)}
+            />
           </CardContent>
         </Card>
       )}
