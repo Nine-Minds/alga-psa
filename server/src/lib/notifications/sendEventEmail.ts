@@ -10,6 +10,7 @@ import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
+import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
@@ -440,7 +441,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       notificationSubtypeId: params.notificationSubtypeId,
       replyContext: effectiveReplyContext,
       templateProcessor: processor,
-      headers: params.headers,
+      // RFC 3834: mark event-driven notifications as auto-generated so compliant
+      // recipient systems do not auto-reply (caller-supplied headers win on conflict).
+      headers: { ...AUTO_GENERATED_MAIL_HEADERS, ...params.headers },
       attachments: params.attachments,
       providerId: params.providerId,
       from: params.from,
