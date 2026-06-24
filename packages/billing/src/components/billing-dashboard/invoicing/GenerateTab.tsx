@@ -1,10 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@alga-psa/ui/components/Button';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Coins, FileText, Receipt } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import type { IService, IClient } from '@alga-psa/types';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { getServices } from '@alga-psa/billing/actions';
@@ -16,29 +12,24 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from 'react-i18next';
 
+export type InvoiceType = 'automatic' | 'manual' | 'prepayment';
+
 interface GenerateTabProps {
   initialServices: IService[];
+  // Invoice type is owned by InvoicingHub (the selector rides the tab-bar row).
+  invoiceType: InvoiceType;
   onGenerateSuccess: () => void;
   refreshTrigger: number;
 }
 
-type InvoiceType = 'automatic' | 'manual' | 'prepayment';
-
-interface SelectOption {
-  value: string;
-  label: React.JSX.Element;
-  textValue?: string;
-}
-
 const GenerateTab: React.FC<GenerateTabProps> = ({
   initialServices,
+  invoiceType,
   onGenerateSuccess,
   refreshTrigger
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const router = useRouter();
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
-  const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
   const [services, setServices] = useState<IService[]>([]);
@@ -81,63 +72,6 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     onGenerateSuccess();
   };
 
-  const handleViewDrafts = () => {
-    setShowSuccessDialog(false);
-    router.push('/msp/billing?tab=invoicing&subtab=drafts');
-  };
-
-  const allInvoiceTypeOptions: SelectOption[] = [
-    {
-      value: 'automatic',
-      textValue: t('generateTab.types.automatic', { defaultValue: 'Automatic Invoices' }),
-      label: (
-        <div className="flex items-center gap-2">
-          <Receipt className="h-4 w-4" />
-          <span>{t('generateTab.types.automatic', { defaultValue: 'Automatic Invoices' })}</span>
-        </div>
-      )
-    },
-    {
-      value: 'manual',
-      textValue: t('generateTab.types.manual', { defaultValue: 'Manual Invoice' }),
-      label: (
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          <span>{t('generateTab.types.manual', { defaultValue: 'Manual Invoice' })}</span>
-        </div>
-      )
-    },
-    {
-      value: 'prepayment',
-      textValue: t('generateTab.types.prepayment', { defaultValue: 'Prepayment' }),
-      label: (
-        <div className="flex items-center gap-2">
-          <Coins className="h-4 w-4" />
-          <span>{t('generateTab.types.prepayment', { defaultValue: 'Prepayment' })}</span>
-        </div>
-      )
-    }
-  ];
-
-  const invoiceTypeOptions = useMemo(() => {
-    if (billingEnabled) {
-      return allInvoiceTypeOptions;
-    }
-    return allInvoiceTypeOptions.filter(option => option.value !== 'prepayment');
-  }, [billingEnabled]);
-
-  const invoiceTypeDescription = {
-    automatic: t('generateTab.descriptions.automatic', {
-      defaultValue: 'Generate invoices for the recurring service periods that are due.',
-    }),
-    manual: t('generateTab.descriptions.manual', {
-      defaultValue: 'Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.',
-    }),
-    prepayment: t('generateTab.descriptions.prepayment', {
-      defaultValue: 'Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage.',
-    }),
-  } satisfies Record<InvoiceType, string>;
-
   const renderContent = () => {
     switch (invoiceType) {
       case 'automatic':
@@ -172,34 +106,16 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
 
   return (
     <>
-      {/* No enclosing card here: every invoice type renders its own elevated surface
-          (the automatic grid, and the manual/prepayment forms each wrap themselves in a
-          Card). Wrapping them again was a pane-on-a-pane. The type selector and content
-          rest directly on the page background — one level of elevation, not three. */}
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
-            {t('generateTab.fields.invoiceType', { defaultValue: 'Invoice Type' })}
-          </label>
-          <CustomSelect
-            value={invoiceType}
-            onValueChange={(value: string) => setInvoiceType(value as InvoiceType)}
-            options={invoiceTypeOptions}
-            className="w-full md:w-80"
-          />
-          <p className="mt-2 text-sm text-muted-foreground">
-            {invoiceTypeDescription[invoiceType]}
-          </p>
-        </div>
+      {/* The invoice-type selector lives in the tab bar (InvoicingHub); every
+          invoice type renders its own elevated surface, so the content rests
+          directly on the page background — one level of elevation, not three. */}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {renderContent()}
-      </div>
+      {renderContent()}
 
       <SuccessDialog
         isOpen={showSuccessDialog}
