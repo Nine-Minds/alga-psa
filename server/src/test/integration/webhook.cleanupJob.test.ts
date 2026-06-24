@@ -16,7 +16,7 @@ vi.mock('@/lib/db/db', () => ({
   })),
 }));
 
-import { cleanupWebhookDeliveriesJob } from '@/../src/services/cleanupWebhookDeliveriesJob';
+import { cleanupWebhookDeliveriesJob } from '@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob';
 
 describe('cleanupWebhookDeliveriesJob (T035)', () => {
   beforeEach(() => {

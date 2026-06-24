@@ -1,8 +1,8 @@
 import { Client, Connection, WorkflowHandle } from '@temporalio/client';
 import { Duration } from '@temporalio/common';
 import logger from '@alga-psa/core/logger';
-import { JobStatus } from 'server/src/types/job';
-import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
+import { JobStatus } from '../../../types/job';
+import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import {
   IJobRunner,
   JobHandlerConfig,
@@ -11,7 +11,7 @@ import {
   JobStatusInfo,
   BaseJobData,
   TemporalConfig,
-} from 'server/src/lib/jobs/interfaces';
+} from '../interfaces';
 
 /**
  * Temporal implementation of the IJobRunner interface

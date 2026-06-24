@@ -1,5 +1,5 @@
 import { runScheduledCreditBalanceValidation } from '@alga-psa/billing/actions/creditReconciliationActions';
-import { runWithTenant } from 'server/src/lib/db';
+import { runWithTenant } from '@alga-psa/db';
 
 export interface CreditReconciliationJobData extends Record<string, unknown> {
   tenantId: string;

@@ -8,6 +8,7 @@ import {
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
   entraAllTenantsSyncWorkflow,
+  maintenanceJobWorkflow,
   premiumTrialExpiryWorkflow,
 } from '../workflows';
 import * as dotenv from 'dotenv';
@@ -360,6 +361,46 @@ export async function setupSchedules() {
     }
 
     await backfillNinjaOneProactiveSchedules();
+
+    // Maintenance jobs that were per-tenant pg-boss crons in CE run on EE as one
+    // global Temporal Schedule each, fanning out across tenants inside the
+    // activity. overlap=SKIP + a short catchup window prevent run pile-up and
+    // post-downtime replay storms; crons keep their original (UTC) cadence.
+    const MAINTENANCE_FANOUT_SCHEDULES: Array<{ jobName: string; cron: string }> = [
+      { jobName: 'expired-credits', cron: '0 1 * * *' },
+      { jobName: 'credit-reconciliation', cron: '0 2 * * *' },
+      { jobName: 'cleanup-temporary-workflow-forms', cron: '0 2 * * *' },
+      { jobName: 'reconcile-bucket-usage', cron: '0 3 * * *' },
+      { jobName: 'process-renewal-queue', cron: '0 5 * * *' },
+      { jobName: 'search:reconcile', cron: '0 6 * * *' },
+      { jobName: 'expiring-credits-notification', cron: '0 9 * * *' },
+      { jobName: 'auto-close-tickets', cron: '*/15 * * * *' },
+      { jobName: 'cleanup-webhook-deliveries', cron: '*/15 * * * *' },
+      { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },
+      { jobName: 'renew-google-gmail-watch', cron: '*/30 * * * *' },
+      { jobName: 'renew-teams-meeting-artifact-subscriptions', cron: '*/30 * * * *' },
+      { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
+      { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
+    ];
+
+    for (const { jobName, cron } of MAINTENANCE_FANOUT_SCHEDULES) {
+      await upsertSchedule(client, `maintenance-fanout:${jobName}`, {
+        spec: {
+          cronExpressions: [cron],
+        },
+        action: {
+          type: 'startWorkflow',
+          workflowType: maintenanceJobWorkflow,
+          args: [{ jobName }],
+          taskQueue: ENTRA_WORKFLOW_TASK_QUEUE,
+          workflowExecutionTimeout: '20m',
+        },
+        policies: {
+          overlap: ScheduleOverlapPolicy.SKIP,
+          catchupWindow: '1m',
+        },
+      });
+    }
 
   } catch (error) {
     logger.error('Failed to connect to Temporal for schedule setup', error);

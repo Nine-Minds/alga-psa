@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { deleteSearchDoc, upsertSearchDoc } from '../../lib/search/upsert';
+import { deleteSearchDoc, upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { SearchDoc } from '@alga-psa/types';
 
 const sampleDoc = (overrides: Partial<SearchDoc> = {}): SearchDoc => ({

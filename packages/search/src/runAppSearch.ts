@@ -19,7 +19,7 @@ import {
   type SearchAppInput,
   type SearchAppResult,
   type SearchResultRow,
-} from '../actions/searchActionShared';
+} from './actions/searchActionShared';
 
 const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
 

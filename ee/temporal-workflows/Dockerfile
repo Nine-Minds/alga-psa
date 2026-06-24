@@ -68,6 +68,11 @@ RUN npx tsup
 WORKDIR /app/ee/packages/workflows
 RUN npx tsup
 
+# Build @alga-psa/jobs (dist/lib/handlers/*.mjs + dist/lib/fanout/index.mjs
+# required at runtime by the job + maintenance-fanout activities)
+WORKDIR /app/packages/jobs
+RUN npx tsup
+
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 

@@ -13,7 +13,7 @@ vi.mock('server/src/lib/db', () => ({
   runWithTenant: mocks.runWithTenant,
 }));
 
-import { creditReconciliationHandler } from 'server/src/lib/jobs/handlers/creditReconciliationHandler';
+import { creditReconciliationHandler } from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 
 const validationResults = {
   balanceValidCount: 3,

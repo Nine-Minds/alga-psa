@@ -5,11 +5,14 @@ import { registerCalendarSyncSubscriber, unregisterCalendarSyncSubscriber } from
 import { registerInternalNotificationSubscriber, unregisterInternalNotificationSubscriber } from './internalNotificationSubscriber';
 import { registerSlaSubscriber, unregisterSlaSubscriber } from './slaSubscriber';
 import { registerSlaNotificationSubscriber, unregisterSlaNotificationSubscriber } from './slaNotificationSubscriber';
+import { registerCreditExpiringSubscriber, unregisterCreditExpiringSubscriber } from './creditExpiringSubscriber';
+import { registerTicketAutoCloseWarningSubscriber, unregisterTicketAutoCloseWarningSubscriber } from './ticketAutoCloseWarningSubscriber';
 import { registerWebhookSubscriber, unregisterWebhookSubscriber } from './webhookSubscriber';
 import { registerSearchIndexSubscriber, unregisterSearchIndexSubscriber } from './searchIndexSubscriber';
 import { registerProjectWebhookSubscriber, unregisterProjectWebhookSubscriber } from './projectWebhookSubscriber';
 import { registerRmmAlertTicketClosedSubscriber, unregisterRmmAlertTicketClosedSubscriber } from './rmmAlertTicketClosedSubscriber';
 import { registerRmmAlertNotificationSubscriber, unregisterRmmAlertNotificationSubscriber } from './rmmAlertNotificationSubscriber';
+import { registerMaintenanceJobSubscriber, unregisterMaintenanceJobSubscriber } from './maintenanceJobSubscriber';
 
 type SubscriberRegistration = {
   name: string;
@@ -24,11 +27,14 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'internalNotification', register: registerInternalNotificationSubscriber },
   { name: 'sla', register: registerSlaSubscriber },
   { name: 'slaNotification', register: registerSlaNotificationSubscriber },
+  { name: 'creditExpiring', register: registerCreditExpiringSubscriber },
+  { name: 'ticketAutoCloseWarning', register: registerTicketAutoCloseWarningSubscriber },
   { name: 'webhook', register: registerWebhookSubscriber },
   { name: 'searchIndex', register: registerSearchIndexSubscriber },
   { name: 'projectWebhook', register: registerProjectWebhookSubscriber },
   { name: 'rmmAlertTicketClosed', register: registerRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: registerRmmAlertNotificationSubscriber },
+  { name: 'maintenanceJob', register: registerMaintenanceJobSubscriber },
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
@@ -39,6 +45,9 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'internalNotification', register: unregisterInternalNotificationSubscriber },
   { name: 'sla', register: unregisterSlaSubscriber },
   { name: 'slaNotification', register: unregisterSlaNotificationSubscriber },
+  { name: 'creditExpiring', register: unregisterCreditExpiringSubscriber },
+  { name: 'ticketAutoCloseWarning', register: unregisterTicketAutoCloseWarningSubscriber },
+  { name: 'maintenanceJob', register: unregisterMaintenanceJobSubscriber },
   { name: 'webhook', register: unregisterWebhookSubscriber },
   { name: 'searchIndex', register: unregisterSearchIndexSubscriber },
   { name: 'projectWebhook', register: unregisterProjectWebhookSubscriber },

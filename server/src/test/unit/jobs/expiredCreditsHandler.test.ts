@@ -18,7 +18,7 @@ vi.mock('server/src/lib/logging/auditLog', () => ({
   auditLog: mocks.auditLog,
 }));
 
-import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
+import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 
 const TENANT = 'tenant-1';
 

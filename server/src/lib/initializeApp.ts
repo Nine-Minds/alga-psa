@@ -1,6 +1,6 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
-import { logger, registerFeatureFlagChecker } from '@alga-psa/core';
+import { logger, registerFeatureFlagChecker, registerJobEnqueuer } from '@alga-psa/core';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
@@ -28,6 +28,7 @@ import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
+import { registerQboConnectionChangeHandler } from '@alga-psa/integrations/lib/qbo/qboConnectionChangeProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -133,6 +134,24 @@ export async function initializeApp() {
       EmailProviderManager: EmailProviderManager as any,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
+    // Let vertical packages (billing, client-portal) enqueue jobs without
+    // importing @alga-psa/jobs (which would create a vertical -> jobs cycle).
+    registerJobEnqueuer(async (jobName, data) => {
+      const jobService = await JobService.create();
+      const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
+        jobName,
+        data as Parameters<typeof jobService.createAndScheduleJob>[1],
+        'immediate',
+      );
+      return { jobId: jobRecord.id as string, scheduledJobId };
+    });
+    // Converge the accounting-sync schedule the moment a tenant connects or
+    // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
+    // next startup reconcile.
+    registerQboConnectionChangeHandler(async (tenantId) => {
+      const { scheduleAccountingSyncCycleJob } = await import('./jobs/handlers/accountingSyncCycleHandler');
+      await scheduleAccountingSyncCycleJob(tenantId);
+    });
     logger.info('Email provider registries initialized');
 
     // Schedule entries are now read directly by @alga-psa/user-activities via the
@@ -620,7 +639,7 @@ async function initializeJobScheduler(storageService: StorageService) {
     const RECONCILER_INTERVAL_MS = 5 * 60 * 1000;
     const tick = async () => {
       try {
-        const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
+        const { reconcileRmmPollingSchedules } = await import('@alga-psa/jobs/handlers/rmmAlertPollingHandlers');
         const runner = await initializeJobRunner();
         await reconcileRmmPollingSchedules(runner);
       } catch (error) {

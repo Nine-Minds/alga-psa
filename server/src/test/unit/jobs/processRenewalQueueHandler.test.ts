@@ -38,7 +38,7 @@ vi.mock('@shared/models/ticketModel', () => ({
   },
 }));
 
-import { processRenewalQueueHandler } from 'server/src/lib/jobs/handlers/processRenewalQueueHandler';
+import { processRenewalQueueHandler } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 
 const TENANT = 'b7e7a1f2-0000-4000-8000-000000000001';
 const CLIENT_ID = 'b7e7a1f2-0000-4000-8000-0000000000c1';

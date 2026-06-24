@@ -1,6 +1,8 @@
 import logger from '@alga-psa/core/logger';
 
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection } from '@alga-psa/db';
+import { isEnterprise } from '@alga-psa/core';
+import { getJobScheduler } from '../jobSchedulerAccessor';
 
 const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
 const WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE = 10_000;
@@ -66,9 +68,15 @@ export async function cleanupWebhookDeliveriesJob(): Promise<{
 export async function scheduleCleanupWebhookDeliveriesJob(
   cronExpression: string = '*/15 * * * *',
 ): Promise<string | null> {
+  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
+  if (isEnterprise) {
+    return null;
+  }
   try {
-    const { initializeScheduler } = await import('server/src/lib/jobs/index');
-    const scheduler = await initializeScheduler();
+    // The CE server registers its initializeScheduler via registerJobSchedulerAccessor
+    // so this package never imports server/src (which would drag the full server handler
+    // registry into the Temporal worker build).
+    const scheduler = await getJobScheduler();
 
     if (!scheduler) {
       logger.error('[WebhookCleanupJob] Scheduler unavailable, skipping webhook delivery cleanup scheduling');

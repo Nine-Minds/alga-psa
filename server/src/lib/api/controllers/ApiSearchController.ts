@@ -19,7 +19,7 @@ import { ApiSearchService } from '../services/ApiSearchService';
 import { runWithTenant } from '../../db';
 import { getConnection } from '../../db/db';
 import { createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
-import { runAppSearch } from '../../search/runAppSearch';
+import { runAppSearch } from '@alga-psa/search/runAppSearch';
 
 /**
  * Query-string schema for the GET endpoint. Mirrors `searchAppInputSchema`
