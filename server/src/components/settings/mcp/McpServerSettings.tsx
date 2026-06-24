@@ -78,6 +78,7 @@ export default function McpServerSettings() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [auditAgent, setAuditAgent] = useState<Agent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -136,13 +137,14 @@ export default function McpServerSettings() {
       await reloadAgents();
     });
 
-  const loadAudit = (agentId: string) =>
+  const loadAudit = (agent: Agent) =>
     run(async () => {
+      setAuditAgent(agent);
       if (demoMode) {
-        setAudit(demoAudit(agentId));
+        setAudit(demoAudit(agent.agent_id));
         return;
       }
-      const r = await api<{ data: AuditRow[] }>(`/api/v1/mcp/audit?agentId=${encodeURIComponent(agentId)}`);
+      const r = await api<{ data: AuditRow[] }>(`/api/v1/mcp/audit?agentId=${encodeURIComponent(agent.agent_id)}`);
       setAudit(r.data);
     });
 
@@ -217,7 +219,7 @@ export default function McpServerSettings() {
       sortable: false,
       render: (_v, a) => (
         <div className="flex justify-end gap-2">
-          <Button id={`mcp-audit-${a.agent_id}`} variant="outline" size="sm" onClick={() => loadAudit(a.agent_id)}>View activity</Button>
+          <Button id={`mcp-audit-${a.agent_id}`} variant="outline" size="sm" onClick={() => loadAudit(a)}>View activity</Button>
           {a.active ? (
             <Button id={`mcp-deactivate-${a.agent_id}`} variant="outline" size="sm" disabled={busy} onClick={() => setAgentActive(a, false)}>Deactivate</Button>
           ) : (
@@ -410,7 +412,7 @@ export default function McpServerSettings() {
       {/* Audit */}
       {audit.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Activity</CardTitle><CardDescription>What this agent did, and whether each action was allowed.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>{auditAgent ? `Activity — ${auditAgent.name}` : 'Activity'}</CardTitle><CardDescription>What it did, and whether each action was allowed.</CardDescription></CardHeader>
           <CardContent>
             <DataTable data={audit} columns={auditColumns} pagination={false} />
           </CardContent>
