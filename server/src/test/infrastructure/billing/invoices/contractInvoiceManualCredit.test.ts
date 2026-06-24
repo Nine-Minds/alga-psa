@@ -29,16 +29,10 @@ describe('Contract Invoice Manual Credit', () => {
     hasPermission: vi.fn(() => Promise.resolve(true))
   }));
 
-  vi.mock('@alga-psa/auth', () => ({
-    getSession: vi.fn(async () => ({
-      user: {
-        id: mockedUserId,
-        tenant: mockedTenantId
-      }
-    })),
-    withAuth: (fn: unknown) => fn,
-    withAuthCheck: (fn: unknown) => fn
-  }));
+  vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
   vi.mock('server/src/lib/analytics/posthog', () => ({
     analytics: {

@@ -26,32 +26,9 @@ import {
   expectError
 } from '../../../../test-utils/errorUtils';
 
-vi.mock('@alga-psa/auth', () => {
-  const getCurrentUser = vi.fn();
-  const hasPermission = vi.fn();
-  // Pass-through wrappers that honor the per-test getCurrentUser mock so
-  // withAuth-wrapped actions enforce auth the way these permission tests expect.
-  const requireUser = async () => {
-    const user = await getCurrentUser();
-    if (!user) throw new Error('Authentication required');
-    return user;
-  };
-  return {
-    getCurrentUser,
-    hasPermission,
-    withAuth: (action: any) => async (...args: any[]) => {
-      const user = await requireUser();
-      return action(user, { tenant: user.tenant }, ...args);
-    },
-    withOptionalAuth: (action: any) => async (...args: any[]) => {
-      const user = await getCurrentUser();
-      return action(user ?? null, user ? { tenant: user.tenant } : null, ...args);
-    },
-    withAuthCheck: (action: any) => async (...args: any[]) => {
-      const user = await requireUser();
-      return action(user, ...args);
-    },
-  };
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../test-utils/testMocks');
+  return createAuthModuleMock();
 });
 
 describe('Project Permissions Infrastructure', () => {

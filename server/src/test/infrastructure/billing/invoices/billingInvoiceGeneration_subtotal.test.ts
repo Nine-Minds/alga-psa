@@ -18,22 +18,10 @@ import { TextEncoder as NodeTextEncoder } from 'util';
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  })),
-  getCurrentUser: vi.fn(async () => ({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' })),
-  // Pass-through so withAuth-wrapped server actions run with the mocked user/tenant.
-  withAuth: (action: any) => async (...args: any[]) =>
-    action({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' }, { tenant: mockedTenantId }, ...args),
-  withOptionalAuth: (action: any) => async (...args: any[]) =>
-    action({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' }, { tenant: mockedTenantId }, ...args),
-  withAuthCheck: (action: any) => async (...args: any[]) =>
-    action({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' }, ...args)
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {

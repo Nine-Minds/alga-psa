@@ -26,25 +26,10 @@ process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : proces
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
-    (...args: any[]) =>
-      action(
-        {
-          user_id: mockedUserId,
-          id: mockedUserId,
-          tenant: mockedTenantId
-        },
-        { tenant: mockedTenantId },
-        ...args,
-      ),
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
