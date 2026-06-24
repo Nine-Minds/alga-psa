@@ -34,7 +34,7 @@ import {
 } from '@alga-psa/shared/rmm/alerts';
 import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
 import { tacticalRmmAlertFetcher } from '@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher';
-import type { IJobRunner } from '../interfaces';
+import type { IJobRunner } from '../jobs/interfaces';
 
 export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 export const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';

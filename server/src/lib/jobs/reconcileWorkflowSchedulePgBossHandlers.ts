@@ -14,7 +14,7 @@ import type { IJobRunner, JobHandlerConfig } from './interfaces';
 import {
   workflowRecurringScheduledRunHandler,
   type WorkflowScheduledRunJobData,
-} from './handlers/workflowScheduledRunHandlers';
+} from '@alga-psa/jobs/handlers/workflowScheduledRunHandlers';
 
 type IntrospectablePgBossRunner = IJobRunner & {
   hasHandler?: (jobName: string) => boolean;

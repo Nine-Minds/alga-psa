@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-import type { BaseJobData } from 'server/src/lib/jobs/interfaces';
+import type { BaseJobData } from '../jobs/interfaces';
 
 export interface ExtensionScheduledInvocationJobData extends BaseJobData {
   installId: string;

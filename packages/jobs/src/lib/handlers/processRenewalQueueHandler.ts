@@ -1,4 +1,4 @@
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { normalizeClientContract } from '@shared/billingClients/clientContracts';
 import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';

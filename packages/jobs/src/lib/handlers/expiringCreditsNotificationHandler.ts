@@ -1,10 +1,9 @@
 import { Knex } from 'knex';
-import { runWithTenant } from 'server/src/lib/db';
-import { getConnection } from 'server/src/lib/db/db';
+import { runWithTenant, getConnection } from '@alga-psa/db';
 import { getEmailNotificationService } from '@alga-psa/notifications';
-import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
-import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
-import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { ICreditTracking } from '@alga-psa/types';
+import { formatCurrency, formatDate } from '../handler-utils/formatters';
+import { toPlainDate, toISODate } from '../handler-utils/dateTimeUtils';
 
 export interface ExpiringCreditsNotificationJobData extends Record<string, unknown> {
   tenantId: string;
@@ -17,7 +16,7 @@ export interface ExpiringCreditsNotificationJobData extends Record<string, unkno
  * 1. Finds credits that will expire within the configured notification thresholds
  * 2. Groups them by client and expiration date
  * 3. Sends notifications to client contacts
- * 
+ *
  * @param data Job data containing tenant ID and optional client ID
  */
 export async function expiringCreditsNotificationHandler(data: ExpiringCreditsNotificationJobData): Promise<void> {
@@ -74,14 +73,14 @@ async function processNotificationsForThreshold(
   // Calculate the target date (credits expiring in exactly daysBeforeExpiration days)
   const targetDate = new Date();
   targetDate.setDate(targetDate.getDate() + daysBeforeExpiration);
-  
+
   // Format dates for SQL comparison (start and end of the target day)
   const startOfDay = new Date(targetDate);
   startOfDay.setHours(0, 0, 0, 0);
-  
+
   const endOfDay = new Date(targetDate);
   endOfDay.setHours(23, 59, 59, 999);
-  
+
   // Find credits expiring on the target date
   let query = knex('credit_tracking')
     .where('tenant', tenant)
@@ -89,31 +88,31 @@ async function processNotificationsForThreshold(
     .whereNotNull('expiration_date')
     .where('remaining_amount', '>', 0)
     .whereBetween('expiration_date', [startOfDay.toISOString(), endOfDay.toISOString()]);
-  
+
   // Add client filter if provided
   if (clientId) {
     query = query.where('client_id', clientId);
   }
-  
+
   const expiringCredits: ICreditTracking[] = await query;
-  
+
   if (!expiringCredits.length) {
     console.log(`No credits expiring in ${daysBeforeExpiration} days`);
     return;
   }
-  
+
   console.log(`Found ${expiringCredits.length} credits expiring in ${daysBeforeExpiration} days`);
-  
+
   // Group credits by client
   const creditsByClient: Record<string, ICreditTracking[]> = {};
-  
+
   for (const credit of expiringCredits) {
     if (!creditsByClient[credit.client_id]) {
       creditsByClient[credit.client_id] = [];
     }
     creditsByClient[credit.client_id].push(credit);
   }
-  
+
   // Process each client
   for (const [clientId, credits] of Object.entries(creditsByClient)) {
     await sendClientNotification(knex, tenant, clientId, credits, daysBeforeExpiration);
@@ -135,37 +134,37 @@ async function sendClientNotification(
     const client = await knex('clients')
       .where({ client_id: clientId, tenant })
       .first();
-      
+
     if (!client) {
       throw new Error(`Client ${clientId} not found`);
     }
-    
+
     // Get client billing contacts
     const contacts = await knex('client_contacts')
       .where({ client_id: clientId, tenant })
       .where('is_billing_contact', true)
       .select('user_id', 'email');
-      
+
     if (!contacts.length) {
       console.log(`No billing contacts found for client ${clientId}, skipping notification`);
       return;
     }
-    
+
     // Get transaction details for each credit
     const transactionIds = credits.map(credit => credit.transaction_id);
     const transactions = await knex('transactions')
       .whereIn('transaction_id', transactionIds)
       .where('tenant', tenant);
-      
+
     // Create transaction lookup map
     const transactionMap = transactions.reduce((acc, tx) => {
       acc[tx.transaction_id] = tx;
       return acc;
     }, {} as Record<string, any>);
-    
+
     // Calculate total expiring amount
     const totalAmount = credits.reduce((sum, credit) => sum + Number(credit.remaining_amount), 0);
-    
+
     // Format credit data for the email template
     const creditItems = credits.map(credit => ({
       creditId: credit.credit_id,
@@ -174,7 +173,7 @@ async function sendClientNotification(
       transactionId: credit.transaction_id,
       description: transactionMap[credit.transaction_id]?.description || 'N/A'
     }));
-    
+
     // Prepare email template data
     const templateData = {
       client: {
@@ -189,19 +188,19 @@ async function sendClientNotification(
         url: `${process.env.APP_URL}/billing/credits?client=${clientId}`
       }
     };
-    
+
     // Get notification service
     const notificationService = getEmailNotificationService();
-    
+
     // Get notification subtype
     const subtype = await knex('notification_subtypes')
       .where({ name: 'Credit Expiring' })
       .first();
-      
+
     if (!subtype) {
       throw new Error('Credit Expiring notification subtype not found');
     }
-    
+
     // Send notification to each contact
     for (const contact of contacts) {
       await notificationService.sendNotification({
@@ -212,10 +211,10 @@ async function sendClientNotification(
         templateName: 'credit-expiring',
         data: templateData
       });
-      
+
       console.log(`Sent credit expiration notification to ${contact.email} for client ${client.name}`);
     }
-    
+
   } catch (error: any) {
     console.error(`Error sending client notification for ${clientId}: ${error.message}`);
     throw error;

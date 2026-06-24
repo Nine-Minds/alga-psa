@@ -377,7 +377,7 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
       // waiting for the periodic reconciler tick.
       try {
         const { reconcileRmmPollingSchedules } = await import(
-          'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+          '@alga-psa/jobs/handlers/rmmAlertPollingHandlers'
         );
         const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
         await reconcileRmmPollingSchedules(await initializeJobRunner());

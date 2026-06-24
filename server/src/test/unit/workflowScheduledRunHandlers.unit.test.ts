@@ -56,7 +56,7 @@ vi.mock('server/src/lib/jobs/JobRunnerFactory', () => ({
 import {
   workflowOneTimeScheduledRunHandler,
   workflowRecurringScheduledRunHandler
-} from '@/lib/jobs/handlers/workflowScheduledRunHandlers';
+} from '@alga-psa/jobs/handlers/workflowScheduledRunHandlers';
 
 describe('Workflow scheduled run handlers', () => {
   beforeEach(() => {

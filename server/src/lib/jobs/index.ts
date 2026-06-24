@@ -1,40 +1,41 @@
 import { Job } from 'pg-boss';
 import { JobScheduler, JobFilter, IJobScheduler, DummyJobScheduler } from './jobScheduler';
+import { registerJobSchedulerAccessor } from '@alga-psa/jobs/scheduler';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { InvoiceEmailHandler, InvoiceEmailJobData } from 'server/src/lib/jobs/handlers/invoiceEmailHandler';
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
-import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
-import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from './handlers/expiringCreditsNotificationHandler';
+import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
+import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
-import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
+import { creditReconciliationHandler, CreditReconciliationJobData } from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 // Import the new handler
-import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
+import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
-import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
-import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';
-import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
-import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
-import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
-import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
+import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
+import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
+import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
+import { cleanupTemporaryFormsJob } from '@alga-psa/jobs/handlers/cleanupTemporaryFormsJob';
+import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob';
+import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from '@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler';
 import {
   renewMicrosoftCalendarWebhooks,
   verifyGoogleCalendarProvisioning,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData
-} from './handlers/calendarWebhookMaintenanceHandler';
+} from '@alga-psa/jobs/handlers/calendarWebhookMaintenanceHandler';
 import {
   renewTeamsMeetingArtifactSubscriptions,
   processTeamsMeetingArtifactNotification,
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
-} from './handlers/teamsMeetingArtifactWebhookHandler';
+} from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
-} from './handlers/workflowQuotaResumeScanHandler';
+} from '@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler';
 import {
   SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
   searchVisibleUserReindexHandler,
@@ -44,7 +45,7 @@ import {
   SEARCH_RECONCILE_JOB_NAME,
   searchReconcileHandler,
   SearchReconcileJobData,
-} from './handlers/searchReconcileHandler';
+} from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -258,6 +259,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
   }
   return jobScheduler;
 };
+
+// Let @alga-psa/jobs CE scheduling helpers reach the fully-initialized server
+// scheduler without importing server/src (keeps the Temporal worker build clean).
+registerJobSchedulerAccessor(() => initializeScheduler());
 
 
 // Export types
@@ -564,8 +569,8 @@ export const scheduleCreditReconciliationJob = async (
 };
 
 // Re-export the cleanup temporary forms scheduling function
-export { scheduleCleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
-export { scheduleCleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
+export { scheduleCleanupTemporaryFormsJob } from '@alga-psa/jobs/handlers/cleanupTemporaryFormsJob';
+export { scheduleCleanupWebhookDeliveriesJob } from '@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob';
 
 // Note: Password reset token cleanup is handled automatically during token operations
 // No scheduled job needed since pg-boss is unreliable and auto-cleanup is more efficient

@@ -1,6 +1,14 @@
 import { createLogger, format, transports } from 'winston';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
+import {
+  workflowOneTimeScheduledRunHandler,
+  workflowRecurringScheduledRunHandler,
+} from '@alga-psa/jobs/handlers/workflowScheduledRunHandlers';
+import {
+  WORKFLOW_ONE_TIME_TRIGGER_JOB,
+  WORKFLOW_RECURRING_TRIGGER_JOB,
+} from '@alga-psa/workflows/lib/workflowScheduleLifecycle';
 import type { JobStatus } from '../types/job.js';
 
 // Configure logger
@@ -48,11 +56,22 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     return;
   }
 
+  // Provide a Temporal job runner to shared handlers that schedule follow-up
+  // jobs. The worker registers the Temporal runner directly so shared handlers
+  // (e.g. RMM polling) stay decoupled from the server-bound JobRunnerFactory.
+  const { registerJobRunnerAccessor } = await import('@alga-psa/jobs/runner');
+  const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
+  registerJobRunnerAccessor(async () => TemporalJobRunner.create({
+    address: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233',
+    namespace: process.env.TEMPORAL_NAMESPACE || 'default',
+    taskQueue: process.env.TEMPORAL_JOB_TASK_QUEUE || 'alga-jobs',
+  }) as any);
+
   // Register EE extension schedule invocation handler so Temporal can execute
   // extension cron jobs on the shared alga-jobs queue.
   try {
     const { extensionScheduledInvocationHandler } = await import(
-      '../../../../server/src/lib/jobs/handlers/extensionScheduledInvocationHandler'
+      '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler'
     );
 
     registerJobHandlerForActivities(
@@ -79,7 +98,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
       huntressIncidentPollHandler,
       RMM_ALERT_RECONCILIATION_JOB,
       HUNTRESS_INCIDENT_POLL_JOB,
-    } = await import('../../../../server/src/lib/jobs/handlers/rmmAlertPollingHandlers');
+    } = await import('@alga-psa/jobs/handlers/rmmAlertPollingHandlers');
 
     registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, async (jobId, data) => {
       await rmmAlertReconciliationHandler(jobId, data as any);
@@ -97,18 +116,10 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
   // scheduleRecurringJob) that start genericJobWorkflow with jobName
-  // workflow-time-trigger-{once,recurring}. The matching pg-boss registration
-  // lives in server/src/lib/jobs/registerAllHandlers.ts (gated includeEnterprise).
+  // workflow-time-trigger-{once,recurring}. The handler code and trigger-name
+  // constants are shared via @alga-psa/jobs and @alga-psa/workflows (no server
+  // dependency), so they are imported statically at module load.
   try {
-    const {
-      workflowOneTimeScheduledRunHandler,
-      workflowRecurringScheduledRunHandler,
-    } = await import('../../../../server/src/lib/jobs/handlers/workflowScheduledRunHandlers');
-    const {
-      WORKFLOW_ONE_TIME_TRIGGER_JOB,
-      WORKFLOW_RECURRING_TRIGGER_JOB,
-    } = await import('@alga-psa/workflows/lib/workflowScheduleLifecycle');
-
     registerJobHandlerForActivities(WORKFLOW_ONE_TIME_TRIGGER_JOB, async (jobId, data) => {
       await workflowOneTimeScheduledRunHandler(jobId, data as any);
     });

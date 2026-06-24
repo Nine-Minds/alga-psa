@@ -96,7 +96,7 @@ describe('EE package relocation audits', () => {
 
   it('keeps shared calendar helper wrappers pointed at the new calendar package instead of legacy enterprise stubs', () => {
     const sharedSubscriber = readSource('server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts');
-    const sharedMaintenance = readSource('server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts');
+    const sharedMaintenance = readSource('packages/jobs/src/lib/handlers/calendarWebhookMaintenanceHandler.ts');
 
     expect(sharedSubscriber).toContain("import('@alga-psa/ee-calendar/event-bus')");
     expect(sharedSubscriber).not.toContain("@enterprise/lib/eventBus/subscribers/calendarSyncSubscriber");

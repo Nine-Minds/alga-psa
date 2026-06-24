@@ -5,6 +5,10 @@
  * This module provides centralized type definitions for use across all modules.
  */
 
+// Asset interface (consumed by the Temporal worker's ninjaone sync; surfaced
+// here so it can be imported from @alga-psa/types instead of a server @/ alias).
+export type { Asset } from './interfaces/asset.interfaces';
+
 // Core type definitions (from shared/types)
 // Note: Some types (EmailMessage, EmailProviderConfig) in lib/email.ts are for OUTBOUND email
 export * from './lib/attributes';

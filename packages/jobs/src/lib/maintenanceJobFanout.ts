@@ -1,6 +1,10 @@
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
+// Sibling handlers live in this same package; imported relatively so the
+// wildcard './handlers/*' export-map entry is not self-referenced (which would
+// otherwise require a rootDir to disambiguate the type build). Consumers
+// outside the package use '@alga-psa/jobs/handlers/<name>'.
 import { expiredCreditsHandler } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler } from './handlers/expiringCreditsNotificationHandler';
 import { creditReconciliationHandler } from './handlers/creditReconciliationHandler';
@@ -13,8 +17,8 @@ import { renewGoogleGmailWatchSubscriptions } from './handlers/googleGmailWatchR
 import { renewTeamsMeetingArtifactSubscriptions } from './handlers/teamsMeetingArtifactWebhookHandler';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
-import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
-import { cleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
+import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
+import { cleanupWebhookDeliveriesJob } from './handlers/cleanupWebhookDeliveriesJob';
 
 const RENEWAL_HORIZON_DAYS = 90;
 const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;

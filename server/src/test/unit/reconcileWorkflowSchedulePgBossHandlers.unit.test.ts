@@ -23,7 +23,7 @@ vi.mock('@alga-psa/workflows/lib/workflowScheduleLifecycle', () => ({
     reconcileRegistrationMock(...args),
 }));
 
-vi.mock('@/lib/jobs/handlers/workflowScheduledRunHandlers', () => ({
+vi.mock('@alga-psa/jobs/handlers/workflowScheduledRunHandlers', () => ({
   workflowRecurringScheduledRunHandler: (...args: unknown[]) =>
     workflowRecurringScheduledRunHandlerMock(...args),
 }));

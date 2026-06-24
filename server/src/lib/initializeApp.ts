@@ -628,7 +628,7 @@ async function initializeJobScheduler(storageService: StorageService) {
     const RECONCILER_INTERVAL_MS = 5 * 60 * 1000;
     const tick = async () => {
       try {
-        const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
+        const { reconcileRmmPollingSchedules } = await import('@alga-psa/jobs/handlers/rmmAlertPollingHandlers');
         const runner = await initializeJobRunner();
         await reconcileRmmPollingSchedules(runner);
       } catch (error) {

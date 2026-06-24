@@ -1,9 +1,7 @@
-import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction, buildTenantPortalSlug } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getEmailNotificationService } from '@alga-psa/notifications';
-import { buildTenantPortalSlug } from '@alga-psa/db';
 import { updateTicketInTransaction } from '@alga-psa/tickets/actions';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import type { IUserWithRoles } from '@alga-psa/types';

@@ -18,11 +18,11 @@ const initializeJobRunnerSource = readFileSync(
   'utf8'
 );
 const renewalHandlerSource = readFileSync(
-  new URL('../handlers/processRenewalQueueHandler.ts', import.meta.url),
+  new URL('../../../../../packages/jobs/src/lib/handlers/processRenewalQueueHandler.ts', import.meta.url),
   'utf8'
 );
 const temporalRunnerSource = readFileSync(
-  new URL('../../../../../ee/server/src/lib/jobs/runners/TemporalJobRunner.ts', import.meta.url),
+  new URL('../../../../../packages/jobs/src/lib/jobs/runners/TemporalJobRunner.ts', import.meta.url),
   'utf8'
 );
 const jobRunnerFactorySource = readFileSync(
@@ -233,12 +233,12 @@ describe('renewal queue scheduling wiring', () => {
   });
 
   it('registers and schedules renewal queue processing in the jobs module', () => {
-    expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
+    expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
     expect(jobsIndexSource).toContain("'process-renewal-queue',");
     expect(jobsIndexSource).toContain('export const scheduleRenewalQueueProcessingJob = async (');
     expect(jobsIndexSource).toContain('return await scheduler.scheduleRecurringJob<RenewalQueueProcessorJobData>(');
-    expect(registerHandlersSource).toContain("import {\n  processRenewalQueueHandler,\n  RenewalQueueProcessorJobData,\n} from './handlers/processRenewalQueueHandler';");
+    expect(registerHandlersSource).toContain("import {\n  processRenewalQueueHandler,\n  RenewalQueueProcessorJobData,\n} from '@alga-psa/jobs/handlers/processRenewalQueueHandler';");
     expect(registerHandlersSource).toContain("name: 'process-renewal-queue',");
     expect(registerHandlersSource).toContain('await processRenewalQueueHandler(data);');
     expect(registerHandlersSource).toContain("'process-renewal-queue',");
@@ -257,11 +257,11 @@ describe('renewal queue scheduling wiring', () => {
   });
 
   it('uses shared renewal processing core logic in both pg-boss and Temporal adapter registration paths', () => {
-    expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
+    expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
     expect(jobsIndexSource).toContain("'process-renewal-queue',");
     expect(jobsIndexSource).toContain('await processRenewalQueueHandler(job.data);');
-    expect(registerHandlersSource).toContain("import {\n  processRenewalQueueHandler,\n  RenewalQueueProcessorJobData,\n} from './handlers/processRenewalQueueHandler';");
+    expect(registerHandlersSource).toContain("import {\n  processRenewalQueueHandler,\n  RenewalQueueProcessorJobData,\n} from '@alga-psa/jobs/handlers/processRenewalQueueHandler';");
     expect(registerHandlersSource).toContain("name: 'process-renewal-queue',");
     expect(registerHandlersSource).toContain('await processRenewalQueueHandler(data);');
     expect(initializeJobRunnerSource).toContain('await registerAllJobHandlers({');
