@@ -5,36 +5,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
-
-interface TrustedIdp {
-  issuer: string;
-  jwks_uri: string;
-  audience: string | null;
-  subject_claim: string;
-  kind?: 'google' | 'microsoft' | 'custom';
-  entra_tenant_id?: string | null;
-  active: boolean;
-}
-interface Agent {
-  agent_id: string;
-  name: string;
-  description: string | null;
-  idp_issuer: string | null;
-  idp_subject: string | null;
-  active: boolean;
-}
-interface Role {
-  role_id: string;
-  role_name: string;
-}
-interface AuditRow {
-  agent_id: string;
-  tool: string;
-  ok: boolean;
-  decision: string | null;
-  status_code: number | null;
-  created_at: string;
-}
+import type { TrustedIdp, Agent, Role, AuditRow } from './mcpTypes';
+import { getMcpDemoMode, demoState, demoAudit } from './mcpDemoData';
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -67,16 +39,27 @@ export default function McpServerSettings() {
   const [agentForm, setAgentForm] = useState({ name: '', idpIssuer: '', idpSubject: '', roleIds: [] as string[] });
   const [suggestion, setSuggestion] = useState<{ microsoft?: { entraTenantId: string; displayName: string | null } }>({});
 
+  // Dev-only: preview populated UI states without the EE backend (?mcpDemo=...).
+  const demoMode = getMcpDemoMode();
+
   const reloadIdps = useCallback(() => api<{ data: TrustedIdp[] }>('/api/v1/mcp/idp-providers').then((r) => setIdps(r.data)), []);
   const reloadAgents = useCallback(() => api<{ data: Agent[] }>('/api/v1/mcp/agents').then((r) => setAgents(r.data)), []);
   const reloadRoles = useCallback(() => api<{ data: Role[] }>('/api/v1/mcp/roles').then((r) => setRoles(r.data)), []);
 
   useEffect(() => {
+    if (demoMode) {
+      const s = demoState(demoMode);
+      setIdps(s.idps);
+      setAgents(s.agents);
+      setRoles(s.roles);
+      setSuggestion(s.suggestion);
+      return;
+    }
     Promise.all([reloadIdps(), reloadAgents(), reloadRoles()]).catch((e) => setError(String(e.message ?? e)));
     api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null } } }>('/api/v1/mcp/idp-suggestions')
       .then((r) => setSuggestion(r.data))
       .catch(() => {});
-  }, [reloadIdps, reloadAgents, reloadRoles]);
+  }, [demoMode, reloadIdps, reloadAgents, reloadRoles]);
 
   const run = async (fn: () => Promise<unknown>) => {
     setError(null);
@@ -106,6 +89,10 @@ export default function McpServerSettings() {
 
   const loadAudit = (agentId: string) =>
     run(async () => {
+      if (demoMode) {
+        setAudit(demoAudit(agentId));
+        return;
+      }
       const r = await api<{ data: AuditRow[] }>(`/api/v1/mcp/audit?agentId=${encodeURIComponent(agentId)}`);
       setAudit(r.data);
     });
