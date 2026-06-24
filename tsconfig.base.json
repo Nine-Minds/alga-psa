@@ -121,6 +121,8 @@
       "@alga-psa/onboarding/*": ["packages/onboarding/src/*"],
       "@alga-psa/jobs": ["packages/jobs/src"],
       "@alga-psa/jobs/*": ["packages/jobs/src/*"],
+      "@alga-psa/search": ["packages/search/src"],
+      "@alga-psa/search/*": ["packages/search/src/*"],
       "@alga-psa/reference-data": ["packages/reference-data/src"],
       "@alga-psa/reference-data/*": ["packages/reference-data/src/*"],
       "@alga-psa/teams": ["packages/teams/src"],

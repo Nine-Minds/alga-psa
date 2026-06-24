@@ -1,9 +1,8 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { runWithTenant } from 'server/src/lib/db';
-import { getConnection } from 'server/src/lib/db/db';
-import { auditLog } from 'server/src/lib/logging/auditLog';
-import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { runWithTenant, getConnection } from '@alga-psa/db';
+import { auditLog } from '../handler-utils/auditLog';
+import { ICreditTracking } from '@alga-psa/types';
 
 export interface ExpiredCreditsJobData extends Record<string, unknown> {
   tenantId: string;
@@ -16,7 +15,7 @@ export interface ExpiredCreditsJobData extends Record<string, unknown> {
  * 1. Finds credits that have passed their expiration date but are not yet marked as expired
  * 2. Marks these credits as expired
  * 3. Creates credit_expiration transactions to record the expiration
- * 
+ *
  * @param data Job data containing tenant ID and optional client ID
  */
 export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promise<void> {
@@ -73,7 +72,7 @@ export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promis
 
 /**
  * Process a single expired credit
- * 
+ *
  * @param trx Knex transaction
  * @param credit The credit tracking entry to process
  * @param tenant Tenant ID
@@ -91,11 +90,11 @@ async function processExpiredCredit(
       .where('transaction_id', credit.transaction_id)
       .where('tenant', tenant)
       .first();
-    
+
     if (!originalTransaction) {
       throw new Error(`Original transaction ${credit.transaction_id} not found for credit ${credit.credit_id}`);
     }
-    
+
     // Check if there's already a credit_expiration transaction for this credit
     const existingExpiration = await trx('transactions')
       .where({
@@ -104,26 +103,26 @@ async function processExpiredCredit(
         tenant
       })
       .first();
-    
+
     // If an expiration transaction already exists, skip this credit
     if (existingExpiration) {
       console.log(`Credit ${credit.credit_id} already has an expiration transaction ${existingExpiration.transaction_id}`);
       return;
     }
-    
+
     // Get the current client credit balance
     const [client] = await trx('clients')
       .where({ client_id: credit.client_id, tenant })
       .select('credit_balance');
-    
+
     if (!client) {
       throw new Error(`Client ${credit.client_id} not found`);
     }
-    
+
     // Calculate the new balance after expiration
     const expirationAmount = -Number(credit.remaining_amount);
     const newBalance = Number(client.credit_balance) + expirationAmount;
-    
+
     // Create the credit expiration transaction
     const expirationTxId = uuidv4();
     await trx('transactions').insert({
@@ -138,7 +137,7 @@ async function processExpiredCredit(
       tenant,
       related_transaction_id: credit.transaction_id
     });
-    
+
     // Update the credit_tracking entry to mark as expired
     await trx('credit_tracking')
       .where({
@@ -150,7 +149,7 @@ async function processExpiredCredit(
         remaining_amount: 0,
         updated_at: now
       });
-    
+
     // Update the client's credit balance
     await trx('clients')
       .where({ client_id: credit.client_id, tenant })
@@ -158,7 +157,7 @@ async function processExpiredCredit(
         credit_balance: newBalance,
         updated_at: now
       });
-    
+
     // Log the expiration in the audit log
     await auditLog(
       trx,
@@ -180,7 +179,7 @@ async function processExpiredCredit(
         }
       }
     );
-    
+
     console.log(`Processed expired credit ${credit.credit_id} for client ${credit.client_id}, amount: ${credit.remaining_amount}`);
   } catch (error: any) {
     console.error(`Error processing expired credit ${credit.credit_id}: ${error.message}`);

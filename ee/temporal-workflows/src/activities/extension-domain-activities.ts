@@ -208,28 +208,27 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
       },
     };
 
-    // Check if exists
-    let exists = false;
+    // Fetch current object (if any): we need its resourceVersion to replace, and its
+    // ref to decide whether a write is necessary at all.
+    let current: any;
     try {
-      await co.getNamespacedCustomObject({
+      current = await co.getNamespacedCustomObject({
         group,
         version,
         namespace,
         plural,
         name,
       });
-      exists = true;
     } catch (e: any) {
       const { status, reason, message, body } = formatHttpError(e);
       const isNotFound = status === 404 || reason === 'NotFound' || /not\s*found/i.test(message);
-      if (isNotFound) {
-        exists = false;
-      } else {
+      if (!isNotFound) {
         throw new Error(`domainmapping.get failed: status=${status} body=${body}`);
       }
+      current = undefined;
     }
 
-    if (!exists) {
+    if (!current) {
       try {
         await co.createNamespacedCustomObject({
           group,
@@ -245,7 +244,14 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
       return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
     }
 
-    // Replace object if exists to ensure correct ref
+    const liveMeta = current.metadata ?? current.body?.metadata;
+    const liveRef = current.spec?.ref?.name ?? current.body?.spec?.ref?.name;
+    // Already mapped to the desired service: idempotent no-op, no write needed.
+    if (liveRef === kservice) {
+      return { applied: false, ref: { namespace, name, kind: 'DomainMapping', group, version } };
+    }
+
+    // Replace requires the live resourceVersion, else the API rejects the update (422).
     try {
       await co.replaceNamespacedCustomObject({
         group,
@@ -253,7 +259,10 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
         namespace,
         plural,
         name,
-        body: desired,
+        body: {
+          ...desired,
+          metadata: { ...desired.metadata, resourceVersion: liveMeta?.resourceVersion },
+        },
       });
     } catch (e: any) {
       const { status, body } = formatHttpError(e);

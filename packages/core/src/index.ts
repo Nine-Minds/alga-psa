@@ -20,6 +20,9 @@ export * from './lib/errors';
 // Edition / feature gating
 export * from './lib/features';
 
+// Job enqueue DI seam (registerJobEnqueuer / enqueueImmediateJob)
+export * from './lib/jobEnqueue';
+
 // Version utilities
 export * from './lib/version';
 

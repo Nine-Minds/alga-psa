@@ -8,18 +8,18 @@ import { RateLimiterMemory } from 'rate-limiter-flexible';
 import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
-} from '../search/acl';
+} from '@alga-psa/search/acl';
 import {
   countSearchMatches,
   runSearchTypeaheadQuery,
-} from '../search/query';
+} from '@alga-psa/search/query';
 import {
   filterTypesByPermission,
   resolveAllowedTypes,
   resolveClientAccess,
   runAppSearch,
   toSearchResultRow,
-} from '../search/runAppSearch';
+} from '@alga-psa/search/runAppSearch';
 import {
   SearchRateLimitError,
   searchAppInputSchema,
@@ -27,14 +27,14 @@ import {
   type SearchAppInput,
   type SearchAppResult,
   type SearchTypeaheadResult,
-} from './searchActionShared';
+} from '@alga-psa/search/actions/searchActionShared';
 
 export type {
   SearchAppInput,
   SearchAppResult,
   SearchResultRow,
   SearchTypeaheadResult,
-} from './searchActionShared';
+} from '@alga-psa/search/actions/searchActionShared';
 
 const fullSearchLimiter = new RateLimiterMemory({ points: 10, duration: 1 });
 const typeaheadSearchLimiter = new RateLimiterMemory({ points: 30, duration: 1 });

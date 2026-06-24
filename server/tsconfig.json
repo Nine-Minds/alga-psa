@@ -285,6 +285,24 @@
       "@alga-psa/jobs/*": [
         "../packages/jobs/src/*"
       ],
+      "@alga-psa/search": [
+        "../packages/search/src"
+      ],
+      "@alga-psa/search/*": [
+        "../packages/search/src/*"
+      ],
+      "@alga-psa/user-activities": [
+        "../packages/user-activities/src"
+      ],
+      "@alga-psa/user-activities/*": [
+        "../packages/user-activities/src/*"
+      ],
+      "@alga-psa/agent-tooling": [
+        "../packages/agent-tooling/src"
+      ],
+      "@alga-psa/agent-tooling/*": [
+        "../packages/agent-tooling/src/*"
+      ],
       "@alga-psa/reference-data": [
         "../packages/reference-data/src"
       ],

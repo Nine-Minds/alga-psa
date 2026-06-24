@@ -16,7 +16,7 @@ vi.mock('@temporalio/client', () => {
 
 describe('TemporalJobRunner.scheduleRecurringJob', () => {
   it('uses singletonKey as scheduleId and passes IANA timezone on spec (Temporal client field: timezone)', async () => {
-    const { TemporalJobRunner } = await import('@ee/lib/jobs/runners/TemporalJobRunner');
+    const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
     TemporalJobRunner.reset();
 
     const { Client } = await import('@temporalio/client');
@@ -61,7 +61,7 @@ describe('TemporalJobRunner.scheduleRecurringJob', () => {
   });
 
   it('does not create schedule when it already exists', async () => {
-    const { TemporalJobRunner } = await import('@ee/lib/jobs/runners/TemporalJobRunner');
+    const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
     TemporalJobRunner.reset();
 
     const { Client } = await import('@temporalio/client');
@@ -93,7 +93,7 @@ describe('TemporalJobRunner.scheduleRecurringJob', () => {
   });
 
   it('registers renewal scheduled processing as a Temporal recurring workflow payload', async () => {
-    const { TemporalJobRunner } = await import('@ee/lib/jobs/runners/TemporalJobRunner');
+    const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
     TemporalJobRunner.reset();
 
     const { Client } = await import('@temporalio/client');

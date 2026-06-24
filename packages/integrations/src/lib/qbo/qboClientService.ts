@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
+import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
 import type { QboTenantCredentials } from './types';
 import { AppError } from '@alga-psa/core';
 import type {
@@ -298,6 +299,7 @@ export async function upsertStoredQboCredentials(tenantId: string, credentials: 
 
   await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET, JSON.stringify(allCredentials));
   logger.info(`Stored QBO credentials for tenant ${tenantId}, realm ${credentials.realmId}`);
+  await notifyQboConnectionChanged(tenantId);
 }
 
 export class QboClientService {

@@ -1,6 +1,9 @@
 import type { Knex } from 'knex';
-import { parseExpression } from 'cron-parser';
+// cron-parser@4 is CJS with no statically-detectable named exports; default-import
+// for CJS-interop safety when consumed as a built ESM bundle (the Temporal worker).
+import cronParser from 'cron-parser';
 import type { WorkflowScheduleDayTypeFilter } from '@alga-psa/workflows/persistence';
+const { parseExpression } = cronParser;
 
 type BusinessHoursScheduleRow = {
   tenant: string;

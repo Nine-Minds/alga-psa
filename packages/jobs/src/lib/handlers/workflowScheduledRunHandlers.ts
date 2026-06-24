@@ -5,10 +5,10 @@ import {
   normalizeWorkflowDayTypeFilter,
   resolveWorkflowBusinessDaySettings
 } from '@alga-psa/workflows/lib/workflowBusinessDayScheduling';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
-import { getJobRunner } from 'server/src/lib/jobs/JobRunnerFactory';
-import type { BaseJobData } from '../interfaces';
+import { getJobRunner } from '../jobRunnerAccessor';
+import type { BaseJobData } from '../jobs/interfaces';
 
 export interface WorkflowScheduledRunJobData extends BaseJobData {
   workflowId: string;

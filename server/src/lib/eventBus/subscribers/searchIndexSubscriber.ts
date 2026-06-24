@@ -4,8 +4,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 import { getEventBus } from '../index';
-import { allIndexers, getIndexer } from '../../search';
-import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
+import { allIndexers, getIndexer } from '@alga-psa/search';
+import { deleteSearchDoc, upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { EntityIndexer, SearchObjectType } from '@alga-psa/types';
 
 let isRegistered = false;

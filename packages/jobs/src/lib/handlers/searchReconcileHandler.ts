@@ -2,8 +2,8 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, getConnection } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
-import { allIndexers, getIndexer } from '../../search';
-import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
+import { allIndexers, getIndexer } from '@alga-psa/search';
+import { deleteSearchDoc, upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { EntityIndexer } from '@alga-psa/types';
 
 export const SEARCH_RECONCILE_JOB_NAME = 'search:reconcile';
