@@ -9,7 +9,7 @@ type InputSize = 'sm' | 'md' | 'lg';
 
 const inputSizeClasses: Record<InputSize, string> = {
   sm: 'py-1 px-2 text-xs h-8',
-  md: 'py-2 px-3 h-10',
+  md: 'py-1.5 px-3 text-sm h-9',
   lg: 'py-3 px-4 text-base h-12',
 };
 
@@ -152,10 +152,10 @@ export function Input({
       <input
         {...finalAutomationProps}
         ref={mergedRef}
-        className={`w-full ${inputSizeClasses[size]} border rounded-md shadow-sm focus:outline-none focus:ring-2 bg-white dark:bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] ${
+        className={`w-full ${inputSizeClasses[size]} border rounded-lg shadow-sm focus:outline-none focus:ring-2 bg-white dark:bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] ${
           hasErrorState
             ? 'border-destructive focus:ring-destructive focus:border-destructive bg-[rgb(var(--color-destructive)/0.1)]'
-            : 'border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))]'
+            : 'border-border focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))]'
         } ${className}`}
         value={value}
         disabled={disabled}
