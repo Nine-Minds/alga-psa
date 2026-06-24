@@ -12,7 +12,7 @@
  *   ?mcpDemo=providers      providers + roles, no agents
  *   ?mcpDemo=empty          force the empty state (ignore the API)
  */
-import type { TrustedIdp, Agent, Role, AuditRow } from './mcpTypes';
+import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdentity } from './mcpTypes';
 
 export type McpDemoMode = 'full' | 'providers' | 'empty';
 
@@ -97,6 +97,26 @@ export const DEMO_SUGGESTION = {
   microsoft: { entraTenantId: MS_TENANT, displayName: 'Acme Corp' },
 };
 
+// Simulates the hosted shared Microsoft/Google apps being available (dev has no
+// real app secrets, so listPlatformProviders would otherwise return []).
+export const DEMO_PLATFORM_PROVIDERS: PlatformProvider[] = [
+  { provider: 'microsoft', label: 'Microsoft', issuer: null, available: true },
+  { provider: 'google', label: 'Google', issuer: GOOGLE_ISSUER, available: true },
+];
+
+/** A fake "Connect with…" result, so the popup flow can be previewed without a real IdP. */
+export function demoConnectResult(provider: 'microsoft' | 'google'): ConnectIdentity {
+  if (provider === 'google') {
+    return { provider: 'google', issuer: GOOGLE_ISSUER, subject: '108124091823740912', label: 'ops-bot@nineminds.com' };
+  }
+  return {
+    provider: 'microsoft',
+    issuer: MS_ISSUER,
+    subject: 'k3Jb9Qn2pXcV7sR1tY0wZ8aH6gL5fD4eC2bN1mQ',
+    label: 'agent-bot@nineminds.com',
+  };
+}
+
 // A burst of synthetic agent calls, newest first, large enough to span many pages
 // so server-style pagination is exercisable.
 const DEMO_AUDIT_COUNT = 137;
@@ -136,8 +156,19 @@ export function demoState(mode: McpDemoMode): {
   agents: Agent[];
   roles: Role[];
   suggestion: typeof DEMO_SUGGESTION | Record<string, never>;
+  platformProviders: PlatformProvider[];
 } {
-  if (mode === 'empty') return { idps: [], agents: [], roles: DEMO_ROLES, suggestion: DEMO_SUGGESTION };
-  if (mode === 'providers') return { idps: DEMO_IDPS, agents: [], roles: DEMO_ROLES, suggestion: {} };
-  return { idps: DEMO_IDPS, agents: DEMO_AGENTS, roles: DEMO_ROLES, suggestion: {} };
+  // `empty` simulates a self-hosted instance with no shared apps (manual flow only);
+  // the other modes simulate hosted, where the platform apps are ready to use.
+  if (mode === 'empty')
+    return { idps: [], agents: [], roles: DEMO_ROLES, suggestion: DEMO_SUGGESTION, platformProviders: [] };
+  if (mode === 'providers')
+    return { idps: DEMO_IDPS, agents: [], roles: DEMO_ROLES, suggestion: {}, platformProviders: DEMO_PLATFORM_PROVIDERS };
+  return {
+    idps: DEMO_IDPS,
+    agents: DEMO_AGENTS,
+    roles: DEMO_ROLES,
+    suggestion: {},
+    platformProviders: DEMO_PLATFORM_PROVIDERS,
+  };
 }

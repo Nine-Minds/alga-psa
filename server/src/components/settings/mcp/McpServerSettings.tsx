@@ -12,10 +12,12 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import type { TrustedIdp, Agent, Role, AuditRow } from './mcpTypes';
-import { getMcpDemoMode, demoState, demoAuditPage } from './mcpDemoData';
+import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdentity } from './mcpTypes';
+import { getMcpDemoMode, demoState, demoAuditPage, demoConnectResult } from './mcpDemoData';
 
 const AUDIT_PAGE_SIZE = 10;
+
+const PROVIDER_NAME: Record<'microsoft' | 'google', string> = { microsoft: 'Microsoft', google: 'Google' };
 
 function providerLabel(kind?: TrustedIdp['kind']): string {
   if (kind === 'microsoft') return 'Microsoft Entra';
@@ -37,11 +39,14 @@ function providerDirectory(p: TrustedIdp): string {
   return hostOf(p.issuer);
 }
 
-/** The provider an agent signs in through, resolved from the trusted-provider list. */
+/** The provider an agent signs in through, resolved from the trusted-provider list or a platform issuer. */
 function agentProvider(a: Agent, idps: TrustedIdp[]): string {
   const idp = idps.find((p) => p.issuer === a.idp_issuer);
   if (idp) return providerLabel(idp.kind);
-  return a.idp_issuer ? hostOf(a.idp_issuer) : '—';
+  const iss = a.idp_issuer ?? '';
+  if (/login\.microsoftonline\.com/.test(iss)) return 'Microsoft';
+  if (iss === 'https://accounts.google.com') return 'Google';
+  return iss ? hostOf(iss) : '—';
 }
 
 /**
@@ -114,6 +119,14 @@ export default function McpServerSettings() {
   // Create-agent form
   const [agentForm, setAgentForm] = useState({ name: '', idpIssuer: '', idpSubject: '', roleIds: [] as string[] });
   const [suggestion, setSuggestion] = useState<{ microsoft?: { entraTenantId: string; displayName: string | null } }>({});
+  // Hosted shared apps available for zero-config provisioning.
+  const [platformProviders, setPlatformProviders] = useState<PlatformProvider[]>([]);
+  // Identity auto-discovered via "Connect with…" (null = none yet).
+  const [connected, setConnected] = useState<ConnectIdentity | null>(null);
+  // Reveal the manual provider+Agent-ID fields (for unattended service accounts).
+  const [manualIdentity, setManualIdentity] = useState(false);
+  // Expand the manual add-provider form (auto-expanded when no platform providers exist).
+  const [showAddProvider, setShowAddProvider] = useState(false);
 
   // Dev-only: preview populated UI states without the EE backend (?mcpDemo=...).
   const demoMode = getMcpDemoMode();
@@ -129,11 +142,15 @@ export default function McpServerSettings() {
       setAgents(s.agents);
       setRoles(s.roles);
       setSuggestion(s.suggestion);
+      setPlatformProviders(s.platformProviders);
       return;
     }
     Promise.all([reloadIdps(), reloadAgents(), reloadRoles()]).catch((e) => setError(String(e.message ?? e)));
     api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null } } }>('/api/v1/mcp/idp-suggestions')
       .then((r) => setSuggestion(r.data))
+      .catch(() => {});
+    api<{ data: PlatformProvider[] }>('/api/v1/mcp/platform-providers')
+      .then((r) => setPlatformProviders(r.data))
       .catch(() => {});
   }, [demoMode, reloadIdps, reloadAgents, reloadRoles]);
 
@@ -158,9 +175,79 @@ export default function McpServerSettings() {
 
   const createAgent = () =>
     run(async () => {
-      await api('/api/v1/mcp/agents', { method: 'POST', body: JSON.stringify(agentForm) });
+      if (demoMode) {
+        const demoAgent: Agent = {
+          agent_id: `demo-${agents.length + 1}`,
+          name: agentForm.name,
+          description: null,
+          idp_issuer: agentForm.idpIssuer || null,
+          idp_subject: agentForm.idpSubject || null,
+          active: true,
+        };
+        setAgents((list) => [demoAgent, ...list]);
+      } else {
+        await api('/api/v1/mcp/agents', { method: 'POST', body: JSON.stringify(agentForm) });
+        await reloadAgents();
+      }
       setAgentForm({ name: '', idpIssuer: '', idpSubject: '', roleIds: [] });
-      await reloadAgents();
+      setConnected(null);
+      setManualIdentity(false);
+    });
+
+  /** Pre-fill the agent form from an auto-discovered identity. */
+  const applyConnected = (identity: ConnectIdentity) => {
+    setConnected(identity);
+    setManualIdentity(false);
+    setAgentForm((f) => ({ ...f, idpIssuer: identity.issuer, idpSubject: identity.subject, name: f.name || identity.label }));
+  };
+
+  const resetConnected = () => {
+    setConnected(null);
+    setAgentForm((f) => ({ ...f, idpIssuer: '', idpSubject: '' }));
+  };
+
+  /** Run the "Connect with…" OAuth popup and pre-fill the agent identity from the result. */
+  const connect = (provider: 'microsoft' | 'google') =>
+    run(async () => {
+      if (demoMode) {
+        applyConnected(demoConnectResult(provider));
+        return;
+      }
+      const { authUrl } = await api<{ authUrl: string }>('/api/v1/mcp/connect/start', {
+        method: 'POST',
+        body: JSON.stringify({ provider }),
+      });
+      await new Promise<void>((resolve, reject) => {
+        const popup = window.open(authUrl, 'mcp-connect', 'width=600,height=720,menubar=no,toolbar=no');
+        if (!popup) {
+          reject(new Error('Popup blocked — allow popups for this site and try again.'));
+          return;
+        }
+        const onMessage = (event: MessageEvent) => {
+          // Same-origin only: the callback page posts from our own origin.
+          if (event.origin !== window.location.origin) return;
+          const d = event.data as { type?: string; provider?: string; success?: boolean; error?: string; data?: ConnectIdentity };
+          if (!d || d.type !== 'oauth-callback' || d.provider !== provider) return;
+          cleanup();
+          if (d.success && d.data) {
+            applyConnected(d.data);
+            resolve();
+          } else {
+            reject(new Error(d.error || 'Connect failed.'));
+          }
+        };
+        const poll = setInterval(() => {
+          if (popup.closed) {
+            cleanup();
+            resolve(); // closed without finishing — leave the form unchanged
+          }
+        }, 500);
+        function cleanup() {
+          clearInterval(poll);
+          window.removeEventListener('message', onMessage);
+        }
+        window.addEventListener('message', onMessage);
+      });
     });
 
   const loadAudit = (agent: Agent, page = 1) =>
@@ -219,6 +306,12 @@ export default function McpServerSettings() {
   ];
 
   const agentIdGuide = agentIdHelp(idps.find((p) => p.issuer === agentForm.idpIssuer));
+  const availablePlatform = platformProviders.filter((p) => p.available);
+  const canAddAgents = idps.length > 0 || availablePlatform.length > 0;
+  // The manual add-provider form shows by default only when there are no ready-to-use platform apps.
+  const showProviderForm = availablePlatform.length === 0 || showAddProvider;
+  // The manual identity fields need a registered provider to pick from.
+  const showManualIdentity = idps.length > 0 && (availablePlatform.length === 0 || manualIdentity);
 
   const agentColumns: ColumnDefinition<Agent>[] = [
     {
@@ -327,10 +420,28 @@ export default function McpServerSettings() {
       <Card>
         <StepHeading step={1} title="Identity providers" description="Agents sign in through these providers. Add the ones your agents use." />
         <CardContent className="space-y-4">
-          {idps.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">No providers yet.</p>
-          ) : (
+          {idps.length > 0 ? (
             <DataTable data={idps} columns={idpColumns} pagination={false} />
+          ) : availablePlatform.length === 0 ? (
+            <p className="text-sm text-[rgb(var(--color-text-500))]">No providers yet.</p>
+          ) : null}
+
+          {availablePlatform.length > 0 && (
+            <div id="mcp-platform-providers" className="space-y-2">
+              {availablePlatform.map((p) => (
+                <div
+                  key={p.provider}
+                  id={`mcp-platform-${p.provider}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm"
+                >
+                  <span className="font-medium text-[rgb(var(--color-text-900))]">{p.label}</span>
+                  <Badge variant="success">Ready to use</Badge>
+                </div>
+              ))}
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                Managed by AlgaPSA — no setup needed. Connect an agent to one in step 2.
+              </p>
+            </div>
           )}
           {suggestion.microsoft && !idps.some((p) => p.kind === 'microsoft') && (
             <div id="mcp-ms-suggestion" className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">
@@ -344,6 +455,20 @@ export default function McpServerSettings() {
               </Button>
             </div>
           )}
+          {availablePlatform.length > 0 && (
+            <button
+              type="button"
+              id="mcp-add-provider-toggle"
+              onClick={() => setShowAddProvider((v) => !v)}
+              aria-expanded={showAddProvider}
+              className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
+            >
+              <ChevronDown className={`h-4 w-4 transition-transform ${showAddProvider ? '' : '-rotate-90'}`} />
+              Add another provider
+            </button>
+          )}
+          {showProviderForm && (
+            <>
           <div className="space-y-3">
             <div className="md:w-1/2">
               <Label htmlFor="idp-kind">Provider</Label>
@@ -410,6 +535,8 @@ export default function McpServerSettings() {
               <span className="text-xs text-[rgb(var(--color-text-500))]">Enter the issuer and signing keys URL to continue.</span>
             )}
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -417,7 +544,7 @@ export default function McpServerSettings() {
       <Card>
         <StepHeading step={2} title="Agents" description="Each agent signs in as itself and gets the roles you assign." />
         <CardContent className="space-y-4">
-          {idps.length === 0 ? (
+          {!canAddAgents ? (
             <p className="text-sm text-[rgb(var(--color-text-500))]">Add a provider in step 1 first. Then add agents that sign in through it.</p>
           ) : (
             <>
@@ -426,21 +553,65 @@ export default function McpServerSettings() {
           ) : (
             <DataTable data={agents} columns={agentColumns} pagination={false} />
           )}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div><Label htmlFor="agent-name">Name</Label><Input id="agent-name" value={agentForm.name} onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })} placeholder="Support triage bot" /></div>
-            <div>
-              <Label htmlFor="agent-issuer">Provider</Label>
-              <CustomSelect
-                id="agent-issuer"
-                className="w-full"
-                value={agentForm.idpIssuer || null}
-                onValueChange={(v) => setAgentForm({ ...agentForm, idpIssuer: v })}
-                disabled={idps.length === 0}
-                placeholder={idps.length === 0 ? 'Add a provider first' : 'Choose a provider'}
-                options={idps.map((p) => ({ value: p.issuer, label: `${providerLabel(p.kind)} · ${providerDirectory(p)}` }))}
-              />
-            </div>
-            <div><Label htmlFor="agent-subject">Agent ID</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder={agentIdGuide.placeholder} /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{agentIdGuide.helper}</p></div>
+          <div className="md:w-1/2">
+            <Label htmlFor="agent-name">Name</Label>
+            <Input id="agent-name" value={agentForm.name} onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })} placeholder="Support triage bot" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Identity</Label>
+            {connected ? (
+              <div id="mcp-connected-identity" className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm">
+                <span className="text-[rgb(var(--color-text-700))]">
+                  Connected as <span className="font-medium text-[rgb(var(--color-text-900))]">{connected.label}</span>{' '}
+                  <span className="text-[rgb(var(--color-text-500))]">({PROVIDER_NAME[connected.provider]})</span>
+                </span>
+                <Button id="mcp-connect-reset" variant="ghost" size="sm" onClick={resetConnected}>Change</Button>
+              </div>
+            ) : (
+              <>
+                {availablePlatform.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {availablePlatform.map((p) => (
+                      <Button key={p.provider} id={`mcp-connect-${p.provider}`} variant="outline" disabled={busy} onClick={() => connect(p.provider)}>
+                        Connect with {p.label}
+                      </Button>
+                    ))}
+                    {idps.length > 0 && (
+                      <button
+                        type="button"
+                        id="mcp-manual-identity-toggle"
+                        onClick={() => setManualIdentity((v) => !v)}
+                        aria-expanded={manualIdentity}
+                        className="text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
+                      >
+                        {manualIdentity ? 'Hide manual entry' : 'Enter identity manually'}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {showManualIdentity && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="agent-issuer">Provider</Label>
+                      <CustomSelect
+                        id="agent-issuer"
+                        className="w-full"
+                        value={agentForm.idpIssuer || null}
+                        onValueChange={(v) => setAgentForm({ ...agentForm, idpIssuer: v })}
+                        placeholder="Choose a provider"
+                        options={idps.map((p) => ({ value: p.issuer, label: `${providerLabel(p.kind)} · ${providerDirectory(p)}` }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="agent-subject">Agent ID</Label>
+                      <Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder={agentIdGuide.placeholder} />
+                      <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{agentIdGuide.helper}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <div>
             <Label>Roles</Label>
@@ -457,11 +628,13 @@ export default function McpServerSettings() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || (idps.length > 0 && !agentForm.idpIssuer)}>Add agent</Button>
+            <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || !agentForm.idpIssuer || !agentForm.idpSubject}>Add agent</Button>
             {!agentForm.name ? (
               <span className="text-xs text-[rgb(var(--color-text-500))]">Name the agent to continue.</span>
-            ) : idps.length > 0 && !agentForm.idpIssuer ? (
-              <span className="text-xs text-[rgb(var(--color-text-500))]">Choose a provider to continue.</span>
+            ) : !agentForm.idpIssuer || !agentForm.idpSubject ? (
+              <span className="text-xs text-[rgb(var(--color-text-500))]">
+                {availablePlatform.length > 0 ? 'Connect a provider — or enter an identity — to continue.' : 'Choose a provider and Agent ID to continue.'}
+              </span>
             ) : null}
           </div>
             </>
