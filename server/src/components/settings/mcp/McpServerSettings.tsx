@@ -6,6 +6,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow } from './mcpTypes';
@@ -284,16 +286,17 @@ export default function McpServerSettings() {
           <div className="space-y-3">
             <div className="md:w-1/2">
               <Label htmlFor="idp-kind">Provider</Label>
-              <select
+              <CustomSelect
                 id="idp-kind"
-                className="block w-full rounded-md border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-2 py-1.5 text-sm text-[rgb(var(--color-text-900))]"
+                className="w-full"
                 value={idpForm.kind}
-                onChange={(e) => setIdpForm({ ...idpForm, kind: e.target.value })}
-              >
-                <option value="microsoft">Microsoft Entra</option>
-                <option value="google">Google</option>
-                <option value="custom">Custom (advanced)</option>
-              </select>
+                onValueChange={(v) => setIdpForm({ ...idpForm, kind: v })}
+                options={[
+                  { value: 'microsoft', label: 'Microsoft Entra' },
+                  { value: 'google', label: 'Google' },
+                  { value: 'custom', label: 'Custom (advanced)' },
+                ]}
+              />
             </div>
 
             {idpForm.kind === 'microsoft' && (
@@ -346,12 +349,15 @@ export default function McpServerSettings() {
           </div>
           <div>
             <Label>Roles</Label>
-            <div className="mt-1 flex flex-wrap gap-3">
+            <div className="mt-1 flex flex-wrap gap-x-6 gap-y-2">
               {roles.map((r) => (
-                <label key={r.role_id} className="flex items-center gap-1 text-sm">
-                  <input id={`agent-role-${r.role_id}`} type="checkbox" checked={agentForm.roleIds.includes(r.role_id)} onChange={() => toggleRole(r.role_id)} />
-                  {r.role_name}
-                </label>
+                <Checkbox
+                  key={r.role_id}
+                  id={`agent-role-${r.role_id}`}
+                  label={r.role_name}
+                  checked={agentForm.roleIds.includes(r.role_id)}
+                  onChange={() => toggleRole(r.role_id)}
+                />
               ))}
             </div>
           </div>
