@@ -30,8 +30,12 @@
         "group": "Grupa",
         "servicePeriod": "Okres usługi",
         "invoiceWindow": "Okno faktury",
-        "included": "Dołączony"
-      }
+        "included": "Dołączony",
+        "charge": "Rodzaj",
+        "status": "Status",
+        "amount": "Kwota"
+      },
+      "pageScopeNote": "{{count}} grup(y) na tej stronie"
     },
     "groups": {
       "item": "Pozycja {{count}}",
@@ -43,9 +47,6 @@
       "line": "Linia {{count}}",
       "line_one": "Linia {{count}}",
       "line_other": "Linie {{count}}",
-      "obligationCount": "Obowiązek {{count}}",
-      "obligationCount_one": "Obowiązek {{count}}",
-      "obligationCount_other": "Obowiązki {{count}}",
       "includedCount": "Uwzględniono element {{count}}",
       "includedCount_one": "Uwzględniono element {{count}}",
       "includedCount_other": "Uwzględniono elementy {{count}}",
@@ -73,9 +74,7 @@
       "item_few": "{{count}} elementy",
       "item_many": "{{count}} elementów",
       "line_few": "{{count}} linie",
-      "line_many": "{{count}} linii",
-      "obligationCount_few": "{{count}} obowiązki",
-      "obligationCount_many": "{{count}} obowiązków"
+      "line_many": "{{count}} linii"
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Okno faktury jest inne",
@@ -242,6 +241,61 @@
     },
     "loading": {
       "billingData": "Ładowanie danych rozliczeniowych"
+    },
+    "views": {
+      "all": "Wszystkie",
+      "ready": "Gotowe",
+      "combinable": "Łączalne",
+      "attention": "Wymaga uwagi",
+      "notYetDue": "Jeszcze nie wymagalne"
+    },
+    "status": {
+      "ready": "Gotowe",
+      "combine": "Połącz",
+      "separate": "Osobno",
+      "notYetDue": "Jeszcze nie wymagalne",
+      "approval": "Zatwierdzenie",
+      "blocked": "Zablokowane"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "Wybrano: {{count}}",
+      "breakdown": "{{invoices}} faktur(y) · {{combine}} połączonych · {{separate}} osobnych",
+      "knownNow": "znane teraz",
+      "knownPlusAtGeneration": "znane teraz · {{count}} obliczane przy generowaniu",
+      "atGenerationLines": "{{count}} pozycj(e)",
+      "empty": "Wybierz grupy lub pozycje, aby wyświetlić podgląd lub wygenerować faktury.",
+      "pageScope": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
+    },
+    "amount": {
+      "atGeneration": "Obliczane przy generowaniu",
+      "plusAtGeneration": "+ {{count}} przy generowaniu"
+    },
+    "window": {
+      "open": "Otwarte",
+      "opensOn": "Otwiera się {{date}}",
+      "notOpen": "Jeszcze nieotwarte"
+    },
+    "legend": {
+      "confirmed": "Kwota znana teraz",
+      "atGeneration": "Obliczane przy generowaniu",
+      "combine": "Połącz w jedną fakturę",
+      "separate": "Musi być fakturowane osobno",
+      "notYetDue": "Jeszcze nie wymagalne"
+    },
+    "filters": {
+      "title": "Filtry",
+      "windowOpen": "Okno otwarte",
+      "charge": "Rodzaj",
+      "currency": "Waluta",
+      "any": "dowolne",
+      "clear": "Wyczyść",
+      "countSummary": "{{groups}} grup(y) · {{obligations}} pozycj(e)"
     }
   },
   "manualInvoices": {

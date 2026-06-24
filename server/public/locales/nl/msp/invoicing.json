@@ -28,8 +28,12 @@
         "group": "Groep",
         "servicePeriod": "Serviceperiode",
         "invoiceWindow": "Factuurvenster",
-        "included": "Inbegrepen"
-      }
+        "included": "Inbegrepen",
+        "charge": "Type",
+        "status": "Status",
+        "amount": "Bedrag"
+      },
+      "pageScopeNote": "{{count}} groep(en) op deze pagina"
     },
     "groups": {
       "item": "{{count}}-item",
@@ -41,9 +45,6 @@
       "line": "{{count}}-lijn",
       "line_one": "{{count}}-lijn",
       "line_other": "{{count}}-lijnen",
-      "obligationCount": "{{count}}-verplichting",
-      "obligationCount_one": "{{count}}-verplichting",
-      "obligationCount_other": "{{count}}-verplichtingen",
       "includedCount": "{{count}}-item inbegrepen",
       "includedCount_one": "{{count}}-item inbegrepen",
       "includedCount_other": "{{count}}-items inbegrepen",
@@ -222,6 +223,61 @@
     },
     "loading": {
       "billingData": "Factureringsgegevens laden"
+    },
+    "views": {
+      "all": "Alle",
+      "ready": "Klaar",
+      "combinable": "Combineerbaar",
+      "attention": "Aandacht nodig",
+      "notYetDue": "Nog niet verschuldigd"
+    },
+    "status": {
+      "ready": "Klaar",
+      "combine": "Combineren",
+      "separate": "Apart",
+      "notYetDue": "Nog niet verschuldigd",
+      "approval": "Goedkeuring",
+      "blocked": "Geblokkeerd"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} geselecteerd",
+      "breakdown": "{{invoices}} factuur/facturen · {{combine}} gecombineerd · {{separate}} apart",
+      "knownNow": "nu bekend",
+      "knownPlusAtGeneration": "nu bekend · {{count}} berekend bij genereren",
+      "atGenerationLines": "{{count}} post(en)",
+      "empty": "Selecteer groepen of posten om facturen te bekijken of te genereren.",
+      "pageScope": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "amount": {
+      "atGeneration": "Berekend bij genereren",
+      "plusAtGeneration": "+ {{count}} bij genereren"
+    },
+    "window": {
+      "open": "Open",
+      "opensOn": "Opent {{date}}",
+      "notOpen": "Nog niet open"
+    },
+    "legend": {
+      "confirmed": "Bedrag nu bekend",
+      "atGeneration": "Berekend bij genereren",
+      "combine": "Combineren tot één factuur",
+      "separate": "Moet apart gefactureerd worden",
+      "notYetDue": "Nog niet verschuldigd"
+    },
+    "filters": {
+      "title": "Filters",
+      "windowOpen": "Venster open",
+      "charge": "Type",
+      "currency": "Valuta",
+      "any": "alle",
+      "clear": "Wissen",
+      "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
     }
   },
   "manualInvoices": {

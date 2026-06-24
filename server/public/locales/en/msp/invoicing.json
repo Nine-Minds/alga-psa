@@ -4,9 +4,9 @@
       "title": "Ready to Invoice",
       "description": "Review recurring due work and generate draft invoices for the selected periods.",
       "selectAllExplanation": "Select parent groups or individual rows to control invoice generation.",
-      "filterPlaceholder": "Filter ready-to-invoice rows",
+      "filterPlaceholder": "Filter by client",
       "dateRange": "Invoice window",
-      "search": "Search",
+      "search": "Apply",
       "groupedPreviewUnavailable": "Preview supports grouped selections; direct \"Generate from preview\" remains single-selection only.",
       "selectionHintCombined": "1 invoice if parent selected",
       "selectionHintSeparate": "Select items individually",
@@ -25,31 +25,32 @@
         }
       },
       "columns": {
-        "group": "Group",
+        "group": "Client / Group",
         "servicePeriod": "Service Period",
         "invoiceWindow": "Invoice Window",
-        "included": "Included"
-      }
+        "included": "Included",
+        "charge": "Charge",
+        "status": "Status",
+        "amount": "Amount"
+      },
+      "pageScopeNote": "{{count}} group(s) on this page"
     },
     "groups": {
-      "item": "{{count}} item",
-      "item_one": "{{count}} item",
-      "item_other": "{{count}} items",
+      "item": "{{count}} line item",
+      "item_one": "{{count}} line item",
+      "item_other": "{{count}} line items",
       "contract": "{{count}} contract",
       "contract_one": "{{count}} contract",
       "contract_other": "{{count}} contracts",
       "line": "{{count}} line",
       "line_one": "{{count}} line",
       "line_other": "{{count}} lines",
-      "obligationCount": "{{count}} obligation",
-      "obligationCount_one": "{{count}} obligation",
-      "obligationCount_other": "{{count}} obligations",
-      "includedCount": "{{count}} item included",
-      "includedCount_one": "{{count}} item included",
-      "includedCount_other": "{{count}} items included",
-      "attributionMetadataMissing": "Assignment attribution metadata missing ({{count}} obligation)",
-      "attributionMetadataMissing_one": "Assignment attribution metadata missing ({{count}} obligation)",
-      "attributionMetadataMissing_other": "Assignment attribution metadata missing ({{count}} obligations)",
+      "includedCount": "{{count}} line item included",
+      "includedCount_one": "{{count}} line item included",
+      "includedCount_other": "{{count}} line items included",
+      "attributionMetadataMissing": "Assignment attribution metadata missing ({{count}} line item)",
+      "attributionMetadataMissing_one": "Assignment attribution metadata missing ({{count}} line item)",
+      "attributionMetadataMissing_other": "Assignment attribution metadata missing ({{count}} line items)",
       "actions": {
         "expand": "Expand",
         "collapse": "Collapse"
@@ -60,7 +61,7 @@
       "blocked": "Contains blocked items",
       "notReady": "Not ready to invoice",
       "upcoming": "Not yet due",
-      "upcomingDetail": "This period bills in arrears, so it becomes available to invoice after the service period ends.",
+      "upcomingDetail": "Bills in arrears. Available once the service period ends.",
       "upcomingDetailWithDate": "This period bills in arrears, so it becomes available to invoice on {{date}}, after the service period ends."
     },
     "incompatibilityReasons": {
@@ -93,9 +94,9 @@
     },
     "actions": {
       "previewSelected": "Preview Selected",
-      "generateSelected": "Generate Invoices for Selected Periods ({{count}})",
-      "generateSelected_one": "Generate Invoices for Selected Periods ({{count}})",
-      "generateSelected_other": "Generate Invoices for Selected Periods ({{count}})",
+      "generateSelected": "Generate Invoices ({{count}})",
+      "generateSelected_one": "Generate Invoices ({{count}})",
+      "generateSelected_other": "Generate Invoices ({{count}})",
       "reverseInvoice": "Reverse Invoice",
       "deleteInvoice": "Delete Invoice",
       "closePreview": "Close Preview",
@@ -222,6 +223,61 @@
     },
     "loading": {
       "billingData": "Loading billing data"
+    },
+    "views": {
+      "all": "All",
+      "ready": "Ready",
+      "combinable": "Combinable",
+      "attention": "Needs attention",
+      "notYetDue": "Not yet due"
+    },
+    "status": {
+      "ready": "Ready",
+      "combine": "Combine",
+      "separate": "Separate",
+      "notYetDue": "Not yet due",
+      "approval": "Approval",
+      "blocked": "Blocked"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} selected",
+      "breakdown": "{{invoices}} invoice(s) · {{combine}} combined · {{separate}} separate",
+      "knownNow": "known now",
+      "knownPlusAtGeneration": "known now · {{count}} calculated at generation",
+      "atGenerationLines": "{{count}} line item(s)",
+      "empty": "Select groups or line items to preview or generate invoices.",
+      "pageScope": "{{groups}} group(s) · {{obligations}} line item(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculated at generation",
+      "plusAtGeneration": "+ {{count}} at generation"
+    },
+    "window": {
+      "open": "Open",
+      "opensOn": "Opens {{date}}",
+      "notOpen": "Not open yet"
+    },
+    "legend": {
+      "confirmed": "Amount known now",
+      "atGeneration": "Calculated at generation",
+      "combine": "Combine into one invoice",
+      "separate": "Must invoice separately",
+      "notYetDue": "Not yet due"
+    },
+    "filters": {
+      "title": "Filters",
+      "windowOpen": "Window open",
+      "charge": "Charge",
+      "currency": "Currency",
+      "any": "any",
+      "clear": "Clear",
+      "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
     }
   },
   "manualInvoices": {
@@ -875,7 +931,7 @@
       "prepayment": "Prepayment"
     },
     "descriptions": {
-      "automatic": "Use invoice windows to review due recurring service periods before generating a recurring batch.",
+      "automatic": "Generate invoices for the recurring service periods that are due.",
       "manual": "Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.",
       "prepayment": "Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage."
     },

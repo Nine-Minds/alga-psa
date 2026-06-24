@@ -492,6 +492,13 @@ export interface IRecurringDueSelectionInput {
   executionWindow: IRecurringRunExecutionWindowIdentity;
 }
 
+/**
+ * How an obligation's amount is determined. Drives the per-row charge tag and
+ * the "known now vs calculated at generation" split on the Automatic Invoices
+ * screen. Values mirror `contract_lines.contract_line_type`.
+ */
+export type RecurringDueWorkChargeType = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+
 export interface IRecurringDueWorkRow {
   rowKey: string;
   executionIdentityKey: string;
@@ -528,6 +535,13 @@ export interface IRecurringDueWorkRow {
   contractLineId?: string | null;
   contractName?: string | null;
   contractLineName?: string | null;
+  /**
+   * Billing nature of the obligation, surfaced so the UI can label each row by
+   * how its amount is determined. Mirrors `contract_lines.contract_line_type`
+   * for contract-backed rows; derived for unresolved non-contract work
+   * ('Hourly' for time entries, 'Usage' for usage records). Null when unknown.
+   */
+  chargeType?: RecurringDueWorkChargeType | null;
   purchaseOrderScopeKey?: string | null;
   currencyCode?: string | null;
   taxSource?: string | null;
