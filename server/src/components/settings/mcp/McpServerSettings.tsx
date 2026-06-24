@@ -344,7 +344,18 @@ export default function McpServerSettings() {
           )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div><Label htmlFor="agent-name">Name</Label><Input id="agent-name" value={agentForm.name} onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })} placeholder="Support triage bot" /></div>
-            <div><Label htmlFor="agent-issuer">IdP issuer</Label><Input id="agent-issuer" value={agentForm.idpIssuer} onChange={(e) => setAgentForm({ ...agentForm, idpIssuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
+            <div>
+              <Label htmlFor="agent-issuer">Identity provider</Label>
+              <CustomSelect
+                id="agent-issuer"
+                className="w-full"
+                value={agentForm.idpIssuer || null}
+                onValueChange={(v) => setAgentForm({ ...agentForm, idpIssuer: v })}
+                disabled={idps.length === 0}
+                placeholder={idps.length === 0 ? 'Add a provider first' : 'Choose a provider'}
+                options={idps.map((p) => ({ value: p.issuer, label: `${providerLabel(p.kind)} · ${providerDirectory(p)}` }))}
+              />
+            </div>
             <div><Label htmlFor="agent-subject">Agent ID</Label><Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder="the agent's client_id or sub" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">The agent's own identifier at your provider.</p></div>
           </div>
           <div>
@@ -361,7 +372,7 @@ export default function McpServerSettings() {
               ))}
             </div>
           </div>
-          <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name}>Add agent</Button>
+          <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || (idps.length > 0 && !agentForm.idpIssuer)}>Add agent</Button>
         </CardContent>
       </Card>
 
