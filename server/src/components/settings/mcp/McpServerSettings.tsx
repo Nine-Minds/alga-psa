@@ -189,13 +189,13 @@ export default function McpServerSettings() {
     {
       title: 'Name',
       dataIndex: 'name',
-      width: '22%',
+      width: '20%',
       render: (_v, a) => <span className="font-medium text-[rgb(var(--color-text-900))]">{a.name}</span>,
     },
     {
       title: 'Provider',
       dataIndex: 'idp_issuer',
-      width: '18%',
+      width: '15%',
       render: (_v, a) => <span className="text-[rgb(var(--color-text-700))]">{agentProvider(a, idps)}</span>,
     },
     {
@@ -208,7 +208,7 @@ export default function McpServerSettings() {
     {
       title: 'Status',
       dataIndex: 'active',
-      width: '110px',
+      width: '96px',
       sortable: false,
       render: (_v, a) => <Badge variant={a.active ? 'success' : 'default-muted'}>{a.active ? 'Active' : 'Inactive'}</Badge>,
     },
