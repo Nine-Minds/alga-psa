@@ -28,7 +28,15 @@ vi.mock('@alga-psa/auth', () => ({
       id: mockedUserId,
       tenant: mockedTenantId
     }
-  }))
+  })),
+  getCurrentUser: vi.fn(async () => ({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' })),
+  // Pass-through so withAuth-wrapped server actions run with the mocked user/tenant.
+  withAuth: (action: any) => async (...args: any[]) =>
+    action({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' }, { tenant: mockedTenantId }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' }, { tenant: mockedTenantId }, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) =>
+    action({ user_id: mockedUserId, tenant: mockedTenantId, user_type: 'internal' }, ...args)
 }));
 
 vi.mock('server/src/lib/analytics/posthog', () => ({

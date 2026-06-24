@@ -59,6 +59,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # A few contract tests shell out to ripgrep (execFileSync('rg', ...)) to
+      # assert on source layout; it isn't on the runner by default.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Determine Nx base/head
         shell: bash
         run: |
@@ -110,6 +115,8 @@ jobs:
   # Informational coverage report for the server unit suite. Push-to-main only
   # (it re-runs the whole suite with instrumentation, too slow for every PR) and
   # non-blocking while baselines are established.
+  # Scope is src/test/unit only: src/test/infrastructure is DB-backed and runs
+  # in its own job below with a Postgres service.
   coverage-report:
     name: Server unit coverage (informational)
     if: github.event_name == 'push'
@@ -125,9 +132,12 @@ jobs:
         run: npm install -g npm@11
       - name: Install dependencies
         run: npm ci
+      # A few contract tests shell out to ripgrep; it isn't on the runner by default.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Run server unit tests with coverage
         working-directory: ./server
-        run: npx vitest run src/test/unit src/test/infrastructure --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov
+        run: npx vitest run src/test/unit --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov
         env:
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
@@ -137,3 +147,83 @@ jobs:
           name: server-unit-coverage
           path: server/coverage/lcov.info
           retention-days: 30
+
+  # DB-backed infrastructure suite (src/test/infrastructure). Split out of the
+  # unit/coverage job because these tests need a real Postgres — without one they
+  # fail en masse on ECONNREFUSED and drown out genuine unit-test signal. Service
+  # setup mirrors integration-tests.yml. Non-blocking until a green baseline
+  # exists; restore blocking once it's stable.
+  infrastructure-tests:
+    name: Infrastructure tests (DB-backed)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      APP_ENV: test
+      NODE_ENV: test
+      # Fail loudly instead of describe.skip when the DB is unreachable (see server/test-utils/requireDb.ts).
+      REQUIRE_DB: '1'
+      VITEST_SEED: '20260610'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      # A few contract tests shell out to ripgrep; it isn't on the runner by default.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      # Some tests read credentials from secrets/ files directly (getSecret falls back to env).
+      - name: Create secrets files
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      - name: Run infrastructure suite
+        working-directory: ./server
+        run: npm run test:infrastructure:ci
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
