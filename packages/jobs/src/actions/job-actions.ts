@@ -2,9 +2,14 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { JobStatus } from '@alga-psa/jobs';
+// Import from the concrete modules rather than the '@alga-psa/jobs' barrel: this
+// file is itself reached via the barrel's `export * from './actions'`, so a
+// self-import would read these before the barrel finishes initializing. The
+// top-level TERMINAL_JOB_STATUSES below evaluates JobStatus at module load, so
+// that cycle would leave it undefined. See sibling files (jobService, schedulers).
+import { JobStatus } from '../types/job';
 import { createTenantKnex } from '@alga-psa/db';
-import { JobService } from '@alga-psa/jobs';
+import { JobService } from '../lib/jobService';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 
 export interface JobMetrics {
