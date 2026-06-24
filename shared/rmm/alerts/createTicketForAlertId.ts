@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { NormalizedRmmAlertEvent, RmmAlertRuleActions } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { createTicketForAlert, type CreatedAlertTicket } from './ticketCreator';
+import { publishRmmTicketCreated } from './ticketCreatedEvent';
 
 export interface CreateTicketForAlertIdArgs {
   tenantId: string;
@@ -38,6 +39,7 @@ export async function createTicketForAlertId(
 
   let clientId: string | null = null;
   let organizationName: string | null = null;
+  let mappingDefaultContactId: string | null = null;
   if (alert.asset_id) {
     const asset = await knex('assets')
       .where({ tenant: tenantId, asset_id: alert.asset_id })
@@ -57,8 +59,9 @@ export async function createTicketForAlertId(
         integration_id: alert.integration_id,
         external_organization_id: externalOrgId,
       })
-      .first('client_id', 'external_organization_name');
+      .first('client_id', 'external_organization_name', 'default_contact_id');
     organizationName = orgMapping?.external_organization_name ?? null;
+    mappingDefaultContactId = orgMapping?.default_contact_id ?? null;
     if (!clientId) clientId = orgMapping?.client_id ?? null;
   }
   if (!clientId) {
@@ -84,19 +87,28 @@ export async function createTicketForAlertId(
   };
   const actions = rmmAlertRuleActionsSchema.parse({ createTicket: true, ...(args.overrides ?? {}) });
 
-  return knex.transaction(async (trx) => {
+  const created = await knex.transaction(async (trx) => {
     const created = await createTicketForAlert(trx, {
       event,
       actions,
       clientId: clientId!,
       assetId: alert.asset_id,
       organizationName,
+      mappingDefaultContactId,
     });
     await trx('rmm_alerts')
       .where({ tenant: tenantId, alert_id: alertId })
       .update({ ticket_id: created.ticket_id, updated_at: new Date().toISOString() });
     return created;
   });
+
+  await publishRmmTicketCreated({
+    tenantId,
+    ticketId: created.ticket_id,
+    source: alert.provider,
+  });
+
+  return created;
 }
 
 function safeParse(value: string): unknown {

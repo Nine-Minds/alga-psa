@@ -410,7 +410,7 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
     const scopes = await client.listComputerGroups();
     const existing = await knex('rmm_organization_mappings')
       .where({ tenant, integration_id: integration.integration_id })
-      .select(['mapping_id', 'external_organization_id', 'client_id', 'auto_sync_assets', 'auto_create_tickets']);
+      .select(['mapping_id', 'external_organization_id', 'client_id', 'auto_sync_assets', 'auto_create_tickets', 'default_contact_id']);
 
     const byExternalId = new Map(existing.map((row: any) => [String(row.external_organization_id), row]));
 
@@ -504,6 +504,7 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
         'rom.client_id',
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
+        'rom.default_contact_id',
         'rom.last_synced_at',
         'c.client_name as client_name',
       ])
@@ -528,6 +529,7 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     clientId?: string | null;
     autoSyncAssets?: boolean;
     autoCreateTickets?: boolean;
+    defaultContactId?: string | null;
   }
 ) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
@@ -541,6 +543,7 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId || null;
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
+    if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
 
     await knex('rmm_organization_mappings')
       .where({ tenant, mapping_id: input.mappingId })

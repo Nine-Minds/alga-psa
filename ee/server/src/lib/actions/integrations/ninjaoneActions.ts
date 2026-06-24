@@ -576,6 +576,7 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
   mappingId: string,
   updates: {
     company_id?: string | null;
+    default_contact_id?: string | null;
     auto_sync_assets?: boolean;
     auto_create_tickets?: boolean;
   }
@@ -599,6 +600,9 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     }
     if ('auto_create_tickets' in updates) {
       dbUpdates.auto_create_tickets = updates.auto_create_tickets;
+    }
+    if ('default_contact_id' in updates) {
+      dbUpdates.default_contact_id = updates.default_contact_id;
     }
 
     await knex('rmm_organization_mappings')

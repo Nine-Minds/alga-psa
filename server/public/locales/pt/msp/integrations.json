@@ -1584,6 +1584,14 @@
           "unavailable": "Informações do webhook indisponíveis. (Requer permissão de leitura das configurações.)",
           "url": "URL do webhook",
           "urlCopied": "URL do webhook copiada para a área de transferência."
+        },
+        "mappings": {
+          "org": "Organização do Tactical",
+          "client": "Cliente Alga",
+          "defaultContact": "Contato padrão"
+        },
+        "contact": {
+          "select": "Selecionar contato"
         }
       },
       "tanium": {
@@ -1635,7 +1643,9 @@
           "mappedClient": "Cliente mapeado",
           "noScopes": "Nenhum escopo Tanium descoberto ainda.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Não mapeado"
+          "unmapped": "Não mapeado",
+          "defaultContact": "Contato padrão",
+          "selectContact": "Selecionar contato"
         },
         "status": {
           "connected": "Conectado",
@@ -1701,7 +1711,9 @@
           "loading": "Carregando…",
           "mappedClient": "Cliente mapeado",
           "noGroups": "Ainda não há grupos descobertos. Execute Descobrir grupos primeiro.",
-          "unmapped": "Não mapeado"
+          "unmapped": "Não mapeado",
+          "defaultContact": "Contato padrão",
+          "selectContact": "Selecionar contato"
         },
         "status": {
           "connected": "Conectado",
@@ -1732,6 +1744,76 @@
           "showSecret": "Mostrar segredo",
           "title": "Webhook de alertas",
           "url": "URL do webhook"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Organização do Huntress",
+          "client": "Cliente de Alga",
+          "defaultContact": "Contato padrão",
+          "createTickets": "Criar tickets",
+          "status": "Status"
+        },
+        "selectContact": "Selecionar contato",
+        "status": {
+          "autoMatched": "Correspondência automática",
+          "mapped": "Mapeado",
+          "unmapped": "Não mapeado → triagem"
+        },
+        "title": "Mapeamento de organizações",
+        "description": "Mapeie organizações do Huntress para clientes. Incidentes de organizações não mapeadas vão para o cliente de fallback e o quadro de triagem.",
+        "unmappedSuffix": "({{count}} não mapeadas)",
+        "syncButton": "Sincronizar organizações",
+        "loading": "Carregando…",
+        "empty": "Ainda não há organizações — clique em \"Sincronizar organizações\".",
+        "errors": {
+          "load": "Falha ao carregar mapeamentos de organizações",
+          "sync": "Falha na sincronização",
+          "updateMapping": "Falha ao atualizar o mapeamento",
+          "updateContact": "Falha ao atualizar o contato padrão"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "Organização do NinjaOne",
+          "company": "Empresa de Alga",
+          "defaultContact": "Contato padrão",
+          "autoSync": "Sincronização automática",
+          "status": "Status"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Selecionar empresa",
+        "selectContact": "Selecionar contato",
+        "status": {
+          "mapped": "Mapeado",
+          "unmapped": "Não mapeado"
+        },
+        "title": "Mapeamentos de organizações",
+        "description": "Mapeie organizações do NinjaOne para empresas da Alga para habilitar a sincronização de dispositivos.",
+        "loading": "Carregando mapeamentos de organizações...",
+        "syncing": "Sincronizando...",
+        "refreshButton": "Atualizar organizações",
+        "summary": {
+          "mapped": "{{count}} mapeadas",
+          "unmapped": "{{count}} não mapeadas"
+        },
+        "empty": {
+          "title": "Nenhuma organização sincronizada ainda.",
+          "hint": "Clique em \"Atualizar organizações\" para buscar organizações do NinjaOne."
+        },
+        "unmappedNote": "Dispositivos de organizações não mapeadas não serão sincronizados. Mapeie cada organização para uma empresa da Alga para habilitar a sincronização de dispositivos.",
+        "success": {
+          "synced": "{{processed}} organizações sincronizadas ({{created}} novas, {{updated}} atualizadas)",
+          "mappingUpdated": "Mapeamento atualizado com sucesso",
+          "contactUpdated": "Contato padrão atualizado com sucesso"
+        },
+        "errors": {
+          "load": "Falha ao carregar mapeamentos de organizações",
+          "sync": "Falha ao sincronizar organizações",
+          "updateMapping": "Falha ao atualizar o mapeamento",
+          "updateContact": "Falha ao atualizar o contato padrão",
+          "updateAutoSync": "Falha ao atualizar a configuração de sincronização automática"
         }
       }
     },
@@ -2321,8 +2403,5 @@
         "publishableKeyFormat": "A publishable key deve começar com pk_"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Selecionar empresa"
   }
 }

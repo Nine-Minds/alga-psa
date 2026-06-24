@@ -1584,6 +1584,14 @@
           "unavailable": "Webhook-informatie niet beschikbaar. (Vereist leesrechten voor instellingen.)",
           "url": "Webhook-URL",
           "urlCopied": "Webhook-URL naar klembord gekopieerd."
+        },
+        "mappings": {
+          "org": "Tactical-organisatie",
+          "client": "Alga-klant",
+          "defaultContact": "Standaardcontact"
+        },
+        "contact": {
+          "select": "Contact selecteren"
         }
       },
       "tanium": {
@@ -1635,7 +1643,9 @@
           "mappedClient": "Toegewezen klant",
           "noScopes": "Nog geen Tanium-scopes ontdekt.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Niet toegewezen"
+          "unmapped": "Niet toegewezen",
+          "defaultContact": "Standaardcontact",
+          "selectContact": "Contact selecteren"
         },
         "status": {
           "connected": "Verbonden",
@@ -1701,7 +1711,9 @@
           "loading": "Laden…",
           "mappedClient": "Toegewezen klant",
           "noGroups": "Nog geen groepen gedetecteerd. Voer eerst Groepen detecteren uit.",
-          "unmapped": "Niet toegewezen"
+          "unmapped": "Niet toegewezen",
+          "defaultContact": "Standaardcontact",
+          "selectContact": "Contact selecteren"
         },
         "status": {
           "connected": "Verbonden",
@@ -1732,6 +1744,76 @@
           "showSecret": "Geheim tonen",
           "title": "Waarschuwingswebhook",
           "url": "Webhook-URL"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Huntress-organisatie",
+          "client": "Alga-klant",
+          "defaultContact": "Standaardcontact",
+          "createTickets": "Tickets aanmaken",
+          "status": "Status"
+        },
+        "selectContact": "Contact selecteren",
+        "status": {
+          "autoMatched": "Automatisch gekoppeld",
+          "mapped": "Gekoppeld",
+          "unmapped": "Niet gekoppeld → triage"
+        },
+        "title": "Organisatiekoppeling",
+        "description": "Koppel Huntress-organisaties aan klanten. Incidenten van niet-gekoppelde organisaties gaan naar de fallbackklant en het triageboard.",
+        "unmappedSuffix": "({{count}} niet gekoppeld)",
+        "syncButton": "Organisaties synchroniseren",
+        "loading": "Laden…",
+        "empty": "Nog geen organisaties — klik op \"Organisaties synchroniseren\".",
+        "errors": {
+          "load": "Kan organisatiekoppelingen niet laden",
+          "sync": "Synchronisatie mislukt",
+          "updateMapping": "Kan koppeling niet bijwerken",
+          "updateContact": "Kan standaardcontact niet bijwerken"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "NinjaOne-organisatie",
+          "company": "Alga-bedrijf",
+          "defaultContact": "Standaardcontact",
+          "autoSync": "Automatisch synchroniseren",
+          "status": "Status"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Bedrijf selecteren",
+        "selectContact": "Contact selecteren",
+        "status": {
+          "mapped": "Gekoppeld",
+          "unmapped": "Niet gekoppeld"
+        },
+        "title": "Organisatiekoppelingen",
+        "description": "Koppel NinjaOne-organisaties aan Alga-bedrijven om apparaatsynchronisatie in te schakelen.",
+        "loading": "Organisatiekoppelingen laden...",
+        "syncing": "Synchroniseren...",
+        "refreshButton": "Organisaties vernieuwen",
+        "summary": {
+          "mapped": "{{count}} gekoppeld",
+          "unmapped": "{{count}} niet gekoppeld"
+        },
+        "empty": {
+          "title": "Nog geen organisaties gesynchroniseerd.",
+          "hint": "Klik op \"Organisaties vernieuwen\" om organisaties op te halen uit NinjaOne."
+        },
+        "unmappedNote": "Apparaten van niet-gekoppelde organisaties worden niet gesynchroniseerd. Koppel elke organisatie aan een Alga-bedrijf om apparaatsynchronisatie in te schakelen.",
+        "success": {
+          "synced": "{{processed}} organisaties gesynchroniseerd ({{created}} nieuw, {{updated}} bijgewerkt)",
+          "mappingUpdated": "Koppeling succesvol bijgewerkt",
+          "contactUpdated": "Standaardcontact succesvol bijgewerkt"
+        },
+        "errors": {
+          "load": "Kan organisatiekoppelingen niet laden",
+          "sync": "Kan organisaties niet synchroniseren",
+          "updateMapping": "Kan koppeling niet bijwerken",
+          "updateContact": "Kan standaardcontact niet bijwerken",
+          "updateAutoSync": "Kan instelling voor automatisch synchroniseren niet bijwerken"
         }
       }
     },
@@ -2321,8 +2403,5 @@
         "publishableKeyFormat": "Publishable key moet beginnen met pk_"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Bedrijf selecteren"
   }
 }

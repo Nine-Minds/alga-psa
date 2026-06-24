@@ -3,6 +3,8 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import {
+  createTicketForAlert,
+  createTicketForAlertId,
   processRmmAlertEvent,
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
@@ -18,6 +20,10 @@ const tenantId = uuidv4();
 const userId = uuidv4();
 const clientId = uuidv4();
 const orgOnlyClientId = uuidv4();
+const noContactClientId = uuidv4();
+const assetPrimaryContactId = uuidv4();
+const orgPrimaryContactId = uuidv4();
+const mappingDefaultContactId = uuidv4();
 const boardId = uuidv4();
 const defaultBoardId = uuidv4();
 const statusOpenId = uuidv4();
@@ -98,6 +104,7 @@ beforeAll(async () => {
       tenant: tenantId,
       client_id: clientId,
       client_name: 'Acme Corp',
+      properties: JSON.stringify({ primary_contact_id: assetPrimaryContactId }),
       is_inactive: false,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
@@ -106,6 +113,50 @@ beforeAll(async () => {
       tenant: tenantId,
       client_id: orgOnlyClientId,
       client_name: 'Org-Mapped Only Co',
+      properties: JSON.stringify({ primary_contact_id: orgPrimaryContactId }),
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    },
+    {
+      tenant: tenantId,
+      client_id: noContactClientId,
+      client_name: 'No Contact Co',
+      properties: JSON.stringify({}),
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    },
+  ]);
+
+  const contactClientColumn = (await hasColumn('contacts', 'client_id')) ? 'client_id' : 'company_id';
+  await db('contacts').insert([
+    {
+      tenant: tenantId,
+      contact_name_id: assetPrimaryContactId,
+      full_name: 'Asset Primary Contact',
+      email: 'asset-primary@example.com',
+      [contactClientColumn]: clientId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    },
+    {
+      tenant: tenantId,
+      contact_name_id: orgPrimaryContactId,
+      full_name: 'Org Primary Contact',
+      email: 'org-primary@example.com',
+      [contactClientColumn]: orgOnlyClientId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    },
+    {
+      tenant: tenantId,
+      contact_name_id: mappingDefaultContactId,
+      full_name: 'Mapping Default Contact',
+      email: 'mapping-default@example.com',
+      [contactClientColumn]: orgOnlyClientId,
       is_inactive: false,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
@@ -204,6 +255,7 @@ beforeAll(async () => {
     external_organization_id: '500',
     external_organization_name: 'Acme Corp',
     client_id: orgOnlyClientId,
+    default_contact_id: mappingDefaultContactId,
     auto_sync_assets: false,
     auto_create_tickets: false,
   });
@@ -272,6 +324,7 @@ afterAll(async () => {
     'priorities',
     'statuses',
     'boards',
+    'contacts',
     'clients',
     'users',
     'tenants',
@@ -290,6 +343,51 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
   const firstExternalId = 'ext-first';
   let firstAlertId: string;
   let firstTicketId: string;
+
+  it('creates direct alert tickets with mapping default, client default, or no contact', async () => {
+    const mappingTicket = await db.transaction((trx) =>
+      createTicketForAlert(trx, {
+        event: event({ externalAlertId: 'direct-mapping-contact', externalDeviceId: undefined }),
+        actions: {
+          createTicket: true,
+          boardId,
+          priorityOverride: priorityUrgentId,
+          assignToUserId: userId,
+        },
+        clientId: orgOnlyClientId,
+        mappingDefaultContactId,
+      }),
+    );
+    const mappingRow = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: mappingTicket.ticket_id })
+      .first();
+    expect(mappingRow.contact_name_id).toBe(mappingDefaultContactId);
+    expect(mappingRow.ticket_number).toBe(mappingTicket.ticket_number);
+
+    const fallbackTicket = await db.transaction((trx) =>
+      createTicketForAlert(trx, {
+        event: event({ externalAlertId: 'direct-primary-contact', externalDeviceId: undefined }),
+        actions: { createTicket: true, boardId },
+        clientId: orgOnlyClientId,
+      }),
+    );
+    const fallbackRow = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: fallbackTicket.ticket_id })
+      .first();
+    expect(fallbackRow.contact_name_id).toBe(orgPrimaryContactId);
+
+    const noContactTicket = await db.transaction((trx) =>
+      createTicketForAlert(trx, {
+        event: event({ externalAlertId: 'direct-no-contact', externalDeviceId: undefined }),
+        actions: { createTicket: true, boardId },
+        clientId: noContactClientId,
+      }),
+    );
+    const noContactRow = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: noContactTicket.ticket_id })
+      .first();
+    expect(noContactRow.contact_name_id).toBeNull();
+  });
 
   it('creates a routed ticket for a triggered alert (rules, asset, templates, provenance)', async () => {
     const result = await processRmmAlertEvent({ knex: db }, event({ externalAlertId: firstExternalId }));
@@ -312,6 +410,7 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     expect(ticket.priority_id).toBe(priorityUrgentId);
     expect(ticket.assigned_to).toBe(userId);
     expect(ticket.client_id).toBe(clientId); // from the asset, not the org mapping
+    expect(ticket.contact_name_id).toBe(assetPrimaryContactId); // asset client primary, not the org mapping default
     expect(ticket.status_id).toBe(statusOpenId);
     expect(ticket.source).toBe('ninjaone');
     expect(ticket.title).toBe('[Alert] SERVER-01: Disk C: is at 95% capacity');
@@ -357,6 +456,44 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     // Unmapped device: the client falls back to the organization mapping.
     const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: result.ticketId! }).first();
     expect(ticket.client_id).toBe(orgOnlyClientId);
+    expect(ticket.contact_name_id).toBe(mappingDefaultContactId);
+  });
+
+  it('creates a manual alert ticket using the organization mapping default contact', async () => {
+    const manualAlertId = uuidv4();
+    await db('rmm_alerts').insert({
+      tenant: tenantId,
+      alert_id: manualAlertId,
+      integration_id: integrationId,
+      external_alert_id: 'manual-contact-default',
+      external_device_id: null,
+      asset_id: null,
+      severity: 'major',
+      status: 'active',
+      source_type: 'condition',
+      alert_class: 'MANUAL_CONTACT',
+      message: 'Manual ticket from alert',
+      device_name: 'ORG-DEVICE',
+      dedup_key: 'manual-contact-default',
+      triggered_at: new Date().toISOString(),
+      last_occurrence_at: new Date().toISOString(),
+      metadata: JSON.stringify({ organizationId: 500 }),
+      updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    });
+
+    const created = await createTicketForAlertId(db, {
+      tenantId,
+      alertId: manualAlertId,
+      overrides: { boardId, priorityOverride: priorityHighId },
+    });
+
+    const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: created.ticket_id }).first();
+    expect(ticket.client_id).toBe(orgOnlyClientId);
+    expect(ticket.contact_name_id).toBe(mappingDefaultContactId);
+
+    const alert = await db('rmm_alerts').where({ tenant: tenantId, alert_id: manualAlertId }).first();
+    expect(alert.ticket_id).toBe(created.ticket_id);
   });
 
   it('records without a ticket when no rule matches', async () => {

@@ -395,6 +395,7 @@ export const listLevelIoOrganizationMappings = withAdvancedAssetsAccess(async (u
         'rom.external_organization_id',
         'rom.external_organization_name',
         'rom.client_id',
+        'rom.default_contact_id',
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
         'rom.metadata',
@@ -420,6 +421,7 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
   input: {
     mappingId: string;
     clientId?: string | null;
+    defaultContactId?: string | null;
     autoSyncAssets?: boolean;
     autoCreateTickets?: boolean;
   }
@@ -433,6 +435,7 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
       updated_at: knex.fn.now(),
     };
     if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId || null;
+    if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
 
