@@ -100,12 +100,31 @@ export const DEMO_SUGGESTION = {
 export function demoAudit(agentId: string): AuditRow[] {
   const base = Date.parse('2026-06-24T14:00:00Z');
   const mins = (n: number) => new Date(base - n * 60_000).toISOString();
-  return [
-    { agent_id: agentId, tool: 'tickets.list', ok: true, decision: 'allow', status_code: 200, created_at: mins(2) },
-    { agent_id: agentId, tool: 'tickets.update', ok: true, decision: 'allow', status_code: 200, created_at: mins(11) },
-    { agent_id: agentId, tool: 'invoices.create', ok: false, decision: 'deny', status_code: 403, created_at: mins(37) },
-    { agent_id: agentId, tool: 'contacts.search', ok: true, decision: 'allow', status_code: 200, created_at: mins(64) },
+  // Enough rows to span more than one page, so the activity log's pager shows.
+  const events: Array<[string, boolean, string, number]> = [
+    ['tickets.list', true, 'allow', 200],
+    ['tickets.update', true, 'allow', 200],
+    ['invoices.create', false, 'deny', 403],
+    ['contacts.search', true, 'allow', 200],
+    ['tickets.get', true, 'allow', 200],
+    ['time_entries.create', true, 'allow', 201],
+    ['projects.list', true, 'allow', 200],
+    ['invoices.send', false, 'deny', 403],
+    ['assets.search', true, 'allow', 200],
+    ['tickets.comment', true, 'allow', 201],
+    ['companies.get', true, 'allow', 200],
+    ['schedules.update', false, 'deny', 409],
+    ['tickets.list', true, 'allow', 200],
+    ['contacts.get', true, 'allow', 200],
   ];
+  return events.map(([tool, ok, decision, status_code], i) => ({
+    agent_id: agentId,
+    tool,
+    ok,
+    decision,
+    status_code,
+    created_at: mins((i + 1) * 7),
+  }));
 }
 
 export function demoState(mode: McpDemoMode): {

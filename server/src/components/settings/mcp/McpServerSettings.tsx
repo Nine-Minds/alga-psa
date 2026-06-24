@@ -166,7 +166,7 @@ export default function McpServerSettings() {
         setAudit(demoAudit(agent.agent_id));
         return;
       }
-      const r = await api<{ data: AuditRow[] }>(`/api/v1/mcp/audit?agentId=${encodeURIComponent(agent.agent_id)}`);
+      const r = await api<{ data: AuditRow[] }>(`/api/v1/mcp/audit?agentId=${encodeURIComponent(agent.agent_id)}&limit=200`);
       setAudit(r.data);
     });
 
@@ -463,7 +463,7 @@ export default function McpServerSettings() {
         <Card>
           <CardHeader><CardTitle>{auditAgent ? `Activity — ${auditAgent.name}` : 'Activity'}</CardTitle><CardDescription>What it did, and whether each action was allowed.</CardDescription></CardHeader>
           <CardContent>
-            <DataTable data={audit} columns={auditColumns} pagination={false} />
+            <DataTable data={audit} columns={auditColumns} />
           </CardContent>
         </Card>
       )}
