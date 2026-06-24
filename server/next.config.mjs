@@ -224,9 +224,12 @@ const nextConfig = {
       '@alga-psa/notifications/hooks': '../packages/notifications/src/hooks/index.ts',
       '@alga-psa/scheduling': '../packages/scheduling/src',
       '@alga-psa/scheduling/': '../packages/scheduling/src/',
-      // @alga-psa/jobs: export names don't mirror src (./fanout -> src/lib/fanout),
-      // so lib/ subpaths get explicit overrides (longest-match wins). search mirrors src.
+      // @alga-psa/jobs: export names don't mirror src (./fanout -> src/lib/fanout).
+      // Turbopack matches the bare key exactly, so every lib/* and mirror
+      // (actions/components) subpath is listed explicitly.
       '@alga-psa/jobs': '../packages/jobs/src',
+      '@alga-psa/jobs/actions': '../packages/jobs/src/actions',
+      '@alga-psa/jobs/components': '../packages/jobs/src/components',
       '@alga-psa/jobs/fanout': '../packages/jobs/src/lib/fanout',
       '@alga-psa/jobs/runner': '../packages/jobs/src/lib/jobRunnerAccessor.ts',
       '@alga-psa/jobs/scheduler': '../packages/jobs/src/lib/jobSchedulerAccessor.ts',
@@ -579,8 +582,15 @@ const nextConfig = {
       // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
       // mirror its src layout (./fanout -> src/lib/fanout, ./handlers/* ->
       // src/lib/handlers/*), so the lib/ subpaths need explicit overrides
-      // (longest-match wins over the bare prefix alias). search mirrors src.
-      '@alga-psa/jobs': path.join(__dirname, '../packages/jobs/src'),
+      // webpack resolve.alias is FIRST-match, so the bare '@alga-psa/jobs' MUST be
+      // exact ('$') — otherwise it swallows every subpath (e.g. '@alga-psa/jobs/fanout'
+      // -> src/fanout, which doesn't exist, instead of src/lib/fanout) and never falls
+      // through to the specific alias. Mirror subpaths (actions/components) and the
+      // non-mirror lib/* subpaths are listed explicitly. search mirrors src (flat),
+      // so its bare prefix resolves fine.
+      '@alga-psa/jobs$': path.join(__dirname, '../packages/jobs/src'),
+      '@alga-psa/jobs/actions': path.join(__dirname, '../packages/jobs/src/actions'),
+      '@alga-psa/jobs/components': path.join(__dirname, '../packages/jobs/src/components'),
       '@alga-psa/jobs/fanout': path.join(__dirname, '../packages/jobs/src/lib/fanout'),
       '@alga-psa/jobs/runner': path.join(__dirname, '../packages/jobs/src/lib/jobRunnerAccessor.ts'),
       '@alga-psa/jobs/scheduler': path.join(__dirname, '../packages/jobs/src/lib/jobSchedulerAccessor.ts'),
