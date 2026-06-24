@@ -31,6 +31,13 @@ function providerDirectory(p: TrustedIdp): string {
   return hostOf(p.issuer);
 }
 
+/** The provider an agent signs in through, resolved from the trusted-provider list. */
+function agentProvider(a: Agent, idps: TrustedIdp[]): string {
+  const idp = idps.find((p) => p.issuer === a.idp_issuer);
+  if (idp) return providerLabel(idp.kind);
+  return a.idp_issuer ? hostOf(a.idp_issuer) : '—';
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     credentials: 'same-origin',
@@ -126,6 +133,14 @@ export default function McpServerSettings() {
       roleIds: f.roleIds.includes(roleId) ? f.roleIds.filter((r) => r !== roleId) : [...f.roleIds, roleId],
     }));
 
+  const setAgentActive = (a: Agent, active: boolean) =>
+    run(async () => {
+      setAgents((list) => list.map((x) => (x.agent_id === a.agent_id ? { ...x, active } : x)));
+      if (!demoMode) {
+        await api('/api/v1/mcp/agents', { method: 'POST', body: JSON.stringify({ ...a, deactivate: !active }) });
+      }
+    });
+
   const idpColumns: ColumnDefinition<TrustedIdp>[] = [
     {
       title: 'Provider',
@@ -146,6 +161,84 @@ export default function McpServerSettings() {
       width: '120px',
       sortable: false,
       render: (_v, p) => <Badge variant={p.active ? 'success' : 'default-muted'}>{p.active ? 'Active' : 'Inactive'}</Badge>,
+    },
+  ];
+
+  const agentColumns: ColumnDefinition<Agent>[] = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      width: '22%',
+      render: (_v, a) => <span className="font-medium text-[rgb(var(--color-text-900))]">{a.name}</span>,
+    },
+    {
+      title: 'Provider',
+      dataIndex: 'idp_issuer',
+      width: '18%',
+      render: (_v, a) => <span className="text-[rgb(var(--color-text-700))]">{agentProvider(a, idps)}</span>,
+    },
+    {
+      title: 'Agent ID',
+      dataIndex: 'idp_subject',
+      render: (_v, a) => (
+        <span className="font-mono text-xs text-[rgb(var(--color-text-700))]" title={a.idp_subject ?? ''}>{a.idp_subject ?? '—'}</span>
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'active',
+      width: '110px',
+      sortable: false,
+      render: (_v, a) => <Badge variant={a.active ? 'success' : 'default-muted'}>{a.active ? 'Active' : 'Inactive'}</Badge>,
+    },
+    {
+      title: '',
+      dataIndex: 'agent_id',
+      width: '190px',
+      sortable: false,
+      render: (_v, a) => (
+        <div className="flex justify-end gap-2">
+          <Button id={`mcp-audit-${a.agent_id}`} variant="outline" size="sm" onClick={() => loadAudit(a.agent_id)}>View activity</Button>
+          {a.active ? (
+            <Button id={`mcp-deactivate-${a.agent_id}`} variant="outline" size="sm" disabled={busy} onClick={() => setAgentActive(a, false)}>Deactivate</Button>
+          ) : (
+            <Button id={`mcp-reactivate-${a.agent_id}`} variant="outline" size="sm" disabled={busy} onClick={() => setAgentActive(a, true)}>Reactivate</Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const auditColumns: ColumnDefinition<AuditRow>[] = [
+    {
+      title: 'When',
+      dataIndex: 'created_at',
+      width: '26%',
+      render: (_v, r) => <span className="text-[rgb(var(--color-text-700))]">{new Date(r.created_at).toLocaleString()}</span>,
+    },
+    {
+      title: 'Action',
+      dataIndex: 'tool',
+      render: (_v, r) => <span className="font-mono text-xs text-[rgb(var(--color-text-700))]">{r.tool}</span>,
+    },
+    {
+      title: 'Result',
+      dataIndex: 'decision',
+      width: '130px',
+      sortable: false,
+      render: (_v, r) =>
+        r.decision ? (
+          <Badge variant={r.decision === 'allow' ? 'success' : 'error'}>{r.decision === 'allow' ? 'Allowed' : 'Blocked'}</Badge>
+        ) : (
+          <span className="text-[rgb(var(--color-text-500))]">—</span>
+        ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status_code',
+      width: '90px',
+      sortable: false,
+      render: (_v, r) => <span className="font-mono text-xs text-[rgb(var(--color-text-600))]">{r.status_code ?? '—'}</span>,
     },
   ];
 
@@ -241,27 +334,11 @@ export default function McpServerSettings() {
           <CardDescription>Each agent signs in as itself and gets the roles you assign.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[rgb(var(--color-text-600))]"><th className="py-1">Name</th><th>Agent ID</th><th>Status</th><th></th></tr>
-            </thead>
-            <tbody>
-              {agents.length === 0 && <tr><td colSpan={4} className="py-2 text-[rgb(var(--color-text-500))]">No agents yet.</td></tr>}
-              {agents.map((a) => (
-                <tr key={a.agent_id} className="border-t border-[rgb(var(--color-border-200))]">
-                  <td className="py-1">{a.name}</td>
-                  <td className="font-mono text-xs">{a.idp_subject ?? '—'}</td>
-                  <td>{a.active ? 'Active' : 'Inactive'}</td>
-                  <td className="text-right space-x-2">
-                    <Button id={`mcp-audit-${a.agent_id}`} variant="outline" size="sm" onClick={() => loadAudit(a.agent_id)}>View audit</Button>
-                    {a.active && (
-                      <Button id={`mcp-deactivate-${a.agent_id}`} variant="outline" size="sm" onClick={() => run(async () => { await api(`/api/v1/mcp/agents`, { method: 'POST', body: JSON.stringify({ ...a, deactivate: true }) }).catch(() => {}); })}>Deactivate</Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {agents.length === 0 ? (
+            <p className="text-sm text-[rgb(var(--color-text-500))]">No agents yet.</p>
+          ) : (
+            <DataTable data={agents} columns={agentColumns} pagination={false} />
+          )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <div><Label htmlFor="agent-name">Name</Label><Input id="agent-name" value={agentForm.name} onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })} placeholder="Support triage bot" /></div>
             <div><Label htmlFor="agent-issuer">IdP issuer</Label><Input id="agent-issuer" value={agentForm.idpIssuer} onChange={(e) => setAgentForm({ ...agentForm, idpIssuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
@@ -287,19 +364,7 @@ export default function McpServerSettings() {
         <Card>
           <CardHeader><CardTitle>Activity</CardTitle><CardDescription>What this agent did, and whether each action was allowed.</CardDescription></CardHeader>
           <CardContent>
-            <table className="w-full text-sm">
-              <thead><tr className="text-left text-[rgb(var(--color-text-600))]"><th className="py-1">When</th><th>Tool</th><th>Decision</th><th>Status</th></tr></thead>
-              <tbody>
-                {audit.map((row, i) => (
-                  <tr key={i} className="border-t border-[rgb(var(--color-border-200))]">
-                    <td className="py-1">{new Date(row.created_at).toLocaleString()}</td>
-                    <td className="font-mono text-xs">{row.tool}</td>
-                    <td>{row.decision}</td>
-                    <td>{row.status_code ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable data={audit} columns={auditColumns} pagination={false} />
           </CardContent>
         </Card>
       )}
