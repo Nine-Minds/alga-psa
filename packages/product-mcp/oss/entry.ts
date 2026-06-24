@@ -47,3 +47,33 @@ export async function exportAgentAudit(_tenant: string, _filter?: unknown): Prom
 export async function authenticateMcpAdmin(_req: unknown): Promise<McpAdminContext | null> {
   return null;
 }
+
+// "Connect with Microsoft/Google" + hosted platform providers (EE-only). These
+// shapes mirror @ee/lib/mcp/connectOAuth so the route shells type-check against
+// either edition's seam entry.
+export interface PlatformProvider {
+  provider: 'microsoft' | 'google';
+  label: string;
+  issuer: string | null;
+  available: boolean;
+}
+export interface ConnectIdentity {
+  provider: 'microsoft' | 'google';
+  issuer: string;
+  subject: string;
+  label: string;
+}
+export interface ConnectStart {
+  authUrl: string;
+  stateCookie: { name: string; value: string; maxAgeSeconds: number };
+}
+
+export async function listPlatformProviders(_tenant: string): Promise<PlatformProvider[]> {
+  return [];
+}
+export async function buildConnectAuthUrl(_params: unknown): Promise<ConnectStart> {
+  throw new Error('MCP is an Enterprise feature.');
+}
+export async function completeConnectCallback(_params: unknown): Promise<ConnectIdentity> {
+  throw new Error('MCP is an Enterprise feature.');
+}
