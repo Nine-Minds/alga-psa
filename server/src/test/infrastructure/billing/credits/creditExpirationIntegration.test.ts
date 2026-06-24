@@ -19,8 +19,6 @@ import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHan
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
@@ -236,26 +234,22 @@ describe('Credit Expiration Integration Tests', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await ensureDefaultTax();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
     await ensureDefaultTax();
   }, 30000);
 

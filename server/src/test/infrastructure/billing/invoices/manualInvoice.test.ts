@@ -9,8 +9,6 @@ import { ensureDefaultBillingSettings } from '../../../../../test-utils/billingT
 import { expectNotFound } from '../../../../../test-utils/errorUtils';
 import type { ITransaction } from '../../../../interfaces/billing.interfaces';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
@@ -112,13 +110,11 @@ beforeAll(async () => {
     ],
     resetBetweenTests: true
   });
-  const mockContext = setupCommonMocks({
+  setupCommonMocks({
     tenantId: context.tenantId,
     userId: context.userId,
     permissionCheck: () => true
   });
-  mockedTenantId = mockContext.tenantId;
-  mockedUserId = mockContext.userId;
   await ensureDefaultBillingSettings(context);
 }, 60000);
 
@@ -128,13 +124,11 @@ beforeEach(async () => {
   // Clear service type cache when context is reset to prevent using stale IDs from previous tenant
   serviceTypeCache = {};
 
-  const mockContext = setupCommonMocks({
+  setupCommonMocks({
     tenantId: context.tenantId,
     userId: context.userId,
     permissionCheck: () => true
   });
-  mockedTenantId = mockContext.tenantId;
-  mockedUserId = mockContext.userId;
   await ensureDefaultBillingSettings(context);
 }, 30000);
 

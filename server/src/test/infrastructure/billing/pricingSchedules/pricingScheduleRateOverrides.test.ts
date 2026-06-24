@@ -17,8 +17,6 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
@@ -189,14 +187,12 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
 
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
     await ensureClientPlanBundlesTable();
@@ -205,13 +201,11 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
   beforeEach(async () => {
     context = await resetContext();
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     // Set up invoice numbering settings
     const nextNumberRecord = {

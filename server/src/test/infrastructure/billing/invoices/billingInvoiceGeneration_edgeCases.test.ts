@@ -7,8 +7,6 @@ import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, c
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
@@ -124,26 +122,22 @@ describe('Billing Invoice Edge Cases', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureTaxForClient(context.clientId, 10);
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureTaxForClient(context.clientId, 10);
   }, 30000);

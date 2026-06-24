@@ -22,8 +22,6 @@ const {
 
 describe('Contract Invoice Manual Credit', () => {
   let context: TestContext;
-  let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-  let mockedUserId = 'mock-user-id';
 
   vi.mock('server/src/lib/auth/rbac', () => ({
     hasPermission: vi.fn(() => Promise.resolve(true))
@@ -144,26 +142,22 @@ describe('Contract Invoice Manual Credit', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
     await configureDefaultTax();
   }, 30000);
 

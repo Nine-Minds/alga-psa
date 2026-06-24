@@ -11,8 +11,6 @@ import {
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
@@ -117,14 +115,12 @@ describe('Client Billing Cycle Creation', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
 
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
   }, 120000);
@@ -132,13 +128,11 @@ describe('Client Billing Cycle Creation', () => {
   beforeEach(async () => {
     context = await resetContext();
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
   }, 30000);
