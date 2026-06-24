@@ -5,8 +5,31 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow } from './mcpTypes';
 import { getMcpDemoMode, demoState, demoAudit } from './mcpDemoData';
+
+function providerLabel(kind?: TrustedIdp['kind']): string {
+  if (kind === 'microsoft') return 'Microsoft Entra';
+  if (kind === 'google') return 'Google';
+  return 'Custom';
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+/** The human-meaningful identifier for a provider row (tenant for Entra, host otherwise). */
+function providerDirectory(p: TrustedIdp): string {
+  if (p.kind === 'microsoft') return p.entra_tenant_id || hostOf(p.issuer);
+  return hostOf(p.issuer);
+}
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -103,6 +126,29 @@ export default function McpServerSettings() {
       roleIds: f.roleIds.includes(roleId) ? f.roleIds.filter((r) => r !== roleId) : [...f.roleIds, roleId],
     }));
 
+  const idpColumns: ColumnDefinition<TrustedIdp>[] = [
+    {
+      title: 'Provider',
+      dataIndex: 'kind',
+      width: '28%',
+      render: (_v, p) => <span className="font-medium text-[rgb(var(--color-text-900))]">{providerLabel(p.kind)}</span>,
+    },
+    {
+      title: 'Directory',
+      dataIndex: 'issuer',
+      render: (_v, p) => (
+        <span className="font-mono text-xs text-[rgb(var(--color-text-700))]" title={p.issuer}>{providerDirectory(p)}</span>
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'active',
+      width: '120px',
+      sortable: false,
+      render: (_v, p) => <Badge variant={p.active ? 'success' : 'default-muted'}>{p.active ? 'Active' : 'Inactive'}</Badge>,
+    },
+  ];
+
   return (
     <div id="mcp-server-settings" className="space-y-6">
       <div>
@@ -125,24 +171,11 @@ export default function McpServerSettings() {
           <CardDescription>Agents sign in through these providers. Add the ones your agents use.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[rgb(var(--color-text-600))]">
-                <th className="py-1">Issuer</th><th>JWKS URI</th><th>Audience</th><th>Subject claim</th>
-              </tr>
-            </thead>
-            <tbody>
-              {idps.length === 0 && <tr><td colSpan={4} className="py-2 text-[rgb(var(--color-text-500))]">No identity providers yet.</td></tr>}
-              {idps.map((p) => (
-                <tr key={p.issuer} className="border-t border-[rgb(var(--color-border-200))]">
-                  <td className="py-1 font-mono text-xs">{p.issuer}</td>
-                  <td className="font-mono text-xs">{p.jwks_uri}</td>
-                  <td className="font-mono text-xs">{p.audience ?? '—'}</td>
-                  <td>{p.subject_claim}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {idps.length === 0 ? (
+            <p className="text-sm text-[rgb(var(--color-text-500))]">No identity providers yet.</p>
+          ) : (
+            <DataTable data={idps} columns={idpColumns} pagination={false} />
+          )}
           {suggestion.microsoft && !idps.some((p) => p.kind === 'microsoft') && (
             <div id="mcp-ms-suggestion" className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))] px-3 py-2 text-sm dark:bg-[rgb(var(--color-primary-400)/0.15)]">
               <span>You're already connected to Microsoft{suggestion.microsoft.displayName ? ` (${suggestion.microsoft.displayName})` : ''}. Use this directory for agents?</span>
