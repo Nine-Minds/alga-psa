@@ -35,6 +35,7 @@ interface TimePeriodSummaryRow {
   hours_entered: number | string | null;
   days_logged: number | string | null;
   last_entry_date?: string | Date | null;
+  entry_count?: number | string | null;
 }
 
 function parseNumericValue(value: number | string | null | undefined): number {
@@ -245,6 +246,24 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
     )
     .as('tes');
 
+  // True count of time_entries per timesheet (independent of the work_date-filtered
+  // summary above), used to decide whether a timesheet is safe to remove.
+  const entryCounts = db('time_entries')
+    .where('tenant', tenant)
+    .groupBy('time_sheet_id', 'tenant')
+    .select('time_sheet_id', 'tenant')
+    .count('* as entry_count')
+    .as('ec');
+
+  // Number of timesheets attached to each period across ALL users. Zero => the period
+  // itself is unused (no one has logged against it) and is safe to remove entirely.
+  const periodSheetCounts = db('time_sheets')
+    .where('tenant', tenant)
+    .groupBy('period_id', 'tenant')
+    .select('period_id', 'tenant')
+    .count('* as period_sheet_count')
+    .as('psc');
+
   const periods = await db('time_periods as tp')
     .leftJoin('time_sheets as ts', function() {
       this.on('tp.period_id', '=', 'ts.period_id')
@@ -255,15 +274,26 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
       this.on('tp.period_id', '=', 'tes.period_id')
           .andOn('tp.tenant', '=', 'tes.tenant');
     })
+    .leftJoin(entryCounts, function() {
+      this.on('ts.id', '=', 'ec.time_sheet_id')
+          .andOn('tp.tenant', '=', 'ec.tenant');
+    })
+    .leftJoin(periodSheetCounts, function() {
+      this.on('tp.period_id', '=', 'psc.period_id')
+          .andOn('tp.tenant', '=', 'psc.tenant');
+    })
     .where({ 'tp.tenant': tenant })
     .orderBy('tp.start_date', 'desc')
     .select(
       'tp.*',
+      'ts.id as time_sheet_id',
       'ts.approval_status',
       db.raw('COALESCE(ts.approval_status, ?) as timeSheetStatus', ['DRAFT']),
       'tes.hours_entered',
       'tes.days_logged',
-      'tes.last_entry_date'
+      'tes.last_entry_date',
+      'ec.entry_count',
+      'psc.period_sheet_count'
     );
 
   console.log('Fetched periods:', periods);
@@ -278,7 +308,10 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
       timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus,
       hoursEntered: parseNumericValue(summary.hours_entered),
       daysLogged: parseNumericValue(summary.days_logged),
-      lastEntryDate: toDateOnlyString(summary.last_entry_date)
+      lastEntryDate: toDateOnlyString(summary.last_entry_date),
+      timeSheetId: (period as { time_sheet_id?: string | null }).time_sheet_id ?? null,
+      entryCount: parseNumericValue(summary.entry_count),
+      periodTimesheetCount: parseNumericValue((period as { period_sheet_count?: number | string | null }).period_sheet_count)
     };
   });
 });
@@ -338,4 +371,80 @@ export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: 
     },
     comments: comments,
   };
+});
+
+export interface DeleteTimeSheetsResult {
+  deletedIds: string[];
+  failed: Array<{ timeSheetId: string; message: string }>;
+}
+
+/**
+ * Remove unused/unneeded timesheets when it is safe to do so. A timesheet is only
+ * removable when it is an *empty draft*: status DRAFT or CHANGES_REQUESTED with zero
+ * time entries. This action is the security boundary — every rule is re-checked
+ * server-side per id and never trusts the caller. Removal is per-id and isolated, so a
+ * blocked sheet only fails itself (reported in `failed`) without aborting the batch.
+ */
+export const deleteTimeSheets = withAuth(async (
+  user,
+  { tenant },
+  timeSheetIds: string[]
+): Promise<DeleteTimeSheetsResult> => {
+  const { knex: db } = await createTenantKnex();
+
+  const uniqueIds = Array.from(
+    new Set((timeSheetIds ?? []).filter((id): id is string => typeof id === 'string' && id.length > 0))
+  );
+
+  const deletedIds: string[] = [];
+  const failed: Array<{ timeSheetId: string; message: string }> = [];
+
+  for (const timeSheetId of uniqueIds) {
+    try {
+      await db.transaction(async (trx) => {
+        const sheet = await trx('time_sheets')
+          .where({ id: timeSheetId, tenant })
+          .first();
+
+        if (!sheet) {
+          throw new Error('Time sheet not found');
+        }
+
+        // Authorize: caller must own the sheet or have a valid delegation (mirrors submitTimeSheet).
+        await assertCanActOnBehalf(user, tenant, sheet.user_id, trx);
+
+        // Only empty drafts are safe to remove.
+        if (sheet.approval_status !== 'DRAFT' && sheet.approval_status !== 'CHANGES_REQUESTED') {
+          throw new Error('Only draft time sheets can be removed');
+        }
+
+        const existingEntry = await trx('time_entries')
+          .where({ time_sheet_id: timeSheetId, tenant })
+          .first('entry_id');
+
+        if (existingEntry) {
+          throw new Error('Time sheet still has time entries');
+        }
+
+        // CHANGES_REQUESTED sheets can carry approver feedback comments even with no
+        // entries; clear them first so the FK to time_sheets does not block the delete.
+        await trx('time_sheet_comments')
+          .where({ time_sheet_id: timeSheetId, tenant })
+          .del();
+
+        await trx('time_sheets')
+          .where({ id: timeSheetId, tenant })
+          .del();
+      });
+
+      deletedIds.push(timeSheetId);
+    } catch (error) {
+      failed.push({
+        timeSheetId,
+        message: error instanceof Error ? error.message : 'Failed to remove time sheet'
+      });
+    }
+  }
+
+  return { deletedIds, failed };
 });

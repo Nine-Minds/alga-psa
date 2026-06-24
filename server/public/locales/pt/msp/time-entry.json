@@ -29,7 +29,9 @@
       "viewDetails": "View details",
       "manageTimePeriods": "Manage Time Periods",
       "selectWorkItem": "Select Work Item",
-      "clearFilter": "Clear filter"
+      "clearFilter": "Clear filter",
+      "remove": "Remover",
+      "clear": "Limpar"
     },
     "states": {
       "inProgress": "In Progress",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "No entries"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selecionado(s)"
+    },
+    "delete": {
+      "success": "{{count}} folha(s) de horas removida(s)",
+      "partialFailure": "Não foi possível remover {{count}} folha(s) de horas",
+      "error": "Falha ao remover as folhas de horas"
+    },
+    "removePeriod": {
+      "success": "{{count}} período(s) removido(s)",
+      "partialFailure": "Não foi possível remover {{count}} período(s)",
+      "error": "Falha ao remover os períodos"
+    },
+    "remove": {
+      "title": "Remover itens não utilizados",
+      "message": "Remover {{count}} período(s) selecionado(s)? Os períodos de pagamento não utilizados são removidos para toda a organização, juntamente com quaisquer rascunhos vazios registrados neles. Esta ação não pode ser desfeita.",
+      "timesheetMessage": "Remover {{count}} folha(s) de horas não utilizada(s)? Apenas os rascunhos de folhas de horas vazios são removidos e esta ação não pode ser desfeita."
     }
   },
   "timeEntryForm": {
