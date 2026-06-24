@@ -15,12 +15,15 @@ import {
 } from './interactionCreateHelper';
 
 import { createTenantKnex } from '@alga-psa/db';
+import { assertMspPermission } from '../lib/authHelpers';
 
 export const addInteraction = withAuth(async (
   user,
   { tenant },
   interactionData: Omit<IInteraction, 'interaction_date'>
 ): Promise<IInteraction> => {
+  await assertMspPermission(user, 'interaction', 'create', 'Permission denied: Cannot create interactions');
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -55,7 +58,9 @@ export const addInteraction = withAuth(async (
   }
 });
 
-export const getInteractionTypes = withAuth(async (_user, { tenant }): Promise<IInteractionType[]> => {
+export const getInteractionTypes = withAuth(async (user, { tenant }): Promise<IInteractionType[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction types');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -68,11 +73,13 @@ export const getInteractionTypes = withAuth(async (_user, { tenant }): Promise<I
 });
 
 export const getInteractionsForEntity = withAuth(async (
-  _user,
+  user,
   { tenant },
   entityId: string,
   entityType: 'contact' | 'client'
 ): Promise<IInteraction[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -85,7 +92,7 @@ export const getInteractionsForEntity = withAuth(async (
 });
 
 export const getRecentInteractions = withAuth(async (
-  _user,
+  user,
   { tenant },
   filters: {
     userId?: string;
@@ -95,6 +102,8 @@ export const getRecentInteractions = withAuth(async (
     typeId?: string;
   }
 ): Promise<IInteraction[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -112,6 +121,8 @@ export const updateInteraction = withAuth(async (
   interactionId: string,
   updateData: Partial<IInteraction>
 ): Promise<IInteraction> => {
+  await assertMspPermission(user, 'interaction', 'update', 'Permission denied: Cannot update interactions');
+
   try {
     const { knex } = await createTenantKnex();
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -131,7 +142,9 @@ export const updateInteraction = withAuth(async (
   }
 });
 
-export const getInteractionStatuses = withAuth(async (_user, { tenant }): Promise<any[]> => {
+export const getInteractionStatuses = withAuth(async (user, { tenant }): Promise<any[]> => {
+  await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction statuses');
+
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -189,6 +202,8 @@ async function cleanupInteractionOnlineMeetings(
 }
 
 export const deleteInteraction = withAuth(async (user, { tenant }, interactionId: string): Promise<void> => {
+  await assertMspPermission(user, 'interaction', 'delete', 'Permission denied: Cannot delete interactions');
+
   try {
     const { knex } = await createTenantKnex();
 

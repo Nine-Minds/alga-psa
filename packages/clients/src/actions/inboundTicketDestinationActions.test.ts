@@ -7,7 +7,7 @@ let trxImpl: any = null;
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -17,6 +17,13 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('../lib/authHelpers', () => ({
   hasPermissionAsync: (...args: any[]) => hasPermissionAsyncMock(...args),
+  hasMspPermission: async (user: any, resource: string, action: string, db?: any) =>
+    user?.user_type === 'internal' && await hasPermissionAsyncMock(user, resource, action, db),
+  assertMspPermission: async (user: any, resource: string, action: string, message: string, db?: any) => {
+    if (!(user?.user_type === 'internal' && await hasPermissionAsyncMock(user, resource, action, db))) {
+      throw new Error(message);
+    }
+  },
 }));
 
 type TrxPlan = {

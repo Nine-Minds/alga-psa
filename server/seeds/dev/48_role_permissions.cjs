@@ -39,6 +39,7 @@ exports.seed = async function (knex) {
         // MSP Finance - Based on permissions_list.md
         else if (role.role_name === 'Finance' && role.msp === true) {
             const financePermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp', 'interaction:delete:msp',
                 'asset:read:msp',
                 'billing:create:msp', 'billing:read:msp', 'billing:update:msp', 'billing:delete:msp',
                 'client:create:msp', 'client:read:msp', 'client:update:msp', 'client:delete:msp',
@@ -68,6 +69,7 @@ exports.seed = async function (knex) {
         // MSP Manager - parity baseline: technician capabilities plus scoped approvals and user/team visibility
         else if (role.role_name === 'Manager' && role.msp === true) {
             const managerPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:create:msp', 'asset:read:msp', 'asset:update:msp',
                 'client:read:msp', 'client:delete:msp',
                 'contact:read:msp', 'contact:delete:msp',
@@ -96,6 +98,7 @@ exports.seed = async function (knex) {
         // MSP Technician - Based on permissions_list.md
         else if (role.role_name === 'Technician' && role.msp === true) {
             const technicianPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:create:msp', 'asset:read:msp', 'asset:update:msp',
                 'client:read:msp', 'client:delete:msp',
                 'contact:read:msp', 'contact:delete:msp',
@@ -122,6 +125,7 @@ exports.seed = async function (knex) {
         // MSP Project Manager - Based on permissions_list.md
         else if (role.role_name === 'Project Manager' && role.msp === true) {
             const projectManagerPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:read:msp',
                 'billing:read:msp',
                 'client:create:msp', 'client:read:msp', 'client:update:msp',
@@ -152,6 +156,7 @@ exports.seed = async function (knex) {
         // MSP Dispatcher - Based on permissions_list.md
         else if (role.role_name === 'Dispatcher' && role.msp === true) {
             const dispatcherPermissions = [
+                'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp',
                 'asset:read:msp',
                 'client:read:msp',
                 'contact:read:msp',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getInstallConfig } from '@ee/lib/extensions/installConfig';
+import { assertRunnerAuth } from '@ee/lib/extensions/runnerAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,16 +12,11 @@ const requestSchema = z.object({
 });
 
 function ensureRunnerAuth(req: NextRequest) {
-  const token = process.env.RUNNER_CONFIG_API_TOKEN || process.env.RUNNER_STORAGE_API_TOKEN;
-  if (!token) {
-    throw new Error('runner auth token not configured');
-  }
-  const provided = req.headers.get('x-runner-auth');
-  if (!provided || provided !== token) {
-    const err = new Error('unauthorized');
-    (err as any).status = 401;
-    throw err;
-  }
+  assertRunnerAuth(
+    req.headers.get('x-runner-auth'),
+    process.env.RUNNER_CONFIG_API_TOKEN,
+    process.env.RUNNER_STORAGE_API_TOKEN,
+  );
 }
 
 export async function POST(req: NextRequest) {

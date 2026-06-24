@@ -100,7 +100,13 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "sebastian.fullname" . }}-storage
           {{- end }}
-        {{- end }}        
+        {{- end }}
+        {{- if .Values.sharedTenantSecrets.enabled }}
+        - name: shared-tenant-secrets
+          hostPath:
+            path: {{ .Values.sharedTenantSecrets.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
       {{- if or .Values.setup.runMigrations .Values.setup.runSeeds }}
       initContainers:
         - name: wait-for-bootstrap
@@ -261,6 +267,10 @@ spec:
             value: "{{ .Values.temporal.namespace }}"
           - name: TEMPORAL_PORTAL_DOMAIN_TASK_QUEUE
             value: "{{ .Values.temporal.portalDomainTaskQueue }}"
+          {{- if .Values.temporal.jobRunnerType }}
+          - name: JOB_RUNNER_TYPE
+            value: "{{ .Values.temporal.jobRunnerType }}"
+          {{- end }}
 
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}
@@ -836,6 +846,21 @@ spec:
                 key: APPLE_SIGN_IN_ENCRYPTION_KEY
           {{- end }}
 
+          # Appliance license service (alga-license / C4) — Appliance Console read-proxy.
+          # URL is non-secret config; the service secret is generated into the chart
+          # secret from .Values.secrets.ALGA_LICENSE_SERVICE_SECRET (see secret.yaml).
+          {{- if and .Values.licenseService .Values.licenseService.url }}
+          - name: ALGA_LICENSE_SERVICE_URL
+            value: "{{ .Values.licenseService.url }}"
+          {{- end }}
+          {{- if and .Values.secrets .Values.secrets.ALGA_LICENSE_SERVICE_SECRET }}
+          - name: ALGA_LICENSE_SERVICE_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: ALGA_LICENSE_SERVICE_SECRET
+          {{- end }}
+
           # Non-sensitive Stripe configuration
           {{- if .Values.stripe }}
           {{- if .Values.stripe.master_billing_tenant_id_secret }}
@@ -928,6 +953,10 @@ spec:
             value: "{{ .Values.secrets_provider.readChain | default "env,filesystem" }}"
           - name: SECRET_WRITE_PROVIDER
             value: "{{ .Values.secrets_provider.writeProvider | default "filesystem" }}"
+          {{- if .Values.sharedTenantSecrets.enabled }}
+          - name: SECRET_FS_BASE_PATH
+            value: "{{ .Values.sharedTenantSecrets.mountPath }}"
+          {{- end }}
           {{- if .Values.secrets_provider.envPrefix }}
           - name: SECRET_ENV_PREFIX
             value: "{{ .Values.secrets_provider.envPrefix }}"
@@ -959,10 +988,16 @@ spec:
             value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
           {{- end }}
-         {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
+          {{- if or (and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled)) .Values.sharedTenantSecrets.enabled }}
           volumeMounts:
+            {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
             - name: storage-volume
               mountPath: {{ .Values.server.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.sharedTenantSecrets.enabled }}
+            - name: shared-tenant-secrets
+              mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+            {{- end }}
           {{- end }}
           ports:
             - name: http

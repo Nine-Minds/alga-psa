@@ -143,9 +143,43 @@ interface CommentThreadReplyHeaderContext {
   references: string[];
 }
 
-function buildGeneratedRfcMessageId(tenantId?: string): string {
-  const domainPart = tenantId ? `${tenantId}.alga-psa.local` : 'alga-psa.local';
+function extractDomainFromAddress(address?: string): string | null {
+  if (typeof address !== 'string') return null;
+  const at = address.lastIndexOf('@');
+  if (at < 0) return null;
+  const domain = address.slice(at + 1).trim().replace(/>+$/, '').trim();
+  return domain || null;
+}
+
+function buildGeneratedRfcMessageId(domain?: string | null): string {
+  const domainPart = (domain && domain.trim()) || 'alga-psa.local';
   return `<${randomUUID()}@${domainPart}>`;
+}
+
+const TICKET_REFERENCES_CAP = 20;
+
+// Keep the root anchor first, then at most `max` most-recent ids, so the
+// References header stays bounded while always preserving the thread root.
+export function capReferences(references: string[], root: string, max = TICKET_REFERENCES_CAP): string[] {
+  const rest = references.filter((value) => value !== root);
+  return rest.length <= max ? [root, ...rest] : [root, ...rest.slice(-max)];
+}
+
+/**
+ * Pure builder for a ticket email's threading headers. Given the conversation
+ * root and the prior outbound message-ids (oldest→newest), returns the
+ * In-Reply-To (most recent prior id, else the root) and the deduped, root-first,
+ * capped References chain. Exported for unit testing.
+ */
+export function buildTicketThreadHeaders(
+  root: string,
+  priorReferences: string[],
+  max = TICKET_REFERENCES_CAP
+): { inReplyTo: string; references: string[] } {
+  const prior = dedupeHeaderValues(priorReferences);
+  const lastPrior = [...prior].reverse().find((id) => id && id !== root) ?? null;
+  const references = capReferences(dedupeHeaderValues([root, ...prior]), root, max);
+  return { inReplyTo: lastPrior ?? root, references };
 }
 
 function dedupeHeaderValues(values: Array<string | null | undefined>): string[] {
@@ -262,6 +296,73 @@ async function persistCommentThreadReferences(params: {
     logger.warn(`[${params.serviceName}] Failed to persist comment thread references`, {
       tenantId: params.tenantId,
       commentThreadId: params.context.commentThreadId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
+ * Apply ticket-scoped RFC threading headers to ANY outbound ticket email
+ * (created/updated/closed/assigned/comment), so every notification for a ticket
+ * collapses into a single conversation in the recipient's mail client.
+ *
+ * The anchor (root Message-ID) is the customer's original inbound Message-ID for
+ * email-origin tickets (so agent replies merge into their existing thread), or a
+ * deterministic synthetic `<ticket-{id}@{domain}>` for UI-origin tickets, persisted
+ * once to `tickets.email_metadata.threadRoot`. In-Reply-To points at the most recent
+ * prior outbound id (or the root); References accumulates the chain, capped.
+ *
+ * Best-effort: any failure is logged and never blocks the send.
+ */
+export async function applyTicketThreadHeaders(params: {
+  tenantId?: string;
+  ticketId?: string;
+  fromDomain?: string | null;
+  headers: Record<string, string>;
+  serviceName: string;
+}): Promise<void> {
+  if (!params.tenantId || !params.ticketId) {
+    return;
+  }
+
+  try {
+    const { knex } = await createTenantKnex(params.tenantId);
+    const ticket = await knex('tickets')
+      .select('email_metadata')
+      .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+      .first<{ email_metadata?: Record<string, any> | null }>();
+
+    const meta = ticket?.email_metadata && typeof ticket.email_metadata === 'object'
+      ? (ticket.email_metadata as Record<string, any>)
+      : {};
+
+    // Resolve (and persist if needed) the canonical per-ticket root Message-ID.
+    let root = normalizeHeaderValue(meta.messageId) ?? normalizeHeaderValue(meta.threadRoot);
+    if (!root) {
+      const domain = (params.fromDomain && params.fromDomain.trim()) || 'alga-psa.local';
+      root = `<ticket-${params.ticketId}@${domain}>`;
+      // Deterministic value → concurrent first-events converge on the same anchor.
+      await knex('tickets')
+        .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+        .update({
+          email_metadata: knex.raw(
+            `jsonb_set(COALESCE(email_metadata, '{}'::jsonb), '{threadRoot}', to_jsonb(?::text), true)`,
+            [root]
+          ),
+        });
+    }
+
+    const priorReferences = Array.isArray(meta.references) ? meta.references : [];
+    const { inReplyTo, references } = buildTicketThreadHeaders(root, priorReferences);
+
+    params.headers['In-Reply-To'] = inReplyTo;
+    if (references.length > 0) {
+      params.headers.References = references.join(' ');
+    }
+  } catch (error) {
+    logger.warn(`[${params.serviceName}] Failed to apply ticket thread headers`, {
+      tenantId: params.tenantId,
+      ticketId: params.ticketId,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
@@ -398,15 +499,40 @@ export abstract class BaseEmailService {
       });
       
       const headers = { ...(params.headers ?? {}) };
-      const commentThreadHeaderContext = await addCommentThreadReplyHeaders({
-        tenantId: params.tenantId,
-        commentId: params.replyContext?.commentId,
-        headers,
-        serviceName: this.getServiceName(),
-      });
-      if (params.replyContext?.commentId && !getHeaderValue(headers, 'Message-ID')) {
-        headers['Message-ID'] = buildGeneratedRfcMessageId(params.tenantId);
+      const fromDomain = extractDomainFromAddress(from.email);
+      // A ticket email is any email associated with a ticket — via replyContext or the
+      // entity association (bundle child notifications use the latter).
+      const effectiveTicketId = params.replyContext?.ticketId
+        ?? (params.entityType === 'ticket' ? params.entityId : undefined);
+
+      let commentThreadHeaderContext: CommentThreadReplyHeaderContext | null = null;
+      if (effectiveTicketId) {
+        // Ticket-scoped threading: every ticket email shares one per-ticket anchor.
+        await applyTicketThreadHeaders({
+          tenantId: params.tenantId,
+          ticketId: effectiveTicketId,
+          fromDomain,
+          headers,
+          serviceName: this.getServiceName(),
+        });
+      } else {
+        // Non-ticket comment threads keep their existing comment-scoped behavior.
+        commentThreadHeaderContext = await addCommentThreadReplyHeaders({
+          tenantId: params.tenantId,
+          commentId: params.replyContext?.commentId,
+          headers,
+          serviceName: this.getServiceName(),
+        });
       }
+
+      // Always stamp a Message-ID we control for ticket/comment emails so the recorded
+      // rfc_message_id matches the wire and later emails can reference it.
+      if ((effectiveTicketId || params.replyContext?.commentId) && !getHeaderValue(headers, 'Message-ID')) {
+        headers['Message-ID'] = buildGeneratedRfcMessageId(fromDomain);
+      }
+
+      const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
+      const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
       // Convert to provider email message format
       emailMessage = {
@@ -474,8 +600,8 @@ export abstract class BaseEmailService {
         tenantId: typeof params.tenantId === 'string' ? params.tenantId : null,
         providerResult: result,
         message: emailMessage,
-        entityType: params.entityType,
-        entityId: params.entityId,
+        entityType: effectiveEntityType,
+        entityId: effectiveEntityId,
         contactId: params.contactId,
         notificationSubtypeId: params.notificationSubtypeId,
         replyContext: params.replyContext,

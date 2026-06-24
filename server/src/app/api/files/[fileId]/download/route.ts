@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/auth/session';
+import { canAccessDocument } from 'server/src/lib/utils/documentPermissionUtils';
 
 export async function GET(
     request: NextRequest,
@@ -9,8 +11,13 @@ export async function GET(
     const resolvedParams = await params;
     console.log('GET request received for file download with params:', resolvedParams);
     try {
+        const user = await getCurrentUser();
+        if (!user?.tenant) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
+
         console.log('Creating tenant knex connection...');
-        const { tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(user.tenant);
         if (!tenant) {
             console.log('Tenant not found');
             return new NextResponse('Tenant not found', { status: 404 });
@@ -18,6 +25,13 @@ export async function GET(
         console.log('Tenant found:', tenant);
 
         const fileId = resolvedParams.fileId;
+        const document = await knex('documents')
+            .where({ tenant, file_id: fileId })
+            .first();
+        if (!document || !(await canAccessDocument(user, document))) {
+            return new NextResponse('Not found', { status: 404 });
+        }
+
         console.log('Attempting to download file with ID:', fileId);
         
         // Use the static downloadFile method with just the fileId

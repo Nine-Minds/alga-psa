@@ -1584,6 +1584,14 @@
           "unavailable": "Informazioni sul webhook non disponibili. (Richiede permesso di lettura delle impostazioni.)",
           "url": "URL del webhook",
           "urlCopied": "URL del webhook copiato negli appunti."
+        },
+        "mappings": {
+          "org": "Organizzazione Tactical",
+          "client": "Cliente Alga",
+          "defaultContact": "Contatto predefinito"
+        },
+        "contact": {
+          "select": "Seleziona contatto"
         }
       },
       "tanium": {
@@ -1635,7 +1643,9 @@
           "mappedClient": "Cliente mappato",
           "noScopes": "Nessun ambito Tanium ancora scoperto.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Non mappato"
+          "unmapped": "Non mappato",
+          "defaultContact": "Contatto predefinito",
+          "selectContact": "Seleziona contatto"
         },
         "status": {
           "connected": "Connesso",
@@ -1701,7 +1711,9 @@
           "loading": "Caricamento…",
           "mappedClient": "Cliente mappato",
           "noGroups": "Nessun gruppo ancora rilevato. Esegui prima Rileva gruppi.",
-          "unmapped": "Non mappato"
+          "unmapped": "Non mappato",
+          "defaultContact": "Contatto predefinito",
+          "selectContact": "Seleziona contatto"
         },
         "status": {
           "connected": "Connesso",
@@ -1732,6 +1744,76 @@
           "showSecret": "Mostra segreto",
           "title": "Webhook avvisi",
           "url": "URL webhook"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Organizzazione Huntress",
+          "client": "Cliente Alga",
+          "defaultContact": "Contatto predefinito",
+          "createTickets": "Crea ticket",
+          "status": "Stato"
+        },
+        "selectContact": "Seleziona contatto",
+        "status": {
+          "autoMatched": "Abbinato automaticamente",
+          "mapped": "Mappato",
+          "unmapped": "Non mappato → triage"
+        },
+        "title": "Mappatura delle organizzazioni",
+        "description": "Mappa le organizzazioni Huntress sui clienti. Gli incidenti delle organizzazioni non mappate vengono inviati al cliente di riserva e alla bacheca di triage.",
+        "unmappedSuffix": "({{count}} non mappate)",
+        "syncButton": "Sincronizza organizzazioni",
+        "loading": "Caricamento…",
+        "empty": "Nessuna organizzazione ancora — fai clic su \"Sincronizza organizzazioni\".",
+        "errors": {
+          "load": "Impossibile caricare le mappature delle organizzazioni",
+          "sync": "Sincronizzazione non riuscita",
+          "updateMapping": "Impossibile aggiornare la mappatura",
+          "updateContact": "Impossibile aggiornare il contatto predefinito"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "Organizzazione NinjaOne",
+          "company": "Azienda Alga",
+          "defaultContact": "Contatto predefinito",
+          "autoSync": "Sincronizzazione automatica",
+          "status": "Stato"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Seleziona azienda",
+        "selectContact": "Seleziona contatto",
+        "status": {
+          "mapped": "Mappato",
+          "unmapped": "Non mappato"
+        },
+        "title": "Mappature delle organizzazioni",
+        "description": "Mappa le organizzazioni NinjaOne sulle aziende Alga per abilitare la sincronizzazione dei dispositivi.",
+        "loading": "Caricamento delle mappature delle organizzazioni...",
+        "syncing": "Sincronizzazione...",
+        "refreshButton": "Aggiorna organizzazioni",
+        "summary": {
+          "mapped": "{{count}} mappate",
+          "unmapped": "{{count}} non mappate"
+        },
+        "empty": {
+          "title": "Nessuna organizzazione ancora sincronizzata.",
+          "hint": "Fai clic su \"Aggiorna organizzazioni\" per recuperare le organizzazioni da NinjaOne."
+        },
+        "unmappedNote": "I dispositivi delle organizzazioni non mappate non verranno sincronizzati. Mappa ogni organizzazione su un'azienda Alga per abilitare la sincronizzazione dei dispositivi.",
+        "success": {
+          "synced": "Sincronizzate {{processed}} organizzazioni ({{created}} nuove, {{updated}} aggiornate)",
+          "mappingUpdated": "Mappatura aggiornata correttamente",
+          "contactUpdated": "Contatto predefinito aggiornato correttamente"
+        },
+        "errors": {
+          "load": "Impossibile caricare le mappature delle organizzazioni",
+          "sync": "Impossibile sincronizzare le organizzazioni",
+          "updateMapping": "Impossibile aggiornare la mappatura",
+          "updateContact": "Impossibile aggiornare il contatto predefinito",
+          "updateAutoSync": "Impossibile aggiornare l'impostazione di sincronizzazione automatica"
         }
       }
     },
@@ -2321,8 +2403,5 @@
         "publishableKeyFormat": "La chiave pubblicabile deve iniziare con pk_"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Seleziona azienda"
   }
 }

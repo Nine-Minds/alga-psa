@@ -762,16 +762,26 @@ export class StripeService {
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Check for existing active subscription for the license price
+    // Check for an existing active or trialing subscription for the license price.
     const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
       .where({
         tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
-        status: 'active',
       })
+      .whereIn('status', ['active', 'trialing'])
       .first();
 
-    if (existingSubscription && existingSubscription.stripe_subscription_item_id) {
+    // Trials can only be DECREASED here (scheduled at trial end, no charge). A trial
+    // increase falls through to checkout so we never bill mid-trial.
+    const isTrialingIncrease =
+      existingSubscription?.status === 'trialing' &&
+      quantity > existingSubscription.quantity;
+
+    if (
+      existingSubscription &&
+      existingSubscription.stripe_subscription_item_id &&
+      !isTrialingIncrease
+    ) {
       const currentQuantity = existingSubscription.quantity;
       const isIncrease = quantity > currentQuantity;
 
@@ -1621,17 +1631,17 @@ export class StripeService {
     const knex = await getConnection(tenantId);
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Get existing subscription
+    // Get existing subscription (active, trialing, or past_due)
     const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
       .where({
         tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
-        status: 'active',
       })
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!existingSubscription) {
-      logger.info(`[StripeService] No active subscription found for tenant ${tenantId}`);
+      logger.info(`[StripeService] No active, trialing, or past_due subscription found for tenant ${tenantId}`);
       return null;
     }
 

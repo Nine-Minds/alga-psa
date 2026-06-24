@@ -6,6 +6,23 @@ import { createTenantKnex } from '@alga-psa/db';
 import type { IClientTaxRateAssociation } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
+import { assertMspPermission } from '../lib/authHelpers';
+
+const assertCanReadClientTaxRates = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'read',
+    'Permission denied: Cannot read client tax rates'
+  );
+
+const assertCanUpdateClientTaxRates = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'update',
+    'Permission denied: Cannot update client tax rates'
+  );
 
 // Combine association data with rate details
 // Removed 'name' from Pick as it doesn't exist on the tax_rates table
@@ -16,10 +33,12 @@ export type ClientTaxRateDetails = IClientTaxRateAssociation & {
 };
 
 export const getClientTaxRates = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<ClientTaxRateDetails[]> => {
+  await assertCanReadClientTaxRates(user);
+
   const { knex } = await createTenantKnex();
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_tax_rates')
@@ -46,10 +65,12 @@ export const getClientTaxRates = withAuth(async (
 // Phase 1: Only allow adding a single default rate per client.
 // Handles inserting a new default OR updating an existing non-default rate to become the default.
 export const addClientTaxRate = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientTaxRateData: Pick<IClientTaxRateAssociation, 'client_id' | 'tax_rate_id'>
 ): Promise<IClientTaxRateAssociation> => {
+  await assertCanUpdateClientTaxRates(user);
+
   const { knex } = await createTenantKnex();
   const { client_id, tax_rate_id } = clientTaxRateData; // Destructure for clarity
 
@@ -120,11 +141,13 @@ export const addClientTaxRate = withAuth(async (
 });
 
 export const removeClientTaxRate = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   taxRateId: string
 ): Promise<void> => {
+  await assertCanUpdateClientTaxRates(user);
+
   const { knex } = await createTenantKnex();
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_tax_rates')
@@ -139,11 +162,13 @@ export const removeClientTaxRate = withAuth(async (
 
 // Phase 1: Update the default tax rate for a client
 export const updateDefaultClientTaxRate = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   newTaxRateId: string
 ): Promise<IClientTaxRateAssociation> => {
+  await assertCanUpdateClientTaxRates(user);
+
   const { knex } = await createTenantKnex();
 
   // Validate that the newTaxRateId exists for this tenant (optional but good practice)
@@ -238,10 +263,12 @@ export const updateDefaultClientTaxRate = withAuth(async (
  * @returns The region_code string or null if no default rate/region is found.
  */
 export const getClientDefaultTaxRegionCode = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<string | null> => {
+  await assertCanReadClientTaxRates(user);
+
   const { knex } = await createTenantKnex();
 
   try {

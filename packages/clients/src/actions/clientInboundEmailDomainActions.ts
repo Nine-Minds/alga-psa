@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { hasPermissionAsync } from '../lib/authHelpers';
+import { assertMspPermission } from '../lib/authHelpers';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface ClientInboundEmailDomain {
@@ -51,9 +51,7 @@ async function findDomainOwner(
 }
 
 export const listClientInboundEmailDomains = withAuth(async (user, { tenant }, clientId: string): Promise<ClientInboundEmailDomain[]> => {
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -71,9 +69,7 @@ export const addClientInboundEmailDomain = withAuth(async (
   clientId: string,
   rawDomain: string
 ): Promise<ClientInboundEmailDomain> => {
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
 
   const domain = normalizeDomain(rawDomain);
   const error = validateDomain(domain);
@@ -117,9 +113,7 @@ export const removeClientInboundEmailDomain = withAuth(async (
   clientId: string,
   domainId: string
 ): Promise<{ success: true }> => {
-  if (!await hasPermissionAsync(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -129,4 +123,3 @@ export const removeClientInboundEmailDomain = withAuth(async (
     return { success: true as const };
   });
 });
-

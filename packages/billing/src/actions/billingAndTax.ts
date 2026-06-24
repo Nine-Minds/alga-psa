@@ -21,6 +21,7 @@ import {
     IRecurringDueWorkMaterializationGap,
     IRecurringDueWorkPaginatedResponse,
     IRecurringDueWorkRow,
+    RecurringDueWorkChargeType,
     RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
@@ -101,6 +102,7 @@ interface PersistedRecurringDueWorkDbRow {
     contract_name?: string | null;
     contract_line_id?: string | null;
     contract_line_name?: string | null;
+    contract_line_type?: string | null;
     is_system_managed_default?: boolean | null;
     client_contract_id?: string | null;
     po_required?: boolean | null;
@@ -420,6 +422,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'ct.is_system_managed_default',
             'cl.contract_line_id',
             'cl.contract_line_name',
+            'cl.contract_line_type',
             'cc.client_contract_id',
             'cc.po_required',
             'ct.currency_code',
@@ -490,6 +493,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'ct.is_system_managed_default',
             'cl.contract_line_id',
             'cl.contract_line_name',
+            'cl.contract_line_type',
             'cc.client_contract_id',
             'cc.po_required',
             'ct.currency_code',
@@ -652,7 +656,7 @@ async function fetchClientCadenceMaterializationGaps(
                 servicePeriodEnd: dueWorkRow.servicePeriodEnd,
                 reason: 'missing_service_period_materialization',
                 detail:
-                    'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+                    "This client's billing schedule changed, so these charges are out of date and need to be rebuilt before they can be invoiced.",
             });
         }
     }
@@ -715,13 +719,36 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
             attribution,
         });
 
+        const chargeType = normalizeChargeType(row.contract_line_type);
+        const rowWithChargeType = (chargeType
+            ? { ...dueWorkRow, chargeType }
+            : dueWorkRow) as IRecurringDueWorkRow;
+
         return missingAttribution
             ? {
-                ...dueWorkRow,
+                ...rowWithChargeType,
                 blockedReason,
             } as IRecurringDueWorkRow
-            : dueWorkRow;
+            : rowWithChargeType;
     });
+}
+
+/**
+ * Coerce the raw `contract_lines.contract_line_type` value into the known charge
+ * type union, dropping anything unexpected so the UI never renders a stray tag.
+ */
+function normalizeChargeType(
+    raw: string | null | undefined,
+): RecurringDueWorkChargeType | null {
+    switch (raw) {
+        case 'Fixed':
+        case 'Hourly':
+        case 'Usage':
+        case 'Bucket':
+            return raw;
+        default:
+            return null;
+    }
 }
 
 async function fetchClientBillingMetadataById(
@@ -832,11 +859,91 @@ async function fetchUnresolvedNonContractDueWorkRows(
             rows.push({
                 ...dueWorkRow,
                 amountCents: charge.total,
+                chargeType: isTimeCharge ? 'Hourly' : 'Usage',
             } as IRecurringDueWorkRow);
         }
     }
 
     return rows;
+}
+
+/**
+ * Fixed contract-line amounts are deterministic before generation (Σ service
+ * base-rate × qty ± custom rate ± proration), so we surface them in the listing
+ * as confirmed "known now" amounts rather than "calculated at generation". This
+ * reuses the billing engine's own fixed-price calculation (single source of
+ * truth) and is batched per (client, service period) to bound the query cost.
+ * Best-effort: rows that can't be priced are left as pending.
+ */
+async function attachFixedContractLineAmountsToRows(
+    rows: IRecurringDueWorkRow[],
+    dbRows: PersistedRecurringDueWorkDbRow[],
+): Promise<void> {
+    // Client-cadence rows carry contractLineId: null (canonical identity is
+    // execution-window based), so resolve the contract line + invoice window via
+    // the DB row by record_id. The engine prices fixed lines off the INVOICE
+    // WINDOW (it derives the covered service period itself), so we group and
+    // query by window, not by service period.
+    const lineIdByRecordId = new Map<string, string>();
+    const invoiceWindowByRecordId = new Map<string, { start: ISO8601String; end: ISO8601String }>();
+    for (const dbRow of dbRows) {
+        if (!dbRow.record_id) {
+            continue;
+        }
+        if (dbRow.contract_line_id) {
+            lineIdByRecordId.set(dbRow.record_id, dbRow.contract_line_id);
+        }
+        if (dbRow.invoice_window_start && dbRow.invoice_window_end) {
+            invoiceWindowByRecordId.set(dbRow.record_id, {
+                start: normalizeDateOnly(dbRow.invoice_window_start) as ISO8601String,
+                end: normalizeDateOnly(dbRow.invoice_window_end) as ISO8601String,
+            });
+        }
+    }
+    const lineIdForRow = (row: IRecurringDueWorkRow): string | undefined =>
+        (row.contractLineId ?? (row.recordId ? lineIdByRecordId.get(row.recordId) : undefined)) || undefined;
+    const invoiceWindowForRow = (row: IRecurringDueWorkRow) =>
+        row.recordId ? invoiceWindowByRecordId.get(row.recordId) : undefined;
+
+    const fixedRows = rows.filter(
+        (row) =>
+            (row as { chargeType?: string | null }).chargeType === 'Fixed'
+            && Boolean(lineIdForRow(row))
+            && Boolean(invoiceWindowForRow(row))
+            && typeof (row as { amountCents?: number | null }).amountCents !== 'number',
+    );
+    if (fixedRows.length === 0) {
+        return;
+    }
+
+    const engine = new BillingEngine();
+    const groups = new Map<string, { clientId: string; start: ISO8601String; end: ISO8601String; members: IRecurringDueWorkRow[] }>();
+    for (const row of fixedRows) {
+        const window = invoiceWindowForRow(row)!;
+        const key = `${row.clientId}|${window.start}|${window.end}`;
+        let group = groups.get(key);
+        if (!group) {
+            group = { clientId: row.clientId, start: window.start, end: window.end, members: [] };
+            groups.set(key, group);
+        }
+        group.members.push(row);
+    }
+
+    for (const group of groups.values()) {
+        let amounts: Map<string, number>;
+        try {
+            amounts = await engine.previewFixedChargeAmountsForInvoiceWindow(group.clientId, group.start, group.end);
+        } catch {
+            continue;
+        }
+        for (const row of group.members) {
+            const lineId = lineIdForRow(row);
+            const amount = lineId ? amounts.get(String(lineId)) : undefined;
+            if (typeof amount === 'number' && Number.isFinite(amount)) {
+                (row as { amountCents?: number | null }).amountCents = amount;
+            }
+        }
+    }
 }
 
 function buildRecurringDueWorkInvoiceCandidates(
@@ -919,6 +1026,15 @@ function buildRecurringDueWorkInvoiceCandidates(
                 .slice(-1)[0] as ISO8601String;
             const cadenceSources = Array.from(new Set(members.map((member) => member.cadenceSource))).sort();
             const canGenerate = members.every((member) => member.canGenerate);
+            // A candidate is "not yet due" (rather than blocked) when the only
+            // reason it cannot generate is that its invoice window has not opened
+            // yet — every member is early, and none has a real data problem.
+            const everyMemberEarly = members.length > 0 && members.every((member) => member.isEarly === true);
+            const anyAttributionIncomplete = members.some((member) => member.attribution?.isComplete === false);
+            const notYetDue = !canGenerate && everyMemberEarly && !anyAttributionIncomplete;
+            const availableOnDate = notYetDue
+                ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
+                : null;
             const explicitContractCount = members.filter(
                 (member) => member.attribution?.source === 'explicit_contract',
             ).length;
@@ -960,7 +1076,11 @@ function buildRecurringDueWorkInvoiceCandidates(
                 splitReasons: [...candidate.splitReasons],
                 memberCount: members.length,
                 canGenerate,
-                blockedReason: canGenerate ? null : 'One or more included obligations are not eligible for generation.',
+                notYetDue,
+                availableOnDate,
+                blockedReason: canGenerate || notYetDue
+                    ? null
+                    : 'One or more included obligations are not eligible for generation.',
                 attributionSummary: {
                     explicitContractCount,
                     systemManagedDefaultContractCount,
@@ -1046,6 +1166,8 @@ function applyClientCadenceMaterializationGapBlocks(
         return {
             ...candidate,
             canGenerate: false,
+            notYetDue: false,
+            availableOnDate: null,
             blockedReason:
                 'Recurring service periods are partially materialized for this window. Repair service periods before generation.',
         };
@@ -1105,6 +1227,8 @@ function applyRecurringApprovalBlocksToInvoiceCandidates(
             ...candidate,
             members,
             canGenerate: false,
+            notYetDue: false,
+            availableOnDate: null,
             blockedReason: formatApprovalBlockedReason(approvalBlockedEntryCount),
             approvalBlockedEntryCount,
             hasApprovalBlockers: true,
@@ -1380,6 +1504,8 @@ export const getAvailableRecurringDueWork = withAuth(async (
             asOf,
             groupingMetadataByRecordId,
         );
+        // Surface deterministic fixed-line amounts as confirmed "known now" values.
+        await attachFixedContractLineAmountsToRows(persistedRows, persistedDbRows);
         const persistedIdentityKeys = new Set(
             persistedRows.map((row) => row.executionIdentityKey),
         );

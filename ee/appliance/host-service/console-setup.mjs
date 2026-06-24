@@ -4,7 +4,7 @@ import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { persistSetupInputs, runSetupWorkflow, validateSetupInputs } from './setup-engine.mjs';
 
-const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/var/lib/alga-appliance/setup-inputs.json';
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 
 async function collectInputs() {

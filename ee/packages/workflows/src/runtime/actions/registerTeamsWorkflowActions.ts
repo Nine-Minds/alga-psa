@@ -295,8 +295,7 @@ export function registerTeamsWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
       channel_id: z.string().trim().min(1),
-      message: z.string().trim().min(1),
-      service_url: z.string().url().optional()
+      message: z.string().trim().min(1)
     }),
     outputSchema: z.object({
       posted: z.boolean(),
@@ -312,13 +311,13 @@ export function registerTeamsWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex } = await requireTeamsIntegration(ctx);
 
-      const serviceUrl = input.service_url ?? (await getAnyTenantServiceUrl(knex, tenantId));
+      const serviceUrl = await getAnyTenantServiceUrl(knex, tenantId);
       if (!serviceUrl) {
         throwActionError(ctx, {
           category: 'ActionError',
           code: 'NO_SERVICE_URL',
           message:
-            'No Teams service URL is known for this tenant yet. Install the Alga app in a team (or have a user open the bot) so Teams sends one, or pass service_url explicitly.'
+            'No Teams service URL is known for this tenant yet. Install the Alga app in a team (or have a user open the bot) so Teams sends one.'
         });
       }
 

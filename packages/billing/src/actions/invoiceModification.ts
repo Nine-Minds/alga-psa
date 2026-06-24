@@ -581,7 +581,7 @@ export const unfinalizeInvoice = withAuth(async (
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is finalized
     const invoice = await trx('invoices')
-      .where({ invoice_id: invoiceId })
+      .where({ invoice_id: invoiceId, tenant })
       .first();
 
     if (!invoice) {
@@ -654,7 +654,7 @@ export const updateInvoiceManualItems = withAuth(async (
   // Load and validate invoice
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('invoices')
-      .where({ invoice_id: invoiceId })
+      .where({ invoice_id: invoiceId, tenant })
       .first();
   });
 
@@ -668,7 +668,7 @@ export const updateInvoiceManualItems = withAuth(async (
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients')
-      .where({ client_id: invoice.client_id })
+      .where({ client_id: invoice.client_id, tenant })
       .first();
   });
 

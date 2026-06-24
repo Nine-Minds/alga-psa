@@ -44,9 +44,6 @@ export interface JobRunnerConfig {
 
   /** Temporal specific configuration (used when type is 'temporal') */
   temporal?: TemporalConfig;
-
-  /** Whether to fall back to PG Boss if Temporal is unavailable (EE only) */
-  fallbackToPgBoss?: boolean;
 }
 
 /**

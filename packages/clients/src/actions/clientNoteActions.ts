@@ -19,6 +19,7 @@ import {
 import type { IDocument } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
+import { assertMspPermission } from '../lib/authHelpers';
 
 export interface ClientNoteContent {
   document: IDocument | null;
@@ -35,6 +36,8 @@ export const getClientNoteContent = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<ClientNoteContent> => {
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+
   const { knex } = await createTenantKnex();
 
   try {
@@ -108,6 +111,8 @@ export const saveClientNote = withAuth(async (
   clientId: string,
   blockData: unknown
 ): Promise<{ document_id: string }> => {
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+
   const { knex } = await createTenantKnex();
 
   try {
@@ -176,11 +181,13 @@ export const saveClientNote = withAuth(async (
  * Removes the link and optionally deletes the document
  */
 export const deleteClientNote = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   deleteDocument: boolean = false
 ): Promise<void> => {
+  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+
   const { knex } = await createTenantKnex();
 
   try {

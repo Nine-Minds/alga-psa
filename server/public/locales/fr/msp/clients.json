@@ -522,6 +522,17 @@
       "5": "Vendredi",
       "6": "Samedi",
       "7": "Dimanche"
+    },
+    "reviewError": "Impossible de vérifier l’impact de ce changement",
+    "reviewing": "Vérification de l’impact…",
+    "confirmSave": "Confirmer et enregistrer",
+    "reviewChanges": "Examiner les changements",
+    "impact": {
+      "title": "Vérifier avant d’appliquer",
+      "periods": "{{count}} période(s) de facturation à venir sur {{lines}} ligne(s) de contrat seront reconstruites selon le nouveau calendrier.",
+      "from": "Reconstruit à partir du {{date}}.",
+      "billedPreserved": "Les charges déjà facturées sont conservées et ne changeront pas.",
+      "confirmHint": "Choisissez « Confirmer et enregistrer » pour appliquer."
     }
   },
   "clientContractAssignment": {

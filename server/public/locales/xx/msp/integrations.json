@@ -1510,7 +1510,7 @@
         "fields": {
           "instanceUrl": "11111",
           "instanceUrlHelp": "11111",
-          "betaApiNote": "55555"
+          "betaApiNote": "11111"
         },
         "lastError": "11111 {{error}} 11111",
         "loadingSettings": "11111",
@@ -1584,6 +1584,14 @@
           "unavailable": "11111",
           "url": "11111",
           "urlCopied": "11111"
+        },
+        "mappings": {
+          "org": "11111",
+          "client": "11111",
+          "defaultContact": "11111"
+        },
+        "contact": {
+          "select": "11111"
         }
       },
       "tanium": {
@@ -1630,11 +1638,13 @@
           "autoSync": "11111",
           "autoSyncDisabled": "11111",
           "autoSyncEnabled": "11111",
+          "defaultContact": "11111",
           "externalScope": "11111",
           "loading": "11111",
           "mappedClient": "11111",
           "noScopes": "11111",
           "scopeIdLabel": "11111 {{id}} 11111",
+          "selectContact": "11111",
           "unmapped": "11111"
         },
         "status": {
@@ -1701,7 +1711,9 @@
           "loading": "11111",
           "mappedClient": "11111",
           "noGroups": "11111",
-          "unmapped": "11111"
+          "unmapped": "11111",
+          "defaultContact": "11111",
+          "selectContact": "11111"
         },
         "status": {
           "connected": "11111",
@@ -1732,6 +1744,76 @@
           "showSecret": "11111",
           "title": "11111",
           "url": "11111"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "11111",
+          "client": "11111",
+          "defaultContact": "11111",
+          "createTickets": "11111",
+          "status": "11111"
+        },
+        "selectContact": "11111",
+        "status": {
+          "autoMatched": "11111",
+          "mapped": "11111",
+          "unmapped": "11111"
+        },
+        "title": "11111",
+        "description": "11111",
+        "unmappedSuffix": "11111 {{count}} 11111",
+        "syncButton": "11111",
+        "loading": "11111",
+        "empty": "11111",
+        "errors": {
+          "load": "11111",
+          "sync": "11111",
+          "updateMapping": "11111",
+          "updateContact": "11111"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "11111",
+          "company": "11111",
+          "defaultContact": "11111",
+          "autoSync": "11111",
+          "status": "11111"
+        },
+        "orgFallback": "11111 {{id}} 11111",
+        "idLabel": "11111 {{id}} 11111",
+        "selectCompany": "11111",
+        "selectContact": "11111",
+        "status": {
+          "mapped": "11111",
+          "unmapped": "11111"
+        },
+        "title": "11111",
+        "description": "11111",
+        "loading": "11111",
+        "syncing": "11111",
+        "refreshButton": "11111",
+        "summary": {
+          "mapped": "11111 {{count}} 11111",
+          "unmapped": "11111 {{count}} 11111"
+        },
+        "empty": {
+          "title": "11111",
+          "hint": "11111"
+        },
+        "unmappedNote": "11111",
+        "success": {
+          "synced": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111",
+          "mappingUpdated": "11111",
+          "contactUpdated": "11111"
+        },
+        "errors": {
+          "load": "11111",
+          "sync": "11111",
+          "updateMapping": "11111",
+          "updateContact": "11111",
+          "updateAutoSync": "11111"
         }
       }
     },
@@ -2321,8 +2403,5 @@
         "publishableKeyFormat": "11111"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "11111"
   }
 }
