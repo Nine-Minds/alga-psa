@@ -1,7 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -78,8 +77,11 @@ export const getDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot read documents');
             }
 
-            return trx('document_content')
-                .where({ document_id: documentId, tenant })
+            return createTenantScopedQuery(trx, {
+                table: 'document_content',
+                tenant,
+            }).builder
+                .where({ document_id: documentId })
                 .first();
         });
 
@@ -114,13 +116,18 @@ export const updateDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot update documents');
             }
 
-            const existingContent = await trx('document_content')
-                .where({ document_id: documentId, tenant })
+            const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+                table,
+                tenant,
+            }).builder;
+
+            const existingContent = await tenantScopedTable('document_content')
+                .where({ document_id: documentId })
                 .first();
 
             if (existingContent) {
-                return await trx('document_content')
-                    .where({ document_id: documentId, tenant })
+                return await tenantScopedTable('document_content')
+                    .where({ document_id: documentId })
                     .update({
                         content: data.content,
                         updated_at: trx.fn.now(),
@@ -168,8 +175,11 @@ export const deleteDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot delete documents');
             }
 
-            return trx('document_content')
-                .where({ document_id: documentId, tenant })
+            return createTenantScopedQuery(trx, {
+                table: 'document_content',
+                tenant,
+            }).builder
+                .where({ document_id: documentId })
                 .delete();
         });
 
