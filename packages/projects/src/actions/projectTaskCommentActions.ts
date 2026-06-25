@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -13,6 +13,14 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 function buildCommentAuthorizationSubject(user: { user_id: string; user_type: 'internal' | 'client' }, tenant: string) {
   return {
@@ -83,8 +91,8 @@ export const createTaskComment = withAuth(async (
     const userId = user.user_id;
 
     // Verify user is internal
-    const userRecord = await trx('users')
-      .where({ user_id: userId, tenant })
+    const userRecord = await tenantScopedTable(trx, 'users', tenant)
+      .where({ user_id: userId })
       .first();
 
     if (!userRecord || userRecord.user_type !== 'internal') {
@@ -95,13 +103,12 @@ export const createTaskComment = withAuth(async (
     const markdownContent = convertBlockNoteToMarkdown(comment.note);
 
     // Get project context for notifications and validate task before inserting thread/comment rows
-    const task = await trx('project_tasks')
+    const task = await tenantScopedTable(trx, 'project_tasks', tenant)
       .join('project_phases', function() {
         this.on('project_tasks.phase_id', 'project_phases.phase_id')
           .andOn('project_tasks.tenant', 'project_phases.tenant');
       })
       .where('project_tasks.task_id', comment.taskId)
-      .where('project_tasks.tenant', tenant)
       .select('project_phases.project_id', 'project_tasks.task_name')
       .first();
 
@@ -116,9 +123,9 @@ export const createTaskComment = withAuth(async (
     let threadId: string | undefined;
 
     if (isReply) {
-      const parent = await trx('project_task_comments')
+      const parent = await tenantScopedTable(trx, 'project_task_comments', tenant)
         .select('task_comment_id', 'task_id', 'thread_id', 'deleted_at')
-        .where({ tenant, task_comment_id: parentCommentId })
+        .where({ task_comment_id: parentCommentId })
         .first();
 
       if (!parent) {
@@ -177,8 +184,8 @@ export const createTaskComment = withAuth(async (
       .returning('*');
 
     if (isReply) {
-      await trx('comment_threads')
-        .where({ tenant, thread_id: threadId })
+      await tenantScopedTable(trx, 'comment_threads', tenant)
+        .where({ thread_id: threadId })
         .update({
           reply_count: trx.raw('reply_count + 1'),
           last_activity_at: now,
@@ -234,8 +241,8 @@ export const getTaskComments = withAuth(async (
 ): Promise<IProjectTaskCommentWithUser[]> => {
   const { knex: db } = await createTenantKnex();
 
-  const comments = await db('project_task_comments')
-    .where({ 'project_task_comments.task_id': taskId, 'project_task_comments.tenant': tenant })
+  const comments = await tenantScopedTable(db, 'project_task_comments', tenant)
+    .where({ 'project_task_comments.task_id': taskId })
     .leftJoin('users', function() {
       this.on('project_task_comments.user_id', 'users.user_id')
         .andOn('project_task_comments.tenant', 'users.tenant');
@@ -246,10 +253,16 @@ export const getTaskComments = withAuth(async (
       'users.last_name',
       'users.email'
     )
-    .orderBy('project_task_comments.created_at', 'asc');
+    .orderBy('project_task_comments.created_at', 'asc') as any[];
 
   // Get avatar URLs for all users
-  const userIds = [...new Set(comments.map((c: any) => c.user_id).filter(Boolean))];
+  const userIds: string[] = [
+    ...new Set(
+      comments
+        .map((c: any) => c.user_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ),
+  ];
   const avatarUrls = tenant ? await getEntityImageUrlsBatch('user', userIds, tenant) : new Map<string, string | null>();
 
   // Map snake_case to camelCase
@@ -287,8 +300,8 @@ export const updateTaskComment = withAuth(async (
   const userId = user.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const existingComment = await trx('project_task_comments')
-      .where({ task_comment_id: taskCommentId, tenant })
+    const existingComment = await tenantScopedTable(trx, 'project_task_comments', tenant)
+      .where({ task_comment_id: taskCommentId })
       .first();
 
     if (!existingComment) {
@@ -300,8 +313,8 @@ export const updateTaskComment = withAuth(async (
     // Convert updated note to markdown
     const markdownContent = convertBlockNoteToMarkdown(updates.note);
 
-    await trx('project_task_comments')
-      .where({ task_comment_id: taskCommentId, tenant })
+    await tenantScopedTable(trx, 'project_task_comments', tenant)
+      .where({ task_comment_id: taskCommentId })
       .update({
         note: updates.note,
         markdown_content: markdownContent,
@@ -310,13 +323,12 @@ export const updateTaskComment = withAuth(async (
       });
 
     // Get task and project context for notifications
-    const task = await trx('project_tasks')
+    const task = await tenantScopedTable(trx, 'project_tasks', tenant)
       .join('project_phases', function() {
         this.on('project_tasks.phase_id', 'project_phases.phase_id')
           .andOn('project_tasks.tenant', 'project_phases.tenant');
       })
       .where('project_tasks.task_id', existingComment.task_id)
-      .where('project_tasks.tenant', tenant)
       .select('project_phases.project_id', 'project_tasks.task_name')
       .first();
 
@@ -370,8 +382,8 @@ export const deleteTaskComment = withAuth(async (
   const userId = user.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const existingComment = await trx('project_task_comments')
-      .where({ task_comment_id: taskCommentId, tenant })
+    const existingComment = await tenantScopedTable(trx, 'project_task_comments', tenant)
+      .where({ task_comment_id: taskCommentId })
       .first();
 
     if (!existingComment) {
@@ -380,13 +392,12 @@ export const deleteTaskComment = withAuth(async (
 
     await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'delete');
 
-    const task = await trx('project_tasks')
+    const task = await tenantScopedTable(trx, 'project_tasks', tenant)
       .join('project_phases', function() {
         this.on('project_tasks.phase_id', 'project_phases.phase_id')
           .andOn('project_tasks.tenant', 'project_phases.tenant');
       })
       .where('project_tasks.task_id', existingComment.task_id)
-      .where('project_tasks.tenant', tenant)
       .select('project_phases.project_id', 'project_tasks.task_name')
       .first();
 
@@ -395,15 +406,15 @@ export const deleteTaskComment = withAuth(async (
     }
 
     // If the comment still has replies, soft-delete it so the thread structure survives
-    const child = await trx('project_task_comments')
+    const child = await tenantScopedTable(trx, 'project_task_comments', tenant)
       .select('task_comment_id')
-      .where({ parent_comment_id: taskCommentId, tenant })
+      .where({ parent_comment_id: taskCommentId })
       .first();
 
     if (child) {
       const now = new Date().toISOString();
-      await trx('project_task_comments')
-        .where({ task_comment_id: taskCommentId, tenant })
+      await tenantScopedTable(trx, 'project_task_comments', tenant)
+        .where({ task_comment_id: taskCommentId })
         .update({
           note: '[deleted]',
           markdown_content: '[deleted]',
@@ -427,23 +438,23 @@ export const deleteTaskComment = withAuth(async (
     }
 
     // Delete reactions before hard-deleting the comment (CitusDB doesn't support ON DELETE CASCADE)
-    await trx('project_task_comment_reactions')
-      .where({ task_comment_id: taskCommentId, tenant })
+    await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
+      .where({ task_comment_id: taskCommentId })
       .del();
 
-    await trx('project_task_comments')
-      .where({ task_comment_id: taskCommentId, tenant })
+    await tenantScopedTable(trx, 'project_task_comments', tenant)
+      .where({ task_comment_id: taskCommentId })
       .del();
 
     if (existingComment.parent_comment_id) {
-      await trx('comment_threads')
-        .where({ tenant, thread_id: existingComment.thread_id })
+      await tenantScopedTable(trx, 'comment_threads', tenant)
+        .where({ thread_id: existingComment.thread_id })
         .update({
           reply_count: trx.raw('GREATEST(reply_count - 1, 0)'),
         });
     } else {
-      await trx('comment_threads')
-        .where({ tenant, thread_id: existingComment.thread_id })
+      await tenantScopedTable(trx, 'comment_threads', tenant)
+        .where({ thread_id: existingComment.thread_id })
         .del();
     }
 
@@ -476,8 +487,8 @@ export const getTaskCommentCount = withAuth(async (
 
   const { knex: db } = await createTenantKnex();
 
-  const result = await db('project_task_comments')
-    .where({ task_id: taskId, tenant })
+  const result = await tenantScopedTable(db, 'project_task_comments', tenant)
+    .where({ task_id: taskId })
     .count('* as count')
     .first();
 
@@ -500,9 +511,8 @@ export const getTaskCommentCountsBatch = withAuth(async (
 
   const { knex: db } = await createTenantKnex();
 
-  const results = await db('project_task_comments')
+  const results = await tenantScopedTable(db, 'project_task_comments', tenant)
     .whereIn('task_id', taskIds)
-    .where({ tenant })
     .groupBy('task_id')
     .select('task_id')
     .count('* as count');
