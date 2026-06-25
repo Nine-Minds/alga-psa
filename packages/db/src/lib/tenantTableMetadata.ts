@@ -253,6 +253,9 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   v_asset_software_details: { scope: 'tenant' },
   workstation_assets: { scope: 'tenant' },
   workflow_runs: { scope: 'tenant' },
+  workflow_form_definitions: { scope: 'tenant' },
+  workflow_form_schemas: { scope: 'tenant' },
+  workflow_task_definitions: { scope: 'tenant' },
   workflow_tasks: { scope: 'tenant' },
 };
 
