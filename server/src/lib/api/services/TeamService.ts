@@ -1108,8 +1108,11 @@ export class TeamService extends BaseService<ITeam> {
 
     return withTransaction(knex, async (trx) => {
       // Validate team exists
-      const team = await trx('teams')
-        .where({ team_id: teamId, tenant: context.tenant })
+      const team = await createTenantScopedQuery(trx, {
+        table: 'teams',
+        tenant: context.tenant,
+      }).builder
+        .where('team_id', teamId)
         .first();
       
       if (!team) {
@@ -1143,16 +1146,22 @@ export class TeamService extends BaseService<ITeam> {
   async revokePermission(permissionId: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const permission = await knex('team_permissions')
-      .where({ permission_id: permissionId, tenant: context.tenant })
+    const permission = await createTenantScopedQuery(knex, {
+      table: 'team_permissions',
+      tenant: context.tenant,
+    }).builder
+      .where('permission_id', permissionId)
       .first();
 
     if (!permission) {
       throw new NotFoundError('Permission not found');
     }
 
-    await knex('team_permissions')
-      .where({ permission_id: permissionId, tenant: context.tenant })
+    await createTenantScopedQuery(knex, {
+      table: 'team_permissions',
+      tenant: context.tenant,
+    }).builder
+      .where('permission_id', permissionId)
       .update({ 
         is_active: false,
         revoked_at: new Date(),
@@ -1172,10 +1181,12 @@ export class TeamService extends BaseService<ITeam> {
   async getTeamPermissions(teamId: string, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    const permissions = await knex('team_permissions')
+    const permissions = await createTenantScopedQuery(knex, {
+      table: 'team_permissions',
+      tenant: context.tenant,
+    }).builder
       .where({
         team_id: teamId,
-        tenant: context.tenant,
         is_active: true
       })
       .where(function() {
@@ -1210,8 +1221,14 @@ export class TeamService extends BaseService<ITeam> {
     return withTransaction(knex, async (trx) => {
       // Validate team and project exist
       const [team, project] = await Promise.all([
-        trx('teams').where({ team_id: teamId, tenant: context.tenant }).first(),
-        trx('projects').where({ project_id: projectId, tenant: context.tenant }).first()
+        createTenantScopedQuery(trx, {
+          table: 'teams',
+          tenant: context.tenant,
+        }).builder.where('team_id', teamId).first(),
+        createTenantScopedQuery(trx, {
+          table: 'projects',
+          tenant: context.tenant,
+        }).builder.where('project_id', projectId).first()
       ]);
 
       if (!team || !project) {
@@ -1256,14 +1273,16 @@ export class TeamService extends BaseService<ITeam> {
   async getTeamProjects(teamId: string, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    const projects = await knex('project_team_assignments as pta')
+    const projects = await createTenantScopedQuery(knex, {
+      table: 'project_team_assignments as pta',
+      tenant: context.tenant,
+    }).builder
       .join('projects as p', function() {
         this.on('pta.project_id', '=', 'p.project_id')
             .andOn('pta.tenant', '=', 'p.tenant');
       })
       .where({
         'pta.team_id': teamId,
-        'pta.tenant': context.tenant,
         'pta.is_active': true
       })
       .select(
