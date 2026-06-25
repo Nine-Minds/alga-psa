@@ -1838,8 +1838,11 @@ export class TeamService extends BaseService<ITeam> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<string[]> {
-    const directChildren = await trx('team_hierarchy')
-      .where({ parent_team_id: teamId, tenant: context.tenant })
+    const directChildren = await createTenantScopedQuery(trx, {
+      table: 'team_hierarchy',
+      tenant: context.tenant,
+    }).builder
+      .where('parent_team_id', teamId)
       .pluck('child_team_id');
 
     const allDescendants = [...directChildren];
@@ -1859,10 +1862,12 @@ export class TeamService extends BaseService<ITeam> {
     const { knex } = await this.getKnex();
 
     // Get current allocations
-    const allocations = await knex('project_team_assignments')
+    const allocations = await createTenantScopedQuery(knex, {
+      table: 'project_team_assignments',
+      tenant: context.tenant,
+    }).builder
       .where({
         team_id: teamId,
-        tenant: context.tenant,
         is_active: true
       })
       .sum('allocation_percentage as total_allocation')
