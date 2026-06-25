@@ -1,6 +1,6 @@
 // @ts-nocheck
 // TODO: Argument count issues
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   Activity,
@@ -108,13 +108,19 @@ async function filterScheduleEntriesByClient<T extends ScheduleEntryWorkItemLink
 
   const [matchingTicketIds, matchingProjectTaskIds] = await Promise.all([
     ticketIds.length > 0
-      ? knex('tickets')
-          .where({ tenant, client_id: clientId })
+      ? createTenantScopedQuery(knex, {
+          table: 'tickets',
+          tenant,
+        }).builder
+          .where({ client_id: clientId })
           .whereIn('ticket_id', ticketIds)
           .pluck('ticket_id')
       : Promise.resolve([]),
     projectTaskIds.length > 0
-      ? knex('project_tasks')
+      ? createTenantScopedQuery(knex, {
+          table: 'project_tasks',
+          tenant,
+        }).builder
           .join('project_phases', function() {
             this.on('project_tasks.phase_id', 'project_phases.phase_id')
               .andOn('project_tasks.tenant', 'project_phases.tenant');
@@ -123,7 +129,6 @@ async function filterScheduleEntriesByClient<T extends ScheduleEntryWorkItemLink
             this.on('project_phases.project_id', 'projects.project_id')
               .andOn('project_phases.tenant', 'projects.tenant');
           })
-          .where('project_tasks.tenant', tenant)
           .where('projects.client_id', clientId)
           .whereIn('project_tasks.task_id', projectTaskIds)
           .pluck('project_tasks.task_id')
@@ -168,8 +173,11 @@ async function resolveActivityTarget(
     throw new Error("Permission denied: cannot view another user's activities");
   }
 
-  const target = await knex('users')
-    .where({ tenant, user_id: targetUserId, user_type: 'internal' })
+  const target = await createTenantScopedQuery(knex, {
+    table: 'users',
+    tenant,
+  }).builder
+    .where({ user_id: targetUserId, user_type: 'internal' })
     .first();
   if (!target) {
     throw new Error('User not found');
