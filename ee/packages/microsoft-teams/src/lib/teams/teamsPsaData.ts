@@ -4,6 +4,7 @@ import {
   computeWorkDateFields,
   createTenantKnex,
   resolveUserTimeZone,
+  truncateToMinute,
   withTransaction,
   type ServiceContext,
 } from '@alga-psa/db';
@@ -416,9 +417,14 @@ export async function createTeamsTimeEntry(params: {
   const { knex } = await createTenantKnex(params.tenantId);
   const userTimeZone = await resolveUserTimeZone(knex, params.tenantId, params.actorUserId);
   const { work_date, work_timezone } = computeWorkDateFields(params.startTime, userTimeZone);
+  // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape used
+  // by TimeEntryService and the workflow runtime. Teams supplies real meeting instants, so the
+  // seconds must be dropped here too or stored entries reproduce the off-by-one duration bug.
+  const startTime = truncateToMinute(params.startTime);
+  const endTime = truncateToMinute(params.endTime);
   const billableDuration = Math.max(
     0,
-    Math.round((new Date(params.endTime).getTime() - new Date(params.startTime).getTime()) / 60000)
+    Math.round((endTime.getTime() - startTime.getTime()) / 60000)
   );
   const entryId = randomUUID();
 
@@ -435,8 +441,8 @@ export async function createTeamsTimeEntry(params: {
     tenant: params.tenantId,
     entry_id: entryId,
     user_id: params.actorUserId,
-    start_time: params.startTime,
-    end_time: params.endTime,
+    start_time: startTime,
+    end_time: endTime,
     work_date,
     work_timezone,
     notes: params.notes || null,

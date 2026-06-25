@@ -22,7 +22,7 @@ import {
   UpdateTimeEntryApprovalStatusParams,
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
-import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
+import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db';
 import { assertCanActOnBehalf, assertCanApproveSubject } from './timeEntryDelegationAuth';
 import { toPlainDate } from '@alga-psa/core';
 import {
@@ -396,8 +396,10 @@ export const saveTimeEntry = withAuth(async (
       }
     }
 
-    const startDate = new Date(start_time);
-    const endDate = new Date(end_time);
+    // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape
+    // lives in TimeEntryService (create/update/stop); a shared persist layer would own it once.
+    const startDate = truncateToMinute(start_time);
+    const endDate = truncateToMinute(end_time);
     const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
     
     // Always store actual duration, only set billable_duration to 0 if explicitly non-billable
@@ -416,8 +418,8 @@ export const saveTimeEntry = withAuth(async (
     const cleanedEntry = {
       work_item_id,
       work_item_type,
-      start_time,
-      end_time,
+      start_time: formatISO(startDate), // minute-truncated; keep stored instant in sync with duration
+      end_time: formatISO(endDate),
       work_date,
       work_timezone,
       billable_duration: finalBillableDuration,
