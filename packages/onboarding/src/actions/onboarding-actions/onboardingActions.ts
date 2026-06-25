@@ -446,9 +446,14 @@ export const createClient = withAuth(async (
     // If we have an existing clientId, update instead of create
     if (clientId) {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+          table,
+          tenant,
+        }).builder;
+
         // Update the client
-        await trx('clients')
-          .where({ client_id: clientId, tenant })
+        await tenantScopedTable('clients')
+          .where({ client_id: clientId })
           .update({
             client_name: data.clientName,
             url: data.clientUrl,
@@ -456,13 +461,13 @@ export const createClient = withAuth(async (
           });
 
         // Update the default location if email or phone changed
-        const defaultLocation = await trx('client_locations')
-          .where({ client_id: clientId, tenant, is_default: true })
+        const defaultLocation = await tenantScopedTable('client_locations')
+          .where({ client_id: clientId, is_default: true })
           .first();
 
         if (defaultLocation && (data.clientEmail || data.clientPhone)) {
-          await trx('client_locations')
-            .where({ location_id: defaultLocation.location_id, tenant })
+          await tenantScopedTable('client_locations')
+            .where({ location_id: defaultLocation.location_id })
             .update({
               email: data.clientEmail || defaultLocation.email || '',
               phone: data.clientPhone || defaultLocation.phone || '',
@@ -565,11 +570,13 @@ export const addClientContact = withAuth(async (
 
     // First, check if a contact with this email already exists for this client
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await createTenantScopedQuery(trx, {
+        table: 'contacts',
+        tenant,
+      }).builder
         .where({ 
           email: data.contactEmail.toLowerCase(),
           client_id: data.clientId,
-          tenant 
         })
         .first();
     });
@@ -582,10 +589,12 @@ export const addClientContact = withAuth(async (
 
       if (needsUpdate) {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-          await trx('contacts')
+          await createTenantScopedQuery(trx, {
+            table: 'contacts',
+            tenant,
+          }).builder
             .where({ 
               contact_name_id: existingContact.contact_name_id,
-              tenant 
             })
             .update({
               full_name: data.contactName,
@@ -648,16 +657,20 @@ export const setupBilling = withAuth(async (
     let serviceId: string | undefined;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       // Use the selected service type
       if (!data.serviceTypeId) {
         throw new Error('Service type is required');
       }
 
       // Verify the service type exists
-      const serviceType = await trx('service_types')
+      const serviceType = await tenantScopedTable('service_types')
         .where({ 
           id: data.serviceTypeId,
-          tenant: tenant,
           is_active: true
         })
         .first();
@@ -694,16 +707,14 @@ export const setupBilling = withAuth(async (
       });
 
       // Set default currency on all tenant clients created during onboarding
-      await trx('clients')
-        .where({ tenant })
+      await tenantScopedTable('clients')
         .whereNull('default_currency_code')
         .update({ default_currency_code: currencyCode });
 
       // Persist the selected currency as the tenant-level billing default
-      const existingSettings = await trx('default_billing_settings').where({ tenant }).first();
+      const existingSettings = await tenantScopedTable('default_billing_settings').first();
       if (existingSettings) {
-        await trx('default_billing_settings')
-          .where({ tenant })
+        await tenantScopedTable('default_billing_settings')
           .update({ default_currency_code: currencyCode, updated_at: trx.fn.now() });
       } else {
         await trx('default_billing_settings').insert({
