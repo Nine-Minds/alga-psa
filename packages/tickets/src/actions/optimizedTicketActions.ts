@@ -16,8 +16,17 @@ import type {
   IUserWithRoles,
   TicketResponseState,
 } from '@alga-psa/types';
-import { withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import {
+  withTransaction,
+  registerAfterCommit,
+  createTenantKnex,
+  createTenantScopedQuery,
+  cloneTenantScopedQuery,
+  withTenantScopedQueryBuilder,
+  resolveUserTimeZone,
+  normalizeIanaTimeZone,
+  type TenantScopedQuery,
+} from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -36,7 +45,6 @@ import {
   ticketListFiltersSchema
 } from '../schemas/ticket.schema';
 import { Temporal } from '@js-temporal/polyfill';
-import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
@@ -57,7 +65,7 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
-  compileResourceReadAuthorizationSql,
+  compileTenantScopedResourceReadAuthorizationSql,
   type AuthorizationRecord,
   type AuthorizationSubject,
   type RelationshipRule,
@@ -269,7 +277,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
 
 function applyTicketReadAuthorizationSql(
-  query: Knex.QueryBuilder,
+  query: TenantScopedQuery,
   trx: Knex.Transaction,
   tenant: string,
   context: TicketAuthorizationContext
@@ -278,7 +286,7 @@ function applyTicketReadAuthorizationSql(
   const builtinRules: RelationshipRule[] =
     context.selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' }];
 
-  return compileResourceReadAuthorizationSql(query, {
+  return compileTenantScopedResourceReadAuthorizationSql(query, {
     resourceType: 'ticket',
     action: 'read',
     builtinRules,
@@ -1000,9 +1008,14 @@ async function buildTicketListBaseQuery(
   tenant: string,
   user: { user_id: string; user_type?: string; clientId?: string | null },
   validatedFilters: ITicketListFilters
-): Promise<{ builder: Knex.QueryBuilder }> {
+): Promise<{ builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery }> {
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
-    let baseQuery = trx('tickets as t')
+    const scopedQuery = createTenantScopedQuery(trx, {
+      table: 'tickets as t',
+      alias: 't',
+      tenant,
+    });
+    let baseQuery = scopedQuery.builder
       .leftJoin('tickets as mt', function() {
         this.on('t.master_ticket_id', 'mt.ticket_id')
           .andOn('t.tenant', 'mt.tenant');
@@ -1039,9 +1052,6 @@ async function buildTicketListBaseQuery(
       .leftJoin('teams as tm', function() {
         this.on('t.assigned_team_id', 'tm.team_id')
            .andOn('t.tenant', 'tm.tenant')
-      })
-      .where({
-        't.tenant': tenant
       });
 
     // Bundle view filter: hide children in bundled view
@@ -1360,7 +1370,10 @@ async function buildTicketListBaseQuery(
     // Wrap in object to prevent Promise thenable unwrapping.
     // Knex query builders have .then(), so returning one from an async function
     // would execute the query instead of returning the builder.
-    return { builder: baseQuery };
+    return {
+      builder: baseQuery,
+      scopedQuery: withTenantScopedQueryBuilder(scopedQuery, baseQuery),
+    };
 }
 
 function buildTicketListSearchPrefixTsquery(raw: string): string | null {
@@ -1797,7 +1810,7 @@ export const getTicketsForList = withAuth(async (
       );
 
     // Build base query for filtering
-    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
     const authorizationContext = await createTicketAuthorizationContext(
       trx,
       tenant,
@@ -1809,11 +1822,11 @@ export const getTicketsForList = withAuth(async (
     const normalizedPage = Math.max(1, Number.isFinite(page) ? Math.floor(page) : 1);
     const normalizedPageSize = Math.max(1, Number.isFinite(pageSize) ? Math.floor(pageSize) : 10);
     const offset = (normalizedPage - 1) * normalizedPageSize;
-    const scopedBaseQuery = baseQuery.clone();
+    const scopedBaseQuery = cloneTenantScopedQuery(scopedQuery);
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
 
     if (authSqlResult.supported) {
-      const countQuery = scopedBaseQuery
+      const countQuery = scopedBaseQuery.builder
         .clone()
         .clearSelect()
         .clearOrder()
@@ -1821,7 +1834,7 @@ export const getTicketsForList = withAuth(async (
         .first();
 
       const pageQuery = applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery),
+        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder),
         validatedFilters
       )
         .limit(normalizedPageSize)
@@ -1958,17 +1971,17 @@ export const getAllMatchingTicketIds = withAuth(async (
       validateData(ticketListFiltersSchema, filters) as ITicketListFilters
     );
 
-    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
     const authorizationContext = await createTicketAuthorizationContext(
       trx,
       tenant,
       user as IUserWithRoles
     );
 
-    const scopedBaseQuery = baseQuery.clone();
+    const scopedBaseQuery = cloneTenantScopedQuery(scopedQuery);
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
     const rows = authSqlResult.supported
-      ? await scopedBaseQuery
+      ? await scopedBaseQuery.builder
           .clearSelect()
           .clearOrder()
           .select('t.ticket_id')
@@ -2019,14 +2032,18 @@ export const getTicketBoardIds = withAuth(async (
       user as IUserWithRoles
     );
 
-    const boardQuery = trx('tickets as t')
-      .where('t.tenant', tenant)
+    const boardQuery = createTenantScopedQuery(trx, {
+      table: 'tickets as t',
+      alias: 't',
+      tenant,
+    });
+    boardQuery.builder
       .whereIn('t.ticket_id', uniqueIds)
       .select('t.ticket_id', 't.board_id');
     const authSqlResult = applyTicketReadAuthorizationSql(boardQuery, trx, tenant, authorizationContext);
 
-    const rows = authSqlResult.supported
-      ? await boardQuery
+    const rows: Array<{ ticket_id?: string | null; board_id?: string | null }> = authSqlResult.supported
+      ? await boardQuery.builder
       : await filterAuthorizedTickets(
           trx,
           authorizationContext,
@@ -3441,18 +3458,18 @@ export const getAdjacentTicketIds = withAuth(async (
       validateData(ticketListFiltersSchema, filters) as ITicketListFilters
     );
 
-    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
     const authorizationContext = await createTicketAuthorizationContext(
       trx,
       tenant,
       user as IUserWithRoles
     );
-    const scopedBaseQuery = baseQuery.clone();
+    const scopedBaseQuery = cloneTenantScopedQuery(scopedQuery);
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
 
     if (authSqlResult.supported) {
       const sortOrderBy = getTicketListSortOrderByClause(validatedFilters);
-      const innerQuery = scopedBaseQuery
+      const innerQuery = scopedBaseQuery.builder
         .clone()
         .clearSelect()
         .clearOrder()
@@ -3473,7 +3490,7 @@ export const getAdjacentTicketIds = withAuth(async (
         .where('ticket_id', currentTicketId);
 
       if (results.length === 0) {
-        const countRow = await scopedBaseQuery
+        const countRow = await scopedBaseQuery.builder
           .clone()
           .clearSelect()
           .clearOrder()
