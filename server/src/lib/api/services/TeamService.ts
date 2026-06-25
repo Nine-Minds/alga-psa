@@ -2414,12 +2414,15 @@ export class TeamService extends BaseService<ITeam> {
 
     // Get all child teams recursively
     const getChildTeams = async (parentId: string): Promise<any[]> => {
-      const children = await knex('team_hierarchy as th')
-        .join('teams as t', 'th.child_team_id', 't.team_id')
-        .where({
-          'th.parent_team_id': parentId,
-          'th.tenant': context.tenant
+      const children = await createTenantScopedQuery(knex, {
+        table: 'team_hierarchy as th',
+        tenant: context.tenant,
+      }).builder
+        .join('teams as t', function() {
+          this.on('th.child_team_id', '=', 't.team_id')
+              .andOn('th.tenant', '=', 't.tenant');
         })
+        .where('th.parent_team_id', parentId)
         .select('t.*');
 
       const childrenWithSubTeams = await Promise.all(
@@ -2433,11 +2436,11 @@ export class TeamService extends BaseService<ITeam> {
     };
 
     // Get parent team if exists
-    const parentRelation = await knex('team_hierarchy')
-      .where({
-        child_team_id: teamId,
-        tenant: context.tenant
-      })
+    const parentRelation = await createTenantScopedQuery(knex, {
+      table: 'team_hierarchy',
+      tenant: context.tenant,
+    }).builder
+      .where('child_team_id', teamId)
       .first();
 
     let parent: ITeam | null = null;
