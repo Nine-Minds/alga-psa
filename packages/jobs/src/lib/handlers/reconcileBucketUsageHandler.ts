@@ -1,5 +1,5 @@
 import { Job } from 'pg-boss';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { reconcileBucketUsageRecord } from '@alga-psa/billing/services/bucketUsageService';
 import logger from '@alga-psa/core/logger';
 import { Temporal } from '@js-temporal/polyfill';
@@ -28,8 +28,10 @@ export async function handleReconcileBucketUsage(job: Job<ReconcileBucketUsageJo
 
     // Find active bucket usage records for the tenant
     // Active means the current date falls within the period_start and period_end
-    const recordsToReconcile = await knex('bucket_usage')
-      .where('tenant', tenantId)
+    const recordsToReconcile = await createTenantScopedQuery(knex, {
+      table: 'bucket_usage',
+      tenant: tenantId,
+    }).builder
       .andWhere('period_start', '<=', currentDateISO)
       .andWhere('period_end', '>=', currentDateISO)
       .select('usage_id');
