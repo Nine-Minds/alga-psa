@@ -72,4 +72,31 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(updateClientContactsSection).not.toContain("trx('clients')");
     expect(updateClientContactsSection).not.toContain("trx('contacts')");
   });
+
+  it('uses structural tenant scoping for CSV import duplicate and email checks', () => {
+    const importHelperSection = sectionBetween('async function findExistingContactByImportedEmails', 'function toContactEmailAddressInput');
+    const importSection = sectionBetween('export const importContactsFromCSV', 'export const checkExistingEmails');
+    const checkEmailsSection = sectionBetween('export const checkExistingEmails', 'export const getContactByEmail');
+
+    expect(importHelperSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(importHelperSection).toContain("tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)");
+    expect(importHelperSection).not.toContain("trx('contacts')");
+    expect(importHelperSection).not.toContain("trx('contact_additional_email_addresses')");
+    expect(importHelperSection).not.toContain(".andWhere('tenant', tenant)");
+
+    expect(importSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
+    expect(importSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(importSection).toContain("tenantScopedTable(trx, 'tag_mappings', tenant)");
+    expect(importSection).not.toContain("trx('clients')");
+    expect(importSection).not.toContain("trx('contacts')");
+    expect(importSection).not.toContain("trx('tag_mappings')");
+    expect(importSection).not.toContain('tenant,\n                client_id');
+    expect(importSection).not.toContain("tagged_type: 'contact', tenant");
+
+    expect(checkEmailsSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(checkEmailsSection).toContain("tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)");
+    expect(checkEmailsSection).not.toContain(".andWhere('tenant', tenant)");
+    expect(checkEmailsSection).not.toContain("trx('contacts')");
+    expect(checkEmailsSection).not.toContain("trx('contact_additional_email_addresses')");
+  });
 });

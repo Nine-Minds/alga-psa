@@ -932,15 +932,13 @@ async function findExistingContactByImportedEmails(
     return undefined;
   }
 
-  const directMatches = await trx('contacts')
+  const directMatches = await tenantScopedTable(trx, 'contacts', tenant)
     .select('contact_name_id')
-    .whereIn('email', emails)
-    .andWhere('tenant', tenant);
+    .whereIn('email', emails);
 
-  const additionalMatches = await trx('contact_additional_email_addresses')
+  const additionalMatches = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
     .select('contact_name_id')
-    .whereIn('normalized_email_address', emails)
-    .andWhere('tenant', tenant);
+    .whereIn('normalized_email_address', emails);
 
   const contactIds = [...new Set([
     ...directMatches.map((row: { contact_name_id: string }) => row.contact_name_id),
@@ -1007,8 +1005,8 @@ export const importContactsFromCSV = withAuth(async (
           }
 
           if (contactData.client_id) {
-            const client = await trx('clients')
-              .where({ client_id: contactData.client_id, tenant })
+            const client = await tenantScopedTable(trx, 'clients', tenant)
+              .where({ client_id: contactData.client_id })
               .first();
 
             if (!client) {
@@ -1027,11 +1025,10 @@ export const importContactsFromCSV = withAuth(async (
           matchedByEmail = Boolean(existingContact);
 
           if (!existingContact) {
-            const existingContactRow = await trx('contacts')
+            const existingContactRow = await tenantScopedTable(trx, 'contacts', tenant)
               .select('contact_name_id')
               .where({
                 full_name: contactData.full_name.trim(),
-                tenant,
                 client_id: contactData.client_id
               })
               .first();
@@ -1120,8 +1117,8 @@ export const importContactsFromCSV = withAuth(async (
 
             if (contactData.tags !== undefined) {
               try {
-                await trx('tag_mappings')
-                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact', tenant })
+                await tenantScopedTable(trx, 'tag_mappings', tenant)
+                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact' })
                   .delete();
 
                 if (contactData.tags) {
@@ -1274,15 +1271,13 @@ export const checkExistingEmails = withAuth(async (
     }
 
     const existingEmails = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const primaryEmails = await trx('contacts')
+      const primaryEmails = await tenantScopedTable(trx, 'contacts', tenant)
         .select('email')
-        .whereIn('email', sanitizedEmails)
-        .andWhere('tenant', tenant);
+        .whereIn('email', sanitizedEmails);
 
-      const additionalEmails = await trx('contact_additional_email_addresses')
+      const additionalEmails = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
         .select('normalized_email_address')
-        .whereIn('normalized_email_address', sanitizedEmails)
-        .andWhere('tenant', tenant);
+        .whereIn('normalized_email_address', sanitizedEmails);
 
       return [
         ...primaryEmails.map((contact: { email: string }) => contact.email),
