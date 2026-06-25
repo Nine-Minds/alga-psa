@@ -113,6 +113,12 @@ export default defineConfig({
       { find: /^@alga-psa\/db\/connection$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts') },
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../packages/db/src/models/index.ts') },
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../packages/db/src/models/$1') },
+      // db's ./workDate export maps to src/lib/workDate (names don't mirror the
+      // src layout), so a prefix alias can't reach it — alias it explicitly.
+      { find: /^@alga-psa\/db\/workDate$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts') },
+
+      { find: /^@alga-psa\/portal-shared$/, replacement: path.resolve(__dirname, '../packages/portal-shared/src/index.ts') },
+      { find: /^@alga-psa\/portal-shared\/(.*)$/, replacement: path.resolve(__dirname, '../packages/portal-shared/src/$1') },
 
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../packages/types/src/index.ts') },
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/index.ts') },
