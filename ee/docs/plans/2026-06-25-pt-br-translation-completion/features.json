@@ -128,7 +128,7 @@
   {
     "id": "F013",
     "description": "pt-BR complete for msp/billing.json: translate the 508 remaining key(s) and re-audit all 512 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",
@@ -139,7 +139,7 @@
   {
     "id": "F014",
     "description": "pt-BR complete for msp/billing-settings.json: translate the 631 remaining key(s) and re-audit all 698 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",
@@ -150,7 +150,7 @@
   {
     "id": "F015",
     "description": "pt-BR complete for msp/invoicing.json: translate the 85 remaining key(s) and re-audit all 1001 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",
@@ -161,7 +161,7 @@
   {
     "id": "F016",
     "description": "pt-BR complete for msp/credits.json: translate the 148 remaining key(s) and re-audit all 151 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",
@@ -172,7 +172,7 @@
   {
     "id": "F017",
     "description": "pt-BR complete for msp/quotes.json: translate the 518 remaining key(s) and re-audit all 534 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",
@@ -183,7 +183,7 @@
   {
     "id": "F018",
     "description": "pt-BR complete for msp/contracts.json: translate the 1342 remaining key(s) and re-audit all 1360 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",
@@ -194,7 +194,7 @@
   {
     "id": "F019",
     "description": "pt-BR complete for msp/contract-lines.json: translate the 509 remaining key(s) and re-audit all 509 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",
@@ -205,7 +205,7 @@
   {
     "id": "F020",
     "description": "pt-BR complete for features/billing.json: translate the 9 remaining key(s) and re-audit all 267 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "prdRefs": [
       "3.2",

@@ -173,7 +173,7 @@
   {
     "id": "T020",
     "description": "validate-translations.cjs passes for pt msp/billing.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F013"
@@ -182,7 +182,7 @@
   {
     "id": "T021",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/billing.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F013"
@@ -191,7 +191,7 @@
   {
     "id": "T022",
     "description": "validate-translations.cjs passes for pt msp/billing-settings.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F014"
@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/billing-settings.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F014"
@@ -209,7 +209,7 @@
   {
     "id": "T024",
     "description": "validate-translations.cjs passes for pt msp/invoicing.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F015"
@@ -218,7 +218,7 @@
   {
     "id": "T025",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/invoicing.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F015"
@@ -227,7 +227,7 @@
   {
     "id": "T026",
     "description": "validate-translations.cjs passes for pt msp/credits.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F016"
@@ -236,7 +236,7 @@
   {
     "id": "T027",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/credits.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F016"
@@ -245,7 +245,7 @@
   {
     "id": "T028",
     "description": "validate-translations.cjs passes for pt msp/quotes.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F017"
@@ -254,7 +254,7 @@
   {
     "id": "T029",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/quotes.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F017"
@@ -263,7 +263,7 @@
   {
     "id": "T030",
     "description": "validate-translations.cjs passes for pt msp/contracts.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F018"
@@ -272,7 +272,7 @@
   {
     "id": "T031",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/contracts.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F018"
@@ -281,7 +281,7 @@
   {
     "id": "T032",
     "description": "validate-translations.cjs passes for pt msp/contract-lines.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F019"
@@ -290,7 +290,7 @@
   {
     "id": "T033",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/contract-lines.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F019"
@@ -299,7 +299,7 @@
   {
     "id": "T034",
     "description": "validate-translations.cjs passes for pt features/billing.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F020"
@@ -308,7 +308,7 @@
   {
     "id": "T035",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for features/billing.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-billing",
     "featureIds": [
       "F020"

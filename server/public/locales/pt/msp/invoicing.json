@@ -4,9 +4,9 @@
       "title": "Pronto para faturar",
       "description": "Revise o trabalho devido recorrente e gere projetos de faturas para os períodos selecionados.",
       "selectAllExplanation": "Selecione grupos principais ou linhas individuais para controlar a geração de faturas.",
-      "filterPlaceholder": "Filtrar linhas prontas para faturamento",
+      "filterPlaceholder": "Filtrar por cliente",
       "dateRange": "Janela de fatura",
-      "search": "Procurar",
+      "search": "Aplicar",
       "groupedPreviewUnavailable": "A visualização oferece suporte a seleções agrupadas; direto \"Gerar a partir da visualização\" permanece apenas como seleção única.",
       "selectionHintCombined": "1 fatura se o pai for selecionado",
       "selectionHintSeparate": "Selecione os itens individualmente",
@@ -17,40 +17,40 @@
           "servicePeriod": "Período de serviço",
           "invoiceWindow": "Janela de fatura"
         },
-        "unapprovedEntries": "Entrada não aprovada de {{count}}",
-        "unapprovedEntries_one": "Entrada não aprovada de {{count}}",
-        "unapprovedEntries_other": "{{count}} entradas não aprovadas",
+        "unapprovedEntries": "Entrada não aprovada {{count}}",
+        "unapprovedEntries_one": "Entrada não aprovada {{count}}",
+        "unapprovedEntries_other": "Entradas não aprovadas {{count}}",
         "actions": {
           "reviewApprovals": "Revise as aprovações"
         }
       },
       "columns": {
-        "group": "Grupo",
+        "group": "Cliente/Grupo",
         "servicePeriod": "Período de serviço",
         "invoiceWindow": "Janela de fatura",
         "included": "Incluído",
-        "charge": "Cobrança",
+        "charge": "Cobrar",
         "status": "Status",
-        "amount": "Valor"
+        "amount": "Quantia"
       },
-      "pageScopeNote": "{{count}} grupo(s) nesta página"
+      "pageScopeNote": "Grupo(s) {{count}} nesta página"
     },
     "groups": {
-      "item": "Item {{count}}",
-      "item_one": "Item {{count}}",
-      "item_other": "Itens {{count}}",
+      "item": "Item de linha {{count}}",
+      "item_one": "Item de linha {{count}}",
+      "item_other": "Itens de linha {{count}}",
       "contract": "Contrato {{count}}",
       "contract_one": "Contrato {{count}}",
       "contract_other": "Contratos {{count}}",
       "line": "Linha {{count}}",
       "line_one": "Linha {{count}}",
       "line_other": "Linhas {{count}}",
-      "includedCount": "Item {{count}} incluído",
-      "includedCount_one": "Item {{count}} incluído",
-      "includedCount_other": "Itens {{count}} incluídos",
-      "attributionMetadataMissing": "Faltam metadados de atribuição de atribuição (obrigação {{count}})",
-      "attributionMetadataMissing_one": "Faltam metadados de atribuição de atribuição (obrigação {{count}})",
-      "attributionMetadataMissing_other": "Faltam metadados de atribuição de atribuição (obrigações {{count}})",
+      "includedCount": "Item de linha {{count}} incluído",
+      "includedCount_one": "Item de linha {{count}} incluído",
+      "includedCount_other": "Itens de linha {{count}} incluídos",
+      "attributionMetadataMissing": "Faltam metadados de atribuição de atribuição (item de linha {{count}})",
+      "attributionMetadataMissing_one": "Faltam metadados de atribuição de atribuição (item de linha {{count}})",
+      "attributionMetadataMissing_other": "Faltam metadados de atribuição de atribuição (itens de linha {{count}})",
       "actions": {
         "expand": "Expandir",
         "collapse": "Colapso"
@@ -60,9 +60,9 @@
       "separate": "Deve faturar separadamente",
       "blocked": "Contém itens bloqueados",
       "notReady": "Não estou pronto para faturar",
-      "upcoming": "Ainda não vencido",
-      "upcomingDetail": "Este período é faturado no vencimento, portanto fica disponível para faturamento após o término do período de serviço.",
-      "upcomingDetailWithDate": "Este período é faturado no vencimento, portanto fica disponível para faturamento em {{date}}, após o término do período de serviço."
+      "upcoming": "Ainda não devido",
+      "upcomingDetail": "Contas em atraso. Disponível quando o período de serviço terminar.",
+      "upcomingDetailWithDate": "Este período fatura em atraso, portanto fica disponível para faturar no {{date}}, após o término do período de serviço."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "A janela da fatura é diferente",
@@ -81,9 +81,9 @@
       "pendingAmount": "Valor pendente",
       "billableOn": "Faturável em {{date}}",
       "attributionWarning": "Faltam metadados de atribuição de atribuição",
-      "blockedUntilApproval": "Bloqueado até aprovação: {{count}} entrada não aprovada.",
-      "blockedUntilApproval_one": "Bloqueado até aprovação: {{count}} entrada não aprovada.",
-      "blockedUntilApproval_other": "Bloqueado até aprovação: {{count}} entradas não aprovadas.",
+      "blockedUntilApproval": "Bloqueado até aprovação: entrada não aprovada {{count}}.",
+      "blockedUntilApproval_one": "Bloqueado até aprovação: entrada não aprovada {{count}}.",
+      "blockedUntilApproval_other": "Bloqueado até aprovação: entradas não aprovadas {{count}}.",
       "assignmentContext": {
         "unresolvedTimeEntry": "Entrada de tempo não resolvida",
         "unresolvedUsageRecord": "Registro de uso não resolvido",
@@ -94,9 +94,9 @@
     },
     "actions": {
       "previewSelected": "Visualização selecionada",
-      "generateSelected": "Gerar faturas para períodos selecionados ({{count}})",
-      "generateSelected_one": "Gerar faturas para períodos selecionados ({{count}})",
-      "generateSelected_other": "Gerar faturas para períodos selecionados ({{count}})",
+      "generateSelected": "Gerar faturas ({{count}})",
+      "generateSelected_one": "Gerar faturas ({{count}})",
+      "generateSelected_other": "Gerar faturas ({{count}})",
       "reverseInvoice": "Fatura reversa",
       "deleteInvoice": "Excluir fatura",
       "closePreview": "Fechar visualização",
@@ -128,7 +128,7 @@
       },
       "delete": {
         "title": "Excluir fatura recorrente permanentemente?",
-        "message": "Esta ação não pode ser desfeita. Isso excluirá permanentemente a fatura recorrente de:\nCcliente: {{client}}\nCfonte de cadência: {{cadenceSource}}\nPeríodo de serviço: {{servicePeriod}}\n{{bridgeEffect}}",
+        "message": "Esta ação não pode ser desfeita. Isso excluirá permanentemente a fatura recorrente de:\nCliente: {{client}}\nFonte de cadência: {{cadenceSource}}\nPeríodo de serviço: {{servicePeriod}}\n{{bridgeEffect}}",
         "bridgeDeleted": "O registro da ponte de cadência do cliente vinculado também será excluído.",
         "bridgeReopened": "Os períodos de serviço recorrentes vinculados serão reabertos sem a necessidade de metadados de ponte do ciclo do cliente.",
         "confirm": "Sim, excluir permanentemente",
@@ -163,7 +163,7 @@
           "total": "Total"
         },
         "generating": "Gerando...",
-        "generateError": "Falha ao gerar fatura a partir da visualização"
+        "generateError": "Falha ao gerar fatura da visualização"
       },
       "poOverage": {
         "title": "Excedentes do limite do pedido de compra",
@@ -201,8 +201,8 @@
       }
     },
     "materializationGap": {
-      "title": "Reparo recorrente do período de serviço necessário",
-      "description": "Essas janelas de cadência do cliente não possuem períodos de serviço recorrentes persistentes, portanto, seu trabalho de pronto para faturamento é bloqueado até que a programação canônica seja reparada.",
+      "title": "Essas programações de faturamento precisam ser reconstruídas",
+      "description": "Uma programação de faturamento foi alterada para esses clientes, portanto, as cobranças futuras estão desatualizadas e ainda não podem ser faturadas. A reconstrução atualiza as cobranças para corresponder à programação atual. Os encargos que já foram faturados não serão afetados.",
       "labels": {
         "servicePeriod": "Período de serviço",
         "invoiceWindow": "Janela de fatura",
@@ -211,10 +211,10 @@
       "reviewLink": "Revise os períodos de serviço",
       "helpText": "Repare os registros canônicos do período de serviço em vez de gerar uma linha de fatura de compatibilidade.",
       "fixAll": "Corrigir tudo",
-      "fixAllBusy": "Recriando…",
-      "fixAllResult": "{{schedules}} agendamento(s) recriado(s) em {{clients}} cliente(s).",
-      "fixAllError": "Não foi possível recriar os períodos de serviço. Tente novamente.",
-      "fixAllDenied": "Você não tem permissão para recriar os períodos de serviço."
+      "fixAllBusy": "Reconstruindo…",
+      "fixAllResult": "Programações {{schedules}} reconstruídas em clientes {{clients}}.",
+      "fixAllError": "Não foi possível reconstruir os períodos de serviço. Por favor, tente novamente.",
+      "fixAllDenied": "Você não tem permissão para reconstruir períodos de serviço."
     },
     "errors": {
       "title": "Ocorreram erros ao finalizar faturas:",
@@ -226,16 +226,16 @@
     },
     "views": {
       "all": "Todos",
-      "ready": "Pronto",
+      "ready": "Preparar",
       "combinable": "Combinável",
-      "attention": "Requer atenção",
-      "notYetDue": "Ainda não vencido"
+      "attention": "Precisa de atenção",
+      "notYetDue": "Ainda não devido"
     },
     "status": {
-      "ready": "Pronto",
+      "ready": "Preparar",
       "combine": "Combinar",
-      "separate": "Separado",
-      "notYetDue": "Ainda não vencido",
+      "separate": "Separar",
+      "notYetDue": "Ainda não devido",
       "approval": "Aprovação",
       "blocked": "Bloqueado"
     },
@@ -246,38 +246,38 @@
       "bucket": "BKT"
     },
     "summary": {
-      "selected": "{{count}} selecionado(s)",
-      "breakdown": "{{invoices}} fatura(s) · {{combine}} combinadas · {{separate}} separadas",
+      "selected": "{{count}} selecionado",
+      "breakdown": "Fatura(s) {{invoices}} · {{combine}} combinada · {{separate}} separada(s)",
       "knownNow": "conhecido agora",
       "knownPlusAtGeneration": "conhecido agora · {{count}} calculado na geração",
-      "atGenerationLines": "{{count}} item(ns)",
-      "empty": "Selecione grupos ou itens para visualizar ou gerar faturas.",
-      "pageScope": "{{groups}} grupo(s) · {{obligations}} item(ns)"
+      "atGenerationLines": "Itens de linha {{count}}",
+      "empty": "Selecione grupos ou itens de linha para visualizar ou gerar faturas.",
+      "pageScope": "Grupo(s) {{groups}} · Item(s) de linha {{obligations}}"
     },
     "amount": {
       "atGeneration": "Calculado na geração",
       "plusAtGeneration": "+ {{count}} na geração"
     },
     "window": {
-      "open": "Aberta",
-      "opensOn": "Abre em {{date}}",
-      "notOpen": "Ainda não aberta"
+      "open": "Abrir",
+      "opensOn": "Abre {{date}}",
+      "notOpen": "Ainda não abriu"
     },
     "legend": {
-      "confirmed": "Valor conhecido agora",
+      "confirmed": "Quantidade conhecida agora",
       "atGeneration": "Calculado na geração",
-      "combine": "Combinar em uma fatura",
-      "separate": "Deve ser faturado separadamente",
-      "notYetDue": "Ainda não vencido"
+      "combine": "Combine em uma fatura",
+      "separate": "Deve faturar separadamente",
+      "notYetDue": "Ainda não devido"
     },
     "filters": {
       "title": "Filtros",
       "windowOpen": "Janela aberta",
-      "charge": "Cobrança",
+      "charge": "Cobrar",
       "currency": "Moeda",
       "any": "qualquer",
       "clear": "Limpar",
-      "countSummary": "{{groups}} grupo(s) · {{obligations}} item(ns)"
+      "countSummary": "Grupo(s) {{groups}} · Item(s) de linha {{obligations}}"
     }
   },
   "manualInvoices": {
@@ -375,23 +375,23 @@
       "bulkFinalizeFailed": "Falha ao finalizar as faturas selecionadas. Por favor, tente novamente.",
       "pdfFailed": "Falha ao gerar PDF. Por favor, tente novamente.",
       "reverseFailed": "Falha ao reverter rascunhos de fatura(s). Por favor, tente novamente.",
-      "bulkFinalizePendingTax_one": "{{count}} fatura foi ignorada porque está aguardando a importação do imposto externo. Importe o imposto do seu sistema contábil, ou altere-a para imposto interno, e então finalize-a individualmente.",
-      "bulkFinalizePendingTax_other": "{{count}} faturas foram ignoradas porque estão aguardando a importação do imposto externo. Importe o imposto do seu sistema contábil, ou altere-as para imposto interno, e então finalize-as individualmente.",
-      "bulkFinalizeSkipped_one": "Não foi possível finalizar {{count}} fatura e ela foi ignorada.",
-      "bulkFinalizeSkipped_other": "Não foi possível finalizar {{count}} faturas e elas foram ignoradas."
+      "bulkFinalizePendingTax_one": "A fatura {{count}} foi ignorada porque aguarda importação de imposto externo. Importe o imposto do seu sistema contábil ou mude para imposto interno e finalize-o individualmente.",
+      "bulkFinalizePendingTax_other": "As faturas {{count}} foram ignoradas porque aguardam importação de impostos externos. Importe o imposto do seu sistema contábil ou mude-o para imposto interno e finalize-o individualmente.",
+      "bulkFinalizeSkipped_one": "A fatura {{count}} não pôde ser finalizada e foi ignorada.",
+      "bulkFinalizeSkipped_other": "As faturas {{count}} não puderam ser finalizadas e foram ignoradas."
     },
     "reverseDialog": {
       "title_other": "Faturas de rascunho reverso",
       "message_one": "A reversão deste rascunho de fatura irá excluí-lo e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
-      "message_other": "A reversão de faturas preliminares {{count}} irá excluí-las e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
+      "message_other": "A reversão dos rascunhos de faturas {{count}} irá excluí-los e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
       "confirm": "Rascunho reverso",
       "cancel": "Cancelar",
       "title_one": "Rascunho de fatura reversa"
     },
     "pendingTaxDialog": {
       "title": "Fatura aguardando imposto externo",
-      "message": "Esta fatura está configurada para usar o imposto calculado por um sistema contábil externo, mas nenhum imposto foi importado ainda, portanto ela não pode ser finalizada. Exporte-a para o seu sistema contábil (QuickBooks, Xero) e importe o imposto de volta para finalizá-la com imposto externo — ou altere esta fatura para imposto interno agora para que o Alga calcule o imposto e finalize-a.",
-      "confirm": "Alterar para imposto interno e finalizar",
+      "message": "Esta fatura está configurada para utilizar imposto calculado por um sistema de contabilidade externo, mas nenhum imposto foi importado ainda, portanto não pode ser finalizado. Exporte-a para o seu sistema contábil (QuickBooks, Xero) e importe o imposto de volta para finalizar com imposto externo — ou mude esta fatura para imposto interno agora para que Alga calcule o imposto e finalize-o.",
+      "confirm": "Mudar para imposto interno e finalizar",
       "cancel": "Cancelar"
     }
   },
@@ -555,11 +555,11 @@
     "repairPanel": {
       "title": "Períodos de serviço persistentes ausentes",
       "description": "Essa programação recorrente existe nos metadados de faturamento em tempo real, mas não possui linhas de período de serviço persistentes. O reparo materializará apenas as linhas futuras, preservará os limites do histórico cobrado e carimbará os novos registros com a proveniência do preenchimento.",
-      "result": "Linhas {{backfilled}} preenchidas, realinhadas {{realigned}}, ignoradas candidatas históricas {{skipped}} e linhas ativas {{active}} deixadas nesta programação."
+      "result": "Linhas {{backfilled}} preenchidas, {{realigned}} realinhadas, candidatos históricos {{skipped}} ignorados e linhas ativas {{active}} deixadas nesta programação."
     },
     "regenerationPreview": {
       "title": "Pré-visualização da regeneração",
-      "description": "Cole os registros de candidatos JSON para visualizar como as linhas editadas ou faturadas preservadas entrariam em conflito com futuros candidatos regenerados para esta programação."
+      "description": "Cole os registros do candidato JSON para visualizar como as linhas editadas ou faturadas preservadas entrariam em conflito com futuros candidatos regenerados para esta programação."
     },
     "conflicts": {
       "kinds": {
@@ -607,7 +607,7 @@
       "starts": "Inicia {{date}}",
       "day": "Dia {{day}}",
       "monthDay": "{{month}} {{day}}",
-      "dash": "—"
+      "dash": "-"
     },
     "cycles": {
       "weekly": "Semanalmente",
@@ -647,10 +647,10 @@
       "unfinalize": "Desfinalizar",
       "viewSourceQuote": "Ver cotação da fonte",
       "applyCredit": "Aplicar crédito",
-      "driftAccept": "Aceitar versão do QuickBooks",
-      "driftReexport": "Reexportar para o QuickBooks",
-      "syncNow": "Sincronizar com o QuickBooks",
-      "viewInQbo": "Ver no QuickBooks",
+      "driftAccept": "Aceite a versão QuickBooks",
+      "driftReexport": "Reexportar para QuickBooks",
+      "syncNow": "Sincronizar com QuickBooks",
+      "viewInQbo": "Ver em QuickBooks",
       "voidInvoice": "Anular fatura"
     },
     "loading": "Carregando visualização...",
@@ -659,7 +659,7 @@
     "errorDescription": "Não foi possível exibir a visualização. Os dados podem estar faltando.",
     "errors": {
       "loadFailed": "Falha ao carregar visualização: {{message}}",
-      "actionFailed": "Falha ao {{action}}. Por favor, tente novamente.",
+      "actionFailed": "Falha em {{action}}. Por favor, tente novamente.",
       "actionLabels": {
         "finalizeInvoice": "finalizar fatura",
         "downloadPdf": "baixar PDF",
@@ -673,11 +673,11 @@
     },
     "voidDialog": {
       "title": "Anular fatura",
-      "description": "Voiding this invoice is permanent. Please provide a reason.",
-      "reasonPlaceholder": "Reason for voiding...",
-      "cancel": "Cancel",
+      "description": "A anulação desta fatura é permanente. Forneça um motivo.",
+      "reasonPlaceholder": "Motivo da anulação...",
+      "cancel": "Cancelar",
       "confirm": "Anular fatura",
-      "voiding": "Voiding..."
+      "voiding": "Anulando..."
     }
   },
   "templateEditor": {
@@ -728,7 +728,7 @@
     "actions": {
       "edit": "Editar",
       "editAsCopy": "Editar como cópia",
-      "clone": "Clone",
+      "clone": "Clonar",
       "setDefault": "Definir como padrão",
       "delete": "Excluir",
       "openMenu": "Abrir menu",
@@ -866,7 +866,7 @@
       "importTaxFailed": "Falha ao importar imposto"
     },
     "adapterNames": {
-      "quickbooks": "QuickBooks on-line",
+      "quickbooks": "QuickBooks Online",
       "xero": "Xero",
       "sage": "Sábio"
     }
@@ -931,7 +931,7 @@
       "prepayment": "Pré-pagamento"
     },
     "descriptions": {
-      "automatic": "Use janelas de fatura para revisar períodos de serviço recorrentes vencidos antes de gerar um lote recorrente.",
+      "automatic": "Gere faturas para os períodos de serviço recorrentes vencidos.",
       "manual": "Use faturas manuais para linhas únicas ou de ajuste. Eles não redefinem períodos de serviço recorrentes.",
       "prepayment": "Use fluxos de pré-pagamento e crédito para valor financeiro que devem permanecer separados da cobertura recorrente do período de serviço."
     },
@@ -1003,14 +1003,14 @@
       "notSynced": "Não sincronizado",
       "queued": "Na fila",
       "synced": "Sincronizado",
-      "drift": "Divergência",
+      "drift": "Deriva",
       "error": "Erro de sincronização",
-      "voided": "Anulada"
+      "voided": "Anulado"
     },
     "tooltip": {
-      "qboNumberPrefix": "QBO #",
+      "qboNumberPrefix": "QBO#",
       "lastSynced": "Última sincronização:",
-      "viewInQuickBooks": "Ver no QuickBooks"
+      "viewInQuickBooks": "Ver em QuickBooks"
     }
   },
   "templateManager": {
@@ -1034,7 +1034,7 @@
       "pendingAdapter": "Aguardando cálculo de imposto de {{adapter}}"
     },
     "adapterNames": {
-      "quickbooks": "QuickBooks on-line",
+      "quickbooks": "QuickBooks Online",
       "xero": "Xero",
       "sage": "Sábio"
     }
@@ -1097,91 +1097,91 @@
     "toolbar": {
       "undo": "Desfazer",
       "redo": "Refazer",
-      "snap": "Encaixar",
+      "snap": "Foto",
       "guides": "Guias",
-      "rulers": "Réguas",
+      "rulers": "Governantes",
       "zoom": "Zoom",
       "metrics": {
-        "drags": "Arrastes: {{count}}",
+        "drags": "Arrasta: {{count}}",
         "success": "Sucesso: {{count}}",
-        "invalid": "Inválidos: {{count}}"
+        "invalid": "Inválido: {{count}}"
       }
     },
     "palette": {
       "tabs": {
-        "blocks": "BLOCOS",
-        "presets": "PREDEFINIÇÕES",
-        "fields": "CAMPOS",
-        "outline": "ESTRUTURA"
+        "blocks": "BLOCKS",
+        "presets": "PRESETS",
+        "fields": "FIELDS",
+        "outline": "OUTLINE"
       },
       "search": {
-        "blocks": "Pesquisar blocos…",
-        "presets": "Pesquisar predefinições…",
-        "fields": "Pesquisar campos…"
+        "blocks": "Blocos de pesquisa...",
+        "presets": "Pesquisar predefinições...",
+        "fields": "Campos de pesquisa..."
       },
-      "dragHint": "Arraste ou toque em «+» para inserir.",
+      "dragHint": "Arraste ou toque em `+` para inserir.",
       "addAriaLabel": "Adicionar {{label}}",
-      "noBlocksMatch": "Nenhum bloco encontrado.",
+      "noBlocksMatch": "Nenhum bloco corresponde a esta pesquisa.",
       "presets": {
         "sectionTitle": "Modelos de macro",
-        "sectionDescription": "Pacotes predefinidos para secções comuns de fatura."
+        "sectionDescription": "Pacotes predefinidos para seções de faturas comuns."
       },
-      "noPresetsMatch": "Nenhuma predefinição encontrada.",
+      "noPresetsMatch": "Nenhuma predefinição corresponde a esta pesquisa.",
       "fields": {
-        "insertHint": "Clique num campo para o inserir no campo de texto ativo.",
+        "insertHint": "Clique em um campo para inserir na entrada de texto em foco.",
         "categories": {
           "client": "Cliente",
-          "contact": "Contacto",
-          "line-item": "Linha",
-          "quote": "Orçamento",
-          "quote-totals": "Totais do orçamento",
+          "contact": "Contato",
+          "line-item": "Item de linha",
+          "quote": "Citar",
+          "quote-totals": "Totais de cotação",
           "invoice": "Fatura",
           "customer": "Cliente",
           "tenant": "Inquilino"
         }
       },
-      "noFieldsMatch": "Nenhum campo encontrado.",
+      "noFieldsMatch": "Nenhum campo corresponde a esta pesquisa.",
       "categories": {
         "structure": "Estrutura",
-        "content": "Conteúdo",
-        "media": "Multimédia",
+        "content": "Contente",
+        "media": "Mídia",
         "dynamic": "Dinâmico"
       }
     },
     "inspector": {
-      "layoutControls": "Controlos de esquema",
-      "sizingMode": "Modo de dimensão",
-      "flexItem": "Item flex",
-      "displayFormat": "Formato de apresentação",
+      "layoutControls": "Controles de layout",
+      "sizingMode": "Modo de dimensionamento",
+      "flexItem": "Item flexível",
+      "displayFormat": "Formato de exibição",
       "attachments": "Anexos",
-      "media": "Multimédia",
+      "media": "Mídia",
       "title": "Inspetor",
       "layerName": "Nome da camada",
       "typeLabel": "Tipo",
       "fieldTypeLabel": "Tipo de campo",
-      "noBindingKey": "Sem chave de ligação",
-      "layoutPreset": "Predefinição de esquema",
+      "noBindingKey": "Nenhuma chave de ligação definida",
+      "layoutPreset": "Predefinição de layout",
       "clear": "Limpar",
-      "fitSectionToContents": "Ajustar secção ao conteúdo",
-      "sectionNoChildContent": "A secção não tem conteúdo para ajustar.",
+      "fitSectionToContents": "Ajustar seção ao conteúdo",
+      "sectionNoChildContent": "A seção não tem conteúdo filho para caber.",
       "apply": "Aplicar",
-      "emptyHelp": "Selecione um componente para editar as propriedades."
+      "emptyHelp": "Selecione um componente para editar suas propriedades."
     },
     "shell": {
       "selectedLabel": "Selecionado:",
       "selectedNone": "Nenhum",
-      "clickBlockHint": "Clique num bloco da tela",
-      "orUse": "ou use",
+      "clickBlockHint": "Clique em um bloco na tela",
+      "orUse": "ou usar",
       "plusInLeftPanelHint": "+ no painel esquerdo"
     },
     "pageSetup": {
-      "title": "Configuração da página",
-      "description": "Escolha predefinição de papel e margem sem selecionar o nó de página oculto.",
+      "title": "Configuração de página",
+      "description": "Escolha uma predefinição de papel e uma margem de página sem selecionar o nó de página oculto.",
       "paperPreset": "Predefinição de papel",
       "marginMm": "Margem (mm)"
     },
     "breadcrumbs": {
-      "emptyHelp": "Selecione um componente da tela para ver a hierarquia.",
+      "emptyHelp": "Selecione um componente na tela para visualizar sua hierarquia.",
       "hierarchy": "Hierarquia"
     },
     "workspace": {
@@ -1191,25 +1191,25 @@
           "existing": "Existente"
         },
         "sampleScenario": "Cenário de amostra",
-        "selectScenarioPlaceholder": "Selecionar cenário…",
-        "searchInvoices": "Pesquisar faturas…",
-        "searchInvoicesHint": "Pesquisar por número ou cliente…",
-        "noInvoicesFound": "Sem faturas.",
-        "selectInvoice": "Selecionar fatura",
-        "loadingDetails": "A carregar detalhes da fatura…",
-        "selectInvoiceHint": "Selecione uma fatura para pré-visualizar com dados.",
+        "selectScenarioPlaceholder": "Selecione o cenário...",
+        "searchInvoices": "Pesquisar faturas...",
+        "searchInvoicesHint": "Pesquise por número ou cliente...",
+        "noInvoicesFound": "Nenhuma fatura encontrada.",
+        "selectInvoice": "Selecione a fatura",
+        "loadingDetails": "Carregando detalhes da fatura...",
+        "selectInvoiceHint": "Selecione uma fatura para visualizar a saída vinculada a dados.",
         "shape": "Forma",
         "render": "Renderizar",
-        "rerun": "Executar de novo",
-        "emptyState": "Selecione dados de amostra ou existentes para gerar uma pré-visualização autoritativa.",
-        "loadingPreview": "A formar e renderizar a pré-visualização…",
-        "templateError": "Não foi possível gerar o modelo de pré-visualização a partir do espaço de trabalho atual.",
-        "renderError": "Falha na renderização da pré-visualização."
+        "rerun": "Executar novamente",
+        "emptyState": "Selecione dados de fatura existentes ou de amostra para gerar uma visualização oficial.",
+        "loadingPreview": "Visualização de modelagem e renderização...",
+        "templateError": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual.",
+        "renderError": "Falha na renderização de visualização."
       },
       "tabs": {
-        "design": "Conceção",
+        "design": "Projeto",
         "transforms": "Transformações",
-        "preview": "Pré-visualização"
+        "preview": "Visualização"
       }
     },
     "blocks": {
@@ -1219,67 +1219,67 @@
       },
       "page": {
         "label": "Página",
-        "description": "Uma página de fatura."
+        "description": "Uma única página de fatura."
       },
       "section": {
-        "label": "Secção",
-        "description": "Agrupamento lógico com regras de esquema partilhadas."
+        "label": "Seção",
+        "description": "Agrupamento lógico com regras de layout compartilhadas."
       },
       "column": {
         "label": "Coluna",
-        "description": "Contentor de coluna legado."
+        "description": "Contêiner de coluna herdado."
       },
       "text": {
         "label": "Bloco de texto",
-        "description": "Conteúdo de texto estático ou ligado a dados."
+        "description": "Conteúdo de texto estático ou vinculado a dados."
       },
       "totals": {
         "label": "Totais",
-        "description": "Resumo subtotal/imposto/total."
+        "description": "Resumo do subtotal/imposto/total geral."
       },
       "table": {
-        "label": "Tabela de linhas",
-        "description": "Linhas repetidas para as linhas da fatura."
+        "label": "Tabela de itens de linha",
+        "description": "Linhas repetidas para itens de linha da fatura."
       },
       "dynamic-table": {
-        "label": "Tabela dinâmica",
+        "label": "Tabela Dinâmica",
         "description": "Tabela de dados avançada com ligações de colunas."
       },
       "field": {
         "label": "Campo de dados",
-        "description": "Mostra um valor ligado (número de fatura, datas, totais)."
+        "description": "Exibe um valor vinculado (número da fatura, datas, totais)."
       },
       "label": {
-        "label": "Etiqueta de campo",
-        "description": "Etiqueta estática emparelhada com campos de dados."
+        "label": "Etiqueta do campo",
+        "description": "Rótulo estático emparelhado com campos de dados."
       },
       "subtotal": {
         "label": "Linha de subtotal",
-        "description": "Mostra o subtotal antes de impostos."
+        "description": "Exibe o subtotal antes dos impostos."
       },
       "tax": {
-        "label": "Linha de imposto",
-        "description": "Mostra o montante de imposto calculado."
+        "label": "Linha fiscal",
+        "description": "Exibe o valor do imposto calculado."
       },
       "discount": {
         "label": "Linha de desconto",
-        "description": "Mostra o montante de desconto."
+        "description": "Exibe o valor do desconto."
       },
       "custom-total": {
-        "label": "Linha de total personalizada",
-        "description": "Linha calculada configurável (taxas, créditos, etc.)."
+        "label": "Linha total personalizada",
+        "description": "Linha computada configurável (taxas, créditos, etc.)."
       },
       "image": {
         "label": "Imagem",
-        "description": "Elemento de imagem inline."
+        "description": "Elemento de imagem embutido."
       },
       "logo": {
         "label": "Logotipo",
-        "description": "Recurso de marca do inquilino."
+        "description": "Ativo de marca do locatário."
       },
       "qr": {
         "label": "Código QR",
-        "description": "QR gerado automaticamente para ligações de pagamento."
+        "description": "QR gerado automaticamente para links de pagamento."
       },
       "signature": {
         "label": "Bloco de assinatura",
@@ -1287,74 +1287,74 @@
       },
       "action-button": {
         "label": "Botão de ação",
-        "description": "Botão de chamada à ação (p.ex., Pagar agora)."
+        "description": "Botão de call to action (por exemplo, Pague agora)."
       },
       "attachment-list": {
         "label": "Lista de anexos",
-        "description": "Mostra documentos ou ligações de suporte."
+        "description": "Exibe documentos ou links de apoio."
       },
       "divider": {
-        "label": "Separador",
-        "description": "Separador de linha horizontal."
+        "label": "Divisor",
+        "description": "Separador de linhas horizontais."
       },
       "spacer": {
         "label": "Espaçador",
-        "description": "Espaço vazio para ajuste de esquema."
+        "description": "Espaço vazio para ajuste de layout."
       },
       "container": {
-        "label": "Contentor",
-        "description": "Contentor estilizado para agrupar conteúdo (bordas, fundos)."
+        "label": "Caixa Recipiente",
+        "description": "Contêiner estilizado para agrupar conteúdo (bordas, planos de fundo)."
       }
     },
     "presets": {
       "header-logo-address": {
-        "label": "Cabeçalho: Logotipo + Morada",
-        "description": "Two-column header with locked logo ratio and address stack."
+        "label": "Cabeçalho: Logotipo + Endereço",
+        "description": "Cabeçalho de duas colunas com proporção de logotipo bloqueada e pilha de endereços."
       },
       "line-items-table": {
-        "label": "Tabela de linhas",
-        "description": "Full-width items table with repeating rows."
+        "label": "Tabela de itens de linha",
+        "description": "Tabela de itens de largura total com linhas repetidas."
       },
       "totals-stack": {
         "label": "Pilha de totais",
-        "description": "Totals summary with note block."
+        "description": "Resumo de totais com bloco de notas."
       },
       "two-column-summary": {
-        "label": "Resumo em duas colunas",
-        "description": "Equal columns for summary and contact info."
+        "label": "Resumo de duas colunas",
+        "description": "Colunas iguais para resumo e informações de contato."
       },
       "notes-totals-row": {
-        "label": "Notes + Totals Row",
-        "description": "Wide notes column beside a narrow totals column using CSS grid."
+        "label": "Notas + linha de totais",
+        "description": "Coluna larga de notas ao lado de uma coluna estreita de totais usando grade CSS."
       },
       "two-equal-columns-grid": {
-        "label": "Two Equal Columns",
-        "description": "Balanced two-column body section using CSS grid."
+        "label": "Duas colunas iguais",
+        "description": "Seção corporal balanceada de duas colunas usando grade CSS."
       },
       "three-info-columns": {
-        "label": "Três colunas de informação",
-        "description": "Three-column info-card row using CSS grid."
+        "label": "Três colunas de informações",
+        "description": "Linha de cartão de informações de três colunas usando grade CSS."
       },
       "recurring-onetime-tables": {
-        "label": "Recurring + One-time Tables",
-        "description": "Quote-ready stacked dynamic tables for recurring and one-time items."
+        "label": "Tabelas recorrentes + únicas",
+        "description": "Tabelas dinâmicas empilhadas prontas para cotação para itens recorrentes e únicos."
       },
       "header-with-qr": {
-        "label": "Split Header with QR",
-        "description": "Logo + address stack with QR code payment block."
+        "label": "Dividir cabeçalho com QR",
+        "description": "Logo + pilha de endereços com bloco de pagamento com código QR."
       },
       "modern-invoice-complete": {
-        "label": "Modern Invoice Template",
-        "description": "Complete layout with Header, Billing Info, Items Table, and Footer."
+        "label": "Modelo de fatura moderno",
+        "description": "Layout completo com Cabeçalho, Informações de Faturamento, Tabela de Itens e Rodapé."
       }
     },
     "schema": {
       "panels": {
         "layout": {
-          "title": "Esquema",
+          "title": "Disposição",
           "fields": {
             "gap": {
-              "label": "Intervalo"
+              "label": "Brecha"
             },
             "padding": {
               "label": "Preenchimento"
@@ -1370,63 +1370,63 @@
               "label": "Alinhar itens",
               "options": {
                 "stretch": "Esticar",
-                "flex-start": "Início",
+                "flex-start": "Começar",
                 "center": "Centro",
                 "flex-end": "Fim"
               }
             },
             "justifyContent": {
-              "label": "Justificar conteúdo",
+              "label": "Justificar o conteúdo",
               "options": {
-                "flex-start": "Início",
+                "flex-start": "Começar",
                 "center": "Centro",
                 "flex-end": "Fim",
                 "space-between": "Espaço entre",
-                "space-around": "Espaço à volta",
-                "space-evenly": "Distribuição uniforme"
+                "space-around": "Espaço ao redor",
+                "space-evenly": "Espaço uniformemente"
               }
             },
             "gridAutoFlow": {
               "label": "Fluxo automático",
               "options": {
-                "row": "row",
-                "column": "column",
-                "dense": "dense",
-                "row dense": "row dense",
-                "column dense": "column dense"
+                "row": "linha",
+                "column": "coluna",
+                "dense": "denso",
+                "row dense": "linha densa",
+                "column dense": "coluna densa"
               }
             },
             "gridTemplateColumns": {
-              "label": "Colunas do modelo"
+              "label": "Colunas de modelo"
             },
             "gridTemplateRows": {
-              "label": "Linhas do modelo"
+              "label": "Linhas de modelo"
             },
             "display": {
               "options": {
-                "flex": "Pilha (Flex)",
-                "grid": "Grelha"
+                "flex": "Pilha (flexível)",
+                "grid": "Grade"
               }
             }
           }
         },
         "sizing-css": {
-          "title": "Sizing (CSS)",
+          "title": "Dimensionamento (CSS)",
           "fields": {
             "height": {
               "label": "altura"
             },
             "minWidth": {
-              "label": "largura mín."
+              "label": "largura mínima"
             },
             "minHeight": {
-              "label": "altura mín."
+              "label": "altura mínima"
             },
             "maxWidth": {
-              "label": "largura máx."
+              "label": "largura máxima"
             },
             "maxHeight": {
-              "label": "altura máx."
+              "label": "altura máxima"
             }
           }
         },
@@ -1437,7 +1437,7 @@
               "label": "Cor do texto"
             },
             "border": {
-              "label": "Bordo"
+              "label": "Fronteira"
             },
             "borderRadius": {
               "label": "Raio"
@@ -1448,11 +1448,11 @@
           }
         },
         "section-border": {
-          "title": "Bordo de secção",
+          "title": "Borda da seção",
           "fields": {
             "sectionBorderStyle": {
               "options": {
-                "light": "Leve",
+                "light": "Luz",
                 "strong": "Forte",
                 "none": "Nenhum"
               }
@@ -1460,7 +1460,7 @@
           }
         },
         "field-binding": {
-          "title": "Ligação de campo",
+          "title": "Vinculação de campo",
           "fields": {
             "format": {
               "options": {
@@ -1480,18 +1480,18 @@
           }
         },
         "field-layout": {
-          "title": "Esquema de campo"
+          "title": "Layout de campo"
         },
         "text-content": {
           "title": "Conteúdo de texto"
         },
         "label-style": {
-          "title": "Label Text",
+          "title": "Texto da etiqueta",
           "fields": {
             "fontWeight": {
               "options": {
-                "semibold": "Semi-negrito",
-                "bold": "Negrito",
+                "semibold": "Seminegrito",
+                "bold": "Audacioso",
                 "medium": "Médio",
                 "normal": "Normal"
               }
@@ -1507,7 +1507,7 @@
             "actionType": {
               "options": {
                 "url": "URL",
-                "mailto": "Email"
+                "mailto": "E-mail"
               }
             }
           }
@@ -1516,16 +1516,16 @@
           "title": "Bloco de assinatura"
         },
         "table": {
-          "title": "Tabela"
+          "title": "Mesa"
         },
         "table-header-style": {
-          "title": "Header Style",
+          "title": "Estilo de cabeçalho",
           "fields": {
             "headerColor": {
               "label": "Cor do texto"
             },
             "att-1": {
-              "label": "Contract.pdf"
+              "label": "Contrato.pdf"
             }
           }
         }
@@ -1534,95 +1534,95 @@
     "fields": {
       "invoice_number": {
         "label": "Número da fatura",
-        "description": "Número da fatura mostrado ao cliente."
+        "description": "O número da fatura mostrado ao cliente."
       },
       "invoice_invoiceNumber": {
         "label": "Número da fatura",
-        "description": "Número da fatura mostrado ao cliente."
+        "description": "O número da fatura mostrado ao cliente."
       },
       "invoice_issueDate": {
         "label": "Data de emissão",
-        "description": "Data de emissão da fatura."
+        "description": "A data em que a fatura foi emitida."
       },
       "invoice_dueDate": {
         "label": "Data de vencimento",
-        "description": "Data de vencimento do pagamento."
+        "description": "A data de vencimento do pagamento."
       },
       "invoice_poNumber": {
-        "label": "Número de OC",
-        "description": "Referência de ordem de compra."
+        "label": "Número do pedido",
+        "description": "A referência da ordem de compra para esta fatura."
       },
       "invoice_subtotal": {
         "label": "Subtotal",
-        "description": "Subtotal antes de impostos e descontos."
+        "description": "O subtotal da fatura antes de impostos e descontos."
       },
       "invoice_tax": {
         "label": "Imposto",
-        "description": "Montante do imposto."
+        "description": "O valor do imposto da fatura."
       },
       "invoice_discount": {
         "label": "Desconto",
-        "description": "Montante de desconto."
+        "description": "O valor do desconto da fatura."
       },
       "invoice_total": {
         "label": "Total",
-        "description": "Montante total a pagar."
+        "description": "O valor total devido na fatura."
       },
       "invoice_currencyCode": {
-        "label": "Código de moeda",
-        "description": "Código ISO da moeda."
+        "label": "Código da moeda",
+        "description": "O código de moeda ISO desta fatura."
       },
       "invoice_recurringServicePeriodStart": {
-        "label": "Recurring Service Period Start",
-        "description": "The canonical recurring invoice service period start date when available."
+        "label": "Início do período de serviço recorrente",
+        "description": "A data de início do período de serviço da fatura recorrente canônica, quando disponível."
       },
       "invoice_recurringServicePeriodEnd": {
-        "label": "Recurring Service Period End",
-        "description": "The canonical recurring invoice service period end date when available."
+        "label": "Fim do período de serviço recorrente",
+        "description": "A data de término do período de serviço da fatura recorrente canônica, quando disponível."
       },
       "invoice_recurringServicePeriodLabel": {
-        "label": "Recurring Service Period",
-        "description": "A formatted canonical recurring invoice service period label when available."
+        "label": "Período de serviço recorrente",
+        "description": "Um rótulo de período de serviço de fatura recorrente canônica formatado, quando disponível."
       },
       "customer_name": {
         "label": "Nome do cliente",
-        "description": "Nome do cliente mostrado na fatura."
+        "description": "O nome do cliente mostrado na fatura."
       },
       "customer_address": {
-        "label": "Morada do cliente",
-        "description": "Morada de faturação do cliente."
+        "label": "Endereço do cliente",
+        "description": "O endereço de cobrança do cliente."
       },
       "client_name": {
-        "label": "Client Name",
-        "description": "The client name shown in quote-style templates."
+        "label": "Nome do cliente",
+        "description": "O nome do cliente mostrado nos modelos de estilo de cotação."
       },
       "client_address": {
-        "label": "Client Address",
-        "description": "The client address."
+        "label": "Endereço do cliente",
+        "description": "O endereço do cliente."
       },
       "contact_name": {
-        "label": "Contact Name",
-        "description": "The contact name shown in quote-style templates."
+        "label": "Nome do contato",
+        "description": "O nome do contato mostrado nos modelos em estilo de cotação."
       },
       "contact_address": {
-        "label": "Contact Address",
-        "description": "The contact address."
+        "label": "Endereço de contato",
+        "description": "O endereço de contato."
       },
       "tenant_name": {
-        "label": "Tenant Name",
-        "description": "Your company name."
+        "label": "Nome do inquilino",
+        "description": "Nome da sua empresa."
       },
       "tenant_address": {
-        "label": "Tenant Address",
-        "description": "Your company address."
+        "label": "Endereço do inquilino",
+        "description": "Endereço da sua empresa."
       },
       "tenantClient_name": {
-        "label": "Tenant Name",
-        "description": "Your company name."
+        "label": "Nome do inquilino",
+        "description": "Nome da sua empresa."
       },
       "tenantClient_address": {
-        "label": "Tenant Address",
-        "description": "Your company address."
+        "label": "Endereço do inquilino",
+        "description": "Endereço da sua empresa."
       }
     },
     "canvas": {

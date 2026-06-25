@@ -124,3 +124,10 @@ npm run migrate
 - Tightened the glossary allowlist for legitimate identical `Total` and `min` values. Translated real `Download` labels to `Baixar`.
 - Fixed obvious ticket/document machine-translation artifacts found during sample review: `Claro`→`Limpar`, `Baixe para jogar`→`Baixar para reproduzir`, `Chamado infantil`→`Chamado secundário`, and ticket board `placa/tabuleiro` terms to `quadro`.
 - Implemented T014-T019. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace features/tickets --namespace features/documents --namespace features/appointments --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — i18n-billing group
+- Implemented F013-F020: completed pt-BR translations for `msp/billing.json`, `msp/billing-settings.json`, `msp/invoicing.json`, `msp/credits.json`, `msp/quotes.json`, `msp/contracts.json`, `msp/contract-lines.json`, and `features/billing.json`.
+- Re-audited all 5,032 keys in the group and marked them reviewed in `pt-review-state.json` with reviewer `codex-pt-br-pass`.
+- Tightened the glossary allowlist for legitimate identical billing/layout terms (`Subtotal`, `Item`, `Visual`, `Vertical`, `Horizontal`, `Normal`, `Zoom`, `Xero`, `T&M`) and narrow placeholder patterns (`Item {{index}}`, `PO {{number}}`, etc.).
+- Translated real UI actions `Clone`→`Clonar` and `Clear`→`Limpar`; adjusted product-area Billing labels to `Faturamento` while leaving charge/frequency contexts as natural `cobrança`.
+- Implemented T020-T035. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/billing --namespace msp/billing-settings --namespace msp/invoicing --namespace msp/credits --namespace msp/quotes --namespace msp/contracts --namespace msp/contract-lines --namespace features/billing --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
