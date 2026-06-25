@@ -16,7 +16,7 @@ import {
   IUserWithRoles
 } from "@alga-psa/types";
 import type { Knex } from "knex";
-import { createTenantKnex, withTransaction } from "@alga-psa/db";
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from "@alga-psa/db";
 import {
   fetchUserActivities,
   fetchScheduleActivities as fetchScheduleActivitiesInternal,
@@ -420,8 +420,11 @@ async function assertCanModifyAdHoc(
   entryId: string,
   user: IUserWithRoles
 ): Promise<void> {
-  const isAssignee = await trx("schedule_entry_assignees")
-    .where({ tenant, entry_id: entryId, user_id: user.user_id })
+  const isAssignee = await createTenantScopedQuery(trx, {
+    table: "schedule_entry_assignees",
+    tenant,
+  }).builder
+    .where({ entry_id: entryId, user_id: user.user_id })
     .first();
   if (!isAssignee) {
     const [canUpdate, canReadAll] = await Promise.all([
@@ -451,8 +454,11 @@ export const setAdHocActivityDone = withAuth(async (
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await trx("schedule_entries")
-      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+    const entry = await createTenantScopedQuery(trx, {
+      table: "schedule_entries",
+      tenant,
+    }).builder
+      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
       throw new Error("Ad-hoc item not found");
@@ -460,8 +466,11 @@ export const setAdHocActivityDone = withAuth(async (
 
     await assertCanModifyAdHoc(trx, tenant, entryId, user);
 
-    await trx("schedule_entries")
-      .where({ tenant, entry_id: entryId })
+    await createTenantScopedQuery(trx, {
+      table: "schedule_entries",
+      tenant,
+    }).builder
+      .where({ entry_id: entryId })
       .update({ status: done ? "closed" : "scheduled", updated_at: trx.fn.now() });
   });
 
