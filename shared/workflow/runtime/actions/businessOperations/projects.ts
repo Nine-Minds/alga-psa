@@ -757,8 +757,8 @@ async function generateTaskWbsCode(
   targetPhase: Record<string, unknown>
 ): Promise<string> {
   const baseWbs = String(targetPhase.wbs_code ?? '1');
-  const countRow = await tx.trx('project_tasks')
-    .where({ tenant: tx.tenantId, phase_id: targetPhase.phase_id })
+  const countRow = await tenantScopedTable(tx, 'project_tasks')
+    .where('phase_id', targetPhase.phase_id)
     .count('* as count')
     .first();
   const nextNumber = parseInt(String((countRow as any)?.count ?? 0), 10) + 1;
@@ -774,8 +774,8 @@ async function getCurrentTaskAdditionalUserIds(
   const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
   if (!hasTaskResources) return [];
 
-  const rows = await tx.trx('task_resources')
-    .where({ tenant: tx.tenantId, task_id: taskId })
+  const rows = await tenantScopedTable(tx, 'task_resources')
+    .where('task_id', taskId)
     .whereNotNull('additional_user_id')
     .select('additional_user_id');
 
@@ -795,8 +795,8 @@ async function resolveActiveTaskAssignmentUsers(
   const supportsUserType = userColumns.has('user_type');
   const supportsInactive = userColumns.has('is_inactive');
 
-  const primaryQuery = tx.trx('users')
-    .where({ tenant: tx.tenantId, user_id: input.primaryUserId });
+  const primaryQuery = tenantScopedTable(tx, 'users')
+    .where('user_id', input.primaryUserId);
   if (supportsUserType) primaryQuery.andWhere('user_type', 'internal');
   if (supportsInactive) primaryQuery.andWhere('is_inactive', false);
   const primaryUser = await primaryQuery.first();
@@ -817,8 +817,7 @@ async function resolveActiveTaskAssignmentUsers(
     return { primaryUserId: input.primaryUserId, additionalUserIds: [] };
   }
 
-  const additionalQuery = tx.trx('users')
-    .where({ tenant: tx.tenantId });
+  const additionalQuery = tenantScopedTable(tx, 'users');
   if (supportsUserType) additionalQuery.andWhere('user_type', 'internal');
   if (supportsInactive) additionalQuery.andWhere('is_inactive', false);
 
@@ -853,8 +852,8 @@ async function reconcileTaskAdditionalUsers(
   const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
   if (!hasTaskResources) return;
 
-  await tx.trx('task_resources')
-    .where({ tenant: tx.tenantId, task_id: taskId })
+  await tenantScopedTable(tx, 'task_resources')
+    .where('task_id', taskId)
     .delete();
 
   if (additionalUserIds.length === 0) return;

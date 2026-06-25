@@ -7,6 +7,10 @@ const helperSection = source.slice(
   source.indexOf('async function ensureProjectExists'),
   source.indexOf('async function ensureProjectDefaultStatusMappings')
 );
+const assignmentHelperSection = source.slice(
+  source.indexOf('async function generateTaskWbsCode'),
+  source.indexOf('async function canReadTickets')
+);
 
 describe('project workflow business operations tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared project helper roots', () => {
@@ -25,5 +29,14 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(helperSection).not.toContain("tx.trx('project_status_mappings')");
     expect(helperSection).not.toContain(".where({ 'psm.tenant': tx.tenantId");
     expect(helperSection).not.toContain(".where({ 'pt.tenant': tx.tenantId");
+  });
+
+  it('uses structural tenant scoping for task assignment helper roots', () => {
+    expect(assignmentHelperSection).toContain("tenantScopedTable(tx, 'project_tasks')");
+    expect(assignmentHelperSection).toContain("tenantScopedTable(tx, 'task_resources')");
+    expect(assignmentHelperSection).toContain("tenantScopedTable(tx, 'users')");
+    expect(assignmentHelperSection).not.toContain("tx.trx('project_tasks')");
+    expect(assignmentHelperSection).not.toContain("tx.trx('users')");
+    expect(assignmentHelperSection).not.toContain(".where({ tenant: tx.tenantId");
   });
 });
