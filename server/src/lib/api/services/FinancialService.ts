@@ -1889,14 +1889,17 @@ export class FinancialService extends BaseService<ITransaction> {
       await this.validatePermissions('update', 'credit', context);
     }
 
-    const { knex } = await this.getKnex();
-    const tenant = context?.tenant || (await this.getKnex()).tenant;
+    const { knex, tenant: defaultTenant } = await this.getKnex();
+    const tenant = context?.tenant || defaultTenant;
     const userId = context?.userId || 'system';
 
     const resolvedReport = await withTransaction(knex, async (trx) => {
       // Get the report
-      const report = await trx('credit_reconciliation_reports')
-        .where({ report_id: reportId, tenant })
+      const report = await createTenantScopedQuery(trx, {
+        table: 'credit_reconciliation_reports',
+        tenant,
+      }).builder
+        .where('report_id', reportId)
         .first();
 
       if (!report) {
@@ -1923,13 +1926,19 @@ export class FinancialService extends BaseService<ITransaction> {
       });
 
       // Update client balance
-      await trx('clients')
-        .where({ client_id: report.client_id, tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where('client_id', report.client_id)
         .update({ credit_balance: report.expected_balance, updated_at: now });
 
       // Resolve the report
-      const [resolved] = await trx('credit_reconciliation_reports')
-        .where({ report_id: reportId, tenant })
+      const [resolved] = await createTenantScopedQuery(trx, {
+        table: 'credit_reconciliation_reports',
+        tenant,
+      }).builder
+        .where('report_id', reportId)
         .update({
           status: 'resolved',
           resolution_date: now,
