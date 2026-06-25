@@ -1,8 +1,7 @@
 'use server'
 
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { marked } from 'marked';
@@ -151,6 +150,14 @@ const SEARCHABLE_ASSOCIATION_ENTITY_TYPES = new Set<SearchableDocumentAssociatio
   'quote',
 ]);
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 export const getDocumentAssociationClientsForPicker = withAuth(async (
   user,
   { tenant }
@@ -162,9 +169,8 @@ export const getDocumentAssociationClientsForPicker = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clients = await trx('clients')
+    const clients = await tenantScopedTable(trx, 'clients', tenant)
       .select('*')
-      .where('tenant', tenant)
       .orderBy('client_name', 'asc');
 
     const logoUrls = await getClientLogoUrlsBatch(
@@ -191,12 +197,11 @@ export const getDocumentAssociationContactsForPicker = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const contacts = await trx('contacts as c')
+    const contacts = await tenantScopedTable(trx, 'contacts as c', tenant)
       .leftJoin('clients as cl', function joinClients() {
         this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
       })
       .select('c.*', 'cl.client_name')
-      .where('c.tenant', tenant)
       .andWhere('c.is_inactive', false)
       .orderBy('c.full_name', 'asc');
 
@@ -230,17 +235,15 @@ async function ensureEntityFoldersInitializedInternal(
   entityType: string,
   createdBy: string | null | undefined
 ) {
-  const existingFolders = await knex('document_folders')
-    .where('tenant', tenant)
-    .andWhere('entity_id', entityId)
+  const existingFolders = await tenantScopedTable(knex, 'document_folders', tenant)
+    .where('entity_id', entityId)
     .andWhere('entity_type', entityType)
     .select('folder_path', 'folder_id');
 
   const existingPaths = new Set(existingFolders.map((folder: { folder_path: string }) => folder.folder_path));
 
-  const defaults = await knex('document_default_folders')
-    .where('tenant', tenant)
-    .andWhere('entity_type', entityType)
+  const defaults = await tenantScopedTable(knex, 'document_default_folders', tenant)
+    .where('entity_type', entityType)
     .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
     .orderBy('sort_order', 'asc')
     .orderBy('folder_path', 'asc');
@@ -318,8 +321,8 @@ async function resolveAuthorizationSubjectForUser(
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
     try {
-      const roleRows = await trx('user_roles')
-        .where({ tenant, user_id: user.user_id })
+      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+        .where('user_id', user.user_id)
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
     } catch {
@@ -330,15 +333,15 @@ async function resolveAuthorizationSubjectForUser(
   let teamRows: Array<{ team_id: string }> = [];
   let managedRows: Array<{ user_id: string }> = [];
   try {
-    teamRows = await trx('team_members')
-      .where({ tenant, user_id: user.user_id })
+    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
+      .where('user_id', user.user_id)
       .select<{ team_id: string }[]>('team_id');
   } catch {
     teamRows = [];
   }
   try {
-    managedRows = await trx('users')
-      .where({ tenant, reports_to: user.user_id })
+    managedRows = await tenantScopedTable(trx, 'users', tenant)
+      .where('reports_to', user.user_id)
       .select<{ user_id: string }[]>('user_id');
   } catch {
     managedRows = [];
@@ -388,8 +391,7 @@ async function resolveDocumentAuthorizationRecords(
     return records;
   }
 
-  const associations = await trx('document_associations')
-    .where({ tenant })
+  const associations = await tenantScopedTable(trx, 'document_associations', tenant)
     .whereIn('document_id', documentIds)
     .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
 
@@ -422,32 +424,28 @@ async function resolveDocumentAuthorizationRecords(
 
   const [contactClientRows, ticketClientRows, projectTaskClientRows, contractClientRows] = await Promise.all([
     contactIds.size > 0
-      ? trx('contacts')
-          .where({ tenant })
+      ? tenantScopedTable(trx, 'contacts', tenant)
           .whereIn('contact_name_id', Array.from(contactIds))
           .select<{ contact_name_id: string; client_id: string | null }[]>('contact_name_id', 'client_id')
       : Promise.resolve([]),
     ticketIds.size > 0
-      ? trx('tickets')
-          .where({ tenant })
+      ? tenantScopedTable(trx, 'tickets', tenant)
           .whereIn('ticket_id', Array.from(ticketIds))
           .select<{ ticket_id: string; client_id: string | null }[]>('ticket_id', 'client_id')
       : Promise.resolve([]),
     projectTaskIds.size > 0
-      ? trx('project_tasks as pt')
+      ? tenantScopedTable(trx, 'project_tasks as pt', tenant)
           .join('project_phases as pp', function joinPhases() {
             this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
           })
           .join('projects as p', function joinProjects() {
             this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
           })
-          .where('pt.tenant', tenant)
           .whereIn('pt.task_id', Array.from(projectTaskIds))
           .select<{ task_id: string; client_id: string | null }[]>('pt.task_id', 'p.client_id')
       : Promise.resolve([]),
     contractIds.size > 0
-      ? trx('client_contracts')
-          .where({ tenant })
+      ? tenantScopedTable(trx, 'client_contracts', tenant)
           .whereIn('contract_id', Array.from(contractIds))
           .select<{ contract_id: string; client_id: string | null }[]>('contract_id', 'client_id')
       : Promise.resolve([]),
