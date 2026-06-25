@@ -1764,14 +1764,13 @@ export function registerProjectActions(): void {
         let task: Record<string, unknown> | undefined;
         let matchedBy: 'task_id' | 'name' | null = null;
 
-        let query = tx.trx('project_tasks as pt')
+        let query = tenantScopedTable(tx, 'project_tasks as pt')
           .join('project_phases as pp', function joinPhases(this: Knex.JoinClause) {
             this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
           })
           .join('projects as p', function joinProjects(this: Knex.JoinClause) {
             this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
           })
-          .where({ 'pt.tenant': tx.tenantId })
           .select('pt.*', 'pp.project_id', ...PROJECT_TABLE_AUTH_COLUMNS.map((col) => `p.${col} as project_${col}`));
 
         if (input.task_id) {
@@ -1869,14 +1868,13 @@ export function registerProjectActions(): void {
         const pageSize = input.page_size ?? 25;
         const taskColumns = await getTableColumns(tx, 'project_tasks');
 
-        let base = tx.trx('project_tasks as pt')
+        let base = tenantScopedTable(tx, 'project_tasks as pt')
           .join('project_phases as pp', function joinPhases(this: Knex.JoinClause) {
             this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
           })
           .join('projects as p', function joinProjects(this: Knex.JoinClause) {
             this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
-          })
-          .where({ 'pt.tenant': tx.tenantId });
+          });
 
         if (filters.project_id) base = base.andWhere('pp.project_id', filters.project_id);
         if (filters.phase_id) base = base.andWhere('pt.phase_id', filters.phase_id);

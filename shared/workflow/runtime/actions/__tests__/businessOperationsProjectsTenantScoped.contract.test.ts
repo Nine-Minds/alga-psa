@@ -27,6 +27,10 @@ const phaseFindSearchSection = source.slice(
   source.indexOf("id: 'projects.find_phase'"),
   source.indexOf("id: 'projects.find_task'")
 );
+const taskFindSearchSection = source.slice(
+  source.indexOf("id: 'projects.find_task'"),
+  source.indexOf("id: 'projects.update'")
+);
 
 describe('project workflow business operations tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared project helper roots', () => {
@@ -98,5 +102,11 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(phaseFindSearchSection).not.toContain("tx.trx('project_phases')");
     expect(phaseFindSearchSection).not.toContain(".where({ tenant: tx.tenantId");
     expect(phaseFindSearchSection).not.toContain(".where({ 'pp.tenant': tx.tenantId");
+  });
+
+  it('uses structural tenant scoping for task find/search roots', () => {
+    expect(taskFindSearchSection).toContain("tenantScopedTable(tx, 'project_tasks as pt')");
+    expect(taskFindSearchSection).not.toContain("tx.trx('project_tasks as pt')");
+    expect(taskFindSearchSection).not.toContain(".where({ 'pt.tenant': tx.tenantId");
   });
 });
