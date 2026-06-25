@@ -1211,8 +1211,7 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const tableName = this.tableName; // Capture tableName to use in callbacks
       
-      const query = knex(tableName)
-        .where(`${tableName}.tenant`, context.tenant);
+      const query = this.buildTenantScopedQuery(knex, context);
   
       // Build search query
       if (searchData.fields && searchData.fields.length > 0) {
@@ -1298,8 +1297,11 @@ export class TimeSheetService extends BaseService<any> {
   private async hasTimeEntries(timeSheetId: string, context: ServiceContext): Promise<boolean> {
       const { knex } = await this.getKnex();
       
-      const entry = await knex('time_entries')
-        .where({ time_sheet_id: timeSheetId, tenant: context.tenant })
+      const entry = await createTenantScopedQuery(knex, {
+        table: 'time_entries',
+        tenant: context.tenant,
+      }).builder
+        .where({ time_sheet_id: timeSheetId })
         .first();
       return !!entry;
     }
@@ -1335,7 +1337,10 @@ export class TimeSheetService extends BaseService<any> {
   private async getUserRole(userId: string, context: ServiceContext): Promise<string> {
       const { knex } = await this.getKnex();
       
-      const user = await knex('users')
+      const user = await createTenantScopedQuery(knex, {
+        table: 'users',
+        tenant: context.tenant,
+      }).builder
         .where({ user_id: userId })
         .first();
       return user?.role || 'user';
@@ -1345,7 +1350,10 @@ export class TimeSheetService extends BaseService<any> {
   private async getTimeSheetUser(userId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return knex('users')
+      return createTenantScopedQuery(knex, {
+        table: 'users',
+        tenant: context.tenant,
+      }).builder
         .where({ user_id: userId })
         .select('user_id', 'first_name', 'last_name', 'email')
         .first();
@@ -1355,8 +1363,11 @@ export class TimeSheetService extends BaseService<any> {
   private async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      return knex('time_entries')
-        .where({ time_sheet_id: timeSheetId, tenant: context.tenant })
+      return createTenantScopedQuery(knex, {
+        table: 'time_entries',
+        tenant: context.tenant,
+      }).builder
+        .where({ time_sheet_id: timeSheetId })
         .orderBy('start_time');
     }
 
@@ -1364,8 +1375,11 @@ export class TimeSheetService extends BaseService<any> {
   private async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const stats = await knex('time_entries')
-        .where({ time_sheet_id: timeSheetId, tenant: context.tenant })
+      const stats = await createTenantScopedQuery(knex, {
+        table: 'time_entries',
+        tenant: context.tenant,
+      }).builder
+        .where({ time_sheet_id: timeSheetId })
         .select([
           knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
           knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
