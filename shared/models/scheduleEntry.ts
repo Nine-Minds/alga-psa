@@ -12,6 +12,7 @@
  */
 
 import type { Knex } from 'knex';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import type {
   IScheduleEntry,
   IRecurrencePattern,
@@ -21,6 +22,14 @@ import type {
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
+
+function tenantScopedTable(
+  knexOrTrx: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(knexOrTrx, { table, tenant }).builder;
+}
 
 /**
  * Schedule Entry model with tenant-explicit methods.
@@ -46,8 +55,7 @@ const ScheduleEntry = {
     }
 
     // Verify entries exist in the correct tenant
-    const validEntries = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const validEntries = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .whereIn('entry_id', validEntryIds)
       .select('entry_id');
 
@@ -58,8 +66,7 @@ const ScheduleEntry = {
       throw new Error(`Schedule entries ${invalidEntryIds.join(', ')} not found in tenant ${tenant}`);
     }
 
-    const assignments = await knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
+    const assignments = await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
       .whereIn('entry_id', validEntryIds)
       .join('users', function () {
         this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
@@ -94,9 +101,8 @@ const ScheduleEntry = {
     }
 
     // Verify entry exists in the correct tenant
-    const entryExists = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    const entryExists = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', entry_id)
       .first();
 
     if (!entryExists) {
@@ -104,16 +110,14 @@ const ScheduleEntry = {
     }
 
     // Delete existing assignments
-    await knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('entry_id', entry_id)
       .del();
 
     // Insert new assignments
     if (userIds.length > 0) {
       // Verify all users exist in the correct tenant
-      const validUsers = await knexOrTrx('users')
-        .where('users.tenant', tenant)
+      const validUsers = await tenantScopedTable(knexOrTrx, 'users', tenant)
         .whereIn('user_id', userIds)
         .select('user_id');
 
@@ -155,8 +159,7 @@ const ScheduleEntry = {
     const endDateStr = end.toISOString().split('T')[0];
     let holidays: IHoliday[] = [];
     try {
-      holidays = await knexOrTrx('holidays')
-        .where('tenant', tenant)
+      holidays = await tenantScopedTable(knexOrTrx, 'holidays', tenant)
         .whereNull('schedule_id') // Only global holidays (not schedule-specific SLA holidays)
         .where(function () {
           this.whereBetween('holiday_date', [startDateStr, endDateStr])
@@ -168,8 +171,7 @@ const ScheduleEntry = {
     }
 
     // Get master recurring entries that might have occurrences in the range
-    const masterEntries = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const masterEntries = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .where('is_recurring', true)
       .whereNotNull('recurrence_pattern')
       .whereNull('original_entry_id')
@@ -285,8 +287,7 @@ const ScheduleEntry = {
     // Recurring masters are excluded here because they are represented
     // by the virtual instances generated below — including them would
     // cause a duplicate on the first occurrence day.
-    const regularEntries = (await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const regularEntries = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .whereNull('original_entry_id')
       .andWhere(function () {
         this.where('is_recurring', false).orWhereNull('is_recurring');
@@ -335,8 +336,7 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting earliest schedule entry');
     }
 
-    const entry = (await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const entry = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .orderBy('scheduled_start', 'asc')
       .first()) as (IScheduleEntry & { entry_id: string }) | undefined;
 
@@ -370,9 +370,8 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting schedule entry');
     }
 
-    const entry = (await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    const entry = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', entry_id)
       .first()) as (IScheduleEntry & { entry_id: string }) | undefined;
 
     if (!entry) return undefined;
