@@ -288,8 +288,11 @@ export class FinancialService extends BaseService<ITransaction> {
     
     return withTransaction(knex, async (trx) => {
       // Calculate balance after transaction
-      const lastTransaction = await trx('transactions')
-        .where({ client_id: data.client_id, tenant: context.tenant })
+      const lastTransaction = await createTenantScopedQuery(trx, {
+        table: 'transactions',
+        tenant: context.tenant,
+      }).builder
+        .where('client_id', data.client_id)
         .orderBy('created_at', 'desc')
         .first();
       
@@ -309,8 +312,11 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // Update client credit balance if this is a credit-related transaction
       if (['credit_issuance', 'credit_application', 'credit_adjustment'].includes(data.type)) {
-        await trx('clients')
-          .where({ client_id: data.client_id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'clients',
+          tenant: context.tenant,
+        }).builder
+          .where('client_id', data.client_id)
           .update({
             credit_balance: balanceAfter,
             updated_at: new Date().toISOString()
