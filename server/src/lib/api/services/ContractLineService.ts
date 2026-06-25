@@ -2068,9 +2068,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<void> {
     // Get source plan services
-    const sourceServices = await trx('contract_line_service_configuration')
-      .where('contract_line_id', sourcePlanId)
-      .where('tenant', context.tenant);
+    const sourceServices = await createTenantScopedQuery(trx, {
+      table: 'contract_line_service_configuration',
+      tenant: context.tenant,
+    }).builder
+      .where('contract_line_id', sourcePlanId);
     
     // Copy each service with modifications
     for (const sourceService of sourceServices) {
