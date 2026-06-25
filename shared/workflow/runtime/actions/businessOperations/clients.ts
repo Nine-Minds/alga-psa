@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
@@ -288,11 +288,11 @@ async function getTableColumns(tx: TenantTxContext, tableName: string): Promise<
 }
 
 function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(tx.trx, { table, tenant: tx.tenantId }).builder;
+  return tenantDb(tx.trx, tx.tenantId).table(table);
 }
 
 function tenantScopedTableForTenant(trx: Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(trx, { table, tenant }).builder;
+  return tenantDb(trx, tenant).table(table);
 }
 
 function pickExistingFields(

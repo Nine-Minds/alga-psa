@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { generateKeyBetween } from 'fractional-indexing';
 import { getDeletionConfig, validateDeletion } from '@alga-psa/core';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -426,7 +426,7 @@ async function getTableColumns(tx: TenantTxContext, tableName: string): Promise<
 }
 
 function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(tx.trx, { table, tenant: tx.tenantId }).builder;
+  return tenantDb(tx.trx, tx.tenantId).table(table);
 }
 
 async function ensureProjectExists(ctx: any, tx: TenantTxContext, projectId: string): Promise<Record<string, unknown>> {

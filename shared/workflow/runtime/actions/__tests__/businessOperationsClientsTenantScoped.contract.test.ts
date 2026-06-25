@@ -36,9 +36,12 @@ const ticketInteractionSection = sectionBetween(
 
 describe('client workflow business operations tenant-scoped query contract', () => {
   it('uses the structural tenant-scoped query helper for client workflow roots', () => {
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db'");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(tx: TenantTxContext, table: string)');
     expect(source).toContain('function tenantScopedTableForTenant(trx: Knex.Transaction, tenant: string, table: string)');
+    expect(source).toContain('tenantDb(tx.trx, tx.tenantId).table(table)');
+    expect(source).toContain('tenantDb(trx, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toMatch(/\.where\(\{[^}]*['"]?[^'"}]*tenant[^'"}]*['"]?\s*:/s);
   });
 

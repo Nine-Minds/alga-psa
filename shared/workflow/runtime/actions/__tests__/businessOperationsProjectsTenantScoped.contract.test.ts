@@ -58,8 +58,10 @@ const linkTicketSection = source.slice(
 
 describe('project workflow business operations tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared project helper roots', () => {
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db'");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(tx: TenantTxContext, table: string)');
+    expect(source).toContain('tenantDb(tx.trx, tx.tenantId).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(helperSection).toContain("tenantScopedTable(tx, 'projects')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'project_phases')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'project_tasks as pt')");
