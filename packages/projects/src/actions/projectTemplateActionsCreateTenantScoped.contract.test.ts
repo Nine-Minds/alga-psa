@@ -88,4 +88,22 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).not.toContain('.where({ status_id: mapping.status_id, tenant })');
     expect(actionSource).not.toContain(".where('tenant', tenant)");
   });
+
+  it('uses structural tenant scoping for template update, delete, duplicate, and categories roots', () => {
+    const actionSource = section(
+      'export const updateTemplate',
+      '// ============================================================\n// TEMPLATE DEPENDENCY ACTIONS'
+    );
+
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_dependencies', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_checklist_items', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_status_mappings', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_templates', tenant)");
+    expect(actionSource).not.toContain(".where({ tenant })");
+    expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
+    expect(actionSource).not.toContain(".where('tenant', tenant)");
+  });
 });

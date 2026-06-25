@@ -58,6 +58,10 @@ type WbsCodeRow = {
   wbs_code: string;
 };
 
+type ProjectTemplateCategoryRow = {
+  category: string | null;
+};
+
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -1056,8 +1060,8 @@ export const updateTemplate = withAuth(async (
       updateData.client_portal_config = JSON.stringify(client_portal_config);
     }
 
-    const [updated] = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update(updateData)
       .returning('*');
 
@@ -1083,8 +1087,8 @@ export const deleteTemplate = withAuth(async (
     await checkPermission(user, 'project', 'delete', trx);
 
     // Cascade delete handled by FK constraints
-    const deleted = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const deleted = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .delete();
 
     if (deleted === 0) {
@@ -1108,8 +1112,8 @@ export const duplicateTemplate = withAuth(async (
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'create', trx);
 
-    const originalTemplate = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const originalTemplate = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .first();
 
     if (!originalTemplate) {
@@ -1129,8 +1133,8 @@ export const duplicateTemplate = withAuth(async (
       .returning('*');
 
     // Copy phases
-    const phases = await trx('project_template_phases')
-      .where({ template_id: templateId, tenant })
+    const phases = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_id: templateId })
       .orderBy('order_key');
 
     const phaseMap = new Map<string, string>();
@@ -1154,8 +1158,7 @@ export const duplicateTemplate = withAuth(async (
     // Copy tasks
     const phaseIds = Array.from(phaseMap.keys());
     if (phaseIds.length > 0) {
-      const tasks = await trx('project_template_tasks')
-        .where('tenant', tenant)
+      const tasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
         .whereIn('template_phase_id', phaseIds);
 
       const taskMap = new Map<string, string>();
@@ -1183,8 +1186,8 @@ export const duplicateTemplate = withAuth(async (
       }
 
       // Copy dependencies
-      const deps = await trx('project_template_dependencies')
-        .where({ template_id: templateId, tenant });
+      const deps = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+        .where({ template_id: templateId });
 
       for (const dep of deps) {
         const newPred = taskMap.get(dep.predecessor_task_id);
@@ -1207,8 +1210,7 @@ export const duplicateTemplate = withAuth(async (
       // Copy checklists
       const taskIds = Array.from(taskMap.keys());
       if (taskIds.length > 0) {
-        const checklists = await trx('project_template_checklist_items')
-          .where('tenant', tenant)
+        const checklists = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
           .whereIn('template_task_id', taskIds);
 
         for (const item of checklists) {
@@ -1229,8 +1231,8 @@ export const duplicateTemplate = withAuth(async (
     }
 
     // Copy status mappings
-    const statusMappings = await trx('project_template_status_mappings')
-      .where({ template_id: templateId, tenant });
+    const statusMappings = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_id: templateId });
 
     for (const mapping of statusMappings) {
       await trx('project_template_status_mappings')
@@ -1261,13 +1263,14 @@ export const getTemplateCategories = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  const results = await knex('project_templates')
-    .where({ tenant })
+  const results = await tenantScopedTable(knex, 'project_templates', tenant)
     .whereNotNull('category')
     .distinct('category')
-    .orderBy('category');
+    .orderBy('category') as ProjectTemplateCategoryRow[];
 
-  return results.map(r => r.category).filter(Boolean);
+  return results
+    .map((r) => r.category)
+    .filter((category): category is string => Boolean(category));
 });
 
 // ============================================================
