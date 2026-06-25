@@ -187,8 +187,11 @@ export const updateActivityGroup = withAuth(async (
       patch.is_collapsed = updates.isCollapsed;
     }
 
-    await trx('user_activity_groups')
-      .where({ tenant, group_id: groupId, user_id: user.user_id })
+    await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ group_id: groupId, user_id: user.user_id })
       .update(patch);
   });
 
@@ -208,15 +211,28 @@ export const deleteActivityGroup = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     // Verify ownership first
-    const group = await trx('user_activity_groups')
-      .where({ tenant, group_id: groupId, user_id: user.user_id })
+    const group = await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ group_id: groupId, user_id: user.user_id })
       .first();
     if (!group) {
       throw new Error('Group not found');
     }
 
-    await trx('user_activity_group_items').where({ tenant, group_id: groupId }).del();
-    await trx('user_activity_groups').where({ tenant, group_id: groupId }).del();
+    await createTenantScopedQuery(trx, {
+      table: 'user_activity_group_items',
+      tenant,
+    }).builder
+      .where({ group_id: groupId })
+      .del();
+    await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ group_id: groupId })
+      .del();
   });
 
   revalidatePath('/activities');
