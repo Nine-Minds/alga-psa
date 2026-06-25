@@ -2,7 +2,7 @@
 
 import { hasPermission } from '../../lib/rbac';
 import { UserSession, IUserSession } from '@alga-psa/db/models/UserSession';
-import { getConnection } from '@alga-psa/db';
+import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
 import { getSession } from '../../lib/getSession';
 import { isTwoFactorEnabled, verifyTwoFactorCode } from '../../lib/twoFactorHelpers';
 import { withAuth } from '../../lib/withAuth';
@@ -89,7 +89,10 @@ export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Pr
   const knex = await getConnection(tenant);
 
   // Get all active sessions with user information
-  const sessionsWithUsers = await knex('sessions')
+  const sessionsWithUsers = await createTenantScopedQuery(knex, {
+    table: 'sessions',
+    tenant,
+  }).builder
     .select(
       'sessions.*',
       knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -100,7 +103,6 @@ export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Pr
       this.on('sessions.user_id', '=', 'users.user_id')
         .andOn('sessions.tenant', '=', 'users.tenant');
     })
-    .where('sessions.tenant', tenant)
     .whereNull('sessions.revoked_at')
     .where('sessions.expires_at', '>', knex.fn.now())
     .orderBy('sessions.last_activity_at', 'desc');
