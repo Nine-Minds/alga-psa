@@ -212,14 +212,14 @@ export function MeetingAttendeesPicker({
 
   const renderAvatar = (row: DisplayRow) => {
     if (row.source === 'user' && row.userId) {
-      return <UserAvatar userId={row.userId} userName={row.name ?? row.emailAddress} avatarUrl={row.avatarUrl ?? null} size="xs" />;
+      return <UserAvatar userId={row.userId} userName={row.name ?? row.emailAddress} avatarUrl={row.avatarUrl ?? null} size="sm" />;
     }
     if (row.source === 'contact' && row.contactId) {
-      return <ContactAvatar contactId={row.contactId} contactName={row.name ?? row.emailAddress} avatarUrl={row.avatarUrl ?? null} size="xs" />;
+      return <ContactAvatar contactId={row.contactId} contactName={row.name ?? row.emailAddress} avatarUrl={row.avatarUrl ?? null} size="sm" />;
     }
     return (
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800">
-        <Mail className="h-3.5 w-3.5" />
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800">
+        <Mail className="h-4 w-4" />
       </span>
     );
   };
