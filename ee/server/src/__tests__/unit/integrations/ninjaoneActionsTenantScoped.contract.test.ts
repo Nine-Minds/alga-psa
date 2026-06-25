@@ -53,4 +53,14 @@ describe('NinjaOne action tenant-scoped query contract', () => {
     expectNoDirectTenantRoot(section);
     expect(section).not.toMatch(/\.where\(['"]rom\.tenant['"],\s*tenant\)/);
   });
+
+  it('uses structural tenant scoping for remote access, asset alert, and device detail roots', () => {
+    const section = sectionBetween('export const getNinjaOneRemoteAccessUrl', 'export const triggerPatchStatusSync');
+
+    expect(section).toContain("tenantScopedTable(knex, 'assets', tenant)");
+    expect(section).toContain("tenantScopedTable(knex, 'rmm_alerts', tenant)");
+    expect(section).toContain(".where('asset_id', assetId)");
+    expect(section).toContain(".where('alert_id', alertId)");
+    expectNoDirectTenantRoot(section);
+  });
 });

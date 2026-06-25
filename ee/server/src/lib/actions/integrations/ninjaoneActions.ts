@@ -850,8 +850,8 @@ export const getNinjaOneRemoteAccessUrl = withAdvancedAssetsAccess(async (user, 
     const { knex } = await createTenantKnex();
 
     // Get the asset to find the RMM device ID
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, 'assets', tenant)
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -924,8 +924,8 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
     const { knex } = await createTenantKnex();
 
     // Get the asset to verify RMM management
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, 'assets', tenant)
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -937,8 +937,8 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
     }
 
     // Get alerts for this asset
-    const alerts = await knex('rmm_alerts')
-      .where({ tenant, asset_id: assetId })
+    const alerts = await tenantScopedTable(knex, 'rmm_alerts', tenant)
+      .where('asset_id', assetId)
       .whereIn('status', ['active', 'acknowledged'])
       .orderBy('triggered_at', 'desc')
       .limit(50);
@@ -974,8 +974,8 @@ export const acknowledgeRmmAlert = withAdvancedAssetsAccess(async (user, { tenan
     const { knex } = await createTenantKnex();
 
     // Update the alert
-    const updated = await knex('rmm_alerts')
-      .where({ tenant, alert_id: alertId })
+    const updated = await tenantScopedTable(knex, 'rmm_alerts', tenant)
+      .where('alert_id', alertId)
       .update({
         status: 'acknowledged',
         acknowledged_at: knex.fn.now(),
@@ -1045,8 +1045,8 @@ export const getNinjaOneDeviceDetails = withAdvancedAssetsAccess(async (user, { 
     const { knex } = await createTenantKnex();
 
     // Get the asset to find the RMM device ID
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, 'assets', tenant)
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
