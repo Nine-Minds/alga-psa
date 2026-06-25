@@ -420,15 +420,19 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     const { page = 1, limit = 25, filters = {} as RoleFilterData, sort, order } = options;
 
-    let dataQuery = knex('roles as r')
+    let dataQuery = createTenantScopedQuery(knex, {
+      table: 'roles as r',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('user_roles as ur', function() {
         this.on('r.role_id', '=', 'ur.role_id')
             .andOn('r.tenant', '=', 'ur.tenant');
-      })
-      .where('r.tenant', context.tenant);
+      });
 
-    let countQuery = knex('roles as r')
-      .where('r.tenant', context.tenant);
+    let countQuery = createTenantScopedQuery(knex, {
+      table: 'roles as r',
+      tenant: context.tenant,
+    }).builder;
 
     // Apply filters
     if (filters.role_name) {
@@ -437,9 +441,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     }
 
     if (filters.has_permissions !== undefined) {
-      const subQuery = knex('role_permissions')
+      const subQuery = createTenantScopedQuery(knex, {
+        table: 'role_permissions',
+        tenant: context.tenant,
+      }).builder
         .select('role_id')
-        .where('tenant', context.tenant);
       
       if (filters.has_permissions) {
         dataQuery = dataQuery.whereIn('r.role_id', subQuery);
@@ -451,12 +457,14 @@ export class PermissionRoleService extends BaseService<IRole> {
     }
 
     if (filters.permission_resource || filters.permission_action) {
-      let permissionSubQuery = knex('role_permissions as rp')
+      let permissionSubQuery = createTenantScopedQuery(knex, {
+        table: 'role_permissions as rp',
+        tenant: context.tenant,
+      }).builder
         .join('permissions as p', function() {
           this.on('rp.permission_id', '=', 'p.permission_id')
               .andOn('rp.tenant', '=', 'p.tenant');
         })
-        .where('rp.tenant', context.tenant)
         .select('rp.role_id');
 
       if (filters.permission_resource) {
@@ -483,12 +491,14 @@ export class PermissionRoleService extends BaseService<IRole> {
       if (havingConditions.length > 0) {
         dataQuery = dataQuery.groupBy('r.role_id').having(knex.raw(havingConditions.join(' AND ')));
         // For count query, we need a different approach
-        const roleIds = await knex('roles as r')
+        const roleIds = await createTenantScopedQuery(knex, {
+          table: 'roles as r',
+          tenant: context.tenant,
+        }).builder
           .leftJoin('user_roles as ur', function() {
             this.on('r.role_id', '=', 'ur.role_id')
                 .andOn('r.tenant', '=', 'ur.tenant');
           })
-          .where('r.tenant', context.tenant)
           .groupBy('r.role_id')
           .having(knex.raw(havingConditions.join(' AND ')))
           .pluck('r.role_id');
@@ -554,9 +564,11 @@ export class PermissionRoleService extends BaseService<IRole> {
   ): Promise<RoleResponse | RoleWithPermissions | null> {
     const { knex } = await this.getKnex();
     
-    const role = await knex('roles')
+    const role = await createTenantScopedQuery(knex, {
+      table: 'roles',
+      tenant: context.tenant,
+    }).builder
       .where('role_id', roleId)
-      .where('tenant', context.tenant)
       .first();
 
     if (!role) {
@@ -596,9 +608,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     
     return withTransaction(knex, async (trx) => {
       // Check for duplicate role name
-      const existing = await trx('roles')
+      const existing = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: context.tenant,
+      }).builder
         .where('role_name', data.role_name)
-        .where('tenant', context.tenant)
         .first();
       
       if (existing) {
@@ -613,9 +627,11 @@ export class PermissionRoleService extends BaseService<IRole> {
 
       // Handle role cloning
       if (data.copy_from_role_id) {
-        const sourceRole = await trx('roles')
+        const sourceRole = await createTenantScopedQuery(trx, {
+          table: 'roles',
+          tenant: context.tenant,
+        }).builder
           .where('role_id', data.copy_from_role_id)
-          .where('tenant', context.tenant)
           .first();
         
         if (!sourceRole) {
@@ -635,9 +651,11 @@ export class PermissionRoleService extends BaseService<IRole> {
       
       if (data.copy_from_role_id && permissionIds.length === 0) {
         // Copy permissions from source role
-        const sourcePermissions = await trx('role_permissions')
+        const sourcePermissions = await createTenantScopedQuery(trx, {
+          table: 'role_permissions',
+          tenant: context.tenant,
+        }).builder
           .where('role_id', data.copy_from_role_id)
-          .where('tenant', context.tenant)
           .pluck('permission_id');
         
         permissionIds = sourcePermissions;
@@ -686,9 +704,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     
     return withTransaction(knex, async (trx) => {
       // Check if role exists
-      const existing = await trx('roles')
+      const existing = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: context.tenant,
+      }).builder
         .where('role_id', roleId)
-        .where('tenant', context.tenant)
         .first();
       
       if (!existing) {
@@ -697,9 +717,11 @@ export class PermissionRoleService extends BaseService<IRole> {
 
       // Check for duplicate name if changing
       if (data.role_name && data.role_name !== existing.role_name) {
-        const duplicate = await trx('roles')
+        const duplicate = await createTenantScopedQuery(trx, {
+          table: 'roles',
+          tenant: context.tenant,
+        }).builder
           .where('role_name', data.role_name)
-          .where('tenant', context.tenant)
           .whereNot('role_id', roleId)
           .first();
         
@@ -710,9 +732,11 @@ export class PermissionRoleService extends BaseService<IRole> {
 
       const updateData = this.addUpdateAuditFields(data, context);
       
-      const [role] = await trx('roles')
+      const [role] = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: context.tenant,
+      }).builder
         .where('role_id', roleId)
-        .where('tenant', context.tenant)
         .update(updateData)
         .returning('*');
 
@@ -749,9 +773,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     
     return withTransaction(knex, async (trx) => {
       // Check if role exists
-      const role = await trx('roles')
+      const role = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: context.tenant,
+      }).builder
         .where('role_id', roleId)
-        .where('tenant', context.tenant)
         .first();
       
       if (!role) {
@@ -759,9 +785,11 @@ export class PermissionRoleService extends BaseService<IRole> {
       }
 
       // Check if role is in use
-      const userCount = await trx('user_roles')
+      const userCount = await createTenantScopedQuery(trx, {
+        table: 'user_roles',
+        tenant: context.tenant,
+      }).builder
         .where('role_id', roleId)
-        .where('tenant', context.tenant)
         .count('* as count')
         .first();
       
@@ -770,15 +798,19 @@ export class PermissionRoleService extends BaseService<IRole> {
       }
 
       // Delete role permissions first
-      await trx('role_permissions')
+      await createTenantScopedQuery(trx, {
+        table: 'role_permissions',
+        tenant: context.tenant,
+      }).builder
         .where('role_id', roleId)
-        .where('tenant', context.tenant)
         .delete();
 
       // Delete the role
-      await trx('roles')
+      await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: context.tenant,
+      }).builder
         .where('role_id', roleId)
-        .where('tenant', context.tenant)
         .delete();
 
       // Log audit event
