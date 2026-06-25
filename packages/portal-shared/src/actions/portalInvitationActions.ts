@@ -1004,8 +1004,11 @@ export const updateClientUser = withAuth(async (
       allowedUpdates.is_inactive = userData.is_inactive;
     }
 
-    const [updatedUser] = await knex('users')
-      .where({ user_id: userId, tenant, user_type: 'client' })
+    const [updatedUser] = await createTenantScopedQuery(knex, {
+      table: 'users',
+      tenant,
+    }).builder
+      .where({ user_id: userId, user_type: 'client' })
       .update({
         ...allowedUpdates,
         updated_at: new Date().toISOString()
