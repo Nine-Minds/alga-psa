@@ -76,11 +76,50 @@ feature is multi-tenant + Temporal/Istio/cert-manager; the appliance is single-M
 - Cloud feature file map: repo-root `context.md` (on the feature branch) has the full cloud file
   inventory for portal domains.
 
+## Resolved (during implementation)
+
+- (2026-06-25) Caps module home = `server/src/lib/deployment/deploymentProfile.ts`, NOT
+  `@alga-psa/core`. Reason: `@alga-psa/core` subpaths are dist-built and the root export drags in
+  heavy node-only deps; the edge-runtime middleware must stay light. A pure, dependency-free module
+  under `server/src/lib` is importable by middleware (relative) AND ee/server actions (`@/lib/...`,
+  same pattern they already use for `@/lib/db`).
+- (2026-06-25) `server/src/middleware.ts` is **Edge runtime** ("Minimal, Edge-safe middleware").
+  Consequences: F018 resolveRequestHost stays pure header/env logic (fine). Slice-2 last-seen (F024)
+  CANNOT write Redis from middleware -> record it at the client-portal **signin page** (node RSC),
+  which already reads the `portalDomain` query param the middleware set (proves a vanity request
+  reached us, fires on every vanity redirect). F027 tell-tale also can't query Redis in edge ->
+  use an edge-safe heuristic: trustForwardedHost && XFH present && XFH !== Host && Host === canonical
+  -> log-warn (the proxy collapsed a vanity request onto the canonical Host).
+- (2026-06-25) Redis active-SET (orig F023) is UNNECESSARY and dropped (simplification): the status
+  action already knows the tenant's domain from its row, so the warning only needs a per-hostname
+  last-seen key. F023 repurposed to the last-seen Redis helper module.
+- (2026-06-25) NEXTAUTH-host rejection (F009) gated to direct mode in the action, to preserve cloud
+  validation behavior exactly.
+
+## Implementation Progress
+
+- (2026-06-25) SLICE 1 COMPLETE (F001-F022). Files:
+  - `server/src/lib/deployment/deploymentProfile.ts` (caps resolver, pure/edge-safe).
+  - `server/src/lib/deployment/requestHost.ts` (resolveRequestHost — extracted from middleware so
+    it's unit-testable without importing the whole edge middleware).
+  - `ee/server/src/lib/portal-domains/provisioner/{types,temporalProvisioner,directProvisioner,index}.ts`.
+  - `ee/server/src/lib/actions/tenant-actions/portalDomainActions.ts` (delegates to provisioner; sets `mode`).
+  - `packages/tenancy/src/actions/tenant-actions/portalDomain.types.ts` (`mode?`, `neverSeenOnHost?`).
+  - `ee/server/src/components/settings/general/ClientPortalDomainSettings.tsx` (mode-aware help/checklist + doc link + never-seen ⚠).
+  - `server/public/locales/en/msp/settings.json` (`clientPortal.domain.appliance.*`). Other locales NOT translated (en only).
+  - `server/src/middleware.ts` (uses resolveRequestHost + caps).
+  - `helm/templates/deployment.yaml` (`DEPLOYMENT_PROFILE` env), appliance `alga-core.single-node.yaml`
+    (`deploymentProfile: appliance`), `temporal-worker.single-node.yaml` (dropped queue + portalDomain block).
+  - `ee/docs/guides/appliance-custom-portal-domain-proxy.md` (operator nginx/caddy guide).
+- (2026-06-25) Import style: new ee/server files import server/src via `@/...` (vitest aliases `@`->./src
+  and `@ee`->ee/server/src; `server/src/...` is NOT aliased in vitest). Verified by running unit tests.
+- (2026-06-25) Tests passing (18): deploymentProfile (T001), portalDomainProvisioner (T002 + unit-level
+  T003/T004/T005/T006), resolveRequestHost (T007). Run: `cd server && npx vitest run --coverage=false <file>`.
+- (2026-06-25) PROXY_SETUP_DOC_URL in the UI is a placeholder (docs.algapsa.com/...); has a TODO to point
+  at the published docs URL once it lands.
+- (2026-06-25) NOT YET RUN / cannot run here: DB-backed action tests (T003/T004 full), E2E login (T008),
+  appliance smoke. tsc full typecheck not run (heavy project refs) — relied on vitest transpile + targeted tests.
+
 ## Open Questions
 
-- Shared caps module home: new `shared/core/deployment-profile.ts` vs extending an existing config
-  module. Resolve at F001.
-- Middleware runtime (edge vs node) determines whether slice-2 last-seen recording can hit Redis in
-  middleware or must move to the first node-runtime touchpoint (signin redirect / handoff). Validate
-  before F024.
-- "Active but never seen" ⚠ threshold (active > N minutes). Pick a default at F025.
+- "Active but never seen" ⚠ threshold (active > N minutes). Default chosen at F025: 10 minutes.

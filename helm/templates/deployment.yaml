@@ -179,6 +179,11 @@ spec:
             value: "{{ .Values.edition | default "community" }}"
           - name: EDITION
             value: "{{ .Values.edition | default "community" }}"
+          # ----------- DEPLOYMENT PROFILE ----------------
+          # Resolves to deployment capabilities (e.g. portal-domain provisioner,
+          # trusted X-Forwarded-Host). Defaults to "hosted"; the appliance sets "appliance".
+          - name: DEPLOYMENT_PROFILE
+            value: "{{ .Values.deploymentProfile | default "hosted" }}"
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"

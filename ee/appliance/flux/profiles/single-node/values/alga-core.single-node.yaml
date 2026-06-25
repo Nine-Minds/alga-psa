@@ -1,6 +1,9 @@
 namespace: msp
 env: production
 edition: enterprise
+# Appliance deployment profile -> capabilities (portal-domain provisioner = direct,
+# trustForwardedHost = true). Custom portal domains use a bring-your-own reverse proxy.
+deploymentProfile: appliance
 host: alga.local
 appUrl: https://alga.local
 domainSuffix: alga.local

@@ -1004,6 +1004,17 @@
         "step3": "Use the Refresh button to poll provisioning progress. We will email your administrators if provisioning fails.",
         "canonicalHostFallback": "canonical host"
       },
+      "appliance": {
+        "helpText": "Point this hostname at your appliance and have your reverse proxy forward the original Host header before saving.",
+        "checklistTitle": "Reverse proxy setup",
+        "step1Prefix": "Point ",
+        "step1Suffix": " at this appliance (an A record to its address, or a CNAME to your appliance host).",
+        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this appliance on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
+        "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
+        "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
+        "docLinkText": "Reverse proxy setup & troubleshooting guide",
+        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header."
+      },
       "badges": {
         "pending_dns": "Pending DNS",
         "verifying_dns": "Verifying DNS",
