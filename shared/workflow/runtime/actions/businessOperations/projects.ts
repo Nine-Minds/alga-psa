@@ -893,7 +893,7 @@ async function deleteFromTableIfExists(
 ): Promise<number> {
   const hasTable = await tx.trx.schema.hasTable(tableName);
   if (!hasTable) return 0;
-  const query = whereBuilder(tx.trx(tableName));
+  const query = whereBuilder(tenantScopedTable(tx, tableName));
   const deleted = await query.delete();
   return Number(deleted ?? 0);
 }
@@ -2632,8 +2632,8 @@ export function registerProjectActions(): void {
 
         const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
         if (timeEntriesExist) {
-          const timeEntryCountRow = await tx.trx('time_entries')
-            .where({ tenant: tx.tenantId, work_item_id: input.task_id, work_item_type: 'project_task' })
+          const timeEntryCountRow = await tenantScopedTable(tx, 'time_entries')
+            .where({ work_item_id: input.task_id, work_item_type: 'project_task' })
             .count('* as count')
             .first();
           const timeEntryCount = Number((timeEntryCountRow as { count?: string | number } | undefined)?.count ?? 0);
@@ -2648,38 +2648,38 @@ export function registerProjectActions(): void {
         }
 
         await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
-          query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForTask(this: Knex.QueryBuilder) {
+          query.andWhere(function dependenciesForTask(this: Knex.QueryBuilder) {
             this.where('predecessor_task_id', input.task_id).orWhere('successor_task_id', input.task_id);
           })
         );
         const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
-          ? await tx.trx('project_task_comments')
-              .where({ tenant: tx.tenantId, task_id: input.task_id })
+          ? await tenantScopedTable(tx, 'project_task_comments')
+              .where('task_id', input.task_id)
               .pluck<string[]>('task_comment_id')
           : [];
         if (taskCommentIds.length > 0) {
           await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+            query.whereIn('task_comment_id', taskCommentIds)
           );
         }
         await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
 
         const deletedTicketLinks = await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
         await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
-          query.where({ tenant: tx.tenantId, entity_type: 'project_task', entity_id: input.task_id })
+          query.where({ entity_type: 'project_task', entity_id: input.task_id })
         );
         const deletedChecklistItems = await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
         await deleteFromTableIfExists(tx, 'task_resources', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
-        await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.task_id)
           .delete();
 
         await writeRunAudit(ctx, tx, {
@@ -2725,15 +2725,15 @@ export function registerProjectActions(): void {
         const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
         await assertProjectReadable(ctx, tx, project);
 
-        const taskIds = await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+        const taskIds = await tenantScopedTable(tx, 'project_tasks')
+          .where('phase_id', input.phase_id)
           .pluck<string[]>('task_id');
 
         if (taskIds.length > 0) {
           const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
           if (timeEntriesExist) {
-            const timeEntryCountRow = await tx.trx('time_entries')
-              .where({ tenant: tx.tenantId, work_item_type: 'project_task' })
+            const timeEntryCountRow = await tenantScopedTable(tx, 'time_entries')
+              .where('work_item_type', 'project_task')
               .whereIn('work_item_id', taskIds)
               .count('* as count')
               .first();
@@ -2749,44 +2749,42 @@ export function registerProjectActions(): void {
           }
 
           await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
-            query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForPhaseTasks(this: Knex.QueryBuilder) {
+            query.andWhere(function dependenciesForPhaseTasks(this: Knex.QueryBuilder) {
               this.whereIn('predecessor_task_id', taskIds).orWhereIn('successor_task_id', taskIds);
             })
           );
           const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
-            ? await tx.trx('project_task_comments')
-                .where({ tenant: tx.tenantId })
+            ? await tenantScopedTable(tx, 'project_task_comments')
                 .whereIn('task_id', taskIds)
                 .pluck<string[]>('task_comment_id')
             : [];
           if (taskCommentIds.length > 0) {
             await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
-              query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+              query.whereIn('task_comment_id', taskCommentIds)
             );
           }
           await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_resources', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
-            query.where({ tenant: tx.tenantId, entity_type: 'project_task' }).whereIn('entity_id', taskIds)
+            query.where('entity_type', 'project_task').whereIn('entity_id', taskIds)
           );
-          await tx.trx('project_tasks')
-            .where({ tenant: tx.tenantId })
+          await tenantScopedTable(tx, 'project_tasks')
             .whereIn('task_id', taskIds)
             .delete();
         }
 
-        const deleted = await tx.trx('project_phases')
-          .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+        const deleted = await tenantScopedTable(tx, 'project_phases')
+          .where('phase_id', input.phase_id)
           .delete();
 
         await writeRunAudit(ctx, tx, {
@@ -2853,20 +2851,19 @@ export function registerProjectActions(): void {
           });
         }
 
-        const phaseIds = await tx.trx('project_phases')
-          .where({ tenant: tx.tenantId, project_id: input.project_id })
+        const phaseIds = await tenantScopedTable(tx, 'project_phases')
+          .where('project_id', input.project_id)
           .pluck<string[]>('phase_id');
         const taskIds = phaseIds.length > 0
-          ? await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId })
+          ? await tenantScopedTable(tx, 'project_tasks')
               .whereIn('phase_id', phaseIds)
               .pluck<string[]>('task_id')
           : [];
 
         const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
         if (timeEntriesExist && taskIds.length > 0) {
-          const timeEntryCountRow = await tx.trx('time_entries')
-            .where({ tenant: tx.tenantId, work_item_type: 'project_task' })
+          const timeEntryCountRow = await tenantScopedTable(tx, 'time_entries')
+            .where('work_item_type', 'project_task')
             .whereIn('work_item_id', taskIds)
             .count('* as count')
             .first();
@@ -2885,65 +2882,62 @@ export function registerProjectActions(): void {
         }
 
         await deleteFromTableIfExists(tx, 'tag_mappings', (query) =>
-          query.where({ tenant: tx.tenantId, tagged_type: 'project', tagged_id: input.project_id })
+          query.where({ tagged_type: 'project', tagged_id: input.project_id })
         );
         if (taskIds.length > 0) {
           await deleteFromTableIfExists(tx, 'tag_mappings', (query) =>
-            query.where({ tenant: tx.tenantId, tagged_type: 'project_task' }).whereIn('tagged_id', taskIds)
+            query.where('tagged_type', 'project_task').whereIn('tagged_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
-            query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForProjectTasks(this: Knex.QueryBuilder) {
+            query.andWhere(function dependenciesForProjectTasks(this: Knex.QueryBuilder) {
               this.whereIn('predecessor_task_id', taskIds).orWhereIn('successor_task_id', taskIds);
             })
           );
           const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
-            ? await tx.trx('project_task_comments')
-                .where({ tenant: tx.tenantId })
+            ? await tenantScopedTable(tx, 'project_task_comments')
                 .whereIn('task_id', taskIds)
                 .pluck<string[]>('task_comment_id')
             : [];
           if (taskCommentIds.length > 0) {
             await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
-              query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+              query.whereIn('task_comment_id', taskCommentIds)
             );
           }
           await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
-            query.where({ tenant: tx.tenantId, entity_type: 'project_task' }).whereIn('entity_id', taskIds)
+            query.where('entity_type', 'project_task').whereIn('entity_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_resources', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
         }
         await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
-          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+          query.where('project_id', input.project_id)
         );
         await deleteFromTableIfExists(tx, 'email_reply_tokens', (query) =>
-          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+          query.where('project_id', input.project_id)
         );
 
         if (taskIds.length > 0) {
-          await tx.trx('project_tasks')
-            .where({ tenant: tx.tenantId })
+          await tenantScopedTable(tx, 'project_tasks')
             .whereIn('task_id', taskIds)
             .delete();
         }
         if (phaseIds.length > 0) {
-          await tx.trx('project_phases')
-            .where({ tenant: tx.tenantId })
+          await tenantScopedTable(tx, 'project_phases')
             .whereIn('phase_id', phaseIds)
             .delete();
         }
         await deleteFromTableIfExists(tx, 'project_status_mappings', (query) =>
-          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+          query.where('project_id', input.project_id)
         );
-        const deleted = await tx.trx('projects')
-          .where({ tenant: tx.tenantId, project_id: input.project_id })
+        const deleted = await tenantScopedTable(tx, 'projects')
+          .where('project_id', input.project_id)
           .delete();
 
         await writeRunAudit(ctx, tx, {
