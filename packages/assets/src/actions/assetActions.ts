@@ -1004,8 +1004,8 @@ export const updateAsset = withAuth(async (
             };
 
             // Get current asset
-            const asset = await trx('assets')
-                .where({ tenant, asset_id })
+            const asset = await tenantScopedTable(trx, 'assets', tenant)
+                .where({ asset_id })
                 .first();
 
             if (!asset) {
@@ -1082,12 +1082,12 @@ export const updateAsset = withAuth(async (
 
             if (Object.keys(baseUpdateData).length > 0) {
                 baseUpdateData.updated_at = trx.fn.now();
-                await trx('assets')
-                    .where({ tenant, asset_id })
+                await tenantScopedTable(trx, 'assets', tenant)
+                    .where({ asset_id })
                     .update(baseUpdateData);
             } else {
-                await trx('assets')
-                    .where({ tenant, asset_id })
+                await tenantScopedTable(trx, 'assets', tenant)
+                    .where({ asset_id })
                     .update({ updated_at: trx.fn.now() });
             }
 
@@ -1433,7 +1433,7 @@ export const bulkDeleteAssets = withAuth(async (
 
 async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: string): Promise<Asset> {
     // Get base asset data with client info
-    const asset = await knex('assets')
+    const asset = await tenantScopedTable(knex, 'assets', tenant)
         .select(
             'assets.*',
             'clients.client_name'
@@ -1442,7 +1442,7 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
             this.on('clients.client_id', '=', 'assets.client_id')
                 .andOn('clients.tenant', '=', 'assets.tenant');
         })
-        .where({ 'assets.tenant': tenant, 'assets.asset_id': asset_id })
+        .where({ 'assets.asset_id': asset_id })
         .first();
 
     if (!asset) {
@@ -1453,7 +1453,7 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);
 
     // Get relationships (include related asset name)
-    const rawRelationships = await knex('asset_relationships as ar')
+    const rawRelationships = await tenantScopedTable(knex, 'asset_relationships as ar', tenant)
         .select(
             'ar.*',
             'parent.name as parent_name',
@@ -1467,7 +1467,6 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
             this.on('ar.child_asset_id', '=', 'child.asset_id')
                 .andOn('ar.tenant', '=', 'child.tenant');
         })
-        .where('ar.tenant', tenant)
         .andWhere(function(this: Knex.QueryBuilder) {
             this.where('ar.parent_asset_id', asset_id)
                 .orWhere('ar.child_asset_id', asset_id);
@@ -1517,7 +1516,7 @@ export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id:
     return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetRelationship[]> => {
         await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
-        const rawRelationships = await trx('asset_relationships as ar')
+        const rawRelationships = await tenantScopedTable(trx, 'asset_relationships as ar', tenant)
             .select(
                 'ar.*',
                 'parent.name as parent_name',
@@ -1531,7 +1530,6 @@ export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id:
                 this.on('ar.child_asset_id', '=', 'child.asset_id')
                     .andOn('ar.tenant', '=', 'child.tenant');
             })
-            .where('ar.tenant', tenant)
             .andWhere(function(this: Knex.QueryBuilder) {
                 this.where('ar.parent_asset_id', asset_id)
                     .orWhere('ar.child_asset_id', asset_id);
