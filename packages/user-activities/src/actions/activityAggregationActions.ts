@@ -944,8 +944,10 @@ export async function fetchTimeEntryActivities(
 
     // Query for time entries created by the user
     const timeEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("time_entries")
-      .where("time_entries.tenant", tenant)
+      return await createTenantScopedQuery(trx, {
+        table: "time_entries",
+        tenant,
+      }).builder
       .where("time_entries.user_id", userId)
       // Apply date range filter if provided
       .modify(function(queryBuilder) {
