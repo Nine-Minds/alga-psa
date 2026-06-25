@@ -21,14 +21,10 @@ process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'credit_creation_tests';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
