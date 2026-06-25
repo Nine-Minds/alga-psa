@@ -3,6 +3,13 @@
   "compilerOptions": {
     "outDir": "./dist"
   },
+  "include": [
+    "src/**/*",
+    "../../packages/jobs/src/lib/handlers/workflowScheduledRunHandlers.ts",
+    "../../packages/jobs/src/lib/handlers/extensionScheduledInvocationHandler.ts",
+    "../../packages/jobs/src/lib/jobRunnerAccessor.ts",
+    "../../packages/jobs/src/lib/jobs/runners/TemporalJobRunner.ts"
+  ],
   "exclude": [
     "node_modules",
     "dist",
