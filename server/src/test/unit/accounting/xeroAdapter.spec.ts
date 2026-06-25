@@ -4,7 +4,13 @@ import { XeroAdapter } from '../../../../../packages/billing/src/adapters/accoun
 import { AccountingExportAdapterContext } from '@alga-psa/types';
 import { AccountingMappingResolver } from '../../../../../packages/billing/src/services/accountingMappingResolver';
 import { XeroClientService } from '@alga-psa/integrations/lib/xero/xeroClientService';
-import * as dbModule from 'server/src/lib/db';
+// The adapter resolves its knex via @alga-psa/db; mock createTenantKnex there so
+// the spec never opens a real DB connection (the queries themselves are stubbed).
+const createTenantKnexMock = vi.hoisted(() => vi.fn());
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  createTenantKnex: createTenantKnexMock,
+}));
 
 /**
  * Specs referenced from:
@@ -79,7 +85,27 @@ describe('XeroAdapter – spec validation scaffolding', () => {
   beforeEach(() => {
     mockResolver.resolveServiceMapping.mockReset();
     mockResolver.resolveTaxCodeMapping.mockReset();
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    // Callable, chainable knex so the invoice-mapping lookup in transform() finds no
+    // existing mapping (first() -> undefined) and proceeds to build a fresh payload.
+    const knexSub: any = {
+      where: () => knexSub,
+      orWhere: () => knexSub,
+      whereNull: () => knexSub,
+      orWhereNull: () => knexSub,
+    };
+    const knexQb: any = {
+      select: () => knexQb,
+      where: (arg: any) => { if (typeof arg === 'function') arg(knexSub); return knexQb; },
+      andWhere: (arg: any) => { if (typeof arg === 'function') arg(knexSub); return knexQb; },
+      orderByRaw: () => knexQb,
+      first: async () => undefined,
+      insert: () => knexQb,
+      onConflict: () => knexQb,
+      merge: async () => 1,
+    };
+    const knexMock: any = () => knexQb;
+    knexMock.raw = (sql: string) => ({ __raw: sql });
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(mockResolver as unknown as AccountingMappingResolver);
     mockResolver.resolveServiceMapping.mockResolvedValue({
       external_entity_id: 'ITEM-001',

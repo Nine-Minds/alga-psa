@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   deleteSearchDoc: vi.fn(),
 }));
 
-vi.mock('../../lib/search/upsert', () => ({
+vi.mock('@alga-psa/search/upsert', () => ({
   upsertSearchDoc: mocks.upsertSearchDoc,
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));

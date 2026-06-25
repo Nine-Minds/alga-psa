@@ -233,6 +233,13 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     act(() => {
       document.dispatchEvent(
         new KeyboardEvent('keydown', {
@@ -273,6 +280,13 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     fireEvent.click(screen.getByText('Go to tickets'));
 
     expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
@@ -301,6 +315,13 @@ describe('DefaultLayout AI interrupt guard', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
+    });
+
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await Promise.resolve();
     });
 
     const beforeUnloadEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;

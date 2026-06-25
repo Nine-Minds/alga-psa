@@ -57,10 +57,17 @@ import {
   workflowOneTimeScheduledRunHandler,
   workflowRecurringScheduledRunHandler
 } from '@alga-psa/jobs/handlers/workflowScheduledRunHandlers';
+import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
 
 describe('Workflow scheduled run handlers', () => {
   beforeEach(() => {
     scheduleRecord = null;
+    // The handlers resolve the runner via @alga-psa/jobs' accessor, not the
+    // server JobRunnerFactory; register a matching mock for the unit test.
+    registerJobRunnerAccessor(async () => ({
+      cancelJob: (...args: unknown[]) => cancelJob(...args),
+      getJobStatus: (...args: unknown[]) => getJobStatus(...args),
+    }) as any);
     launchPublishedWorkflowRun.mockReset();
     launchPublishedWorkflowRun.mockResolvedValue({ runId: 'run-1', workflowVersion: 4 });
     updateScheduleState.mockReset();

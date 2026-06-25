@@ -10,7 +10,7 @@ const migrationPath = path.resolve(
   testDir,
   '../../../migrations/20260513120000_create_app_search_index.cjs',
 );
-const searchQueryPath = path.resolve(testDir, '../../../src/lib/search/query.ts');
+const searchQueryPath = path.resolve(testDir, '../../../../packages/search/src/query.ts');
 const migration = require(migrationPath) as {
   up: (knex: { raw: (sql: string) => Promise<{ rows?: Array<Record<string, unknown>> }> }) => Promise<void>;
   down: (knex: { schema: { dropTableIfExists: (tableName: string) => Promise<void> } }) => Promise<void>;
