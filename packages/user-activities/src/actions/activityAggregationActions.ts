@@ -637,14 +637,16 @@ export async function fetchProjectActivities(
 
         // Tag filter: task must have at least one of the requested tags
         if (filters.projectTaskTagIds && filters.projectTaskTagIds.length > 0) {
-          queryBuilder.whereExists(function() {
-            this.select(db.raw(1))
-              .from("tag_mappings")
+          queryBuilder.whereExists(
+            createTenantScopedQuery(trx, {
+              table: "tag_mappings",
+              tenant,
+            }).builder
+              .select(db.raw(1))
               .whereRaw("tag_mappings.tagged_id = project_tasks.task_id::text")
-              .andWhere("tag_mappings.tenant", tenant)
               .andWhere("tag_mappings.tagged_type", "project_task")
-              .whereIn("tag_mappings.tag_id", filters.projectTaskTagIds!);
-          });
+              .whereIn("tag_mappings.tag_id", filters.projectTaskTagIds!)
+          );
         }
 
         // Apply search filter if provided
