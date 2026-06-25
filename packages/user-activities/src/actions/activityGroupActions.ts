@@ -35,6 +35,10 @@ interface ActivityGroupItemRow {
   sort_order: number;
 }
 
+interface ActivityGroupIdRow {
+  group_id: string;
+}
+
 /**
  * Fetch all groups with their items for a user.
  * Defaults to the caller's own groups. When `targetUserId` names another internal
@@ -256,22 +260,31 @@ export const moveActivityToGroup = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     // Verify target group belongs to user
-    const target = await trx('user_activity_groups')
-      .where({ tenant, group_id: targetGroupId, user_id: user.user_id })
+    const target = await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ group_id: targetGroupId, user_id: user.user_id })
       .first();
     if (!target) {
       throw new Error('Target group not found');
     }
 
     // Remove any existing membership of this activity in any of the user's groups
-    const userGroups = await trx('user_activity_groups')
-      .where({ tenant, user_id: user.user_id })
-      .select('group_id');
+    const userGroups = await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ user_id: user.user_id })
+      .select('group_id') as ActivityGroupIdRow[];
     const userGroupIds = userGroups.map((g) => g.group_id);
 
     if (userGroupIds.length > 0) {
-      await trx('user_activity_group_items')
-        .where({ tenant, activity_id: activityId, activity_type: activityType })
+      await createTenantScopedQuery(trx, {
+        table: 'user_activity_group_items',
+        tenant,
+      }).builder
+        .where({ activity_id: activityId, activity_type: activityType })
         .whereIn('group_id', userGroupIds)
         .del();
     }
@@ -279,8 +292,11 @@ export const moveActivityToGroup = withAuth(async (
     // Make room at the insertion index. Without this, multiple rows would
     // share the same sort_order and the final order on reload would be
     // non-deterministic.
-    await trx('user_activity_group_items')
-      .where({ tenant, group_id: targetGroupId })
+    await createTenantScopedQuery(trx, {
+      table: 'user_activity_group_items',
+      tenant,
+    }).builder
+      .where({ group_id: targetGroupId })
       .andWhere('sort_order', '>=', sortOrder)
       .increment('sort_order', 1);
 
@@ -310,15 +326,21 @@ export const removeActivityFromGroups = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
-    const userGroups = await trx('user_activity_groups')
-      .where({ tenant, user_id: user.user_id })
-      .select('group_id');
+    const userGroups = await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ user_id: user.user_id })
+      .select('group_id') as ActivityGroupIdRow[];
     const userGroupIds = userGroups.map((g) => g.group_id);
 
     if (userGroupIds.length === 0) return;
 
-    await trx('user_activity_group_items')
-      .where({ tenant, activity_id: activityId, activity_type: activityType })
+    await createTenantScopedQuery(trx, {
+      table: 'user_activity_group_items',
+      tenant,
+    }).builder
+      .where({ activity_id: activityId, activity_type: activityType })
       .whereIn('group_id', userGroupIds)
       .del();
   });
