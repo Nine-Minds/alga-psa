@@ -536,11 +536,8 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
-    const assignments = await knex('authorization_bundle_assignments')
-      .where({
-        tenant,
-        bundle_id: bundleId,
-      })
+    const assignments = await tenantScopedTable(knex, tenant, 'authorization_bundle_assignments')
+      .where('bundle_id', bundleId)
       .orderBy('created_at', 'asc')
       .select<
         Array<{
@@ -566,25 +563,24 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
 
     const [roles, teams, users, apiKeys, availableRoles, availableTeams, availableUsers, availableApiKeys] = await Promise.all([
       roleIds.length > 0
-        ? knex('roles').where({ tenant }).whereIn('role_id', roleIds).select<{ role_id: string; role_name: string }[]>('role_id', 'role_name')
+        ? tenantScopedTable(knex, tenant, 'roles').whereIn('role_id', roleIds).select<{ role_id: string; role_name: string }[]>('role_id', 'role_name')
         : Promise.resolve([]),
       teamIds.length > 0
-        ? knex('teams').where({ tenant }).whereIn('team_id', teamIds).select<{ team_id: string; team_name: string }[]>('team_id', 'team_name')
+        ? tenantScopedTable(knex, tenant, 'teams').whereIn('team_id', teamIds).select<{ team_id: string; team_name: string }[]>('team_id', 'team_name')
         : Promise.resolve([]),
       userIds.length > 0
-        ? knex('users').where({ tenant }).whereIn('user_id', userIds).select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email')
+        ? tenantScopedTable(knex, tenant, 'users').whereIn('user_id', userIds).select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email')
         : Promise.resolve([]),
       apiKeyIds.length > 0
-        ? knex('api_keys').where({ tenant }).whereIn('api_key_id', apiKeyIds).select<{ api_key_id: string; description: string | null }[]>('api_key_id', 'description')
+        ? tenantScopedTable(knex, tenant, 'api_keys').whereIn('api_key_id', apiKeyIds).select<{ api_key_id: string; description: string | null }[]>('api_key_id', 'description')
         : Promise.resolve([]),
-      knex('roles').where({ tenant }).orderBy('role_name', 'asc').select<{ role_id: string; role_name: string; msp: boolean; client: boolean }[]>('role_id', 'role_name', 'msp', 'client'),
-      knex('teams').where({ tenant }).orderBy('team_name', 'asc').select<{ team_id: string; team_name: string }[]>('team_id', 'team_name'),
-      knex('users').where({ tenant }).orderBy('username', 'asc').select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email'),
-      knex('api_keys as ak')
+      tenantScopedTable(knex, tenant, 'roles').orderBy('role_name', 'asc').select<{ role_id: string; role_name: string; msp: boolean; client: boolean }[]>('role_id', 'role_name', 'msp', 'client'),
+      tenantScopedTable(knex, tenant, 'teams').orderBy('team_name', 'asc').select<{ team_id: string; team_name: string }[]>('team_id', 'team_name'),
+      tenantScopedTable(knex, tenant, 'users').orderBy('username', 'asc').select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email'),
+      tenantScopedTable(knex, tenant, 'api_keys as ak')
         .leftJoin('users as u', function () {
           this.on('u.user_id', '=', 'ak.user_id').andOn('u.tenant', '=', 'ak.tenant');
         })
-        .where('ak.tenant', tenant)
         .where('ak.active', true)
         .andWhere(function () {
           this.whereNull('ak.expires_at').orWhere('ak.expires_at', '>', knex.fn.now());
@@ -686,8 +682,7 @@ export const listAuthorizationSimulationPrincipalsAction = withAuth(
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
-    const users = await knex('users')
-      .where({ tenant })
+    const users = await tenantScopedTable(knex, tenant, 'users')
       .orderBy('username', 'asc')
       .limit(50)
       .select<
@@ -723,8 +718,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     const { knex } = await createTenantKnex();
 
     if (input.resourceType === 'ticket') {
-      const rows = await knex('tickets')
-        .where({ tenant })
+      const rows = await tenantScopedTable(knex, tenant, 'tickets')
         .orderBy('updated_at', 'desc')
         .limit(50)
         .select<{ ticket_id: string; title: string | null }[]>('ticket_id', 'title');
@@ -732,8 +726,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     }
 
     if (input.resourceType === 'document') {
-      const rows = await knex('documents')
-        .where({ tenant })
+      const rows = await tenantScopedTable(knex, tenant, 'documents')
         .orderBy('created_at', 'desc')
         .limit(50)
         .select<{ document_id: string; document_name: string | null }[]>('document_id', 'document_name');
@@ -741,8 +734,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     }
 
     if (input.resourceType === 'time_entry') {
-      const rows = await knex('time_entries')
-        .where({ tenant })
+      const rows = await tenantScopedTable(knex, tenant, 'time_entries')
         .orderBy('start_time', 'desc')
         .limit(50)
         .select<{ entry_id: string; notes: string | null }[]>('entry_id', 'notes');
@@ -750,8 +742,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     }
 
     if (input.resourceType === 'project') {
-      const rows = await knex('projects')
-        .where({ tenant })
+      const rows = await tenantScopedTable(knex, tenant, 'projects')
         .orderBy('updated_at', 'desc')
         .limit(50)
         .select<{ project_id: string; project_name: string | null }[]>('project_id', 'project_name');
@@ -759,8 +750,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     }
 
     if (input.resourceType === 'asset') {
-      const rows = await knex('assets')
-        .where({ tenant })
+      const rows = await tenantScopedTable(knex, tenant, 'assets')
         .orderBy('updated_at', 'desc')
         .limit(50)
         .select<{ asset_id: string; name: string | null }[]>('asset_id', 'name');
@@ -768,8 +758,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     }
 
     if (input.resourceType === 'billing') {
-      const rows = await knex('quotes')
-        .where({ tenant })
+      const rows = await tenantScopedTable(knex, tenant, 'quotes')
         .orderBy('updated_at', 'desc')
         .limit(50)
         .select<{ quote_id: string; quote_number: string | null }[]>('quote_id', 'quote_number');
@@ -839,33 +828,33 @@ async function loadSimulationRecord(
   resourceId: string
 ): Promise<AuthorizationRecord> {
   if (resourceType === 'ticket') {
-    const row = await knex('tickets').where({ tenant, ticket_id: resourceId }).first();
+    const row = await tenantScopedTable(knex, tenant, 'tickets').where('ticket_id', resourceId).first();
     if (!row) throw new Error('Ticket not found.');
     return toAuthorizationRecord(row);
   }
   if (resourceType === 'document') {
-    const row = await knex('documents').where({ tenant, document_id: resourceId }).first();
+    const row = await tenantScopedTable(knex, tenant, 'documents').where('document_id', resourceId).first();
     if (!row) throw new Error('Document not found.');
     return toAuthorizationRecord(row);
   }
   if (resourceType === 'time_entry') {
-    const row = await knex('time_entries').where({ tenant, entry_id: resourceId }).first();
+    const row = await tenantScopedTable(knex, tenant, 'time_entries').where('entry_id', resourceId).first();
     if (!row) throw new Error('Time entry not found.');
     return toAuthorizationRecord(row);
   }
   if (resourceType === 'project') {
-    const row = await knex('projects').where({ tenant, project_id: resourceId }).first();
+    const row = await tenantScopedTable(knex, tenant, 'projects').where('project_id', resourceId).first();
     if (!row) throw new Error('Project not found.');
     return toAuthorizationRecord(row);
   }
   if (resourceType === 'asset') {
-    const row = await knex('assets').where({ tenant, asset_id: resourceId }).first();
+    const row = await tenantScopedTable(knex, tenant, 'assets').where('asset_id', resourceId).first();
     if (!row) throw new Error('Asset not found.');
     return toAuthorizationRecord(row);
   }
 
   if (resourceType === 'billing') {
-    const row = await knex('quotes').where({ tenant, quote_id: resourceId }).first();
+    const row = await tenantScopedTable(knex, tenant, 'quotes').where('quote_id', resourceId).first();
     if (!row) throw new Error('Quote not found.');
     return toAuthorizationRecord(row);
   }
