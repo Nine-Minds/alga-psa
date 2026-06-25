@@ -2053,8 +2053,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'read');
 
     const { knex } = await this.getKnex();
-    const invoice = await knex('invoices')
-      .where({ invoice_id: id, tenant: context.tenant })
+    const invoice = await createTenantScopedQuery(knex, {
+      table: 'invoices',
+      tenant: context.tenant,
+    }).builder
+      .where({ invoice_id: id })
       .select('invoice_id', 'invoice_number')
       .first();
 
