@@ -2137,7 +2137,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     const db = await getConnection(tenantId);
 
     // Get task and project details
-    const task = await db('project_tasks as pt')
+    const task = await tenantScopedTable(db, 'project_tasks as pt', tenantId)
       .select(
         'pt.task_name',
         'pt.phase_id',
@@ -2151,10 +2151,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
         this.on('ph.project_id', 'p.project_id')
             .andOn('ph.tenant', 'p.tenant');
       })
-      .where({
-        'pt.task_id': taskId,
-        'pt.tenant': tenantId
-      })
+      .where('pt.task_id', taskId)
       .first();
 
     if (!task || !assignedToId) {
@@ -2167,9 +2164,9 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     }
 
     // Look up who performed the assignment
-    const assignedByUser = assignedByUserId ? await db('users')
+    const assignedByUser = assignedByUserId ? await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where('user_id', assignedByUserId)
       .first() : null;
 
     const performedByName = assignedByUser
@@ -2186,9 +2183,9 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
 
     if (assignedToType === 'team') {
       // Team assignment: assignedToId is the team ID
-      const team = await db('teams')
+      const team = await tenantScopedTable(db, 'teams', tenantId)
         .select('team_name', 'manager_id')
-        .where({ team_id: assignedToId, tenant: tenantId })
+        .where('team_id', assignedToId)
         .first();
 
       if (!team) {
@@ -2201,12 +2198,12 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       }
 
       // Get all active team members
-      const teamMembers = await db('team_members')
+      const teamMembers = await tenantScopedTable(db, 'team_members', tenantId)
         .join('users', function() {
           this.on('team_members.user_id', 'users.user_id')
               .andOn('team_members.tenant', 'users.tenant');
         })
-        .where({ 'team_members.team_id': assignedToId, 'team_members.tenant': tenantId })
+        .where('team_members.team_id', assignedToId)
         .andWhere('users.is_inactive', false)
         .select('team_members.user_id');
 

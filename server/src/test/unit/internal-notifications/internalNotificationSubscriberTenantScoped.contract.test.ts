@@ -36,6 +36,7 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     const documentMentionSection = sectionBetween('async function handleUserMentionedInDocument', 'async function handleProjectCreated');
     const projectCreatedSection = sectionBetween('async function handleProjectCreated', 'async function handleProjectAssigned');
     const projectAssignedSection = sectionBetween('async function handleProjectAssigned', 'async function handleTaskAssigned');
+    const taskAssignedSection = sectionBetween('async function handleTaskAssigned', 'async function handleInvoiceGenerated');
 
     expect(source).toContain("import { createTenantScopedQuery, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
@@ -136,5 +137,14 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
 
     expect(projectAssignedSection).toContain("tenantScopedTable(db, 'projects', tenantId)");
     expect(projectAssignedSection).not.toContain('.where({ project_id: projectId, tenant: tenantId })');
+
+    expect(taskAssignedSection).toContain("tenantScopedTable(db, 'project_tasks as pt', tenantId)");
+    expect(taskAssignedSection).toContain("tenantScopedTable(db, 'users', tenantId)");
+    expect(taskAssignedSection).toContain("tenantScopedTable(db, 'teams', tenantId)");
+    expect(taskAssignedSection).toContain("tenantScopedTable(db, 'team_members', tenantId)");
+    expect(taskAssignedSection).not.toContain("'pt.tenant': tenantId");
+    expect(taskAssignedSection).not.toContain('.where({ user_id: assignedByUserId, tenant: tenantId })');
+    expect(taskAssignedSection).not.toContain('.where({ team_id: assignedToId, tenant: tenantId })');
+    expect(taskAssignedSection).not.toContain("'team_members.tenant': tenantId");
   });
 });
