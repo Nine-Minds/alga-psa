@@ -1402,9 +1402,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     
     try {
-      const user = await knex('users')
+      const user = await createTenantScopedQuery(knex, {
+        table: 'users',
+        tenant: context.tenant,
+      }).builder
         .where('user_id', userId)
-        .where('tenant', context.tenant)
         .first();
       
       if (!user) {
@@ -1446,9 +1448,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     
     try {
-      const user = await knex('users')
+      const user = await createTenantScopedQuery(knex, {
+        table: 'users',
+        tenant: context.tenant,
+      }).builder
         .where('user_id', userId)
-        .where('tenant', context.tenant)
         .first();
       
       if (!user) {
