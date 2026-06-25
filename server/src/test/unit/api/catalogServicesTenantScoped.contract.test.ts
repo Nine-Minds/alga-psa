@@ -22,6 +22,9 @@ describe('catalog API services tenant-scoped query contract', () => {
       expect(source).toContain("table: 'service_prices'");
       expect(source).not.toContain("knex('service_catalog as sc').where({ 'sc.tenant': tenant })");
       expect(source).not.toMatch(/knex\('service_prices'\)\s*\.where\(\{ tenant \}\)/);
+      expect(source).not.toMatch(/knex\('service_catalog as sc'\)\s*\.leftJoin/);
+      expect(source).not.toMatch(/knex\('service_catalog'\)\s*\.where\(\{ service_id: id, tenant \}\)/);
+      expect(source).not.toMatch(/knex\('service_prices'\)\s*\.where\(\{ service_id: (id|serviceId), tenant \}\)/);
     }
   });
 });

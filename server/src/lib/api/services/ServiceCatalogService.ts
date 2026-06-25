@@ -207,12 +207,16 @@ export class ServiceCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    const service = await knex('service_catalog as sc')
+    const service = await createTenantScopedQuery(knex, {
+      table: 'service_catalog as sc',
+      alias: 'sc',
+      tenant,
+    }).builder
       .leftJoin('service_types as st', function (this: any) {
         this.on('sc.custom_service_type_id', '=', 'st.id')
           .andOn('sc.tenant', '=', 'st.tenant');
       })
-      .where({ 'sc.service_id': id, 'sc.tenant': tenant })
+      .where('sc.service_id', id)
       .select(
         'sc.*',
         knex.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -223,8 +227,12 @@ export class ServiceCatalogService extends BaseService<IService> {
 
     if (!service) return null;
 
-    const prices = await knex('service_prices')
-      .where({ service_id: id, tenant })
+    const prices = await createTenantScopedQuery(knex, {
+      table: 'service_prices',
+      alias: 'service_prices',
+      tenant,
+    }).builder
+      .where('service_id', id)
       .select('*');
 
     return { ...service, prices } as IService;
@@ -236,8 +244,12 @@ export class ServiceCatalogService extends BaseService<IService> {
 
     const { custom_service_type_id } = data;
     if (custom_service_type_id) {
-      const serviceType = await knex('service_types')
-        .where({ id: custom_service_type_id, tenant })
+      const serviceType = await createTenantScopedQuery(knex, {
+        table: 'service_types',
+        alias: 'service_types',
+        tenant,
+      }).builder
+        .where('id', custom_service_type_id)
         .first();
       if (!serviceType) {
         throw new Error(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
@@ -286,8 +298,12 @@ export class ServiceCatalogService extends BaseService<IService> {
       ...updateData
     } = data as any;
 
-    const [updated] = await knex('service_catalog')
-      .where({ service_id: id, tenant })
+    const [updated] = await createTenantScopedQuery(knex, {
+      table: 'service_catalog',
+      alias: 'service_catalog',
+      tenant,
+    }).builder
+      .where('service_id', id)
       .update(updateData)
       .returning('*');
 
@@ -308,13 +324,21 @@ export class ServiceCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    const existing = await knex('service_catalog')
-      .where({ service_id: id, tenant })
+    const existing = await createTenantScopedQuery(knex, {
+      table: 'service_catalog',
+      alias: 'service_catalog',
+      tenant,
+    }).builder
+      .where('service_id', id)
       .select('item_kind')
       .first();
 
-    await knex('service_catalog')
-      .where({ service_id: id, tenant })
+    await createTenantScopedQuery(knex, {
+      table: 'service_catalog',
+      alias: 'service_catalog',
+      tenant,
+    }).builder
+      .where('service_id', id)
       .delete();
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, id, {
