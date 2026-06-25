@@ -194,3 +194,10 @@ npm run migrate
 - Translation decisions: use glossary-consistent Brazilian terms (`fatura`, `créditos`, `projeto`, `tarefa`, `marco`) and preserve the existing template builders/visual variants, including task-assignment badge color constants.
 - Implemented T102/T103 by extending `scripts/tests/pt-br-email-templates.test.mjs` to cover the 13 billing/project templates in addition to the previous auth/ticketing group.
 - Verification: `node --test scripts/tests/pt-br-email-templates.test.mjs` passed (2 tests), checking non-empty `pt` output, exact placeholder parity with English, no `undefined`, and no forbidden glossary terms.
+
+## 2026-06-25 — email-pt-appointments-time-surveys group
+- Implemented F056: added explicit `pt` variants to the source-of-truth email templates for appointment request received, appointment request approved, appointment request declined, new appointment request, appointment assigned technician, time entry submitted, time entry approved, time entry rejected, and survey ticket closed.
+- Translation decisions: use Brazilian service language (`agendamento`, `técnico`, `lançamento de horas`, `pesquisa`) and keep Handlebars conditionals/variables exactly aligned with English output.
+- Implemented T104/T105 by extending `scripts/tests/pt-br-email-templates.test.mjs` to cover this 9-template group along with the prior completed email groups.
+- Verification: `node --test scripts/tests/pt-br-email-templates.test.mjs` passed (2 tests), checking non-empty `pt` output, exact placeholder parity with English, no `undefined`, and no forbidden glossary terms.
+- Gotcha for next groups: F054-F056 name 34 source templates, while F057/T106 refer to 36 production email rows. Reconcile the authoritative DB/template count before marking migration/parity work complete.

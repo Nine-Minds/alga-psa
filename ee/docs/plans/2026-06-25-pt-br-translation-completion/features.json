@@ -598,7 +598,7 @@
   {
     "id": "F056",
     "description": "Add pt blocks to the source-of-truth email template files for: appointment-request-received, appointment-request-approved, appointment-request-declined, new-appointment-request, appointment-assigned-technician, time-entry-submitted, time-entry-approved, time-entry-rejected, survey-ticket-closed (subject + html_content + text_content), translated to pt-BR per glossary, {{variables}} preserved.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-appointments-time-surveys",
     "prdRefs": [
       "4.3",

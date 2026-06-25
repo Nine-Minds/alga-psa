@@ -88,6 +88,17 @@ const COPY = {
     thankYou: '{{thank_you_text}}',
   },
 };
+SUBJECTS.pt = 'Queremos sua opinião sobre o chamado {{ticket_number}}';
+COPY.pt = {
+  salutation: 'Olá {{contact_name}},',
+  summary: 'Chamado #{{ticket_number}} · {{ticket_subject}}',
+  technicianLine: 'Técnico: {{technician_name}}',
+  ratingIntro: '{{prompt_text}}',
+  buttonHelp: 'Escolha uma nota abaixo para nos contar como foi o atendimento:',
+  fallback: 'Se os botões não carregarem, abra este link seguro da pesquisa:',
+  thankYou: '{{thank_you_text}}',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(lang, c, subject) {
