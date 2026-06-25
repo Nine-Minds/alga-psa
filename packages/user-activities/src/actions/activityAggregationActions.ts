@@ -782,16 +782,18 @@ export async function fetchTicketActivities(
         this.where("tickets.assigned_to", userId);
         
         // Or tickets where the user is an additional resource
-        this.orWhereExists(function() {
-          this.select(db.raw(1))
-            .from("ticket_resources")
+        this.orWhereExists(
+          createTenantScopedQuery(trx, {
+            table: "ticket_resources",
+            tenant,
+          }).builder
+            .select(db.raw(1))
             .whereRaw("ticket_resources.ticket_id = tickets.ticket_id")
-            .andWhere("ticket_resources.tenant", tenant)
             .andWhere(function() {
               this.where("ticket_resources.assigned_to", userId)
                 .orWhere("ticket_resources.additional_user_id", userId);
-            });
-        });
+            })
+        );
       })
       // Apply filters
       .modify(function(queryBuilder) {
