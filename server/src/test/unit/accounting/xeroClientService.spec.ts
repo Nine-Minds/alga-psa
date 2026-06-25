@@ -139,11 +139,14 @@ describe('XeroClientService – REST usage', () => {
       expect(body.Contact).toEqual({ ContactID: payload.contactId });
       expect(body.LineItems).toHaveLength(1);
       expect(body.LineItems[0]).toMatchObject({
-        LineItemID: payload.lines[0]?.lineId,
         Description: 'Consulting services',
         AccountCode: '200',
         TaxType: 'OUTPUT'
       });
+      // A new line must NOT carry the Alga lineId as LineItemID — Xero would treat it as an
+      // already-known line. LineItemID is only sent for previously-exported lines
+      // (line.externalLineItemId), which this fresh payload does not have.
+      expect(body.LineItems[0].LineItemID).toBeUndefined();
       expect(body.CurrencyCode).toBe('USD');
       return {
         data: {
