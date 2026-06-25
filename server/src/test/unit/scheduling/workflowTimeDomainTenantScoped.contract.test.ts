@@ -94,4 +94,21 @@ describe('workflow time domain tenant-scoped query contract', () => {
     expect(createEntryValidationSection).not.toContain('.where({ tenant: tenantId, user_id: input.user_id })');
     expect(createEntryValidationSection).not.toContain('.where({ tenant: tenantId, service_id: input.service_id })');
   });
+
+  it('uses structural tenant scoping for update, delete, and get entry roots', () => {
+    const updateEntrySection = sectionBetween('export async function updateWorkflowTimeEntry', 'export async function deleteWorkflowTimeEntry');
+    const deleteEntrySection = sectionBetween('export async function deleteWorkflowTimeEntry', 'export async function getWorkflowTimeEntry');
+    const getEntrySection = sectionBetween('export async function getWorkflowTimeEntry', 'function applyFindEntriesFilters');
+
+    expect(updateEntrySection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
+    expect(updateEntrySection).toContain("tenantScopedTable(trx, 'service_catalog', tenantId)");
+    expect(updateEntrySection).not.toContain('.where({ tenant: tenantId, entry_id: input.entry_id })');
+    expect(updateEntrySection).not.toContain('.where({ tenant: tenantId, service_id: resolvedServiceId })');
+
+    expect(deleteEntrySection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
+    expect(deleteEntrySection).not.toContain('.where({ tenant: tenantId, entry_id: entryId })');
+
+    expect(getEntrySection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
+    expect(getEntrySection).not.toContain('.where({ tenant: tenantId, entry_id: entryId })');
+  });
 });

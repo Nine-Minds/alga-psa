@@ -1357,8 +1357,8 @@ export async function updateWorkflowTimeEntry(params: {
 }): Promise<WorkflowTimeCreatedEntrySummary> {
   const { trx, tenantId, actorUserId, input } = params;
 
-  const existing = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: input.entry_id })
+  const existing = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: input.entry_id })
     .select(
       'entry_id',
       'user_id',
@@ -1409,8 +1409,8 @@ export async function updateWorkflowTimeEntry(params: {
   const resolvedWorkItem = await getWorkItemClientContext(trx, tenantId, effectiveLink);
   const resolvedServiceId = input.service_id ?? String(existing.service_id);
 
-  const service = await trx('service_catalog')
-    .where({ tenant: tenantId, service_id: resolvedServiceId })
+  const service = await tenantScopedTable(trx, 'service_catalog', tenantId)
+    .where({ service_id: resolvedServiceId })
     .select('service_id')
     .first();
 
@@ -1504,8 +1504,8 @@ export async function updateWorkflowTimeEntry(params: {
     attachToTimeSheet,
   });
 
-  const updatedRows = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: input.entry_id })
+  const updatedRows = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: input.entry_id })
     .update({
       work_item_id: effectiveLink?.id ?? null,
       work_item_type: effectiveLink?.type ?? null,
@@ -1620,8 +1620,8 @@ export async function deleteWorkflowTimeEntry(params: {
 }): Promise<WorkflowTimeDeletedEntrySummary> {
   const { trx, tenantId, actorUserId, entryId } = params;
 
-  const existing = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  const existing = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .select(
       'entry_id',
       'user_id',
@@ -1671,8 +1671,8 @@ export async function deleteWorkflowTimeEntry(params: {
     minutesDelta: -Number(existing.billable_duration ?? 0),
   });
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .delete();
 
   if (oldLink?.type === 'project_task') {
@@ -1699,8 +1699,8 @@ export async function getWorkflowTimeEntry(params: {
 }): Promise<WorkflowTimeCreatedEntrySummary> {
   const { trx, tenantId, actorUserId, entryId } = params;
 
-  const entry = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  const entry = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .select(
       'entry_id',
       'user_id',
