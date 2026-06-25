@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, getConnection } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, getConnection } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 import { allIndexers, getIndexer } from '@alga-psa/search';
@@ -25,6 +25,12 @@ interface WatermarkRow {
 interface IndexedObjectRow {
   object_id: string;
 }
+
+const searchIndexQuery = (knex: Knex, tenant: string) =>
+  createTenantScopedQuery(knex, {
+    table: 'app_search_index',
+    tenant
+  }).builder;
 
 async function resolveReconcileTenants(data: SearchReconcileJobData): Promise<string[]> {
   if (data.tenantId) {
@@ -127,9 +133,8 @@ export async function deleteRowsMissingFromSource(
   let deleted = 0;
 
   while (true) {
-    const query = knex<IndexedObjectRow>('app_search_index')
+    const query = searchIndexQuery(knex, tenant)
       .select('object_id')
-      .where('tenant', tenant)
       .andWhere('object_type', indexer.objectType)
       .orderBy('object_id', 'asc')
       .limit(RECONCILE_BATCH_SIZE);
@@ -138,7 +143,7 @@ export async function deleteRowsMissingFromSource(
       query.andWhere('object_id', '>', cursor);
     }
 
-    const rows = await query;
+    const rows = await query as IndexedObjectRow[];
     if (rows.length === 0) {
       break;
     }
@@ -177,11 +182,10 @@ export async function insertRowsMissingFromIndex(
     }
 
     const objectIds = docs.map((doc) => doc.objectId);
-    const existingRows = await knex<IndexedObjectRow>('app_search_index')
+    const existingRows = await searchIndexQuery(knex, tenant)
       .select('object_id')
-      .where('tenant', tenant)
       .andWhere('object_type', indexer.objectType)
-      .whereIn('object_id', objectIds);
+      .whereIn('object_id', objectIds) as IndexedObjectRow[];
     const existingIds = new Set(existingRows.map((row) => row.object_id));
 
     for (const doc of docs) {

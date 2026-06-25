@@ -1,6 +1,6 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { runWithTenant, getConnection } from '@alga-psa/db';
+import { runWithTenant, getConnection, createTenantScopedQuery } from '@alga-psa/db';
 import { auditLog } from '../handler-utils/auditLog';
 import { ICreditTracking } from '@alga-psa/types';
 
@@ -8,6 +8,12 @@ export interface ExpiredCreditsJobData extends Record<string, unknown> {
   tenantId: string;
   clientId?: string; // Optional: process only a specific client
 }
+
+const tenantScopedTable = (trx: Knex.Transaction, table: string, tenant: string) =>
+  createTenantScopedQuery(trx, {
+    table,
+    tenant
+  }).builder;
 
 /**
  * Job handler for processing expired credits
@@ -40,8 +46,7 @@ export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promis
         const now = new Date().toISOString();
 
         // Find credits that have expired but are not yet marked as expired
-        let query = trx('credit_tracking')
-          .where('tenant', tenantId)
+        let query = tenantScopedTable(trx, 'credit_tracking', tenantId)
           .where('is_expired', false)
           .whereNotNull('expiration_date')
           .where('expiration_date', '<', now)
@@ -86,9 +91,8 @@ async function processExpiredCredit(
 ): Promise<void> {
   try {
     // Get the original transaction for this credit
-    const originalTransaction = await trx('transactions')
+    const originalTransaction = await tenantScopedTable(trx, 'transactions', tenant)
       .where('transaction_id', credit.transaction_id)
-      .where('tenant', tenant)
       .first();
 
     if (!originalTransaction) {
@@ -96,11 +100,10 @@ async function processExpiredCredit(
     }
 
     // Check if there's already a credit_expiration transaction for this credit
-    const existingExpiration = await trx('transactions')
+    const existingExpiration = await tenantScopedTable(trx, 'transactions', tenant)
       .where({
         related_transaction_id: credit.transaction_id,
-        type: 'credit_expiration',
-        tenant
+        type: 'credit_expiration'
       })
       .first();
 
@@ -111,8 +114,8 @@ async function processExpiredCredit(
     }
 
     // Get the current client credit balance
-    const [client] = await trx('clients')
-      .where({ client_id: credit.client_id, tenant })
+    const [client] = await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: credit.client_id })
       .select('credit_balance');
 
     if (!client) {
@@ -139,10 +142,9 @@ async function processExpiredCredit(
     });
 
     // Update the credit_tracking entry to mark as expired
-    await trx('credit_tracking')
+    await tenantScopedTable(trx, 'credit_tracking', tenant)
       .where({
-        credit_id: credit.credit_id,
-        tenant
+        credit_id: credit.credit_id
       })
       .update({
         is_expired: true,
@@ -151,8 +153,8 @@ async function processExpiredCredit(
       });
 
     // Update the client's credit balance
-    await trx('clients')
-      .where({ client_id: credit.client_id, tenant })
+    await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: credit.client_id })
       .update({
         credit_balance: newBalance,
         updated_at: now
