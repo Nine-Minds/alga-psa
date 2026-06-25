@@ -973,8 +973,8 @@
   },
   {
     "id": "T109",
-    "description": "Migration inserts one pt row per internal_notification subtype (parity with the en row count); re-run is a no-op.",
-    "implemented": false,
+    "description": "Migration inserts one pt row per English/source internal notification template and covers every internal_notification subtype; re-run is a no-op via (name, language_code) upsert.",
+    "implemented": true,
     "commitGroup": "notif-pt-templates",
     "featureIds": [
       "F059"
@@ -983,7 +983,7 @@
   {
     "id": "T110",
     "description": "getUserLocale resolving to pt returns the pt internal-notification template for both an internal and a client user; falls back to en only when a pt row is absent.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "notif-pt-templates",
     "featureIds": [
       "F059"
@@ -992,7 +992,7 @@
   {
     "id": "T111",
     "description": "pt notification title/message pass the glossary forbidden-term audit and preserve all {{variable}} placeholders.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "notif-pt-templates",
     "featureIds": [
       "F059"

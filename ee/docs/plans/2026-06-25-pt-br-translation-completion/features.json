@@ -627,7 +627,7 @@
   {
     "id": "F059",
     "description": "Create migration server/migrations/<ts>_add_portuguese_internal_notification_templates.cjs inserting pt rows (language_code=pt, translated title+message, {{variables}} intact) for every internal_notification_subtype, mirroring the Polish notification migration; idempotent up()/down().",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "notif-pt-templates",
     "prdRefs": [
       "4.3",

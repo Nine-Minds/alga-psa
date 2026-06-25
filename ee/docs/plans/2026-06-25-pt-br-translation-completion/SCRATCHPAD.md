@@ -208,3 +208,10 @@ npm run migrate
 - Implemented F058: exported `TEMPLATE_GETTERS` from the dev seed for test visibility; seed behavior is unchanged, and every getter now returns a `pt` translation from the source files.
 - Implemented T106-T108 with `scripts/tests/pt-br-email-migration.test.mjs`: verifies migration/seed template-name parity, 34 pt rows, exact placeholder parity with English, scoped idempotent upsert/down behavior, and that `pt` rows satisfy the system-template locale lookup before English fallback.
 - Verification: `node --test scripts/tests/pt-br-email-migration.test.mjs` passed (4 tests). `node --test scripts/tests/pt-br-email-templates.test.mjs` passed (2 tests).
+
+## 2026-06-25 — notif-pt-templates group
+- Implemented F059: added `pt` translations to all internal notification source files (`tickets`, `projects`, `invoices`, `system`, `appointments`, `sla`) and created `server/migrations/20260625121000_add_portuguese_internal_notification_templates.cjs` to upsert the `pt` rows into `internal_notification_templates`.
+- Updated `server/seeds/dev/87_internal_notification_templates.cjs` to include the SLA source templates and export `ALL_TEMPLATES` for parity tests; the source now has 45 templates and covers every internal subtype from `categoriesAndSubtypes.cjs`.
+- Translation decisions: use glossary terms (`chamado`, `fatura`, `agendamento`, `usuário`) and preserve every English `{{variable}}` token. SLA templates are internal-only but still get pt rows because their subtypes are part of the internal notification source of truth.
+- Implemented T109-T111 with `scripts/tests/pt-br-internal-notification-templates.test.mjs`: verifies source/seed/migration parity, every subtype has pt coverage, 45 pt rows are built, placeholder sets match English, forbidden terms are absent, upsert/down are scoped/idempotent, and representative internal/client-facing lookups resolve pt before fallback.
+- Verification: `node --test scripts/tests/pt-br-internal-notification-templates.test.mjs` passed (4 tests).
