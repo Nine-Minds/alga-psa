@@ -2340,8 +2340,10 @@ export class TeamService extends BaseService<ITeam> {
     const { knex } = await this.getKnex();
     
     // Build base query
-    let query = knex('teams')
-      .where('teams.tenant', context.tenant);
+    let query = createTenantScopedQuery(knex, {
+      table: 'teams',
+      tenant: context.tenant,
+    }).builder;
 
     // Apply search filters
     if (filters.query) {
@@ -2357,7 +2359,10 @@ export class TeamService extends BaseService<ITeam> {
 
     if (filters.manager_name) {
       query = query
-        .leftJoin('users as manager', 'teams.manager_id', 'manager.user_id')
+        .leftJoin('users as manager', function() {
+          this.on('teams.manager_id', '=', 'manager.user_id')
+              .andOn('teams.tenant', '=', 'manager.tenant');
+        })
         .where(knex.raw(`CONCAT(manager.first_name, ' ', manager.last_name)`), 'ilike', `%${filters.manager_name}%`);
     }
 
