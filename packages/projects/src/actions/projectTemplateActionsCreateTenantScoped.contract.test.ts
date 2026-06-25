@@ -140,4 +140,23 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).not.toContain('.where({ template_phase_id: beforePhaseId, tenant })');
     expect(actionSource).not.toContain('.where({ template_phase_id: afterPhaseId, tenant })');
   });
+
+  it('uses structural tenant scoping for template task editor roots', () => {
+    const actionSource = section(
+      'export const addTemplateTask',
+      '/**\n * Add a status mapping to a template'
+    );
+
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
+    expect(actionSource).not.toContain('.where({ template_phase_id: phaseId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_phase_id: updated.template_phase_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_phase_id: task.template_phase_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_phase_id: targetPhaseId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_task_id: taskId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_task_id: beforeTaskId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_task_id: afterTaskId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_id: phase.template_id, tenant })');
+  });
 });
