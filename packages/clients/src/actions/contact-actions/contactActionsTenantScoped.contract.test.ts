@@ -99,4 +99,31 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(checkEmailsSection).not.toContain("trx('contacts')");
     expect(checkEmailsSection).not.toContain("trx('contact_additional_email_addresses')");
   });
+
+  it('uses structural tenant scoping for contact helper and visibility-group roots', () => {
+    const contactLookupSection = sectionBetween('export const getContactByEmail', 'export const updateContactPortalAdminStatus');
+    const portalUserSection = sectionBetween('export const updateContactPortalAdminStatus', 'type VisibilityGroupListItem');
+    const visibilitySection = source.slice(source.indexOf('type VisibilityGroupListItem'));
+
+    expect(contactLookupSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(contactLookupSection).not.toContain(".where({ email: email.toLowerCase(), client_id: clientId, tenant })");
+    expect(contactLookupSection).not.toContain(".where({ email: email.trim().toLowerCase(), tenant })");
+
+    expect(portalUserSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(portalUserSection).toContain("tenantScopedTable(trx, 'users', tenant)");
+    expect(portalUserSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
+    expect(portalUserSection).not.toContain(".where({ contact_name_id: contactId, tenant })");
+    expect(portalUserSection).not.toContain('tenant: tenant, user_type');
+    expect(portalUserSection).not.toContain("'user_roles.tenant': tenant");
+
+    expect(visibilitySection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(visibilitySection).toContain("tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)");
+    expect(visibilitySection).toContain("tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)");
+    expect(visibilitySection).toContain("tenantScopedTable(trx, 'boards', tenant)");
+    expect(visibilitySection).not.toContain('.where({ tenant, contact_name_id: contactId })');
+    expect(visibilitySection).not.toContain('.where({ tenant, client_id: clientId, group_id: groupId })');
+    expect(visibilitySection).not.toContain('.where({ tenant, group_id: groupId })');
+    expect(visibilitySection).not.toContain('.where({ tenant })');
+    expect(visibilitySection).not.toContain('tenant, client_id: clientId, portal_visibility_group_id: groupId');
+  });
 });
