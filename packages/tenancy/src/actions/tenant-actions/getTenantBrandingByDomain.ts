@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
 import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
@@ -20,10 +20,7 @@ interface TenantPortalConfig {
 }
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table: 'tenant_settings',
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table('tenant_settings');
 
 async function getTenantSettings(tenantId: string) {
   const tenantKnex = await getConnection(tenantId);

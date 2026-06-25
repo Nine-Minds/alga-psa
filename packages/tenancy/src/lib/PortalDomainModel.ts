@@ -1,15 +1,12 @@
 import type { Knex } from 'knex';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
 
 const portalDomainsQuery = (knex: Knex, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table: PORTAL_DOMAIN_TABLE,
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table<PortalDomainRecord>(PORTAL_DOMAIN_TABLE);
 
 export const PORTAL_DOMAIN_STATUSES = [
   'pending_dns',

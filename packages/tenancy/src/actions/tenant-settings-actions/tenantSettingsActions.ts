@@ -4,7 +4,7 @@ import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -31,10 +31,7 @@ const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
 const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table: 'tenant_settings',
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table('tenant_settings');
 
 function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
   if (!value || typeof value !== 'object') {
@@ -53,7 +50,7 @@ const getTenantSettingsForTenant = async (tenant: string): Promise<TenantSetting
     .select('*')
     .first();
 
-  return settings || null;
+  return (settings as TenantSettings | undefined) || null;
 };
 
 async function canTenantActivateAiAssistant(

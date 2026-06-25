@@ -1,16 +1,13 @@
 'use server';
 
 import { uploadEntityImage, deleteEntityImage, type EntityType } from '@alga-psa/storage';
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table: 'tenant_settings',
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table('tenant_settings');
 
 /**
  * Upload a logo for the tenant

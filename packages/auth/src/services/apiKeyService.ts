@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
 
@@ -21,10 +21,7 @@ interface ApiKey {
 
 export class ApiKeyService {
   private static apiKeysQuery(knex: Knex, tenant: string) {
-    return createTenantScopedQuery(knex, {
-      table: 'api_keys',
-      tenant,
-    }).builder;
+    return tenantDb(knex, tenant).table<ApiKey>('api_keys');
   }
 
   /**

@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from 'crypto';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 import type { PortalSessionTokenPayload } from './session';
@@ -144,10 +144,7 @@ async function getConnection(): Promise<Knex> {
 }
 
 async function loadPortalDomain(knex: Knex, tenant: string, portalDomainId: string): Promise<PortalDomainRecord | null> {
-  const record = await createTenantScopedQuery(knex, {
-    table: PORTAL_DOMAINS_TABLE,
-    tenant,
-  }).builder
+  const record = await tenantDb(knex, tenant).table<PortalDomainRecord>(PORTAL_DOMAINS_TABLE)
     .where({ id: portalDomainId })
     .first() as PortalDomainRecord | undefined;
 
@@ -252,10 +249,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
   const now = new Date();
 
   return knex.transaction(async (trx) => {
-    const row = await createTenantScopedQuery(trx, {
-      table: TABLE_NAME,
-      tenant,
-    }).builder
+    const row = await tenantDb(trx, tenant).table<PortalDomainSessionOttRow>(TABLE_NAME)
       .where({ token_hash: tokenHash, portal_domain_id: portalDomainId })
       .first() as PortalDomainSessionOttRow | undefined;
 
@@ -290,10 +284,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
       return null;
     }
 
-    const [updated] = await createTenantScopedQuery(trx, {
-      table: TABLE_NAME,
-      tenant,
-    }).builder
+    const [updated] = await tenantDb(trx, tenant).table<PortalDomainSessionOttRow>(TABLE_NAME)
       .where({ id: row.id })
       .update({
         consumed_at: now,
@@ -325,7 +316,7 @@ export async function pruneExpiredPortalDomainOtts(options: PruneOttOptions = {}
   const cutoff = options.before ?? new Date();
   const createOttQuery = (): Knex.QueryBuilder<PortalDomainSessionOttRow, any> => (
     options.tenant
-      ? createTenantScopedQuery(knex, { table: TABLE_NAME, tenant: options.tenant }).builder
+      ? tenantDb(knex, options.tenant).table<PortalDomainSessionOttRow>(TABLE_NAME)
       : knex<PortalDomainSessionOttRow>(TABLE_NAME)
   ) as Knex.QueryBuilder<PortalDomainSessionOttRow, any>;
 

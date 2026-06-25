@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { revalidateTag } from 'next/cache';
 import { generateBrandingStyles } from '../../lib/generateBrandingStyles';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
@@ -18,10 +18,7 @@ export interface TenantBranding {
 }
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table: 'tenant_settings',
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table('tenant_settings');
 
 /**
  * Update tenant's branding settings

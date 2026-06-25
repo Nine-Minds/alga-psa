@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction, createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { Tenant, TenantCompany } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -12,10 +12,7 @@ export const getCurrentTenant = withOptionalAuth(async (_user, ctx): Promise<str
 });
 
 const tenantScopedTable = (trx: Knex.Transaction, table: string, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table(table);
 
 export const getTenantDetails = withAuth(async (_user, { tenant }): Promise<Tenant & { clients: TenantCompany[] }> => {
   const { knex: db } = await createTenantKnex();
@@ -23,11 +20,7 @@ export const getTenantDetails = withAuth(async (_user, { tenant }): Promise<Tena
     const [tenantDetails] = (await tenantScopedTable(trx, 'tenants', tenant)
       .select('*')) as Tenant[];
 
-    const clients = (await createTenantScopedQuery(trx, {
-        table: 'tenant_companies as tc',
-        alias: 'tc',
-        tenant
-      }).builder
+    const clients = (await tenantDb(trx, tenant).table('tenant_companies as tc')
       .join('clients as c', function() {
         this.on('tc.client_id', '=', 'c.client_id')
             .andOn('tc.tenant', '=', 'c.tenant');

@@ -1,16 +1,13 @@
 'use server';
 
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 const tenantScopedTable = (knex: Knex, table: string, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table(table);
 
 /**
  * Get the user's client ID from their contact

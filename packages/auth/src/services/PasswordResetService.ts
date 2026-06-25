@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { checkPasswordResetLimit, formatRateLimitError } from '../lib/security/rateLimiting';
 import crypto from 'crypto';
 import { Knex } from 'knex';
@@ -32,7 +32,7 @@ export interface TokenVerificationResult {
 }
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 export class PasswordResetService {
@@ -352,7 +352,7 @@ export class PasswordResetService {
         .limit(10)
         .select('*');
 
-      return tokens;
+      return tokens as unknown as PasswordResetToken[];
 
     } catch (error) {
       console.error('Error fetching reset history:', error);

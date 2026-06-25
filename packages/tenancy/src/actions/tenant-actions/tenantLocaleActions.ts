@@ -1,16 +1,13 @@
 'use server';
 
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table: 'tenant_settings',
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table('tenant_settings');
 
 /**
  * Update tenant's default locale for all users

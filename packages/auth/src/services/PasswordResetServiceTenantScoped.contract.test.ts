@@ -6,7 +6,8 @@ const source = readFileSync(resolve(__dirname, 'PasswordResetService.ts'), 'utf8
 
 describe('PasswordResetService tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tenant-known password reset roots', () => {
-    expect(source).toContain('createTenantScopedQuery');
+    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).toContain("tenantScopedTable(trx, 'password_reset_tokens', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'users', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'password_reset_tokens', tokenTenant)");

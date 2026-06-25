@@ -2,7 +2,7 @@
 
 import { hasPermission } from '../../lib/rbac';
 import { UserSession, IUserSession } from '@alga-psa/db/models/UserSession';
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { getSession } from '../../lib/getSession';
 import { isTwoFactorEnabled, verifyTwoFactorCode } from '../../lib/twoFactorHelpers';
 import { withAuth } from '../../lib/withAuth';
@@ -89,10 +89,7 @@ export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Pr
   const knex = await getConnection(tenant);
 
   // Get all active sessions with user information
-  const sessionsWithUsers = await createTenantScopedQuery(knex, {
-    table: 'sessions',
-    tenant,
-  }).builder
+  const sessionsWithUsers = await tenantDb(knex, tenant).table('sessions')
     .select(
       'sessions.*',
       knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),

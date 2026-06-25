@@ -12,9 +12,13 @@ const withTransactionMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
-  createTenantScopedQuery: (conn: any, options: { table: string }) => ({ builder: conn(options.table) }),
+  tenantDb: (conn: any) => ({ table: (table: string) => conn(table) }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
+
+vi.mock('@alga-psa/core', () => ({
+  deleteEntityWithValidation: vi.fn(),
+}), { virtual: true });
 
 vi.mock('../lib/withAuth', () => ({
   withAuth:

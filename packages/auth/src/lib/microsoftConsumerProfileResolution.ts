@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 // Kept local to @alga-psa/auth to avoid a package cycle through @alga-psa/integrations.
@@ -115,12 +115,12 @@ function getConsumerLabel(consumerType: MicrosoftProfileConsumer): string {
   }
 }
 
-function tenantScopedTable(db: any, table: string, tenant: string) {
-  return createTenantScopedQuery(db, { table, tenant }).builder;
+function tenantScopedTable<Row extends object = Record<string, any>>(db: any, table: string, tenant: string) {
+  return tenantDb(db, tenant).table<Row>(table);
 }
 
 async function getTenantMicrosoftProfiles(db: any, tenant: string): Promise<MicrosoftProfileRow[]> {
-  const rows = (await tenantScopedTable(db, 'microsoft_profiles', tenant).select('*')) as MicrosoftProfileRow[];
+  const rows = await tenantScopedTable<MicrosoftProfileRow>(db, 'microsoft_profiles', tenant).select('*');
   return [...rows].sort((left, right) => {
     if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
     if (left.is_archived !== right.is_archived) return left.is_archived ? 1 : -1;
@@ -133,7 +133,7 @@ async function getMicrosoftConsumerBindingRow(
   tenant: string,
   consumerType: MicrosoftProfileConsumer
 ): Promise<MicrosoftConsumerBindingRow | undefined> {
-  const row = await tenantScopedTable(db, 'microsoft_profile_consumer_bindings', tenant)
+  const row = await tenantScopedTable<MicrosoftConsumerBindingRow>(db, 'microsoft_profile_consumer_bindings', tenant)
     .where({ consumer_type: consumerType })
     .first();
 
@@ -145,7 +145,7 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | undefined> {
-  const row = await tenantScopedTable(db, 'microsoft_profiles', tenant).where({ profile_id: profileId }).first();
+  const row = await tenantScopedTable<MicrosoftProfileRow>(db, 'microsoft_profiles', tenant).where({ profile_id: profileId }).first();
   return row || undefined;
 }
 

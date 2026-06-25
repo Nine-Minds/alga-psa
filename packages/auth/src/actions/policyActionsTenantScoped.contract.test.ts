@@ -6,7 +6,8 @@ const source = readFileSync(resolve(__dirname, 'policyActions.ts'), 'utf8');
 
 describe('policy actions tenant-scoped query contract', () => {
   it('uses structural tenant scoping for role, permission, user, ticket, and policy roots', () => {
-    expect(source).toContain('createTenantScopedQuery');
+    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).toContain("tenantScopedTable(trx, 'roles', tenant)");
     expect(source).toContain("tenantScopedTable(db, 'roles', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'role_permissions', tenant)");

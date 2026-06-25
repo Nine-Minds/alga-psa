@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
 
@@ -74,10 +74,8 @@ function mapRow(row: PortalDomainRecord): PortalDomain {
 }
 
 export async function getPortalDomain(knex: Knex, tenant: string): Promise<PortalDomain | null> {
-  const record = await createTenantScopedQuery(knex, {
-    table: PORTAL_DOMAIN_TABLE,
-    tenant,
-  }).builder.first() as PortalDomainRecord | undefined;
+  const record = await tenantDb(knex, tenant).table<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
+    .first() as PortalDomainRecord | undefined;
 
   if (!record) {
     return null;

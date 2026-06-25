@@ -14,7 +14,8 @@ describe('tenant locale actions tenant-scoped query contract', () => {
   it('uses structural tenant scoping for locale setting and hierarchy roots', () => {
     for (const file of localeActionFiles) {
       const source = readFileSync(resolve(__dirname, file), 'utf8');
-      expect(source).toContain('createTenantScopedQuery');
+      expect(source).toContain('tenantDb');
+      expect(source).not.toContain('createTenantScopedQuery');
       expect(source).not.toContain(".where({ tenant })");
       expect(source).not.toContain('tenant: tenantId');
       expect(source).not.toContain('client_id: clientId, tenant');

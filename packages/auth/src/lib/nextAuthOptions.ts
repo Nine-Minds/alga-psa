@@ -43,7 +43,7 @@ import { UserSession } from "@alga-psa/db/models/UserSession";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
-import { createTenantScopedQuery, getConnection } from "@alga-psa/db";
+import { getConnection, tenantDb } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
@@ -107,10 +107,7 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
     const knex = await getAdminConnection();
 
     // Fetch plan from tenants table
-    const tenantRecord = await createTenantScopedQuery(knex, {
-        table: 'tenants',
-        tenant: tenantId,
-    }).builder
+    const tenantRecord = await tenantDb(knex, tenantId).table('tenants')
         .select('plan', 'product_code')
         .first();
 
@@ -125,10 +122,7 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
     let addOns: string[] = [];
 
     try {
-        const subscription = await createTenantScopedQuery(knex, {
-            table: 'stripe_subscriptions',
-            tenant: tenantId,
-        }).builder
+        const subscription = await tenantDb(knex, tenantId).table('stripe_subscriptions')
             .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
             .orderByRaw("CASE WHEN status = 'trialing' THEN 0 WHEN status = 'active' THEN 1 ELSE 2 END")
             .select('status', 'current_period_end', 'metadata')
@@ -164,10 +158,7 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
     }
 
     try {
-        const addOnRows = await createTenantScopedQuery(knex, {
-            table: 'tenant_addons',
-            tenant: tenantId,
-        }).builder
+        const addOnRows = await tenantDb(knex, tenantId).table('tenant_addons')
             .select('addon_key', 'expires_at');
 
         addOns = addOnRows
@@ -1302,10 +1293,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                       const connection = await getAdminConnection();
                         console.log('Database connection established');
 
-                        const contact = await createTenantScopedQuery(connection, {
-                            table: 'contacts',
-                            tenant: user.tenant,
-                        }).builder
+                        const contact = await tenantDb(connection, user.tenant).table('contacts')
                             .where({
                                 contact_name_id: user.contact_id
                         })
@@ -2153,10 +2141,7 @@ export const options: NextAuthConfig = {
                       const connection = await getAdminConnection();
                         console.log('Database connection established');
 
-                        const contact = await createTenantScopedQuery(connection, {
-                            table: 'contacts',
-                            tenant: user.tenant,
-                        }).builder
+                        const contact = await tenantDb(connection, user.tenant).table('contacts')
                             .where({
                                 contact_name_id: user.contact_id
                         })

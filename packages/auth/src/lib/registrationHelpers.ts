@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { createTenantScopedQuery, withTransaction, withAdminTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import User from '@alga-psa/db/models/user';
@@ -161,10 +161,7 @@ async function registerContactUser(
         })
         .returning('*');
 
-      const roles = await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant: contact.tenant,
-      }).builder as RegistrationRoleRow[];
+      const roles = await tenantDb(trx, contact.tenant).table<RegistrationRoleRow>('roles');
       const userRole = roles.find(r =>
         r.role_name && r.role_name.toLowerCase() === 'user'
       );

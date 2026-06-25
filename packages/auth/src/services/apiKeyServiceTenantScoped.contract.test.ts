@@ -8,8 +8,8 @@ const source = readFileSync(servicePath, 'utf8');
 describe('api key service tenant-scoped query contract', () => {
   it('routes api key reads and mutations through the tenant-scoped helper', () => {
     expect(source).toContain('private static apiKeysQuery');
-    expect(source).toContain('createTenantScopedQuery(knex, {');
-    expect(source).toContain("table: 'api_keys'");
+    expect(source).toContain("tenantDb(knex, tenant).table<ApiKey>('api_keys')");
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).toContain("const [record] = await knex('api_keys').insert(insertPayload).returning('*')");
 
     expect(source.match(/knex\('api_keys'\)/g)).toHaveLength(1);
