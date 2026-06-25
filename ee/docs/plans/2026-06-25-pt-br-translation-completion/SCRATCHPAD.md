@@ -160,3 +160,10 @@ npm run migrate
 - Tightened the glossary allowlist for admin/integration technical labels and compact formats (`OAuth2 (XOAUTH2)`, `TTL:`, `Temporal`, `Cron`, `Xero CSV`, `ID: {{id}}`, duration formats, placeholder names, `TK-`, etc.).
 - Translated real UI labels and corrected obvious artifacts: `Clone`→`Clonar`, `Durar`→`Último`, `Ticketing`→`Chamados`, `Serial`→`Número de série`, and job `empregos`→`trabalhos`.
 - Implemented T062-T077. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/admin --namespace msp/settings --namespace msp/integrations --namespace msp/email-providers --namespace msp/extensions --namespace msp/licensing --namespace msp/onboarding --namespace msp/jobs --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — i18n-workflows group
+- Implemented F042: completed pt-BR translations for `msp/workflows.json`.
+- Re-audited all 1,706 keys in the group and marked them reviewed in `pt-review-state.json` with reviewer `codex-pt-br-pass`.
+- Tightened the glossary allowlist for legitimate workflow technical labels and compact formats (`Designer`, `Vars`, `Beta`, `corr-123`, `Etc/GMT+5`, `Cron: {{cron}}`, `{{count}} total`).
+- Translated real UI `Clear` labels to `Limpar`.
+- Implemented T078-T079. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/workflows --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).

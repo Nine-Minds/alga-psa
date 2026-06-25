@@ -695,7 +695,7 @@
   {
     "id": "T078",
     "description": "validate-translations.cjs passes for pt msp/workflows.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-workflows",
     "featureIds": [
       "F042"
@@ -704,7 +704,7 @@
   {
     "id": "T079",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/workflows.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-workflows",
     "featureIds": [
       "F042"

@@ -447,7 +447,7 @@
   {
     "id": "F042",
     "description": "pt-BR complete for msp/workflows.json: translate the 1227 remaining key(s) and re-audit all 1706 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-workflows",
     "prdRefs": [
       "3.2",
