@@ -508,15 +508,18 @@ export async function fetchProjectActivities(
       .modify(function(queryBuilder) {
         // Apply status filter if provided
         if (filters.status && filters.status.length > 0) {
-          queryBuilder.whereIn("project_tasks.project_status_mapping_id", function() {
-            this.select("project_status_mappings.project_status_mapping_id")
-              .from("project_status_mappings")
+          queryBuilder.whereIn(
+            "project_tasks.project_status_mapping_id",
+            createTenantScopedQuery(trx, {
+              table: "project_status_mappings",
+              tenant,
+            }).builder
+              .select("project_status_mappings.project_status_mapping_id")
               .join("standard_statuses", function() {
                 this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
               })
-              .where("project_status_mappings.tenant", tenant)
-              .whereIn("standard_statuses.name", filters.status || []);
-          });
+              .whereIn("standard_statuses.name", filters.status || [])
+          );
         }
         
         // Apply due date filter if provided
@@ -535,9 +538,14 @@ export async function fetchProjectActivities(
           // Tasks with NULL project_status_mapping_id are treated as open.
           queryBuilder.where(function() {
             this.whereNull("project_tasks.project_status_mapping_id")
-              .orWhereIn("project_tasks.project_status_mapping_id", function() {
-                this.select("psm.project_status_mapping_id")
-                  .from({ psm: "project_status_mappings" })
+              .orWhereIn(
+                "project_tasks.project_status_mapping_id",
+                createTenantScopedQuery(trx, {
+                  table: "project_status_mappings",
+                  alias: "psm",
+                  tenant,
+                }).builder
+                  .select("psm.project_status_mapping_id")
                   .leftJoin({ ss: "standard_statuses" }, function() {
                     this.on("psm.standard_status_id", "ss.standard_status_id");
                   })
@@ -545,9 +553,8 @@ export async function fetchProjectActivities(
                     this.on("psm.status_id", "cs.status_id")
                         .andOn("psm.tenant", "cs.tenant");
                   })
-                  .where("psm.tenant", tenant)
-                  .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false");
-              });
+                  .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false")
+              );
           });
         }
         
