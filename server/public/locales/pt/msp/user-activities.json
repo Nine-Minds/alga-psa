@@ -3,11 +3,11 @@
     "title": "Atividades do usuário",
     "viewSwitcher": {
       "cards": "Cartões",
-      "table": "Tabela"
+      "table": "Mesa"
     },
     "sections": {
       "notifications": "Notificações",
-      "schedule": "Agenda"
+      "schedule": "Agendar"
     },
     "filteredTitle": "Atividades filtradas",
     "allActivitiesTitle": "Todas as atividades"
@@ -26,7 +26,7 @@
     },
     "values": {
       "noDueDate": "Sem data de vencimento",
-      "emDash": "—",
+      "emDash": "-",
       "unread": "Não lido",
       "recurringEvent": "Evento recorrente",
       "adHocBadge": "Ad hoc"
@@ -36,23 +36,23 @@
       "print": "Imprimir"
     },
     "viewSwitcher": {
-      "flat": "Plana",
-      "grouped": "Agrupada"
+      "flat": "Plano",
+      "grouped": "Agrupado"
     },
     "states": {
       "noActivities": "Nenhuma atividade encontrada",
-      "noMatching": "Nenhuma atividade corresponde aos filtros"
+      "noMatching": "Nenhuma atividade encontrada com filtros correspondentes"
     },
     "errors": {
-      "loadFailed": "Falha ao carregar as atividades. Tente novamente mais tarde.",
-      "addAdHocFailed": "Falha ao adicionar o item ad hoc. Tente novamente."
+      "loadFailed": "Falha ao carregar atividades. Por favor, tente novamente mais tarde.",
+      "addAdHocFailed": "Falha ao adicionar item ad hoc. Por favor, tente novamente."
     },
     "activityTypes": {
-      "schedule": "Agenda",
-      "projectTask": "Tarefa de projeto",
-      "ticket": "Ticket",
-      "timeEntry": "Lançamento de tempo",
-      "workflowTask": "Tarefa de fluxo de trabalho",
+      "schedule": "Agendar",
+      "projectTask": "Tarefa do Projeto",
+      "ticket": "Chamado",
+      "timeEntry": "Entrada de tempo",
+      "workflowTask": "Tarefa de Fluxo de Trabalho",
       "notification": "Notificação",
       "unknown": "Desconhecido",
       "activity": "Atividade"
@@ -60,7 +60,7 @@
     "print": {
       "optionsDialog": {
         "title": "Opções de impressão",
-        "description": "Escolha quais colunas incluir ao imprimir as atividades."
+        "description": "Escolha quais colunas incluir ao imprimir atividades."
       }
     },
     "adHoc": {
@@ -68,7 +68,7 @@
       "addButton": "Adicionar",
       "markDone": "Marcar como concluído",
       "markNotDone": "Marcar como não concluído",
-      "convertToTicket": "Converter em ticket",
+      "convertToTicket": "Converter em chamado",
       "convertToTask": "Converter em tarefa de projeto"
     },
     "viewingUser": {
@@ -81,35 +81,35 @@
     "due": "Vencimento: {{date}}",
     "recurringEvent": "Evento recorrente",
     "unread": "Não lido",
-    "noMessage": "Sem mensagem",
-    "estimatedHours": "Est.: {{hours}} h",
-    "duration": "Duração: {{hours}} h",
-    "hasForm": "Possui formulário",
+    "noMessage": "Nenhuma mensagem",
+    "estimatedHours": "Estimativa: {{hours}}h",
+    "duration": "Duração: {{hours}}h",
+    "hasForm": "Tem forma",
     "roles": "Funções: {{roles}}"
   },
   "drawer": {
     "loading": "Carregando...",
-    "errorLoadingTitle": "Erro ao carregar os detalhes da atividade",
-    "errorLoadingMessage": "Falha ao carregar os detalhes da atividade. Tente novamente mais tarde.",
+    "errorLoadingTitle": "Erro ao carregar detalhes da atividade",
+    "errorLoadingMessage": "Falha ao carregar detalhes da atividade. Por favor, tente novamente mais tarde.",
     "userNotAuthenticated": "Usuário não autenticado",
-    "scheduleEntryNotFound": "Entrada da agenda não encontrada",
-    "timeEntryNotFound": "Lançamento de tempo não encontrado",
+    "scheduleEntryNotFound": "Entrada de agendamento não encontrada",
+    "timeEntryNotFound": "Entrada de hora não encontrada",
     "unknownWorkItem": "Item de trabalho desconhecido",
-    "timeEntryDetailsTitle": "Detalhes do lançamento de tempo",
-    "errorLoadingTimeEntry": "Erro ao carregar o lançamento de tempo",
-    "workflowTaskTitle": "Tarefa de fluxo de trabalho",
+    "timeEntryDetailsTitle": "Detalhes de entrada de tempo",
+    "errorLoadingTimeEntry": "Erro ao carregar a entrada do horário",
+    "workflowTaskTitle": "Tarefa de Fluxo de Trabalho",
     "noAdditionalDetails": "Nenhum detalhe adicional disponível.",
     "failedToLoadDocument": "Falha ao carregar o conteúdo do documento",
     "notificationNotFound": "Notificação não encontrada",
-    "failedToLoadTicket": "Falha ao carregar os detalhes do ticket",
-    "failedToLoadTask": "Falha ao carregar os detalhes da tarefa",
-    "unsupportedTitle": "Tipo de atividade não suportado",
-    "unsupportedDescription": "Este tipo de atividade ({{activityType}}) não é suportado no visualizador de detalhes.",
+    "failedToLoadTicket": "Falha ao carregar detalhes do chamado",
+    "failedToLoadTask": "Falha ao carregar detalhes da tarefa",
+    "unsupportedTitle": "Tipo de atividade não compatível",
+    "unsupportedDescription": "Este tipo de atividade ({{activityType}}) não é compatível com o visualizador de detalhes.",
     "saveDocumentSuccess": "Documento salvo com sucesso",
     "saveDocumentError": "Falha ao salvar o documento",
-    "timeEntryUpdatedSuccess": "Lançamento de tempo atualizado com sucesso",
-    "timeEntryUpdatedError": "Falha ao atualizar o lançamento de tempo",
-    "backToNotification": "Voltar para a notificação",
+    "timeEntryUpdatedSuccess": "Entrada de hora atualizada com sucesso",
+    "timeEntryUpdatedError": "Falha ao atualizar a entrada de horário",
+    "backToNotification": "Voltar para notificação",
     "documentTitleEdit": "Editar documento",
     "documentTitleViewer": "Visualizador de documentos",
     "actions": {
@@ -121,29 +121,29 @@
     "menu": {
       "openMenu": "Abrir menu",
       "goToPage": "Ir para a página",
-      "dismissError": "Falha ao dispensar a tarefa: {{message}}"
+      "dismissError": "Falha ao dispensar tarefa: {{message}}"
     },
-    "retryLater": "Tente novamente mais tarde.",
+    "retryLater": "Por favor, tente novamente mais tarde.",
     "adHoc": {
-      "endBeforeStart": "A hora de término deve ser posterior à hora de início.",
+      "endBeforeStart": "O horário de término deve ser posterior ao horário de início.",
       "fields": {
-        "end": "Término (opcional)",
-        "noTime": "Sem horário",
+        "end": "Fim (opcional)",
+        "noTime": "Não há tempo",
         "notes": "Notas",
         "notesPlaceholder": "Adicionar notas…",
-        "start": "Início (opcional)",
+        "start": "Iniciar (opcional)",
         "title": "Título",
         "titlePlaceholder": "Título"
       },
-      "loadError": "Falha ao carregar este item. Tente novamente mais tarde.",
+      "loadError": "Falha ao carregar este item. Por favor, tente novamente mais tarde.",
       "saveError": "Falha ao salvar o item.",
       "saveSuccess": "Item salvo",
-      "statusDone": "Concluído",
-      "statusOpen": "Aberto",
+      "statusDone": "Feito",
+      "statusOpen": "Abrir",
       "title": "Item ad hoc",
       "toggleDoneError": "Falha ao atualizar o item."
     },
-    "enterpriseOnly": "As tarefas de fluxo de trabalho são um recurso Enterprise."
+    "enterpriseOnly": "As tarefas de fluxo de trabalho são um recurso empresarial."
   },
   "groupedView": {
     "addGroup": "Adicionar grupo",
@@ -157,8 +157,8 @@
       "deleteGroup": "Excluir grupo"
     },
     "dropActivitiesHere": "Solte as atividades aqui",
-    "ungroupedHeading": "Não agrupadas",
-    "allInGroups": "Todas as atividades estão em grupos",
+    "ungroupedHeading": "Desagrupado",
+    "allInGroups": "Todas as atividades são em grupos",
     "columns": {
       "title": "Título",
       "status": "Status",
@@ -168,94 +168,94 @@
   },
   "printable": {
     "defaultTitle": "Atividades",
-    "ungroupedHeading": "Não agrupadas",
+    "ungroupedHeading": "Desagrupado",
     "empty": "(vazio)"
   },
   "sections": {
     "projects": {
-      "title": "Tarefas de projeto",
+      "title": "Tarefas do Projeto",
       "actions": {
         "refresh": "Atualizar",
-        "filter": "Filtrar",
-        "reset": "Redefinir",
+        "filter": "Filtro",
+        "reset": "Reiniciar",
         "viewAll": "Ver tudo"
       },
       "ariaLabels": {
-        "refresh": "Atualizar tarefas de projeto",
-        "filter": "Filtrar tarefas de projeto"
+        "refresh": "Atualizar tarefas do projeto",
+        "filter": "Filtrar tarefas do projeto"
       },
       "states": {
-        "loading": "Carregando atividades de projeto...",
+        "loading": "Carregando atividades do projeto...",
         "empty": "Nenhuma atividade de projeto encontrada"
       },
       "errors": {
-        "loadFailed": "Falha ao carregar as atividades de projeto. Tente novamente mais tarde."
+        "loadFailed": "Falha ao carregar atividades do projeto. Por favor, tente novamente mais tarde."
       },
       "filterDialog": {
-        "title": "Filtrar tarefas de projeto",
-        "description": "Selecione os critérios para filtrar as atividades de tarefas de projeto.",
+        "title": "Filtrar tarefas do projeto",
+        "description": "Selecione critérios para filtrar atividades de tarefas do projeto.",
         "fields": {
-          "search": "Pesquisar",
-          "searchPlaceholder": "Pesquisar título, descrição",
+          "search": "Procurar",
+          "searchPlaceholder": "Título de pesquisa, descrição",
           "project": "Projeto",
-          "projectPlaceholder": "Selecione o projeto...",
+          "projectPlaceholder": "Selecione Projeto...",
           "allProjects": "Todos os projetos",
           "phase": "Fase",
-          "phasePlaceholder": "Selecione a fase...",
+          "phasePlaceholder": "Selecione Fase...",
           "phaseLoadingPlaceholder": "Carregando fases...",
-          "phaseSelectFirstPlaceholder": "Selecione primeiro um projeto",
+          "phaseSelectFirstPlaceholder": "Selecione um projeto primeiro",
           "allPhases": "Todas as fases",
           "priority": "Prioridade",
-          "priorityPlaceholder": "Selecione a prioridade...",
+          "priorityPlaceholder": "Selecione Prioridade...",
           "allPriorities": "Todas as prioridades",
-          "dueDateRange": "Intervalo de data de vencimento",
-          "showClosedTasks": "Exibir tarefas fechadas"
+          "dueDateRange": "Intervalo de datas de vencimento",
+          "showClosedTasks": "Mostrar tarefas fechadas"
         },
         "actions": {
-          "reset": "Redefinir",
+          "reset": "Reiniciar",
           "cancel": "Cancelar",
           "apply": "Aplicar filtros"
         }
       }
     },
     "tickets": {
-      "title": "Tickets",
+      "title": "Chamados",
       "actions": {
         "refresh": "Atualizar",
-        "filter": "Filtrar",
-        "reset": "Redefinir",
+        "filter": "Filtro",
+        "reset": "Reiniciar",
         "viewAll": "Ver tudo"
       },
       "ariaLabels": {
-        "refresh": "Atualizar tickets",
-        "filter": "Filtrar tickets"
+        "refresh": "Atualizar chamados",
+        "filter": "Filtrar chamados"
       },
       "states": {
-        "loading": "Carregando atividades de tickets...",
-        "empty": "Nenhuma atividade de ticket encontrada"
+        "loading": "Carregando atividades de chamados...",
+        "empty": "Nenhuma atividade de chamado encontrada"
       },
       "errors": {
-        "loadFailed": "Falha ao carregar as atividades de tickets. Tente novamente mais tarde."
+        "loadFailed": "Falha ao carregar atividades de chamado. Por favor, tente novamente mais tarde."
       },
       "filterDialog": {
-        "title": "Filtrar tickets",
-        "description": "Selecione os critérios para filtrar as atividades de tickets.",
+        "title": "Filtrar chamados",
+        "description": "Selecione critérios para filtrar atividades de chamado.",
         "fields": {
-          "search": "Pesquisar",
-          "searchPlaceholder": "Pesquisar título, descrição, nº do ticket",
+          "search": "Procurar",
+          "searchPlaceholder": "Título de pesquisa, descrição, número do chamado",
           "client": "Cliente",
           "contact": "Contato",
           "status": "Status",
-          "statusPlaceholder": "Selecione o status...",
+          "statusPlaceholder": "Selecione Estado...",
           "allStatuses": "Todos os status",
           "priority": "Prioridade",
-          "priorityPlaceholder": "Selecione a prioridade...",
+          "priorityPlaceholder": "Selecione Prioridade...",
           "allPriorities": "Todas as prioridades",
-          "dueDateRange": "Intervalo de data de vencimento",
-          "showClosedTickets": "Exibir tickets fechados"
+          "dueDateRange": "Intervalo de datas de vencimento",
+          "showClosedTickets": "Mostrar chamados fechados"
         },
         "actions": {
-          "reset": "Redefinir",
+          "reset": "Reiniciar",
           "cancel": "Cancelar",
           "apply": "Aplicar filtros"
         }
@@ -266,8 +266,8 @@
       "drawerTitle": "Tarefas de fluxo de trabalho",
       "actions": {
         "refresh": "Atualizar",
-        "filter": "Filtrar",
-        "reset": "Redefinir",
+        "filter": "Filtro",
+        "reset": "Reiniciar",
         "viewAll": "Ver tudo"
       },
       "ariaLabels": {
@@ -275,33 +275,33 @@
         "filter": "Filtrar tarefas de fluxo de trabalho"
       },
       "states": {
-        "loading": "Carregando atividades de tarefas de fluxo de trabalho...",
+        "loading": "Carregando atividades de tarefa de fluxo de trabalho...",
         "empty": "Nenhuma atividade de tarefa de fluxo de trabalho encontrada"
       },
       "errors": {
-        "loadFailed": "Falha ao carregar as atividades de tarefas de fluxo de trabalho. Tente novamente mais tarde."
+        "loadFailed": "Falha ao carregar atividades de tarefa de fluxo de trabalho. Por favor, tente novamente mais tarde."
       },
       "filterDialog": {
         "title": "Filtrar tarefas de fluxo de trabalho",
-        "description": "Selecione os critérios para filtrar as atividades de tarefas de fluxo de trabalho.",
+        "description": "Selecione critérios para filtrar atividades de tarefas de fluxo de trabalho.",
         "fields": {
-          "search": "Pesquisar",
-          "searchPlaceholder": "Pesquisar título, descrição",
-          "workflowExecution": "Execução de fluxo de trabalho",
-          "workflowExecutionPlaceholder": "Selecione a execução de fluxo de trabalho...",
+          "search": "Procurar",
+          "searchPlaceholder": "Título de pesquisa, descrição",
+          "workflowExecution": "Execução de Fluxo de Trabalho",
+          "workflowExecutionPlaceholder": "Selecione Execução do Fluxo de Trabalho...",
           "allExecutions": "Todas as execuções",
           "priority": "Prioridade",
-          "priorityPlaceholder": "Selecione a prioridade...",
+          "priorityPlaceholder": "Selecione Prioridade...",
           "allPriorities": "Todas as prioridades",
-          "priorityHigh": "Alta",
-          "priorityMedium": "Média",
-          "priorityLow": "Baixa",
-          "dueDateRange": "Intervalo de data de vencimento",
-          "showClosedTasks": "Exibir tarefas fechadas",
+          "priorityHigh": "Alto",
+          "priorityMedium": "Médio",
+          "priorityLow": "Baixo",
+          "dueDateRange": "Intervalo de datas de vencimento",
+          "showClosedTasks": "Mostrar tarefas fechadas",
           "includeHiddenTasks": "Incluir tarefas ocultas"
         },
         "actions": {
-          "reset": "Redefinir",
+          "reset": "Reiniciar",
           "cancel": "Cancelar",
           "apply": "Aplicar filtros"
         }
@@ -317,52 +317,52 @@
           "createdAt": "Data de criação",
           "title": "Título"
         },
-        "ascending": "Crescente",
-        "descending": "Decrescente",
+        "ascending": "Ascendente",
+        "descending": "Descendente",
         "states": {
           "loading": "Carregando tarefas de fluxo de trabalho...",
           "empty": "Nenhuma tarefa de fluxo de trabalho encontrada"
         },
         "errors": {
-          "loadFailed": "Falha ao carregar as tarefas de fluxo de trabalho. Tente novamente mais tarde."
+          "loadFailed": "Falha ao carregar tarefas de fluxo de trabalho. Por favor, tente novamente mais tarde."
         }
       }
     },
     "schedule": {
-      "title": "Agenda",
+      "title": "Agendar",
       "actions": {
         "refresh": "Atualizar",
-        "filter": "Filtrar",
-        "reset": "Redefinir",
+        "filter": "Filtro",
+        "reset": "Reiniciar",
         "viewAll": "Ver tudo"
       },
       "states": {
-        "loading": "Carregando atividades da agenda...",
-        "empty": "Nenhuma atividade da agenda encontrada"
+        "loading": "Carregando atividades agendadas...",
+        "empty": "Nenhuma atividade de cronograma encontrada"
       },
       "errors": {
-        "loadFailed": "Falha ao carregar as atividades da agenda. Tente novamente mais tarde.",
-        "refreshFailed": "Falha ao atualizar as atividades da agenda. Tente novamente mais tarde.",
-        "addAdHocFailed": "Falha ao adicionar a atividade. Tente novamente."
+        "loadFailed": "Falha ao carregar atividades agendadas. Por favor, tente novamente mais tarde.",
+        "refreshFailed": "Falha ao atualizar atividades agendadas. Por favor, tente novamente mais tarde.",
+        "addAdHocFailed": "Falha ao adicionar atividade. Por favor, tente novamente."
       },
       "filterDialog": {
-        "title": "Filtrar entradas da agenda",
-        "description": "Selecione os critérios para filtrar as atividades da agenda.",
+        "title": "Filtrar entradas de programação",
+        "description": "Selecione critérios para filtrar atividades agendadas.",
         "fields": {
-          "search": "Pesquisar",
-          "searchPlaceholder": "Pesquisar título, descrição",
-          "dateRange": "Intervalo de datas",
+          "search": "Procurar",
+          "searchPlaceholder": "Título de pesquisa, descrição",
+          "dateRange": "Período",
           "workItemType": "Tipo de item de trabalho relacionado",
           "workItemTypePlaceholder": "Selecione o tipo de item de trabalho...",
           "allTypes": "Todos os tipos",
-          "ticket": "Ticket",
-          "projectTask": "Tarefa de projeto",
-          "workflowTask": "Tarefa de fluxo de trabalho",
-          "showClosedEntries": "Exibir entradas fechadas",
-          "showRecurringOnly": "Exibir apenas as recorrentes"
+          "ticket": "Chamado",
+          "projectTask": "Tarefa do Projeto",
+          "workflowTask": "Tarefa de Fluxo de Trabalho",
+          "showClosedEntries": "Mostrar entradas fechadas",
+          "showRecurringOnly": "Mostrar apenas recorrente"
         },
         "actions": {
-          "reset": "Redefinir",
+          "reset": "Reiniciar",
           "cancel": "Cancelar",
           "apply": "Aplicar filtros"
         }
@@ -372,8 +372,8 @@
       "title": "Notificações",
       "actions": {
         "refresh": "Atualizar",
-        "filter": "Filtrar",
-        "reset": "Redefinir",
+        "filter": "Filtro",
+        "reset": "Reiniciar",
         "viewAll": "Ver tudo"
       },
       "ariaLabels": {
@@ -381,37 +381,37 @@
         "filter": "Filtrar notificações"
       },
       "tabs": {
-        "unread": "Não lidas",
-        "all": "Todas",
-        "read": "Lidas"
+        "unread": "Não lido",
+        "all": "Todos",
+        "read": "Ler"
       },
       "states": {
         "loading": "Carregando atividades de notificação...",
         "empty": "Nenhuma atividade de notificação encontrada"
       },
       "errors": {
-        "loadFailed": "Falha ao carregar as atividades de notificação. Tente novamente mais tarde."
+        "loadFailed": "Falha ao carregar atividades de notificação. Por favor, tente novamente mais tarde."
       },
       "filterDialog": {
         "title": "Filtrar notificações",
-        "description": "Selecione os critérios para filtrar as atividades de notificação.",
+        "description": "Selecione critérios para filtrar atividades de notificação.",
         "fields": {
           "status": "Status",
-          "unreadOnly": "Apenas não lidas",
-          "showRead": "Exibir lidas",
+          "unreadOnly": "Somente não lido",
+          "showRead": "Mostrar leitura",
           "category": "Categoria",
-          "categoryPlaceholder": "Selecione a categoria...",
+          "categoryPlaceholder": "Selecione Categoria...",
           "allCategories": "Todas as categorias",
           "categories": {
-            "tickets": "Tickets",
+            "tickets": "Chamados",
             "projects": "Projetos",
             "invoices": "Faturas",
             "system": "Sistema"
           },
-          "dateRange": "Intervalo de datas"
+          "dateRange": "Período"
         },
         "actions": {
-          "reset": "Redefinir",
+          "reset": "Reiniciar",
           "cancel": "Cancelar",
           "apply": "Aplicar filtros"
         }
@@ -422,7 +422,7 @@
     "priority": {
       "loading": "Carregando...",
       "empty": "Nenhuma prioridade disponível",
-      "none": "Nenhuma"
+      "none": "Nenhum"
     },
     "status": {
       "loading": "Carregando...",
@@ -433,23 +433,23 @@
   "filters": {
     "labels": {
       "types": "Tipos:",
-      "tickets": "Tickets:",
+      "tickets": "Chamados:",
       "tasks": "Tarefas:",
       "priority": "Prioridade",
+      "search": "Procurar",
       "dueDate": "Data de vencimento",
-      "showClosed": "Exibir fechadas",
-      "search": "Pesquisar",
+      "showClosed": "Mostrar fechado",
       "client": "Cliente",
-      "dueDateShort": "Vencimento",
-      "tags": "Tags",
-      "tagsSelected": "{{count}} tags",
+      "dueDateShort": "Devido",
+      "tags": "Etiquetas",
+      "tagsSelected": "Etiquetas {{count}}",
       "tasksCompact": "Tarefas",
-      "ticketsCompact": "Tickets"
+      "ticketsCompact": "Chamados"
     },
     "activityTypeOptions": {
-      "schedule": "Agenda",
-      "projectTask": "Tarefas de projeto",
-      "ticket": "Tickets",
+      "schedule": "Agendar",
+      "projectTask": "Tarefas do Projeto",
+      "ticket": "Chamados",
       "workflowTask": "Tarefas de fluxo de trabalho"
     },
     "placeholders": {
@@ -457,39 +457,39 @@
       "allStatuses": "Todos os status",
       "allProjects": "Todos os projetos",
       "allPriorities": "Todas as prioridades",
-      "selectPriority": "Selecione a prioridade...",
+      "selectPriority": "Selecione Prioridade...",
       "search": "Pesquisar atividades...",
-      "searchBoards": "Pesquisar quadros...",
+      "searchBoards": "Painéis de pesquisa...",
       "searchStatuses": "Pesquisar status...",
       "searchProjects": "Pesquisar projetos...",
       "allClients": "Todos os clientes",
       "fromDateShort": "De",
       "projectTaskTags": "Filtrar tags de tarefas...",
-      "ticketTags": "Filtrar tags de tickets...",
-      "toDateShort": "Até"
+      "ticketTags": "Filtrar tags de chamado...",
+      "toDateShort": "Para"
     },
     "actions": {
-      "reset": "Redefinir",
+      "reset": "Reiniciar",
       "clearClient": "Limpar filtro de cliente"
     },
-    "statusClosedSuffix": " (fechado)",
+    "statusClosedSuffix": "(fechado)",
     "summary": {
-      "boards_one": "{{count}} quadro",
-      "boards_other": "{{count}} quadros",
-      "statuses_one": "{{count}} status",
-      "statuses_other": "{{count}} status",
-      "projects_one": "{{count}} projeto",
-      "projects_other": "{{count}} projetos",
-      "phases_one": "{{count}} fase",
-      "phases_other": "{{count}} fases",
-      "excludingName": "exceto {{name}}",
-      "excludingCount_one": "exceto {{count}}",
-      "excludingCount_other": "exceto {{count}}",
-      "boards": "{{count}} quadros",
-      "excludingCount": "exceto {{count}}",
-      "phases": "{{count}} fases",
-      "projects": "{{count}} projetos",
-      "statuses": "{{count}} status"
+      "boards_one": "Placa {{count}}",
+      "boards_other": "Placas {{count}}",
+      "statuses_one": "Situação {{count}}",
+      "statuses_other": "Status {{count}}",
+      "projects_one": "Projeto {{count}}",
+      "projects_other": "Projetos {{count}}",
+      "phases_one": "Fase {{count}}",
+      "phases_other": "Fases {{count}}",
+      "excludingName": "excluindo {{name}}",
+      "excludingCount_one": "excluindo {{count}}",
+      "excludingCount_other": "excluindo {{count}}",
+      "boards": "Placas {{count}}",
+      "excludingCount": "excluindo {{count}}",
+      "phases": "Fases {{count}}",
+      "projects": "Projetos {{count}}",
+      "statuses": "Status {{count}}"
     }
   },
   "actions": {

@@ -1,50 +1,50 @@
 {
   "page": {
-    "title": "Reports"
+    "title": "Relatórios"
   },
   "actions": {
-    "refresh": "Refresh"
+    "refresh": "Atualizar"
   },
   "placeholders": {
-    "selectContract": "Select contract..."
+    "selectContract": "Selecione o contrato..."
   },
   "units": {
-    "hoursShort": "hrs",
-    "days": "days",
+    "hoursShort": "horas",
+    "days": "dias",
     "percent": "%",
-    "dash": "—"
+    "dash": "-"
   },
   "reportsPage": {
     "cards": {
       "timeUtilization": {
-        "title": "Time Utilization",
-        "placeholder": "[Time Utilization Chart Placeholder]"
+        "title": "Utilização do tempo",
+        "placeholder": "[Espaço reservado para gráfico de utilização de tempo]"
       },
       "projectProgress": {
-        "title": "Project Progress",
-        "placeholder": "[Project Progress Chart Placeholder]"
+        "title": "Progresso do Projeto",
+        "placeholder": "[Espaço reservado para gráfico de progresso do projeto]"
       },
       "revenueByClient": {
-        "title": "Revenue by Client",
-        "placeholder": "[Revenue by Client Chart Placeholder]"
+        "title": "Receita por cliente",
+        "placeholder": "[Espaço reservado para gráfico de receita por cliente]"
       },
       "teamPerformance": {
-        "title": "Team Performance",
-        "placeholder": "[Team Performance Chart Placeholder]"
+        "title": "Desempenho da equipe",
+        "placeholder": "[Espaço reservado para gráfico de desempenho da equipe]"
       }
     },
     "description": "Relatórios operacionais predefinidos para o espaço de trabalho atual. Mais personalização será adicionada a este catálogo posteriormente.",
     "categories": {
-      "helpdesk": "Help desk",
+      "helpdesk": "Suporte técnico",
       "operations": "Operações",
-      "billing": "Faturamento"
+      "billing": "Cobrança"
     },
     "badges": {
       "planned": "Planejado"
     },
     "actions": {
       "viewReport": "Ver relatório",
-      "openInBilling": "Abrir em faturamento",
+      "openInBilling": "Aberto no faturamento",
       "requiresTier": "Requer {{tier}}",
       "comingSoon": "Em breve"
     },
@@ -52,112 +52,112 @@
       "loadReport": "Falha ao carregar o relatório."
     },
     "empty": {
-      "noData": "Sem dados para este relatório.",
-      "noOpenTicketsInRange": "Nenhum ticket aberto neste período.",
+      "noData": "Não há dados para este relatório.",
+      "noOpenTicketsInRange": "Não há chamados abertos nesta faixa.",
       "noDate": "Sem data",
-      "notAvailable": "n/d",
-      "noEmailChannels": "Nenhum canal de email configurado."
+      "notAvailable": "n / D",
+      "noEmailChannels": "Nenhum canal de e-mail está configurado."
     },
     "fallbackTitle": "Relatório",
     "dateRange": {
-      "lastDays": "Últimos {{count}} dias"
+      "lastDays": "Últimos dias {{count}}"
     },
     "units": {
       "daysWithCount": "{{count}} dias"
     },
     "metrics": {
-      "created": "Criados",
-      "closed": "Fechados",
-      "openNow": "Abertos agora",
+      "created": "Criado",
+      "closed": "Fechado",
+      "openNow": "Abra agora",
       "awaitingCustomer": "Aguardando cliente",
-      "awaitingInternal": "Aguardando internamente",
+      "awaitingInternal": "Aguardando interno",
       "under2Days": "Menos de 2 dias",
       "days2To7": "2 a 7 dias",
       "days8To30": "8 a 30 dias",
       "over30Days": "Mais de 30 dias",
       "activeChannels": "Canais ativos",
-      "healthyChannels": "Canais saudaveis",
-      "problemChannels": "Canais com problemas",
-      "emailsProcessed": "Emails processados",
-      "ticketsFromEmail": "Tickets por email",
-      "failedEmails": "Emails com falha",
-      "avgProcessingTime": "Tempo medio de processamento",
-      "avgTicketCreationTime": "Tempo medio email-ticket",
-      "totalHours": "Horas totais",
-      "billableHours": "Horas faturaveis",
-      "nonBillableHours": "Horas nao faturaveis",
-      "billablePercent": "% faturavel",
+      "healthyChannels": "Canais saudáveis",
+      "problemChannels": "Canais problemáticos",
+      "emailsProcessed": "E-mails processados",
+      "ticketsFromEmail": "Chamados por e-mail",
+      "failedEmails": "E-mails com falha",
+      "avgProcessingTime": "Média tempo de processamento",
+      "avgTicketCreationTime": "Média tempo de e-mail para chamado",
+      "totalHours": "Total de horas",
+      "billableHours": "Horas faturáveis",
+      "nonBillableHours": "Horas não faturáveis",
+      "billablePercent": "% faturável",
       "timeEntries": "Entradas de tempo",
       "activeContracts": "Contratos ativos",
-      "monthlyRecurring": "Recorrente mensal",
-      "renewalsDue": "Renovacoes pendentes",
-      "bucketUsedHours": "Horas de pacote usadas",
-      "bucketOverageHours": "Excesso do pacote",
-      "openAssigned": "Abertos atribuidos",
-      "activeAssignees": "Atribuidos ativos",
-      "avgResolutionTime": "Tempo medio de resolucao"
+      "monthlyRecurring": "Recorrente mensalmente",
+      "renewalsDue": "Renovações vencidas",
+      "bucketUsedHours": "Horas de intervalo usadas",
+      "bucketOverageHours": "Excedente do intervalo",
+      "openAssigned": "Aberto atribuído",
+      "activeAssignees": "Responsáveis ​​ativos",
+      "avgResolutionTime": "Média tempo de resolução"
     },
     "sections": {
-      "openByStatus": "Abertos por status",
-      "openByPriority": "Abertos por prioridade",
-      "openByAssignee": "Abertos por responsável",
-      "ageDistribution": "Distribuição por idade",
-      "responseOwnership": "Responsável pela resposta",
-      "oldestOpenTickets": "Tickets abertos mais antigos",
+      "openByStatus": "Aberto por status",
+      "openByPriority": "Aberto por prioridade",
+      "openByAssignee": "Aberto pelo responsável",
+      "ageDistribution": "Distribuição etária",
+      "responseOwnership": "Propriedade da resposta",
+      "oldestOpenTickets": "Chamados abertos mais antigos",
       "emailProcessingStatus": "Status de processamento",
-      "emailChannels": "Canais de email",
-      "timeByUser": "Tempo por usuario",
-      "billableHoursByService": "Horas faturaveis por servico",
-      "entriesByWorkType": "Entradas por tipo de trabalho",
-      "contractRevenue": "Receita de contratos",
-      "upcomingRenewals": "Renovacoes futuras",
-      "bucketUsage": "Uso do pacote",
-      "performanceByAssignee": "Desempenho por atribuido",
-      "closedByAssignee": "Fechados por atribuido"
+      "emailChannels": "Canais de e-mail",
+      "timeByUser": "Tempo por usuário",
+      "billableHoursByService": "Horas faturáveis ​​por serviço",
+      "entriesByWorkType": "Inscrições por tipo de trabalho",
+      "contractRevenue": "Receita do contrato",
+      "upcomingRenewals": "Próximas renovações",
+      "bucketUsage": "Uso de balde",
+      "performanceByAssignee": "Desempenho por cessionário",
+      "closedByAssignee": "Fechado pelo cessionário"
     },
     "reportCatalog": {
       "ticketWorkload": {
-        "title": "Carga de tickets",
-        "description": "Tickets criados, fechados e atualmente abertos agrupados por status, prioridade e responsável."
+        "title": "Carga de trabalho de chamados",
+        "description": "Chamados criados, fechados e atualmente abertos agrupados por status, prioridade e responsável."
       },
       "ticketAging": {
-        "title": "Idade dos tickets",
-        "description": "Faixas de idade de tickets abertos, responsável pela resposta e tickets ativos mais antigos."
+        "title": "Envelhecimento do chamado",
+        "description": "Intervalos de idade de chamados abertos, propriedade de respostas e chamados ativos mais antigos."
       },
       "emailChannelHealth": {
-        "title": "Saúde dos canais de e-mail",
-        "description": "Volume de emails recebidos, velocidade de criacao de tickets e saude da conexao das caixas."
+        "title": "Integridade do canal de e-mail",
+        "description": "Volume de entrada de e-mail, velocidade de criação de chamados e integridade da conexão da caixa de correio."
       },
       "timeUtilization": {
-        "title": "Utilização de tempo",
-        "description": "Trabalho rastreado por pessoa e área de serviço para operações PSA."
+        "title": "Utilização do tempo",
+        "description": "Trabalho monitorado por pessoa e área de serviço para operações de PSA."
       },
       "teamPerformance": {
         "title": "Desempenho da equipe",
-        "description": "Volume da equipe e responsabilidade de resposta para espaços com vários usuários."
+        "description": "Taxa de transferência e propriedade de resposta em nível de equipe para espaços de trabalho multiusuários."
       },
       "contractReports": {
-        "title": "Relatórios de contratos",
-        "description": "Receita de contratos, renovações, uso de pacotes e rentabilidade simples."
+        "title": "Relatórios de contrato",
+        "description": "Receita de contrato, renovações, utilização de bucket e lucratividade simples."
       }
     },
     "table": {
       "channel": "Canal",
       "status": "Status",
-      "processed": "Processados",
-      "tickets": "Tickets",
-      "avgEmailToTicket": "Media email para ticket",
-      "assignee": "Atribuido",
-      "created": "Criados",
-      "closed": "Fechados",
-      "open": "Abertos",
-      "avgResolution": "Resolucao media",
-      "user": "Usuario",
-      "totalHours": "Horas totais",
-      "billableHours": "Horas faturaveis",
+      "processed": "Processado",
+      "tickets": "Chamados",
+      "avgEmailToTicket": "Média de email para chamado",
+      "assignee": "Responsável",
+      "created": "Criado",
+      "closed": "Fechado",
+      "open": "Abrir",
+      "avgResolution": "Média resolução",
+      "user": "Usuário",
+      "totalHours": "Total de horas",
+      "billableHours": "Horas faturáveis",
       "entries": "Entradas",
-      "ticket": "Ticket",
-      "entered": "Inserido",
+      "ticket": "Chamado",
+      "entered": "Entrou",
       "age": "Idade"
     },
     "statusValues": {
@@ -167,147 +167,147 @@
       "configuring": "Configurando",
       "unknown": "Desconhecido",
       "success": "Sucesso",
-      "failed": "Falha",
+      "failed": "Fracassado",
       "partial": "Parcial",
-      "processing": "Processando"
+      "processing": "Processamento"
     }
   },
   "contractReports": {
-    "title": "Contract Reports",
-    "description": "Analyze contract performance, revenue, and utilization metrics",
+    "title": "Relatórios de contrato",
+    "description": "Analise o desempenho do contrato, a receita e as métricas de utilização",
     "errors": {
-      "loadingTitle": "Error Loading Reports",
-      "loadData": "Failed to load report data"
+      "loadingTitle": "Erro ao carregar relatórios",
+      "loadData": "Falha ao carregar dados do relatório"
     },
     "summary": {
       "totalMRR": {
-        "title": "Total MRR",
-        "subtitle": "Monthly Recurring Revenue"
+        "title": "MRR total",
+        "subtitle": "Receita recorrente mensal"
       },
       "ytdRevenue": {
-        "title": "YTD Revenue",
-        "subtitle": "Year to Date by billed service period"
+        "title": "Receita acumulada no ano",
+        "subtitle": "Acumulado no ano por período de serviço faturado"
       },
       "activeContracts": {
-        "title": "Active Contracts",
-        "subtitle": "Active assignments"
+        "title": "Contratos Ativos",
+        "subtitle": "Tarefas ativas"
       },
       "renewalDecisions": {
-        "title": "Renewal Decisions Due",
-        "subtitle": "Decision due dates in the next 90 days"
+        "title": "Decisões de renovação vencidas",
+        "subtitle": "Datas de vencimento da decisão nos próximos 90 dias"
       }
     },
     "tabs": {
-      "revenue": "Contract Revenue",
-      "expiration": "Expiration",
-      "bucketUsage": "Bucket Hours",
-      "profitability": "Profitability"
+      "revenue": "Receita do Contrato",
+      "expiration": "Expiração",
+      "bucketUsage": "Horas de intervalo",
+      "profitability": "Rentabilidade"
     },
     "sections": {
       "revenue": {
-        "title": "Contract Revenue Report",
-        "description": "Overview of monthly recurring revenue and year-to-date billed service periods by contract.",
-        "empty": "No contract revenue data available"
+        "title": "Relatório de receita do contrato",
+        "description": "Visão geral da receita recorrente mensal e dos períodos de serviço faturados acumulados no ano por contrato.",
+        "empty": "Não há dados de receita de contrato disponíveis"
       },
       "expiration": {
-        "title": "Contract Expiration and Renewal Decisions",
-        "description": "Track upcoming contract expirations and renewal decision due dates.",
-        "empty": "No upcoming contract expirations or renewal decisions in the near term"
+        "title": "Decisões de expiração e renovação de contrato",
+        "description": "Acompanhe os próximos vencimentos de contratos e datas de vencimento de decisões de renovação.",
+        "empty": "Não há vencimentos futuros de contratos ou decisões de renovação no curto prazo"
       },
       "bucketUsage": {
-        "title": "Bucket Hours Utilization",
-        "description": "Monitor bucket hours usage and identify overage situations",
-        "empty": "No bucket-based contracts found"
+        "title": "Utilização de horas de intervalo",
+        "description": "Monitore o uso de horas de intervalo e identifique situações de excesso",
+        "empty": "Nenhum contrato baseado em bucket encontrado"
       },
       "profitability": {
-        "title": "Simple Profitability Report",
-        "description": "Basic profit margins and revenue vs. cost analysis by contract",
-        "empty": "No profitability data available"
+        "title": "Relatório de rentabilidade simples",
+        "description": "Margens de lucro básicas e análise de receitas versus custos por contrato",
+        "empty": "Não há dados de rentabilidade disponíveis"
       }
     },
     "table": {
-      "contract": "Contract",
-      "client": "Client",
-      "monthlyRecurring": "Monthly Recurring",
-      "totalBilledYtd": "Total Billed (YTD)",
+      "contract": "Contrato",
+      "client": "Cliente",
+      "monthlyRecurring": "Mensalmente Recorrente",
+      "totalBilledYtd": "Total faturado (acumulado no ano)",
       "status": "Status",
-      "endDate": "End Date",
-      "daysUntilExpiration": "Days Until Expiration",
-      "monthlyValue": "Monthly Value",
-      "autoRenew": "Auto-Renew",
-      "totalHours": "Total Hours",
-      "usedHours": "Used Hours",
-      "remaining": "Remaining",
-      "utilization": "Utilization",
-      "overage": "Overage",
-      "revenueYtd": "Revenue (YTD)",
-      "costYtd": "Cost (YTD)",
-      "profit": "Profit",
-      "margin": "Margin"
+      "endDate": "Data de término",
+      "daysUntilExpiration": "Dias até a expiração",
+      "monthlyValue": "Valor Mensal",
+      "autoRenew": "Renovação automática",
+      "totalHours": "Total de horas",
+      "usedHours": "Horas usadas",
+      "remaining": "Restante",
+      "utilization": "Utilização",
+      "overage": "Excedente",
+      "revenueYtd": "Receita (acumulada no ano)",
+      "costYtd": "Custo (acumulado no ano)",
+      "profit": "Lucro",
+      "margin": "Margem"
     },
     "statusValues": {
-      "active": "Active",
-      "upcoming": "Upcoming",
-      "yes": "Yes",
-      "no": "No"
+      "active": "Ativo",
+      "upcoming": "Por vir",
+      "yes": "Sim",
+      "no": "Não"
     }
   },
   "contractPerformance": {
-    "title": "Contract Performance Metrics",
+    "title": "Métricas de desempenho do contrato",
     "errors": {
-      "loadData": "Failed to load contract data"
+      "loadData": "Falha ao carregar dados do contrato"
     },
     "metrics": {
-      "totalClients": "Total Clients",
-      "activeClients": "Active Clients",
-      "totalPlans": "Total Plans",
-      "averagePlansPerClient": "Avg. Plans Per Client",
-      "totalRevenue": "Total Revenue",
-      "averageRevenuePerClient": "Avg. Revenue Per Client"
+      "totalClients": "Total de clientes",
+      "activeClients": "Clientes ativos",
+      "totalPlans": "Planos totais",
+      "averagePlansPerClient": "Média Planos por cliente",
+      "totalRevenue": "Receita total",
+      "averageRevenuePerClient": "Média Receita por cliente"
     },
     "empty": {
-      "selectContract": "Select a contract to view performance metrics",
-      "noContracts": "No contracts available"
+      "selectContract": "Selecione um contrato para visualizar métricas de desempenho",
+      "noContracts": "Nenhum contrato disponível"
     },
     "comparison": {
-      "title": "Contract Comparison",
+      "title": "Comparação de contratos",
       "table": {
-        "contract": "Contract",
-        "clients": "Clients",
-        "plans": "Plans",
-        "revenue": "Revenue"
+        "contract": "Contrato",
+        "clients": "Clientes",
+        "plans": "Planos",
+        "revenue": "Receita"
       }
     }
   },
   "contractUsage": {
-    "title": "Contract Usage Report",
+    "title": "Relatório de utilização do contrato",
     "errors": {
-      "loadInitialData": "Failed to load initial data",
-      "loadUsageData": "Failed to load contract usage data"
+      "loadInitialData": "Falha ao carregar os dados iniciais",
+      "loadUsageData": "Falha ao carregar dados de uso do contrato"
     },
     "empty": {
-      "noClientsUsingContract": "No clients are using this contract",
-      "selectContract": "Select a contract to view usage data"
+      "noClientsUsingContract": "Nenhum cliente está usando este contrato",
+      "selectContract": "Selecione um contrato para visualizar os dados de uso"
     },
     "table": {
-      "client": "Client",
-      "startDate": "Start Date",
-      "endDate": "End Date",
-      "contractLines": "Contract Lines",
-      "totalBilled": "Total Billed",
+      "client": "Cliente",
+      "startDate": "Data de início",
+      "endDate": "Data de término",
+      "contractLines": "Linhas de Contrato",
+      "totalBilled": "Total faturado",
       "status": "Status"
     },
     "statusValues": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "ongoing": "Ongoing",
-      "unknownClient": "Unknown Client"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "ongoing": "Em andamento",
+      "unknownClient": "Cliente desconhecido"
     },
     "summary": {
-      "title": "Summary",
-      "totalClients": "Total Clients",
-      "activeAssignments": "Active Assignments",
-      "totalBilled": "Total Billed"
+      "title": "Resumo",
+      "totalClients": "Total de clientes",
+      "activeAssignments": "Tarefas ativas",
+      "totalBilled": "Total faturado"
     }
   }
 }

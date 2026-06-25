@@ -458,7 +458,7 @@
   {
     "id": "F043",
     "description": "pt-BR complete for msp/core.json: translate the 228 remaining key(s) and re-audit all 243 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",
@@ -469,7 +469,7 @@
   {
     "id": "F044",
     "description": "pt-BR complete for msp/dashboard.json: translate the 108 remaining key(s) and re-audit all 128 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",
@@ -480,7 +480,7 @@
   {
     "id": "F045",
     "description": "pt-BR complete for msp/keyboard-shortcuts.json: translate the 59 remaining key(s) and re-audit all 196 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",
@@ -491,7 +491,7 @@
   {
     "id": "F046",
     "description": "pt-BR complete for msp/auth.json: translate the 0 remaining key(s) and re-audit all 75 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",
@@ -502,7 +502,7 @@
   {
     "id": "F047",
     "description": "pt-BR complete for msp/chat.json: translate the 7 remaining key(s) and re-audit all 127 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",
@@ -513,7 +513,7 @@
   {
     "id": "F048",
     "description": "pt-BR complete for msp/reports.json: translate the 103 remaining key(s) and re-audit all 201 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",
@@ -524,7 +524,7 @@
   {
     "id": "F049",
     "description": "pt-BR complete for msp/surveys.json: translate the 259 remaining key(s) and re-audit all 259 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",
@@ -535,7 +535,7 @@
   {
     "id": "F050",
     "description": "pt-BR complete for msp/user-activities.json: translate the 16 remaining key(s) and re-audit all 333 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "prdRefs": [
       "3.2",

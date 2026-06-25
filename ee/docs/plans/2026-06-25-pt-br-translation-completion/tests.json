@@ -713,7 +713,7 @@
   {
     "id": "T080",
     "description": "validate-translations.cjs passes for pt msp/core.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F043"
@@ -722,7 +722,7 @@
   {
     "id": "T081",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/core.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F043"
@@ -731,7 +731,7 @@
   {
     "id": "T082",
     "description": "validate-translations.cjs passes for pt msp/dashboard.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F044"
@@ -740,7 +740,7 @@
   {
     "id": "T083",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/dashboard.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F044"
@@ -749,7 +749,7 @@
   {
     "id": "T084",
     "description": "validate-translations.cjs passes for pt msp/keyboard-shortcuts.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F045"
@@ -758,7 +758,7 @@
   {
     "id": "T085",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/keyboard-shortcuts.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F045"
@@ -767,7 +767,7 @@
   {
     "id": "T086",
     "description": "validate-translations.cjs passes for pt msp/auth.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F046"
@@ -776,7 +776,7 @@
   {
     "id": "T087",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/auth.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F046"
@@ -785,7 +785,7 @@
   {
     "id": "T088",
     "description": "validate-translations.cjs passes for pt msp/chat.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F047"
@@ -794,7 +794,7 @@
   {
     "id": "T089",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/chat.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F047"
@@ -803,7 +803,7 @@
   {
     "id": "T090",
     "description": "validate-translations.cjs passes for pt msp/reports.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F048"
@@ -812,7 +812,7 @@
   {
     "id": "T091",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/reports.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F048"
@@ -821,7 +821,7 @@
   {
     "id": "T092",
     "description": "validate-translations.cjs passes for pt msp/surveys.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F049"
@@ -830,7 +830,7 @@
   {
     "id": "T093",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/surveys.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F049"
@@ -839,7 +839,7 @@
   {
     "id": "T094",
     "description": "validate-translations.cjs passes for pt msp/user-activities.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F050"
@@ -848,7 +848,7 @@
   {
     "id": "T095",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/user-activities.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-misc",
     "featureIds": [
       "F050"

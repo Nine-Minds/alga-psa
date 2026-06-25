@@ -167,3 +167,10 @@ npm run migrate
 - Tightened the glossary allowlist for legitimate workflow technical labels and compact formats (`Designer`, `Vars`, `Beta`, `corr-123`, `Etc/GMT+5`, `Cron: {{cron}}`, `{{count}} total`).
 - Translated real UI `Clear` labels to `Limpar`.
 - Implemented T078-T079. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/workflows --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — i18n-misc group
+- Implemented F043-F050: completed pt-BR translations for `msp/core.json`, `msp/dashboard.json`, `msp/keyboard-shortcuts.json`, `msp/auth.json`, `msp/chat.json`, `msp/reports.json`, `msp/surveys.json`, and `msp/user-activities.json`.
+- Re-audited all 1,562 keys in the group and marked them reviewed in `pt-review-state.json` with reviewer `codex-pt-br-pass`.
+- Tightened the glossary allowlist for legitimate misc labels and shortcuts (`Alga`, `Google Play (Android)`, `Global`, `Editor`, `Ctrl`, `Ad hoc`, `Cmd/Ctrl+K`, `%`).
+- Fixed a placeholder regression (`{{chamado}}` back to `{{ticket}}`) and obvious machine artifacts: `Lar`→`Início`, `Cessionário`→`Responsável`, `Pão ralado`→`Trilha de navegação`, `Centro de Emprego Aberto`→`Abrir central de trabalhos`, and `boleto`→`chamado` in report context.
+- Implemented T080-T095. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/core --namespace msp/dashboard --namespace msp/keyboard-shortcuts --namespace msp/auth --namespace msp/chat --namespace msp/reports --namespace msp/surveys --namespace msp/user-activities --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
