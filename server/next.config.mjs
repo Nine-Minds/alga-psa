@@ -226,7 +226,12 @@ const nextConfig = {
       '@alga-psa/scheduling/': '../packages/scheduling/src/',
       // @alga-psa/jobs: export names don't mirror src (./fanout -> src/lib/fanout).
       // Turbopack matches the bare key exactly, so every lib/* and mirror
-      // (actions/components) subpath is listed explicitly.
+      // (actions/components) subpath is listed explicitly. The wildcard exports
+      // (./handlers/*, ./handler-utils/*, ./runners/*) additionally need a
+      // trailing-slash key so subpath imports like
+      // '@alga-psa/jobs/handlers/autoCloseTicketsHandler' resolve to src/lib/...
+      // instead of falling through to the tsconfig '@alga-psa/jobs/*' -> src/*
+      // mapping (which drops the lib/ segment).
       '@alga-psa/jobs': '../packages/jobs/src',
       '@alga-psa/jobs/actions': '../packages/jobs/src/actions',
       '@alga-psa/jobs/components': '../packages/jobs/src/components',
@@ -234,8 +239,11 @@ const nextConfig = {
       '@alga-psa/jobs/runner': '../packages/jobs/src/lib/jobRunnerAccessor.ts',
       '@alga-psa/jobs/scheduler': '../packages/jobs/src/lib/jobSchedulerAccessor.ts',
       '@alga-psa/jobs/handlers': '../packages/jobs/src/lib/handlers',
+      '@alga-psa/jobs/handlers/': '../packages/jobs/src/lib/handlers/',
       '@alga-psa/jobs/handler-utils': '../packages/jobs/src/lib/handler-utils',
+      '@alga-psa/jobs/handler-utils/': '../packages/jobs/src/lib/handler-utils/',
       '@alga-psa/jobs/runners': '../packages/jobs/src/lib/jobs/runners',
+      '@alga-psa/jobs/runners/': '../packages/jobs/src/lib/jobs/runners/',
       '@alga-psa/search': '../packages/search/src',
       '@alga-psa/search/': '../packages/search/src/',
       '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
