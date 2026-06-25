@@ -837,7 +837,13 @@
       "missingHelp": "We hebben dit record nog niet gedetecteerd in DNS. Controleer of het bestaat in uw DNS-provider met de exacte waarde zoals hierboven weergegeven.",
       "mismatchHelp": "Het DNS-record bestaat, maar de waarde komt niet overeen met wat Resend verwacht.",
       "matchedHelp": "De gedetecteerde waarde komt overeen met de verwachte waarde.",
-      "unknownHelp": "We hebben het DNS nog niet gecontroleerd. Controleer DNS opnieuw om verificatie uit te voeren."
+      "unknownHelp": "We hebben het DNS nog niet gecontroleerd. Controleer DNS opnieuw om verificatie uit te voeren.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Volledige naam",
+      "valueLabel": "Waarde",
+      "copyHostAriaLabel": "Host kopiëren",
+      "copyFqdnAriaLabel": "Volledige naam kopiëren",
+      "hostHint": "Tip: voer bij uw DNS-provider alleen de hierboven getoonde Host in. De meeste providers (Namecheap, GoDaddy, Cloudflare en andere) voegen “{{domain}}” automatisch toe. Als u de volledige naam plakt, wordt het domein herhaald (…{{domain}}.{{domain}}) en wordt het record nooit geverifieerd."
     }
   },
   "inboundRules": {
