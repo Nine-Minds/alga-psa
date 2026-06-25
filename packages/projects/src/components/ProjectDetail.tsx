@@ -3972,7 +3972,7 @@ export default function ProjectDetail({
                               indeterminate={stripSomeSelected && !stripAllSelected}
                               onChange={() => setTasksSelected(stripTaskIds, !stripAllSelected)}
                               size="sm"
-                              containerClassName="mb-0 flex-shrink-0"
+                              containerClassName="flex-shrink-0"
                               skipRegistration
                             />
                           )}

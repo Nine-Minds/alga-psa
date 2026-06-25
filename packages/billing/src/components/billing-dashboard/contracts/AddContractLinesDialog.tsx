@@ -484,7 +484,6 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                       <div onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           id={`preset-${preset.preset_id}`}
-                          containerClassName=""
                           checked={selectedPresetIds.has(preset.preset_id)}
                           onChange={() => preset.preset_id && togglePreset(preset.preset_id)}
                           aria-label={selectedPresetIds.has(preset.preset_id)

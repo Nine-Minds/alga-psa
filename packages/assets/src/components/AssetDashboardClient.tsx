@@ -831,7 +831,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             })}
             className="m-0"
             indeterminate={isIndeterminate}
-            containerClassName="mb-0"
             skipRegistration
           />
         </div>
@@ -871,7 +870,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 name: record.name
               })}
               className="m-0 pointer-events-none"
-              containerClassName="mb-0"
               skipRegistration
             />
           </div>
@@ -1265,7 +1263,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={statusFilters.includes(status)}
                           onChange={() => toggleFilterValue(statusFilters, status, setStatusFilters)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span className="capitalize">{getAssetStatusLabel(status)}</span>
                       </DropdownMenuItem>
@@ -1289,7 +1286,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={typeFilters.includes(type)}
                           onChange={() => toggleFilterValue(typeFilters, type, setTypeFilters)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span className="capitalize">{getAssetTypeLabel(type)}</span>
                       </DropdownMenuItem>
@@ -1313,7 +1309,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={agentStatusFilters.includes(value)}
                           onChange={() => toggleFilterValue(agentStatusFilters, value, setAgentStatusFilters)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span>{getAgentStatusLabel(value)}</span>
                       </DropdownMenuItem>
@@ -1326,7 +1321,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={rmmManagedFilter.includes(value)}
                           onChange={() => toggleFilterValue(rmmManagedFilter, value, setRmmManagedFilter)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span>{label}</span>
                       </DropdownMenuItem>
@@ -1349,7 +1343,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                           checked={visibleColumnIds.includes(key)}
                           onChange={() => toggleColumn(key)}
                           className="mr-2"
-                          containerClassName="m-0"
                         />
                         <span className="capitalize">
                           {t(`assetDashboardClient.columns.${key}`, {

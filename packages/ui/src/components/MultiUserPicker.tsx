@@ -452,7 +452,6 @@ const MultiUserPicker = ({
               id="unassigned-checkbox"
               checked={includeUnassigned}
               onChange={handleUnassignedToggle}
-              containerClassName=""
             />
             <UserMinus className="w-4 h-4 text-gray-400" />
             <span className="text-sm">Unassigned</span>
@@ -522,7 +521,6 @@ const MultiUserPicker = ({
                             checked={isSelected}
                             onChange={() => handleUserToggle(user.user_id)}
                             className="mr-2"
-                            containerClassName=""
                           />
                         </div>
                         <UserAvatar

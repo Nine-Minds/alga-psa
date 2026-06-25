@@ -217,7 +217,6 @@ const MultiContactPicker = ({
                       disabled={noEmail}
                       onChange={() => handleToggle(contact.contact_name_id)}
                       className="mr-2"
-                      containerClassName=""
                     />
                   </div>
                   <ContactAvatar

@@ -583,7 +583,6 @@ const MultiUserAndTeamPicker = ({
               id="unassigned-checkbox"
               checked={includeUnassigned}
               onChange={handleUnassignedToggle}
-              containerClassName=""
             />
             <UserMinus className="w-4 h-4 text-gray-400" />
             <span className="text-sm">{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
@@ -653,7 +652,6 @@ const MultiUserAndTeamPicker = ({
                             checked={isSelected}
                             onChange={() => handleUserToggle(user.user_id)}
                             className="mr-2"
-                            containerClassName=""
                           />
                         </div>
                         <UserAvatar
@@ -690,7 +688,6 @@ const MultiUserAndTeamPicker = ({
                             checked={isSelected}
                             onChange={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
                             className="mr-2"
-                            containerClassName=""
                           />
                         </div>
                         <TeamAvatar

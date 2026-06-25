@@ -842,7 +842,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             checked={shouldLinkNewTicket}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShouldLinkNewTicket(e.target.checked)}
             label={linkT('linkToTaskLabel', 'Link this ticket to the task')}
-            containerClassName="mb-0 mt-2"
+            containerClassName="mt-2"
           />
         ),
       })}
