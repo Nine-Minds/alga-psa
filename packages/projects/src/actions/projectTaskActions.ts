@@ -1905,16 +1905,16 @@ export const moveTaskToPhase = withAuth(async (
             let afterKey: string | null = null;
 
             if (beforeTaskId) {
-                const beforeTask = await trx('project_tasks')
-                    .where({ task_id: beforeTaskId, tenant })
+                const beforeTask = await tenantScopedTable(trx, 'project_tasks', tenant)
+                    .where({ task_id: beforeTaskId })
                     .select('order_key')
                     .first();
                 beforeKey = beforeTask?.order_key || null;
             }
 
             if (afterTaskId) {
-                const afterTask = await trx('project_tasks')
-                    .where({ task_id: afterTaskId, tenant })
+                const afterTask = await tenantScopedTable(trx, 'project_tasks', tenant)
+                    .where({ task_id: afterTaskId })
                     .select('order_key')
                     .first();
                 afterKey = afterTask?.order_key || null;
@@ -1922,11 +1922,10 @@ export const moveTaskToPhase = withAuth(async (
 
             // If no position specified, add to end of target status
             if (!beforeKey && !afterKey) {
-                const lastTask = await trx('project_tasks')
+                const lastTask = await tenantScopedTable(trx, 'project_tasks', tenant)
                     .where({
                         phase_id: newPhaseId,
-                        project_status_mapping_id: finalStatusMappingId,
-                        tenant
+                        project_status_mapping_id: finalStatusMappingId
                     })
                     .orderBy('order_key', 'desc')
                     .first();
@@ -1951,16 +1950,14 @@ export const moveTaskToPhase = withAuth(async (
                 updated_at: trx.fn.now()
             };
 
-            const [updatedTask] = await trx<IProjectTask>('project_tasks')
+            const [updatedTask] = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('task_id', taskId)
-                .andWhere('tenant', tenant)
                 .update(updateData)
                 .returning('*');
 
             // Update all ticket links to point to new project and phase
-            await trx('project_ticket_links')
+            await tenantScopedTable(trx, 'project_ticket_links', tenant)
                 .where('task_id', taskId)
-                .andWhere('tenant', tenant)
                 .update({
                     project_id: newPhase.project_id,
                     phase_id: newPhaseId
