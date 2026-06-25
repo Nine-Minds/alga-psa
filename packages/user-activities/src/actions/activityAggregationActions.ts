@@ -854,14 +854,16 @@ export async function fetchTicketActivities(
 
         // Tag filter: ticket must have at least one of the requested tags
         if (filters.ticketTagIds && filters.ticketTagIds.length > 0) {
-          queryBuilder.whereExists(function() {
-            this.select(db.raw(1))
-              .from("tag_mappings")
+          queryBuilder.whereExists(
+            createTenantScopedQuery(trx, {
+              table: "tag_mappings",
+              tenant,
+            }).builder
+              .select(db.raw(1))
               .whereRaw("tag_mappings.tagged_id = tickets.ticket_id::text")
-              .andWhere("tag_mappings.tenant", tenant)
               .andWhere("tag_mappings.tagged_type", "ticket")
-              .whereIn("tag_mappings.tag_id", filters.ticketTagIds!);
-          });
+              .whereIn("tag_mappings.tag_id", filters.ticketTagIds!)
+          );
         }
 
         // Text search filter
