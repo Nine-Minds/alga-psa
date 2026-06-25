@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
+const createTenantScopedQueryMock = vi.hoisted(() => vi.fn((conn: any, options: { table: string }) => ({
+  builder: conn(options.table),
+})));
 const withTransactionMock = vi.hoisted(() => vi.fn());
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const preCheckDeletionMock = vi.hoisted(() => vi.fn());
@@ -38,6 +41,7 @@ vi.mock('@alga-psa/core', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  createTenantScopedQuery: createTenantScopedQueryMock,
   withTransaction: withTransactionMock,
 }));
 

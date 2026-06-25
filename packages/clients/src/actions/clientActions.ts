@@ -1,7 +1,7 @@
 'use server'
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { deleteEntityWithValidation, unparseCSV, isEnterprise } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
@@ -16,7 +16,6 @@ import {
 } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
-import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTag } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
@@ -40,6 +39,14 @@ const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'company_size',
   'annual_revenue',
 ]);
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
@@ -111,36 +118,34 @@ async function cleanupEntraReferencesBeforeClientDelete(
   const now = trx.fn.now();
 
   if (existingTables.has('entra_sync_run_tenants')) {
-    await trx('entra_sync_run_tenants')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_sync_run_tenants', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_links')) {
-    await trx('entra_contact_links')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_contact_links', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_reconciliation_queue')) {
-    await trx('entra_contact_reconciliation_queue')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_client_tenant_mappings')) {
-    const activeMappings = await trx('entra_client_tenant_mappings')
+    const activeMappings = await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
       .where({
-        tenant: tenantId,
         client_id: clientId,
         is_active: true,
       })
       .select('managed_tenant_id');
 
     if (activeMappings.length > 0) {
-      await trx('entra_client_tenant_mappings')
+      await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
         .where({
-          tenant: tenantId,
           client_id: clientId,
           is_active: true,
         })
@@ -165,8 +170,8 @@ async function cleanupEntraReferencesBeforeClientDelete(
       await trx('entra_client_tenant_mappings').insert(unmappedRows);
     }
 
-    await trx('entra_client_tenant_mappings')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 }
@@ -198,8 +203,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       };
 
       // First, get the current client data to properly merge properties
-      const currentClient = await trx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const currentClient = await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
 
       if (!currentClient) {
@@ -262,8 +267,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
       console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
 
-      const [updatedClient] = await trx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const [updatedClient] = await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .update(updateObject)
         .returning('*');
 
@@ -417,8 +422,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     // (default_billing_settings.default_currency_code) instead of leaving it null and
     // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
     if (!clientData.default_currency_code) {
-      const billingSettings = await knex('default_billing_settings')
-        .where({ tenant })
+      const billingSettings = await tenantScopedTable(knex, 'default_billing_settings', tenant)
         .select('default_currency_code')
         .first();
       clientData.default_currency_code = billingSettings?.default_currency_code || 'USD';
