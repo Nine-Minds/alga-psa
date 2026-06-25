@@ -1057,9 +1057,8 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const result = await trx('users')
+      const result = await this.buildTenantScopedQuery(trx, context)
         .whereIn('user_id', userIds)
-        .where('tenant', context.tenant)
         .update({ 
           is_inactive: deactivate,
           updated_at: knex.raw('now()')
