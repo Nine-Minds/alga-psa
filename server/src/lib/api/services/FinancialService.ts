@@ -814,8 +814,11 @@ export class FinancialService extends BaseService<ITransaction> {
     const tenant = context.tenant;
 
     // Verify client exists
-    const client = await knex('clients')
-      .where({ client_id: request.client_id, tenant })
+    const client = await createTenantScopedQuery(knex, {
+      table: 'clients',
+      tenant,
+    }).builder
+      .where('client_id', request.client_id)
       .first();
     if (!client) {
       throw new Error('Client not found');
@@ -826,11 +829,16 @@ export class FinancialService extends BaseService<ITransaction> {
       const clientCurrency = client.default_currency_code || 'USD';
 
       // Determine credit expiration settings
-      const clientSettings = await trx('client_billing_settings')
-        .where({ client_id: request.client_id, tenant })
+      const clientSettings = await createTenantScopedQuery(trx, {
+        table: 'client_billing_settings',
+        tenant,
+      }).builder
+        .where('client_id', request.client_id)
         .first();
-      const defaultSettings = await trx('default_billing_settings')
-        .where({ tenant })
+      const defaultSettings = await createTenantScopedQuery(trx, {
+        table: 'default_billing_settings',
+        tenant,
+      }).builder
         .first();
 
       let isCreditExpirationEnabled = true;
@@ -881,8 +889,11 @@ export class FinancialService extends BaseService<ITransaction> {
         .returning('*');
 
       // Get current balance
-      const lastTx = await trx('transactions')
-        .where({ client_id: request.client_id, tenant })
+      const lastTx = await createTenantScopedQuery(trx, {
+        table: 'transactions',
+        tenant,
+      }).builder
+        .where('client_id', request.client_id)
         .orderBy('created_at', 'desc')
         .first();
       const currentBalance = lastTx?.balance_after || 0;
