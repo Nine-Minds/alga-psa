@@ -3305,32 +3305,23 @@ export const getDocumentsByFolder = withAuth(async (
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-      let query = trx('documents as d')
-        .where('d.tenant', tenant);
+      let query = tenantScopedTable(trx, 'documents as d', tenant);
+
+      const associationExistsQuery = () =>
+        tenantScopedTable(trx, 'document_associations as da', tenant)
+          .select('*')
+          .whereRaw('da.document_id = d.document_id');
 
       if (hasEntityScope) {
-        query = query.whereExists(function() {
-          this.select('*')
-            .from('document_associations as da')
-            .whereRaw('da.document_id = d.document_id')
-            .andWhere('da.tenant', tenant)
+        query = query.whereExists(
+          associationExistsQuery()
             .andWhere('da.entity_id', entityId)
-            .andWhere('da.entity_type', entityType);
-        });
+            .andWhere('da.entity_type', entityType)
+        );
       } else {
         query = query.where(function() {
-          this.whereNotExists(function() {
-            this.select('*')
-              .from('document_associations as da')
-              .whereRaw('da.document_id = d.document_id')
-              .andWhere('da.tenant', tenant);
-          })
-          .orWhereExists(function() {
-            this.select('*')
-              .from('document_associations as da')
-              .whereRaw('da.document_id = d.document_id')
-              .andWhere('da.tenant', tenant);
-          });
+          this.whereNotExists(associationExistsQuery())
+            .orWhereExists(associationExistsQuery());
         });
       }
 
@@ -3425,20 +3416,19 @@ export const getDocumentsByFolder = withAuth(async (
         query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
       }
       if (filters?.entityType || filters?.entityId) {
-        query = query.whereExists(function() {
-          this.select('*')
-            .from('document_associations as filter_da')
-            .whereRaw('filter_da.document_id = d.document_id')
-            .andWhere('filter_da.tenant', tenant);
+        const filterAssociationQuery = tenantScopedTable(trx, 'document_associations as filter_da', tenant)
+          .select('*')
+          .whereRaw('filter_da.document_id = d.document_id');
 
-          if (filters?.entityType) {
-            this.andWhere('filter_da.entity_type', filters.entityType);
-          }
+        if (filters?.entityType) {
+          filterAssociationQuery.andWhere('filter_da.entity_type', filters.entityType);
+        }
 
-          if (filters?.entityId) {
-            this.andWhere('filter_da.entity_id', filters.entityId);
-          }
-        });
+        if (filters?.entityId) {
+          filterAssociationQuery.andWhere('filter_da.entity_id', filters.entityId);
+        }
+
+        query = query.whereExists(filterAssociationQuery);
       }
       if (filters?.clientVisibility === 'visible') {
         query = query.where('d.is_client_visible', true);
