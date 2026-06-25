@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -107,8 +107,11 @@ export const saveClientInfo = withAuth(async (
           updateData.hashed_password = await hashPassword(data.newPassword);
         }
 
-        await trx('users')
-          .where({ user_id: currentUser.user_id, tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'users',
+          tenant,
+        }).builder
+          .where({ user_id: currentUser.user_id })
           .update(updateData);
 
         // If password was changed, mark it as reset
@@ -164,10 +167,15 @@ export const addSingleTeamMember = withAuth(async (
     let error: string | null = null;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       try {
         // Check if user already exists
-        const existingUser = await trx('users')
-          .where({ email: member.email.toLowerCase(), tenant })
+        const existingUser = await tenantScopedTable('users')
+          .where({ email: member.email.toLowerCase() })
           .first();
 
         if (existingUser) {
@@ -196,10 +204,9 @@ export const addSingleTeamMember = withAuth(async (
         });
 
         // Get role from roles table by role_name
-        const role = await trx('roles')
+        const role = await tenantScopedTable('roles')
           .where({ 
             role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
-            tenant 
           })
           .first();
 
@@ -212,8 +219,8 @@ export const addSingleTeamMember = withAuth(async (
         } else {
           console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
           // Try to assign a default role
-          const defaultRole = await trx('roles')
-            .where({ tenant, msp: true })
+          const defaultRole = await tenantScopedTable('roles')
+            .where({ msp: true })
             .orderBy('role_name')
             .first();
           
@@ -307,11 +314,16 @@ export const addTeamMembers = withAuth(async (
     const failed: Array<{ member: TeamMember; error: string }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       for (const member of membersToProcess) {
         try {
           // Check if user already exists
-          const existingUser = await trx('users')
-            .where({ email: member.email.toLowerCase(), tenant })
+          const existingUser = await tenantScopedTable('users')
+            .where({ email: member.email.toLowerCase() })
             .first();
 
           if (existingUser) {
@@ -339,10 +351,9 @@ export const addTeamMembers = withAuth(async (
           });
 
           // Get role from roles table by role_name
-          const role = await trx('roles')
+          const role = await tenantScopedTable('roles')
             .where({ 
               role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
-              tenant 
             })
             .first();
 
@@ -355,8 +366,8 @@ export const addTeamMembers = withAuth(async (
           } else {
             console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
             // Try to assign a default role
-            const defaultRole = await trx('roles')
-              .where({ tenant, msp: true })
+            const defaultRole = await tenantScopedTable('roles')
+              .where({ msp: true })
               .orderBy('role_name')
               .first();
             
