@@ -1,6 +1,28 @@
 import type { DependencyType, IProjectTaskDependency } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
+import { createTenantScopedQuery } from '@alga-psa/db';
+
+type DependencyWithTaskDetails = IProjectTaskDependency & {
+    predecessor_task_name?: string | null;
+    predecessor_task_wbs_code?: string | null;
+    predecessor_task_type_key?: string | null;
+    successor_task_name?: string | null;
+    successor_task_wbs_code?: string | null;
+    successor_task_type_key?: string | null;
+};
+
+type SuccessorTaskIdRow = {
+    successor_task_id: string;
+};
+
+function tenantScopedTable(
+    conn: Knex | Knex.Transaction,
+    table: string,
+    tenant: string,
+): Knex.QueryBuilder {
+    return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 const TaskDependencyModel = {
     addDependency: async (
@@ -19,9 +41,8 @@ const TaskDependencyModel = {
         }
 
         // Check for existing dependency first
-        const existingDependency = await knexOrTrx('project_task_dependencies')
+        const existingDependency = await tenantScopedTable(knexOrTrx, 'project_task_dependencies', tenant)
             .where({
-                tenant,
                 predecessor_task_id: predecessorTaskId,
                 successor_task_id: successorTaskId,
                 dependency_type: dependencyType
@@ -68,8 +89,8 @@ const TaskDependencyModel = {
     }> => {
         if (!tenant) throw new Error('Tenant context is required for dependency operations');
         
-        const predecessors = await knexOrTrx('project_task_dependencies as ptd')
-            .where({ 'ptd.successor_task_id': taskId, 'ptd.tenant': tenant })
+        const predecessors = await tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant)
+            .where({ 'ptd.successor_task_id': taskId })
             .leftJoin('project_tasks as pt_pred', function() {
                 this.on('ptd.predecessor_task_id', '=', 'pt_pred.task_id')
                     .andOn('ptd.tenant', '=', 'pt_pred.tenant');
@@ -77,10 +98,10 @@ const TaskDependencyModel = {
             .select('ptd.*', 
                     'pt_pred.task_name as predecessor_task_name', 
                     'pt_pred.wbs_code as predecessor_task_wbs_code',
-                    'pt_pred.task_type_key as predecessor_task_type_key');
+                    'pt_pred.task_type_key as predecessor_task_type_key') as DependencyWithTaskDetails[];
             
-        const successors = await knexOrTrx('project_task_dependencies as ptd')
-            .where({ 'ptd.predecessor_task_id': taskId, 'ptd.tenant': tenant })
+        const successors = await tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant)
+            .where({ 'ptd.predecessor_task_id': taskId })
             .leftJoin('project_tasks as pt_succ', function() {
                 this.on('ptd.successor_task_id', '=', 'pt_succ.task_id')
                     .andOn('ptd.tenant', '=', 'pt_succ.tenant');
@@ -88,25 +109,25 @@ const TaskDependencyModel = {
             .select('ptd.*', 
                     'pt_succ.task_name as successor_task_name', 
                     'pt_succ.wbs_code as successor_task_wbs_code',
-                    'pt_succ.task_type_key as successor_task_type_key');
+                    'pt_succ.task_type_key as successor_task_type_key') as DependencyWithTaskDetails[];
         
         return { 
             predecessors: predecessors.map(d => ({
                 ...d, 
                 predecessor_task: { 
                     task_id: d.predecessor_task_id, 
-                    task_name: d.predecessor_task_name, 
-                    wbs_code: d.predecessor_task_wbs_code,
-                    task_type_key: d.predecessor_task_type_key
+                    task_name: d.predecessor_task_name ?? '',
+                    wbs_code: d.predecessor_task_wbs_code ?? '',
+                    task_type_key: d.predecessor_task_type_key ?? ''
                 }
             })), 
             successors: successors.map(d => ({
                 ...d, 
                 successor_task: { 
                     task_id: d.successor_task_id, 
-                    task_name: d.successor_task_name, 
-                    wbs_code: d.successor_task_wbs_code,
-                    task_type_key: d.successor_task_type_key
+                    task_name: d.successor_task_name ?? '',
+                    wbs_code: d.successor_task_wbs_code ?? '',
+                    task_type_key: d.successor_task_type_key ?? ''
                 }
             }))
         };
@@ -120,8 +141,8 @@ const TaskDependencyModel = {
     ): Promise<IProjectTaskDependency> => {
         if (!tenant) throw new Error('Tenant context is required for dependency operations');
         
-        const [dependency] = await knexOrTrx('project_task_dependencies')
-            .where({ dependency_id: dependencyId, tenant })
+        const [dependency] = await tenantScopedTable(knexOrTrx, 'project_task_dependencies', tenant)
+            .where({ dependency_id: dependencyId })
             .update({
                 ...data,
                 updated_at: new Date()
@@ -134,13 +155,13 @@ const TaskDependencyModel = {
     removeDependency: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, dependencyId: string): Promise<void> => {
         if (!tenant) throw new Error('Tenant context is required for dependency operations');
         
-        await knexOrTrx('project_task_dependencies')
-            .where({ dependency_id: dependencyId, tenant })
+        await tenantScopedTable(knexOrTrx, 'project_task_dependencies', tenant)
+            .where({ dependency_id: dependencyId })
             .delete();
     },
     
     validateNoCycles: async (
-        db: Knex,
+        db: Knex | Knex.Transaction,
         tenant: string,
         predecessorTaskId: string,
         successorTaskId: string
@@ -156,13 +177,12 @@ const TaskDependencyModel = {
             visited.add(currentTaskId);
             path.add(currentTaskId);
             
-            const dependencies = await db('project_task_dependencies')
+            const dependencies = await tenantScopedTable(db, 'project_task_dependencies', tenant)
                 .where({ 
                     predecessor_task_id: currentTaskId, 
-                    tenant,
                 })
                 .whereIn('dependency_type', ['blocks', 'blocked_by'])
-                .select('successor_task_id');
+                .select('successor_task_id') as SuccessorTaskIdRow[];
                 
             for (const dep of dependencies) {
                 if (await hasPath(dep.successor_task_id, targetTaskId)) {
