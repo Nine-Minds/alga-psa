@@ -1,7 +1,7 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
+import { createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
 // Import from the concrete modules rather than the '@alga-psa/jobs' barrel: this
 // file is itself reached via the barrel's `export * from './actions'`, so a
 // self-import would read these before the barrel finishes initializing. The
@@ -41,12 +41,17 @@ export interface JobRecord {
   external_run_id?: string;
 }
 
+const tenantScopedTable = (conn: Knex | Knex.Transaction, table: string, tenant: string) =>
+  createTenantScopedQuery(conn, {
+    table,
+    tenant
+  }).builder;
+
 export const getQueueMetricsAction = withAuth(async (user, { tenant }): Promise<JobMetrics> => {
   const { knex } = await createTenantKnex();
 
   // Get all counts in a single query using conditional aggregation
-  const result = await knex('jobs')
-    .where({ tenant })
+  const result = await tenantScopedTable(knex, 'jobs', tenant)
     .select(
       knex.raw('COUNT(*) as total'),
       knex.raw(`COUNT(*) FILTER (WHERE status = ?) as completed`, [JobStatus.Completed]),
@@ -86,9 +91,8 @@ export const getJobDetailsWithHistory = withAuth(async (user, { tenant }, filter
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Build and execute jobs query scoped explicitly to the tenant
-    let query = trx('jobs')
+    let query = tenantScopedTable(trx, 'jobs', tenant)
       .select('*')
-      .where('tenant', tenant)
       .orderBy('created_at', 'desc');
 
     if (filter.state) {
@@ -110,7 +114,7 @@ export const getJobDetailsWithHistory = withAuth(async (user, { tenant }, filter
       query = query.offset(filter.offset);
     }
 
-    const jobs = await query;
+    const jobs = await query as JobRecord[];
 
     if (jobs.length === 0) {
       return [];
@@ -205,7 +209,6 @@ export const clearJobHistoryAction = withAuth(async (
   // job_details subquery and the jobs delete target an identical row set. The
   // scope (status) and age (cutoff) axes compose with AND.
   const applyFilters = (query: Knex.QueryBuilder): Knex.QueryBuilder => {
-    query.where('tenant', tenant);
     if (params.scope === 'finished') {
       query.whereIn('status', TERMINAL_JOB_STATUSES);
     }
@@ -217,12 +220,11 @@ export const clearJobHistoryAction = withAuth(async (
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Child rows first: job_details has a FK to jobs(tenant, job_id).
-    await trx('job_details')
-      .where('tenant', tenant)
-      .whereIn('job_id', applyFilters(trx('jobs').select('job_id')))
+    await tenantScopedTable(trx, 'job_details', tenant)
+      .whereIn('job_id', applyFilters(tenantScopedTable(trx, 'jobs', tenant).select('job_id')))
       .delete();
 
-    const deletedJobs = await applyFilters(trx('jobs')).delete();
+    const deletedJobs = await applyFilters(tenantScopedTable(trx, 'jobs', tenant)).delete();
 
     return { deletedJobs };
   });

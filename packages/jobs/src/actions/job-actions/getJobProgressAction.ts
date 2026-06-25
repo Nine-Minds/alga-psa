@@ -1,7 +1,7 @@
 'use server';
 
-import { withAdminTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
+import { createTenantScopedQuery, withAdminTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 
 // Concrete module, not the '@alga-psa/jobs' barrel — this file is reached via the
@@ -17,20 +17,34 @@ export interface JobProgressData {
   metrics: JobMetrics;
 }
 
+type JobHeaderRow = {
+  id: string;
+  name: string;
+  status: JobStatus | string;
+  createdOn?: Date | string | null;
+};
+
 export const getJobProgressAction = withAuth(async (user, { tenant }, jobId: string): Promise<JobProgressData> => {
   try {
     const { header, details } = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const [headerResult] = await trx('jobs as j')
+      const [headerResult] = await createTenantScopedQuery(trx, {
+          table: 'jobs as j',
+          alias: 'j',
+          tenant
+        }).builder
         .select(
           'j.job_id as id',
           'j.type as name',
           'j.status',
           'j.created_at as createdOn'
         )
-        .where('j.job_id', jobId)
-        .andWhere('j.tenant', tenant);
+        .where('j.job_id', jobId) as JobHeaderRow[];
 
-      const detailsResult = await trx('job_details as jd')
+      const detailsResult = await createTenantScopedQuery(trx, {
+          table: 'job_details as jd',
+          alias: 'jd',
+          tenant
+        }).builder
         .select(
           'jd.detail_id as id',
           'jd.step_name as stepName',
@@ -40,8 +54,7 @@ export const getJobProgressAction = withAuth(async (user, { tenant }, jobId: str
           'jd.result'
         )
         .where('jd.job_id', jobId)
-        .andWhere('jd.tenant', tenant)
-        .orderBy('jd.processed_at', 'asc');
+        .orderBy('jd.processed_at', 'asc') as JobDetail[];
 
       return { header: headerResult, details: detailsResult };
     });
@@ -65,10 +78,10 @@ export const getJobProgressAction = withAuth(async (user, { tenant }, jobId: str
       metrics: {
         total: details.length,
         completed: details.filter(d => d.status === JobStatus.Completed).length,
-        failed: details.filter(d => d.status === 'Failed').length,
-        pending: details.filter(d => d.status === 'Pending').length,
-        active: details.filter(d => d.status === 'Pending').length,
-        queued: details.filter(d => d.status === 'Pending').length,
+        failed: details.filter(d => d.status === JobStatus.Failed).length,
+        pending: details.filter(d => d.status === JobStatus.Pending).length,
+        active: details.filter(d => d.status === JobStatus.Pending).length,
+        queued: details.filter(d => d.status === JobStatus.Pending).length,
         byRunner: {
           pgboss: 0,
           temporal: 0
