@@ -1507,14 +1507,19 @@ export class FinancialService extends BaseService<ITransaction> {
       await this.validatePermissions('read', 'financial_report', context);
     }
     
-    const { knex } = await this.getKnex();
-    const tenant = context?.tenant || await this.getKnex().then(({tenant}) => tenant);
+    const { knex, tenant: defaultTenant } = await this.getKnex();
+    const tenant = context?.tenant || defaultTenant;
     const reportDate = new Date().toISOString();
     const now = new Date();
 
-    let query = knex('invoices as i')
-      .join('clients as c', 'i.client_id', 'c.client_id')
-      .where('i.tenant', tenant)
+    let query = createTenantScopedQuery(knex, {
+      table: 'invoices as i',
+      tenant,
+    }).builder
+      .join('clients as c', function joinClients() {
+        this.on('i.client_id', '=', 'c.client_id')
+          .andOn('i.tenant', '=', 'c.tenant');
+      })
       .whereIn('i.status', ['sent', 'overdue']);
 
     if (clientId) {
