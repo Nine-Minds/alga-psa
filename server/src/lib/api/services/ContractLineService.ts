@@ -1514,7 +1514,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     const plan = await this.getExistingPlan(planId, context);
     
     // Get client assignments
-    const clientStats = await knex('contract_lines as cl')
+    const clientStats = await createTenantScopedQuery(knex, {
+      table: 'contract_lines as cl',
+      tenant: context.tenant,
+    }).builder
       .join('contracts as c', function joinContracts() {
         this.on('cl.contract_id', '=', 'c.contract_id')
           .andOn('cl.tenant', '=', 'c.tenant');
@@ -1524,7 +1527,6 @@ export class ContractLineService extends BaseService<IContractLine> {
           .andOn('c.tenant', '=', 'cc.tenant');
       })
       .where('cl.contract_line_id', planId)
-      .where('cl.tenant', context.tenant)
       .select(
         knex.raw('COUNT(DISTINCT cc.client_id) as total_clients'),
         knex.raw('COUNT(DISTINCT CASE WHEN cc.is_active = true THEN cc.client_id END) as active_clients')
@@ -1544,10 +1546,15 @@ export class ContractLineService extends BaseService<IContractLine> {
     };
     
     // Get service usage stats
-    const serviceStats = await knex('contract_line_service_configuration as psc')
-      .join('service_catalog as sc', 'psc.service_id', 'sc.service_id')
+    const serviceStats = await createTenantScopedQuery(knex, {
+      table: 'contract_line_service_configuration as psc',
+      tenant: context.tenant,
+    }).builder
+      .join('service_catalog as sc', function joinCatalog() {
+        this.on('psc.service_id', '=', 'sc.service_id')
+          .andOn('psc.tenant', '=', 'sc.tenant');
+      })
       .where('psc.contract_line_id', planId)
-      .where('psc.tenant', context.tenant)
       .select('sc.service_name', 'psc.service_id')
       .count('* as usage_count');
     
@@ -1583,9 +1590,18 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get basic counts
     const [planCount, contractCount, assignmentCount] = await Promise.all([
-      knex('contract_lines').where('tenant', context.tenant).count('* as count').first(),
-      knex('contracts').where('tenant', context.tenant).count('* as count').first(),
-      knex('contract_lines as cl')
+      createTenantScopedQuery(knex, {
+        table: 'contract_lines',
+        tenant: context.tenant,
+      }).builder.count('* as count').first(),
+      createTenantScopedQuery(knex, {
+        table: 'contracts',
+        tenant: context.tenant,
+      }).builder.count('* as count').first(),
+      createTenantScopedQuery(knex, {
+        table: 'contract_lines as cl',
+        tenant: context.tenant,
+      }).builder
         .join('contracts as c', function joinContracts() {
           this.on('cl.contract_id', '=', 'c.contract_id')
             .andOn('cl.tenant', '=', 'c.tenant');
@@ -1594,7 +1610,6 @@ export class ContractLineService extends BaseService<IContractLine> {
           this.on('c.contract_id', '=', 'cc.contract_id')
             .andOn('c.tenant', '=', 'cc.tenant');
         })
-        .where('cl.tenant', context.tenant)
         .where('cl.is_active', true)
         .where('cc.is_active', true)
         .whereRaw('c.owner_client_id = cc.client_id')
@@ -1606,8 +1621,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     ]);
     
     // Get plans by type
-    const plansByType = await knex('contract_lines')
-      .where('tenant', context.tenant)
+    const plansByType = await createTenantScopedQuery(knex, {
+      table: 'contract_lines',
+      tenant: context.tenant,
+    }).builder
       .groupBy('contract_line_type')
       .select('contract_line_type')
       .count('* as count');
@@ -1618,8 +1635,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     });
     
     // Get billing frequency distribution
-    const frequencyDistribution = await knex('contract_lines')
-      .where('tenant', context.tenant)
+    const frequencyDistribution = await createTenantScopedQuery(knex, {
+      table: 'contract_lines',
+      tenant: context.tenant,
+    }).builder
       .groupBy('billing_frequency')
       .select('billing_frequency')
       .count('* as count');
