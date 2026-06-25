@@ -1003,20 +1003,20 @@ export const getArticlesWithTags = withAuth(
     }
 
     // --- available tags for filter sidebar ---
-    const availableTagsResult = await knex.raw(
-      `SELECT DISTINCT ON (td.tag_text) td.*
-       FROM tag_definitions td
-       WHERE td.tenant = ?
-         AND td.tagged_type = 'knowledge_base_article'
-         AND EXISTS (
-           SELECT 1 FROM tag_mappings tm
-           WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
-         )
-       ORDER BY td.tag_text ASC, td.created_at ASC`,
-      [tenant]
-    );
+    const availableTagDefs = await tenantScopedTable(knex, 'tag_definitions as td', tenant)
+      .distinctOn('td.tag_text')
+      .select('td.*')
+      .where('td.tagged_type', 'knowledge_base_article')
+      .whereExists(function () {
+        this.select(knex.raw('1'))
+          .from('tag_mappings as tm')
+          .whereRaw('tm.tenant = td.tenant')
+          .whereRaw('tm.tag_id = td.tag_id');
+      })
+      .orderBy('td.tag_text', 'asc')
+      .orderBy('td.created_at', 'asc');
 
-    const availableTags: ITag[] = (availableTagsResult.rows || []).map((def: any) => ({
+    const availableTags: ITag[] = availableTagDefs.map((def: any) => ({
       tag_id: def.tag_id,
       tenant,
       board_id: def.board_id || undefined,
@@ -1131,8 +1131,8 @@ export const recordArticleView = withAuth(
       return false;
     }
 
-    await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
+    await tenantScopedTable(knex, 'kb_articles', tenant)
+      .where({ article_id: articleId })
       .increment('view_count', 1);
 
     return true;
@@ -1159,8 +1159,8 @@ export const recordArticleFeedback = withAuth(
 
     const column = helpful ? 'helpful_count' : 'not_helpful_count';
 
-    await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
+    await tenantScopedTable(knex, 'kb_articles', tenant)
+      .where({ article_id: articleId })
       .increment(column, 1);
 
     return true;
@@ -1183,12 +1183,11 @@ export const getArticleTemplates = withAuth(
       return permissionError('Permission denied');
     }
 
-    let query = knex('kb_article_templates')
+    let query = tenantScopedTable(knex, 'kb_article_templates', tenant)
       .select([
         'template_id', 'tenant', 'name', 'description',
         'article_type', 'is_default', 'created_at', 'updated_at',
-      ])
-      .where('tenant', tenant);
+      ]);
 
     if (articleType) {
       query = query.andWhere('article_type', articleType);
@@ -1499,7 +1498,9 @@ export const importArticles = withAuth(
 
         // Deduplicate slug: append a suffix if needed
         let slug = generateSlug(title);
-        const existingSlug = await knex('kb_articles').where({ tenant, slug }).first();
+        const existingSlug = await tenantScopedTable(knex, 'kb_articles', tenant)
+          .where({ slug })
+          .first();
         if (existingSlug) {
           slug = `${slug}-${Date.now()}`;
         }
@@ -1547,8 +1548,8 @@ export const createArticleFromTicket = withAuth(
     }
 
     // Get the ticket
-    const ticket = await knex('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    const ticket = await tenantScopedTable(knex, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .first();
 
     if (!ticket) {
