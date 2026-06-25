@@ -740,9 +740,14 @@ export async function completePortalSetup(
         } as CompleteSetupResult;
       }
 
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(knex, {
+        table,
+        tenant,
+      }).builder;
+
       // Check if user already exists
-      const existingUser = await knex('users')
-        .where({ tenant, contact_id: contact.contact_name_id })
+      const existingUser = await tenantScopedTable('users')
+        .where({ contact_id: contact.contact_name_id })
         .first();
 
       if (existingUser) {
@@ -750,8 +755,8 @@ export async function completePortalSetup(
         try {
           const { hashPassword } = await import('@alga-psa/core/encryption');
           const hashedPassword = await hashPassword(password);
-          await knex('users')
-            .where({ user_id: existingUser.user_id, tenant })
+          await tenantScopedTable('users')
+            .where({ user_id: existingUser.user_id })
             .update({ hashed_password: hashedPassword, is_inactive: false, updated_at: knex.raw('now()') });
 
           // Mark invitation as used
@@ -828,14 +833,14 @@ export async function completePortalSetup(
       // Assign appropriate role based on contact's is_client_admin flag
       try {
         // Get the full contact details to check is_client_admin
-        const fullContact = await knex('contacts')
-          .where({ tenant, contact_name_id: contact.contact_name_id })
+        const fullContact = await tenantScopedTable('contacts')
+          .where({ contact_name_id: contact.contact_name_id })
           .first();
         
         // Find the appropriate role - use actual role names from seeds: "Admin" or "User"
         const roleName = fullContact?.is_client_admin ? 'Admin' : 'User';
-        const role = await knex('roles')
-          .where({ tenant, role_name: roleName, client: true })
+        const role = await tenantScopedTable('roles')
+          .where({ role_name: roleName, client: true })
           .first();
         
         if (role) {
