@@ -400,6 +400,10 @@ export const deleteUser = withAuth(async (
     const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
       const tenantOrUndef = tenantId || undefined;
       const actorId = user.user_id;
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant: tenantId,
+      }).builder;
 
       // Citus does not enforce ON DELETE SET NULL / CASCADE on distributed
       // tables, so every FK pointing at users(tenant, user_id) must be
@@ -458,8 +462,8 @@ export const deleteUser = withAuth(async (
         ['authorization_bundle_rules', 'created_by'],
       ];
       for (const [table, column] of nullColumns) {
-        await trx(table)
-          .where({ [column]: userId, tenant: tenantOrUndef })
+        await tenantScopedTable(table)
+          .where({ [column]: userId })
           .update({ [column]: null });
       }
 
@@ -488,8 +492,8 @@ export const deleteUser = withAuth(async (
         ['tenant_telemetry_settings', 'updated_by'],
       ];
       for (const [table, column] of reassignColumns) {
-        await trx(table)
-          .where({ [column]: userId, tenant: tenantOrUndef })
+        await tenantScopedTable(table)
+          .where({ [column]: userId })
           .update({ [column]: actorId });
       }
 
