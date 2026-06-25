@@ -1410,16 +1410,16 @@ export const addTaskResourcesAction = withAuth(async (
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-            const task = await trx('project_tasks')
-                .where({ task_id: taskId, tenant })
+            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: taskId })
                 .first();
             if (!task) {
                 throw new Error('Task not found');
             }
 
             const wanted = Array.from(new Set(userIds.filter(Boolean)));
-            const existing = await trx('task_resources')
-                .where({ task_id: taskId, tenant })
+            const existing = await tenantScopedTable(trx, 'task_resources', tenant)
+                .where({ task_id: taskId })
                 .whereIn('additional_user_id', wanted)
                 .select('additional_user_id');
             const existingIds = new Set(existing.map((row: { additional_user_id: string }) => row.additional_user_id));
@@ -1478,8 +1478,8 @@ export const assignTeamToProjectTask = withAuth(async (
         const eventData = await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
 
-            const task = await trx('project_tasks')
-                .where({ task_id: taskId, tenant })
+            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: taskId })
                 .first();
             if (!task) {
                 throw new Error('Task not found');
@@ -1490,8 +1490,8 @@ export const assignTeamToProjectTask = withAuth(async (
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-            const team = await trx('teams')
-                .where({ team_id: teamId, tenant })
+            const team = await tenantScopedTable(trx, 'teams', tenant)
+                .where({ team_id: teamId })
                 .first();
             if (!team) {
                 throw new Error('Team not found');
@@ -1502,20 +1502,20 @@ export const assignTeamToProjectTask = withAuth(async (
 
             // Resolve project_id via phase
             const phase = task.phase_id
-                ? await trx('project_phases')
-                    .where({ phase_id: task.phase_id, tenant })
+                ? await tenantScopedTable(trx, 'project_phases', tenant)
+                    .where({ phase_id: task.phase_id })
                     .select('project_id')
                     .first()
                 : null;
 
-            const teamMembers = await trx('team_members')
+            const teamMembers = await tenantScopedTable(trx, 'team_members', tenant)
                 .join('users', function() {
                     this.on('team_members.user_id', 'users.user_id')
                         .andOn('team_members.tenant', 'users.tenant');
                 })
-                .where({ 'team_members.team_id': teamId, 'team_members.tenant': tenant })
+                .where({ 'team_members.team_id': teamId })
                 .andWhere('users.is_inactive', false)
-                .select('team_members.user_id');
+                .select('team_members.user_id') as Array<{ user_id: string }>;
 
             // Assigning a team makes that team's lead the task's primary agent,
             // overwriting any previous primary (e.g. the prior team's lead).
@@ -1524,12 +1524,12 @@ export const assignTeamToProjectTask = withAuth(async (
             // The new lead can't be both primary and an additional resource
             // (CHECK assigned_to != additional_user_id + unique index), so drop
             // any existing resource row for them before promoting to primary.
-            await trx('task_resources')
-                .where({ task_id: taskId, tenant, additional_user_id: assignedTo })
+            await tenantScopedTable(trx, 'task_resources', tenant)
+                .where({ task_id: taskId, additional_user_id: assignedTo })
                 .delete();
 
-            await trx('project_tasks')
-                .where({ task_id: taskId, tenant })
+            await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: taskId })
                 .update({
                     assigned_team_id: teamId,
                     assigned_to: assignedTo,
@@ -1541,10 +1541,10 @@ export const assignTeamToProjectTask = withAuth(async (
                 .filter((userId: string) => userId && userId !== assignedTo);
 
             if (memberIds.length > 0) {
-                const existingResources = await trx('task_resources')
-                    .where({ task_id: taskId, tenant })
+                const existingResources = await tenantScopedTable(trx, 'task_resources', tenant)
+                    .where({ task_id: taskId })
                     .whereIn('additional_user_id', memberIds)
-                    .select('additional_user_id');
+                    .select('additional_user_id') as Array<{ additional_user_id: string }>;
 
                 const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
                 const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
@@ -1613,8 +1613,8 @@ export const removeTeamFromProjectTask = withAuth(async (
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
 
-            const task = await trx('project_tasks')
-                .where({ task_id: taskId, tenant })
+            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: taskId })
                 .first();
             if (!task) {
                 throw new Error('Task not found');
@@ -1628,36 +1628,36 @@ export const removeTeamFromProjectTask = withAuth(async (
             // Resolve the team's lead so we know whether removing the team should
             // also vacate the primary agent slot it filled.
             const removedTeam = task.assigned_team_id
-                ? await trx('teams')
-                    .where({ team_id: task.assigned_team_id, tenant })
+                ? await tenantScopedTable(trx, 'teams', tenant)
+                    .where({ team_id: task.assigned_team_id })
                     .first()
                 : null;
             const teamLeadId: string | null = removedTeam?.manager_id ?? null;
 
             const mode = options.mode;
             if (mode === 'remove_all') {
-                await trx('task_resources')
-                    .where({ task_id: taskId, tenant, role: 'team_member' })
+                await tenantScopedTable(trx, 'task_resources', tenant)
+                    .where({ task_id: taskId, role: 'team_member' })
                     .delete();
             } else if (mode === 'selective') {
                 const keepIds = options.keepUserIds ?? [];
-                await trx('task_resources')
-                    .where({ task_id: taskId, tenant, role: 'team_member' })
+                await tenantScopedTable(trx, 'task_resources', tenant)
+                    .where({ task_id: taskId, role: 'team_member' })
                     .whereNotIn('additional_user_id', keepIds)
                     .delete();
                 // Kept members are now individual agents — clear the team_member role
                 // so they don't get swept up by a future remove_all.
                 if (keepIds.length > 0) {
-                    await trx('task_resources')
-                        .where({ task_id: taskId, tenant, role: 'team_member' })
+                    await tenantScopedTable(trx, 'task_resources', tenant)
+                        .where({ task_id: taskId, role: 'team_member' })
                         .whereIn('additional_user_id', keepIds)
                         .update({ role: null });
                 }
             } else if (mode === 'keep_all') {
                 // Keep every member but drop the team_member role so the rows are
                 // treated as plain additional agents from now on.
-                await trx('task_resources')
-                    .where({ task_id: taskId, tenant, role: 'team_member' })
+                await tenantScopedTable(trx, 'task_resources', tenant)
+                    .where({ task_id: taskId, role: 'team_member' })
                     .update({ role: null });
             }
 
@@ -1666,8 +1666,8 @@ export const removeTeamFromProjectTask = withAuth(async (
             // 'selective' keep people assigned, so the lead stays as primary.
             const clearPrimary = mode === 'remove_all' && !!teamLeadId && task.assigned_to === teamLeadId;
 
-            await trx('project_tasks')
-                .where({ task_id: taskId, tenant })
+            await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: taskId })
                 .update({
                     assigned_team_id: null,
                     ...(clearPrimary ? { assigned_to: null } : {}),
