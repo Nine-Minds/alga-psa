@@ -71,6 +71,15 @@ function tokenize(text: string) {
   );
 }
 
+// Singularize every word in a block of text while leaving separators intact.
+// Query tokens are singularized (e.g. "priorities" -> "priority"), so matching a
+// singularized view of the field text keeps substring matching symmetric for
+// irregular plurals whose singular is not a substring of the plural — "priorities",
+// "categories", "companies". Input is expected to already be lower-cased.
+function singularizeText(text: string) {
+  return text.replace(/[a-z0-9]+/g, (word) => singularize(word));
+}
+
 function buildSearchContext(query: string): SearchContext {
   const normalizedQuery = query.trim().toLowerCase();
   const intents = new Set<SearchIntent>();
@@ -207,9 +216,13 @@ function scoreTokenMatches(
   ];
 
   let score = 0;
-  for (const token of context.tokens) {
-    for (const [field, value, weight] of fieldTexts) {
-      if (value.includes(token)) {
+  for (const [field, value, weight] of fieldTexts) {
+    // Match against the raw field text and a singularized view of it so a query
+    // token like "priority" (singularized from "priorities") still matches a field
+    // that literally reads "priorities". Computed once per field, not per token.
+    const singularValue = singularizeText(value);
+    for (const token of context.tokens) {
+      if (value.includes(token) || singularValue.includes(token)) {
         score += weight;
         matchedFields.add(field);
       }
@@ -252,6 +265,19 @@ function scoreEntry(
   ) {
     score += 4;
     matchedFields.add('resourceTail');
+  }
+
+  // Exact-resource match: every resource segment of the path is named in the query.
+  // This favors the endpoint whose whole resource the user asked for (POST /tickets
+  // for "create ticket") over one where the noun is only a trailing qualifier
+  // (POST /categories/ticket — a ticket *category*). The bonus applies equally to
+  // all of a resource's endpoints, so it never disturbs intra-resource ordering.
+  if (
+    resourceSegments.length > 0 &&
+    resourceSegments.every((segment) => context.tokens.includes(segment))
+  ) {
+    score += 4;
+    matchedFields.add('resourceExact');
   }
 
   if (
