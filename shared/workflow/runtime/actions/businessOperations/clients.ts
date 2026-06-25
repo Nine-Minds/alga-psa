@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
@@ -253,7 +254,7 @@ const clientToSummary = (row: Record<string, unknown>) =>
   });
 
 async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: string): Promise<ClientRow> {
-  const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: clientId }).first();
+  const client = await tenantScopedTable(tx, 'clients').where('client_id', clientId).first();
   if (!client) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -266,7 +267,7 @@ async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: strin
 }
 
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, any>> {
-  const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: ticketId }).first();
+  const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', ticketId).first();
   if (!ticket) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -284,6 +285,14 @@ async function getTableColumns(tx: TenantTxContext, tableName: string): Promise<
     .where({ table_schema: 'public', table_name: tableName });
 
   return new Set(rows.map((row: { column_name: string }) => row.column_name));
+}
+
+function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(tx.trx, { table, tenant: tx.tenantId }).builder;
+}
+
+function tenantScopedTableForTenant(trx: Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(trx, { table, tenant }).builder;
 }
 
 function pickExistingFields(
@@ -304,19 +313,19 @@ function pickExistingFields(
 }
 
 async function deactivateClientUsersForClient(tx: TenantTxContext, clientId: string): Promise<void> {
-  const contacts = await tx.trx('contacts')
-    .where({ tenant: tx.tenantId, client_id: clientId })
+  const contacts = await tenantScopedTable(tx, 'contacts')
+    .where('client_id', clientId)
     .select('contact_name_id');
 
-  await tx.trx('contacts').where({ tenant: tx.tenantId, client_id: clientId }).update({ is_inactive: true });
+  await tenantScopedTable(tx, 'contacts').where('client_id', clientId).update({ is_inactive: true });
 
   const contactIds = contacts
     .map((row: { contact_name_id?: string | null }) => row.contact_name_id)
     .filter((value: string | null | undefined): value is string => Boolean(value));
 
   if (contactIds.length > 0) {
-    await tx.trx('users')
-      .where({ tenant: tx.tenantId, user_type: 'client' })
+    await tenantScopedTable(tx, 'users')
+      .where('user_type', 'client')
       .whereIn('contact_id', contactIds)
       .update({ is_inactive: true });
   }
@@ -371,8 +380,8 @@ async function upsertDefaultClientLocation(
 
   if (!hasAnyValue) return;
 
-  let location = await tx.trx('client_locations')
-    .where({ tenant: tx.tenantId, client_id: clientId, is_default: true })
+  let location = await tenantScopedTable(tx, 'client_locations')
+    .where({ client_id: clientId, is_default: true })
     .first();
 
   if (!location) {
@@ -413,8 +422,8 @@ async function upsertDefaultClientLocation(
   }
 
   if (Object.keys(locationPatch).length > 0) {
-    await tx.trx('client_locations')
-      .where({ tenant: tx.tenantId, client_id: clientId, location_id: location.location_id })
+    await tenantScopedTable(tx, 'client_locations')
+      .where({ client_id: clientId, location_id: location.location_id })
       .update(locationPatch);
   }
 }
@@ -467,9 +476,8 @@ async function ensureClientTagMappings(
       .onConflict(['tenant', 'tag_text', 'tagged_type'])
       .ignore();
 
-    const definition = await tx.trx('tag_definitions')
+    const definition = await tenantScopedTable(tx, 'tag_definitions')
       .where({
-        tenant: tx.tenantId,
         tag_text: tagText,
         tagged_type: 'client',
       })
@@ -511,9 +519,8 @@ async function ensureClientTagMappings(
       continue;
     }
 
-    const mapping = await tx.trx('tag_mappings')
+    const mapping = await tenantScopedTable(tx, 'tag_mappings')
       .where({
-        tenant: tx.tenantId,
         tag_id: definition.tag_id,
         tagged_id: clientId,
         tagged_type: 'client',
@@ -532,14 +539,15 @@ async function ensureClientTagMappings(
   return { added, existing };
 }
 
-async function deleteFromTableIfExists(
+async function deleteFromTenantTableIfExists(
   trx: Knex.Transaction,
+  tenant: string,
   tableName: string,
   where: Record<string, unknown>
 ): Promise<void> {
   const exists = await trx.schema.hasTable(tableName);
   if (!exists) return;
-  await trx(tableName).where(where).delete();
+  await tenantScopedTableForTenant(trx, tenant, tableName).where(where).delete();
 }
 
 async function getExistingPublicTables(
@@ -564,16 +572,15 @@ async function cleanupDefaultContractsForDeletedClient(
     return;
   }
 
-  const defaultContracts = await trx('contracts')
+  const defaultContracts = await tenantScopedTableForTenant(trx, tenant, 'contracts')
     .where({
-      tenant,
       owner_client_id: clientId,
       is_system_managed_default: true,
     })
     .select('contract_id') as ContractRow[];
 
-  const assignmentsForClient = await trx('client_contracts')
-    .where({ tenant, client_id: clientId })
+  const assignmentsForClient = await tenantScopedTableForTenant(trx, tenant, 'client_contracts')
+    .where('client_id', clientId)
     .select('client_contract_id', 'contract_id') as ClientContractAssignmentRow[];
 
   const assignmentsById = new Map<string, string>();
@@ -583,8 +590,7 @@ async function cleanupDefaultContractsForDeletedClient(
 
   const invoicedDefaultContractIds = new Set<string>();
   if (assignmentsById.size > 0 && existingTables.has('invoice_charges')) {
-    const invoiceRows = await trx('invoice_charges')
-      .where({ tenant })
+    const invoiceRows = await tenantScopedTableForTenant(trx, tenant, 'invoice_charges')
       .whereIn('client_contract_id', [...assignmentsById.keys()])
       .distinct('client_contract_id') as Array<{ client_contract_id: string }>;
     for (const row of invoiceRows) {
@@ -595,13 +601,13 @@ async function cleanupDefaultContractsForDeletedClient(
     }
   }
 
-  await trx('client_contracts')
-    .where({ tenant, client_id: clientId })
+  await tenantScopedTableForTenant(trx, tenant, 'client_contracts')
+    .where('client_id', clientId)
     .delete();
 
   for (const contract of defaultContracts) {
-    const countRow = await trx('client_contracts')
-      .where({ tenant, contract_id: contract.contract_id })
+    const countRow = await tenantScopedTableForTenant(trx, tenant, 'client_contracts')
+      .where('contract_id', contract.contract_id)
       .count<{ count?: string }>('client_contract_id as count')
       .first();
     const assignmentCount = Number(countRow?.count ?? 0);
@@ -610,16 +616,16 @@ async function cleanupDefaultContractsForDeletedClient(
     }
 
     if (invoicedDefaultContractIds.has(contract.contract_id)) {
-      await trx('contracts')
-        .where({ tenant, contract_id: contract.contract_id })
+      await tenantScopedTableForTenant(trx, tenant, 'contracts')
+        .where('contract_id', contract.contract_id)
         .update({
           status: 'archived',
           is_active: false,
           updated_at: trx.fn.now(),
         });
     } else {
-      await trx('contracts')
-        .where({ tenant, contract_id: contract.contract_id })
+      await tenantScopedTableForTenant(trx, tenant, 'contracts')
+        .where('contract_id', contract.contract_id)
         .delete();
     }
   }
@@ -631,14 +637,13 @@ async function cleanupClientDeleteArtifacts(
   clientId: string
 ): Promise<void> {
   await cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
-  await deleteFromTableIfExists(trx, 'client_billing_settings', { tenant, client_id: clientId });
-  await deleteFromTableIfExists(trx, 'client_billing_cycles', { tenant, client_id: clientId });
-  await deleteFromTableIfExists(trx, 'client_tax_settings', { tenant, client_id: clientId });
-  await deleteFromTableIfExists(trx, 'client_tax_rates', { tenant, client_id: clientId });
-  await deleteFromTableIfExists(trx, 'client_locations', { tenant, client_id: clientId });
-  await deleteFromTableIfExists(trx, 'client_payment_customers', { tenant, client_id: clientId });
-  await deleteFromTableIfExists(trx, 'tag_mappings', {
-    tenant,
+  await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
+  await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
+  await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
+  await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
+  await deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+  await deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });
+  await deleteFromTenantTableIfExists(trx, tenant, 'tag_mappings', {
     tagged_type: 'client',
     tagged_id: clientId,
   });
@@ -649,8 +654,8 @@ async function cleanupClientNotesDocument(
   tenant: string,
   clientId: string
 ): Promise<void> {
-  const clientRecord = await trx('clients')
-    .where({ client_id: clientId, tenant })
+  const clientRecord = await tenantScopedTableForTenant(trx, tenant, 'clients')
+    .where('client_id', clientId)
     .select('notes_document_id')
     .first();
 
@@ -658,16 +663,13 @@ async function cleanupClientNotesDocument(
     return;
   }
 
-  await deleteFromTableIfExists(trx, 'document_block_content', {
-    tenant,
+  await deleteFromTenantTableIfExists(trx, tenant, 'document_block_content', {
     document_id: clientRecord.notes_document_id,
   });
-  await deleteFromTableIfExists(trx, 'document_associations', {
-    tenant,
+  await deleteFromTenantTableIfExists(trx, tenant, 'document_associations', {
     document_id: clientRecord.notes_document_id,
   });
-  await deleteFromTableIfExists(trx, 'documents', {
-    tenant,
+  await deleteFromTenantTableIfExists(trx, tenant, 'documents', {
     document_id: clientRecord.notes_document_id,
   });
 }
@@ -695,36 +697,34 @@ async function cleanupEntraReferencesBeforeClientDelete(
   const now = trx.fn.now();
 
   if (existingTables.has('entra_sync_run_tenants')) {
-    await trx('entra_sync_run_tenants')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTableForTenant(trx, tenantId, 'entra_sync_run_tenants')
+      .where('client_id', clientId)
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_links')) {
-    await trx('entra_contact_links')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTableForTenant(trx, tenantId, 'entra_contact_links')
+      .where('client_id', clientId)
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_reconciliation_queue')) {
-    await trx('entra_contact_reconciliation_queue')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTableForTenant(trx, tenantId, 'entra_contact_reconciliation_queue')
+      .where('client_id', clientId)
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_client_tenant_mappings')) {
-    const activeMappings = await trx('entra_client_tenant_mappings')
+    const activeMappings = await tenantScopedTableForTenant(trx, tenantId, 'entra_client_tenant_mappings')
       .where({
-        tenant: tenantId,
         client_id: clientId,
         is_active: true,
       })
       .select('managed_tenant_id') as Array<{ managed_tenant_id: string }>;
 
     if (activeMappings.length > 0) {
-      await trx('entra_client_tenant_mappings')
+      await tenantScopedTableForTenant(trx, tenantId, 'entra_client_tenant_mappings')
         .where({
-          tenant: tenantId,
           client_id: clientId,
           is_active: true,
         })
@@ -749,16 +749,15 @@ async function cleanupEntraReferencesBeforeClientDelete(
       await trx('entra_client_tenant_mappings').insert(unmappedRows);
     }
 
-    await trx('entra_client_tenant_mappings')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTableForTenant(trx, tenantId, 'entra_client_tenant_mappings')
+      .where('client_id', clientId)
       .update({ client_id: null, updated_at: now });
   }
 }
 
 async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Promise<string> {
-  const status = await tx.trx('statuses')
+  const status = await tenantScopedTable(tx, 'statuses')
     .where({
-      tenant: tx.tenantId,
       status_type: 'interaction',
       is_default: true,
     })
@@ -779,8 +778,7 @@ async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Pro
 // Mirrors the tenant-default read in resolveClientBillingCurrency so new clients adopt the
 // configured org default at creation instead of a literal 'USD'.
 async function getTenantDefaultBillingCurrency(tx: TenantTxContext): Promise<string> {
-  const billingSettings = await tx.trx('default_billing_settings')
-    .where({ tenant: tx.tenantId })
+  const billingSettings = await tenantScopedTable(tx, 'default_billing_settings')
     .select('default_currency_code')
     .first();
 
@@ -799,8 +797,8 @@ async function appendClientNoteBlock(
   };
 
   if (client.notes_document_id) {
-    const existing = await tx.trx('document_block_content')
-      .where({ tenant: tx.tenantId, document_id: client.notes_document_id })
+    const existing = await tenantScopedTable(tx, 'document_block_content')
+      .where('document_id', client.notes_document_id)
       .first();
 
     const existingBlocks = Array.isArray(existing?.block_data)
@@ -818,8 +816,8 @@ async function appendClientNoteBlock(
     const nextBlocks = [...(Array.isArray(existingBlocks) ? existingBlocks : []), contentBlock];
 
     if (existing) {
-      await tx.trx('document_block_content')
-        .where({ tenant: tx.tenantId, document_id: client.notes_document_id })
+      await tenantScopedTable(tx, 'document_block_content')
+        .where('document_id', client.notes_document_id)
         .update({ block_data: JSON.stringify(nextBlocks), updated_at: nowIso });
     } else {
       await tx.trx('document_block_content').insert({
@@ -832,8 +830,8 @@ async function appendClientNoteBlock(
       });
     }
 
-    await tx.trx('documents')
-      .where({ tenant: tx.tenantId, document_id: client.notes_document_id })
+    await tenantScopedTable(tx, 'documents')
+      .where('document_id', client.notes_document_id)
       .update({ updated_at: nowIso, edited_by: tx.actorUserId });
 
     return {
@@ -844,8 +842,7 @@ async function appendClientNoteBlock(
   }
 
   const documentId = uuidv4();
-  const documentType = await tx.trx('document_types')
-    .where({ tenant: tx.tenantId })
+  const documentType = await tenantScopedTable(tx, 'document_types')
     .orderBy('type_name', 'asc')
     .first();
 
@@ -890,8 +887,8 @@ async function appendClientNoteBlock(
     .onConflict(['tenant', 'document_id', 'entity_id', 'entity_type'])
     .ignore();
 
-  await tx.trx('clients')
-    .where({ tenant: tx.tenantId, client_id: client.client_id })
+  await tenantScopedTable(tx, 'clients')
+    .where('client_id', client.client_id)
     .update({ notes_document_id: documentId, updated_at: nowIso });
 
   return {
@@ -980,14 +977,12 @@ export function registerClientActions(): void {
           matchedBy = 'client_id';
         } else if (input.name) {
           const name = String(input.name).trim();
-          client = await tx.trx('clients')
-            .where({ tenant: tx.tenantId })
+          client = await tenantScopedTable(tx, 'clients')
             .andWhereRaw('lower(client_name) = ?', [name.toLowerCase()])
             .first();
           matchedBy = 'name';
         } else if (input.external_ref) {
-          client = await tx.trx('clients')
-            .where({ tenant: tx.tenantId })
+          client = await tenantScopedTable(tx, 'clients')
             .andWhereRaw(`(properties->>'external_ref') = ?`, [input.external_ref])
             .first();
           matchedBy = 'external_ref';
@@ -1009,8 +1004,8 @@ export function registerClientActions(): void {
 
         let primaryContact: any = null;
         if (input.include_primary_contact) {
-          primaryContact = await tx.trx('contacts')
-            .where({ tenant: tx.tenantId, client_id: client.client_id })
+          primaryContact = await tenantScopedTable(tx, 'contacts')
+            .where('client_id', client.client_id)
             .orderBy('is_inactive', 'asc')
             .orderBy('created_at', 'asc')
             .first();
@@ -1087,7 +1082,7 @@ export function registerClientActions(): void {
         const offset = (page - 1) * pageSize;
         const filters = input.filters ?? {};
 
-        let base = tx.trx('clients').where({ tenant: tx.tenantId });
+        let base = tenantScopedTable(tx, 'clients');
         if (!filters.include_inactive) {
           base = base.where(function onlyActive() {
             this.where('is_inactive', false).orWhereNull('is_inactive');
@@ -1224,8 +1219,8 @@ export function registerClientActions(): void {
         );
 
         if (Object.keys(directPatch).length > 0) {
-          await tx.trx('clients')
-            .where({ tenant: tx.tenantId, client_id: createdId })
+          await tenantScopedTable(tx, 'clients')
+            .where('client_id', createdId)
             .update(directPatch);
         }
 
@@ -1343,8 +1338,8 @@ export function registerClientActions(): void {
 
         if (Object.keys(clientPatch).length > 0) {
           try {
-            await tx.trx('clients')
-              .where({ tenant: tx.tenantId, client_id: input.client_id })
+            await tenantScopedTable(tx, 'clients')
+              .where('client_id', input.client_id)
               .update(clientPatch);
           } catch (error) {
             rethrowAsStandardError(ctx, error);
@@ -1442,8 +1437,8 @@ export function registerClientActions(): void {
         let archivedAt: string | null = null;
         if (!previousInactive) {
           archivedAt = new Date().toISOString();
-          await tx.trx('clients')
-            .where({ tenant: tx.tenantId, client_id: input.client_id })
+          await tenantScopedTable(tx, 'clients')
+            .where('client_id', input.client_id)
             .update({ is_inactive: true, updated_at: archivedAt });
           await deactivateClientUsersForClient(tx, input.client_id);
         }
@@ -1511,8 +1506,8 @@ export function registerClientActions(): void {
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'client', action: 'delete' });
 
-        const client = await tx.trx('clients')
-          .where({ tenant: tx.tenantId, client_id: input.client_id })
+        const client = await tenantScopedTable(tx, 'clients')
+          .where('client_id', input.client_id)
           .select('client_id')
           .first();
 
@@ -1528,8 +1523,8 @@ export function registerClientActions(): void {
           });
         }
 
-        const defaultClient = await tx.trx('tenant_companies')
-          .where({ tenant: tx.tenantId, client_id: input.client_id, is_default: true })
+        const defaultClient = await tenantScopedTable(tx, 'tenant_companies')
+          .where({ client_id: input.client_id, is_default: true })
           .first();
 
         if (defaultClient) {
@@ -1551,7 +1546,7 @@ export function registerClientActions(): void {
             await cleanupClientNotesDocument(trx, tenantId, input.client_id);
             await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, input.client_id);
 
-            await trx('clients').where({ tenant: tenantId, client_id: input.client_id }).delete();
+            await tenantScopedTableForTenant(trx, tenantId, 'clients').where('client_id', input.client_id).delete();
           }
         );
 
@@ -1664,12 +1659,11 @@ export function registerClientActions(): void {
 
         let copiedTags = 0;
         if (input.copy_tags) {
-          const sourceTags = await tx.trx('tag_mappings as tm')
+          const sourceTags = await tenantScopedTable(tx, 'tag_mappings as tm')
             .join('tag_definitions as td', function joinTagDefs() {
               this.on('tm.tenant', 'td.tenant').andOn('tm.tag_id', 'td.tag_id');
             })
             .where({
-              'tm.tenant': tx.tenantId,
               'tm.tagged_type': 'client',
               'tm.tagged_id': input.source_client_id,
               'td.tagged_type': 'client',
@@ -1686,8 +1680,8 @@ export function registerClientActions(): void {
 
         let copiedLocations = 0;
         if (input.copy_locations) {
-          const locationRows = await tx.trx('client_locations')
-            .where({ tenant: tx.tenantId, client_id: input.source_client_id })
+          const locationRows = await tenantScopedTable(tx, 'client_locations')
+            .where('client_id', input.source_client_id)
             .select('*');
 
           if (locationRows.length > 0) {
@@ -1830,8 +1824,8 @@ export function registerClientActions(): void {
         const ticket = await ensureTicketExists(ctx, tx, input.ticket_id);
 
         if (Object.prototype.hasOwnProperty.call(input, 'contact_id') && input.contact_id !== null && input.contact_id !== undefined) {
-          const contact = await tx.trx('contacts')
-            .where({ tenant: tx.tenantId, contact_name_id: input.contact_id })
+          const contact = await tenantScopedTable(tx, 'contacts')
+            .where('contact_name_id', input.contact_id)
             .first();
           if (!contact) {
             throwActionError(ctx, {
@@ -1852,8 +1846,8 @@ export function registerClientActions(): void {
         }
 
         if (Object.prototype.hasOwnProperty.call(input, 'location_id') && input.location_id !== null && input.location_id !== undefined) {
-          const location = await tx.trx('client_locations')
-            .where({ tenant: tx.tenantId, location_id: input.location_id })
+          const location = await tenantScopedTable(tx, 'client_locations')
+            .where('location_id', input.location_id)
             .first();
           if (!location) {
             throwActionError(ctx, {
@@ -1886,7 +1880,7 @@ export function registerClientActions(): void {
           patch.location_id = input.location_id ?? null;
         }
 
-        await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).update(patch);
+        await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).update(patch);
 
         const after = await ensureTicketExists(ctx, tx, input.ticket_id);
 
@@ -2040,8 +2034,8 @@ export function registerClientActions(): void {
         await ensureClientExists(ctx, tx, input.client_id);
 
         if (input.contact_id) {
-          const contact = await tx.trx('contacts')
-            .where({ tenant: tx.tenantId, contact_name_id: input.contact_id })
+          const contact = await tenantScopedTable(tx, 'contacts')
+            .where('contact_name_id', input.contact_id)
             .first();
           if (!contact) {
             throwActionError(ctx, {
@@ -2062,8 +2056,8 @@ export function registerClientActions(): void {
         }
 
         if (input.ticket_id) {
-          const ticket = await tx.trx('tickets')
-            .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
+          const ticket = await tenantScopedTable(tx, 'tickets')
+            .where('ticket_id', input.ticket_id)
             .first();
           if (!ticket) {
             throwActionError(ctx, {
