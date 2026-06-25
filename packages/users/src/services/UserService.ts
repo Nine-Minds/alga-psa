@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from '@alga-psa/types';
 import { ListOptions } from '../controllers/types';
 import { 
@@ -403,8 +403,8 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Verify user exists and belongs to tenant
-      const existingUser = await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      const existingUser = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .select('user_id')
         .first();
 
@@ -414,18 +414,27 @@ export class UserService extends BaseService<IUser> {
 
       // Delete related data in correct order to avoid foreign key constraints
       // 1. Delete user preferences
-      await trx('user_preferences')
-        .where({ user_id: id, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'user_preferences',
+        tenant: context.tenant,
+      }).builder
+        .where({ user_id: id })
         .delete();
 
       // 2. Delete user roles
-      await trx('user_roles')
-        .where({ user_id: id, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'user_roles',
+        tenant: context.tenant,
+      }).builder
+        .where({ user_id: id })
         .delete();
 
       // 3. Delete API keys
-      await trx('api_keys')
-        .where({ user_id: id, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'api_keys',
+        tenant: context.tenant,
+      }).builder
+        .where({ user_id: id })
         .delete();
 
       // 4. Set audit columns to NULL for tables with foreign keys to users
@@ -449,8 +458,10 @@ export class UserService extends BaseService<IUser> {
             if (hasCreatedBy) updates.created_by = null;
             if (hasUpdatedBy) updates.updated_by = null;
 
-            await trx(tableName)
-              .where({ tenant: context.tenant })
+            await createTenantScopedQuery(trx, {
+              table: tableName,
+              tenant: context.tenant,
+            }).builder
               .where(function() {
                 if (hasCreatedBy) this.orWhere('created_by', id);
                 if (hasUpdatedBy) this.orWhere('updated_by', id);
@@ -461,8 +472,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // 5. Finally delete the user
-      await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .delete();
     });
   }
