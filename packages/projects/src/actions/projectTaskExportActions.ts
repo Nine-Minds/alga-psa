@@ -1,7 +1,7 @@
 'use server'
 
 import type { ITag } from '@alga-psa/types';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth, throwPermissionError } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
@@ -48,6 +48,14 @@ const CSV_HEADERS: Record<string, string> = {
   created_at: 'Created At',
   updated_at: 'Updated At',
 };
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '';
@@ -98,6 +106,10 @@ interface ChecklistCounts {
   total: number;
   completed: number;
 }
+
+type PhaseIdRow = {
+  phase_id: string;
+};
 
 function taskToRow(
   task: TaskRow,
@@ -183,11 +195,10 @@ async function resolveNameLookups(
   // Resolve user names
   if (userIds.size > 0) {
     promises.push(
-      trx('users')
+      tenantScopedTable(trx, 'users', tenant)
         .select('user_id', trx.raw("CONCAT(first_name, ' ', last_name) as full_name"))
         .whereIn('user_id', Array.from(userIds))
-        .andWhere('tenant', tenant)
-        .then(users => {
+        .then((users: Array<{ user_id: string; full_name?: string | null }>) => {
           for (const u of users) {
             lookups.users[u.user_id] = u.full_name || '';
           }
@@ -198,11 +209,10 @@ async function resolveNameLookups(
   // Resolve team names
   if (teamIds.size > 0) {
     promises.push(
-      trx('teams')
+      tenantScopedTable(trx, 'teams', tenant)
         .select('team_id', 'team_name')
         .whereIn('team_id', Array.from(teamIds))
-        .andWhere('tenant', tenant)
-        .then(teams => {
+        .then((teams: Array<{ team_id: string; team_name?: string | null }>) => {
           for (const t of teams) {
             lookups.teams[t.team_id] = t.team_name || '';
           }
@@ -213,11 +223,10 @@ async function resolveNameLookups(
   // Resolve phase names
   if (phaseIds.size > 0) {
     promises.push(
-      trx('project_phases')
+      tenantScopedTable(trx, 'project_phases', tenant)
         .select('phase_id', 'phase_name')
         .whereIn('phase_id', Array.from(phaseIds))
-        .andWhere('tenant', tenant)
-        .then(phases => {
+        .then((phases: Array<{ phase_id: string; phase_name?: string | null }>) => {
           for (const p of phases) {
             lookups.phases[p.phase_id] = p.phase_name || '';
           }
@@ -228,7 +237,7 @@ async function resolveNameLookups(
   // Resolve status names via project_status_mappings
   if (statusMappingIds.size > 0) {
     promises.push(
-      trx('project_status_mappings as psm')
+      tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
         .leftJoin('statuses as s', function (this: Knex.JoinClause) {
           this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
         })
@@ -236,13 +245,12 @@ async function resolveNameLookups(
           this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
         })
         .whereIn('psm.project_status_mapping_id', Array.from(statusMappingIds))
-        .andWhere('psm.tenant', tenant)
         .select(
           'psm.project_status_mapping_id',
           trx.raw("COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name"),
           trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
         )
-        .then(rows => {
+        .then((rows: Array<{ project_status_mapping_id: string; status_name?: string | null; is_closed?: boolean | null }>) => {
           for (const r of rows) {
             lookups.statuses[r.project_status_mapping_id] = {
               name: r.status_name || '',
@@ -256,11 +264,10 @@ async function resolveNameLookups(
   // Resolve priority names
   if (priorityIds.size > 0) {
     promises.push(
-      trx('priorities')
+      tenantScopedTable(trx, 'priorities', tenant)
         .select('priority_id', 'priority_name')
         .whereIn('priority_id', Array.from(priorityIds))
-        .andWhere('tenant', tenant)
-        .then(priorities => {
+        .then((priorities: Array<{ priority_id: string; priority_name?: string | null }>) => {
           for (const p of priorities) {
             lookups.priorities[p.priority_id] = p.priority_name || '';
           }
@@ -274,9 +281,9 @@ async function resolveNameLookups(
       trx('standard_task_types')
         .select('type_key', 'type_name')
         .where('is_active', true),
-      trx('custom_task_types')
+      tenantScopedTable(trx, 'custom_task_types', tenant)
         .select('type_key', 'type_name')
-        .where({ tenant, is_active: true }),
+        .where({ is_active: true }),
     ]).then(([standard, custom]) => {
       for (const t of standard) {
         lookups.taskTypes[t.type_key] = t.type_name || '';
@@ -313,27 +320,26 @@ export const exportProjectTasksToCSV = withAuth(async (
 
     if (taskIds && taskIds.length > 0) {
       // Export only the explicitly selected tasks, scoped to this project's phases
-      const projectPhases = await trx('project_phases')
-        .where({ project_id: projectId, tenant })
-        .select('phase_id');
+      const projectPhases = await tenantScopedTable(trx, 'project_phases', tenant)
+        .where({ project_id: projectId })
+        .select('phase_id') as PhaseIdRow[];
 
       const projectPhaseIds = projectPhases.map(p => p.phase_id);
       if (projectPhaseIds.length === 0) {
         return { csv: '', count: 0 };
       }
 
-      tasks = await trx('project_tasks')
+      tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
         .whereIn('task_id', taskIds)
         .whereIn('phase_id', projectPhaseIds)
-        .andWhere('tenant', tenant)
         .orderBy(['phase_id', 'order_key'])
-        .limit(MAX_EXPORT_ROWS);
+        .limit(MAX_EXPORT_ROWS) as TaskRow[];
     } else {
       // Get phases for this project, filtered to selected ones
-      const phases = await trx('project_phases')
-        .where({ project_id: projectId, tenant })
+      const phases = await tenantScopedTable(trx, 'project_phases', tenant)
+        .where({ project_id: projectId })
         .whereIn('phase_id', selectedPhaseIds)
-        .select('phase_id');
+        .select('phase_id') as PhaseIdRow[];
 
       const phaseIds = phases.map(p => p.phase_id);
       if (phaseIds.length === 0) {
@@ -341,11 +347,10 @@ export const exportProjectTasksToCSV = withAuth(async (
       }
 
       // Get all tasks for selected phases
-      tasks = await trx('project_tasks')
+      tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
         .whereIn('phase_id', phaseIds)
-        .andWhere('tenant', tenant)
         .orderBy(['phase_id', 'order_key'])
-        .limit(MAX_EXPORT_ROWS);
+        .limit(MAX_EXPORT_ROWS) as TaskRow[];
     }
 
     if (tasks.length === 0) {
@@ -358,9 +363,8 @@ export const exportProjectTasksToCSV = withAuth(async (
     const [lookups, tagsArray, checklistRows] = await Promise.all([
       resolveNameLookups(trx, tenant, tasks),
       findTagsByEntityIds(taskRowIds, 'project_task').catch(() => []),
-      trx('task_checklist_items')
+      tenantScopedTable(trx, 'task_checklist_items', tenant)
         .whereIn('task_id', taskRowIds)
-        .andWhere('tenant', tenant)
         .select('task_id', 'completed'),
     ]);
 
