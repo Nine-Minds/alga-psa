@@ -282,7 +282,7 @@
   {
     "id": "F027",
     "description": "pt-BR complete for msp/clients.json: translate the 968 remaining key(s) and re-audit all 1150 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "prdRefs": [
       "3.2",
@@ -293,7 +293,7 @@
   {
     "id": "F028",
     "description": "pt-BR complete for msp/contacts.json: translate the 400 remaining key(s) and re-audit all 452 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "prdRefs": [
       "3.2",
@@ -304,7 +304,7 @@
   {
     "id": "F029",
     "description": "pt-BR complete for msp/account.json: translate the 9 remaining key(s) and re-audit all 327 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "prdRefs": [
       "3.2",
@@ -315,7 +315,7 @@
   {
     "id": "F030",
     "description": "pt-BR complete for msp/profile.json: translate the 248 remaining key(s) and re-audit all 462 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "prdRefs": [
       "3.2",

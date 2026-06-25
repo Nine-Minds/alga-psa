@@ -139,3 +139,10 @@ npm run migrate
 - Tightened the glossary allowlist for legitimate identical project/time labels and compact formatting (`Kanban`, `h`, `download`, UUID placeholders, `Status: {{status}}`, `({{hours}}h)`, `{{type}} • {{client}}`).
 - Fixed obvious machine-translation artifacts found during sample review: `Claro`→`Limpar`, `Download`→`Baixar`, `Link`→`Vincular`, and `Cessionário`→`Responsável` for assignee labels.
 - Implemented T036-T047. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace features/projects --namespace projects --namespace msp/schedule --namespace msp/dispatch --namespace msp/calendar --namespace msp/time-entry --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — i18n-clients group
+- Implemented F027-F030: completed pt-BR translations for `msp/clients.json`, `msp/contacts.json`, `msp/account.json`, and `msp/profile.json`.
+- Re-audited all 2,391 keys in the group and marked them reviewed in `pt-review-state.json` with reviewer `codex-pt-br-pass`.
+- Tightened the glossary allowlist for legitimate identical client/profile values (`Individual`, `Local`, `Fax`, `Solo`, `Webhooks`, `HMAC-SHA256`) and compact technical patterns (`URL:`, `~{{percent}}%`, `via {{method}}`, `{{duration}} ms`, IP/CIDR placeholders).
+- Translated real UI labels `Downgrade`→`Fazer downgrade`, `Claro`→`Limpar`, and phone type `Lar`→`Residencial`.
+- Implemented T048-T055. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/clients --namespace msp/contacts --namespace msp/account --namespace msp/profile --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).

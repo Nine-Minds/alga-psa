@@ -425,7 +425,7 @@
   {
     "id": "T048",
     "description": "validate-translations.cjs passes for pt msp/clients.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F027"
@@ -434,7 +434,7 @@
   {
     "id": "T049",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/clients.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F027"
@@ -443,7 +443,7 @@
   {
     "id": "T050",
     "description": "validate-translations.cjs passes for pt msp/contacts.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F028"
@@ -452,7 +452,7 @@
   {
     "id": "T051",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/contacts.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F028"
@@ -461,7 +461,7 @@
   {
     "id": "T052",
     "description": "validate-translations.cjs passes for pt msp/account.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F029"
@@ -470,7 +470,7 @@
   {
     "id": "T053",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/account.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F029"
@@ -479,7 +479,7 @@
   {
     "id": "T054",
     "description": "validate-translations.cjs passes for pt msp/profile.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F030"
@@ -488,7 +488,7 @@
   {
     "id": "T055",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/profile.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-clients",
     "featureIds": [
       "F030"
