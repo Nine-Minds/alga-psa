@@ -2562,8 +2562,12 @@ export const addTaskDependency = withAuth(async (
 
         if (!actualDependencyType) {
             const [predecessor, successor] = await Promise.all([
-                trx('project_tasks').where({ task_id: actualPredecessorId, tenant }).first(),
-                trx('project_tasks').where({ task_id: actualSuccessorId, tenant }).first()
+                tenantScopedTable(trx, 'project_tasks', tenant)
+                    .where('task_id', actualPredecessorId)
+                    .first(),
+                tenantScopedTable(trx, 'project_tasks', tenant)
+                    .where('task_id', actualSuccessorId)
+                    .first()
             ]);
 
             if (!predecessor || !successor) {
@@ -2653,8 +2657,8 @@ export const removeTaskDependency = withAuth(async (
     await withTransaction(db, async (trx) => {
         await checkPermission(user, 'project', 'update', trx);
 
-        const dependency = await trx('project_task_dependencies')
-            .where({ dependency_id: dependencyId, tenant })
+        const dependency = await tenantScopedTable(trx, 'project_task_dependencies', tenant)
+            .where('dependency_id', dependencyId)
             .first();
 
         if (!dependency) {
@@ -2715,8 +2719,8 @@ export const updateTaskDependency = withAuth(async (
     const {knex: db} = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(user, 'project', 'update', trx);
-        const dependency = await trx('project_task_dependencies')
-            .where({ dependency_id: dependencyId, tenant })
+        const dependency = await tenantScopedTable(trx, 'project_task_dependencies', tenant)
+            .where('dependency_id', dependencyId)
             .first();
 
         if (!dependency) {
@@ -2752,11 +2756,8 @@ export const getTaskById = withAuth(async (
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-            const task = await trx('project_tasks')
-                .where({
-                    'project_tasks.task_id': taskId,
-                    'project_tasks.tenant': tenant
-                })
+            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where('project_tasks.task_id', taskId)
                 .first();
 
             return task || null;
