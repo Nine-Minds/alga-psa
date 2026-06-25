@@ -1873,11 +1873,10 @@ export const getDocumentCountsForEntities = withAuth(async (
         return countMap;
       }
 
-      const rows = await trx('document_associations as da')
+      const rows = await tenantScopedTable(trx, 'document_associations as da', tenant)
         .join('documents as d', function joinDocuments() {
           this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
         })
-        .where('da.tenant', tenant)
         .whereIn('da.entity_id', entityIds)
         .where('da.entity_type', entityType)
         .select('da.entity_id', 'd.document_id', 'd.created_by', 'd.is_client_visible');
@@ -1945,10 +1944,10 @@ export const getDocumentsByEntity = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-        let query = trx('documents')
+        let query = tenantScopedTable(trx, 'documents', tenant)
           .join('document_associations', function() {
             this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
+                .andOn('documents.tenant', '=', 'document_associations.tenant');
           })
           .leftJoin('users', function() {
             this.on('documents.created_by', '=', 'users.user_id')
@@ -1959,7 +1958,6 @@ export const getDocumentsByEntity = withAuth(async (
                 .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
           })
           .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .where('documents.tenant', tenant)
           .where('document_associations.entity_id', entity_id)
           .andWhere('document_associations.entity_type', entity_type)
           .select(
@@ -2044,8 +2042,7 @@ export const getAllDocuments = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-        let query = trx('documents')
-          .where('documents.tenant', tenant)
+        let query = tenantScopedTable(trx, 'documents', tenant)
           .leftJoin('document_types as dt', function() {
             this.on('documents.type_id', '=', 'dt.type_id')
                 .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
@@ -2145,30 +2142,28 @@ export const getAllDocuments = withAuth(async (
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
         if (filters?.excludeEntityId && filters?.excludeEntityType) {
-          query = query.whereNotExists(function() {
-            this.select('*')
-                .from('document_associations')
-                .whereRaw('document_associations.document_id = documents.document_id')
-                .andWhere('document_associations.entity_id', filters.excludeEntityId)
-                .andWhere('document_associations.entity_type', filters.excludeEntityType)
-                .andWhere('document_associations.tenant', tenant);
-          });
+          query = query.whereNotExists(
+            tenantScopedTable(trx, 'document_associations', tenant)
+              .select('*')
+              .whereRaw('document_associations.document_id = documents.document_id')
+              .andWhere('document_associations.entity_id', filters.excludeEntityId)
+              .andWhere('document_associations.entity_type', filters.excludeEntityType)
+          );
         }
         if (filters?.entityType || filters?.entityId) {
-          query = query.whereExists(function() {
-            this.select('*')
-              .from('document_associations as filter_da')
-              .whereRaw('filter_da.document_id = documents.document_id')
-              .andWhere('filter_da.tenant', tenant);
+          const filterAssociationQuery = tenantScopedTable(trx, 'document_associations as filter_da', tenant)
+            .select('*')
+            .whereRaw('filter_da.document_id = documents.document_id');
 
-            if (filters?.entityType) {
-              this.andWhere('filter_da.entity_type', filters.entityType);
-            }
+          if (filters?.entityType) {
+            filterAssociationQuery.andWhere('filter_da.entity_type', filters.entityType);
+          }
 
-            if (filters?.entityId) {
-              this.andWhere('filter_da.entity_id', filters.entityId);
-            }
-          });
+          if (filters?.entityId) {
+            filterAssociationQuery.andWhere('filter_da.entity_id', filters.entityId);
+          }
+
+          query = query.whereExists(filterAssociationQuery);
         }
         if (filters?.folder_path !== undefined && !filters.showAllDocuments) {
           if (filters.folder_path === null || filters.folder_path === '') {

@@ -69,7 +69,7 @@ describe('document authorization kernel wiring contracts', () => {
     expect(source).toContain('export const getDocumentCountsForEntities = withAuth(async (');
     expect(source).toContain("if (!await hasPermission(user, 'document', 'read')) {");
     expect(source).toContain("return new Map(entityIds.map((entityId) => [entityId, 0]));");
-    expect(source).toContain("const rows = await trx('document_associations as da')");
+    expect(source).toContain("const rows = await tenantScopedTable(trx, 'document_associations as da', tenant)");
     expect(source).toContain('const authorizedDocuments = await authorizeAndRedactDocuments(');
     expect(source).toContain('const authorizedIds = new Set(authorizedDocuments.map((document) => document.document_id));');
     expect(source).toContain('const countedByEntity = new Map<string, Set<string>>();');
