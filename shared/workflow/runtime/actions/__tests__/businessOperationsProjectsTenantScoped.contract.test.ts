@@ -35,6 +35,10 @@ const updateSection = source.slice(
   source.indexOf("id: 'projects.update'"),
   source.indexOf("id: 'projects.move_task'")
 );
+const moveTaskSection = source.slice(
+  source.indexOf("id: 'projects.move_task'"),
+  source.indexOf("id: 'projects.assign_task'")
+);
 
 describe('project workflow business operations tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared project helper roots', () => {
@@ -122,5 +126,13 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(updateSection).not.toContain("tx.trx('project_phases')");
     expect(updateSection).not.toContain("tx.trx('project_tasks')");
     expect(updateSection).not.toContain(".where({ tenant: tx.tenantId");
+  });
+
+  it('uses structural tenant scoping for move-task roots', () => {
+    expect(moveTaskSection).toContain("tenantScopedTable(tx, 'project_tasks')");
+    expect(moveTaskSection).toContain("tenantScopedTable(tx, 'project_ticket_links')");
+    expect(moveTaskSection).not.toContain("tx.trx('project_tasks')");
+    expect(moveTaskSection).not.toContain("tx.trx('project_ticket_links')");
+    expect(moveTaskSection).not.toContain(".where({ tenant: tx.tenantId");
   });
 });

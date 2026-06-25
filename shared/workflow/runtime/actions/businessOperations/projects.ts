@@ -2199,24 +2199,24 @@ export function registerProjectActions(): void {
         let afterKey: string | null = null;
         if (taskColumns.has('order_key')) {
           if (input.before_task_id) {
-            const beforeTask = await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId, task_id: input.before_task_id, phase_id: input.target_phase_id })
+            const beforeTask = await tenantScopedTable(tx, 'project_tasks')
+              .where({ task_id: input.before_task_id, phase_id: input.target_phase_id })
               .first('order_key');
             if (!beforeTask) {
               throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'before_task_id must be in the target phase' });
             }
             afterKey = beforeTask.order_key ?? null;
           } else if (input.after_task_id) {
-            const afterTask = await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId, task_id: input.after_task_id, phase_id: input.target_phase_id })
+            const afterTask = await tenantScopedTable(tx, 'project_tasks')
+              .where({ task_id: input.after_task_id, phase_id: input.target_phase_id })
               .first('order_key');
             if (!afterTask) {
               throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'after_task_id must be in the target phase' });
             }
             beforeKey = afterTask.order_key ?? null;
           } else {
-            const lastTask = await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId, phase_id: input.target_phase_id })
+            const lastTask = await tenantScopedTable(tx, 'project_tasks')
+              .where('phase_id', input.target_phase_id)
               .modify((query) => {
                 if (targetProjectStatusMappingId && taskColumns.has('project_status_mapping_id')) {
                   query.andWhere('project_status_mapping_id', targetProjectStatusMappingId);
@@ -2238,12 +2238,12 @@ export function registerProjectActions(): void {
         if (taskColumns.has('project_status_mapping_id')) updatePayload.project_status_mapping_id = targetProjectStatusMappingId;
         if (taskColumns.has('status_id')) updatePayload.status_id = targetStatusId;
 
-        await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.task_id)
           .update(updatePayload);
 
-        await tx.trx('project_ticket_links')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_ticket_links')
+          .where('task_id', input.task_id)
           .update({ project_id: targetProjectId, phase_id: input.target_phase_id });
 
         await writeRunAudit(ctx, tx, {
