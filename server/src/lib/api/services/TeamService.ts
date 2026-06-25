@@ -2151,31 +2151,39 @@ export class TeamService extends BaseService<ITeam> {
       largestTeam
     ] = await Promise.all([
       // Total teams
-      knex('teams')
-        .where({ tenant: context.tenant })
+      createTenantScopedQuery(knex, {
+        table: 'teams',
+        tenant: context.tenant,
+      }).builder
         .count('* as count')
         .first(),
       
       // Teams with members
-      knex('teams as t')
+      createTenantScopedQuery(knex, {
+        table: 'teams as t',
+        tenant: context.tenant,
+      }).builder
         .join('team_members as tm', function() {
           this.on('t.team_id', '=', 'tm.team_id')
               .andOn('t.tenant', '=', 'tm.tenant');
         })
-        .where('t.tenant', context.tenant)
         .countDistinct('t.team_id as count')
         .first(),
       
       // Average team size
-      knex('team_members')
-        .where({ tenant: context.tenant })
+      createTenantScopedQuery(knex, {
+        table: 'team_members',
+        tenant: context.tenant,
+      }).builder
         .select('team_id')
         .count('* as size')
         .groupBy('team_id'),
       
       // Largest team
-      knex('team_members')
-        .where({ tenant: context.tenant })
+      createTenantScopedQuery(knex, {
+        table: 'team_members',
+        tenant: context.tenant,
+      }).builder
         .select('team_id')
         .count('* as size')
         .groupBy('team_id')
