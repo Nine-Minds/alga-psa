@@ -1465,28 +1465,29 @@ export const getAvailableRecurringDueWork = withAuth(async (
     const asOf = options.dateRange?.to ?? toISODate(Temporal.Now.plainDateISO());
 
     try {
-        const candidateBillingPeriods = await fetchAvailableBillingPeriodsUnpaginated(
-            knex,
-            tenant,
-            options,
-        );
-        const clientMetadataById = await fetchClientBillingMetadataById(
-            knex,
-            tenant,
-            Array.from(
-                new Set(candidateBillingPeriods.map((period) => period.client_id).filter(Boolean)),
+        // candidateBillingPeriods and persistedDbRows both derive straight from
+        // `options`, so fetch them concurrently. clientMetadataById and
+        // rawMaterializationGaps both depend only on candidateBillingPeriods, so they
+        // run concurrently once it resolves. knex is a pooled connection (no shared
+        // transaction here), so these parallel queries are safe.
+        const [candidateBillingPeriods, persistedDbRows] = await Promise.all([
+            fetchAvailableBillingPeriodsUnpaginated(knex, tenant, options),
+            fetchPersistedRecurringDueWorkDbRows(knex, tenant, options),
+        ]);
+        const [clientMetadataById, rawMaterializationGaps] = await Promise.all([
+            fetchClientBillingMetadataById(
+                knex,
+                tenant,
+                Array.from(
+                    new Set(candidateBillingPeriods.map((period) => period.client_id).filter(Boolean)),
+                ),
             ),
-        );
-        const rawMaterializationGaps = await fetchClientCadenceMaterializationGaps(
-            knex,
-            tenant,
-            candidateBillingPeriods,
-        );
-        const persistedDbRows = await fetchPersistedRecurringDueWorkDbRows(
-            knex,
-            tenant,
-            options,
-        );
+            fetchClientCadenceMaterializationGaps(
+                knex,
+                tenant,
+                candidateBillingPeriods,
+            ),
+        ]);
         const groupingMetadataByRecordId = new Map<string, RecurringDueWorkGroupingMetadata>(
             persistedDbRows.map((row) => [
                 row.record_id,
