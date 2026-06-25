@@ -176,6 +176,20 @@ type ContactEmailRow = {
   updated_at?: string;
 };
 
+type ContactPhoneTypeDefinitionRow = {
+  contact_phone_type_id: string;
+  label: string;
+  normalized_label: string;
+};
+
+type ContactEmailTypeDefinitionRow = {
+  contact_email_type_id: string;
+  label: string;
+  normalized_label: string;
+};
+
+type ContactEmailTypeLabelRow = Pick<ContactEmailTypeDefinitionRow, 'contact_email_type_id' | 'label'>;
+
 type PreparedPhoneNumberInput = {
   contact_phone_number_id?: string;
   phone_number: string;
@@ -1203,7 +1217,7 @@ export class ContactModel {
       return new Map();
     }
 
-    const rows = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
+    const rows: ContactEmailTypeLabelRow[] = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .whereIn('contact_email_type_id', customTypeIds)
       .select('contact_email_type_id', 'label');
 
@@ -1642,7 +1656,7 @@ export class ContactModel {
     }
 
     const normalizedLabels = Array.from(uniqueByNormalized.keys());
-    const existingRows = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
+    const existingRows: ContactPhoneTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .select('contact_phone_type_id', 'label', 'normalized_label')
       .whereIn('normalized_label', normalizedLabels);
 
@@ -1666,7 +1680,7 @@ export class ContactModel {
         .ignore();
     }
 
-    const resolvedRows = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
+    const resolvedRows: ContactPhoneTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .select('contact_phone_type_id', 'label', 'normalized_label')
       .whereIn('normalized_label', normalizedLabels);
 
@@ -1706,7 +1720,7 @@ export class ContactModel {
     }
 
     const normalizedLabels = Array.from(uniqueByNormalized.keys());
-    const existingRows = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
+    const existingRows: ContactEmailTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .select('contact_email_type_id', 'label', 'normalized_label')
       .whereIn('normalized_label', normalizedLabels);
 
@@ -1730,7 +1744,7 @@ export class ContactModel {
         .ignore();
     }
 
-    const resolvedRows = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
+    const resolvedRows: ContactEmailTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .select('contact_email_type_id', 'label', 'normalized_label')
       .whereIn('normalized_label', normalizedLabels);
 
