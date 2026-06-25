@@ -2438,8 +2438,8 @@ export function registerProjectActions(): void {
           targetProjectStatusMappingId,
         });
 
-        const sourceTaskRow = await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+        const sourceTaskRow = await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.source_task_id)
           .first();
         if (!sourceTaskRow) {
           throwActionError(ctx, {
@@ -2484,8 +2484,8 @@ export function registerProjectActions(): void {
         if (input.copy_checklist) {
           const hasChecklist = await tx.trx.schema.hasTable('task_checklist_items');
           if (hasChecklist) {
-            const checklistRows = await tx.trx('task_checklist_items')
-              .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+            const checklistRows = await tenantScopedTable(tx, 'task_checklist_items')
+              .where('task_id', input.source_task_id)
               .select('*');
             if (checklistRows.length > 0) {
               const checklistColumns = await getTableColumns(tx, 'task_checklist_items');
@@ -2509,8 +2509,8 @@ export function registerProjectActions(): void {
         if (input.copy_additional_assignees) {
           const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
           if (hasTaskResources) {
-            const sourceResources = await tx.trx('task_resources')
-              .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+            const sourceResources = await tenantScopedTable(tx, 'task_resources')
+              .where('task_id', input.source_task_id)
               .whereNotNull('additional_user_id')
               .select('*');
             if (sourceResources.length > 0) {
@@ -2530,14 +2530,14 @@ export function registerProjectActions(): void {
 
         let copiedTicketLinkCount = 0;
         if (input.copy_ticket_links) {
-          const sourceLinks = await tx.trx('project_ticket_links')
-            .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+          const sourceLinks = await tenantScopedTable(tx, 'project_ticket_links')
+            .where('task_id', input.source_task_id)
             .select('*');
           if (sourceLinks.length > 0) {
             const canReadTicketLinks = await canReadTickets(ctx, tx);
             const sourceTicketIds = sourceLinks.map((link: Record<string, unknown>) => String(link.ticket_id));
             const tickets = canReadTicketLinks
-              ? await tx.trx('tickets').where({ tenant: tx.tenantId }).whereIn('ticket_id', sourceTicketIds).select('*')
+              ? await tenantScopedTable(tx, 'tickets').whereIn('ticket_id', sourceTicketIds).select('*')
               : [];
             const authorizeTicket = await createTicketReadAuthorizer(tx);
             const ticketAuthorization = await Promise.all(tickets.map((ticket: Record<string, unknown>) => authorizeTicket(ticket)));
