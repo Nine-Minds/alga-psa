@@ -911,8 +911,8 @@ export const deleteDocument = withAuth(async (
         throw new Error('Permission denied: Cannot delete documents');
       }
 
-      const document = await trx('documents')
-        .where({ document_id: documentId, tenant: tenantId })
+      const document = await tenantScopedTable(trx, 'documents', tenantId)
+        .where({ document_id: documentId })
         .first();
       if (!document) {
         throw new Error('Document not found');
@@ -920,35 +920,26 @@ export const deleteDocument = withAuth(async (
 
       await deleteEntityTags(trx, documentId, 'document');
 
-      await trx('clients')
-        .where({
-          notes_document_id: documentId,
-          tenant: tenantId
-        })
+      await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ notes_document_id: documentId })
         .update({
           notes_document_id: null
         });
 
-      await trx('assets')
-        .where({
-          notes_document_id: documentId,
-          tenant: tenantId
-        })
+      await tenantScopedTable(trx, 'assets', tenantId)
+        .where({ notes_document_id: documentId })
         .update({
           notes_document_id: null
         });
 
-      await trx('contacts')
-        .where({
-          notes_document_id: documentId,
-          tenant: tenantId
-        })
+      await tenantScopedTable(trx, 'contacts', tenantId)
+        .where({ notes_document_id: documentId })
         .update({
           notes_document_id: null
         });
 
-      const existingAssociations = await trx('document_associations')
-        .where({ document_id: document.document_id, tenant: tenantId })
+      const existingAssociations = await tenantScopedTable(trx, 'document_associations', tenantId)
+        .where({ document_id: document.document_id })
         .select('association_id', 'document_id', 'entity_id', 'entity_type');
 
       detachedAssociations = existingAssociations.map((row: any) => ({
@@ -963,13 +954,13 @@ export const deleteDocument = withAuth(async (
       // downstream auth checks in deleteDocumentContent/deleteBlockContent can
       // resolve the parent document.  These rows would be orphaned if deleted
       // after the document row is removed.
-      await trx('document_content')
-        .where({ document_id: documentId, tenant: tenantId })
+      await tenantScopedTable(trx, 'document_content', tenantId)
+        .where({ document_id: documentId })
         .delete();
-      await trx('document_block_content')
-        .where({ document_id: documentId, tenant: tenantId })
+      await tenantScopedTable(trx, 'document_block_content', tenantId)
+        .where({ document_id: documentId })
         .delete();
-      await trx('documents').where({ document_id: documentId, tenant: tenantId }).delete();
+      await tenantScopedTable(trx, 'documents', tenantId).where({ document_id: documentId }).delete();
       deletedDocument = document;
     });
 
