@@ -521,22 +521,22 @@ export const deleteUser = withAuth(async (
         'user_preferences',
       ];
       for (const table of deleteByUserId) {
-        await trx(table).where({ user_id: userId, tenant: tenantOrUndef }).del();
+        await tenantScopedTable(table).where({ user_id: userId }).del();
       }
 
       // import_jobs uses created_by, not user_id
-      await trx('import_jobs').where({ created_by: userId, tenant: tenantOrUndef }).del();
+      await tenantScopedTable('import_jobs').where({ created_by: userId }).del();
 
       // Activity group items must precede groups (items.group_id → groups).
-      await trx('user_activity_group_items')
-        .where({ tenant: tenantOrUndef })
-        .whereIn('group_id', function () {
-          this.select('group_id')
-            .from('user_activity_groups')
-            .where({ user_id: userId, tenant: tenantOrUndef });
-        })
+      await tenantScopedTable('user_activity_group_items')
+        .whereIn(
+          'group_id',
+          tenantScopedTable('user_activity_groups')
+            .select('group_id')
+            .where({ user_id: userId })
+        )
         .del();
-      await trx('user_activity_groups').where({ user_id: userId, tenant: tenantOrUndef }).del();
+      await tenantScopedTable('user_activity_groups').where({ user_id: userId }).del();
 
       // ── EE-only tables (guarded) ──────────────────────────────────────
       if (isEnterprise) {
