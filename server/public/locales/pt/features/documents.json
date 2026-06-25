@@ -1,283 +1,283 @@
 {
   "templatesSettings": {
-    "folderCount_one": "{{count}} folder",
-    "folderCount_other": "{{count}} folders"
+    "folderCount_one": "Pasta {{count}}",
+    "folderCount_other": "Pastas {{count}}"
   },
-  "title": "Documents",
-  "noDocuments": "No documents attached",
-  "upload": "Upload Document",
-  "download": "Download",
-  "remove": "Remove",
-  "preview": "Preview",
-  "linkDocuments": "Link Documents",
-  "editDocument": "Edit Document",
-  "viewDocument": "View Document",
-  "downloadToPlay": "Download to Play",
-  "delete": "Delete",
-  "previewUnavailable": "Preview unavailable",
-  "newDocument": "New Document",
-  "uploadFile": "Upload File",
-  "deleteTitle": "Delete Document",
-  "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
-  "deleteVideoTitle": "Delete Video",
-  "deleteVideoMessage": "Are you sure you want to delete the video \"{{name}}\"? This action cannot be undone.",
-  "removeTitle": "Remove Document",
-  "removeMessage": "Are you sure you want to remove \"{{name}}\" from this item? The document will still be available in the document library.",
-  "removeVideoTitle": "Remove Video",
-  "removeVideoMessage": "Are you sure you want to remove the video \"{{name}}\" from this item? The file will remain available in the document library.",
-  "downloadFile": "Download File",
-  "videoUnsupported": "Video format ({{mimeType}}) not supported for browser playback",
-  "videoTagUnsupported": "Your browser does not support the video tag.",
-  "unnamed": "Untitled",
-  "videoDownloadInfo": "The video will be downloaded and can be played with your system's default video player",
-  "previewUnavailableNoId": "Preview not available (no identifier)",
-  "previewLoadFailed": "Failed to load preview",
-  "videoCodecWarning": "Chrome may not support this video codec. Try downloading or use Safari/Edge.",
+  "title": "Documentos",
+  "noDocuments": "Nenhum documento anexado",
+  "upload": "Carregar documento",
+  "download": "Baixar",
+  "remove": "Remover",
+  "preview": "Visualização",
+  "linkDocuments": "Vincular documentos",
+  "editDocument": "Editar documento",
+  "viewDocument": "Ver documento",
+  "downloadToPlay": "Baixar para reproduzir",
+  "delete": "Excluir",
+  "previewUnavailable": "Visualização indisponível",
+  "newDocument": "Novo Documento",
+  "uploadFile": "Carregar arquivo",
+  "deleteTitle": "Excluir documento",
+  "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita.",
+  "deleteVideoTitle": "Excluir vídeo",
+  "deleteVideoMessage": "Tem certeza de que deseja excluir o vídeo \"{{name}}\"? Esta ação não pode ser desfeita.",
+  "removeTitle": "Remover documento",
+  "removeMessage": "Tem certeza de que deseja remover \"{{name}}\" deste item? O documento ainda estará disponível na biblioteca de documentos.",
+  "removeVideoTitle": "Remover vídeo",
+  "removeVideoMessage": "Tem certeza de que deseja remover o vídeo \"{{name}}\" deste item? O arquivo permanecerá disponível na biblioteca de documentos.",
+  "downloadFile": "Baixar arquivo",
+  "videoUnsupported": "Formato de vídeo ({{mimeType}}) não suportado para reprodução no navegador",
+  "videoTagUnsupported": "Seu navegador não suporta a tag de vídeo.",
+  "unnamed": "Sem título",
+  "videoDownloadInfo": "O vídeo será baixado e poderá ser reproduzido com o player de vídeo padrão do seu sistema",
+  "previewUnavailableNoId": "Visualização não disponível (sem identificador)",
+  "previewLoadFailed": "Falha ao carregar a visualização",
+  "videoCodecWarning": "O Chrome pode não suportar este codec de vídeo. Tente baixar ou usar o Safari/Edge.",
   "messages": {
-    "fetchFailed": "Failed to fetch documents.",
-    "folderCreated": "Folder \"{{name}}\" created successfully",
-    "folderCreateFailed": "Failed to create folder",
-    "moveDocumentsSuccess_one": "{{count}} document moved to {{destination}}",
-    "moveDocumentsSuccess_other": "{{count}} documents moved to {{destination}}",
-    "moveDocumentsFailed": "Failed to move documents",
-    "deleteSuccess": "Document \"{{name}}\" deleted successfully",
-    "deleteFailed": "Failed to delete document",
-    "removeAssociationFailed": "Failed to remove document association",
-    "moveDocumentSuccess": "Document \"{{name}}\" moved successfully",
-    "moveDocumentFailed": "Failed to move document",
-    "createFailed": "Failed to create document",
-    "saveFailed": "Failed to save document",
-    "loadContentFailed": "Failed to load document content",
-    "downloadFailed": "Failed to download document",
-    "bulkDeleteFailed": "Failed to delete some documents",
-    "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
-    "bulkDeleteSuccess_other": "{{count}} documents deleted successfully",
+    "fetchFailed": "Falha ao buscar documentos.",
+    "folderCreated": "Pasta \"{{name}}\" criada com sucesso",
+    "folderCreateFailed": "Falha ao criar pasta",
+    "moveDocumentsSuccess_one": "Documento {{count}} movido para {{destination}}",
+    "moveDocumentsSuccess_other": "Documentos {{count}} movidos para {{destination}}",
+    "moveDocumentsFailed": "Falha ao mover documentos",
+    "deleteSuccess": "Documento \"{{name}}\" excluído com sucesso",
+    "deleteFailed": "Falha ao excluir documento",
+    "removeAssociationFailed": "Falha ao remover a associação do documento",
+    "moveDocumentSuccess": "Documento \"{{name}}\" movido com sucesso",
+    "moveDocumentFailed": "Falha ao mover o documento",
+    "createFailed": "Falha ao criar documento",
+    "saveFailed": "Falha ao salvar o documento",
+    "loadContentFailed": "Falha ao carregar o conteúdo do documento",
+    "downloadFailed": "Falha ao baixar o documento",
+    "bulkDeleteFailed": "Falha ao excluir alguns documentos",
+    "bulkDeleteSuccess_one": "Documento {{count}} excluído com sucesso",
+    "bulkDeleteSuccess_other": "Documentos {{count}} excluídos com sucesso",
     "passwordRequired": "A senha é obrigatória",
-    "shareLinkCreateFailed": "Falha ao criar o link de compartilhamento",
+    "shareLinkCreateFailed": "Falha ao criar link de compartilhamento",
     "shareLinkCreated": "Link de compartilhamento criado",
     "linkCopied": "Link copiado para a área de transferência",
     "shareLinkRevokeFailed": "Falha ao revogar o link de compartilhamento",
     "shareLinkRevoked": "Link de compartilhamento revogado",
-    "shareLinksLoadFailed": "Falha ao carregar os links de compartilhamento",
+    "shareLinksLoadFailed": "Falha ao carregar links de compartilhamento",
     "folderPathRequired": "O caminho da pasta é obrigatório",
     "folderAlreadyExists": "A pasta já existe",
     "defaultsSaveFailed": "Falha ao salvar",
     "defaultsRemoved": "Pastas padrão para {{entity}} removidas",
     "defaultsSaved": "Pastas padrão para {{entity}} salvas",
-    "suggestedDefaultsAllLoaded": "Todos os padrões sugeridos já foram carregados",
-    "suggestedDefaultsLoaded_one": "Padrões carregados para {{count}} tipo de entidade",
-    "suggestedDefaultsLoaded_other": "Padrões carregados para {{count}} tipos de entidade",
+    "suggestedDefaultsAllLoaded": "Todos os padrões sugeridos já estão carregados",
+    "suggestedDefaultsLoaded_one": "Padrões carregados para o tipo de entidade {{count}}",
+    "suggestedDefaultsLoaded_other": "Padrões carregados para tipos de entidade {{count}}",
     "suggestedDefaultsLoadFailed": "Falha ao carregar os padrões sugeridos",
-    "entityTypesAllConfigured": "Todos os tipos de entidade já têm pastas padrão configuradas",
-    "defaultFoldersLoadFailed": "Falha ao carregar as pastas padrão"
+    "entityTypesAllConfigured": "Todos os tipos de entidade já possuem pastas padrão configuradas",
+    "defaultFoldersLoadFailed": "Falha ao carregar pastas padrão"
   },
   "validation": {
-    "nameRequired": "Document name is required"
+    "nameRequired": "O nome do documento é obrigatório"
   },
   "bulkActions": {
-    "selected_one": "{{count}} document selected",
-    "selected_other": "{{count}} documents selected",
-    "moveToFolder": "Move to Folder",
-    "deleteSelected": "Delete Selected",
-    "clearSelection": "Clear Selection"
+    "selected_one": "Documento {{count}} selecionado",
+    "selected_other": "Documentos {{count}} selecionados",
+    "moveToFolder": "Mover para pasta",
+    "deleteSelected": "Excluir selecionado",
+    "clearSelection": "Limpar seleção"
   },
   "prompts": {
-    "confirmBulkDelete_one": "Are you sure you want to delete {{count}} document?",
-    "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?"
+    "confirmBulkDelete_one": "Tem certeza de que deseja excluir o documento {{count}}?",
+    "confirmBulkDelete_other": "Tem certeza de que deseja excluir documentos {{count}}?"
   },
   "pagination": {
-    "perPage": "{{count}} per page"
+    "perPage": "{{count}} por página"
   },
   "folderSelector": {
-    "defaultTitle": "Select Destination Folder",
-    "defaultDescription": "Choose where to save this document",
-    "newDocumentTitle": "Select Folder for New Document",
-    "newDocumentDescription": "Choose where to save this new document",
-    "moveTitle": "Move Document",
-    "moveDescriptionWithName": "Select destination folder for \"{{name}}\"",
-    "moveDescription": "Select destination folder",
-    "bulkMoveTitle": "Move Selected Documents",
-    "bulkMoveDescription_one": "Select destination folder for {{count}} document",
-    "bulkMoveDescription_other": "Select destination folder for {{count}} documents",
+    "defaultTitle": "Selecione a pasta de destino",
+    "defaultDescription": "Escolha onde salvar este documento",
+    "newDocumentTitle": "Selecione a pasta para o novo documento",
+    "newDocumentDescription": "Escolha onde salvar este novo documento",
+    "moveTitle": "Mover documento",
+    "moveDescriptionWithName": "Selecione a pasta de destino para \"{{name}}\"",
+    "moveDescription": "Selecione a pasta de destino",
+    "bulkMoveTitle": "Mover documentos selecionados",
+    "bulkMoveDescription_one": "Selecione a pasta de destino para o documento {{count}}",
+    "bulkMoveDescription_other": "Selecione a pasta de destino para documentos {{count}}",
     "errors": {
-      "nameRequired": "Please enter a folder name",
-      "invalidCharacters": "Folder name cannot contain \"/\"",
-      "createFailed": "Failed to create folder"
+      "nameRequired": "Por favor insira um nome de pasta",
+      "invalidCharacters": "O nome da pasta não pode conter \"/\"",
+      "createFailed": "Falha ao criar pasta"
     },
-    "creating": "Creating...",
-    "createButton": "Create Folder",
-    "newFolderButton": "New Folder",
-    "parentLabel": "Parent folder: {{folder}}",
-    "rootLabel": "/ (Root)",
-    "namePlaceholder": "Enter folder name",
-    "loading": "Loading folders...",
-    "rootOption": "Root (No folder)",
-    "empty": "No folders available. Documents will be saved to root."
+    "creating": "Criando...",
+    "createButton": "Criar pasta",
+    "newFolderButton": "Nova pasta",
+    "parentLabel": "Pasta pai: {{folder}}",
+    "rootLabel": "/ (Raiz)",
+    "namePlaceholder": "Digite o nome da pasta",
+    "loading": "Carregando pastas...",
+    "rootOption": "Raiz (sem pasta)",
+    "empty": "Nenhuma pasta disponível. Os documentos serão salvos na raiz."
   },
   "filters": {
-    "searchLabel": "Search Documents",
-    "searchPlaceholder": "Search by document name...",
-    "typeLabel": "Document Type",
-    "entityTypeLabel": "Associated Entity Type",
-    "uploadedByLabel": "Uploaded By",
-    "uploadedByPlaceholder": "All Users",
-    "updatedStartLabel": "Updated Date Start",
-    "updatedEndLabel": "Updated Date End",
-    "startDatePlaceholder": "Select start date",
-    "endDatePlaceholder": "Select end date",
-    "sortByLabel": "Sort By",
-    "clear": "Clear Filters",
+    "searchLabel": "Pesquisar documentos",
+    "searchPlaceholder": "Pesquisar pelo nome do documento...",
+    "typeLabel": "Tipo de documento",
+    "entityTypeLabel": "Tipo de entidade associada",
+    "uploadedByLabel": "Enviado por",
+    "uploadedByPlaceholder": "Todos os usuários",
+    "updatedStartLabel": "Data de início atualizada",
+    "updatedEndLabel": "Data final atualizada",
+    "startDatePlaceholder": "Selecione a data de início",
+    "endDatePlaceholder": "Selecione a data de término",
+    "sortByLabel": "Ordenar por",
+    "clear": "Limpar filtros",
     "typeOptions": {
-      "all": "All Document Types",
+      "all": "Todos os tipos de documentos",
       "pdf": "PDF",
-      "image": "Images",
-      "text": "Documents",
-      "video": "Video",
-      "other": "Other"
+      "image": "Imagens",
+      "text": "Documentos",
+      "video": "Vídeo",
+      "other": "Outro"
     },
     "sortOptions": {
-      "updated_at": "Date",
-      "document_name": "Document name",
-      "file_size": "File size",
-      "created_by_full_name": "Created By"
+      "updated_at": "Data",
+      "document_name": "Nome do documento",
+      "file_size": "Tamanho do arquivo",
+      "created_by_full_name": "Criado por"
     },
     "sortOrder": {
       "default": {
-        "asc": "Show ascending order",
-        "desc": "Show descending order"
+        "asc": "Mostrar ordem crescente",
+        "desc": "Mostrar ordem decrescente"
       },
       "document_name": {
-        "asc": "Show A-Z",
-        "desc": "Show Z-A"
+        "asc": "Mostrar A-Z",
+        "desc": "Mostrar Z-A"
       },
       "updated_at": {
-        "asc": "Show Oldest First",
-        "desc": "Show Newest First"
+        "asc": "Mostrar o mais antigo primeiro",
+        "desc": "Mostrar o mais recente primeiro"
       },
       "file_size": {
-        "asc": "Show Smallest First",
-        "desc": "Show Largest First"
+        "asc": "Mostrar o menor primeiro",
+        "desc": "Mostrar o maior primeiro"
       },
       "created_by_full_name": {
-        "asc": "Show A-Z",
-        "desc": "Show Z-A"
+        "asc": "Mostrar A-Z",
+        "desc": "Mostrar Z-A"
       }
     }
   },
   "selector": {
-    "title": "Select Documents",
-    "reflectionLabel": "Document Selector",
-    "searchPlaceholder": "Search documents...",
-    "foldersLabel": "Folders",
-    "folderHint": "in folder \"{{folder}}\"",
-    "saving": "Saving...",
-    "selectDocument": "Select Document",
-    "associateSelected": "Associate Selected",
+    "title": "Selecione Documentos",
+    "reflectionLabel": "Seletor de documentos",
+    "searchPlaceholder": "Pesquisar documentos...",
+    "foldersLabel": "Pastas",
+    "folderHint": "na pasta \"{{folder}}\"",
+    "saving": "Salvando...",
+    "selectDocument": "Selecione o documento",
+    "associateSelected": "Associado selecionado",
     "errors": {
-      "configuration": "Configuration error: Missing entity information",
-      "invalidData": "Invalid document data received",
-      "load": "Failed to load documents",
-      "save": "Failed to save document selection"
+      "configuration": "Erro de configuração: informações de entidade ausentes",
+      "invalidData": "Dados de documento inválidos recebidos",
+      "load": "Falha ao carregar documentos",
+      "save": "Falha ao salvar a seleção do documento"
     },
-    "configErrorTitle": "Configuration Error",
-    "configErrorMessage": "Missing required configuration. Please contact support."
+    "configErrorTitle": "Erro de configuração",
+    "configErrorMessage": "Configuração necessária ausente. Entre em contato com o suporte."
   },
   "uploadSection": {
-    "reflectionLabel": "Document Upload",
-    "dragDrop": "Drag and drop your file here, or",
-    "browse": "Browse Files",
-    "uploading": "Uploading...",
-    "error": "Failed to upload document",
-    "fileError": "Failed to upload file"
+    "reflectionLabel": "Upload de documentos",
+    "dragDrop": "Arraste e solte seu arquivo aqui ou",
+    "browse": "Navegar pelos arquivos",
+    "uploading": "Fazendo upload...",
+    "error": "Falha ao carregar o documento",
+    "fileError": "Falha ao carregar o arquivo"
   },
   "folders": {
-    "root": "Root",
-    "loadFailed": "Failed to load folder tree",
-    "deleteConfirm": "Are you sure you want to delete the folder \"{{name}}\"? This will only work if the folder is empty.",
-    "deleteSuccess": "Folder \"{{name}}\" deleted successfully",
-    "deleteFailed": "Failed to delete folder",
-    "deleteAction": "Delete folder",
-    "loading": "Loading folders...",
-    "title": "Folders",
-    "collapse": "Collapse folders",
-    "allDocuments": "All Documents"
+    "root": "Raiz",
+    "loadFailed": "Falha ao carregar a árvore de pastas",
+    "deleteConfirm": "Tem certeza de que deseja excluir a pasta \"{{name}}\"? Isso só funcionará se a pasta estiver vazia.",
+    "deleteSuccess": "Pasta \"{{name}}\" excluída com sucesso",
+    "deleteFailed": "Falha ao excluir pasta",
+    "deleteAction": "Excluir pasta",
+    "loading": "Carregando pastas...",
+    "title": "Pastas",
+    "collapse": "Recolher pastas",
+    "allDocuments": "Todos os documentos"
   },
   "folderManager": {
-    "title": "Create New Folder",
-    "nameLabel": "Folder Name",
-    "namePlaceholder": "Enter folder name",
-    "willCreateIn": "Will be created in: {{folder}}"
+    "title": "Criar nova pasta",
+    "nameLabel": "Nome da pasta",
+    "namePlaceholder": "Digite o nome da pasta",
+    "willCreateIn": "Será criado em: {{folder}}"
   },
   "portal": {
-    "subtitle": "View and download your shared documents",
-    "searchPlaceholder": "Search documents...",
-    "showing": "{{count}} documents",
-    "loadError": "Failed to load documents. Please try again."
+    "subtitle": "Visualize e baixe seus documentos compartilhados",
+    "searchPlaceholder": "Pesquisar documentos...",
+    "showing": "Documentos {{count}}",
+    "loadError": "Falha ao carregar documentos. Por favor, tente novamente."
   },
   "kb": {
-    "title": "Knowledge Base",
-    "subtitle": "Find answers to common questions and how-to guides",
-    "categories": "Categories",
-    "allArticles": "All Articles",
-    "searchPlaceholder": "Search articles...",
-    "articleCount": "{{count}} articles",
-    "noArticles": "No articles found",
-    "loadError": "Failed to load articles. Please try again.",
-    "noContent": "No content available",
-    "articleNotFound": "Article not found",
-    "backToArticles": "Back to Articles",
-    "views": "views",
-    "wasHelpful": "Was this article helpful?",
-    "yes": "Yes",
-    "no": "No",
-    "feedbackThanks": "Thank you for your feedback!",
-    "feedbackError": "Failed to submit feedback",
-    "filterByTags": "Filter by tags..."
+    "title": "Base de conhecimento",
+    "subtitle": "Encontre respostas para perguntas comuns e guias de procedimentos",
+    "categories": "Categorias",
+    "allArticles": "Todos os artigos",
+    "searchPlaceholder": "Pesquisar artigos...",
+    "articleCount": "Artigos {{count}}",
+    "noArticles": "Nenhum artigo encontrado",
+    "loadError": "Falha ao carregar artigos. Por favor, tente novamente.",
+    "noContent": "Nenhum conteúdo disponível",
+    "articleNotFound": "Artigo não encontrado",
+    "backToArticles": "Voltar aos artigos",
+    "views": "visualizações",
+    "wasHelpful": "Este artigo foi útil?",
+    "yes": "Sim",
+    "no": "Não",
+    "feedbackThanks": "Obrigado pelo seu feedback!",
+    "feedbackError": "Falha ao enviar feedback",
+    "filterByTags": "Filtrar por tags..."
   },
   "visibility": {
-    "cascadeTitle": "Update document visibility",
-    "cascadeMakeVisible": "Would you also like to make all {{count}} document(s) in \"{{name}}\" visible to the client portal?",
-    "cascadeMakeHidden": "Would you also like to hide all {{count}} document(s) in \"{{name}}\" from the client portal?",
-    "cascadeYes": "Yes, update documents",
-    "cascadeNo": "No, folder only"
+    "cascadeTitle": "Atualizar a visibilidade do documento",
+    "cascadeMakeVisible": "Você também gostaria de tornar todos os documentos {{count}} em \"{{name}}\" visíveis para o portal do cliente?",
+    "cascadeMakeHidden": "Você também gostaria de ocultar todos os documentos {{count}} em \"{{name}}\" do portal do cliente?",
+    "cascadeYes": "Sim, atualizar documentos",
+    "cascadeNo": "Não, apenas pasta"
   },
   "empty": {
-    "default": "No documents found"
+    "default": "Nenhum documento encontrado"
   },
   "shared": {
     "statusLabels": {
       "draft": "Rascunho",
-      "review": "In Review",
-      "published": "Published",
-      "archived": "Archived"
+      "review": "Em revisão",
+      "published": "Publicado",
+      "archived": "Arquivado"
     },
     "audienceLabels": {
-      "internal": "Internal",
-      "client": "Client",
-      "public": "Public"
+      "internal": "Interno",
+      "client": "Cliente",
+      "public": "Público"
     },
     "typeLabels": {
-      "how_to": "How-To",
+      "how_to": "Como fazer",
       "faq": "FAQ",
-      "troubleshooting": "Troubleshooting",
-      "reference": "Reference"
+      "troubleshooting": "Solução de problemas",
+      "reference": "Referência"
     }
   },
   "documents": {
     "messages": {
       "error": {
-        "noPermission": "Não tem permissão para ver os documentos",
+        "noPermission": "Você não tem permissão para visualizar documentos",
         "invalidData": "Dados de documento inválidos recebidos",
-        "fetchFailed": "Falha ao obter os documentos"
+        "fetchFailed": "Falha ao buscar documentos"
       }
     }
   },
-  "uploadError": "Falha ao enviar o documento",
+  "uploadError": "Falha ao carregar o documento",
   "downloadError": "Falha ao baixar o documento",
-  "uploadHint": "Envie ficheiros para partilhar com esta tarefa",
-  "file": "ficheiro",
-  "files": "ficheiros",
-  "view": "Ver",
+  "uploadHint": "Faça upload de arquivos para compartilhar com esta tarefa",
+  "file": "arquivo",
+  "files": "arquivos",
+  "view": "Visualizar",
   "common:pagination": {
     "next": "Próximo",
     "pageOf": "Página {{current}} de {{total}}",

@@ -95,7 +95,7 @@
   {
     "id": "F010",
     "description": "pt-BR complete for features/tickets.json: translate the 1045 remaining key(s) and re-audit all 1214 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-tickets",
     "prdRefs": [
       "3.2",
@@ -106,7 +106,7 @@
   {
     "id": "F011",
     "description": "pt-BR complete for features/documents.json: translate the 185 remaining key(s) and re-audit all 216 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-tickets",
     "prdRefs": [
       "3.2",
@@ -117,7 +117,7 @@
   {
     "id": "F012",
     "description": "pt-BR complete for features/appointments.json: translate the 107 remaining key(s) and re-audit all 125 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-tickets",
     "prdRefs": [
       "3.2",
