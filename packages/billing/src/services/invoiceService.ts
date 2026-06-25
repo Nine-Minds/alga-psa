@@ -460,8 +460,8 @@ export async function persistManualInvoiceCharges(
   for (const requestItem of nonDiscountItems) {
     let service;
     if (requestItem.service_id) {
-      service = await tx('service_catalog')
-        .where({ service_id: requestItem.service_id, tenant })
+      service = await tenantScopedTable(tx, tenant, 'service_catalog')
+        .where('service_id', requestItem.service_id)
         .select('*', 'tax_rate_id') // Fetch tax_rate_id
         .first();
       if (!service) {
@@ -474,8 +474,8 @@ export async function persistManualInvoiceCharges(
     let serviceIsTaxable = true; // Default for purely manual items if no service
     if (service) {
       if (service.tax_rate_id) {
-        const taxRateInfo = await tx('tax_rates')
-          .where({ tax_rate_id: service.tax_rate_id, tenant })
+        const taxRateInfo = await tenantScopedTable(tx, tenant, 'tax_rates')
+          .where('tax_rate_id', service.tax_rate_id)
           // Add validity checks if needed (e.g., is_active, date range)
           // For now, just fetch the region code associated with the ID
           .select('region_code')
@@ -562,8 +562,8 @@ export async function persistManualInvoiceCharges(
 
     // Get applicable item amount for percentage discounts
     if (applicableItemId) {
-      const applicableItem = await tx('invoice_charges')
-        .where({ item_id: applicableItemId, tenant })
+      const applicableItem = await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', applicableItemId)
         .first();
       applicableAmount = applicableItem?.net_amount;
     }
@@ -576,22 +576,22 @@ export async function persistManualInvoiceCharges(
 
     let service; // Discounts might optionally reference a service
     if (requestItem.service_id) {
-        service = await tx('service_catalog')
-            .where({ service_id: requestItem.service_id, tenant })
-            .select('*', 'tax_rate_id') // Fetch tax_rate_id
-            .first();
+      service = await tenantScopedTable(tx, tenant, 'service_catalog')
+        .where('service_id', requestItem.service_id)
+        .select('*', 'tax_rate_id') // Fetch tax_rate_id
+        .first();
     }
     // --- Determine Tax Region for Discount (less critical as not taxed, but for consistency) ---
     let discountTaxRegion: string | null = null;
     if (service) {
-        if (service.tax_rate_id) {
-            const taxRateInfo = await tx('tax_rates')
-                .where({ tax_rate_id: service.tax_rate_id, tenant })
-                .select('region_code')
-                .first();
-            discountTaxRegion = taxRateInfo?.region_code ?? null;
-        }
-        // If service exists but no tax_rate_id, region remains null
+      if (service.tax_rate_id) {
+        const taxRateInfo = await tenantScopedTable(tx, tenant, 'tax_rates')
+          .where('tax_rate_id', service.tax_rate_id)
+          .select('region_code')
+          .first();
+        discountTaxRegion = taxRateInfo?.region_code ?? null;
+      }
+      // If service exists but no tax_rate_id, region remains null
     } else {
         // No service linked, use fallback
         discountTaxRegion = client.region_code ?? null; // Fallback to client region if no service

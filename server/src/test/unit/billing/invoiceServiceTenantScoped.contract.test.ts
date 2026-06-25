@@ -28,6 +28,10 @@ const preManualChargeSection = sectionBetween(
   'export async function getClientDetails',
   'export async function persistManualInvoiceCharges'
 );
+const manualChargeSection = sectionBetween(
+  'export async function persistManualInvoiceCharges',
+  'async function persistFixedInvoiceCharges'
+);
 
 describe('invoiceService tenant-scoped query contract', () => {
   it('uses structural tenant scoping for top invoice linkage and source-marking roots', () => {
@@ -62,5 +66,17 @@ describe('invoiceService tenant-scoped query contract', () => {
     expect(preManualChargeSection).not.toContain("knex('clients as c')");
     expect(preManualChargeSection).not.toContain("knex('client_locations')");
     expect(preManualChargeSection).not.toContain("tx('invoice_charges')");
+  });
+
+  it('uses structural tenant scoping for manual invoice lookup roots', () => {
+    expect(manualChargeSection).toContain("tenantScopedTable(tx, tenant, 'service_catalog')");
+    expect(manualChargeSection).toContain("tenantScopedTable(tx, tenant, 'tax_rates')");
+    expect(manualChargeSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
+
+    expect(manualChargeSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
+    expect(manualChargeSection).not.toMatch(/\.where\(['"]tenant['"]/);
+    expect(manualChargeSection).not.toContain("tx('service_catalog')");
+    expect(manualChargeSection).not.toContain("tx('tax_rates')");
+    expect(manualChargeSection).not.toContain("const applicableItem = await tx('invoice_charges')");
   });
 });
