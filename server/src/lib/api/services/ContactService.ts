@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ListResult, ServiceContext, withTransaction } from '@alga-psa/db';
+import { BaseService, ListResult, ServiceContext, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
@@ -101,22 +101,28 @@ export class ContactService extends BaseService<IContact> {
     } = options;
 
     let dataQuery = applyDefaultPhoneJoins(
-      knex('contacts as c')
+      createTenantScopedQuery(knex, {
+        table: 'contacts as c',
+        alias: 'c',
+        tenant: context.tenant,
+      }).builder
         .leftJoin('clients as comp', function joinClients() {
           this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
-        })
-        .where('c.tenant', context.tenant),
+        }),
       knex
     );
 
     let countQuery = applyDefaultPhoneJoins(
-      knex('contacts as c')
+      createTenantScopedQuery(knex, {
+        table: 'contacts as c',
+        alias: 'c',
+        tenant: context.tenant,
+      }).builder
         .leftJoin('clients as comp', function joinClients() {
           this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
-        })
-        .where('c.tenant', context.tenant),
+        }),
       knex
     );
 
@@ -171,7 +177,11 @@ export class ContactService extends BaseService<IContact> {
 
     const contact = await withTransaction(knex, async (trx) => {
       const baseContact = await applyDefaultPhoneJoins(
-        trx('contacts as c')
+        createTenantScopedQuery(trx, {
+          table: 'contacts as c',
+          alias: 'c',
+          tenant: context.tenant,
+        }).builder
           .leftJoin('clients as comp', function joinClients() {
             this.on('c.client_id', '=', 'comp.client_id')
               .andOn('c.tenant', '=', 'comp.tenant');
@@ -181,7 +191,7 @@ export class ContactService extends BaseService<IContact> {
               .andOn('comp.tenant', '=', 'cl.tenant')
               .andOn('cl.is_default', '=', knex.raw('true'));
           })
-          .where({ 'c.contact_name_id': id, 'c.tenant': context.tenant }),
+          .where('c.contact_name_id', id),
         knex
       )
         .select(
@@ -348,15 +358,16 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
     const contacts = await withTransaction(knex, async (trx) => {
       const rows = await applyDefaultPhoneJoins(
-        trx('contacts as c')
+        createTenantScopedQuery(trx, {
+          table: 'contacts as c',
+          alias: 'c',
+          tenant: context.tenant,
+        }).builder
           .leftJoin('clients as comp', function joinClients() {
             this.on('c.client_id', '=', 'comp.client_id')
               .andOn('c.tenant', '=', 'comp.tenant');
           })
-          .where({
-            'c.client_id': clientId,
-            'c.tenant': context.tenant,
-          }),
+          .where('c.client_id', clientId),
         knex
       )
         .select(
@@ -414,12 +425,15 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     let query = applyDefaultPhoneJoins(
-      knex('contacts as c')
+      createTenantScopedQuery(knex, {
+        table: 'contacts as c',
+        alias: 'c',
+        tenant: context.tenant,
+      }).builder
         .leftJoin('clients as comp', function joinClients() {
           this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
-        })
-        .where('c.tenant', context.tenant),
+        }),
       knex
     );
 
@@ -534,12 +548,15 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     let query = applyDefaultPhoneJoins(
-      knex('contacts as c')
+      createTenantScopedQuery(knex, {
+        table: 'contacts as c',
+        alias: 'c',
+        tenant: context.tenant,
+      }).builder
         .leftJoin('clients as comp', function joinClients() {
           this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
-        })
-        .where('c.tenant', context.tenant),
+        }),
       knex
     );
 
