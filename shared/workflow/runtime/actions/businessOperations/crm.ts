@@ -18,6 +18,7 @@ import {
   getQuoteApprovalWorkflowSettings,
   quoteStatusSchema,
 } from './crmWorkerDal';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -66,6 +67,14 @@ const visibilitySchema = z.enum(['internal', 'client_visible']);
 const onEmptySchema = z.enum(['return_empty', 'error']);
 const supportedActivityTagTargetTypes = ['ticket', 'contact', 'client'] as const;
 type SupportedActivityTagTargetType = Extract<TaggedEntityType, typeof supportedActivityTagTargetTypes[number]>;
+
+function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(tx.trx, { table, tenant: tx.tenantId }).builder;
+}
+
+function tenantScopedTableForTenant(trx: Knex.Transaction, tenantId: string, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(trx, { table, tenant: tenantId }).builder;
+}
 
 const activitySummarySchema = z.object({
   activity_id: uuidSchema,
@@ -538,7 +547,7 @@ async function validateInteractionTypeId(
   fieldName: 'type_id'
 ): Promise<void> {
   const [tenantType, systemType] = await Promise.all([
-    tx.trx('interaction_types').where({ tenant: tx.tenantId, type_id: typeId }).first(),
+    tenantScopedTable(tx, 'interaction_types').where('type_id', typeId).first(),
     tx.trx('system_interaction_types').where({ type_id: typeId }).first(),
   ]);
 
@@ -560,8 +569,8 @@ async function validateInteractionStatusId(
   statusId: string,
   fieldName: 'status_id'
 ): Promise<void> {
-  const status = await tx.trx('statuses')
-    .where({ tenant: tx.tenantId, status_id: statusId, status_type: 'interaction' })
+  const status = await tenantScopedTable(tx, 'statuses')
+    .where({ status_id: statusId, status_type: 'interaction' })
     .first();
 
   if (status) {
@@ -577,9 +586,8 @@ async function validateInteractionStatusId(
 }
 
 async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Promise<string> {
-  const status = await tx.trx('statuses')
+  const status = await tenantScopedTable(tx, 'statuses')
     .where({
-      tenant: tx.tenantId,
       status_type: 'interaction',
       is_default: true,
     })
@@ -601,7 +609,7 @@ async function fetchActivityDetailRow(
   tenantId: string,
   activityId: string
 ): Promise<Record<string, unknown> | null> {
-  return await trx('interactions as i')
+  return await tenantScopedTableForTenant(trx, tenantId, 'interactions as i')
     .leftJoin('clients as c', function joinClients() {
       this.on('i.tenant', 'c.tenant').andOn('i.client_id', 'c.client_id');
     })
@@ -621,7 +629,7 @@ async function fetchActivityDetailRow(
       this.on('i.tenant', 'it.tenant').andOn('i.type_id', 'it.type_id');
     })
     .leftJoin('system_interaction_types as sit', 'i.type_id', 'sit.type_id')
-    .where({ 'i.tenant': tenantId, 'i.interaction_id': activityId })
+    .where('i.interaction_id', activityId)
     .select(
       'i.interaction_id',
       'i.type_id',
@@ -734,15 +742,15 @@ async function resolveQuoteRecipients(
 ): Promise<string[]> {
   const [contactRecipient, clientRecipient] = await Promise.all([
     quote.contact_id
-      ? trx('contacts')
+      ? tenantScopedTableForTenant(trx, tenantId, 'contacts')
         .select('email')
-        .where({ tenant: tenantId, contact_name_id: quote.contact_id })
+        .where('contact_name_id', quote.contact_id)
         .first<{ email?: string | null }>()
       : Promise.resolve(null),
     quote.client_id
-      ? trx('clients')
+      ? tenantScopedTableForTenant(trx, tenantId, 'clients')
         .select('billing_email')
-        .where({ tenant: tenantId, client_id: quote.client_id })
+        .where('client_id', quote.client_id)
         .first<{ billing_email?: string | null }>()
       : Promise.resolve(null),
   ]);
@@ -883,8 +891,8 @@ async function ensureQuoteContactBelongsToClient(
 ): Promise<void> {
   if (!contactId) return;
 
-  const contact = await tx.trx('contacts')
-    .where({ tenant: tx.tenantId, contact_name_id: contactId })
+  const contact = await tenantScopedTable(tx, 'contacts')
+    .where('contact_name_id', contactId)
     .first();
 
   if (!contact) {
@@ -967,23 +975,29 @@ async function resolveQuoteAuthorizationSubject(
 ): Promise<AuthorizationSubject> {
   const roleRows = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('user_roles').where({ tenant: tenantId, user_id: actorUserId }).select<{ role_id: string }[]>('role_id'),
+    () => tenantScopedTableForTenant(trx, tenantId, 'user_roles')
+      .where('user_id', actorUserId)
+      .select<{ role_id: string }[]>('role_id'),
     []
   );
   const teamRows = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('team_members').where({ tenant: tenantId, user_id: actorUserId }).select<{ team_id: string }[]>('team_id'),
+    () => tenantScopedTableForTenant(trx, tenantId, 'team_members')
+      .where('user_id', actorUserId)
+      .select<{ team_id: string }[]>('team_id'),
     []
   );
   const managedRows = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('users').where({ tenant: tenantId, reports_to: actorUserId }).select<{ user_id: string }[]>('user_id'),
+    () => tenantScopedTableForTenant(trx, tenantId, 'users')
+      .where('reports_to', actorUserId)
+      .select<{ user_id: string }[]>('user_id'),
     []
   );
   const userRow = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('users')
-      .where({ tenant: tenantId, user_id: actorUserId })
+    () => tenantScopedTableForTenant(trx, tenantId, 'users')
+      .where('user_id', actorUserId)
       .select<{ user_type?: string | null; contact_id?: string | null; client_id?: string | null }>('user_type', 'contact_id', 'client_id')
       .first(),
     null
@@ -1042,7 +1056,7 @@ async function getAuthorizedQuoteForMutation(
   quoteId: string,
   deniedMessage: string
 ): Promise<Record<string, unknown>> {
-  const quote = await tx.trx('quotes').where({ tenant: tx.tenantId, quote_id: quoteId }).first();
+  const quote = await tenantScopedTable(tx, 'quotes').where('quote_id', quoteId).first();
   if (!quote) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -1096,12 +1110,12 @@ async function resolveInteractionStatus(
 ): Promise<{ status_id: string; status_name: string }> {
   let statusRow: Record<string, unknown> | undefined;
   if (params.statusId) {
-    statusRow = await tx.trx('statuses')
-      .where({ tenant: tx.tenantId, status_type: 'interaction', status_id: params.statusId })
+    statusRow = await tenantScopedTable(tx, 'statuses')
+      .where({ status_type: 'interaction', status_id: params.statusId })
       .first();
   } else if (params.statusName) {
-    statusRow = await tx.trx('statuses')
-      .where({ tenant: tx.tenantId, status_type: 'interaction' })
+    statusRow = await tenantScopedTable(tx, 'statuses')
+      .where('status_type', 'interaction')
       .whereRaw('lower(trim(name)) = lower(trim(?))', [params.statusName])
       .first();
   }
