@@ -1,0 +1,648 @@
+[
+  {
+    "id": "F001",
+    "description": "Author pt-BR domain glossary + dialect ruleset (data file) mapping every domain term to its Brazilian translation (ticket→chamado, billing→faturamento, asset→ativo, etc.) and listing forbidden European-PT forms (comboio, telemóvel, ecrã, autocarro, registo, etc.) and the allowlist of strings legitimately identical to English (Status, Dashboard, Email, ...).",
+    "implemented": false,
+    "commitGroup": "glossary",
+    "prdRefs": [
+      "3.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add localized-loanword allowlist so the audit does not flag intentionally-identical strings (proper nouns, codes, units).",
+    "implemented": false,
+    "commitGroup": "glossary",
+    "prdRefs": [
+      "3.1",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Build a pt-BR audit script (scripts/audit-pt-br.cjs) that, per namespace, reports: keys still identical to English (excluding allowlist), glossary/forbidden-term violations, and unverified (not-yet-reviewed) keys; emits a per-namespace JSON+markdown report the loop consumes.",
+    "implemented": false,
+    "commitGroup": "audit-tooling",
+    "prdRefs": [
+      "3.2",
+      "5.1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Audit script tracks a per-key \"reviewed\" ledger (e.g. a sidecar pt review-state file) so the full re-audit of already-translated keys is resumable across loop iterations.",
+    "implemented": false,
+    "commitGroup": "audit-tooling",
+    "prdRefs": [
+      "3.2",
+      "3.3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add native-review export generator (scripts/export-pt-review.cjs) producing an en→pt side-by-side sheet (CSV/markdown) for human sign-off.",
+    "implemented": false,
+    "commitGroup": "audit-tooling",
+    "prdRefs": [
+      "4.2",
+      "6.2"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "pt-BR complete for common.json: translate the 688 remaining key(s) and re-audit all 898 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-common",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "pt-BR complete for client-portal.json: translate the 390 remaining key(s) and re-audit all 561 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-common",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "pt-BR complete for client-portal/service-requests.json: translate the 6 remaining key(s) and re-audit all 53 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-common",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "pt-BR complete for msp/service-requests.json: translate the 16 remaining key(s) and re-audit all 217 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-common",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "pt-BR complete for features/tickets.json: translate the 1045 remaining key(s) and re-audit all 1214 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-tickets",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "pt-BR complete for features/documents.json: translate the 185 remaining key(s) and re-audit all 216 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-tickets",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "pt-BR complete for features/appointments.json: translate the 107 remaining key(s) and re-audit all 125 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-tickets",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "pt-BR complete for msp/billing.json: translate the 508 remaining key(s) and re-audit all 512 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "pt-BR complete for msp/billing-settings.json: translate the 631 remaining key(s) and re-audit all 698 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "pt-BR complete for msp/invoicing.json: translate the 85 remaining key(s) and re-audit all 1001 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "pt-BR complete for msp/credits.json: translate the 148 remaining key(s) and re-audit all 151 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "pt-BR complete for msp/quotes.json: translate the 518 remaining key(s) and re-audit all 534 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "pt-BR complete for msp/contracts.json: translate the 1342 remaining key(s) and re-audit all 1360 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "pt-BR complete for msp/contract-lines.json: translate the 509 remaining key(s) and re-audit all 509 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "pt-BR complete for features/billing.json: translate the 9 remaining key(s) and re-audit all 267 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-billing",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "pt-BR complete for features/projects.json: translate the 1247 remaining key(s) and re-audit all 1342 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-projects-time",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "pt-BR complete for projects.json: translate the 1 remaining key(s) and re-audit all 7 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-projects-time",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "pt-BR complete for msp/schedule.json: translate the 304 remaining key(s) and re-audit all 380 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-projects-time",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "pt-BR complete for msp/dispatch.json: translate the 98 remaining key(s) and re-audit all 98 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-projects-time",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "pt-BR complete for msp/calendar.json: translate the 13 remaining key(s) and re-audit all 139 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-projects-time",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "pt-BR complete for msp/time-entry.json: translate the 268 remaining key(s) and re-audit all 301 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-projects-time",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "pt-BR complete for msp/clients.json: translate the 968 remaining key(s) and re-audit all 1150 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-clients",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "pt-BR complete for msp/contacts.json: translate the 400 remaining key(s) and re-audit all 452 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-clients",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "pt-BR complete for msp/account.json: translate the 9 remaining key(s) and re-audit all 327 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-clients",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "pt-BR complete for msp/profile.json: translate the 248 remaining key(s) and re-audit all 462 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-clients",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "pt-BR complete for msp/assets.json: translate the 798 remaining key(s) and re-audit all 909 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-assets-catalog",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "pt-BR complete for msp/knowledge-base.json: translate the 162 remaining key(s) and re-audit all 183 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-assets-catalog",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "pt-BR complete for msp/service-catalog.json: translate the 9 remaining key(s) and re-audit all 261 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-assets-catalog",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "pt-BR complete for msp/admin.json: translate the 143 remaining key(s) and re-audit all 365 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "pt-BR complete for msp/settings.json: translate the 804 remaining key(s) and re-audit all 1296 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "pt-BR complete for msp/integrations.json: translate the 95 remaining key(s) and re-audit all 1679 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "pt-BR complete for msp/email-providers.json: translate the 26 remaining key(s) and re-audit all 675 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "pt-BR complete for msp/extensions.json: translate the 51 remaining key(s) and re-audit all 290 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "pt-BR complete for msp/licensing.json: translate the 111 remaining key(s) and re-audit all 114 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "pt-BR complete for msp/onboarding.json: translate the 467 remaining key(s) and re-audit all 473 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "pt-BR complete for msp/jobs.json: translate the 48 remaining key(s) and re-audit all 80 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-admin",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "pt-BR complete for msp/workflows.json: translate the 1227 remaining key(s) and re-audit all 1706 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-workflows",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "pt-BR complete for msp/core.json: translate the 228 remaining key(s) and re-audit all 243 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "pt-BR complete for msp/dashboard.json: translate the 108 remaining key(s) and re-audit all 128 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "pt-BR complete for msp/keyboard-shortcuts.json: translate the 59 remaining key(s) and re-audit all 196 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "pt-BR complete for msp/auth.json: translate the 0 remaining key(s) and re-audit all 75 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "pt-BR complete for msp/chat.json: translate the 7 remaining key(s) and re-audit all 127 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "pt-BR complete for msp/reports.json: translate the 103 remaining key(s) and re-audit all 201 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "pt-BR complete for msp/surveys.json: translate the 259 remaining key(s) and re-audit all 259 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "pt-BR complete for msp/user-activities.json: translate the 16 remaining key(s) and re-audit all 333 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
+    "implemented": false,
+    "commitGroup": "i18n-misc",
+    "prdRefs": [
+      "3.2",
+      "3.3",
+      "3.4"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Relabel picker: set localeNames.pt = 'Português (Brasil)' in packages/core/src/lib/i18n/config.ts; pt stays in supportedLocales and INCOMPLETE_LOCALES (gated pending human review).",
+    "implemented": false,
+    "commitGroup": "i18n-finalize",
+    "prdRefs": [
+      "2.1",
+      "3.1",
+      "4.1"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Keep pt in INCOMPLETE_LOCALES (do NOT auto un-gate); document the one-line removal as the post-review go-live step.",
+    "implemented": false,
+    "commitGroup": "i18n-finalize",
+    "prdRefs": [
+      "4.1",
+      "6.1"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Whole-catalog gate: validate-translations.cjs and audit-pt-br.cjs both pass clean for pt across all 45 namespaces; generate the final native-review export.",
+    "implemented": false,
+    "commitGroup": "i18n-finalize",
+    "prdRefs": [
+      "3.2",
+      "4.2",
+      "5.1"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Add pt blocks to the source-of-truth email template files for: email-verification, password-reset, portal-invitation, tenant-recovery, no-account-found, ticket-created, ticket-created-client, ticket-assigned, ticket-updated, ticket-updated-client, ticket-closed, ticket-comment-added (subject + html_content + text_content), translated to pt-BR per glossary, {{variables}} preserved.",
+    "implemented": false,
+    "commitGroup": "email-pt-auth-ticketing",
+    "prdRefs": [
+      "4.3",
+      "4.4"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Add pt blocks to the source-of-truth email template files for: invoice-generated, invoice-email, payment-received, payment-overdue, credits-expiring, project-created, project-updated, project-closed, project-assigned, project-task-assigned-primary, project-task-assigned-additional, task-updated, milestone-completed (subject + html_content + text_content), translated to pt-BR per glossary, {{variables}} preserved.",
+    "implemented": false,
+    "commitGroup": "email-pt-billing-projects",
+    "prdRefs": [
+      "4.3",
+      "4.4"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Add pt blocks to the source-of-truth email template files for: appointment-request-received, appointment-request-approved, appointment-request-declined, new-appointment-request, appointment-assigned-technician, time-entry-submitted, time-entry-approved, time-entry-rejected, survey-ticket-closed (subject + html_content + text_content), translated to pt-BR per glossary, {{variables}} preserved.",
+    "implemented": false,
+    "commitGroup": "email-pt-appointments-time-surveys",
+    "prdRefs": [
+      "4.3",
+      "4.4"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Create production migration server/migrations/<ts>_add_portuguese_email_templates.cjs that upserts all 36 pt rows into system_email_templates (language_code=pt, correct notification_subtype_id), mirroring the Polish migration; idempotent up()/down().",
+    "implemented": false,
+    "commitGroup": "email-pt-migration",
+    "prdRefs": [
+      "4.3",
+      "4.5"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Verify the dev seed (server/seeds/dev/68_add_notification_templates.cjs via upsertEmailTemplate) picks up the new pt blocks so fresh DBs get pt automatically.",
+    "implemented": false,
+    "commitGroup": "email-pt-migration",
+    "prdRefs": [
+      "4.5"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Create migration server/migrations/<ts>_add_portuguese_internal_notification_templates.cjs inserting pt rows (language_code=pt, translated title+message, {{variables}} intact) for every internal_notification_subtype, mirroring the Polish notification migration; idempotent up()/down().",
+    "implemented": false,
+    "commitGroup": "notif-pt-templates",
+    "prdRefs": [
+      "4.3",
+      "4.4",
+      "4.5"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Add an automated parity check (test/script) asserting pt template coverage equals en for both system_email_templates and internal_notification_templates, and that {{variable}} sets match per template.",
+    "implemented": false,
+    "commitGroup": "templates-verify",
+    "prdRefs": [
+      "4.4",
+      "5.1"
+    ]
+  }
+]
