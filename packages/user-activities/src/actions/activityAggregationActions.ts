@@ -1193,8 +1193,10 @@ export async function fetchNotificationActivities(
 
     // Query for notifications for the user
     const notifications = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("internal_notifications")
-        .where("internal_notifications.tenant", tenant)
+      return await createTenantScopedQuery(trx, {
+        table: "internal_notifications",
+        tenant,
+      }).builder
         .where("internal_notifications.user_id", userId)
         .whereNull("internal_notifications.deleted_at")
         .modify(function(queryBuilder) {
