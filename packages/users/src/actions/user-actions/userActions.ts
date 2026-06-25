@@ -232,8 +232,10 @@ export const addUser = withAuth(async (
 
       // Check license limits for  MSP (internal) users
       if (userData.userType !== 'client') {
-        const tenantRow = await trx('tenants')
-          .where({ tenant })
+        const tenantRow = await createTenantScopedQuery(trx, {
+          table: 'tenants',
+          tenant,
+        }).builder
           .first('licensed_user_count', 'plan');
 
         if (!tenantRow) {

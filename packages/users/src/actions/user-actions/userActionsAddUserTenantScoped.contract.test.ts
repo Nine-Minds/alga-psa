@@ -23,12 +23,14 @@ describe('user actions add-user tenant-scoped query contract', () => {
     expect(helperSection).toContain('createTenantScopedQuery(trx, {');
     expect(helperSection).toContain("table: 'users'");
     expect(addUserSection).toContain('createTenantScopedQuery(trx, {');
+    expect(addUserSection).toContain("table: 'tenants'");
     expect(addUserSection).toContain("table: 'roles'");
     expect(addUserSection).toContain("table: 'users'");
     expect(addUserSection).toContain("const [newUser] = await trx('users')");
     expect(addUserSection).toContain("await trx('user_roles').insert({");
 
     expect(helperSection).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where/);
+    expect(addUserSection).not.toMatch(/trx\('tenants'\)\s*[\r\n]+\s*\.where\(\{\s*tenant\s*\}\)/);
     expect(addUserSection).not.toMatch(/trx\('roles'\)\s*[\r\n]+\s*\.where/);
     expect(addUserSection).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where/);
     expect(addUserSection).not.toMatch(/\.where\(\{\s*role_id: userData\.roleId,\s*tenant/);
