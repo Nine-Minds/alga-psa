@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
@@ -73,9 +73,12 @@ async function getContactAuthContext(
   tenant: string,
   contactId: string
 ): Promise<PortalContactAuthContext | null> {
-  const contact = await db('contacts')
+  const contact = await createTenantScopedQuery(db, {
+    table: 'contacts',
+    tenant,
+  }).builder
     .select('contact_name_id', 'client_id', 'is_client_admin')
-    .where({ tenant, contact_name_id: contactId })
+    .where({ contact_name_id: contactId })
     .first();
 
   return contact ?? null;
@@ -139,13 +142,15 @@ async function resolveInvitationTargetClientId(
   tenant: string,
   invitationId: string
 ): Promise<string | null | undefined> {
-  const invitation = await db('portal_invitations as pi')
+  const invitation = await createTenantScopedQuery(db, {
+    table: 'portal_invitations as pi',
+    tenant,
+  }).builder
     .leftJoin('contacts as c', function() {
       this.on('pi.tenant', '=', 'c.tenant')
         .andOn('pi.contact_id', '=', 'c.contact_name_id');
     })
     .where({
-      'pi.tenant': tenant,
       'pi.invitation_id': invitationId
     })
     .select('c.client_id')
@@ -163,13 +168,15 @@ async function resolveClientUserTargetClientId(
   tenant: string,
   userId: string
 ): Promise<string | null | undefined> {
-  const targetUser = await db('users as u')
+  const targetUser = await createTenantScopedQuery(db, {
+    table: 'users as u',
+    tenant,
+  }).builder
     .leftJoin('contacts as c', function() {
       this.on('u.tenant', '=', 'c.tenant')
         .andOn('u.contact_id', '=', 'c.contact_name_id');
     })
     .where({
-      'u.tenant': tenant,
       'u.user_id': userId,
       'u.user_type': 'client'
     })
