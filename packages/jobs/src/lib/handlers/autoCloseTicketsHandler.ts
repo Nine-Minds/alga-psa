@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -71,6 +71,10 @@ interface PendingClose {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 async function computePendingCloses(
   knex: Knex,
   tenant: string,
@@ -135,8 +139,7 @@ async function syncAutoCloseState(
   tenant: string,
   pending: PendingClose[]
 ): Promise<void> {
-  const existing = await knex('ticket_auto_close_state')
-    .where({ tenant })
+  const existing = await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
     .select('ticket_id', 'rule_id', 'scheduled_close_at', 'warning_sent_at');
   const existingByTicket = new Map<string, (typeof existing)[number]>(
     existing.map((row: any) => [row.ticket_id, row])
@@ -150,8 +153,7 @@ async function syncAutoCloseState(
     .filter((row: any) => !pendingTicketIds.has(row.ticket_id))
     .map((row: any) => row.ticket_id);
   if (staleIds.length > 0) {
-    await knex('ticket_auto_close_state')
-      .where({ tenant })
+    await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
       .whereIn('ticket_id', staleIds)
       .del();
   }
@@ -175,8 +177,8 @@ async function syncAutoCloseState(
     if (currentScheduled !== p.scheduled_close_at.getTime() || current.rule_id !== p.rule_id) {
       // Timer moved (new activity or rule change) — reset any pending warning
       // so the customer is warned again before the new deadline.
-      await knex('ticket_auto_close_state')
-        .where({ tenant, ticket_id: p.ticket_id })
+      await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
+        .where({ ticket_id: p.ticket_id })
         .update({
           rule_id: p.rule_id,
           scheduled_close_at: p.scheduled_close_at.toISOString(),
@@ -190,14 +192,13 @@ async function syncAutoCloseState(
 
 async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
   const now = new Date();
-  const due = await knex('ticket_auto_close_state as s')
+  const due = await tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant)
     .join('board_auto_close_rules as r', function joinRules() {
       this.on('r.tenant', 's.tenant').andOn('r.rule_id', 's.rule_id');
     })
     .join('tickets as t', function joinTickets() {
       this.on('t.tenant', 's.tenant').andOn('t.ticket_id', 's.ticket_id');
     })
-    .where('s.tenant', tenant)
     .whereNull('s.warning_sent_at')
     .whereNotNull('r.warning_days_before')
     .whereRaw("s.scheduled_close_at - (r.warning_days_before * interval '1 day') <= now()")
@@ -237,8 +238,8 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
       });
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        await trx('ticket_auto_close_state')
-          .where({ tenant, ticket_id: row.ticket_id })
+        await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+          .where({ ticket_id: row.ticket_id })
           .update({ warning_sent_at: now.toISOString(), updated_at: trx.fn.now() });
 
         await writeTicketActivity(trx, {
@@ -263,11 +264,10 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
 }
 
 async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: number; skipped: number }> {
-  const due = await knex('ticket_auto_close_state as s')
+  const due = await tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant)
     .join('board_auto_close_rules as r', function joinRules() {
       this.on('r.tenant', 's.tenant').andOn('r.rule_id', 's.rule_id');
     })
-    .where('s.tenant', tenant)
     .where('s.scheduled_close_at', '<=', knex.fn.now())
     .where('r.is_enabled', true)
     .select('s.ticket_id', 's.rule_id', 'r.inactivity_days', 'r.close_to_status_id');
@@ -282,14 +282,16 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
         // must still match the rule and still be inactive past the deadline.
         const [stillPending] = await computePendingCloses(trx, tenant, row.ticket_id);
         if (!stillPending || stillPending.rule_id !== row.rule_id) {
-          await trx('ticket_auto_close_state').where({ tenant, ticket_id: row.ticket_id }).del();
+          await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+            .where({ ticket_id: row.ticket_id })
+            .del();
           skipped++;
           return;
         }
         if (stillPending.scheduled_close_at.getTime() > Date.now()) {
           // Activity arrived after the scan snapshot — push the timer back.
-          await trx('ticket_auto_close_state')
-            .where({ tenant, ticket_id: row.ticket_id })
+          await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+            .where({ ticket_id: row.ticket_id })
             .update({
               scheduled_close_at: stillPending.scheduled_close_at.toISOString(),
               warning_sent_at: null,
@@ -299,8 +301,8 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
           return;
         }
 
-        const targetStatus = await trx('statuses')
-          .where({ tenant, status_id: row.close_to_status_id })
+        const targetStatus = await tenantScopedTable(trx, 'statuses', tenant)
+          .where({ status_id: row.close_to_status_id })
           .first();
         if (!targetStatus?.is_closed) {
           throw new Error(`Auto-close target status ${row.close_to_status_id} is missing or not closed`);
@@ -331,7 +333,9 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
           { systemActor: true, bypassCloseRules: { source: 'auto_close' } }
         );
 
-        await trx('ticket_auto_close_state').where({ tenant, ticket_id: row.ticket_id }).del();
+        await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+          .where({ ticket_id: row.ticket_id })
+          .del();
         closed++;
       });
     } catch (error) {
