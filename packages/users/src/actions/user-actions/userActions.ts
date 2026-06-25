@@ -735,8 +735,11 @@ export const updateUserRoles = withAuth(async (
       }
 
       // Delete existing roles
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: tenant || undefined })
+      await createTenantScopedQuery(trx, {
+        table: 'user_roles',
+        tenant,
+      }).builder
+        .where({ user_id: userId })
         .del();
 
       // Insert new roles
