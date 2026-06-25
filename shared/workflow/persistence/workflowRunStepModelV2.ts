@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowRunStepRecord = {
   step_id: string;
@@ -16,9 +17,18 @@ export type WorkflowRunStepRecord = {
   completed_at?: string | null;
 };
 
+function workflowRunSteps(
+  knex: Knex,
+  tenant?: string | null,
+): Knex.QueryBuilder<WorkflowRunStepRecord, WorkflowRunStepRecord[]> {
+  return tenant
+    ? tenantDb(knex, tenant).table<WorkflowRunStepRecord>('workflow_run_steps')
+    : knex<WorkflowRunStepRecord>('workflow_run_steps');
+}
+
 const WorkflowRunStepModelV2 = {
   create: async (knex: Knex, data: Partial<WorkflowRunStepRecord>): Promise<WorkflowRunStepRecord> => {
-    const [record] = await knex<WorkflowRunStepRecord>('workflow_run_steps')
+    const [record] = await workflowRunSteps(knex, data.tenant)
       .insert({
         ...data,
         started_at: data.started_at ?? new Date().toISOString()
@@ -28,9 +38,8 @@ const WorkflowRunStepModelV2 = {
   },
 
   update: async (knex: Knex, stepId: string, data: Partial<WorkflowRunStepRecord>, tenant?: string | null): Promise<WorkflowRunStepRecord> => {
-    const query = knex<WorkflowRunStepRecord>('workflow_run_steps').where({ step_id: stepId });
-    if (tenant) query.andWhere({ tenant });
-    const [record] = await query
+    const [record] = await workflowRunSteps(knex, tenant)
+      .where({ step_id: stepId })
       .update({
         ...data
       })
@@ -39,16 +48,17 @@ const WorkflowRunStepModelV2 = {
   },
 
   getLatestByRunAndPath: async (knex: Knex, runId: string, stepPath: string, tenant?: string | null): Promise<WorkflowRunStepRecord | null> => {
-    const query = knex<WorkflowRunStepRecord>('workflow_run_steps').where({ run_id: runId, step_path: stepPath });
-    if (tenant) query.andWhere({ tenant });
-    const record = await query.orderBy('started_at', 'desc').first();
+    const record = await workflowRunSteps(knex, tenant)
+      .where({ run_id: runId, step_path: stepPath })
+      .orderBy('started_at', 'desc')
+      .first();
     return record || null;
   },
 
   listByRun: async (knex: Knex, runId: string, tenant?: string | null): Promise<WorkflowRunStepRecord[]> => {
-    const query = knex<WorkflowRunStepRecord>('workflow_run_steps').where({ run_id: runId });
-    if (tenant) query.andWhere({ tenant });
-    return query.orderBy('started_at', 'asc');
+    return workflowRunSteps(knex, tenant)
+      .where({ run_id: runId })
+      .orderBy('started_at', 'asc');
   }
 };
 

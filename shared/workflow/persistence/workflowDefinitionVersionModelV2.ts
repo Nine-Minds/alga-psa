@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowDefinitionVersionRecord = {
   version_id: string;
@@ -39,10 +40,19 @@ const normalizeWorkflowDefinitionVersionWrite = (
   return out;
 };
 
+function workflowDefinitionVersions(
+  knex: Knex,
+  tenant?: string | null,
+): Knex.QueryBuilder<WorkflowDefinitionVersionRecord, WorkflowDefinitionVersionRecord[]> {
+  return tenant
+    ? tenantDb(knex, tenant).table<WorkflowDefinitionVersionRecord>('workflow_definition_versions')
+    : knex<WorkflowDefinitionVersionRecord>('workflow_definition_versions');
+}
+
 const WorkflowDefinitionVersionModelV2 = {
   create: async (knex: Knex, data: Partial<WorkflowDefinitionVersionRecord>): Promise<WorkflowDefinitionVersionRecord> => {
     const normalized = normalizeWorkflowDefinitionVersionWrite(data);
-    const [record] = await knex<WorkflowDefinitionVersionRecord>('workflow_definition_versions')
+    const [record] = await workflowDefinitionVersions(knex, data.tenant)
       .insert({
         ...normalized,
         created_at: new Date().toISOString(),
@@ -56,10 +66,11 @@ const WorkflowDefinitionVersionModelV2 = {
     knex: Knex,
     workflowId: string,
     version: number,
-    data: Partial<WorkflowDefinitionVersionRecord>
+    data: Partial<WorkflowDefinitionVersionRecord>,
+    tenant?: string | null
   ): Promise<WorkflowDefinitionVersionRecord> => {
     const normalized = normalizeWorkflowDefinitionVersionWrite(data);
-    const [record] = await knex<WorkflowDefinitionVersionRecord>('workflow_definition_versions')
+    const [record] = await workflowDefinitionVersions(knex, tenant ?? data.tenant)
       .where({ workflow_id: workflowId, version })
       .update({
         ...normalized,
@@ -69,15 +80,24 @@ const WorkflowDefinitionVersionModelV2 = {
     return record;
   },
 
-  getByWorkflowAndVersion: async (knex: Knex, workflowId: string, version: number): Promise<WorkflowDefinitionVersionRecord | null> => {
-    const record = await knex<WorkflowDefinitionVersionRecord>('workflow_definition_versions')
+  getByWorkflowAndVersion: async (
+    knex: Knex,
+    workflowId: string,
+    version: number,
+    tenant?: string | null
+  ): Promise<WorkflowDefinitionVersionRecord | null> => {
+    const record = await workflowDefinitionVersions(knex, tenant)
       .where({ workflow_id: workflowId, version })
       .first();
     return record || null;
   },
 
-  listByWorkflow: async (knex: Knex, workflowId: string): Promise<WorkflowDefinitionVersionRecord[]> => {
-    return knex<WorkflowDefinitionVersionRecord>('workflow_definition_versions')
+  listByWorkflow: async (
+    knex: Knex,
+    workflowId: string,
+    tenant?: string | null
+  ): Promise<WorkflowDefinitionVersionRecord[]> => {
+    return workflowDefinitionVersions(knex, tenant)
       .where({ workflow_id: workflowId })
       .orderBy('version', 'desc');
   }

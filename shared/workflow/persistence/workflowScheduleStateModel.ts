@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowScheduleStateStatus =
   | 'scheduled'
@@ -53,13 +54,22 @@ const normalizeWorkflowScheduleWrite = (
   return out;
 };
 
+function tenantWorkflowSchedule(
+  knex: Knex,
+  tenant?: string | null,
+): Knex.QueryBuilder<WorkflowScheduleStateRecord, WorkflowScheduleStateRecord[]> {
+  return tenant
+    ? tenantDb(knex, tenant).table<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
+    : knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule');
+}
+
 const WorkflowScheduleStateModel = {
   create: async (
     knex: Knex,
     data: Partial<WorkflowScheduleStateRecord>
   ): Promise<WorkflowScheduleStateRecord> => {
     const normalized = normalizeWorkflowScheduleWrite(data);
-    const [record] = await knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
+    const [record] = await tenantWorkflowSchedule(knex, data.tenant)
       .insert({
         ...normalized,
         created_at: new Date().toISOString(),
@@ -76,9 +86,8 @@ const WorkflowScheduleStateModel = {
     tenant?: string | null
   ): Promise<WorkflowScheduleStateRecord> => {
     const normalized = normalizeWorkflowScheduleWrite(data);
-    const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').where({ id: scheduleId });
-    if (tenant) query.andWhere({ tenant });
-    const [record] = await query
+    const [record] = await tenantWorkflowSchedule(knex, tenant)
+      .where({ id: scheduleId })
       .update({
         ...normalized,
         updated_at: new Date().toISOString()
@@ -88,50 +97,50 @@ const WorkflowScheduleStateModel = {
   },
 
   getById: async (knex: Knex, scheduleId: string, tenant?: string | null): Promise<WorkflowScheduleStateRecord | null> => {
-    const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').where({ id: scheduleId });
-    if (tenant) query.andWhere({ tenant });
-    const record = await query.first();
+    const record = await tenantWorkflowSchedule(knex, tenant)
+      .where({ id: scheduleId })
+      .first();
     return record ?? null;
   },
 
   getByWorkflowId: async (knex: Knex, workflowId: string, tenant?: string | null): Promise<WorkflowScheduleStateRecord | null> => {
-    const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').where({ workflow_id: workflowId });
-    if (tenant) query.andWhere({ tenant });
-    const record = await query.orderBy('created_at', 'asc').first();
+    const record = await tenantWorkflowSchedule(knex, tenant)
+      .where({ workflow_id: workflowId })
+      .orderBy('created_at', 'asc')
+      .first();
     return record ?? null;
   },
 
   listByWorkflowId: async (knex: Knex, workflowId: string, tenant?: string | null): Promise<WorkflowScheduleStateRecord[]> => {
-    const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').where({ workflow_id: workflowId });
-    if (tenant) query.andWhere({ tenant });
-    return query.orderBy('created_at', 'asc');
+    return tenantWorkflowSchedule(knex, tenant)
+      .where({ workflow_id: workflowId })
+      .orderBy('created_at', 'asc');
   },
 
   listByWorkflowIds: async (knex: Knex, workflowIds: string[], tenant?: string | null): Promise<WorkflowScheduleStateRecord[]> => {
     if (!workflowIds.length) return [];
-    const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').whereIn('workflow_id', workflowIds);
-    if (tenant) query.andWhere({ tenant });
-    return query.orderBy('created_at', 'asc');
+    return tenantWorkflowSchedule(knex, tenant)
+      .whereIn('workflow_id', workflowIds)
+      .orderBy('created_at', 'asc');
   },
 
   listByTenantId: async (knex: Knex, tenantId: string): Promise<WorkflowScheduleStateRecord[]> =>
-    knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
-      .where({ tenant: tenantId })
+    tenantWorkflowSchedule(knex, tenantId)
       .orderBy('created_at', 'asc'),
 
   list: async (knex: Knex): Promise<WorkflowScheduleStateRecord[]> =>
-    knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').select('*'),
+    tenantWorkflowSchedule(knex).select('*'),
 
   deleteById: async (knex: Knex, scheduleId: string, tenant?: string | null): Promise<number> => {
-    const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').where({ id: scheduleId });
-    if (tenant) query.andWhere({ tenant });
-    return query.del();
+    return tenantWorkflowSchedule(knex, tenant)
+      .where({ id: scheduleId })
+      .del();
   },
 
   deleteByWorkflowId: async (knex: Knex, workflowId: string, tenant?: string | null): Promise<number> => {
-    const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule').where({ workflow_id: workflowId });
-    if (tenant) query.andWhere({ tenant });
-    return query.del();
+    return tenantWorkflowSchedule(knex, tenant)
+      .where({ workflow_id: workflowId })
+      .del();
   }
 };
 

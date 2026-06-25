@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowRuntimeEventRecord = {
   event_id: string;
@@ -18,9 +19,18 @@ export type WorkflowRuntimeEventRecord = {
   error_message?: string | null;
 };
 
+function workflowRuntimeEvents(
+  knex: Knex,
+  tenant?: string | null,
+): Knex.QueryBuilder<WorkflowRuntimeEventRecord, WorkflowRuntimeEventRecord[]> {
+  return tenant
+    ? tenantDb(knex, tenant).table<WorkflowRuntimeEventRecord>('workflow_runtime_events')
+    : knex<WorkflowRuntimeEventRecord>('workflow_runtime_events');
+}
+
 const WorkflowRuntimeEventModelV2 = {
   create: async (knex: Knex, data: Partial<WorkflowRuntimeEventRecord>): Promise<WorkflowRuntimeEventRecord> => {
-    const [record] = await knex<WorkflowRuntimeEventRecord>('workflow_runtime_events')
+    const [record] = await workflowRuntimeEvents(knex, data.tenant)
       .insert({
         ...data,
         created_at: data.created_at ?? new Date().toISOString()
@@ -30,9 +40,8 @@ const WorkflowRuntimeEventModelV2 = {
   },
 
   update: async (knex: Knex, eventId: string, data: Partial<WorkflowRuntimeEventRecord>, tenant?: string | null): Promise<WorkflowRuntimeEventRecord> => {
-    const query = knex<WorkflowRuntimeEventRecord>('workflow_runtime_events').where({ event_id: eventId });
-    if (tenant) query.andWhere({ tenant });
-    const [record] = await query
+    const [record] = await workflowRuntimeEvents(knex, tenant)
+      .where({ event_id: eventId })
       .update({
         ...data
       })
@@ -41,9 +50,9 @@ const WorkflowRuntimeEventModelV2 = {
   },
 
   getById: async (knex: Knex, eventId: string, tenant?: string | null): Promise<WorkflowRuntimeEventRecord | null> => {
-    const query = knex<WorkflowRuntimeEventRecord>('workflow_runtime_events').where({ event_id: eventId });
-    if (tenant) query.andWhere({ tenant });
-    const record = await query.first();
+    const record = await workflowRuntimeEvents(knex, tenant)
+      .where({ event_id: eventId })
+      .first();
     return record || null;
   },
 
@@ -60,10 +69,7 @@ const WorkflowRuntimeEventModelV2 = {
       cursor?: number;
     }
   ): Promise<WorkflowRuntimeEventRecord[]> => {
-    const query = knex<WorkflowRuntimeEventRecord>('workflow_runtime_events');
-    if (options?.tenantId) {
-      query.where('tenant', options.tenantId);
-    }
+    const query = workflowRuntimeEvents(knex, options?.tenantId);
     if (options?.eventName) {
       query.where('event_name', options.eventName);
     }
