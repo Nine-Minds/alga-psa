@@ -1309,14 +1309,19 @@ export class FinancialService extends BaseService<ITransaction> {
     const sortableFields = new Set(['created_at', 'updated_at', 'type', 'is_default']);
     const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
 
-    let dataQuery = knex('payment_methods as pm')
+    let dataQuery = createTenantScopedQuery(knex, {
+      table: 'payment_methods as pm',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('clients as c', function() {
         this.on('pm.client_id', '=', 'c.client_id')
           .andOn('pm.tenant', '=', 'c.tenant');
-      })
-      .where('pm.tenant', context.tenant);
+      });
 
-    let countQuery = knex('payment_methods as pm').where('pm.tenant', context.tenant);
+    let countQuery = createTenantScopedQuery(knex, {
+      table: 'payment_methods as pm',
+      tenant: context.tenant,
+    }).builder;
 
     if (client_id) {
       dataQuery = dataQuery.where('pm.client_id', client_id);
