@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {
   MICROSOFT_PROFILE_CONSUMERS,
@@ -158,7 +158,7 @@ function getConsumerLabel(consumerType: MicrosoftProfileConsumer): string {
 }
 
 function tenantScopedTable(db: any, table: string, tenant: string) {
-  return createTenantScopedQuery(db, { table, tenant }).builder;
+  return tenantDb(db, tenant).table(table);
 }
 
 async function getTenantMicrosoftProfiles(db: any, tenant: string): Promise<MicrosoftProfileRow[]> {
@@ -177,7 +177,7 @@ async function getMicrosoftConsumerBindingRow(
 ): Promise<MicrosoftConsumerBindingRow | undefined> {
   const row = await tenantScopedTable(db, 'microsoft_profile_consumer_bindings', tenant)
     .where({ consumer_type: consumerType })
-    .first();
+    .first() as MicrosoftConsumerBindingRow | undefined;
 
   return row || undefined;
 }
@@ -187,7 +187,9 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | undefined> {
-  const row = await tenantScopedTable(db, 'microsoft_profiles', tenant).where({ profile_id: profileId }).first();
+  const row = await tenantScopedTable(db, 'microsoft_profiles', tenant)
+    .where({ profile_id: profileId })
+    .first() as MicrosoftProfileRow | undefined;
   return row || undefined;
 }
 
@@ -274,7 +276,7 @@ async function ensureLegacyMicrosoftProfileBackfill(
   const clientSecretRef = getMicrosoftProfileSecretRef(profileId);
   const now = new Date();
 
-  await db('microsoft_profiles').insert({
+  await tenantScopedTable(db, 'microsoft_profiles', tenant).insert({
     tenant,
     profile_id: profileId,
     display_name: DEFAULT_MICROSOFT_PROFILE_NAME,

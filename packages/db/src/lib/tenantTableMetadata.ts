@@ -154,6 +154,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   tenant_notification_subtype_settings: { scope: 'tenant' },
   tickets: { scope: 'tenant' },
   ticket_auto_close_state: { scope: 'tenant' },
+  ticket_bundle_mirrors: { scope: 'tenant' },
+  ticket_bundle_settings: { scope: 'tenant' },
   ticket_entity_links: { scope: 'tenant' },
   ticket_resources: { scope: 'tenant' },
   time_entries: { scope: 'tenant' },

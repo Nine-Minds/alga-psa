@@ -8,10 +8,13 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
   it('uses tenant-scoped query wrappers for ticket read authorization SQL', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
 
-    expect(source).toContain('createTenantScopedQuery');
+    expect(source).toContain('tenantDb');
     expect(source).toContain('function tenantScopedTable(');
+    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).toContain("tenantDb(trx, tenant).scoped('tickets as t')");
     expect(source).toContain('cloneTenantScopedQuery');
     expect(source).toContain('compileTenantScopedResourceReadAuthorizationSql');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toContain('compileResourceReadAuthorizationSql,');
   });
 

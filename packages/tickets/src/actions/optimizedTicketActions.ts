@@ -20,7 +20,7 @@ import {
   withTransaction,
   registerAfterCommit,
   createTenantKnex,
-  createTenantScopedQuery,
+  tenantDb,
   cloneTenantScopedQuery,
   withTenantScopedQueryBuilder,
   resolveUserTimeZone,
@@ -100,7 +100,7 @@ function tenantScopedTable(
   table: string,
   tenant: string
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
@@ -996,11 +996,7 @@ async function buildTicketListBaseQuery(
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery }> {
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
-    const scopedQuery = createTenantScopedQuery(trx, {
-      table: 'tickets as t',
-      alias: 't',
-      tenant,
-    });
+    const scopedQuery = tenantDb(trx, tenant).scoped('tickets as t');
     let baseQuery = scopedQuery.builder
       .leftJoin('tickets as mt', function() {
         this.on('t.master_ticket_id', 'mt.ticket_id')
@@ -2016,11 +2012,7 @@ export const getTicketBoardIds = withAuth(async (
       user as IUserWithRoles
     );
 
-    const boardQuery = createTenantScopedQuery(trx, {
-      table: 'tickets as t',
-      alias: 't',
-      tenant,
-    });
+    const boardQuery = tenantDb(trx, tenant).scoped('tickets as t');
     boardQuery.builder
       .whereIn('t.ticket_id', uniqueIds)
       .select('t.ticket_id', 't.board_id');
@@ -2945,7 +2937,7 @@ export const addTicketCommentWithCache = withAuth(async (
     const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
     const nowIso = new Date().toISOString();
 
-    await trx('comment_threads').insert({
+    await tenantDb(trx, tenant).table('comment_threads').insert({
       tenant,
       thread_id: threadId,
       ticket_id: ticketId,
@@ -2958,7 +2950,7 @@ export const addTicketCommentWithCache = withAuth(async (
       created_by: user.user_id || null,
     });
 
-    const [newComment] = await trx('comments').insert({
+    const [newComment] = await tenantDb(trx, tenant).table<IComment>('comments').insert({
       tenant,
       comment_id: newCommentId,
       thread_id: threadId,
@@ -3028,7 +3020,7 @@ export const addTicketCommentWithCache = withAuth(async (
             throw new Error('Failed to generate mirrored comment/thread identifiers');
           }
 
-          await trx('comment_threads').insert({
+          await tenantDb(trx, tenant).table('comment_threads').insert({
             tenant,
             thread_id: childGenerated.thread_id,
             ticket_id: child.ticket_id,
@@ -3041,7 +3033,7 @@ export const addTicketCommentWithCache = withAuth(async (
             created_by: null,
           });
 
-          await trx('comments').insert({
+          await tenantDb(trx, tenant).table('comments').insert({
             tenant,
             comment_id: childGenerated.comment_id,
             thread_id: childGenerated.thread_id,
@@ -3056,7 +3048,7 @@ export const addTicketCommentWithCache = withAuth(async (
             created_at: now,
           });
 
-          await trx('ticket_bundle_mirrors')
+          await tenantDb(trx, tenant).table('ticket_bundle_mirrors')
             .insert({
               tenant,
               source_comment_id: newComment.comment_id,
@@ -3101,7 +3093,7 @@ export const addTicketCommentWithCache = withAuth(async (
 
       const events = buildTicketCommunicationWorkflowEvents({
         ticketId,
-        messageId: newComment.comment_id,
+        messageId: newCommentId,
         visibility: isInternal ? 'internal' : 'public',
         author: { authorType: 'user', authorId: user.user_id },
         channel: 'ui',

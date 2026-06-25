@@ -18,8 +18,10 @@ describe('Tactical RMM action tenant-scoped query contract', () => {
   it('uses structural tenant scoping for top settings, summary, test, and organization sync roots', () => {
     const section = sectionBetween('export const getTacticalRmmSettings', 'export const syncTacticalRmmDevices');
 
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';");
-    expect(source).toContain('function tenantScopedTable(conn: Knex, table: string, tenant: string): Knex.QueryBuilder');
+    expect(source).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
+    expect(source).toContain('function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder');
+    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
 
     expect(section).toContain("tenantScopedTable(knex, 'rmm_integrations', tenant)");
     expect(section).toContain("tenantScopedTable(knex, 'rmm_organization_mappings', tenant)");

@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { Knex } from 'knex';
 import { isAxiosUnauthorized, TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
@@ -22,8 +22,8 @@ const TACTICAL_KNOX_PASSWORD_SECRET = 'tacticalrmm_password';
 const TACTICAL_KNOX_TOKEN_SECRET = 'tacticalrmm_knox_token';
 const TACTICAL_WEBHOOK_SECRET = 'tacticalrmm_webhook_secret';
 
-function tenantScopedTable(conn: Knex, table: string, tenant: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
 async function publishRmmSyncEvent(args: {
@@ -107,7 +107,7 @@ async function upsertIntegrationRow(args: {
     updated_at: now,
   };
 
-  const res = await knex('rmm_integrations')
+  const res = await tenantScopedTable(knex, 'rmm_integrations', args.tenant)
     .insert(insertRow)
     .onConflict(['tenant', 'provider'])
     .merge({
@@ -623,7 +623,7 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       if (existing.has(externalId)) updated += 1;
       else created += 1;
 
-      await knex('rmm_organization_mappings')
+      await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
         .insert({
           tenant,
           integration_id: integration.integration_id,
@@ -749,7 +749,7 @@ async function createTacticalAssetRecord(
   }
 ): Promise<{ asset_id: string }> {
   const now = new Date().toISOString();
-  const [asset] = await trx('assets')
+  const [asset] = await tenantScopedTable(trx, 'assets', args.tenant)
     .insert({
       tenant: args.tenant,
       asset_type: args.assetType,
@@ -790,8 +790,8 @@ export const syncTacticalRmmDevices = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .first(['integration_id', 'instance_url', 'settings']);
 
     if (!integration?.integration_id) {
@@ -816,8 +816,8 @@ export const syncTacticalRmmDevices = withAuth(async (
       authMode,
     });
 
-    const mappedOrgs = await knex('rmm_organization_mappings')
-      .where({ tenant, integration_id: integration.integration_id })
+    const mappedOrgs = await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
+      .where({ integration_id: integration.integration_id })
       .whereNotNull('client_id')
       .andWhere('auto_sync_assets', true)
       .select(['external_organization_id', 'client_id']);
@@ -855,9 +855,8 @@ export const syncTacticalRmmDevices = withAuth(async (
           const site = siteId ? siteById.get(siteId) : undefined;
           const siteName = site ? String((site as any).name ?? (site as any).site_name ?? '') : undefined;
 
-          const mapping = await knex('tenant_external_entity_mappings')
+          const mapping = await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
             .where({
-              tenant,
               integration_type: PROVIDER,
               alga_entity_type: 'asset',
               external_entity_id: agentId,
@@ -891,8 +890,7 @@ export const syncTacticalRmmDevices = withAuth(async (
               location: siteName || '',
             });
 
-            await knex('assets')
-              .where({ tenant })
+            await tenantScopedTable(knex, 'assets', tenant)
               .whereRaw('assets.asset_id::text = ?', [String(asset.asset_id)])
               .update({
                 rmm_provider: PROVIDER,
@@ -904,7 +902,7 @@ export const syncTacticalRmmDevices = withAuth(async (
               });
 
             if (assetType === 'workstation') {
-              await knex('workstation_assets')
+              await tenantScopedTable(knex, 'workstation_assets', tenant)
                 .insert({
                   tenant,
                   asset_id: asset.asset_id,
@@ -927,7 +925,7 @@ export const syncTacticalRmmDevices = withAuth(async (
                   wan_ip: vitals.wan_ip,
                 });
             } else {
-              await knex('server_assets')
+              await tenantScopedTable(knex, 'server_assets', tenant)
                 .insert({
                   tenant,
                   asset_id: asset.asset_id,
@@ -951,7 +949,7 @@ export const syncTacticalRmmDevices = withAuth(async (
                 });
             }
 
-            await knex('tenant_external_entity_mappings').insert({
+            await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant).insert({
               tenant,
               integration_type: PROVIDER,
               alga_entity_type: 'asset',
@@ -971,13 +969,11 @@ export const syncTacticalRmmDevices = withAuth(async (
           } else {
             const assetIdText = String(mapping.alga_entity_id);
 
-            const assetRow = await knex('assets')
-              .where({ tenant })
+            const assetRow = await tenantScopedTable(knex, 'assets', tenant)
               .whereRaw('assets.asset_id::text = ?', [assetIdText])
               .first(['asset_type']);
 
-            await knex('assets')
-              .where({ tenant })
+            await tenantScopedTable(knex, 'assets', tenant)
               .whereRaw('assets.asset_id::text = ?', [assetIdText])
               .update({
                 name: deviceName,
@@ -990,7 +986,7 @@ export const syncTacticalRmmDevices = withAuth(async (
               });
 
             if (assetRow?.asset_type === 'server') {
-              await knex('server_assets')
+              await tenantScopedTable(knex, 'server_assets', tenant)
                 .insert({
                   tenant,
                   asset_id: knex.raw('?::uuid', [assetIdText]),
@@ -1013,7 +1009,7 @@ export const syncTacticalRmmDevices = withAuth(async (
                   wan_ip: vitals.wan_ip,
                 });
             } else {
-              await knex('workstation_assets')
+              await tenantScopedTable(knex, 'workstation_assets', tenant)
                 .insert({
                   tenant,
                   asset_id: knex.raw('?::uuid', [assetIdText]),
@@ -1037,8 +1033,8 @@ export const syncTacticalRmmDevices = withAuth(async (
                 });
             }
 
-            await knex('tenant_external_entity_mappings')
-              .where({ tenant, id: mapping.id })
+            await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
+              .where({ id: mapping.id })
               .update({
                 external_realm_id: externalOrgId,
                 external_entity_id: agentId,
@@ -1059,8 +1055,8 @@ export const syncTacticalRmmDevices = withAuth(async (
       }
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
 
     await publishRmmSyncEvent({
@@ -1121,22 +1117,21 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .first(['integration_id']);
 
     if (!integration?.integration_id) {
       return { success: true, mappings: [] };
     }
 
-    const rows = await knex('rmm_organization_mappings as rom')
+    const rows = await tenantScopedTable(knex, 'rmm_organization_mappings as rom', tenant)
       .leftJoin('clients as c', function () {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const join = this as any;
         join.on('c.client_id', '=', 'rom.client_id').andOn('c.tenant', '=', 'rom.tenant');
       })
       .where({
-        'rom.tenant': tenant,
         'rom.integration_id': integration.integration_id,
       })
       .select([
@@ -1173,8 +1168,8 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (!Object.keys(patch).length) return { success: true };
 
-    await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: input.mappingId })
+    await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
+      .where({ mapping_id: input.mappingId })
       .update({ ...patch, updated_at: knex.fn.now() });
 
     return { success: true };
@@ -1268,8 +1263,8 @@ export const backfillTacticalRmmAlerts = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .first(['integration_id', 'instance_url', 'settings']);
 
     if (!integration?.integration_id) {
@@ -1302,8 +1297,8 @@ export const backfillTacticalRmmAlerts = withAuth(async (
     );
     errors.push(...result.warnings);
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
 
     await publishRmmSyncEvent({
@@ -1473,8 +1468,8 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .first(['integration_id', 'instance_url', 'settings']);
 
     if (!integration?.integration_id) {
@@ -1497,8 +1492,8 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
         : [];
 
     // Build agent_id -> asset_id map
-    const mappings = await knex('tenant_external_entity_mappings')
-      .where({ tenant, integration_type: PROVIDER, alga_entity_type: 'asset' })
+    const mappings = await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
+      .where({ integration_type: PROVIDER, alga_entity_type: 'asset' })
       .select(['external_entity_id', 'alga_entity_id']);
 
     const assetIdByAgentId = new Map<string, string>();
@@ -1541,8 +1536,8 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
       }
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
 
     return {
@@ -1571,8 +1566,8 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where({ provider: PROVIDER })
       .first(['integration_id', 'instance_url', 'settings']);
 
     if (!integration?.integration_id) {
@@ -1588,9 +1583,8 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
 
     const agent = await client.request<any>({ method: 'GET', path: `/beta/v1/agent/${encodeURIComponent(agentId)}/` });
 
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
       .where({
-        tenant,
         integration_type: PROVIDER,
         alga_entity_type: 'asset',
         external_entity_id: agentId,
@@ -1625,13 +1619,11 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
     const siteId = String((agent as any).site_id ?? (agent as any).site ?? '');
     const siteName = (agent as any).site_name ? String((agent as any).site_name) : undefined;
 
-    const assetRow = await knex('assets')
-      .where({ tenant })
+    const assetRow = await tenantScopedTable(knex, 'assets', tenant)
       .whereRaw('assets.asset_id::text = ?', [assetIdText])
       .first(['asset_type']);
 
-    await knex('assets')
-      .where({ tenant })
+    await tenantScopedTable(knex, 'assets', tenant)
       .whereRaw('assets.asset_id::text = ?', [assetIdText])
       .update({
         name: deviceName,
@@ -1644,7 +1636,7 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
       });
 
     if (assetRow?.asset_type === 'server') {
-      await knex('server_assets')
+      await tenantScopedTable(knex, 'server_assets', tenant)
         .insert({
           tenant,
           asset_id: knex.raw('?::uuid', [assetIdText]),
@@ -1667,7 +1659,7 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
           wan_ip: vitals.wan_ip,
         });
     } else {
-      await knex('workstation_assets')
+      await tenantScopedTable(knex, 'workstation_assets', tenant)
         .insert({
           tenant,
           asset_id: knex.raw('?::uuid', [assetIdText]),
@@ -1691,8 +1683,8 @@ export const syncTacticalRmmSingleAgent = withAuth(async (
         });
     }
 
-    await knex('tenant_external_entity_mappings')
-      .where({ tenant, id: mapping.id })
+    await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
+      .where({ id: mapping.id })
       .update({
         external_realm_id: externalOrgId || mapping.external_realm_id,
         sync_status: 'synced',
