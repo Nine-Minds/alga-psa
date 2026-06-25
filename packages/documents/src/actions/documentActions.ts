@@ -2526,10 +2526,9 @@ export const removeDocumentAssociations = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      let query = trx('document_associations')
+      let query = tenantScopedTable(trx, 'document_associations', tenant)
         .where('entity_id', entity_id)
-        .andWhere('entity_type', entity_type)
-        .andWhere('tenant', tenant);
+        .andWhere('entity_type', entity_type);
 
       if (document_ids && document_ids.length > 0) {
         query = query.whereIn('document_id', document_ids);
@@ -2690,8 +2689,7 @@ export const uploadDocument = withAuth(async (
             );
 
             const entityFolderQuery = () =>
-              knex('document_folders')
-                .where('tenant', tenant)
+              tenantScopedTable(knex, 'document_folders', tenant)
                 .andWhere('entity_id', primaryEntity.id)
                 .andWhere('entity_type', primaryEntity.type);
 
@@ -2729,9 +2727,8 @@ export const uploadDocument = withAuth(async (
       let isClientVisible = user.user_type === 'client';
       if (!isClientVisible && resolvedFolderPath) {
         try {
-          const folderVisibilityQuery = knex('document_folders')
+          const folderVisibilityQuery = tenantScopedTable(knex, 'document_folders', tenant)
             .select('is_client_visible')
-            .where('tenant', tenant)
             .andWhere('folder_path', resolvedFolderPath);
 
           const entityId = options.ticketId || options.projectTaskId || options.contractId
@@ -2897,8 +2894,8 @@ export const uploadDocument = withAuth(async (
       try {
         const previewResult = await generateDocumentPreviews(document, buffer);
         if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
-          await knex('documents')
-            .where({ document_id: document.document_id, tenant })
+          await tenantScopedTable(knex, 'documents', tenant)
+            .where({ document_id: document.document_id })
             .update({
               thumbnail_file_id: previewResult.thumbnail_file_id,
               preview_file_id: previewResult.preview_file_id,
