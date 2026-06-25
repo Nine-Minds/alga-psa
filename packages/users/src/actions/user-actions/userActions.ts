@@ -886,9 +886,11 @@ export const registerClientUser = withAuth(async (
         .returning(['user_id']);
 
       // Get the default client portal user role (must exist via migrations)
-      const clientRole = await trx('roles')
+      const clientRole = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: contact.tenant,
+      }).builder
         .where({
-          tenant: contact.tenant,
           client: true,
           msp: false
         })
