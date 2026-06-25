@@ -584,7 +584,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     
     if (ticket.client_id) {
       [client, contacts, locations] = await Promise.all([
-        trx('clients as c')
+        tenantScopedTable(trx, 'clients as c', tenant)
           .select(
             'c.*',
             'd.file_id'
@@ -599,22 +599,19 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
                 .andOn('d.tenant', '=', 'c.tenant');
           })
           .where({
-            'c.client_id': ticket.client_id,
-            'c.tenant': tenant
+            'c.client_id': ticket.client_id
           })
           .first(),
 
-        trx('contacts')
+        tenantScopedTable(trx, 'contacts', tenant)
           .where({
-            client_id: ticket.client_id,
-            tenant: tenant
+            client_id: ticket.client_id
           })
           .orderBy('full_name', 'asc'),
           
-        trx('client_locations')
+        tenantScopedTable(trx, 'client_locations', tenant)
           .where({
             client_id: ticket.client_id,
-            tenant: tenant,
             is_active: true
           })
           .orderBy('is_default', 'desc')
@@ -635,29 +632,26 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }
 
     if (ticket.contact_name_id) {
-      contactInfo = await trx('contacts')
+      contactInfo = await tenantScopedTable(trx, 'contacts', tenant)
         .where({
-          contact_name_id: ticket.contact_name_id,
-          tenant: tenant
+          contact_name_id: ticket.contact_name_id
         })
         .first();
     }
 
     // Fetch created by user
     const createdByUser = ticket.entered_by ? 
-      await trx('users')
+      await tenantScopedTable(trx, 'users', tenant)
         .where({
-          user_id: ticket.entered_by,
-          tenant: tenant
+          user_id: ticket.entered_by
         })
         .first() : null;
 
     // Fetch board
     const board = ticket.board_id ?
-      await trx('boards')
+      await tenantScopedTable(trx, 'boards', tenant)
         .where({
-          board_id: ticket.board_id,
-          tenant: tenant
+          board_id: ticket.board_id
         })
         .first() : null;
     if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
@@ -700,13 +694,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     );
 
     const commentContacts = commentContactIds.length > 0
-      ? await trx('contacts')
+      ? await tenantScopedTable(trx, 'contacts', tenant)
         .select('contact_name_id', 'full_name', 'email')
         .whereIn('contact_name_id', commentContactIds)
-        .andWhere({ tenant })
       : [];
 
-    const contactMap = commentContacts.reduce((acc, contact) => {
+    const contactMap = commentContacts.reduce((acc: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>, contact: { contact_name_id: string; full_name?: string | null; email?: string | null }) => {
       acc[contact.contact_name_id] = {
         contact_id: contact.contact_name_id,
         full_name: contact.full_name || '',
@@ -744,7 +737,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }));
 
     // Get scheduled hours for ticket
-    const scheduleEntries = await trx('schedule_entries as se')
+    const scheduleEntries = await tenantScopedTable(trx, 'schedule_entries as se', tenant)
       .select(
         'se.*',
         'sea.user_id'
@@ -755,8 +748,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })
       .where({
         'se.work_item_id': ticketId,
-        'se.work_item_type': 'ticket',
-        'se.tenant': tenant
+        'se.work_item_type': 'ticket'
       });
 
     // Calculate scheduled hours per agent
@@ -834,11 +826,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // Bundle context (master/child + settings + children list)
     const masterTicketId = normalizedTicketData.master_ticket_id ?? null;
     const bundleRootId = masterTicketId ?? ticketId;
-    const bundleSettings = await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: bundleRootId })
+    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: bundleRootId })
       .first();
 
-    const rawBundleChildren = await trx('tickets as ct')
+    const rawBundleChildren = await tenantScopedTable(trx, 'tickets as ct', tenant)
       .select(
         'ct.ticket_id',
         'ct.ticket_number',
@@ -857,11 +849,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         this.on('ct.client_id', 'comp.client_id')
           .andOn('ct.tenant', 'comp.tenant');
       })
-      .where({ 'ct.tenant': tenant, 'ct.master_ticket_id': bundleRootId })
+      .where({ 'ct.master_ticket_id': bundleRootId })
       .orderBy('ct.updated_at', 'desc');
 
     const rawBundleMaster = masterTicketId
-      ? await trx('tickets as mt')
+      ? await tenantScopedTable(trx, 'tickets as mt', tenant)
         .select(
           'mt.ticket_id',
           'mt.ticket_number',
@@ -880,7 +872,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           this.on('mt.client_id', 'comp.client_id')
             .andOn('mt.tenant', 'comp.tenant');
         })
-        .where({ 'mt.tenant': tenant, 'mt.ticket_id': masterTicketId })
+        .where({ 'mt.ticket_id': masterTicketId })
         .first()
       : null;
 
@@ -895,7 +887,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master)
     const aggregatedChildClientComments = isBundleMaster
-      ? await trx('comments as c')
+      ? await tenantScopedTable(trx, 'comments as c', tenant)
         .select(
           'c.*',
           'ct.ticket_id as child_ticket_id',
@@ -911,8 +903,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           this.on('ct.client_id', 'comp.client_id')
             .andOn('ct.tenant', 'comp.tenant');
         })
-        .where({ 'c.tenant': tenant })
-        .andWhere('c.is_internal', false)
+        .where('c.is_internal', false)
         .andWhere('ct.master_ticket_id', ticketId)
         .orderBy('c.created_at', 'desc')
         .limit(200)

@@ -67,4 +67,32 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).not.toContain(".where({ tenant })");
     expect(section).not.toContain(".andWhere({ tenant })");
   });
+
+  it('uses structural tenant scoping for consolidated ticket client and bundle roots', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('// Fetch specific client and contact data if available');
+    const end = source.indexOf('// Track ticket view analytics', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const section = source.slice(start, end);
+
+    expect(section).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'client_locations', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'users', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'boards', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'schedule_entries as se', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'tickets as ct', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'tickets as mt', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'comments as c', tenant)");
+    expect(section).not.toContain("'c.tenant': tenant");
+    expect(section).not.toContain('tenant: tenant');
+    expect(section).not.toContain(".andWhere({ tenant })");
+    expect(section).not.toContain(".where({ tenant, master_ticket_id");
+    expect(section).not.toContain("'ct.tenant': tenant");
+    expect(section).not.toContain("'mt.tenant': tenant");
+  });
 });
