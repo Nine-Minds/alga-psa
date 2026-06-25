@@ -758,15 +758,16 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const teams = await knex('teams as t')
+    const teams = await createTenantScopedQuery(knex, {
+      table: 'teams as t',
+      alias: 't',
+      tenant: context.tenant,
+    }).builder
       .join('team_members as tm', function() {
         this.on('t.team_id', '=', 'tm.team_id')
             .andOn('t.tenant', '=', 'tm.tenant');
       })
-      .where({
-        'tm.user_id': userId,
-        't.tenant': context.tenant
-      })
+      .where({ 'tm.user_id': userId })
       .select('t.*', knex.raw('tm.user_id = t.manager_id as is_manager'))
       .orderBy('t.team_name');
 
@@ -847,8 +848,11 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const preferences = await knex('user_preferences')
-      .where({ user_id: userId, tenant: context.tenant })
+    const preferences = await createTenantScopedQuery(knex, {
+      table: 'user_preferences',
+      tenant: context.tenant,
+    }).builder
+      .where({ user_id: userId })
       .select('setting_name', 'setting_value');
 
     const result: Record<string, any> = {};
