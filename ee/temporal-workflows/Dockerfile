@@ -57,7 +57,7 @@ WORKDIR /app/ee/temporal-workflows
 RUN npm install
 WORKDIR /app
 RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps \
-    && npm install --no-save openai@^4.104.0
+    && npm install --no-save --workspaces=false openai@^4.104.0
 
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
