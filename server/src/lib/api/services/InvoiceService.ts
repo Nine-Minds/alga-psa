@@ -1428,8 +1428,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -1442,8 +1445,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Calculate current payments
-      const payments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const payments = await createTenantScopedQuery(trx, {
+        table: 'invoice_payments',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
       const totalPayments = Number(payments[0]?.total_paid || 0);
 
@@ -1487,8 +1493,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       }));
 
       // Calculate net payments after refund
-      const netPayments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const netPayments = await createTenantScopedQuery(trx, {
+        table: 'invoice_payments',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
       const netPaid = Number(netPayments[0]?.total_paid || 0);
 
@@ -1506,8 +1515,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: newStatus,
           updated_by: context.userId,
