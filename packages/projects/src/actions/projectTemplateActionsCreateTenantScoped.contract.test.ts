@@ -124,4 +124,20 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).not.toContain("'ptd.tenant': tenant");
     expect(actionSource).not.toContain("knex('project_template_dependencies as ptd')");
   });
+
+  it('uses structural tenant scoping for template phase editor roots', () => {
+    const actionSource = section(
+      'export const addTemplatePhase',
+      '/**\n * Add a new task to a template phase'
+    );
+
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");
+    expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_id: updated.template_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_id: phase.template_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_phase_id: phaseId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_phase_id: beforePhaseId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_phase_id: afterPhaseId, tenant })');
+  });
 });
