@@ -1127,9 +1127,9 @@ async function resolveEveryoneMention(
 
   if (hasEveryone) {
     // Single query to get all active internal users in the tenant
-    const internalUsers = await db('users')
+    const internalUsers = await tenantScopedTable(db, 'users', tenantId)
       .select('user_id')
-      .where({ tenant: tenantId, user_type: 'internal', is_inactive: false });
+      .where({ user_type: 'internal', is_inactive: false });
 
     const allIds = [...regularIds, ...internalUsers.map(u => u.user_id)];
     return Array.from(new Set(allIds));
@@ -1171,9 +1171,8 @@ async function findMentionedUsers(db: Knex, tenantId: string, mentions: string[]
   if (mentions.length === 0) return [];
 
   // Query users by username or display name
-  const users = await db('users')
+  const users = await tenantScopedTable(db, 'users', tenantId)
     .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-    .where('tenant', tenantId)
     .andWhere(function() {
       this.whereIn('username', mentions)
         .orWhereRaw("CONCAT(first_name, ' ', last_name) IN (?)", [mentions]);
@@ -1200,7 +1199,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     const db = await getConnection(tenantId);
 
     // Get task details
-    const task = await db('project_tasks as pt')
+    const task = await tenantScopedTable(db, 'project_tasks as pt', tenantId)
       .select(
         'pt.task_id',
         'pt.task_name',
@@ -1217,7 +1216,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
         this.on('ph.project_id', 'p.project_id')
            .andOn('ph.tenant', 'p.tenant');
       })
-      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+      .where('pt.task_id', taskId)
       .first();
 
     if (!task) {
@@ -1226,9 +1225,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1267,10 +1266,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     // Get user details and create notifications for mentioned users
     if (resolvedMentionedUserIds.length > 0) {
-      const mentionedUsers = await db('users')
+      const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-        .whereIn('user_id', resolvedMentionedUserIds)
-        .andWhere('tenant', tenantId);
+        .whereIn('user_id', resolvedMentionedUserIds);
 
       if (mentionedUsers.length > 0) {
         const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1400,7 +1398,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
     const db = await getConnection(tenantId);
 
     // Get task details
-    const task = await db('project_tasks as pt')
+    const task = await tenantScopedTable(db, 'project_tasks as pt', tenantId)
       .select(
         'pt.task_id',
         'pt.task_name',
@@ -1417,7 +1415,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
         this.on('ph.project_id', 'p.project_id')
            .andOn('ph.tenant', 'p.tenant');
       })
-      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+      .where('pt.task_id', taskId)
       .first();
 
     if (!task) {
@@ -1426,9 +1424,9 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1468,10 +1466,9 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await db('users')
+        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .andWhere('tenant', tenantId);
+          .whereIn('user_id', resolvedNewlyMentionedUserIds);
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
