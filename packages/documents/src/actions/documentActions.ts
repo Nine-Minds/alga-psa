@@ -2249,8 +2249,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
     };
 
     if (entityType === 'client') {
-      let query = trx('clients')
-        .where({ tenant })
+      let query = tenantScopedTable(trx, 'clients', tenant)
         .select('client_id as value', 'client_name as label')
         .orderBy('client_name', 'asc');
       query = applySearch(query, ['client_name']);
@@ -2260,11 +2259,10 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'contact') {
-      let query = trx('contacts as c')
+      let query = tenantScopedTable(trx, 'contacts as c', tenant)
         .leftJoin('clients as cl', function joinClients() {
           this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
         })
-        .where('c.tenant', tenant)
         .select(
           'c.contact_name_id as value',
           trx.raw(`
@@ -2283,11 +2281,10 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'ticket') {
-      let query = trx('tickets as t')
+      let query = tenantScopedTable(trx, 'tickets as t', tenant)
         .leftJoin('clients as cl', function joinClients() {
           this.on('t.client_id', '=', 'cl.client_id').andOn('t.tenant', '=', 'cl.tenant');
         })
-        .where('t.tenant', tenant)
         .select(
           't.ticket_id as value',
           trx.raw(`
@@ -2311,11 +2308,10 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'asset') {
-      let query = trx('assets as a')
+      let query = tenantScopedTable(trx, 'assets as a', tenant)
         .leftJoin('clients as cl', function joinClients() {
           this.on('a.client_id', '=', 'cl.client_id').andOn('a.tenant', '=', 'cl.tenant');
         })
-        .where('a.tenant', tenant)
         .select(
           'a.asset_id as value',
           trx.raw(`
@@ -2342,7 +2338,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'project_task') {
-      let query = trx('project_tasks as pt')
+      let query = tenantScopedTable(trx, 'project_tasks as pt', tenant)
         .leftJoin('project_phases as pp', function joinPhases() {
           this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
         })
@@ -2352,7 +2348,6 @@ export const searchDocumentAssociationEntities = withAuth(async (
         .leftJoin('clients as cl', function joinClients() {
           this.on('p.client_id', '=', 'cl.client_id').andOn('p.tenant', '=', 'cl.tenant');
         })
-        .where('pt.tenant', tenant)
         .select(
           'pt.task_id as value',
           trx.raw(`
@@ -2379,14 +2374,13 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'contract') {
-      let query = trx('contracts as c')
+      let query = tenantScopedTable(trx, 'contracts as c', tenant)
         .leftJoin('client_contracts as cc', function joinClientContracts() {
           this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
         })
         .leftJoin('clients as cl', function joinClients() {
           this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
         })
-        .where('c.tenant', tenant)
         .select(
           'c.contract_id as value',
           trx.raw("COALESCE(c.contract_name, 'Unnamed contract') as label")
@@ -2399,11 +2393,10 @@ export const searchDocumentAssociationEntities = withAuth(async (
       return { options: rows, total };
     }
 
-    let quoteQuery = trx('quotes as q')
+    let quoteQuery = tenantScopedTable(trx, 'quotes as q', tenant)
       .leftJoin('clients as cl', function joinClients() {
         this.on('q.client_id', '=', 'cl.client_id').andOn('q.tenant', '=', 'cl.tenant');
       })
-      .where('q.tenant', tenant)
       .select(
         'q.quote_id as value',
         trx.raw(`
