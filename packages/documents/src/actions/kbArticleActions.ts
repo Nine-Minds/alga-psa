@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -64,6 +64,15 @@ export interface IArticleFilters {
 export interface IKBArticleCategory {
   id: string;
   name: string;
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+  alias?: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant, alias }).builder;
 }
 
 const KB_ARTICLE_SELECT_COLUMNS = [
@@ -148,8 +157,8 @@ async function _createArticleInternal(
   const audience = input.audience || 'internal';
 
   // Ensure slug uniqueness — append a numeric suffix if needed
-  const existingSlug = await knex('kb_articles')
-    .where({ tenant, slug })
+  const existingSlug = await tenantScopedTable(knex, 'kb_articles', tenant)
+    .where({ slug })
     .first();
   if (existingSlug) {
     // If the caller provided an explicit slug, treat collision as an error
@@ -160,7 +169,9 @@ async function _createArticleInternal(
     let suffix = 2;
     while (true) {
       const candidate = `${slug}-${suffix}`;
-      const collision = await knex('kb_articles').where({ tenant, slug: candidate }).first();
+      const collision = await tenantScopedTable(knex, 'kb_articles', tenant)
+        .where({ slug: candidate })
+        .first();
       if (!collision) {
         slug = candidate;
         break;
@@ -197,8 +208,8 @@ async function _createArticleInternal(
     });
   }
 
-  const document = await knex('documents')
-    .where({ tenant, document_id: documentId })
+  const document = await tenantScopedTable(knex, 'documents', tenant)
+    .where({ document_id: documentId })
     .first() as IDocument;
 
   // Create the KB article record — clean up document on failure
@@ -224,16 +235,16 @@ async function _createArticleInternal(
     });
   } catch (err) {
     // Clean up orphaned document if kb_articles insert fails
-    await knex('documents')
-      .where({ tenant, document_id: document.document_id })
+    await tenantScopedTable(knex, 'documents', tenant)
+      .where({ document_id: document.document_id })
       .del()
       .catch(() => {}); // best effort cleanup
     throw err;
   }
 
-  const article = await knex('kb_articles')
+  const article = await tenantScopedTable(knex, 'kb_articles', tenant)
     .select(KB_ARTICLE_SELECT_COLUMNS)
-    .where({ tenant, article_id: articleId })
+    .where({ article_id: articleId })
     .first();
 
   return {
@@ -292,8 +303,8 @@ export const updateArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
-      const existing = await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .first();
 
       if (!existing) {
@@ -307,8 +318,8 @@ export const updateArticle = withAuth(
 
       if (input.title !== undefined) {
         // Also update the document name
-        await trx('documents')
-          .where({ tenant, document_id: existing.document_id })
+        await tenantScopedTable(trx, 'documents', tenant)
+          .where({ document_id: existing.document_id })
           .update({
             document_name: input.title.trim(),
             updated_at: trx.fn.now(),
@@ -317,8 +328,8 @@ export const updateArticle = withAuth(
 
       if (input.slug !== undefined) {
         const newSlug = input.slug.trim();
-        const existingSlug = await trx('kb_articles')
-          .where({ tenant, slug: newSlug })
+        const existingSlug = await tenantScopedTable(trx, 'kb_articles', tenant)
+          .where({ slug: newSlug })
           .whereNot('article_id', articleId)
           .first();
         if (existingSlug) {
@@ -352,13 +363,13 @@ export const updateArticle = withAuth(
         updates.status = input.status;
       }
 
-      await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .update(updates);
 
-      const article = await trx('kb_articles')
+      const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
-        .where({ tenant, article_id: articleId })
+        .where({ article_id: articleId })
         .first();
 
       return article as unknown as IKBArticle;
@@ -395,8 +406,8 @@ export const publishArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
-      const existing = await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .first();
 
       if (!existing) {
@@ -404,8 +415,8 @@ export const publishArticle = withAuth(
       }
 
       // Update article status
-      await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .update({
           status: 'published',
           published_at: trx.fn.now(),
@@ -416,17 +427,17 @@ export const publishArticle = withAuth(
 
       // Auto-set is_client_visible for client/public audience
       if (existing.audience === 'client' || existing.audience === 'public') {
-        await trx('documents')
-          .where({ tenant, document_id: existing.document_id })
+        await tenantScopedTable(trx, 'documents', tenant)
+          .where({ document_id: existing.document_id })
           .update({
             is_client_visible: true,
             updated_at: trx.fn.now(),
           });
       }
 
-      const article = await trx('kb_articles')
+      const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
-        .where({ tenant, article_id: articleId })
+        .where({ article_id: articleId })
         .first();
 
       return article as unknown as IKBArticle;
@@ -463,8 +474,8 @@ export const archiveArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
-      const existing = await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .first();
 
       if (!existing) {
@@ -472,8 +483,8 @@ export const archiveArticle = withAuth(
       }
 
       // Update article status
-      await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .update({
           status: 'archived',
           updated_at: trx.fn.now(),
@@ -481,16 +492,16 @@ export const archiveArticle = withAuth(
         });
 
       // Clear is_client_visible
-      await trx('documents')
-        .where({ tenant, document_id: existing.document_id })
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where({ document_id: existing.document_id })
         .update({
           is_client_visible: false,
           updated_at: trx.fn.now(),
         });
 
-      const article = await trx('kb_articles')
+      const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
-        .where({ tenant, article_id: articleId })
+        .where({ article_id: articleId })
         .first();
 
       return article as unknown as IKBArticle;
@@ -529,8 +540,8 @@ export const deleteArticle = withAuth(
     }
 
     const deleted = await withTransaction(knex, async (trx) => {
-      const existing = await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .first();
 
       if (!existing) {
@@ -541,20 +552,20 @@ export const deleteArticle = withAuth(
         throw new Error('Only draft or archived articles can be deleted. Archive the article first.');
       }
 
-      await trx('tag_mappings')
-        .where({ tenant, tagged_id: articleId, tagged_type: 'knowledge_base_article' })
+      await tenantScopedTable(trx, 'tag_mappings', tenant)
+        .where({ tagged_id: articleId, tagged_type: 'knowledge_base_article' })
         .del();
 
-      await trx('kb_articles')
-        .where({ tenant, article_id: articleId })
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
         .del();
 
-      await trx('document_block_content')
-        .where({ tenant, document_id: existing.document_id })
+      await tenantScopedTable(trx, 'document_block_content', tenant)
+        .where({ document_id: existing.document_id })
         .del();
 
-      await trx('documents')
-        .where({ tenant, document_id: existing.document_id })
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where({ document_id: existing.document_id })
         .del();
 
       return {
