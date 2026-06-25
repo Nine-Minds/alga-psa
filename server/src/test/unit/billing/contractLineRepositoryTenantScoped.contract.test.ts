@@ -42,4 +42,24 @@ describe('contract line repositories tenant-scoped query contract', () => {
     expect(section).not.toMatch(/\.where\(\{\s*'[^']*\.tenant':\s*tenant/);
     expect(section).not.toMatch(/\.where\(['"]tenant['"],\s*tenant\)/);
   });
+
+  it.each(repositoryPaths)('uses structural tenant scoping for template snapshot and clone roots in %s', (relativePath) => {
+    const source = readRepoFile(relativePath);
+    const section = sectionBetween(source, 'export async function ensureTemplateLineSnapshot', 'export async function addContractLine');
+
+    expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_template_lines')");
+    expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_lines')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_lines')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_fixed_config')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_services')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_defaults')");
+
+    expect(section).not.toMatch(/\.where\(\{\s*tenant[,}]/);
+    expect(section).not.toMatch(/\.where\(\{\s*'[^']*\.tenant':\s*tenant/);
+    expect(section).not.toMatch(/\.where\(['"]tenant['"],\s*tenant\)/);
+  });
 });

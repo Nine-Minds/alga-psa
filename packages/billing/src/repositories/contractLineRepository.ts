@@ -215,13 +215,13 @@ export async function ensureTemplateLineSnapshot(
   contractLineId: string,
   customRate?: number
 ): Promise<string> {
-  const templateLine = await knex('contract_template_lines')
-    .where({ tenant, template_id: templateId, template_line_id: contractLineId })
+  const templateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+    .where({ template_id: templateId, template_line_id: contractLineId })
     .first();
 
   if (templateLine) {
-    await knex('contract_template_lines')
-      .where({ tenant, template_id: templateId, template_line_id: contractLineId })
+    await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: templateId, template_line_id: contractLineId })
       .update({
         custom_rate: customRate ?? templateLine.custom_rate ?? null,
         updated_at: knex.fn.now(),
@@ -229,8 +229,8 @@ export async function ensureTemplateLineSnapshot(
     return contractLineId;
   }
 
-  const baseLine = await knex('contract_lines')
-    .where({ tenant, contract_line_id: contractLineId })
+  const baseLine = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where('contract_line_id', contractLineId)
     .first();
 
   if (!baseLine) {
@@ -238,8 +238,8 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = knex.fn.now();
-  const existingTemplateLine = await knex('contract_template_lines')
-    .where({ tenant, template_line_id: contractLineId })
+  const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+    .where('template_line_id', contractLineId)
     .first();
 
   const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
@@ -280,16 +280,16 @@ async function cloneTemplateLineToContract(
   templateLineId: string,
   customRate?: number
 ): Promise<string> {
-  const templateLine = await trx('contract_template_lines')
-    .where({ tenant, template_line_id: templateLineId })
+  const templateLine = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+    .where('template_line_id', templateLineId)
     .first();
 
   if (!templateLine) {
     throw new Error(`Template contract line ${templateLineId} not found`);
   }
 
-  const templateFixedConfig = await trx('contract_template_line_fixed_config')
-    .where({ tenant, template_line_id: templateLineId })
+  const templateFixedConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_fixed_config')
+    .where('template_line_id', templateLineId)
     .first();
 
   const now = trx.fn.now();
@@ -339,8 +339,8 @@ async function cloneTemplateLineToContract(
     billing_cycle_alignment: templateBillingCycleAlignment,
   });
 
-  const templateServices = await trx('contract_template_line_services')
-    .where({ tenant, template_line_id: templateLineId });
+  const templateServices = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+    .where('template_line_id', templateLineId);
 
   for (const service of templateServices) {
     await trx('contract_line_services')
@@ -357,8 +357,8 @@ async function cloneTemplateLineToContract(
         custom_rate: service.custom_rate ?? null,
       });
 
-    const configurations = await trx('contract_template_line_service_configuration')
-      .where({ tenant, template_line_id: templateLineId, service_id: service.service_id });
+    const configurations = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+      .where({ template_line_id: templateLineId, service_id: service.service_id });
 
     for (const configuration of configurations) {
       const newConfigId = uuidv4();
@@ -375,8 +375,8 @@ async function cloneTemplateLineToContract(
         updated_at: now,
       });
 
-      const bucketConfig = await trx('contract_template_line_service_bucket_config')
-        .where({ tenant, config_id: configuration.config_id })
+      const bucketConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
+        .where('config_id', configuration.config_id)
         .first();
 
       if (bucketConfig) {
@@ -392,8 +392,8 @@ async function cloneTemplateLineToContract(
         });
       }
 
-      const hourlyConfig = await trx('contract_template_line_service_hourly_config')
-        .where({ tenant, config_id: configuration.config_id })
+      const hourlyConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
+        .where('config_id', configuration.config_id)
         .first();
 
       if (hourlyConfig) {
@@ -412,8 +412,8 @@ async function cloneTemplateLineToContract(
         });
       }
 
-      const usageConfig = await trx('contract_template_line_service_usage_config')
-        .where({ tenant, config_id: configuration.config_id })
+      const usageConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
+        .where('config_id', configuration.config_id)
         .first();
 
       if (usageConfig) {
@@ -429,8 +429,8 @@ async function cloneTemplateLineToContract(
     }
   }
 
-  const templateDefaults = await trx('contract_template_line_defaults')
-    .where({ tenant, template_line_id: templateLineId });
+  const templateDefaults = await tenantScopedTable(trx, tenant, 'contract_template_line_defaults')
+    .where('template_line_id', templateLineId);
 
   for (const def of templateDefaults) {
     await trx('contract_line_service_defaults').insert({

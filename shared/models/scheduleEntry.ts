@@ -59,7 +59,7 @@ const ScheduleEntry = {
       .whereIn('entry_id', validEntryIds)
       .select('entry_id');
 
-    const validEntrySet = new Set(validEntries.map(e => e.entry_id));
+    const validEntrySet = new Set(validEntries.map((e: { entry_id: string }) => e.entry_id));
     const invalidEntryIds = validEntryIds.filter(id => !validEntrySet.has(id));
 
     if (invalidEntryIds.length > 0) {
@@ -121,7 +121,7 @@ const ScheduleEntry = {
         .whereIn('user_id', userIds)
         .select('user_id');
 
-      const validUserIds = validUsers.map(u => u.user_id);
+      const validUserIds = validUsers.map((u: { user_id: string }) => u.user_id);
       const invalidUserIds = userIds.filter(id => !validUserIds.includes(id));
 
       if (invalidUserIds.length > 0) {
@@ -1003,7 +1003,7 @@ const ScheduleEntry = {
       .select('entry_id');
 
     const assignmentResult = await assignmentQuery;
-    const entryIds = assignmentResult.map(a => a.entry_id);
+    const entryIds = assignmentResult.map((a: { entry_id: string }) => a.entry_id);
 
     if (entryIds.length === 0) return [];
 
