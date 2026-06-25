@@ -40,4 +40,31 @@ describe('project template create-from-project tenant-scoped query contract', ()
     expect(actionSource).not.toContain(".where('tenant', tenant)");
     expect(actionSource).not.toContain('.where({ task_id: task.task_id, tenant })');
   });
+
+  it('uses structural tenant scoping for applyTemplate read and update roots', () => {
+    const actionSource = section(
+      'export const applyTemplate',
+      '/**\n * Get all templates'
+    );
+
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_status_mappings', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'projects', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'statuses', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_task_resources', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'users', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_dependencies', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_checklist_items', tenant)");
+    expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
+    expect(actionSource).not.toContain('.where({ project_id: newProjectId, tenant })');
+    expect(actionSource).not.toContain('.where({ phase_id: newPhaseId, tenant })');
+    expect(actionSource).not.toContain('.where({ task_id: newTaskId, tenant })');
+    expect(actionSource).not.toContain('.where({ user_id: resource.user_id, tenant })');
+    expect(actionSource).not.toContain(".where('tenant', tenant)");
+    expect(actionSource).not.toContain('.where({ tenant, status_type:');
+  });
 });
