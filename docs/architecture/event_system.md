@@ -21,7 +21,9 @@ Events consist of three main components:
    ```
 
 3. **Event Types**
-   The system supports various event types (defined in [events.ts](../server/src/lib/eventBus/events.ts)):
+   Core event types are defined in `server/src/lib/eventBus/events.ts`. Newer domain-specific schemas are defined in `packages/event-schemas/src/schemas/domain/` — prefer this location when adding new event types, as it can be imported from the Temporal worker without pulling in the full Next.js server module graph (see [temporal-worker-job-execution.md](./temporal-worker-job-execution.md)).
+
+   Core event types include:
    ```typescript
    export const EventTypeEnum = z.enum([
      'TICKET_CREATED',
@@ -36,6 +38,14 @@ Events consist of three main components:
      'INVOICE_FINALIZED',
    ]);
    ```
+
+   Additional domain events (defined in `packages/event-schemas/src/schemas/domain/`):
+
+   | Event type | When it fires | Default subscriber behavior |
+   |------------|--------------|-----------------------------|
+   | `TICKET_AUTO_CLOSE_WARNING` | A ticket is approaching its auto-close deadline | Warning email sent to the ticket's assigned user or owner |
+   | `CREDIT_EXPIRING` | A tenant's prepaid credit balance is nearing its expiration date | Credit-expiry notification email sent to the billing contact |
+   | `MAINTENANCE_JOB_REQUESTED` | (EE only) A maintenance job has been dispatched to the Temporal worker via the fan-out workflow | Worker executes the named maintenance handler across all tenants |
 
 ## Channel Management
 
@@ -259,7 +269,8 @@ The event system is implemented using:
 - Knex.js for database operations
 
 Key files:
-- `eventBus/events.ts`: Event type definitions
+- `eventBus/events.ts`: Core event type definitions (original events)
+- `packages/event-schemas/src/schemas/domain/`: Domain event schemas (newer events; importable from Temporal worker)
 - `eventBus/index.ts`: Core event bus implementation
 - `eventBus/initialize.ts`: System initialization
 - `eventBus/subscribers/`: Event handlers
