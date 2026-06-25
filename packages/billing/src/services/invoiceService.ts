@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
@@ -30,6 +30,10 @@ interface InvoiceContext {
   session: Session;
   knex: Knex;
   tenant: string;
+}
+
+function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(knexOrTrx, { table, tenant }).builder;
 }
 
 function normalizeRecurringDateForPersistence(value: unknown): string | null {
@@ -93,7 +97,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     return 0;
   }
 
-  const invoiceBuilder = tx('invoices') as any;
+  const invoiceBuilder = tenantScopedTable(tx, tenant, 'invoices') as any;
   if (!invoiceBuilder || typeof invoiceBuilder.where !== 'function') {
     return 0;
   }
@@ -102,7 +106,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
   // invoice window (when this cycle may be cut), not a service period. That's why we read
   // it into `invoiceWindow*` locals here. Column rename to `invoice_window_*` is pending.
   const invoiceWindow = await invoiceBuilder
-    .where({ invoice_id: invoiceId, tenant })
+    .where('invoice_id', invoiceId)
     .first(['billing_period_start', 'billing_period_end']);
 
   const invoiceWindowStart = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_start);
@@ -119,13 +123,13 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
 
   let resolvedContractLineId = contractLineId ?? null;
   if (!resolvedContractLineId && configId) {
-    const configBuilder = tx('contract_line_service_configuration') as any;
+    const configBuilder = tenantScopedTable(tx, tenant, 'contract_line_service_configuration') as any;
     if (!configBuilder || typeof configBuilder.where !== 'function') {
       return 0;
     }
 
     const configRow = await configBuilder
-      .where({ tenant, config_id: configId })
+      .where('config_id', configId)
       .first('contract_line_id') as { contract_line_id?: string } | undefined;
 
     resolvedContractLineId = configRow?.contract_line_id ?? null;
@@ -143,8 +147,8 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     obligation_id: candidate.obligationId,
   }));
 
-  return tx('recurring_service_periods')
-    .where({ tenant, charge_family: chargeFamily, due_position: billingTiming })
+  return tenantScopedTable(tx, tenant, 'recurring_service_periods')
+    .where({ charge_family: chargeFamily, due_position: billingTiming })
     .where(function recurringObligationMatch() {
       for (const [index, candidate] of obligationCandidates.entries()) {
         if (index === 0) {
@@ -199,8 +203,8 @@ async function linkAndMarkSourceBillingRecord(params: {
       return;
     }
 
-    const updatedCount = await tx('time_entries')
-      .where({ tenant, entry_id: entryId, invoiced: false })
+    const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
+      .where({ entry_id: entryId, invoiced: false })
       .update({ invoiced: true });
 
     if (updatedCount !== 1) {
@@ -223,8 +227,8 @@ async function linkAndMarkSourceBillingRecord(params: {
       return;
     }
 
-    const updatedCount = await tx('usage_tracking')
-      .where({ tenant, usage_id: usageId, invoiced: false })
+    const updatedCount = await tenantScopedTable(tx, tenant, 'usage_tracking')
+      .where({ usage_id: usageId, invoiced: false })
       .update({ invoiced: true });
 
     if (updatedCount !== 1) {
