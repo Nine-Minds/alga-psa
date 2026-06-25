@@ -893,8 +893,7 @@ export const getTemplates = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  let query = knex('project_templates')
-    .where({ tenant });
+  let query = tenantScopedTable(knex, 'project_templates', tenant);
 
   if (filters?.category) {
     query = query.where('category', filters.category);
@@ -922,8 +921,8 @@ export const getTemplateWithDetails = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  const template = await knex('project_templates')
-    .where({ template_id: templateId, tenant })
+  const template = await tenantScopedTable(knex, 'project_templates', tenant)
+    .where({ template_id: templateId })
     .first();
 
   if (!template) {
@@ -932,19 +931,19 @@ export const getTemplateWithDetails = withAuth(async (
 
   // Load all related data
   const [phases, dependencies, rawStatusMappings] = await Promise.all([
-    knex('project_template_phases')
-      .where({ template_id: templateId, tenant })
+    tenantScopedTable(knex, 'project_template_phases', tenant)
+      .where({ template_id: templateId })
       .orderBy('order_key'),
-    knex('project_template_dependencies')
-      .where({ template_id: templateId, tenant }),
-    knex('project_template_status_mappings')
-      .where({ template_id: templateId, tenant })
+    tenantScopedTable(knex, 'project_template_dependencies', tenant)
+      .where({ template_id: templateId }),
+    tenantScopedTable(knex, 'project_template_status_mappings', tenant)
+      .where({ template_id: templateId })
       .orderBy('display_order')
-  ]);
+  ]) as [IProjectTemplatePhase[], IProjectTemplateDependency[], ProjectTemplateStatusMappingRow[]];
 
   // Enrich status mappings with actual status information
   const statusMappings = await Promise.all(
-    rawStatusMappings.map(async (mapping: any) => {
+    rawStatusMappings.map(async (mapping) => {
       if (mapping.status_id) {
         // First, try standard_statuses (for standard statuses)
         const standardStatus = await knex('standard_statuses')
@@ -962,8 +961,8 @@ export const getTemplateWithDetails = withAuth(async (
         }
 
         // If not found, try statuses table (for custom statuses)
-        const customStatus = await knex('statuses')
-          .where({ status_id: mapping.status_id, tenant })
+        const customStatus = await tenantScopedTable(knex, 'statuses', tenant)
+          .where({ status_id: mapping.status_id })
           .first();
 
         if (customStatus) {
@@ -995,8 +994,7 @@ export const getTemplateWithDetails = withAuth(async (
   console.log(`[getTemplateWithDetails] Template: ${template.template_name}, phaseIds:`, phaseIds);
 
   if (phaseIds.length > 0) {
-    tasks = await knex('project_template_tasks')
-      .where('tenant', tenant)
+    tasks = await tenantScopedTable(knex, 'project_template_tasks', tenant)
       .whereIn('template_phase_id', phaseIds)
       .orderBy('order_key');
 
@@ -1008,12 +1006,10 @@ export const getTemplateWithDetails = withAuth(async (
     const taskIds = tasks.map(t => t.template_task_id);
     if (taskIds.length > 0) {
       [checklistItems, taskAssignments] = await Promise.all([
-        knex('project_template_checklist_items')
-          .where('tenant', tenant)
+        tenantScopedTable(knex, 'project_template_checklist_items', tenant)
           .whereIn('template_task_id', taskIds)
           .orderBy('order_number'),
-        knex('project_template_task_resources')
-          .where('tenant', tenant)
+        tenantScopedTable(knex, 'project_template_task_resources', tenant)
           .whereIn('template_task_id', taskIds)
       ]);
     }

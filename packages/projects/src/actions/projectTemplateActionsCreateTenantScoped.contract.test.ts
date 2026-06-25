@@ -12,7 +12,7 @@ function section(start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
-describe('project template create-from-project tenant-scoped query contract', () => {
+describe('project template tenant-scoped query contract', () => {
   it('uses structural tenant scoping for template status mapping helper roots', () => {
     const helperSource = section(
       'async function getScopedTemplateStatusMappings',
@@ -66,5 +66,26 @@ describe('project template create-from-project tenant-scoped query contract', ()
     expect(actionSource).not.toContain('.where({ user_id: resource.user_id, tenant })');
     expect(actionSource).not.toContain(".where('tenant', tenant)");
     expect(actionSource).not.toContain('.where({ tenant, status_type:');
+  });
+
+  it('uses structural tenant scoping for template list and detail read roots', () => {
+    const actionSource = section(
+      'export const getTemplates',
+      '/**\n * Update a template'
+    );
+
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_templates', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_phases', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_dependencies', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_status_mappings', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'statuses', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_tasks', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_checklist_items', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_task_resources', tenant)");
+    expect(actionSource).toContain("knex('standard_statuses')");
+    expect(actionSource).not.toContain(".where({ tenant })");
+    expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
+    expect(actionSource).not.toContain('.where({ status_id: mapping.status_id, tenant })');
+    expect(actionSource).not.toContain(".where('tenant', tenant)");
   });
 });
