@@ -5,7 +5,7 @@ import {
   type ParsedTableExpression,
   type TenantTableScope,
 } from './tenantTableMetadata';
-import { createTenantScopedQuery, type TenantScopedQuery } from './tenantScopedQuery';
+import { createTenantScopedRootQuery, type TenantScopedQuery } from './tenantScopedQuery';
 
 export interface TenantJoinOptions {
   type?: 'inner' | 'left';
@@ -79,7 +79,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
       throw new Error(`Admin table ${parsed.tableName} cannot be accessed through tenantDb.scoped`);
     }
 
-    return createTenantScopedQuery(conn, {
+    return createTenantScopedRootQuery(conn, {
       table: tableExpression,
       alias: parsed.rootAlias,
       tenant,

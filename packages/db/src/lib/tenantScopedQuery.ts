@@ -14,7 +14,7 @@ export interface TenantScopedQuery {
   readonly [tenantScopedQueryBrand]: true;
 }
 
-export interface TenantScopedQueryOptions {
+export interface TenantScopedRootQueryOptions {
   table: string;
   alias?: string;
   tenant: string;
@@ -26,7 +26,7 @@ type TenantScopedQueryMetadata = Pick<
   'tenant' | 'rootAlias' | 'tenantColumn' | 'qualifiedTenantColumn'
 >;
 
-function createMetadata(options: TenantScopedQueryOptions): TenantScopedQueryMetadata {
+function createMetadata(options: TenantScopedRootQueryOptions): TenantScopedQueryMetadata {
   const tenantColumn = options.tenantColumn ?? 'tenant';
   const rootAlias = options.alias ?? parseTableExpression(options.table).rootAlias;
   return {
@@ -57,9 +57,9 @@ function tagTenantScopedQuery(
  * authorization narrowing. It makes the root tenant predicate part of the type
  * contract instead of an unverified call-site convention.
  */
-export function createTenantScopedQuery(
+export function createTenantScopedRootQuery(
   conn: Knex | Knex.Transaction,
-  options: TenantScopedQueryOptions
+  options: TenantScopedRootQueryOptions
 ): TenantScopedQuery {
   const metadata = createMetadata(options);
   return tagTenantScopedQuery(

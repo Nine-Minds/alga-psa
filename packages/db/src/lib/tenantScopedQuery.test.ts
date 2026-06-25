@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import knexFactory from 'knex';
-import { createTenantScopedQuery, isTenantScopedQuery } from './tenantScopedQuery';
+import { createTenantScopedRootQuery, isTenantScopedQuery } from './tenantScopedQuery';
 
 const db = knexFactory({ client: 'pg' });
 
@@ -8,9 +8,9 @@ afterAll(async () => {
   await db.destroy();
 });
 
-describe('tenant scoped query helper', () => {
+describe('tenant scoped root query factory', () => {
   it('creates a branded query with the root tenant predicate', () => {
-    const query = createTenantScopedQuery(db, {
+    const query = createTenantScopedRootQuery(db, {
       table: 'tickets as t',
       alias: 't',
       tenant: 'tenant-1',
@@ -26,11 +26,11 @@ describe('tenant scoped query helper', () => {
   });
 
   it('infers the root tenant column for common table expressions', () => {
-    const plainTableQuery = createTenantScopedQuery(db, {
+    const plainTableQuery = createTenantScopedRootQuery(db, {
       table: 'clients',
       tenant: 'tenant-1',
     });
-    const aliasedTableQuery = createTenantScopedQuery(db, {
+    const aliasedTableQuery = createTenantScopedRootQuery(db, {
       table: 'tickets as t',
       tenant: 'tenant-1',
     });
@@ -48,7 +48,7 @@ describe('tenant scoped query helper', () => {
   });
 
   it('preserves tenant metadata across clones and builder replacement', () => {
-    const query = createTenantScopedQuery(db, {
+    const query = createTenantScopedRootQuery(db, {
       table: 'tickets as t',
       alias: 't',
       tenant: 'tenant-1',
