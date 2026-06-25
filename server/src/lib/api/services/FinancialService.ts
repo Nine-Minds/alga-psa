@@ -1641,7 +1641,10 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     // Revenue analytics
-    let revenueQuery = knex('invoices')
+    let revenueQuery = createTenantScopedQuery(knex, {
+      table: 'invoices',
+      tenant: context.tenant,
+    }).builder
       .select(
         knex.raw(`${dateGrouping} as period`),
         knex.raw('SUM(total_amount) as total_revenue'),
@@ -1652,7 +1655,6 @@ export class FinancialService extends BaseService<ITransaction> {
         knex.raw('COUNT(*) as invoice_count'),
         knex.raw('AVG(total_amount) as average_invoice_value')
       )
-      .where('tenant', context.tenant)
       .whereIn('status', ['sent', 'paid'])
       .modify((qb) => {
         if (date_from && date_to) {
@@ -1663,14 +1665,16 @@ export class FinancialService extends BaseService<ITransaction> {
       .orderBy('period');
 
     // Credit analytics
-    let creditQuery = knex('transactions')
+    let creditQuery = createTenantScopedQuery(knex, {
+      table: 'transactions',
+      tenant: context.tenant,
+    }).builder
       .select(
         knex.raw(`${dateGrouping} as period`),
         knex.raw('SUM(CASE WHEN type IN (\'credit_issuance\', \'credit_issuance_from_negative_invoice\') THEN amount ELSE 0 END) as credits_issued'),
         knex.raw('SUM(CASE WHEN type = \'credit_application\' THEN ABS(amount) ELSE 0 END) as credits_applied'),
         knex.raw('SUM(CASE WHEN type = \'credit_expiration\' THEN ABS(amount) ELSE 0 END) as credits_expired')
       )
-      .where('tenant', context.tenant)
       .whereIn('type', [
         'credit_issuance',
         'credit_issuance_from_negative_invoice',
@@ -1699,9 +1703,11 @@ export class FinancialService extends BaseService<ITransaction> {
     const creditAnalytics = await Promise.all(
       creditData.map(async (period: any) => {
         // Get credit balance at end of period
-        const balanceQuery = knex('clients')
-          .sum('credit_balance as total_balance')
-          .where('tenant', context.tenant);
+        const balanceQuery = createTenantScopedQuery(knex, {
+          table: 'clients',
+          tenant: context.tenant,
+        }).builder
+          .sum('credit_balance as total_balance');
         
         if (client_id) {
           balanceQuery.where('client_id', client_id);
