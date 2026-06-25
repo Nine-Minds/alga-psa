@@ -2,9 +2,11 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
+import type { Knex } from 'knex';
 import {
   type AuthorizationRecord,
   type AuthorizationReason,
@@ -129,6 +131,10 @@ const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
   'billing',
 ]);
 
+function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(knexOrTrx, { table, tenant }).builder;
+}
+
 function normalizeRuleIdList(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -215,11 +221,8 @@ export const seedStarterAuthorizationBundlesAction = withAuth(
 
     await knex.transaction(async (trx) => {
       for (const starter of STARTER_AUTHORIZATION_BUNDLES) {
-        const existing = await trx('authorization_bundles')
-          .where({
-            tenant,
-            bundle_key: starter.key,
-          })
+        const existing = await tenantScopedTable(trx, tenant, 'authorization_bundles')
+          .where('bundle_key', starter.key)
           .first('bundle_id');
 
         if (existing) {
@@ -309,11 +312,8 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
     const { bundleId, createDraftIfMissing = true } = input;
 
     const { knex } = await createTenantKnex();
-    const bundle = await knex('authorization_bundles')
-      .where({
-        tenant,
-        bundle_id: bundleId,
-      })
+    const bundle = await tenantScopedTable(knex, tenant, 'authorization_bundles')
+      .where('bundle_id', bundleId)
       .first<{
         bundle_id: string;
         name: string;
@@ -337,9 +337,8 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
           })
         ).revisionId
       : (
-          await knex('authorization_bundle_revisions')
+          await tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')
             .where({
-              tenant,
               bundle_id: bundleId,
               lifecycle_state: 'draft',
             })
@@ -362,8 +361,7 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
             revisionId: bundle.published_revision_id,
           })
         : Promise.resolve([]),
-      knex('clients')
-        .where({ tenant })
+      tenantScopedTable(knex, tenant, 'clients')
         .orderBy('client_name', 'asc')
         .select<
           Array<{
@@ -373,8 +371,7 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
             client_type: 'company' | 'individual' | null;
           }>
         >('client_id', 'client_name', 'is_inactive', 'client_type'),
-      knex('boards')
-        .where({ tenant })
+      tenantScopedTable(knex, tenant, 'boards')
         .orderBy('board_name', 'asc')
         .select<Array<{ board_id: string; board_name: string; is_inactive: boolean | null }>>(
           'board_id',
