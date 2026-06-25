@@ -3,7 +3,7 @@
 import User from '@alga-psa/db/models/user';
 import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -88,8 +88,11 @@ async function getSafeUserWithRoles(
     throw new Error('Tenant context is required for safe user lookup');
   }
 
-  const user = await trx('users')
-    .where({ user_id: userId, tenant })
+  const user = await createTenantScopedQuery(trx, {
+    table: 'users',
+    tenant,
+  }).builder
+    .where({ user_id: userId })
     .select(USER_RESPONSE_FIELD_NAMES)
     .first();
 
@@ -186,8 +189,11 @@ export const addUser = withAuth(async (
       }
 
       // Validate that the role exists
-      const role = await trx('roles')
-        .where({ role_id: userData.roleId, tenant: tenant || undefined })
+      const role = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant,
+      }).builder
+        .where({ role_id: userData.roleId })
         .first();
 
       if (!role) {
@@ -234,9 +240,11 @@ export const addUser = withAuth(async (
           throw new Error(`Tenant not found: ${tenant}`);
         }
 
-        const usedResult = await trx('users')
+        const usedResult = await createTenantScopedQuery(trx, {
+          table: 'users',
+          tenant,
+        }).builder
           .where({
-            tenant,
             user_type: 'internal',
             is_inactive: false,
           })
