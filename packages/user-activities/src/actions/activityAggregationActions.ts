@@ -298,11 +298,14 @@ async function fetchAdHocEntriesForUser(
   tenant: string,
   userId: string
 ): Promise<any[]> {
-  const rows = await knex('schedule_entries as se')
+  const rows = await createTenantScopedQuery(knex, {
+    table: 'schedule_entries',
+    alias: 'se',
+    tenant,
+  }).builder
     .join('schedule_entry_assignees as sea', function () {
       this.on('se.entry_id', 'sea.entry_id').andOn('se.tenant', 'sea.tenant');
     })
-    .where('se.tenant', tenant)
     .andWhere('se.work_item_type', 'ad_hoc')
     .andWhere('sea.user_id', userId)
     .whereNull('se.original_entry_id')
@@ -315,8 +318,10 @@ async function fetchAdHocEntriesForUser(
 
   // Resolve the full assignee list for each entry
   const entryIds = rows.map((r: any) => r.entry_id);
-  const assigneeRows = await knex('schedule_entry_assignees')
-    .where('tenant', tenant)
+  const assigneeRows = await createTenantScopedQuery(knex, {
+    table: 'schedule_entry_assignees',
+    tenant,
+  }).builder
     .whereIn('entry_id', entryIds)
     .select('entry_id', 'user_id');
   const assigneesByEntry = new Map<string, string[]>();
