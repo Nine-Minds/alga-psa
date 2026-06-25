@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type {
@@ -44,14 +44,32 @@ async function checkPermission(
   }
 }
 
+type ProjectTemplateStatusMappingRow = {
+  template_status_mapping_id: string;
+  template_id: string;
+  template_phase_id?: string | null;
+  status_id?: string | null;
+  custom_status_name?: string | null;
+  custom_status_color?: string | null;
+  display_order: number;
+};
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 async function getScopedTemplateStatusMappings(
   trx: Knex.Transaction,
   tenant: string,
   templateId: string,
   templatePhaseId?: string | null
-) {
-  const query = trx('project_template_status_mappings')
-    .where({ tenant, template_id: templateId })
+): Promise<ProjectTemplateStatusMappingRow[]> {
+  const query = tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+    .where({ template_id: templateId })
     .orderBy('display_order');
 
   if (templatePhaseId) {
@@ -60,7 +78,7 @@ async function getScopedTemplateStatusMappings(
     query.whereNull('template_phase_id');
   }
 
-  return query;
+  return await query as ProjectTemplateStatusMappingRow[];
 }
 
 /**
@@ -100,8 +118,8 @@ export const createTemplateFromProject = withAuth(async (
     await checkPermission(user, 'project', 'create', trx);
 
     // Verify project exists and user has access
-    const project = await trx('projects')
-      .where({ project_id: projectId, tenant })
+    const project = await tenantScopedTable(trx, 'projects', tenant)
+      .where({ project_id: projectId })
       .first();
 
     if (!project) {
@@ -128,8 +146,8 @@ export const createTemplateFromProject = withAuth(async (
     let phases: any[] = [];
 
     if (copyOptions.copyPhases) {
-      phases = await trx('project_phases')
-        .where({ project_id: projectId, tenant })
+      phases = await tenantScopedTable(trx, 'project_phases', tenant)
+        .where({ project_id: projectId })
         .orderBy('order_key');
 
       for (const phase of phases) {
@@ -169,8 +187,8 @@ export const createTemplateFromProject = withAuth(async (
 
     // Copy status mappings first to create mapping from project status to template status
     const projectStatusToTemplateStatusMap = new Map<string, string>();
-    const statusMappings = await trx('project_status_mappings')
-      .where({ project_id: projectId, tenant });
+    const statusMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_id: projectId });
 
     for (const mapping of statusMappings) {
       const templatePhaseId = mapping.phase_id
@@ -200,8 +218,7 @@ export const createTemplateFromProject = withAuth(async (
       return template.template_id;
     }
 
-    const tasks = await trx('project_tasks')
-      .where('tenant', tenant)
+    const tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
       .whereIn('phase_id', phaseIds)
       .orderBy('order_key');
 
@@ -255,8 +272,8 @@ export const createTemplateFromProject = withAuth(async (
         // Note: Primary assignment (assigned_to) is already copied via the task insert above
 
         // Copy additional agents from task_resources
-        const additionalAgents = await trx('task_resources')
-          .where({ task_id: task.task_id, tenant })
+        const additionalAgents = await tenantScopedTable(trx, 'task_resources', tenant)
+          .where({ task_id: task.task_id })
           .select('additional_user_id');
 
         for (const resource of additionalAgents) {
@@ -275,8 +292,7 @@ export const createTemplateFromProject = withAuth(async (
     // Copy dependencies (with remapped IDs)
     const taskIds = Array.from(taskMap.keys());
     if (taskIds.length > 0) {
-      const dependencies = await trx('project_task_dependencies')
-        .where('tenant', tenant)
+      const dependencies = await tenantScopedTable(trx, 'project_task_dependencies', tenant)
         .whereIn('predecessor_task_id', taskIds);
 
       for (const dep of dependencies) {
@@ -299,8 +315,7 @@ export const createTemplateFromProject = withAuth(async (
 
       // Copy checklists (if enabled)
       if (copyOptions.copyChecklists) {
-        const checklists = await trx('task_checklist_items')
-          .where('tenant', tenant)
+        const checklists = await tenantScopedTable(trx, 'task_checklist_items', tenant)
           .whereIn('task_id', taskIds);
 
         for (const item of checklists) {
