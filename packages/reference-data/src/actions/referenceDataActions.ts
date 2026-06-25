@@ -1,8 +1,7 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { IStandardPriority, IPriority, DeletionValidationResult } from '@alga-psa/types';
 import { IStandardStatus, IStatus } from '@alga-psa/types';
 import { IStandardServiceType } from '@alga-psa/types';
@@ -24,14 +23,20 @@ function normalizeBoolean(value: unknown): boolean {
   return value === true || value === 'true';
 }
 
+const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
+  createTenantScopedQuery(trx, {
+    table,
+    tenant
+  }).builder;
+
 async function seedBoardTicketStatusesFromStandards(
   trx: Knex.Transaction,
   tenant: string,
   boardId: string,
   userId: string
 ): Promise<number> {
-  const existingStatus = await trx('statuses')
-    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+  const existingStatus = await tenantScopedTable(trx, 'statuses', tenant)
+    .where({ board_id: boardId, status_type: 'ticket' })
     .first('status_id');
 
   if (existingStatus) {
@@ -573,8 +578,8 @@ export const importReferenceData = withAuth(async (
       // Check for existing defaults before inserting
       if (dataType === 'boards' && mappedData.is_default === true) {
         // Check if there's already a default board
-        const existingDefault = await trx('boards')
-          .where({ tenant: tenant, is_default: true })
+        const existingDefault = await tenantScopedTable(trx, 'boards', tenant)
+          .where({ is_default: true })
           .first();
 
         if (existingDefault) {
@@ -585,9 +590,8 @@ export const importReferenceData = withAuth(async (
 
       if (dataType === 'statuses' && mappedData.is_default === true) {
         // Check if there's already a default status of the same type
-        const existingDefault = await trx('statuses')
+        const existingDefault = await tenantScopedTable(trx, 'statuses', tenant)
           .where({
-            tenant: tenant,
             is_default: true,
             status_type: mappedData.status_type,
             ...(mappedData.status_type === 'ticket' ? { board_id: mappedData.board_id ?? null } : {})
