@@ -1962,12 +1962,18 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       );
 
-      const invoiceRecord = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+      const invoiceRecord = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant,
+      }).builder
+        .where({ invoice_id: invoiceId })
         .first();
 
-      const updatedItems = await trx('invoice_charges')
-        .where({ invoice_id: invoiceId, tenant })
+      const updatedItems = await createTenantScopedQuery(trx, {
+        table: 'invoice_charges',
+        tenant,
+      }).builder
+        .where({ invoice_id: invoiceId })
         .orderBy('created_at', 'asc');
 
       if (!invoiceRecord) {
