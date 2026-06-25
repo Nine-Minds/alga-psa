@@ -1118,8 +1118,8 @@ export async function calculateAndDistributeTax(
   tenant: string
 ): Promise<number> {
   // Check invoice tax source before calculating
-  const invoice = await tx('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  const invoice = await tenantScopedTable(tx, tenant, 'invoices')
+    .where('invoice_id', invoiceId)
     .select('tax_source')
     .first();
 
@@ -1133,15 +1133,19 @@ export async function calculateAndDistributeTax(
     console.log(`[calculateAndDistributeTax] Using external tax amounts for invoice ${invoiceId}`);
 
     // Copy external_tax_amount to tax_amount and update total_price
-    const items = await tx('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
-      .select('item_id', 'net_amount', 'external_tax_amount');
+    const items = await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where('invoice_id', invoiceId)
+      .select<{ item_id: string; net_amount?: unknown; external_tax_amount?: unknown }[]>(
+        'item_id',
+        'net_amount',
+        'external_tax_amount'
+      );
 
     for (const item of items) {
       const externalTax = Number(item.external_tax_amount || 0);
       const netAmount = Number(item.net_amount || 0);
-      await tx('invoice_charges')
-        .where({ item_id: item.item_id, tenant })
+      await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', item.item_id)
         .update({
           tax_amount: externalTax,
           total_price: netAmount + externalTax
@@ -1158,14 +1162,14 @@ export async function calculateAndDistributeTax(
     // Pending external tax is likewise import-state driven rather than service-period driven.
     console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has pending external tax - using zero tax`);
 
-    const items = await tx('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
-      .select('item_id', 'net_amount');
+    const items = await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where('invoice_id', invoiceId)
+      .select<{ item_id: string; net_amount?: unknown }[]>('item_id', 'net_amount');
 
     for (const item of items) {
       const netAmount = Number(item.net_amount || 0);
-      await tx('invoice_charges')
-        .where({ item_id: item.item_id, tenant })
+      await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', item.item_id)
         .update({
           tax_amount: 0,
           total_price: netAmount
@@ -1180,14 +1184,15 @@ export async function calculateAndDistributeTax(
   console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
   
   // Fetch invoice to get currency_code
-  const invoiceForCurrency = await tx('invoices')
+  const invoiceForCurrency = await tenantScopedTable(tx, tenant, 'invoices')
     .select('currency_code')
-    .where({ invoice_id: invoiceId, tenant })
+    .where('invoice_id', invoiceId)
     .first();
   const currencyCode = invoiceForCurrency?.currency_code || 'USD';
 
-  let invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
-    .where({ invoice_id: invoiceId, tenant })
+  // Use ManualInvoiceItem type for base structure.
+  let invoiceItems: ManualInvoiceItem[] = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
     .select('*');
   // Percentage discounts remain financial-only rows even when the invoice also
   // contains canonical recurring detail-backed charges. Recalculate them from
@@ -1202,7 +1207,7 @@ export async function calculateAndDistributeTax(
   console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
   // Only fixed-plan parents should be treated as consolidated tax carriers.
-  const detailParentIdsResult = await tx('invoice_charge_details')
+  const detailParentIdsResult = await tenantScopedTable(tx, tenant, 'invoice_charge_details')
     .join('invoice_charge_fixed_details as iifd', function() {
       this.on('iifd.item_detail_id', '=', 'invoice_charge_details.item_detail_id')
         .andOn('iifd.tenant', '=', 'invoice_charge_details.tenant');
@@ -1211,9 +1216,7 @@ export async function calculateAndDistributeTax(
       this.on('invoice_charges.item_id', '=', 'invoice_charge_details.item_id')
         .andOn('invoice_charges.tenant', '=', 'invoice_charge_details.tenant');
     })
-    .where('invoice_charge_details.tenant', tenant)
     .where('invoice_charges.invoice_id', invoiceId)
-    .andWhere('invoice_charges.tenant', tenant)
     .distinct('invoice_charge_details.item_id');
   const detailParentIds = new Set(detailParentIdsResult.map((row: { item_id: string }) => row.item_id));
 
@@ -1227,14 +1230,12 @@ export async function calculateAndDistributeTax(
   if (consolidatedItemIds.length > 0) {
     // Fetch details. Tax info (is_taxable, tax_region) should now be on the parent invoice_item
     // derived during item creation based on service's tax_rate_id.
-    fixedDetails = await tx('invoice_charge_fixed_details as iifd')
+    fixedDetails = await tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details as iifd')
         .join('invoice_charge_details as iid', function() {
             this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
                 .andOn('iifd.tenant', '=', 'iid.tenant'); // Ensure tenant match
         })
         .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
-        .andWhere('iifd.tenant', tenant)
-        .andWhere('iid.tenant', tenant)
         .select(
             'iifd.item_detail_id',
             'iifd.allocated_amount',
