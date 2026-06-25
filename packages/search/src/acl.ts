@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -224,15 +225,23 @@ function parseAssignedUsers(value: unknown): string[] {
     .filter((entry): entry is string => Boolean(entry));
 }
 
+function tenantScopedRoot<Row extends object>(
+  knex: Knex,
+  user: SearchAclPrincipal,
+  tableExpression: string,
+): Knex.QueryBuilder<Row, Row[]> {
+  if (!user.tenant) {
+    return knex<Row, Row[]>(tableExpression);
+  }
+
+  return tenantDb(knex, user.tenant).table<Row>(tableExpression);
+}
+
 async function ticketExists(knex: Knex, user: SearchAclPrincipal, ticketId: string): Promise<boolean> {
-  const query = knex<{ ticket_id: string }>('tickets')
+  const row = await tenantScopedRoot<{ ticket_id: string }>(knex, user, 'tickets')
     .select('ticket_id')
     .where('ticket_id', ticketId)
     .first();
-  if (user.tenant) {
-    query.andWhere('tenant', user.tenant);
-  }
-  const row = await query;
   return Boolean(row);
 }
 
@@ -241,14 +250,10 @@ async function projectClientIdForProject(
   user: SearchAclPrincipal,
   projectId: string,
 ): Promise<string | null | undefined> {
-  const query = knex<{ client_id: string | null }>('projects')
+  const row = await tenantScopedRoot<{ client_id: string | null }>(knex, user, 'projects')
     .select('client_id')
     .where('project_id', projectId)
     .first();
-  if (user.tenant) {
-    query.andWhere('tenant', user.tenant);
-  }
-  const row = await query;
   return row?.client_id;
 }
 
@@ -257,14 +262,14 @@ registerSearchVisibilityVerifier('ticket', async (knex, user, row) => {
 });
 
 registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
-  const query = knex<{ ticket_id: string; is_internal: boolean | null }>('comments')
+  const comment = await tenantScopedRoot<{ ticket_id: string; is_internal: boolean | null }>(
+    knex,
+    user,
+    'comments',
+  )
     .select('ticket_id', 'is_internal')
     .where('comment_id', row.id)
     .first();
-  if (user.tenant) {
-    query.andWhere('tenant', user.tenant);
-  }
-  const comment = await query;
   if (!comment) return false;
   if (comment.is_internal && !user.isInternal) return false;
   return ticketExists(knex, user, comment.ticket_id);
@@ -276,29 +281,26 @@ registerSearchVisibilityVerifier('project', async (knex, user, row) => {
 });
 
 registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
-  const query = knex<{ project_id: string }>('project_phases')
+  const phase = await tenantScopedRoot<{ project_id: string }>(knex, user, 'project_phases')
     .select('project_id')
     .where('phase_id', row.id)
     .first();
-  if (user.tenant) {
-    query.andWhere('tenant', user.tenant);
-  }
-  const phase = await query;
   if (!phase) return false;
   const clientId = await projectClientIdForProject(knex, user, phase.project_id);
   return clientId !== undefined && hasClientAccess(user, clientId);
 });
 
 registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
-  const query = knex<{ project_id: string }>('project_tasks as pt')
-    .join('project_phases as pp', function() {
-      this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
-    })
+  const query = tenantScopedRoot<{ project_id: string }>(knex, user, 'project_tasks as pt')
     .select('pp.project_id')
     .where('pt.task_id', row.id)
     .first();
   if (user.tenant) {
-    query.andWhere('pt.tenant', user.tenant);
+    tenantDb(knex, user.tenant).tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+  } else {
+    query.join('project_phases as pp', function() {
+      this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
+    });
   }
   const task = await query;
   if (!task) return false;
@@ -307,18 +309,22 @@ registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
 });
 
 registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row) => {
-  const query = knex<{ project_id: string }>('project_task_comments as ptc')
-    .join('project_tasks as pt', function() {
-      this.on('pt.task_id', 'ptc.task_id').andOn('pt.tenant', 'ptc.tenant');
-    })
-    .join('project_phases as pp', function() {
-      this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
-    })
+  const query = tenantScopedRoot<{ project_id: string }>(knex, user, 'project_task_comments as ptc')
     .select('pp.project_id')
     .where('ptc.task_comment_id', row.id)
     .first();
   if (user.tenant) {
-    query.andWhere('ptc.tenant', user.tenant);
+    const db = tenantDb(knex, user.tenant);
+    db.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'ptc.task_id');
+    db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+  } else {
+    query
+      .join('project_tasks as pt', function() {
+        this.on('pt.task_id', 'ptc.task_id').andOn('pt.tenant', 'ptc.tenant');
+      })
+      .join('project_phases as pp', function() {
+        this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
+      });
   }
   const comment = await query;
   if (!comment) return false;
@@ -327,37 +333,29 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
 });
 
 registerSearchVisibilityVerifier('document', async (knex, user, row) => {
-  const documentQuery = knex<{ document_id: string }>('documents')
+  const document = await tenantScopedRoot<{ document_id: string }>(knex, user, 'documents')
     .select('document_id')
     .where('document_id', row.id)
     .first();
-  if (user.tenant) {
-    documentQuery.andWhere('tenant', user.tenant);
-  }
-  const document = await documentQuery;
   if (!document) return false;
 
-  const associationQuery = knex<{ entity_id: string }>('document_associations')
+  const association = await tenantScopedRoot<{ entity_id: string }>(
+    knex,
+    user,
+    'document_associations',
+  )
     .select('entity_id')
     .where('document_id', row.id)
     .andWhere('entity_type', 'client')
     .first();
-  if (user.tenant) {
-    associationQuery.andWhere('tenant', user.tenant);
-  }
-  const association = await associationQuery;
   return hasClientAccess(user, association?.entity_id ?? null);
 });
 
 registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
-  const query = knex<{ assigned_users: unknown }>('workflow_tasks')
+  const task = await tenantScopedRoot<{ assigned_users: unknown }>(knex, user, 'workflow_tasks')
     .select('assigned_users')
     .where('task_id', row.id)
     .first();
-  if (user.tenant) {
-    query.andWhere('tenant', user.tenant);
-  }
-  const task = await query;
   if (!task) return false;
 
   const assignedUsers = parseAssignedUsers(task.assigned_users);
@@ -371,14 +369,10 @@ registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
 registerSearchVisibilityVerifier('status', async (knex, user, row) => {
   // Status search rows are keyed by name (ticket statuses only, deduped
   // across boards), so the existence check matches on name, not status_id.
-  const query = knex<{ name: string }>('statuses')
+  const status = await tenantScopedRoot<{ name: string }>(knex, user, 'statuses')
     .select('name')
     .where('name', row.id)
     .andWhere('status_type', 'ticket')
     .first();
-  if (user.tenant) {
-    query.andWhere('tenant', user.tenant);
-  }
-  const status = await query;
   return Boolean(status);
 });
