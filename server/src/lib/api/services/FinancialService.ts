@@ -959,8 +959,11 @@ export class FinancialService extends BaseService<ITransaction> {
 
     return withTransaction(knex, async (trx) => {
       // Get source credit
-      const sourceCredit = await trx('credit_tracking')
-        .where({ credit_id: request.source_credit_id, tenant })
+      const sourceCredit = await createTenantScopedQuery(trx, {
+        table: 'credit_tracking',
+        tenant,
+      }).builder
+        .where('credit_id', request.source_credit_id)
         .first();
 
       if (!sourceCredit) {
@@ -974,8 +977,11 @@ export class FinancialService extends BaseService<ITransaction> {
       }
 
       // Verify target client
-      const targetClient = await trx('clients')
-        .where({ client_id: request.target_client_id, tenant })
+      const targetClient = await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where('client_id', request.target_client_id)
         .first();
       if (!targetClient) {
         throw new Error(`Target client with ID ${request.target_client_id} not found`);
@@ -985,8 +991,11 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // 1. Reduce source credit remaining amount
       const newSourceRemaining = Number(sourceCredit.remaining_amount) - request.amount;
-      await trx('credit_tracking')
-        .where({ credit_id: request.source_credit_id, tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'credit_tracking',
+        tenant,
+      }).builder
+        .where('credit_id', request.source_credit_id)
         .update({ remaining_amount: newSourceRemaining, updated_at: now });
 
       // 2. Create transfer-out transaction for source
@@ -1004,12 +1013,18 @@ export class FinancialService extends BaseService<ITransaction> {
       });
 
       // 3. Update source client balance
-      const [sourceClient] = await trx('clients')
-        .where({ client_id: sourceCredit.client_id, tenant })
+      const [sourceClient] = await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where('client_id', sourceCredit.client_id)
         .select('credit_balance');
       const newSourceBalance = Number(sourceClient.credit_balance) - request.amount;
-      await trx('clients')
-        .where({ client_id: sourceCredit.client_id, tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where('client_id', sourceCredit.client_id)
         .update({ credit_balance: newSourceBalance, updated_at: now });
 
       // 4. Create transfer-in transaction for target
@@ -1028,8 +1043,11 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // 5. Update target client balance
       const newTargetBalance = Number(targetClient.credit_balance) + request.amount;
-      await trx('clients')
-        .where({ client_id: request.target_client_id, tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where('client_id', request.target_client_id)
         .update({ credit_balance: newTargetBalance, updated_at: now });
 
       // 6. Create new credit tracking for target
