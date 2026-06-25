@@ -656,15 +656,15 @@ export class TimeSheetService extends BaseService<any> {
   async getTimeSheetComments(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      const comments = await knex('time_sheet_comments')
+      const comments = await createTenantScopedQuery(knex, {
+        table: 'time_sheet_comments',
+        tenant: context.tenant,
+      }).builder
         .leftJoin('users', function() {
           this.on('time_sheet_comments.user_id', '=', 'users.user_id')
             .andOn('time_sheet_comments.tenant', '=', 'users.tenant');
         })
-        .where({
-          'time_sheet_comments.time_sheet_id': timeSheetId,
-          'time_sheet_comments.tenant': context.tenant
-        })
+        .where({ 'time_sheet_comments.time_sheet_id': timeSheetId })
         .select(
           'time_sheet_comments.*',
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
@@ -687,8 +687,10 @@ export class TimeSheetService extends BaseService<any> {
   async getTimePeriods(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      return knex('time_periods')
-        .where({ tenant: context.tenant })
+      return createTenantScopedQuery(knex, {
+        table: 'time_periods',
+        tenant: context.tenant,
+      }).builder
         .orderBy('start_date', 'desc');
     }
 
@@ -706,8 +708,11 @@ export class TimeSheetService extends BaseService<any> {
   async getTimePeriod(id: string, context: ServiceContext): Promise<any | null> {
       const { knex } = await this.getKnex();
       
-      const period = await knex('time_periods')
-        .where({ period_id: id, tenant: context.tenant })
+      const period = await createTenantScopedQuery(knex, {
+        table: 'time_periods',
+        tenant: context.tenant,
+      }).builder
+        .where({ period_id: id })
         .first();
   
       if (period && period.start_date && period.end_date) {
@@ -758,8 +763,11 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx('time_periods')
-          .where({ period_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'time_periods',
+          tenant: context.tenant,
+        }).builder
+          .where({ period_id: id })
           .update(updateData);
   
         return this.getTimePeriod(id, context);
@@ -772,16 +780,22 @@ export class TimeSheetService extends BaseService<any> {
       
       return withTransaction(knex, async (trx) => {
         // Check if period has time sheets
-        const hasTimeSheets = await trx('time_sheets')
-          .where({ period_id: id, tenant: context.tenant })
+        const hasTimeSheets = await createTenantScopedQuery(trx, {
+          table: 'time_sheets',
+          tenant: context.tenant,
+        }).builder
+          .where({ period_id: id })
           .first();
   
         if (hasTimeSheets) {
           throw new Error('Cannot delete time period that has associated time sheets');
         }
   
-        await trx('time_periods')
-          .where({ period_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'time_periods',
+          tenant: context.tenant,
+        }).builder
+          .where({ period_id: id })
           .del();
       });
     }
