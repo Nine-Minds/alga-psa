@@ -758,15 +758,20 @@ export const configureTicketing = withAuth(async (
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       // Configure ticket numbering - check if any numbering field is explicitly set
       if (data.ticketPrefix !== undefined || data.ticketStartNumber !== undefined || data.ticketPaddingLength !== undefined) {
-        const existingNumbering = await trx('next_number')
-          .where({ tenant, entity_type: 'TICKET' })
+        const existingNumbering = await tenantScopedTable('next_number')
+          .where({ entity_type: 'TICKET' })
           .first();
 
         if (existingNumbering) {
-          await trx('next_number')
-            .where({ tenant, entity_type: 'TICKET' })
+          await tenantScopedTable('next_number')
+            .where({ entity_type: 'TICKET' })
             .update({
               prefix: data.ticketPrefix ?? '',
               padding_length: data.ticketPaddingLength ?? 6,
@@ -797,17 +802,15 @@ export const configureTicketing = withAuth(async (
         
         // If this imported board should be default, clear existing defaults first
         if (shouldBeDefault) {
-          await trx('boards')
+          await tenantScopedTable('boards')
             .where({ 
-              tenant,
               is_default: true
             })
             .update({ is_default: false });
             
           // Set the imported board as default
-          await trx('boards')
+          await tenantScopedTable('boards')
             .where({
-              tenant,
               board_id: boardId
             })
             .update({ is_default: true });
@@ -822,9 +825,8 @@ export const configureTicketing = withAuth(async (
         
         // If setting as default, clear any existing defaults first
         if (shouldBeDefault) {
-          await trx('boards')
+          await tenantScopedTable('boards')
             .where({ 
-              tenant,
               is_default: true
             })
             .update({ is_default: false });
@@ -855,9 +857,8 @@ export const configureTicketing = withAuth(async (
           const categoryId = require('crypto').randomUUID();
           
           // Check if category already exists
-          const existingCategory = await trx('categories')
+          const existingCategory = await tenantScopedTable('categories')
             .where({ 
-              tenant, 
               category_name: categoryName,
               board_id: boardId
             })
@@ -869,9 +870,8 @@ export const configureTicketing = withAuth(async (
           
           if (displayOrder !== null) {
             // Check if this display order already exists for this board
-            const existingWithOrder = await trx('categories')
+            const existingWithOrder = await tenantScopedTable('categories')
               .where({ 
-                tenant, 
                 board_id: boardId,
                 display_order: displayOrder
               })
@@ -879,8 +879,8 @@ export const configureTicketing = withAuth(async (
               
             if (existingWithOrder) {
               // Find the max display order and add 1
-              const maxOrder = await trx('categories')
-                .where({ tenant, board_id: boardId })
+              const maxOrder = await tenantScopedTable('categories')
+                .where({ board_id: boardId })
                 .max('display_order as max')
                 .first();
               displayOrder = (maxOrder?.max || 0) + 1;
@@ -913,9 +913,8 @@ export const configureTicketing = withAuth(async (
         
         // If we have a default status, clear existing defaults first
         if (defaultStatus) {
-          await trx('statuses')
+          await tenantScopedTable('statuses')
             .where({ 
-              tenant, 
               board_id: boardId,
               status_type: 'ticket',
               is_default: true
@@ -928,9 +927,8 @@ export const configureTicketing = withAuth(async (
           if (status.status_id && !status.status_id.startsWith('manual-')) {
             // For imported statuses, we might need to update their default flag
             if (status.is_default) {
-              await trx('statuses')
+              await tenantScopedTable('statuses')
                 .where({
-                  tenant,
                   status_id: status.status_id,
                   board_id: boardId
                 })
@@ -940,9 +938,8 @@ export const configureTicketing = withAuth(async (
           }
           
           // Check if status already exists
-          const existingStatus = await trx('statuses')
+          const existingStatus = await tenantScopedTable('statuses')
             .where({ 
-              tenant, 
               name: status.name,
               status_type: 'ticket',
               board_id: boardId
@@ -979,9 +976,8 @@ export const configureTicketing = withAuth(async (
         const priorityName = typeof priority === 'string' ? priority : priority.priority_name;
         
         // Check if priority already exists (might have been imported)
-        const existingPriority = await trx('priorities')
+        const existingPriority = await tenantScopedTable('priorities')
           .where({ 
-            tenant, 
             priority_name: priorityName,
             item_type: 'ticket'
           })
