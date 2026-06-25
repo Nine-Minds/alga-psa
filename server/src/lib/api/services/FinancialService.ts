@@ -633,8 +633,11 @@ export class FinancialService extends BaseService<ITransaction> {
 
     return withTransaction(knex, async (trx) => {
       // Get the invoice and its currency
-      const invoice = await trx('invoices')
-        .where({ invoice_id: request.invoice_id, tenant })
+      const invoice = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant,
+      }).builder
+        .where('invoice_id', request.invoice_id)
         .select('credit_applied', 'currency_code', 'subtotal', 'tax', 'total_amount')
         .first();
 
@@ -645,8 +648,11 @@ export class FinancialService extends BaseService<ITransaction> {
       const invoiceCurrency = invoice.currency_code || 'USD';
 
       // Check already-applied credit
-      const existingAllocations = await trx('credit_allocations')
-        .where({ invoice_id: request.invoice_id, tenant })
+      const existingAllocations = await createTenantScopedQuery(trx, {
+        table: 'credit_allocations',
+        tenant,
+      }).builder
+        .where('invoice_id', request.invoice_id)
         .sum('amount as total_applied')
         .first();
       const alreadyApplied = Number(existingAllocations?.total_applied || 0);
@@ -663,8 +669,11 @@ export class FinancialService extends BaseService<ITransaction> {
       }
 
       // Get client credit balance (lock row to prevent concurrent over-application)
-      const [client] = await trx('clients')
-        .where({ client_id: request.client_id, tenant })
+      const [client] = await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where('client_id', request.client_id)
         .select('credit_balance')
         .forUpdate();
       const availableCredit = client.credit_balance || 0;
@@ -675,8 +684,13 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // Get active credit entries in the same currency (FIFO by expiration, locked for update)
       const now = new Date().toISOString();
-      const creditEntries = await trx('credit_tracking')
-        .where({ client_id: request.client_id, tenant, is_expired: false, currency_code: invoiceCurrency })
+      const creditEntries = await createTenantScopedQuery(trx, {
+        table: 'credit_tracking',
+        tenant,
+      }).builder
+        .where('client_id', request.client_id)
+        .where('is_expired', false)
+        .where('currency_code', invoiceCurrency)
         .where(function() {
           this.whereNull('expiration_date').orWhere('expiration_date', '>', now);
         })
@@ -699,8 +713,11 @@ export class FinancialService extends BaseService<ITransaction> {
         const applyAmount = Math.min(remainingRequested, Number(credit.remaining_amount));
         if (applyAmount <= 0) continue;
 
-        await trx('credit_tracking')
-          .where({ credit_id: credit.credit_id, tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'credit_tracking',
+          tenant,
+        }).builder
+          .where('credit_id', credit.credit_id)
           .update({ remaining_amount: Number(credit.remaining_amount) - applyAmount, updated_at: now });
 
         totalApplied += applyAmount;
@@ -739,20 +756,29 @@ export class FinancialService extends BaseService<ITransaction> {
       });
 
       // Update invoice (read-then-update to avoid Citus-unsafe SET col = col +/- val)
-      const currentInvoice = await trx('invoices')
-        .where({ invoice_id: request.invoice_id, tenant })
+      const currentInvoice = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant,
+      }).builder
+        .where('invoice_id', request.invoice_id)
         .select('credit_applied', 'total_amount')
         .forUpdate()
         .first();
-      await trx('invoices')
-        .where({ invoice_id: request.invoice_id, tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant,
+      }).builder
+        .where('invoice_id', request.invoice_id)
         .update({
           credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
         });
 
       // Update client balance
-      await trx('clients')
-        .where({ client_id: request.client_id, tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where('client_id', request.client_id)
         .update({ credit_balance: newBalance, updated_at: now });
 
       return {
