@@ -140,4 +140,26 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(optionsSection).not.toContain(".where({ tenant })");
     expect(optionsSection).not.toContain(".where({ 'c.tenant': tenant })");
   });
+
+  it('uses structural tenant scoping for ticket update transaction roots', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('export async function updateTicketInTransaction');
+    const end = source.indexOf('export const updateTicketWithCache', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const section = source.slice(start, end);
+
+    expect(section).toContain("tenantScopedTable(trx, 'tickets', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'priorities', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'categories', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'statuses', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
+    expect(section).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    expect(section).not.toContain(".where({ ticket_id: id, tenant: tenant })");
+    expect(section).not.toContain(".where('tenant', tenant)");
+    expect(section).not.toContain('tenant: tenant,');
+    expect(section).not.toContain('.where({ tenant, master_ticket_id: id })');
+  });
 });

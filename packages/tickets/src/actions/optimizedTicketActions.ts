@@ -2226,8 +2226,8 @@ export async function updateTicketInTransaction(
       const validatedData = validateData(ticketUpdateSchema, data);
 
     // Get current ticket state before update
-    const currentTicket = await trx('tickets')
-      .where({ ticket_id: id, tenant: tenant })
+    const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: id })
       .first();
 
     if (!currentTicket) {
@@ -2268,8 +2268,7 @@ export async function updateTicketInTransaction(
         const priorityNamePattern = `P${priorityLevel} -%`;
 
         // Get the corresponding ITIL priority record from tenant's priorities table
-        const itilPriorityRecord = await trx('priorities')
-          .where('tenant', tenant)
+        const itilPriorityRecord = await tenantScopedTable(trx, 'priorities', tenant)
           .where('is_from_itil_standard', true)
           .where('priority_name', 'like', priorityNamePattern)
           .where('item_type', 'ticket')
@@ -2302,8 +2301,8 @@ export async function updateTicketInTransaction(
 
       if (newSubcategoryId) {
         // If setting a subcategory, verify it's a valid child of the category
-        const subcategory = await trx('categories')
-          .where({ category_id: newSubcategoryId, tenant: tenant })
+        const subcategory = await tenantScopedTable(trx, 'categories', tenant)
+          .where({ category_id: newSubcategoryId })
           .first();
 
         if (subcategory && subcategory.parent_category !== newCategoryId) {
@@ -2332,10 +2331,9 @@ export async function updateTicketInTransaction(
     }
 
     // Get the status before and after update to check for closure
-    const oldStatus = await trx('statuses')
+    const oldStatus = await tenantScopedTable(trx, 'statuses', tenant)
       .where({
-        status_id: currentTicket.status_id,
-        tenant: tenant
+        status_id: currentTicket.status_id
       })
       .first();
 
@@ -2347,8 +2345,8 @@ export async function updateTicketInTransaction(
     // unless gates pass, a permissioned override applies, or the caller is an
     // exempt automation path (bypassCloseRules).
     if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
-      const nextStatus = await trx('statuses')
-        .where({ status_id: updateData.status_id, tenant: tenant })
+      const nextStatus = await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_id: updateData.status_id })
         .first();
       if (nextStatus?.is_closed && !oldStatus?.is_closed) {
         const merged = { ...currentTicket, ...updateData };
@@ -2384,18 +2382,16 @@ export async function updateTicketInTransaction(
       // Use the existing transaction instead of creating a nested one
         // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
         // to avoid constraint violations after the update
-        await trx('ticket_resources')
+        await tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
-            tenant: tenant,
             ticket_id: id,
             additional_user_id: updateData.assigned_to
           })
           .delete();
         
         // Step 2: Get existing resources with the old assigned_to value
-        const existingResources = await trx('ticket_resources')
+        const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
-            tenant: tenant,
             ticket_id: id,
             assigned_to: currentTicket.assigned_to
           })
@@ -2414,9 +2410,8 @@ export async function updateTicketInTransaction(
         
         // Step 4: Delete the existing resources with the old assigned_to
         if (existingResources.length > 0) {
-          await trx('ticket_resources')
+          await tenantScopedTable(trx, 'ticket_resources', tenant)
             .where({
-              tenant: tenant,
               ticket_id: id,
               assigned_to: currentTicket.assigned_to
             })
@@ -2424,8 +2419,8 @@ export async function updateTicketInTransaction(
         }
         
         // Step 5: Update the ticket with the new assigned_to
-        const [updated] = await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update(updateData)
           .returning('*');
           
@@ -2440,8 +2435,8 @@ export async function updateTicketInTransaction(
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment
-      [updatedTicket] = await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update(updateData)
         .returning('*');
     }
@@ -2452,10 +2447,9 @@ export async function updateTicketInTransaction(
 
     // Get the new status if it was updated
     const newStatus = updateData.status_id ? 
-      await trx('statuses')
+      await tenantScopedTable(trx, 'statuses', tenant)
         .where({ 
-          status_id: updateData.status_id,
-          tenant: tenant
+          status_id: updateData.status_id
         })
         .first() :
       oldStatus;
@@ -2568,8 +2562,8 @@ export async function updateTicketInTransaction(
     // Keep the ticket row's denormalized close flag aligned with the selected status.
     if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
       const nextIsClosed = !!newStatus?.is_closed;
-      await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update({ is_closed: nextIsClosed });
       updatedTicket.is_closed = nextIsClosed;
     }
@@ -2579,14 +2573,14 @@ export async function updateTicketInTransaction(
     // lives in the audit row instead.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       const closedBy = isSystemActor ? null : user.user_id;
-      await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update({ closed_at: occurredAt, closed_by: closedBy });
       updatedTicket.closed_at = occurredAt;
       updatedTicket.closed_by = closedBy;
     } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-      await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update({ closed_at: null, closed_by: null });
       updatedTicket.closed_at = null;
       updatedTicket.closed_by = null;
@@ -2796,8 +2790,8 @@ export async function updateTicketInTransaction(
     }
 
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
-    const bundleSettings = await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: id })
+    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: id })
       .first();
 
     if (bundleSettings?.mode === 'sync_updates') {
@@ -2809,8 +2803,8 @@ export async function updateTicketInTransaction(
       }
 
       if (Object.keys(propagateFields).length > 0) {
-        const childTickets = await trx('tickets')
-          .where({ tenant, master_ticket_id: id })
+        const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ master_ticket_id: id })
           .select(['ticket_id', ...Object.keys(propagateFields)]);
 
         const childPublishes = childTickets
@@ -2818,13 +2812,14 @@ export async function updateTicketInTransaction(
             ticketId: childTicket.ticket_id as string,
             updatedFields: diffTicketFields(childTicket, propagateFields),
           }))
-          .filter((childPublish) => childPublish.updatedFields.length > 0);
+          .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
+            childPublish.updatedFields.length > 0);
 
         const propagate: Record<string, any> = { ...propagateFields };
         propagate.updated_by = user.user_id;
         propagate.updated_at = new Date().toISOString();
-        await trx('tickets')
-          .where({ tenant, master_ticket_id: id })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ master_ticket_id: id })
           .update(propagate);
 
         for (const childPublish of childPublishes) {
