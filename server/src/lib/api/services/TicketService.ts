@@ -4,12 +4,18 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import {
+  BaseService,
+  ServiceContext,
+  ListResult,
+  createTenantScopedQuery,
+  withTenantScopedQueryBuilder,
+  withTransaction,
+} from '@alga-psa/db';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
@@ -193,10 +199,18 @@ export class TicketService extends BaseService<ITicket> {
     const selectedFields = this.normalizeTicketListFields(fields);
 
     // Build base query with all necessary joins
-    let dataQuery = knex('tickets as t').where('t.tenant', context.tenant);
-
-    let countQuery = knex('tickets as t')
-      .where('t.tenant', context.tenant);
+    const dataScopedQuery = createTenantScopedQuery(knex, {
+      table: 'tickets as t',
+      alias: 't',
+      tenant: context.tenant,
+    });
+    const countScopedQuery = createTenantScopedQuery(knex, {
+      table: 'tickets as t',
+      alias: 't',
+      tenant: context.tenant,
+    });
+    let dataQuery = dataScopedQuery.builder;
+    let countQuery = countScopedQuery.builder;
 
     // Apply filters
     dataQuery = this.applyTicketFilters(dataQuery, filters);
@@ -205,8 +219,8 @@ export class TicketService extends BaseService<ITicket> {
     // Push row-level read authorization into SQL (when the caller provides it)
     // so both the page and the total count reflect only authorized rows.
     if (options.applyAuthorization) {
-      options.applyAuthorization(dataQuery);
-      options.applyAuthorization(countQuery);
+      options.applyAuthorization(withTenantScopedQueryBuilder(dataScopedQuery, dataQuery));
+      options.applyAuthorization(withTenantScopedQueryBuilder(countScopedQuery, countQuery));
     }
 
     // Apply sorting

@@ -35,9 +35,10 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { compileResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
+import { compileTenantScopedResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
+import { createTenantScopedQuery, type TenantScopedQuery } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
@@ -66,7 +67,7 @@ import { ZodError } from 'zod';
 async function resolveTicketReadAuthorizationApplier(
   apiRequest: AuthenticatedApiRequest,
   knex: Knex
-): Promise<((query: Knex.QueryBuilder) => void) | null> {
+): Promise<((query: TenantScopedQuery) => void) | null> {
   const subject = buildAuthorizationPrincipalSubject(
     apiRequest.context.user,
     apiRequest.context.apiKeyId
@@ -79,8 +80,8 @@ async function resolveTicketReadAuthorizationApplier(
     knex,
   });
   const adapter = createTicketRelationshipSqlAdapter(knex, subject.tenant);
-  const compile = (query: Knex.QueryBuilder) =>
-    compileResourceReadAuthorizationSql(query, {
+  const compile = (query: TenantScopedQuery) =>
+    compileTenantScopedResourceReadAuthorizationSql(query, {
       resourceType: 'ticket',
       action: 'read',
       builtinRules: [],
@@ -89,10 +90,15 @@ async function resolveTicketReadAuthorizationApplier(
     });
 
   // Probe representability on a throwaway builder before committing to SQL.
-  if (!compile(knex('tickets as t').where('t.tenant', subject.tenant)).supported) {
+  const probe = createTenantScopedQuery(knex, {
+    table: 'tickets as t',
+    alias: 't',
+    tenant: subject.tenant,
+  });
+  if (!compile(probe).supported) {
     return null;
   }
-  return (query: Knex.QueryBuilder) => {
+  return (query: TenantScopedQuery) => {
     compile(query);
   };
 }
