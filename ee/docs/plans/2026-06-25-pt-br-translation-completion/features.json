@@ -546,7 +546,7 @@
   {
     "id": "F051",
     "description": "Relabel picker: set localeNames.pt = 'Português (Brasil)' in packages/core/src/lib/i18n/config.ts; pt stays in supportedLocales and INCOMPLETE_LOCALES (gated pending human review).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-finalize",
     "prdRefs": [
       "2.1",
@@ -557,7 +557,7 @@
   {
     "id": "F052",
     "description": "Keep pt in INCOMPLETE_LOCALES (do NOT auto un-gate); document the one-line removal as the post-review go-live step.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-finalize",
     "prdRefs": [
       "4.1",
@@ -567,7 +567,7 @@
   {
     "id": "F053",
     "description": "Whole-catalog gate: validate-translations.cjs and audit-pt-br.cjs both pass clean for pt across all 45 namespaces; generate the final native-review export.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-finalize",
     "prdRefs": [
       "3.2",

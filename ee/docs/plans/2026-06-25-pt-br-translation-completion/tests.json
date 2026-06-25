@@ -857,7 +857,7 @@
   {
     "id": "T096",
     "description": "Language-picker helper (filterPseudoLocales) still omits pt while INCOMPLETE_LOCALES contains it.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-finalize",
     "featureIds": [
       "F052"
@@ -866,7 +866,7 @@
   {
     "id": "T097",
     "description": "localeNames.pt renders as 'Português (Brasil)' wherever locale names are shown.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-finalize",
     "featureIds": [
       "F051"
@@ -875,7 +875,7 @@
   {
     "id": "T098",
     "description": "Repo-wide validator + audit both exit 0 for pt; native-review export file is generated and non-empty.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-finalize",
     "featureIds": [
       "F053"
@@ -884,7 +884,7 @@
   {
     "id": "T099",
     "description": "Setting locale=pt via cookie/URL loads pt resources for a sampled MSP and client-portal route without falling back to English.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-finalize",
     "featureIds": [
       "F053"

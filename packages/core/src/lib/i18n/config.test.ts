@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterPseudoLocales, LOCALE_CONFIG } from './config';
+import { filterPseudoLocales, INCOMPLETE_LOCALES, LOCALE_CONFIG } from './config';
 
 describe('filterPseudoLocales', () => {
   afterEach(() => {
@@ -21,10 +21,15 @@ describe('filterPseudoLocales', () => {
   });
 
   it('strips incomplete locales in both modes', () => {
+    expect(INCOMPLETE_LOCALES).toContain('pt');
     vi.stubEnv('NODE_ENV', 'development');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).not.toContain('pt');
     vi.stubEnv('NODE_ENV', 'production');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).not.toContain('pt');
+  });
+
+  it('labels pt as Brazilian Portuguese', () => {
+    expect(LOCALE_CONFIG.localeNames.pt).toBe('Português (Brasil)');
   });
 
   it('keeps production locales untouched', () => {

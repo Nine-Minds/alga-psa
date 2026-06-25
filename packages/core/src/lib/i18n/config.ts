@@ -32,7 +32,7 @@ export const LOCALE_CONFIG = {
     nl: 'Nederlands',
     it: 'Italiano',
     pl: 'Polski',
-    pt: 'Português',
+    pt: 'Português (Brasil)',
     xx: 'Pseudo (xx)',
     yy: 'Pseudo (yy)',
   } as const,
