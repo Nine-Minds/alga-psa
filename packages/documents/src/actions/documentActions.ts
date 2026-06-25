@@ -1580,7 +1580,7 @@ export const getDocumentPreview = withAuth(async (
 
     // Check if the identifier is a document ID
     let document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
+      return await tenantScopedTable(trx, 'documents', tenant)
         .select(
           'documents.*',
           trx.raw(`
@@ -1593,7 +1593,7 @@ export const getDocumentPreview = withAuth(async (
               .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
         })
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .where({ 'documents.document_id': identifier, 'documents.tenant': tenant })
+        .where({ 'documents.document_id': identifier })
         .first();
     });
     console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${document ? 'found' : 'not found'}`);
@@ -1790,9 +1790,8 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
 
         // Get document by file_id or document_id
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('documents')
-                .where({ tenant })
-                .andWhere(function() {
+            return await tenantScopedTable(trx, 'documents', tenant)
+                .where(function() {
                     this.where({ file_id: documentIdOrFileId })
                         .orWhere({ document_id: documentIdOrFileId });
                 })
