@@ -2789,21 +2789,20 @@ export const getAllProjectTasksForListView = withAuth(async (
         await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all phases for this project
-        const phases = await trx('project_phases')
-            .where({ project_id: projectId, tenant })
+        const phases = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where('project_id', projectId)
             .orderBy('order_key');
 
-        const phaseIds = phases.map(p => p.phase_id);
+        const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
 
         // 2. Get all tasks across all phases (base fields)
         const tasks = phaseIds.length > 0
-            ? await trx('project_tasks')
+            ? await tenantScopedTable(trx, 'project_tasks', tenant)
                 .whereIn('phase_id', phaseIds)
-                .andWhere('tenant', tenant)
                 .orderBy(['phase_id', 'order_key'])
             : [];
 
-        const taskIds = tasks.map(t => t.task_id);
+        const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
 
         // 3. Get statuses using getProjectTaskStatuses (NOT getProjectStatuses)
         const { getProjectTaskStatuses } = await import('./projectActions');
@@ -2818,9 +2817,8 @@ export const getAllProjectTasksForListView = withAuth(async (
                 ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds)
                 : [],
             taskIds.length > 0
-                ? trx('task_checklist_items')
+                ? tenantScopedTable(trx, 'task_checklist_items', tenant)
                     .whereIn('task_id', taskIds)
-                    .andWhere('tenant', tenant)
                     .orderBy('order_number')
                 : [],
             taskIds.length > 0
@@ -2828,9 +2826,8 @@ export const getAllProjectTasksForListView = withAuth(async (
                 : [],
             // Fetch dependencies where task is the successor (predecessors of task)
             taskIds.length > 0
-                ? trx('project_task_dependencies as ptd')
+                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
                     .whereIn('ptd.successor_task_id', taskIds)
-                    .andWhere('ptd.tenant', tenant)
                     .leftJoin('project_tasks as pt', function() {
                         this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
                             .andOn('ptd.tenant', '=', 'pt.tenant');
@@ -2839,9 +2836,8 @@ export const getAllProjectTasksForListView = withAuth(async (
                 : [],
             // Fetch dependencies where task is the predecessor (successors of task)
             taskIds.length > 0
-                ? trx('project_task_dependencies as ptd')
+                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
                     .whereIn('ptd.predecessor_task_id', taskIds)
-                    .andWhere('ptd.tenant', tenant)
                     .leftJoin('project_tasks as pt', function() {
                         this.on('ptd.successor_task_id', '=', 'pt.task_id')
                             .andOn('ptd.tenant', '=', 'pt.tenant');
@@ -2934,11 +2930,11 @@ export const getPhaseTaskCounts = withAuth(async (
         await checkPermission(user, 'project', 'read', trx);
         await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-        const counts = await trx('project_tasks as pt')
+        const counts = await tenantScopedTable(trx, 'project_tasks as pt', tenant)
             .join('project_phases as pp', function() {
                 this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
             })
-            .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
+            .where('pp.project_id', projectId)
             .groupBy('pt.phase_id')
             .select('pt.phase_id')
             .count('pt.task_id as count');
@@ -2971,15 +2967,14 @@ export const getProjectTaskData = withAuth(async (
         await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all tasks across all phases for this project
-        const phases = await trx('project_phases')
-            .where({ project_id: projectId, tenant })
+        const phases = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where('project_id', projectId)
             .select('phase_id');
-        const phaseIds = phases.map(p => p.phase_id);
+        const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
 
         const tasks: IProjectTask[] = phaseIds.length > 0
-            ? await trx('project_tasks')
+            ? await tenantScopedTable(trx, 'project_tasks', tenant)
                 .whereIn('phase_id', phaseIds)
-                .andWhere('tenant', tenant)
                 .orderBy(['phase_id', 'order_key'])
             : [];
 
@@ -2991,18 +2986,16 @@ export const getProjectTaskData = withAuth(async (
                 ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds)
                 : [],
             taskIds.length > 0
-                ? trx('task_checklist_items')
+                ? tenantScopedTable(trx, 'task_checklist_items', tenant)
                     .whereIn('task_id', taskIds)
-                    .andWhere('tenant', tenant)
                     .orderBy('order_number')
                 : [],
             taskIds.length > 0
                 ? findTagsByEntityIds(taskIds, 'project_task').catch(() => [])
                 : [],
             taskIds.length > 0
-                ? trx('project_task_dependencies as ptd')
+                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
                     .whereIn('ptd.successor_task_id', taskIds)
-                    .andWhere('ptd.tenant', tenant)
                     .leftJoin('project_tasks as pt', function() {
                         this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
                             .andOn('ptd.tenant', '=', 'pt.tenant');
@@ -3010,9 +3003,8 @@ export const getProjectTaskData = withAuth(async (
                     .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
                 : [],
             taskIds.length > 0
-                ? trx('project_task_dependencies as ptd')
+                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
                     .whereIn('ptd.predecessor_task_id', taskIds)
-                    .andWhere('ptd.tenant', tenant)
                     .leftJoin('project_tasks as pt', function() {
                         this.on('ptd.successor_task_id', '=', 'pt.task_id')
                             .andOn('ptd.tenant', '=', 'pt.tenant');
@@ -3110,8 +3102,7 @@ export const bulkAddTagsToTasks = withAuth(async (
   // Filter to task IDs that actually exist in this tenant. tag_mappings.tagged_id
   // has no FK to project_tasks, so without this we'd silently insert orphan
   // mappings for any UUID a project:update holder submits.
-  const existingTaskRows = await knex('project_tasks')
-    .where('tenant', tenant)
+  const existingTaskRows = await tenantScopedTable(knex, 'project_tasks', tenant)
     .whereIn('task_id', uniqueIds)
     .select<Array<{ task_id: string }>>('task_id');
   const knownTaskIds = new Set<string>(existingTaskRows.map((row) => row.task_id));
@@ -3151,12 +3142,11 @@ export const bulkAddTagsToTasks = withAuth(async (
       // task IDs from projects the caller can't read. Authorize each task's
       // project (resolved once per distinct project, not per task) the same way
       // every other task mutation here does, and drop tasks that fail.
-      const taskProjectRows = await trx('project_tasks as pt')
+      const taskProjectRows = await tenantScopedTable(trx, 'project_tasks as pt', tenant)
         .join('project_phases as pp', function joinPhases() {
           this.on('pt.phase_id', '=', 'pp.phase_id')
             .andOn('pt.tenant', '=', 'pp.tenant');
         })
-        .where('pt.tenant', tenant)
         .whereIn('pt.task_id', validIds)
         .select<Array<{ task_id: string; project_id: string }>>('pt.task_id', 'pp.project_id');
       const projectIdByTask = new Map(taskProjectRows.map((row) => [row.task_id, row.project_id]));
