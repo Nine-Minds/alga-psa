@@ -515,14 +515,19 @@ export class FinancialService extends BaseService<ITransaction> {
     ]);
     const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
 
-    let dataQuery = knex('invoices as i')
+    let dataQuery = createTenantScopedQuery(knex, {
+      table: 'invoices as i',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('clients as c', function() {
         this.on('i.client_id', '=', 'c.client_id')
           .andOn('i.tenant', '=', 'c.tenant');
-      })
-      .where('i.tenant', context.tenant);
+      });
 
-    let countQuery = knex('invoices as i').where('i.tenant', context.tenant);
+    let countQuery = createTenantScopedQuery(knex, {
+      table: 'invoices as i',
+      tenant: context.tenant,
+    }).builder;
 
     if (client_id) {
       dataQuery = dataQuery.where('i.client_id', client_id);
