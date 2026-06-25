@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUser } from '@alga-psa/types';
@@ -11,6 +11,21 @@ import type {
   TemplateTask,
   TemplateWizardData,
 } from '@alga-psa/projects/types/templateWizard';
+
+type SourceTemplateStatusMappingRow = {
+  status_id?: string | null;
+  custom_status_name?: string | null;
+  display_order: number;
+};
+
+type SourceTemplatePhaseRow = {
+  template_phase_id: string;
+  phase_name: string;
+  description?: string | null;
+  duration_days?: number | null;
+  start_offset_days?: number | null;
+  order_key: string;
+};
 
 function getTaskMarkdownDescription(task: TemplateTask): string | null {
   if (task.description_rich_text) {
@@ -30,6 +45,14 @@ async function checkPermission(
   if (!hasPermissionResult) {
     throw new Error(`Permission denied: Cannot ${action} ${resource}`);
   }
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
 }
 
 /**
@@ -214,8 +237,8 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify template exists
-    const template = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const template = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .first();
 
     if (!template) {
@@ -223,8 +246,8 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     }
 
     // 1. Update template metadata
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({
         template_name: data.template_name.trim(),
         description: data.description?.trim() || null,
@@ -234,13 +257,15 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
       });
 
     // 2. Delete existing status mappings, phases, tasks, dependencies, and checklists
-    await trx('project_template_status_mappings')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_id: templateId })
       .delete();
 
     // 3. Delete existing phases, tasks, dependencies, and checklists
     // (CASCADE should handle related records)
-    await trx('project_template_phases').where({ template_id: templateId, tenant }).delete();
+    await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_id: templateId })
+      .delete();
 
     // 4. Recreate phases with proper ordering
     const phaseMap = new Map<string, string>();
@@ -392,8 +417,8 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     await checkPermission(user, 'project', 'create', trx);
 
     // Get source template with all details
-    const sourceTemplate = await trx('project_templates')
-      .where({ template_id: sourceTemplateId, tenant })
+    const sourceTemplate = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: sourceTemplateId })
       .first();
 
     if (!sourceTemplate) {
@@ -414,10 +439,8 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
       .returning('*');
 
     // Copy status mappings
-    const statusMappings = await trx('project_template_status_mappings').where({
-      template_id: sourceTemplateId,
-      tenant,
-    });
+    const statusMappings = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_id: sourceTemplateId }) as SourceTemplateStatusMappingRow[];
 
     if (statusMappings.length > 0) {
       const statusInserts = statusMappings.map((mapping) => ({
@@ -431,9 +454,9 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     }
 
     // Copy phases
-    const sourcePhases = await trx('project_template_phases')
-      .where({ template_id: sourceTemplateId, tenant })
-      .orderBy('order_key');
+    const sourcePhases = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_id: sourceTemplateId })
+      .orderBy('order_key') as SourceTemplatePhaseRow[];
 
     const phaseMap = new Map<string, string>();
 
@@ -454,8 +477,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     }
 
     // Copy tasks
-    const sourceTasks = await trx('project_template_tasks')
-      .where('tenant', tenant)
+    const sourceTasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
       .whereIn(
         'template_phase_id',
         sourcePhases.map((p) => p.template_phase_id)
@@ -491,10 +513,8 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     }
 
     // Copy dependencies
-    const sourceDeps = await trx('project_template_dependencies').where({
-      template_id: sourceTemplateId,
-      tenant,
-    });
+    const sourceDeps = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+      .where({ template_id: sourceTemplateId });
 
     for (const dep of sourceDeps) {
       const newPred = taskMap.get(dep.predecessor_task_id);
@@ -515,8 +535,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
 
     // Copy checklists
     if (taskMap.size > 0) {
-      const sourceChecklists = await trx('project_template_checklist_items')
-        .where('tenant', tenant)
+      const sourceChecklists = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
         .whereIn('template_task_id', Array.from(taskMap.keys()));
 
       for (const item of sourceChecklists) {
