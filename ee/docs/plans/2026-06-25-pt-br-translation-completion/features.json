@@ -21,7 +21,7 @@
   {
     "id": "F003",
     "description": "Build a pt-BR audit script (scripts/audit-pt-br.cjs) that, per namespace, reports: keys still identical to English (excluding allowlist), glossary/forbidden-term violations, and unverified (not-yet-reviewed) keys; emits a per-namespace JSON+markdown report the loop consumes.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-tooling",
     "prdRefs": [
       "3.2",
@@ -31,7 +31,7 @@
   {
     "id": "F004",
     "description": "Audit script tracks a per-key \"reviewed\" ledger (e.g. a sidecar pt review-state file) so the full re-audit of already-translated keys is resumable across loop iterations.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-tooling",
     "prdRefs": [
       "3.2",
@@ -41,7 +41,7 @@
   {
     "id": "F005",
     "description": "Add native-review export generator (scripts/export-pt-review.cjs) producing an en→pt side-by-side sheet (CSV/markdown) for human sign-off.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-tooling",
     "prdRefs": [
       "4.2",

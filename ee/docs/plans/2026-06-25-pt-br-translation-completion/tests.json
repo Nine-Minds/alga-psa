@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "Audit script exits non-zero when a seeded forbidden term (e.g. \"comboio\") is present in any pt file and zero when clean.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-tooling",
     "featureIds": [
       "F003"
@@ -29,7 +29,7 @@
   {
     "id": "T004",
     "description": "Audit script correctly counts identical-to-English keys against the allowlist (known fixture namespace).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-tooling",
     "featureIds": [
       "F003"
@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "description": "Review-export produces one row per pt key with en source, pt value, namespace, and review status.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-tooling",
     "featureIds": [
       "F003"

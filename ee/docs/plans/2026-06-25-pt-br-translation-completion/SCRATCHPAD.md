@@ -103,3 +103,10 @@ npm run migrate
 - Implemented F002: added `identicalAllowlist` to the glossary for intentionally identical technical strings, loanwords, product/proper names, and safe technical patterns. Kept it conservative so the future audit still flags English copy-forwards by default.
 - Implemented T001/T002 with `scripts/tests/pt-br-glossary.test.mjs`. The test parses the glossary, requires complete term fields, checks duplicate IDs/English terms, verifies canonical forbidden markers (`comboio`, `telemóvel`, `ecrã`, `autocarro`, `registo`, `utilizador`, `rato`), and validates allowlist patterns.
 - Verification: `node --test scripts/tests/pt-br-glossary.test.mjs` passed (3 tests).
+
+## 2026-06-25 — audit-tooling group
+- Implemented F003: added `scripts/audit-pt-br.cjs`, which compares `server/public/locales/en` to `pt`, reports identical-to-English values after applying the glossary allowlist, scans for forbidden pt-PT/wrong-register terms, counts unreviewed keys from the ledger, and can emit JSON/markdown reports under the plan `reports/` directory.
+- Implemented F004: added `ee/docs/plans/2026-06-25-pt-br-translation-completion/pt-review-state.json` as the per-key resumable review ledger. Empty ledger shape is `reviewed[namespace][dottedKey] = true` or an object with `reviewed: true`.
+- Implemented F005: added `scripts/export-pt-review.cjs`, producing CSV or markdown side-by-side rows with namespace, key, English, Portuguese, and review status.
+- Implemented T003-T005 with `scripts/tests/pt-br-audit-tooling.test.mjs`. Fixture coverage checks forbidden-term failure and recovery, identical-to-English allowlist counting, and one export row per key with review status.
+- Verification: `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests). `node scripts/audit-pt-br.cjs --no-write-report || true` smoke-tested the full catalog and currently reports the expected baseline debt: 45 namespaces, 22,567 keys, 14,127 untranslated, 66 forbidden-term violations, 22,567 unreviewed. `node scripts/export-pt-review.cjs --namespace common --output <tmp>` wrote 898 common rows plus header.
