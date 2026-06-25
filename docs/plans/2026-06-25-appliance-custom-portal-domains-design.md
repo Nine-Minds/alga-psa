@@ -35,7 +35,8 @@ These were settled during design and frame everything below:
 | Routing + TLS ownership | **Bring-your-own-proxy** | Operator runs their own proxy/LB; appliance provisions nothing |
 | Activation model | **Trust-on-submit** | Domain becomes `active` immediately; no DNS/cert verification on-box |
 | Config surface | **In-app EE Settings** | MSP admin manages it in the existing Settings card; no new operator UI |
-| Cloud-vs-appliance branch | **Provisioner seam** | One abstraction, two drivers, selected by a dedicated env var |
+| Cloud-vs-appliance branch | **Provisioner seam** | One abstraction, two drivers, selected via the deployment profile |
+| Config model | **Deployment profile → capabilities** | One `DEPLOYMENT_PROFILE` input resolves to a typed capabilities object; code reads named capabilities, not the profile |
 | Disable behavior | **Delete the row** | No tombstone; OTT rows cascade away |
 | Proxy-header robustness | **Contract + XFH fallback + warning** | Documented contract, trusted `X-Forwarded-Host` fallback, and a best-effort misconfig warning |
 
@@ -68,6 +69,37 @@ The single external requirement for all of this to work is that the operator's p
   operator to "point a CNAME to" it. On the appliance that target does not exist; the proxy
   target is the appliance itself.
 
+## Deployment profile and capabilities
+
+Rather than minting a new environment variable per appliance behavior, the hosted-vs-appliance
+divergence is expressed once. A single input — `DEPLOYMENT_PROFILE` (`hosted` by default, or
+`appliance`) — is resolved in one place into a typed capabilities object:
+
+```
+DEPLOYMENT_PROFILE=appliance
+  → resolveDeploymentCapabilities()
+      {
+        portalDomain: { provisioner: 'direct' },   // 'temporal' on hosted
+        trustForwardedHost: true,                   // false on hosted
+      }
+```
+
+The rest of the code reads **named capabilities** (`caps.portalDomain.provisioner`,
+`caps.trustForwardedHost`) — never `DEPLOYMENT_PROFILE` directly. This keeps call sites
+semantic and independently testable, avoids the "conditional magnet" failure mode of a raw
+`if (appliance)` boolean (which mis-names what it controls and accretes unrelated branches),
+and still gives the DRY-ness of a single mode: one place to set, one place to map, no
+impossible flag combinations. Individual capabilities remain overridable for the rare
+deployment that needs a non-default mix.
+
+The resolver lives in a shared module (e.g. `shared/core/deployment-profile.ts`) so both
+`alga-core` server actions and the edge middleware read the same capabilities. There is no
+existing deployment-mode signal to reuse: `EDITION` is orthogonal (the appliance and the cloud
+are both EE), and the Helm `hostedEnv` flag is chart-scoped tooling, not a runtime profile.
+
+Portal domains is the first consumer; subsequent appliance-specific behaviors extend the
+capabilities object in this one place instead of adding env vars.
+
 ## Architecture: the provisioner seam
 
 Introduce a `PortalDomainProvisioner` interface that owns **status transitions and side
@@ -97,20 +129,16 @@ Two implementations under `ee/server/src/lib/portal-domains/provisioner/`:
 
 ### Driver selection
 
-A dedicated environment variable read by **`alga-core`** (where the server actions run — not
-the worker):
+The provisioner factory (in `alga-core`, where the server actions run — not the worker)
+selects the driver from `caps.portalDomain.provisioner`:
 
-```
-PORTAL_DOMAIN_PROVISIONER = temporal | direct        # default: temporal
-```
+- **Cloud (`hosted` profile):** `temporal`. Zero behavior change.
+- **Appliance (`appliance` profile):** `direct`.
 
-- **Cloud:** unset → `temporal`. Zero behavior change.
-- **Appliance:** Flux sets `direct`.
-
-The factory **defaults to `temporal` on unset or unknown values** — the safe default for the
-common (cloud) case. A misconfigured appliance (variable omitted) produces a visible "stuck
-at `pending_dns`" symptom rather than silent corruption, because the enqueue lands on a queue
-no worker services.
+The capabilities resolver **defaults to the `hosted` profile** (→ `temporal`) on an unset or
+unknown `DEPLOYMENT_PROFILE` — the safe default for the common case. A misconfigured appliance
+(profile omitted) produces a visible "stuck at `pending_dns`" symptom rather than silent
+corruption, because the enqueue lands on a queue no worker services.
 
 ### Reject the app host as a vanity domain
 
@@ -122,19 +150,23 @@ the middleware never redirects (host equals canonical), a confusing no-op.
 
 ### New
 
+- `shared/core/deployment-profile.ts` (or equivalent shared module) — `DEPLOYMENT_PROFILE`
+  parsing + `resolveDeploymentCapabilities()` returning the typed capabilities object. Read by
+  both the server actions and the middleware.
 - `ee/server/src/lib/portal-domains/provisioner/types.ts` — interface + `ProvisionContext`.
 - `ee/server/src/lib/portal-domains/provisioner/temporalProvisioner.ts` — extracted cloud
   behavior.
 - `ee/server/src/lib/portal-domains/provisioner/directProvisioner.ts` — appliance
   trust-on-submit.
-- `ee/server/src/lib/portal-domains/provisioner/index.ts` — factory reading
-  `PORTAL_DOMAIN_PROVISIONER`.
+- `ee/server/src/lib/portal-domains/provisioner/index.ts` — factory selecting the driver from
+  `caps.portalDomain.provisioner`.
 
 ### Modified
 
 - `ee/server/src/lib/actions/tenant-actions/portalDomainActions.ts` — the five actions
-  delegate side effects to the provisioner; status-message literals move into the temporal
-  driver; the status response gains a `mode: 'temporal' | 'direct'` field.
+  delegate side effects to the provisioner (selected from `caps.portalDomain.provisioner`);
+  status-message literals move into the temporal driver; the status response gains a
+  `mode: 'temporal' | 'direct'` field.
 - `packages/tenancy/src/actions/tenant-actions/portalDomain.types.ts` — add `mode` to
   `PortalDomainStatusResponse` and surface the proxy fields in `verificationDetails`.
 - `ee/server/src/components/settings/general/ClientPortalDomainSettings.tsx` — make the help
@@ -143,11 +175,11 @@ the middleware never redirects (host equals canonical), a confusing no-op.
   states); the `active` / `disabled` badges work unchanged. Add the "never seen on vanity
   Host" warning.
 - i18n `msp/settings` — add the proxy-contract and warning strings.
-- `helm/templates/deployment.yaml` — add a templated `PORTAL_DOMAIN_PROVISIONER` env from
-  `.Values.portalDomain.provisioner | default "temporal"`. (The chart already injects env
-  this way, e.g. `TEMPORAL_PORTAL_DOMAIN_TASK_QUEUE`.)
+- `helm/templates/deployment.yaml` — add a templated `DEPLOYMENT_PROFILE` env from
+  `.Values.deploymentProfile | default "hosted"`. (The chart already injects env this way,
+  e.g. `TEMPORAL_PORTAL_DOMAIN_TASK_QUEUE`.)
 - `ee/appliance/flux/profiles/single-node/values/alga-core.single-node.yaml` — set
-  `portalDomain.provisioner: direct` and the `PORTAL_DOMAIN_TRUST_FORWARDED_HOST` flag.
+  `deploymentProfile: appliance` (which yields `provisioner: direct` + `trustForwardedHost: true`).
 - `ee/appliance/flux/profiles/single-node/values/temporal-worker.single-node.yaml` — drop
   `portal-domain-workflows` from `taskQueue` and remove the empty `portalDomain` block. The
   appliance never loads K8s provisioning.
@@ -213,8 +245,8 @@ To make more proxy configurations work and to surface the dominant misconfigurat
 
 - **Trusted `X-Forwarded-Host` fallback.** A `resolveRequestHost()` helper in the middleware
   uses `Host` by default and falls back to `X-Forwarded-Host` only when
-  `PORTAL_DOMAIN_TRUST_FORWARDED_HOST` is enabled (appliance on, cloud off — trusting
-  forwarded host headers is a host-injection consideration, so it is opt-in).
+  `caps.trustForwardedHost` is set (appliance on, cloud off — trusting forwarded host headers
+  is a host-injection consideration, so it is opt-in via the deployment profile).
 - **Active-domain set + last-seen.** The provisioner maintains a Redis set of active vanity
   hostnames (register adds, disable removes). A request arriving on an active vanity Host
   records a last-seen timestamp.
@@ -258,10 +290,12 @@ path).
   `=== canonicalHost`.
 - `temporalProvisioner`: regression — still upserts `pending_dns` and enqueues with the
   correct trigger (behavior-preserving extraction).
-- Factory: `direct` / `temporal` / unset (→`temporal`) / unknown (→`temporal`).
-- Middleware `resolveRequestHost`: `Host` by default; `X-Forwarded-Host` honored only with the
-  flag; tell-tale log-warn fires on XFH≠Host and not in the healthy case; last-seen recorded
-  on an active vanity Host.
+- `resolveDeploymentCapabilities`: `appliance` → `{ provisioner: 'direct', trustForwardedHost: true }`;
+  `hosted` / unset / unknown → `{ provisioner: 'temporal', trustForwardedHost: false }`.
+- Factory: reads `caps.portalDomain.provisioner` and returns the matching driver.
+- Middleware `resolveRequestHost`: `Host` by default; `X-Forwarded-Host` honored only when
+  `caps.trustForwardedHost` is set; tell-tale log-warn fires on XFH≠Host and not in the healthy
+  case; last-seen recorded on an active vanity Host.
 
 **Integration**
 
