@@ -95,4 +95,49 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).not.toContain("'ct.tenant': tenant");
     expect(section).not.toContain("'mt.tenant': tenant");
   });
+
+  it('uses structural tenant scoping for ticket list and form option roots', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const listBaseStart = source.indexOf('async function buildTicketListBaseQuery');
+    const listBaseEnd = source.indexOf('function buildTicketListSearchPrefixTsquery', listBaseStart);
+    const listActionStart = source.indexOf('export const getTicketsForList');
+    const listActionEnd = source.indexOf('export const getAllMatchingTicketIds', listActionStart);
+    const boardIdsStart = source.indexOf('export const getTicketBoardIds');
+    const boardIdsEnd = source.indexOf('export const getTicketFormOptions', boardIdsStart);
+    const optionsStart = source.indexOf('export const getTicketFormOptions');
+    const optionsEnd = source.indexOf('export async function updateTicketInTransaction', optionsStart);
+
+    expect(listBaseStart).toBeGreaterThanOrEqual(0);
+    expect(listBaseEnd).toBeGreaterThan(listBaseStart);
+    expect(listActionStart).toBeGreaterThanOrEqual(0);
+    expect(listActionEnd).toBeGreaterThan(listActionStart);
+    expect(boardIdsStart).toBeGreaterThanOrEqual(0);
+    expect(boardIdsEnd).toBeGreaterThan(boardIdsStart);
+    expect(optionsStart).toBeGreaterThanOrEqual(0);
+    expect(optionsEnd).toBeGreaterThan(optionsStart);
+
+    const listBaseSection = source.slice(listBaseStart, listBaseEnd);
+    const listActionSection = source.slice(listActionStart, listActionEnd);
+    const boardIdsSection = source.slice(boardIdsStart, boardIdsEnd);
+    const optionsSection = source.slice(optionsStart, optionsEnd);
+
+    expect(listBaseSection).toContain("tenantScopedTable(trx, 'boards', tenant)");
+    expect(listBaseSection).not.toContain(".where('tenant', tenant)");
+
+    expect(listActionSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
+    expect(listActionSection).not.toContain(".where('tm.tenant', tenant)");
+
+    expect(boardIdsSection).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
+    expect(boardIdsSection).not.toContain(".where('t.tenant', tenant)");
+
+    expect(optionsSection).toContain("tenantScopedTable(trx, 'statuses', tenant)");
+    expect(optionsSection).toContain("tenantScopedTable(trx, 'priorities', tenant)");
+    expect(optionsSection).toContain("tenantScopedTable(trx, 'boards', tenant)");
+    expect(optionsSection).toContain("tenantScopedTable(trx, 'categories', tenant)");
+    expect(optionsSection).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
+    expect(optionsSection).toContain("tenantScopedTable(trx, 'users', tenant)");
+    expect(optionsSection).not.toContain(".where({ tenant, item_type: 'ticket' })");
+    expect(optionsSection).not.toContain(".where({ tenant })");
+    expect(optionsSection).not.toContain(".where({ 'c.tenant': tenant })");
+  });
 });

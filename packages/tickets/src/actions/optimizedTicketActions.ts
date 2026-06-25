@@ -1064,9 +1064,8 @@ async function buildTicketListBaseQuery(
         }
       });
     } else if (validatedFilters.boardFilterState !== 'all') {
-      const boardSubquery = trx('boards')
+      const boardSubquery = tenantScopedTable(trx, 'boards', tenant)
         .select('board_id')
-        .where('tenant', tenant)
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
@@ -1875,12 +1874,11 @@ export const getTicketsForList = withAuth(async (
         ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
         : Promise.resolve(new Map<string, string | null>()),
       ticketIds.length > 0
-        ? trx('tag_mappings as tm')
+        ? tenantScopedTable(trx, 'tag_mappings as tm', tenant)
             .join('tag_definitions as td', function() {
               this.on('tm.tenant', '=', 'td.tenant')
                 .andOn('tm.tag_id', '=', 'td.tag_id');
             })
-            .where('tm.tenant', tenant)
             .whereIn('tm.tagged_id', ticketIds)
             .where('tm.tagged_type', 'ticket')
             .select(
@@ -2033,8 +2031,7 @@ export const getTicketBoardIds = withAuth(async (
       : await filterAuthorizedTickets(
           trx,
           authorizationContext,
-          await trx('tickets as t')
-            .where('t.tenant', tenant)
+          await tenantScopedTable(trx, 'tickets as t', tenant)
             .whereIn('t.ticket_id', uniqueIds)
             .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
         );
@@ -2073,37 +2070,32 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       users,
       tags
     ] = await Promise.all([
-      trx('statuses')
+      tenantScopedTable(trx, 'statuses', tenant)
         .where({
-          tenant: tenant,
           status_type: 'ticket'  // Changed from item_type to status_type
         })
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
 
       // Fetch only tenant-specific ticket priorities (includes ITIL ones copied to tenant)
-      trx('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      tenantScopedTable(trx, 'priorities', tenant)
+        .where({ item_type: 'ticket' })
         .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc'),
       
-      trx('boards')
-        .where({ tenant })
+      tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
 
       // Fetch only tenant-specific categories (includes ITIL ones copied to tenant)
-      trx('categories')
-        .where({ tenant })
+      tenantScopedTable(trx, 'categories', tenant)
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
-      trx('clients as c')
+      tenantScopedTable(trx, 'clients as c', tenant)
         .select('c.*')
-        .where({ 'c.tenant': tenant })
         .orderBy('c.client_name', 'asc'),
 
-      trx('users')
-        .where({ tenant })
+      tenantScopedTable(trx, 'users', tenant)
         .orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
@@ -2152,13 +2144,13 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
     }));
 
     // --- Add Logo URL Processing ---
-    const clientsData = clients; 
+    const clientsData = clients as IClient[];
 
     // Process clients to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
+    const clientIds = clientsData.map((c: IClient) => c.client_id);
     const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
-    const clientsWithLogos = clientsData.map((clientData) => {
+    const clientsWithLogos = clientsData.map((clientData: IClient) => {
       const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
       return {
         ...clientData,
