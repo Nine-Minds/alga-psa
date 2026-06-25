@@ -877,8 +877,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -893,8 +896,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       const hasInvoiceChargesTable = await trx.schema.hasTable('invoice_charges');
       const lineItems = hasInvoiceChargesTable
         ? await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id)
-        : await trx('invoice_line_items')
-          .where({ invoice_id: data.invoice_id, tenant: context.tenant });
+        : await createTenantScopedQuery(trx, {
+          table: 'invoice_line_items',
+          tenant: context.tenant,
+        }).builder
+          .where({ invoice_id: data.invoice_id });
 
       if (!lineItems.length) {
         throw new Error('Invoice must have line items to be finalized');
@@ -919,8 +925,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status and amounts
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .update(invoiceUpdate);
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
@@ -983,8 +992,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
@@ -1004,8 +1016,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: 'sent',
           updated_by: context.userId,
