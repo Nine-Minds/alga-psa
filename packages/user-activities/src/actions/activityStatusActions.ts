@@ -239,17 +239,20 @@ export const getActivityStatusOptions = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+      table,
+      tenant,
+    }).builder;
+
     if (activityType === ActivityType.TICKET) {
-      const ticket = await trx("tickets")
+      const ticket = await tenantScopedTable("tickets")
         .where("ticket_id", activityId)
-        .where("tenant", tenant)
         .select("board_id")
         .first();
 
       if (!ticket) return [];
 
-      const statuses = await trx("statuses")
-        .where("tenant", tenant)
+      const statuses = await tenantScopedTable("statuses")
         .where("status_type", "ticket")
         .modify((qb) => {
           if (ticket.board_id) qb.andWhere("board_id", ticket.board_id);
@@ -267,7 +270,7 @@ export const getActivityStatusOptions = withAuth(async (
 
     if (activityType === ActivityType.PROJECT_TASK) {
       // Need the task's project and phase to scope mappings correctly
-      const task = await trx("project_tasks")
+      const task = await tenantScopedTable("project_tasks")
         .leftJoin("project_phases", function () {
           this.on("project_tasks.phase_id", "project_phases.phase_id").andOn(
             "project_tasks.tenant",
@@ -275,7 +278,6 @@ export const getActivityStatusOptions = withAuth(async (
           );
         })
         .where("project_tasks.task_id", activityId)
-        .where("project_tasks.tenant", tenant)
         .select(
           "project_phases.project_id as project_id",
           "project_tasks.phase_id as phase_id"
@@ -285,14 +287,16 @@ export const getActivityStatusOptions = withAuth(async (
       if (!task) return [];
 
       // First, check for phase-specific mappings
-      const phaseMappings = await trx("project_status_mappings as psm")
+      const phaseMappings = await createTenantScopedQuery(trx, {
+        table: "project_status_mappings as psm",
+        tenant,
+      }).builder
         .leftJoin("statuses as s", function () {
           this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
         })
         .leftJoin("standard_statuses as ss", function () {
           this.on("psm.standard_status_id", "=", "ss.standard_status_id");
         })
-        .where("psm.tenant", tenant)
         .where("psm.project_id", task.project_id)
         .where("psm.phase_id", task.phase_id)
         .select(
@@ -315,14 +319,16 @@ export const getActivityStatusOptions = withAuth(async (
       }
 
       // Fall back to project-default mappings (phase_id IS NULL)
-      const projectMappings = await trx("project_status_mappings as psm")
+      const projectMappings = await createTenantScopedQuery(trx, {
+        table: "project_status_mappings as psm",
+        tenant,
+      }).builder
         .leftJoin("statuses as s", function () {
           this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
         })
         .leftJoin("standard_statuses as ss", function () {
           this.on("psm.standard_status_id", "=", "ss.standard_status_id");
         })
-        .where("psm.tenant", tenant)
         .where("psm.project_id", task.project_id)
         .whereNull("psm.phase_id")
         .select(
