@@ -1097,8 +1097,11 @@ export class FinancialService extends BaseService<ITransaction> {
     const offset = (page - 1) * limit;
 
     // Build base query
-    let baseQuery = knex('credit_tracking')
-      .where({ 'credit_tracking.client_id': client_id, 'credit_tracking.tenant': tenant });
+    let baseQuery = createTenantScopedQuery(knex, {
+      table: 'credit_tracking',
+      tenant,
+    }).builder
+      .where('credit_tracking.client_id', client_id);
 
     if (!include_expired) {
       baseQuery = baseQuery.where('credit_tracking.is_expired', false);
@@ -1154,8 +1157,11 @@ export class FinancialService extends BaseService<ITransaction> {
     const tenant = context.tenant;
 
     // Sum credit-related transactions
-    const transactions = await knex('transactions')
-      .where({ client_id: clientId, tenant })
+    const transactions = await createTenantScopedQuery(knex, {
+      table: 'transactions',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
       .whereIn('type', [
         'credit_issuance', 'credit_application', 'credit_adjustment',
         'credit_expiration', 'credit_transfer', 'credit_issuance_from_negative_invoice'
@@ -1168,8 +1174,11 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     // Get client's actual balance
-    const client = await knex('clients')
-      .where({ client_id: clientId, tenant })
+    const client = await createTenantScopedQuery(knex, {
+      table: 'clients',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
       .select('credit_balance')
       .first();
 
