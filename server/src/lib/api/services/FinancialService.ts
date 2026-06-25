@@ -1314,11 +1314,11 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // If this is set as default, unset other defaults for the client
       if (data.is_default) {
-        await trx('payment_methods')
-          .where({
-            client_id: data.client_id,
-            tenant: context.tenant
-          })
+        await createTenantScopedQuery(trx, {
+          table: 'payment_methods',
+          tenant: context.tenant,
+        }).builder
+          .where('client_id', data.client_id)
           .update({ is_default: false });
       }
 
