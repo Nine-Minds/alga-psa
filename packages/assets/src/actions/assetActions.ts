@@ -1748,8 +1748,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             };
 
             const buildAssetListQuery = () => {
-                const query = trx('assets')
-                    .where('assets.tenant', tenant)
+                const query = tenantScopedTable(trx, 'assets', tenant)
                     .leftJoin('clients', function(this: Knex.JoinClause) {
                         this.on('clients.client_id', '=', 'assets.client_id')
                             .andOn('clients.tenant', '=', 'assets.tenant')
@@ -1927,8 +1926,8 @@ export const updateMaintenanceSchedule = withAuth(async (
         const validatedData = validateData(updateMaintenanceScheduleSchema, data);
 
         const schedule = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const existingSchedule = await trx('asset_maintenance_schedules')
-                .where({ tenant, schedule_id })
+            const existingSchedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
+                .where({ schedule_id })
                 .select('asset_id')
                 .first();
 
@@ -1939,8 +1938,8 @@ export const updateMaintenanceSchedule = withAuth(async (
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
 
             // Update the schedule
-            const [updatedSchedule] = await trx('asset_maintenance_schedules')
-                .where({ tenant, schedule_id })
+            const [updatedSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
+                .where({ schedule_id })
                 .update({
                     ...validatedData,
                     updated_at: trx.fn.now()
@@ -1949,9 +1948,8 @@ export const updateMaintenanceSchedule = withAuth(async (
 
             // Update notifications if next_maintenance changed
             if (validatedData.next_maintenance) {
-                await trx('asset_maintenance_notifications')
+                await tenantScopedTable(trx, 'asset_maintenance_notifications', tenant)
                     .where({
-                        tenant,
                         schedule_id,
                         is_sent: false
                     })
@@ -2008,8 +2006,8 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
 
     try {
         const [schedule] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const existingSchedule = await trx('asset_maintenance_schedules')
-                .where({ tenant, schedule_id })
+            const existingSchedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
+                .where({ schedule_id })
                 .select('asset_id')
                 .first();
             if (!existingSchedule) {
@@ -2018,8 +2016,8 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
 
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
 
-            return await trx('asset_maintenance_schedules')
-                .where({ tenant, schedule_id })
+            return await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
+                .where({ schedule_id })
                 .delete()
                 .returning(['asset_id']);
         });
@@ -2047,9 +2045,8 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
         const validatedData = validateData(createMaintenanceHistorySchema, data);
 
         const history = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const schedule = await trx('asset_maintenance_schedules')
+            const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
                 .where({
-                    tenant,
                     schedule_id: validatedData.schedule_id
                 })
                 .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_name', 'maintenance_type')
@@ -2075,9 +2072,8 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 .returning('*');
 
             // Update the schedule's last maintenance date and calculate next maintenance
-            const [updatedSchedule] = await trx('asset_maintenance_schedules')
+            const [updatedSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
                 .where({
-                    tenant,
                     schedule_id: validatedData.schedule_id
                 })
                 .update({
@@ -2134,13 +2130,13 @@ export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, as
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceSchedule[]> => {
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
-            const schedules = await trx('asset_maintenance_schedules')
-                .where({ tenant, asset_id })
+            const schedules = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
+                .where({ asset_id })
                 .orderBy('next_maintenance', 'asc')
                 .select('*');
 
             // Transform Date objects to ISO strings
-            return schedules.map(schedule => ({
+            return schedules.map((schedule: any) => ({
                 ...schedule,
                 next_maintenance: schedule.next_maintenance instanceof Date
                     ? schedule.next_maintenance.toISOString()
@@ -2274,16 +2270,16 @@ async function fetchAssetMaintenanceReport(
     tenant: string,
     asset_id: string
 ): Promise<AssetMaintenanceReport> {
-    const asset = await db('assets')
-        .where({ tenant, asset_id })
+    const asset = await tenantScopedTable(db, 'assets', tenant)
+        .where({ asset_id })
         .first();
 
     if (!asset) {
         throw new Error('Asset not found');
     }
 
-    const stats = await db('asset_maintenance_schedules')
-        .where({ tenant, asset_id })
+    const stats = await tenantScopedTable(db, 'asset_maintenance_schedules', tenant)
+        .where({ asset_id })
         .select(
             db.raw('COUNT(*) as total_schedules'),
             db.raw('SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active_schedules'),
@@ -2292,22 +2288,22 @@ async function fetchAssetMaintenanceReport(
         )
         .first() as unknown as { total_schedules: string; active_schedules: string; last_maintenance: string | null; next_maintenance: string | null } | undefined;
 
-    const history = await db('asset_maintenance_history')
-        .where({ tenant, asset_id })
+    const history = await tenantScopedTable(db, 'asset_maintenance_history', tenant)
+        .where({ asset_id })
         .orderBy('performed_at', 'desc');
 
-    const completed = await db('asset_maintenance_history')
-        .where({ tenant, asset_id })
+    const completed = await tenantScopedTable(db, 'asset_maintenance_history', tenant)
+        .where({ asset_id })
         .count('* as count')
         .first();
 
-    const scheduled = await db('asset_maintenance_schedules')
-        .where({ tenant, asset_id })
+    const scheduled = await tenantScopedTable(db, 'asset_maintenance_schedules', tenant)
+        .where({ asset_id })
         .sum('frequency_interval as sum')
         .first();
 
-    const upcomingCount = await db('asset_maintenance_notifications')
-        .where({ tenant, asset_id, is_sent: false })
+    const upcomingCount = await tenantScopedTable(db, 'asset_maintenance_notifications', tenant)
+        .where({ asset_id, is_sent: false })
         .count('* as count')
         .first()
         .then(result => Number(result?.count || 0));
@@ -2326,7 +2322,7 @@ async function fetchAssetMaintenanceReport(
         last_maintenance: stats?.last_maintenance || undefined,
         next_maintenance: stats?.next_maintenance || undefined,
         compliance_rate,
-        maintenance_history: history.map((record): AssetMaintenanceHistory => ({
+        maintenance_history: history.map((record: any): AssetMaintenanceHistory => ({
             ...record,
             performed_at: typeof record.performed_at === 'string'
                 ? record.performed_at
