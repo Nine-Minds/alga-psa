@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getImageUrlInternal } from './imageUrl';
 import type { Knex } from 'knex';
 
@@ -25,10 +25,7 @@ export async function getEntityImageUrl(
 
     // Wrap database queries in a transaction for consistency
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       // Query for document association
       let query = tenantScopedTable('document_associations')
@@ -158,10 +155,7 @@ export async function getEntityImageUrlsBatch(
 
   try {
     const { knex } = await createTenantKnex(tenant);
-    const tenantScopedTable = (table: string) => createTenantScopedQuery(knex, {
-      table,
-      tenant
-    }).builder;
+    const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
 
     // Get all associations in one query
     const associations = await tenantScopedTable('document_associations')

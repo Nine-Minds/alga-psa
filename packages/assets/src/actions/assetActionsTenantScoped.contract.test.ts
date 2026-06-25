@@ -21,8 +21,9 @@ describe('asset action helper tenant-scoped query contract', () => {
             '// Export getAsset',
         );
 
-        expect(source).toContain("import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db'");
+        expect(source).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db'");
         expect(source).toContain('function tenantScopedTable(');
+        expect(source).not.toContain('createTenantScopedQuery');
         expect(helperSection).toContain("tenantScopedTable(trx, 'client_locations', tenant)");
         expect(helperSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
         expect(helperSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");

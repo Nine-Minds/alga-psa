@@ -55,7 +55,7 @@ import {
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -146,7 +146,7 @@ function tenantScopedTable(
     table: string,
     tenant: string,
 ): Knex.QueryBuilder {
-    return createTenantScopedQuery(conn, { table, tenant }).builder;
+    return tenantDb(conn, tenant).table(table);
 }
 
 function normalizeBulkAssetIds(assetIds: string[]): string[] {

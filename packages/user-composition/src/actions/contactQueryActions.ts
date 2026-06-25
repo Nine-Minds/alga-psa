@@ -1,7 +1,7 @@
 'use server'
 
 import type { IContact } from '@alga-psa/types';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '../lib/permissions';
@@ -34,10 +34,8 @@ export const getContactsForPicker = withAuth(async (
   const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
     const dbSortBy = safeSortBy === 'client_name' ? 'full_name' : `contacts.${safeSortBy}`;
 
-    return createTenantScopedQuery(trx, {
-      table: 'contacts',
-      tenant,
-    }).builder
+    return tenantDb(trx, tenant)
+      .table('contacts')
       .select('contacts.*', 'clients.client_name')
       .leftJoin('clients', function (this: Knex.JoinClause) {
         this.on('contacts.client_id', 'clients.client_id')

@@ -20,8 +20,9 @@ describe('clientActions tenant-scoped query contract', () => {
     const updateSection = sectionBetween('export const updateClient', 'export const createClient');
     const createSection = sectionBetween('export const createClient', '// Pagination interface');
 
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
+    expect(source).not.toContain('createTenantScopedQuery');
 
     expect(entraCleanupSection).toContain("tenantScopedTable(trx, 'entra_sync_run_tenants', tenantId)");
     expect(entraCleanupSection).toContain("tenantScopedTable(trx, 'entra_contact_links', tenantId)");

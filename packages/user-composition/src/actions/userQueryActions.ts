@@ -2,7 +2,7 @@
 
 import User from '@alga-psa/db/models/user';
 import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
@@ -124,10 +124,8 @@ export const getReportsToSubordinates = withAuth(async (
         return [] as IUser[];
       }
 
-      const rows = await createTenantScopedQuery(trx, {
-        table: 'users',
-        tenant,
-      }).builder
+      const rows = await tenantDb(trx, tenant)
+        .table('users')
         .whereIn('user_id', subordinateIds)
         .select('*');
 
@@ -157,10 +155,8 @@ export const getAllRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
   try {
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const roles = await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant,
-      }).builder
+      const roles = await tenantDb(trx, tenant)
+        .table<IRole>('roles')
         .select('*');
       return roles;
     });
@@ -177,10 +173,8 @@ export const getMSPRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
   try {
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const roles = await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant,
-      }).builder
+      const roles = await tenantDb(trx, tenant)
+        .table<IRole>('roles')
         .where({
           msp: true
         })
@@ -200,10 +194,8 @@ export const getClientPortalRoles = withAuth(async (_user, { tenant }): Promise<
   try {
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const roles = await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant,
-      }).builder
+      const roles = await tenantDb(trx, tenant)
+        .table<IRole>('roles')
         .where({
           client: true
         })
@@ -430,10 +422,8 @@ export const getUserClientId = withAuth(async (
 
       // First try to get client ID from contact if user is contact-based
       if (user.contact_id) {
-        const contact = await createTenantScopedQuery(trx, {
-          table: 'contacts',
-          tenant,
-        }).builder
+        const contact = await tenantDb(trx, tenant)
+          .table('contacts')
           .where({
             contact_name_id: user.contact_id,
           })
@@ -472,10 +462,8 @@ export const getUserContactId = withAuth(async (
         throw new Error('Permission denied: Cannot read user contact ID');
       }
 
-      const user = await createTenantScopedQuery(trx, {
-        table: 'users',
-        tenant,
-      }).builder
+      const user = await tenantDb(trx, tenant)
+        .table('users')
         .where({
           user_id: userId,
         })
@@ -504,10 +492,8 @@ export const getClientUsersForClient = withAuth(async (
         throw new Error('Permission denied: Cannot read client users for client');
       }
 
-      const users = await createTenantScopedQuery(trx, {
-        table: 'users',
-        tenant,
-      }).builder
+      const users = await tenantDb(trx, tenant)
+        .table('users')
         .join('contacts', function() {
           this.on('users.contact_id', '=', 'contacts.contact_name_id')
               .andOn('contacts.tenant', '=', 'users.tenant');

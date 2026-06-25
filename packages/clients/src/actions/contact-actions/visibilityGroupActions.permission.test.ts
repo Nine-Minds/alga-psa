@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hasPermissionAsyncMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
-const createTenantScopedQueryMock = vi.fn((conn: any, options: { table: string }) => ({
-  builder: conn(options.table),
+const tenantDbMock = vi.fn((conn: any, _tenant?: string) => ({
+  table: (table: string) => conn(table),
 }));
 const withTransactionMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
-  createTenantScopedQuery: (conn: any, options: { table: string }) => createTenantScopedQueryMock(conn, options),
+  tenantDb: (conn: any, tenant: string) => tenantDbMock(conn, tenant),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
 

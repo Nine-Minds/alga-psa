@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 /**
@@ -26,18 +26,14 @@ async function getImageUrlCore(
     // Fetch minimal file details to check MIME type and existence
     const fileDetails = useTransaction
       ? await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await createTenantScopedQuery(trx, {
-            table: 'external_files',
-            tenant
-          }).builder
+          return await tenantDb(trx, tenant)
+            .table('external_files')
             .select('mime_type', 'storage_path')
             .where({ file_id })
             .first();
         })
-      : await createTenantScopedQuery(knex, {
-          table: 'external_files',
-          tenant
-        }).builder
+      : await tenantDb(knex, tenant)
+          .table('external_files')
           .select('mime_type', 'storage_path')
           .where({ file_id })
           .first();

@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
@@ -8,10 +8,8 @@ async function getImageUrlInternalLite(
   tenant: string,
   fileId: string,
 ): Promise<string | null> {
-  const fileDetails = await createTenantScopedQuery(trx, {
-    table: 'external_files',
-    tenant,
-  }).builder
+  const fileDetails = await tenantDb(trx, tenant)
+    .table('external_files')
     .select('mime_type')
     .where({ file_id: fileId })
     .first();
@@ -32,10 +30,8 @@ export async function getEntityImageUrl(
     const { knex } = await createTenantKnex(tenant);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const association = await createTenantScopedQuery(trx, {
-        table: 'document_associations',
-        tenant,
-      }).builder
+      const association = await tenantDb(trx, tenant)
+        .table('document_associations')
         .where({
           entity_id: entityId,
           entity_type: entityType,
@@ -47,10 +43,8 @@ export async function getEntityImageUrl(
         return null;
       }
 
-      const documentRecord = await createTenantScopedQuery(trx, {
-        table: 'documents',
-        tenant,
-      }).builder
+      const documentRecord = await tenantDb(trx, tenant)
+        .table('documents')
         .select('file_id', 'updated_at')
         .where({
           document_id: association.document_id,
@@ -110,10 +104,8 @@ export async function getEntityImageUrlsBatch(
   try {
     const { knex } = await createTenantKnex(tenant);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const associations = await createTenantScopedQuery(trx, {
-        table: 'document_associations',
-        tenant,
-      }).builder
+      const associations = await tenantDb(trx, tenant)
+        .table('document_associations')
         .select('entity_id', 'document_id')
         .whereIn('entity_id', entityIds)
         .andWhere({
@@ -126,10 +118,8 @@ export async function getEntityImageUrlsBatch(
       }
 
       const documentIds = associations.map((a: any) => a.document_id);
-      const documents = await createTenantScopedQuery(trx, {
-        table: 'documents',
-        tenant,
-      }).builder
+      const documents = await tenantDb(trx, tenant)
+        .table('documents')
         .select('document_id', 'file_id', 'updated_at')
         .whereIn('document_id', documentIds);
 
@@ -143,10 +133,8 @@ export async function getEntityImageUrlsBatch(
       const fileIds = documents.map((d: any) => d.file_id).filter(Boolean);
       const imageFileIds = new Set<string>();
       if (fileIds.length > 0) {
-        const files = await createTenantScopedQuery(trx, {
-          table: 'external_files',
-          tenant,
-        }).builder
+        const files = await tenantDb(trx, tenant)
+          .table('external_files')
           .select('file_id', 'mime_type')
           .whereIn('file_id', fileIds);
         for (const file of files) {

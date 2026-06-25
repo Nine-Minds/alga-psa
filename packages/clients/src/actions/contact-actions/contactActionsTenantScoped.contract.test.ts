@@ -19,8 +19,9 @@ describe('contactActions tenant-scoped query contract', () => {
     const cleanupSection = sectionBetween('async function cleanupEntraReferencesBeforeContactDelete', 'export const getContactByContactNameId');
     const deleteSection = sectionBetween('export const deleteContact', 'type ContactFilterStatus');
 
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
+    expect(source).not.toContain('createTenantScopedQuery');
 
     expect(cleanupSection).toContain("tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)");
     expect(cleanupSection).not.toContain(".where({ tenant: tenantId, resolved_contact_id: contactId })");

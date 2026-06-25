@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
 export interface MentionUser {
@@ -34,10 +34,8 @@ export const searchUsersForMentions = withAuth(async (
     console.log('[searchUsersForMentions] Searching with query:', query);
     const searchPattern = `%${query.toLowerCase()}%`;
 
-    let queryBuilder = createTenantScopedQuery(knex, {
-      table: 'users',
-      tenant,
-    }).builder
+    let queryBuilder = tenantDb(knex, tenant)
+      .table('users')
       .select(
         'user_id',
         'username',
@@ -59,7 +57,7 @@ export const searchUsersForMentions = withAuth(async (
 
     const users = await queryBuilder
       .orderBy('first_name')
-      .limit(10) as MentionUserRow[];
+      .limit(10) as unknown as MentionUserRow[];
 
     console.log('[searchUsersForMentions] Found users:', users.length);
 
