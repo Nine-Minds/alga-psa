@@ -2039,13 +2039,15 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getRolesByPermission(permissionId: string, context: ServiceContext): Promise<RoleResponse[]> {
     const { knex } = await this.getKnex();
     
-    const roles = await knex('roles as r')
+    const roles = await createTenantScopedQuery(knex, {
+      table: 'roles as r',
+      tenant: context.tenant,
+    }).builder
       .join('role_permissions as rp', function() {
         this.on('r.role_id', '=', 'rp.role_id')
             .andOn('r.tenant', '=', 'rp.tenant');
       })
       .where('rp.permission_id', permissionId)
-      .where('r.tenant', context.tenant)
       .select('r.*');
 
     return roles.map(role => ({
