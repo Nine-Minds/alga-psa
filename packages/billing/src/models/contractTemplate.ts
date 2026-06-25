@@ -1,6 +1,30 @@
-import { createTenantKnex } from '@alga-psa/db';
-import type { IContractTemplate, IContractTemplateWithLines } from '@alga-psa/types';
-import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import type { CadenceOwner, IContractTemplate, IContractTemplateWithLines } from '@alga-psa/types';
+import { normalizeTemplateRecurringStorage, type RecurringBillingTiming } from '@shared/billingClients/recurrenceStorageModel';
+import type { Knex } from 'knex';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
+type ContractTemplateLineSummaryRow = Record<string, any> & {
+  custom_rate: number | string | null;
+  display_order: number | null;
+  billing_timing?: RecurringBillingTiming | null;
+  cadence_owner?: CadenceOwner | null;
+};
+
+type TemplateLineIdRow = {
+  template_line_id: string;
+};
+
+type ServiceConfigurationIdRow = {
+  config_id: string;
+};
 
 const ContractTemplateModel = {
   async getAll(tenantId: string): Promise<IContractTemplate[]> {
@@ -9,8 +33,7 @@ const ContractTemplateModel = {
       throw new Error('Tenant context is required for fetching contract templates');
     }
 
-    return knex<IContractTemplate>('contract_templates')
-      .where({ tenant })
+    return tenantScopedTable(knex, tenant, 'contract_templates')
       .orderBy('created_at', 'desc');
   },
 
@@ -20,19 +43,16 @@ const ContractTemplateModel = {
       throw new Error('Tenant context is required for fetching a contract template');
     }
 
-    const template = await knex<IContractTemplate>('contract_templates')
-      .where({ tenant, template_id: templateId })
+    const template = await tenantScopedTable(knex, tenant, 'contract_templates')
+      .where('template_id', templateId)
       .first();
 
     if (!template) {
       return null;
     }
 
-    const lines = await knex('contract_template_lines as lines')
-      .where({
-        'lines.tenant': tenant,
-        'lines.template_id': templateId,
-      })
+    const lines: ContractTemplateLineSummaryRow[] = await tenantScopedTable(knex, tenant, 'contract_template_lines as lines')
+      .where('lines.template_id', templateId)
       .orderBy('lines.display_order', 'asc')
       .select([
         'lines.template_line_id',
@@ -93,8 +113,8 @@ const ContractTemplateModel = {
       throw new Error('Tenant context is required for updating contract templates');
     }
 
-    const [record] = await knex<IContractTemplate>('contract_templates')
-      .where({ tenant, template_id: templateId })
+    const [record] = await tenantScopedTable(knex, tenant, 'contract_templates')
+      .where('template_id', templateId)
       .update(
         {
           ...updates,
@@ -117,125 +137,107 @@ const ContractTemplateModel = {
     }
 
     await knex.transaction(async (trx) => {
-      await trx('contract_template_pricing_schedules')
-        .where({ tenant, template_id: templateId })
+      await tenantScopedTable(trx, tenant, 'contract_template_pricing_schedules')
+        .where('template_id', templateId)
         .delete();
 
-      const lineRows = await trx('contract_template_lines')
-        .where({ tenant, template_id: templateId })
+      const lineRows: TemplateLineIdRow[] = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+        .where('template_id', templateId)
         .select('template_line_id');
 
       const lineIds = lineRows.map((row) => row.template_line_id);
 
       if (lineIds.length > 0) {
-        const configRows = await trx('contract_template_line_service_configuration')
-          .where({ tenant })
+        const configRows: ServiceConfigurationIdRow[] = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
           .whereIn('template_line_id', lineIds)
           .select('config_id');
 
         const configIds = configRows.map((row) => row.config_id);
 
         if (configIds.length > 0) {
-          await trx('contract_template_line_service_bucket_config')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_template_line_service_hourly_config')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_template_line_service_usage_config')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_template_line_service_configuration')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_line_service_bucket_config')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_line_service_bucket_config')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_line_service_hourly_config')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_line_service_hourly_config')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_line_service_hourly_configs')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_line_service_hourly_configs')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_line_service_rate_tiers')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_line_service_rate_tiers')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_line_service_usage_config')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_line_service_usage_config')
             .whereIn('config_id', configIds)
             .delete();
 
           // Child tables reference contract_line_service_configuration via (tenant, config_id).
           // Citus disallows cascading actions on distributed foreign keys; handle deletes explicitly.
-          await trx('contract_line_service_fixed_config')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_line_service_fixed_config')
             .whereIn('config_id', configIds)
             .delete();
 
-          await trx('contract_line_service_configuration')
-            .where({ tenant })
+          await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
             .whereIn('config_id', configIds)
             .delete();
         }
 
-        await trx('contract_template_line_services')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_services')
           .whereIn('template_line_id', lineIds)
           .delete();
 
-        await trx('contract_template_line_defaults')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_defaults')
           .whereIn('template_line_id', lineIds)
           .delete();
 
-        await trx('contract_template_line_terms')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_terms')
           .whereIn('template_line_id', lineIds)
           .delete();
 
-        await trx('contract_template_line_fixed_config')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_line_fixed_config')
           .whereIn('template_line_id', lineIds)
           .delete();
 
-        await trx('contract_template_lines')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_template_lines')
           .whereIn('template_line_id', lineIds)
           .delete();
 
-        await trx('contract_line_services')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_line_services')
           .whereIn('contract_line_id', lineIds)
           .delete();
 
-        await trx('contract_line_service_defaults')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_line_service_defaults')
           .whereIn('contract_line_id', lineIds)
           .delete();
 
-        await trx('contract_lines')
-          .where({ tenant })
+        await tenantScopedTable(trx, tenant, 'contract_lines')
           .whereIn('contract_line_id', lineIds)
           .delete();
       }
 
-      await trx('contract_templates').where({ tenant, template_id: templateId }).delete();
+      await tenantScopedTable(trx, tenant, 'contract_templates')
+        .where('template_id', templateId)
+        .delete();
     });
   },
 };
