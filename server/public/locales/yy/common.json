@@ -1,4 +1,7 @@
 {
+  "clientNameCell": {
+    "noClient": "55555"
+  },
   "reactions": {
     "ariaSummary_one": "55555 {{emoji}} 55555 {{count}} 55555",
     "ariaSummary_other": "55555 {{emoji}} 55555 {{count}} 55555",

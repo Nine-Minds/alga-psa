@@ -1835,7 +1835,7 @@ const BoardsSettings: React.FC = () => {
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                    <div className="w-8 [&>div]:mb-0">
+                    <div className="w-8">
                       <Checkbox
                         id="select-all-boards"
                         checked={availableReferenceBoards.length > 0 && selectedImportBoards.length === availableReferenceBoards.length}
@@ -1873,7 +1873,7 @@ const BoardsSettings: React.FC = () => {
                         key={board.id} 
                         className="flex items-center space-x-2 p-2 hover:bg-muted/30 border-b"
                       >
-                        <div className="w-8 [&>div]:mb-0">
+                        <div className="w-8">
                           <Checkbox
                             id={`import-board-${board.id}`}
                             checked={selectedImportBoards.includes(board.id)}

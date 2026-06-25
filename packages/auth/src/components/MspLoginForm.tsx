@@ -166,7 +166,6 @@ export default function MspLoginForm({
           checked={isPublicWorkstation}
           label="Public workstation - do not remember my email"
           onChange={(event) => setIsPublicWorkstation(event.target.checked)}
-          containerClassName="mb-0"
         />
       </div>
 

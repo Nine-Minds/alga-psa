@@ -72,17 +72,21 @@ export function Checkbox({
     }
   }, [indeterminate, checked]);
 
-  const wrapperClasses = cn('flex items-center gap-2', containerClassName ?? 'mb-4');
+  // Margin-less by default: a checkbox is an inline control, so vertical spacing
+  // between stacked form fields belongs to the form layout (space-y/grid), not the
+  // checkbox. Pass containerClassName for any bespoke spacing.
+  const wrapperClasses = cn('flex items-center gap-2', containerClassName);
 
   return (
     <div className={wrapperClasses}>
       <input
         type="checkbox"
-        className={`alga-checkbox ${checkboxSizeClasses[size]} rounded-md border-[rgb(var(--color-border-300))] text-primary-500 focus-visible:outline-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 ${className || ''}`}
-        style={{
-          accentColor: 'rgb(var(--color-primary-500))',
-          borderRadius: '0.375rem'
-        }}
+        className={cn(
+          'alga-checkbox shrink-0 rounded-md border-[rgb(var(--color-border-300))] text-primary-500 focus-visible:outline-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500',
+          checkboxSizeClasses[size],
+          className
+        )}
+        style={{ accentColor: 'rgb(var(--color-primary-500))' }}
         checked={checked}
         disabled={disabled}
         required={required}
@@ -94,7 +98,7 @@ export function Checkbox({
         {...withDataAutomationId({ id })}
       />
       {label && (
-        <label htmlFor={id} className="ml-2 block text-sm text-[rgb(var(--color-text-900))]">
+        <label htmlFor={id} className="text-sm text-[rgb(var(--color-text-900))] select-none cursor-pointer">
           {label}
         </label>
       )}

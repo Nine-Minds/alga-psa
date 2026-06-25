@@ -7,16 +7,18 @@ import { cn } from '../lib/utils';
 import Spinner from './Spinner';
 
 export type EntityAvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number;
-export type EntityAvatarShape = 'circle' | 'square';
 export type ImageLoadingStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 export interface EntityAvatarProps {
   entityId: string | number;
   entityName: string;
   imageUrl: string | null;
+  /**
+   * Shape follows size automatically: `xs` renders as a rounded square,
+   * `sm` and larger render as a circle. There is no shape override — this is
+   * the single avatar shape rule across the app.
+   */
   size?: EntityAvatarSize;
-  /** 'circle' (default) for people; 'square' (rounded) for org/company logos. */
-  shape?: EntityAvatarShape;
   className?: string;
   getInitials?: (name: string) => string;
   altText?: string;
@@ -74,7 +76,6 @@ export const EntityAvatar = ({
   entityName,
   imageUrl,
   size = 'md',
-  shape = 'circle',
   className,
   getInitials = getDefaultInitials,
   altText,
@@ -129,12 +130,12 @@ export const EntityAvatar = ({
     setImageStatus('loaded');
   };
 
-  // Square (org/company) avatars get rounded corners; people stay circular —
-  // except at the smallest size, where a tight circle clips the corners of
-  // two-letter initials. There, even circle avatars render as rounded squares
-  // (matching the org avatars) so the placeholder text isn't cut off.
-  const isSmall = size === 'xs';
-  const radiusClass = shape === 'square' || isSmall ? 'rounded-md' : 'rounded-full';
+  // Shape is derived from size, never from entity type: the smallest avatars
+  // (xs, or any pixel size at/below the xs 24px footprint) render as rounded
+  // squares — a tight circle clips the corners of two-letter initials — and
+  // everything sm and larger renders as a circle. One rule for every entity.
+  const isSquare = size === 'xs' || (typeof size === 'number' && size <= 24);
+  const radiusClass = isSquare ? 'rounded-md' : 'rounded-full';
 
   // Combine classes: base + size + custom. shrink-0 keeps the avatar a fixed
   // square in flex rows (e.g. next to a long client name) instead of letting the

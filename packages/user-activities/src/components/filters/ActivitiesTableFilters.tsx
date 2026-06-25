@@ -585,7 +585,6 @@ export function ActivitiesTableFilters({
               label={option.label}
               checked={selectedTypes.includes(option.value)}
               onChange={() => toggleType(option.value)}
-              containerClassName="mb-0"
               size="sm"
             />
           ))}
@@ -597,7 +596,7 @@ export function ActivitiesTableFilters({
             label={t('filters.labels.showClosed', { defaultValue: 'Show closed' })}
             checked={filters.isClosed}
             onChange={handleClosedToggle}
-            containerClassName="mb-0 whitespace-nowrap"
+            containerClassName="whitespace-nowrap"
             size="sm"
           />
           <Button

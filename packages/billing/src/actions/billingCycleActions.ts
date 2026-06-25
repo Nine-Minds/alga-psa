@@ -13,6 +13,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { toPlainDate } from '@alga-psa/core';
 import { applyClientCadenceChange } from '@alga-psa/shared/billingClients';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 
 export const getBillingCycle = withAuth(async (
@@ -384,6 +385,7 @@ export interface RecurringInvoiceHistoryRow {
   invoiceDate: ISO8601String | null;
   clientId: string;
   clientName: string;
+  logoUrl?: string | null;
   billingCycleId: string | null;
   hasBillingCycleBridge: boolean;
   cadenceSource: 'client_schedule' | 'contract_anniversary';
@@ -800,8 +802,23 @@ async function fetchRecurringInvoiceHistoryPage(
       .limit(pageSize)
       .offset(offset);
 
+    const rows = cycles.map(mapRecurringHistoryRow);
+    const clientIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.clientId)
+          .filter((clientId): clientId is string => Boolean(clientId)),
+      ),
+    );
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of rows) {
+        row.logoUrl = row.clientId ? logoUrlsMap.get(row.clientId) ?? null : null;
+      }
+    }
+
     return {
-      rows: cycles.map(mapRecurringHistoryRow),
+      rows,
       total,
       page,
       pageSize,

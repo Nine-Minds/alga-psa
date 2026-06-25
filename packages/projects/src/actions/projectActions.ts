@@ -29,6 +29,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
@@ -277,7 +278,17 @@ export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Prom
     return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
   });
 
-  return clients as IClient[];
+  if (clients.length === 0) {
+    return [];
+  }
+
+  // Batch-resolve logo URLs once (no N+1) so the projects table can show real logos.
+  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c: any) => c.client_id), tenant);
+
+  return clients.map((c: any) => ({
+    ...c,
+    logoUrl: logoUrlsMap.get(c.client_id) ?? null,
+  })) as IClient[];
 });
 
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {

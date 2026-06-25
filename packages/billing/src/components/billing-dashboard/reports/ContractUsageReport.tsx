@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -22,6 +23,7 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface ContractUsageRecord {
   client_id: string;
   client_name: string;
+  logoUrl: string | null;
   contract_id: string;
   contract_name: string;
   start_date: string;
@@ -101,6 +103,7 @@ const ContractUsageReport: React.FC = () => {
             clientContracts.push({
               client_id: client.client_id,
               client_name: client.client_name || t('contractUsage.statusValues.unknownClient', { defaultValue: 'Unknown Client' }),
+              logoUrl: client.logoUrl ?? null,
               contract_id: contractId,
               contract_name: detailedContract.contract_name,
               start_date: matchingContract.start_date,
@@ -139,6 +142,7 @@ const ContractUsageReport: React.FC = () => {
     {
       title: t('contractUsage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('contractUsage.table.startDate', { defaultValue: 'Start Date' }),

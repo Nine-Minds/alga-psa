@@ -453,7 +453,7 @@ const UserAndTeamPicker = ({
                     userId={user.user_id}
                     userName={userName}
                     avatarUrl={resolveUserAvatar(user.user_id)}
-                    size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
+                    size="xs"
                   />
                   <span>{userName}</span>
                 </div>
@@ -537,7 +537,7 @@ const UserAndTeamPicker = ({
               userId={currentUser.user_id}
               userName={`${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()}
               avatarUrl={resolveUserAvatar(currentUser.user_id)}
-              size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
+              size={size === 'xs' ? 'xs' : 'sm'}
             />
           )}
           {currentTeam && (

@@ -4,6 +4,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 export const getAllClientsForAssets = withAuth(async (
@@ -14,7 +15,7 @@ export const getAllClientsForAssets = withAuth(async (
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const query = trx('clients')
       .select('*')
       .where('tenant', tenant)
@@ -26,6 +27,14 @@ export const getAllClientsForAssets = withAuth(async (
 
     return query;
   }) as unknown as IClient[];
+
+  if (clients.length === 0) {
+    return clients;
+  }
+
+  // Batch-resolve logo URLs once (no N+1) so the assets table can show real logos.
+  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c) => c.client_id), tenant);
+  return clients.map((c) => ({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null }));
 });
 
 export const getClientByIdForAssets = withAuth(async (
@@ -36,13 +45,22 @@ export const getClientByIdForAssets = withAuth(async (
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const result = await trx('clients')
       .select('*')
       .where({ client_id: clientId, tenant })
       .first();
     return result ?? null;
   }) as unknown as IClient | null;
+
+  if (!client) {
+    return null;
+  }
+
+  // Resolve the uploaded logo so the client drawer/detail view shows the real
+  // logo (matching the assets table), not just initials.
+  const logoUrl = await getClientLogoUrl(clientId, tenant);
+  return { ...client, logoUrl };
 });
 
 export const getClientLocationsForAssets = withAuth(async (

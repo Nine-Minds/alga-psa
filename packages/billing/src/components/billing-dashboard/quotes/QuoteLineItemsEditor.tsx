@@ -503,7 +503,6 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 checked={item.is_optional}
                 label={t('quoteLineItems.labels.optional', { defaultValue: 'Optional' })}
                 disabled={disabled}
-                containerClassName="mb-0"
                 onChange={(event) => updateItem(item.local_id, { is_optional: event.target.checked })}
               />
               <Checkbox
@@ -511,7 +510,6 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 checked={item.is_recurring}
                 label={t('quoteLineItems.labels.recurring', { defaultValue: 'Recurring' })}
                 disabled={disabled}
-                containerClassName="mb-0"
                 onChange={(event) => updateItem(item.local_id, {
                   is_recurring: event.target.checked,
                   billing_frequency: event.target.checked ? (item.billing_frequency ?? 'monthly') : null,

@@ -1510,7 +1510,7 @@ const Clients: React.FC = () => {
 
       {/* Delete */}
       <div className="flex items-center gap-8 mb-6 ms-4">
-        <div className="[&>div]:mb-0 [&>div]:flex [&>div]:items-center">
+        <div className="[&>div]:flex [&>div]:items-center">
           <Checkbox
             id="select-all-clients"
             checked={selectedClients.length > 0}
