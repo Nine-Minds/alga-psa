@@ -95,6 +95,14 @@ function applyDefaultContactPhoneJoin(
     });
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 export type BundleMode = 'link_only' | 'sync_updates';
 
 export interface BundleMemberTicket {
@@ -145,8 +153,8 @@ export class TicketService extends BaseService<ITicket> {
       knex,
       context.tenant,
       async (trx, tenant) => {
-        const ticket = await trx('tickets')
-          .where({ ticket_id: id, tenant })
+        const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .first();
 
         if (!ticket) {
@@ -155,8 +163,8 @@ export class TicketService extends BaseService<ITicket> {
 
         await deleteTicketChildRecords(trx, id, tenant, ticket);
 
-        await trx('tickets')
-          .where({ ticket_id: id, tenant })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .delete();
       }
     );
@@ -386,11 +394,10 @@ export class TicketService extends BaseService<ITicket> {
     }
     if (ticketIds.length === 0) return;
 
-    const rows = await knex('tag_mappings as tm')
+    const rows = await tenantScopedTable(knex, 'tag_mappings as tm', tenant)
       .join('tag_definitions as td', function joinDefinitions() {
         this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
       })
-      .where('tm.tenant', tenant)
       .where('tm.tagged_type', 'ticket')
       .whereIn('tm.tagged_id', ticketIds)
       .select(
@@ -442,7 +449,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(id);
 
-    const ticket = await knex('tickets as t')
+    const ticket = await tenantScopedTable(knex, 'tickets as t', context.tenant)
       .leftJoin('clients as comp', function() {
         this.on('t.client_id', '=', 'comp.client_id')
             .andOn('t.tenant', '=', 'comp.tenant');
@@ -494,7 +501,7 @@ export class TicketService extends BaseService<ITicket> {
           ELSE NULL 
         END as assigned_to_name`)
       )
-      .where({ 't.ticket_id': id, 't.tenant': context.tenant })
+      .where({ 't.ticket_id': id })
       .first();
 
     if (!ticket) {
@@ -519,7 +526,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const documents = await knex('documents as d')
+    const documents = await tenantScopedTable(knex, 'documents as d', context.tenant)
       .join('document_associations as da', function () {
         this.on('d.document_id', '=', 'da.document_id')
           .andOn('d.tenant', '=', 'da.tenant');
@@ -535,9 +542,7 @@ export class TicketService extends BaseService<ITicket> {
       .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
       .where({
         'da.entity_id': ticketId,
-        'da.entity_type': 'ticket',
-        'da.tenant': context.tenant,
-        'd.tenant': context.tenant
+        'da.entity_type': 'ticket'
       })
       .select(
         'd.*',
@@ -559,7 +564,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const assets = await knex('asset_associations as aa')
+    const assets = await tenantScopedTable(knex, 'asset_associations as aa', context.tenant)
       .join('assets as a', function joinAssets(this: Knex.JoinClause) {
         this.on('aa.asset_id', '=', 'a.asset_id')
           .andOn('aa.tenant', '=', 'a.tenant');
@@ -570,9 +575,7 @@ export class TicketService extends BaseService<ITicket> {
       })
       .where({
         'aa.entity_id': ticketId,
-        'aa.entity_type': 'ticket',
-        'aa.tenant': context.tenant,
-        'a.tenant': context.tenant
+        'aa.entity_type': 'ticket'
       })
       .select(
         'a.*',
@@ -599,23 +602,22 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const ticket = await knex('tickets')
-      .where({ tenant: context.tenant, ticket_id: ticketId })
+    const ticket = await tenantScopedTable(knex, 'tickets', context.tenant)
+      .where({ ticket_id: ticketId })
       .first();
     if (!ticket) {
       throw new NotFoundError('Ticket not found');
     }
 
-    const asset = await knex('assets')
-      .where({ tenant: context.tenant, asset_id: data.asset_id })
+    const asset = await tenantScopedTable(knex, 'assets', context.tenant)
+      .where({ asset_id: data.asset_id })
       .first();
     if (!asset) {
       throw new NotFoundError('Asset not found');
     }
 
-    const existing = await knex('asset_associations')
+    const existing = await tenantScopedTable(knex, 'asset_associations', context.tenant)
       .where({
-        tenant: context.tenant,
         asset_id: data.asset_id,
         entity_id: ticketId,
         entity_type: 'ticket'
@@ -648,9 +650,8 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const deleted = await knex('asset_associations')
+    const deleted = await tenantScopedTable(knex, 'asset_associations', context.tenant)
       .where({
-        tenant: context.tenant,
         asset_id: assetId,
         entity_id: ticketId,
         entity_type: 'ticket'
