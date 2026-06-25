@@ -8,8 +8,7 @@ import type {
   ImportContactResult,
   ITag,
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation, isEnterprise, unparseCSV } from '@alga-psa/core';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
@@ -37,6 +36,14 @@ import {
   isValidContactCsvEmailValue,
   normalizeContactCsvEmailValue,
 } from '../../lib/contactCsvEmailFields';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 function maybeUserActor(user: any) {
   const userId = user?.user_id;
@@ -103,8 +110,8 @@ async function cleanupEntraReferencesBeforeContactDelete(
     return;
   }
 
-  await trx('entra_contact_reconciliation_queue')
-    .where({ tenant: tenantId, resolved_contact_id: contactId })
+  await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)
+    .where({ resolved_contact_id: contactId })
     .update({
       resolved_contact_id: null,
       updated_at: trx.fn.now(),
@@ -168,8 +175,8 @@ export const deleteContact = withAuth(async (
     await assertMspPermission(user, 'contact', 'delete', 'Permission denied: Cannot delete contacts', db);
 
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .where({ contact_name_id: contactId, tenant })
+      return await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ contact_name_id: contactId })
         .first();
     });
 
@@ -188,40 +195,40 @@ export const deleteContact = withAuth(async (
       await deleteEntityTags(trx, contactId, 'contact');
 
       // Clean up child records owned by the contact
-      await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
-      await trx('contact_additional_email_addresses').where({ contact_name_id: contactId, tenant: tenantId }).delete();
-      await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
-      await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
+      await tenantScopedTable(trx, 'contact_phone_numbers', tenantId).where({ contact_name_id: contactId }).delete();
+      await tenantScopedTable(trx, 'contact_additional_email_addresses', tenantId).where({ contact_name_id: contactId }).delete();
+      await tenantScopedTable(trx, 'comments', tenantId).where({ contact_id: contactId }).delete();
+      await tenantScopedTable(trx, 'portal_invitations', tenantId).where({ contact_id: contactId }).delete();
 
       // Unlink from any RMM org mapping using this contact as its default
       // notification contact (no FK; Citus rejects ON DELETE SET NULL).
-      await trx('rmm_organization_mappings')
-        .where({ default_contact_id: contactId, tenant: tenantId })
+      await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
+        .where({ default_contact_id: contactId })
         .update({ default_contact_id: null });
 
-      const contactRecord = await trx('contacts')
-        .where({ contact_name_id: contactId, tenant: tenantId })
+      const contactRecord = await tenantScopedTable(trx, 'contacts', tenantId)
+        .where({ contact_name_id: contactId })
         .select('notes_document_id')
         .first();
 
       if (contactRecord?.notes_document_id) {
-        await trx('document_block_content')
-          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_block_content', tenantId)
+          .where({ document_id: contactRecord.notes_document_id })
           .delete();
 
-        await trx('document_associations')
-          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_associations', tenantId)
+          .where({ document_id: contactRecord.notes_document_id })
           .delete();
 
-        await trx('documents')
-          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+        await tenantScopedTable(trx, 'documents', tenantId)
+          .where({ document_id: contactRecord.notes_document_id })
           .delete();
       }
 
       await cleanupEntraReferencesBeforeContactDelete(trx, tenantId, contactId);
 
-      const deleted = await trx('contacts')
-        .where({ contact_name_id: contactId, tenant: tenantId })
+      const deleted = await tenantScopedTable(trx, 'contacts', tenantId)
+        .where({ contact_name_id: contactId })
         .delete();
 
       if (!deleted || deleted === 0) {
