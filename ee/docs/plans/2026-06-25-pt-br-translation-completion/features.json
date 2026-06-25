@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Author pt-BR domain glossary + dialect ruleset (data file) mapping every domain term to its Brazilian translation (ticket→chamado, billing→faturamento, asset→ativo, etc.) and listing forbidden European-PT forms (comboio, telemóvel, ecrã, autocarro, registo, etc.) and the allowlist of strings legitimately identical to English (Status, Dashboard, Email, ...).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "glossary",
     "prdRefs": [
       "3.1"
@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Add localized-loanword allowlist so the audit does not flag intentionally-identical strings (proper nouns, codes, units).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "glossary",
     "prdRefs": [
       "3.1",

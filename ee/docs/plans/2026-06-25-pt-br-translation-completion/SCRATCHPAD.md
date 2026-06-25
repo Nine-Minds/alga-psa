@@ -97,3 +97,9 @@ npm run migrate
 ## Open questions
 - Native reviewer identity + preferred export format (CSV vs md). Export supports both.
 - Glossary home: `.ai/translation/pt-br-glossary.*` (reusable, preferred) vs plan folder.
+
+## 2026-06-25 — glossary group
+- Implemented F001: added `.ai/translation/pt-br-glossary.json` as the reusable pt-BR terminology source of truth. It includes structured domain terms with `en-term`, `pt-br-term`, and rationale notes; forbidden European-PT/wrong-register forms; dialect rules; and placeholder-preservation guidance.
+- Implemented F002: added `identicalAllowlist` to the glossary for intentionally identical technical strings, loanwords, product/proper names, and safe technical patterns. Kept it conservative so the future audit still flags English copy-forwards by default.
+- Implemented T001/T002 with `scripts/tests/pt-br-glossary.test.mjs`. The test parses the glossary, requires complete term fields, checks duplicate IDs/English terms, verifies canonical forbidden markers (`comboio`, `telemóvel`, `ecrã`, `autocarro`, `registo`, `utilizador`, `rato`), and validates allowlist patterns.
+- Verification: `node --test scripts/tests/pt-br-glossary.test.mjs` passed (3 tests).

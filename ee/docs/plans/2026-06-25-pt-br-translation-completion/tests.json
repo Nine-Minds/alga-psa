@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Glossary file parses and every entry has en-term, pt-br-term, and notes; no duplicate keys.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "glossary",
     "featureIds": [
       "F001"
@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "Forbidden-terms list is non-empty and contains the canonical European-PT markers (comboio, telemóvel, ecrã, autocarro, registo, utilizador, rato).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "glossary",
     "featureIds": [
       "F001"
