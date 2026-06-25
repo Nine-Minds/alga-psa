@@ -989,18 +989,23 @@ export async function fetchTimeEntryActivities(
           queryBuilder.where(function() {
             this.where(function() {
               this.where("time_entries.work_item_type", "ticket")
-                .whereExists(function() {
-                  this.select(db.raw(1))
-                    .from("tickets")
+                .whereExists(
+                  createTenantScopedQuery(trx, {
+                    table: "tickets",
+                    tenant,
+                  }).builder
+                    .select(db.raw(1))
                     .whereRaw("tickets.ticket_id = time_entries.work_item_id")
-                    .andWhere("tickets.tenant", tenant)
-                    .andWhere("tickets.client_id", filters.clientId);
-                });
+                    .andWhere("tickets.client_id", filters.clientId)
+                );
             }).orWhere(function() {
               this.where("time_entries.work_item_type", "project_task")
-                .whereExists(function() {
-                  this.select(db.raw(1))
-                    .from("project_tasks")
+                .whereExists(
+                  createTenantScopedQuery(trx, {
+                    table: "project_tasks",
+                    tenant,
+                  }).builder
+                    .select(db.raw(1))
                     .join("project_phases", function() {
                       this.on("project_tasks.phase_id", "project_phases.phase_id")
                         .andOn("project_tasks.tenant", "project_phases.tenant");
@@ -1010,9 +1015,8 @@ export async function fetchTimeEntryActivities(
                         .andOn("project_phases.tenant", "projects.tenant");
                     })
                     .whereRaw("project_tasks.task_id = time_entries.work_item_id")
-                    .andWhere("project_tasks.tenant", tenant)
-                    .andWhere("projects.client_id", filters.clientId);
-                });
+                    .andWhere("projects.client_id", filters.clientId)
+                );
             });
           });
         }
