@@ -3604,9 +3604,8 @@ export const toggleFolderVisibility = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const folder = await knex('document_folders')
+  const folder = await tenantScopedTable(knex, 'document_folders', tenant)
     .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
-    .where('tenant', tenant)
     .andWhere('folder_id', folderId)
     .first();
 
@@ -3614,8 +3613,7 @@ export const toggleFolderVisibility = withAuth(async (
     throw new Error('Folder not found');
   }
 
-  const folderUpdatedCount = await knex('document_folders')
-    .where('tenant', tenant)
+  const folderUpdatedCount = await tenantScopedTable(knex, 'document_folders', tenant)
     .andWhere('folder_id', folderId)
     .update({
       is_client_visible: isClientVisible,
@@ -3626,29 +3624,25 @@ export const toggleFolderVisibility = withAuth(async (
   if (cascade) {
     // Escape SQL LIKE wildcards in folder path before using in pattern
     const escapedPath = folder.folder_path.replace(/%/g, '\\%').replace(/_/g, '\\_');
-    let documentsQuery = knex('documents as d')
-      .where('d.tenant', tenant)
+    let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant)
       .where(function() {
         this.where('d.folder_path', folder.folder_path)
           .orWhere('d.folder_path', 'like', `${escapedPath}/%`);
       });
 
+    const associationExistsQuery = () =>
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
+        .whereRaw('da.document_id = d.document_id');
+
     if (folder.entity_id && folder.entity_type) {
-      documentsQuery = documentsQuery.whereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
+      documentsQuery = documentsQuery.whereExists(
+        associationExistsQuery()
           .andWhere('da.entity_id', folder.entity_id)
-          .andWhere('da.entity_type', folder.entity_type);
-      });
+          .andWhere('da.entity_type', folder.entity_type)
+      );
     } else {
-      documentsQuery = documentsQuery.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      });
+      documentsQuery = documentsQuery.whereNotExists(associationExistsQuery());
     }
 
     const documentsToUpdate = await documentsQuery
@@ -3699,9 +3693,8 @@ export const toggleFolderVisibilityByPath = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const query = knex('document_folders')
+  const query = tenantScopedTable(knex, 'document_folders', tenant)
     .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
-    .where('tenant', tenant)
     .andWhere('folder_path', folderPath);
 
   if (entityId && entityType) {
@@ -3714,8 +3707,7 @@ export const toggleFolderVisibilityByPath = withAuth(async (
     throw new Error('Folder not found');
   }
 
-  const folderUpdatedCount = await knex('document_folders')
-    .where('tenant', tenant)
+  const folderUpdatedCount = await tenantScopedTable(knex, 'document_folders', tenant)
     .andWhere('folder_id', folder.folder_id)
     .update({
       is_client_visible: isClientVisible,
@@ -3725,29 +3717,25 @@ export const toggleFolderVisibilityByPath = withAuth(async (
 
   if (cascade) {
     const escapedPath = folder.folder_path.replace(/%/g, '\\%').replace(/_/g, '\\_');
-    let documentsQuery = knex('documents as d')
-      .where('d.tenant', tenant)
+    let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant)
       .where(function() {
         this.where('d.folder_path', folder.folder_path)
           .orWhere('d.folder_path', 'like', `${escapedPath}/%`);
       });
 
+    const associationExistsQuery = () =>
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
+        .whereRaw('da.document_id = d.document_id');
+
     if (folder.entity_id && folder.entity_type) {
-      documentsQuery = documentsQuery.whereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
+      documentsQuery = documentsQuery.whereExists(
+        associationExistsQuery()
           .andWhere('da.entity_id', folder.entity_id)
-          .andWhere('da.entity_type', folder.entity_type);
-      });
+          .andWhere('da.entity_type', folder.entity_type)
+      );
     } else {
-      documentsQuery = documentsQuery.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      });
+      documentsQuery = documentsQuery.whereNotExists(associationExistsQuery());
     }
 
     const documentsToUpdate = await documentsQuery
