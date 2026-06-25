@@ -677,8 +677,11 @@ export const getActivityViewableUsers = withAuth(async (
   }
 
   // Select only non-sensitive columns (never hashed_password / two_factor_secret).
-  const rows = await knex("users")
-    .where({ tenant, user_type: "internal", is_inactive: false })
+  const rows = await createTenantScopedQuery(knex, {
+    table: "users",
+    tenant,
+  }).builder
+    .where({ user_type: "internal", is_inactive: false })
     .whereNot({ user_id: user.user_id })
     .orderBy([{ column: "first_name" }, { column: "last_name" }])
     .select(
