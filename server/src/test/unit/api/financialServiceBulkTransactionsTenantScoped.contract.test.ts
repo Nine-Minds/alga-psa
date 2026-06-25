@@ -19,9 +19,9 @@ describe('financial service bulk transactions tenant-scoped query contract', () 
   it('uses structural tenant scoping for bulk transaction read and update roots', () => {
     const bulkTransactionSection = sectionBetween('async bulkTransactionOperation', 'async bulkCreditOperation');
 
-    expect(bulkTransactionSection).toContain('createTenantScopedQuery(trx, {');
-    expect(bulkTransactionSection).toContain("table: 'transactions'");
-    expect(bulkTransactionSection).toContain("table: 'clients'");
+    expect(bulkTransactionSection).toContain('tenantDb(');
+    expect(bulkTransactionSection).toContain(".table('transactions')");
+    expect(bulkTransactionSection).toContain(".table('clients')");
 
     expect(bulkTransactionSection).not.toMatch(/trx\('(?:transactions|clients)'\)\s*\.(?:where|first|update|delete)/);
     expect(bulkTransactionSection).not.toMatch(/where\(\{\s*[^}]*tenant\s*[,}]/);

@@ -20,12 +20,12 @@ describe('contract line service basic tenant-scoped query contract', () => {
     const basicSection = sectionBetween('// BASIC CRUD OPERATIONS WITH VALIDATION', '// PLAN CONFIGURATION MANAGEMENT');
     const helperSection = sectionBetween('private buildContractLineQuery', 'private async isPlanInUse');
 
-    expect(source).toContain('createTenantScopedQuery');
-    expect(basicSection).toContain('createTenantScopedQuery(trx, {');
-    expect(helperSection).toContain('createTenantScopedQuery(knex, {');
-    expect(helperSection).toContain('createTenantScopedQuery(trx, {');
-    expect(helperSection).toContain("table: 'contract_lines as cl'");
-    expect(helperSection).toContain("table: 'contract_lines'");
+    expect(source).not.toContain('createTenantScopedQuery');
+    expect(basicSection).toContain('tenantDb(');
+    expect(helperSection).toContain('tenantDb(');
+    expect(helperSection).toContain('tenantDb(');
+    expect(helperSection).toContain(".table('contract_lines as cl')");
+    expect(helperSection).toContain(".table('contract_lines')");
 
     expect(basicSection).not.toMatch(/trx\('contract_lines'\)\s*\.(?:where|update|delete)/);
     expect(helperSection).not.toMatch(/knex\('contract_lines(?: as cl)?'\)\s*\./);

@@ -19,9 +19,9 @@ describe('team service statistics tenant-scoped query contract', () => {
   it('uses structural tenant scoping for statistics roots', () => {
     const section = sectionBetween('// Statistics and Reporting', '// HATEOAS Link Generation');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'teams'");
-    expect(section).toContain("table: 'team_members'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('teams')");
+    expect(section).toContain(".table('team_members')");
 
     expect(section).not.toMatch(/knex\('(?:teams|team_members)'\)\s*\./);
     expect(section).not.toMatch(/\.where\('tenant', context\.tenant\)/);

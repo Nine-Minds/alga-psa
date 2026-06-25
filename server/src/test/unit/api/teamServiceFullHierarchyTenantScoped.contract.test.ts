@@ -17,9 +17,9 @@ describe('team service full hierarchy tenant-scoped query contract', () => {
   it('uses structural tenant scoping for getFullHierarchy roots', () => {
     const section = sectionFrom('async getFullHierarchy');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'team_hierarchy as th'");
-    expect(section).toContain("table: 'team_hierarchy'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('team_hierarchy as th')");
+    expect(section).toContain(".table('team_hierarchy')");
     expect(section).toContain(".andOn('th.tenant', '=', 't.tenant')");
 
     expect(section).not.toMatch(/knex\('team_hierarchy(?: as th)?'\)\s*\./);

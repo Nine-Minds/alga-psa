@@ -19,10 +19,10 @@ describe('team service search tenant-scoped query contract', () => {
   it('uses structural tenant scoping for search roots and hydration lookups', () => {
     const section = sectionBetween('// Search and Filtering', '// Bulk Operations');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'teams as t'");
-    expect(section).toContain("table: 'team_members'");
-    expect(section).toContain("table: 'users'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('teams as t')");
+    expect(section).toContain(".table('team_members')");
+    expect(section).toContain(".table('users')");
 
     expect(section).not.toMatch(/knex\('(?:teams as t|team_members|users)'\)\s*\./);
     expect(section).not.toMatch(/\.where\('(?:t\.)?tenant', context\.tenant\)/);

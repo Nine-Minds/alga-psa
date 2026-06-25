@@ -19,14 +19,14 @@ describe('permission role service analytics tenant-scoped query contract', () =>
   it('uses structural tenant scoping for analytics and audit roots', () => {
     const section = sectionBetween('// ANALYTICS AND AUDITING', '// BULK OPERATIONS');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'roles as r'");
-    expect(section).toContain("table: 'roles'");
-    expect(section).toContain("table: 'permissions'");
-    expect(section).toContain("table: 'permissions as p'");
-    expect(section).toContain("table: 'user_roles'");
-    expect(section).toContain("table: 'user_roles as ur'");
-    expect(section).toContain("table: 'audit_logs'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('roles as r')");
+    expect(section).toContain(".table('roles')");
+    expect(section).toContain(".table('permissions')");
+    expect(section).toContain(".table('permissions as p')");
+    expect(section).toContain(".table('user_roles')");
+    expect(section).toContain(".table('user_roles as ur')");
+    expect(section).toContain(".table('audit_logs')");
 
     expect(section).not.toMatch(/knex\('(?:roles|permissions|user_roles|audit_logs)(?: as [a-z]+)?'\)\s*\./);
     expect(section).not.toMatch(/\.where\('(?:r\.|p\.|ur\.)?tenant', context\.tenant\)/);

@@ -56,11 +56,12 @@ const auditTrailSection = sectionFrom('export const getAuthorizationBundleAuditT
 
 describe('authorization bundle action tenant-scoped query contract', () => {
   it('uses structural tenant scoping for starter seeding and draft-editor roots', () => {
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain(
       'function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder'
     );
-    expect(source).toContain('createTenantScopedQuery(knexOrTrx, { table, tenant }).builder');
+    expect(source).toContain('tenantDb(knexOrTrx, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
 
     expect(seedSection).toContain("tenantScopedTable(trx, tenant, 'authorization_bundles')");
     expect(draftEditorSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundles')");

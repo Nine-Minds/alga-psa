@@ -19,11 +19,11 @@ describe('team service member-management tenant-scoped query contract', () => {
   it('uses structural tenant scoping for member-management roots', () => {
     const section = sectionBetween('// Team Member Management', '// Team Hierarchy and Reporting');
 
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'teams'");
-    expect(section).toContain("table: 'users'");
-    expect(section).toContain("table: 'team_members'");
-    expect(section).toContain("table: 'task_assignments'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('teams')");
+    expect(section).toContain(".table('users')");
+    expect(section).toContain(".table('team_members')");
+    expect(section).toContain(".table('task_assignments')");
 
     expect(section).not.toMatch(/trx\('(?:teams|users|team_members|task_assignments)'\)\s*\.(?:where|whereIn|update|del|delete|count|pluck|first)/);
     expect(section).not.toMatch(/\.where\('tenant', context\.tenant\)/);

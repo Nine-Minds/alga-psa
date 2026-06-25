@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import knexFactory, { type Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import {
   compileTenantScopedResourceReadAuthorizationSql,
   type AuthorizationSubject,
@@ -35,11 +35,7 @@ const adapter: RelationshipSqlAdapter = {
 
 describe('tenant-scoped relationship SQL compiler', () => {
   it('applies authorization to a tenant-scoped query', () => {
-    const query = createTenantScopedQuery(db, {
-      table: 'tickets as t',
-      alias: 't',
-      tenant: subject.tenant,
-    });
+    const query = tenantDb(db, subject.tenant).scoped('tickets as t');
 
     const result = compileTenantScopedResourceReadAuthorizationSql(query, {
       resourceType: 'ticket',
@@ -55,11 +51,7 @@ describe('tenant-scoped relationship SQL compiler', () => {
   });
 
   it('throws before mutating when query and subject tenants disagree', () => {
-    const query = createTenantScopedQuery(db, {
-      table: 'tickets as t',
-      alias: 't',
-      tenant: 'tenant-2',
-    });
+    const query = tenantDb(db, 'tenant-2').scoped('tickets as t');
 
     expect(() =>
       compileTenantScopedResourceReadAuthorizationSql(query, {

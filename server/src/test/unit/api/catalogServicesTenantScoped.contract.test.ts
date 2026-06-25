@@ -16,10 +16,8 @@ describe('catalog API services tenant-scoped query contract', () => {
     for (const relativePath of catalogServices) {
       const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
-      expect(source).toContain('createTenantScopedQuery(knex, {');
-      expect(source).toContain("table: 'service_catalog as sc'");
-      expect(source).toContain("alias: 'sc'");
-      expect(source).toContain("table: 'service_prices'");
+      expect(source).toContain('tenantDb(');
+      expect(source).toContain(".table('service_catalog as sc')");      expect(source).toContain(".table('service_prices')");
       expect(source).not.toContain("knex('service_catalog as sc').where({ 'sc.tenant': tenant })");
       expect(source).not.toMatch(/knex\('service_prices'\)\s*\.where\(\{ tenant \}\)/);
       expect(source).not.toMatch(/knex\('service_catalog as sc'\)\s*\.leftJoin/);

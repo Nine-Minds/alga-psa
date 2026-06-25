@@ -19,8 +19,8 @@ describe('financial service payment methods tenant-scoped query contract', () =>
   it('uses structural tenant scoping for payment-method list roots', () => {
     const paymentMethodSection = sectionBetween('async listPaymentMethods', '// FINANCIAL REPORTING');
 
-    expect(paymentMethodSection).toContain('createTenantScopedQuery(knex, {');
-    expect(paymentMethodSection).toContain("table: 'payment_methods as pm'");
+    expect(paymentMethodSection).toContain('tenantDb(');
+    expect(paymentMethodSection).toContain(".table('payment_methods as pm')");
     expect(paymentMethodSection).toContain(".andOn('pm.tenant', '=', 'c.tenant')");
 
     expect(paymentMethodSection).not.toMatch(/knex\('payment_methods as pm'\)\s*\./);

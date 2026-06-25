@@ -13,15 +13,15 @@ describe('category API service tenant-scoped query contract', () => {
       'utf8'
     );
 
-    expect(source).toContain('createTenantScopedQuery(trx, {');
-    expect(source).toContain('createTenantScopedQuery(knex, {');
+    expect(source).toContain('tenantDb(');
+    expect(source).toContain('tenantDb(');
     expect(source).toContain('this.buildTenantScopedQuery(trx, context)');
-    expect(source).toContain("table: 'service_categories'");
-    expect(source).toContain("table: 'service_items'");
-    expect(source).toContain("table: 'service_request_definitions'");
-    expect(source).toContain("table: 'tickets'");
-    expect(source).toContain('table: tableName');
-    expect(source).toContain('table: `${tableName} as c`');
+    expect(source).toContain(".table('service_categories')");
+    expect(source).toContain(".table('service_items')");
+    expect(source).toContain(".table('service_request_definitions')");
+    expect(source).toContain(".table('tickets')");
+    expect(source).toContain('.table(tableName)');
+    expect(source).toContain(".table(`${tableName} as c`)");
     expect(source).not.toMatch(/(?:knex|trx)\('service_categories'\)[\s\S]*?\.where\('tenant', context\.tenant\)/);
     expect(source).not.toMatch(/trx\('service_items'\)[\s\S]*?\.where\('tenant', context\.tenant\)/);
     expect(source).not.toMatch(/trx\('service_request_definitions'\)[\s\S]*?tenant: context\.tenant/);

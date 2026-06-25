@@ -19,8 +19,8 @@ describe('permission role service roles-by-permission tenant-scoped query contra
   it('uses structural tenant scoping for the roles-by-permission root', () => {
     const section = methodSection('getRolesByPermission');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'roles as r'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('roles as r')");
     expect(section).not.toMatch(/knex\('roles as r'\)\s*\./);
     expect(section).not.toMatch(/\.where\('r\.tenant', context\.tenant\)/);
   });

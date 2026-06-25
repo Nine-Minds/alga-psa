@@ -19,8 +19,8 @@ describe('financial service create payment method tenant-scoped query contract',
   it('uses structural tenant scoping for default payment-method reset roots', () => {
     const paymentMethodSection = sectionBetween('async createPaymentMethod', 'async listPaymentMethods');
 
-    expect(paymentMethodSection).toContain('createTenantScopedQuery(trx, {');
-    expect(paymentMethodSection).toContain("table: 'payment_methods'");
+    expect(paymentMethodSection).toContain('tenantDb(');
+    expect(paymentMethodSection).toContain(".table('payment_methods')");
 
     expect(paymentMethodSection).not.toMatch(/trx\('payment_methods'\)\s*\.(?:where|update|delete)/);
     expect(paymentMethodSection).not.toMatch(/where\(\{\s*[^}]*tenant\s*[,}]/);

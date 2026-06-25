@@ -20,8 +20,8 @@ describe('invoice service statistics tenant-scoped query contract', () => {
     const statisticsSection = sectionBetween('async getStatistics', '// Missing Methods - Stub Implementations');
     const statisticsHelperSection = sectionBetween('private async getStatusStatistics', '// Alias Methods for Controller Compatibility');
 
-    expect(statisticsSection).toContain('createTenantScopedQuery(trx, {');
-    expect(statisticsSection).toContain("table: 'invoices'");
+    expect(statisticsSection).toContain('tenantDb(');
+    expect(statisticsSection).toContain(".table('invoices')");
     expect(statisticsSection).not.toMatch(/trx\('invoices'\)\.where\('tenant', context\.tenant\)/);
 
     expect(statisticsHelperSection).toContain(".join('clients', function()");

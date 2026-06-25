@@ -20,8 +20,8 @@ describe('time sheet service workflow tenant-scoped query contract', () => {
     const workflowSection = sectionBetween('// Time sheet workflow operations', 'async addComment');
 
     expect(workflowSection).toContain('this.buildTenantScopedQuery(trx, context)');
-    expect(workflowSection).toContain('createTenantScopedQuery(trx, {');
-    expect(workflowSection).toContain("table: 'time_entries'");
+    expect(workflowSection).toContain('tenantDb(');
+    expect(workflowSection).toContain(".table('time_entries')");
 
     expect(workflowSection).not.toMatch(/trx\(this\.tableName\)\s*[\r\n]+\s*\.where/);
     expect(workflowSection).not.toMatch(/trx\('time_entries'\)\s*[\r\n]+\s*\.where/);

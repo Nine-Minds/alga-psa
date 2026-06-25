@@ -19,9 +19,9 @@ describe('invoice service manual invoice tenant-scoped query contract', () => {
   it('uses structural tenant scoping for manual invoice post-create reloads', () => {
     const manualSection = sectionBetween('async generateManualInvoice', 'async generatePDF');
 
-    expect(manualSection).toContain('createTenantScopedQuery(trx, {');
-    expect(manualSection).toContain("table: 'invoices'");
-    expect(manualSection).toContain("table: 'invoice_charges'");
+    expect(manualSection).toContain('tenantDb(');
+    expect(manualSection).toContain(".table('invoices')");
+    expect(manualSection).toContain(".table('invoice_charges')");
     expect(manualSection).toContain("await trx('invoices').insert({");
 
     expect(manualSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|first)/);

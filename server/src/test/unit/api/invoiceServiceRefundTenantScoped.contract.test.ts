@@ -19,9 +19,9 @@ describe('invoice service refund tenant-scoped query contract', () => {
   it('uses structural tenant scoping for refund reads and updates', () => {
     const refundSection = sectionBetween('async recordRefund', '// Bulk Operations');
 
-    expect(refundSection).toContain('createTenantScopedQuery(trx, {');
-    expect(refundSection).toContain("table: 'invoices'");
-    expect(refundSection).toContain("table: 'invoice_payments'");
+    expect(refundSection).toContain('tenantDb(');
+    expect(refundSection).toContain(".table('invoices')");
+    expect(refundSection).toContain(".table('invoice_payments')");
     expect(refundSection).toContain("await trx('invoice_payments').insert(refundData)");
 
     expect(refundSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|update|first)/);

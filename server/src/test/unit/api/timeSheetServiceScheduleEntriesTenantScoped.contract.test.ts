@@ -19,10 +19,10 @@ describe('time sheet service schedule entries tenant-scoped query contract', () 
   it('uses structural tenant scoping for schedule-entry roots', () => {
     const section = sectionBetween('// Schedule entries', '// Search and statistics');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'schedule_entries'");
-    expect(section).toContain("table: 'schedule_entry_assignees'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('schedule_entries')");
+    expect(section).toContain(".table('schedule_entry_assignees')");
     expect(section).toContain("await trx('schedule_entry_assignees').insert(assigneeData)");
 
     expect(section).not.toMatch(/knex\('schedule_entries'\)\s*\./);
@@ -34,9 +34,9 @@ describe('time sheet service schedule entries tenant-scoped query contract', () 
   it('uses structural tenant scoping for schedule-entry hydration helpers', () => {
     const section = sectionBetween('async getScheduleEntry', 'private async getWorkItemForSchedule');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'schedule_entries'");
-    expect(section).toContain("table: 'schedule_entry_assignees'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('schedule_entries')");
+    expect(section).toContain(".table('schedule_entry_assignees')");
 
     expect(section).not.toMatch(/knex\('schedule_entries'\)\s*\./);
     expect(section).not.toMatch(/knex\('schedule_entry_assignees'\)\s*\./);

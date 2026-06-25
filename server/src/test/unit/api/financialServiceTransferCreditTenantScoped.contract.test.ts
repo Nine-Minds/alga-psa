@@ -19,9 +19,9 @@ describe('financial service transfer-credit tenant-scoped query contract', () =>
   it('uses structural tenant scoping for transfer-credit read and update roots', () => {
     const transferSection = sectionBetween('async transferCredit', 'async listClientCredits');
 
-    expect(transferSection).toContain('createTenantScopedQuery(trx, {');
-    expect(transferSection).toContain("table: 'credit_tracking'");
-    expect(transferSection).toContain("table: 'clients'");
+    expect(transferSection).toContain('tenantDb(');
+    expect(transferSection).toContain(".table('credit_tracking')");
+    expect(transferSection).toContain(".table('clients')");
 
     expect(transferSection).not.toMatch(/trx\('(?:credit_tracking|clients)'\)\s*\.(?:where|first|update|delete|select)/);
     expect(transferSection).not.toMatch(/where\(\{\s*[^}]*tenant\s*[,}]/);

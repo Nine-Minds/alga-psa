@@ -47,11 +47,11 @@ const totalUpdateSection = sectionBetween(
 
 describe('invoiceService tenant-scoped query contract', () => {
   it('uses structural tenant scoping for top invoice linkage and source-marking roots', () => {
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
     expect(source).toContain(
       'function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder'
     );
-    expect(source).toContain('createTenantScopedQuery(knexOrTrx, { table, tenant }).builder');
+    expect(source).toContain('tenantDb(knexOrTrx, tenant).table(table)');
 
     expect(linkageSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
     expect(linkageSection).toContain("tenantScopedTable(tx, tenant, 'contract_line_service_configuration')");

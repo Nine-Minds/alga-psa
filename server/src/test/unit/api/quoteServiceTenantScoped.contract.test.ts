@@ -13,12 +13,11 @@ describe('quote API service tenant-scoped query contract', () => {
       'utf8'
     );
 
-    expect(source).toContain('createTenantScopedQuery(trx, {');
-    expect(source).toContain("table: 'quotes as q'");
-    expect(source).toContain("alias: 'q'");
-    expect(source).toContain("table: 'clients'");
-    expect(source).toContain("table: 'default_billing_settings'");
-    expect(source).toContain("table: 'quote_items'");
+    expect(source).toContain('tenantDb(');
+    expect(source).toContain(".table('quotes as q')");
+    expect(source).toContain(".table('clients')");
+    expect(source).toContain(".table('default_billing_settings')");
+    expect(source).toContain(".table('quote_items')");
     expect(source).not.toContain("alias: 'clients'");
     expect(source).not.toContain("alias: 'default_billing_settings'");
     expect(source).not.toContain("alias: 'quote_items'");

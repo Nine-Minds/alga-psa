@@ -20,14 +20,13 @@ describe('invoice service list tenant-scoped query contract', () => {
     const listSection = sectionBetween('async list(', 'async getById');
     const baseQuerySection = sectionBetween('protected buildBaseQuery', 'private applyInvoiceFilters');
 
-    expect(baseQuerySection).toContain('createTenantScopedQuery(trx, {');
-    expect(baseQuerySection).toContain("table: 'invoices'");
+    expect(baseQuerySection).toContain('tenantDb(');
+    expect(baseQuerySection).toContain(".table('invoices')");
     expect(baseQuerySection).not.toMatch(/return trx\('invoices'\)\s*\./);
     expect(baseQuerySection).not.toMatch(/\.where\('invoices\.tenant', context\.tenant\)/);
 
-    expect(listSection).toContain('createTenantScopedQuery(trx, {');
-    expect(listSection).toContain("table: 'client_locations as cl'");
-    expect(listSection).toContain("alias: 'cl'");
+    expect(listSection).toContain('tenantDb(');
+    expect(listSection).toContain(".table('client_locations as cl')");
     expect(listSection).toContain(".andOn('invoices.tenant', '=', 'clients.tenant')");
     expect(listSection).toContain(".andOn('invoices.tenant', '=', 'client_billing_cycles.tenant')");
     expect(listSection).toContain(".andOn('invoices.tenant', '=', 'tax_rates.tenant')");

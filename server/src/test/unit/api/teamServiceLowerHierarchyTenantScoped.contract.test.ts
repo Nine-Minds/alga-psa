@@ -19,10 +19,10 @@ describe('team service lower hierarchy tenant-scoped query contract', () => {
   it('uses structural tenant scoping for lower hierarchy roots', () => {
     const section = sectionBetween('async createHierarchy', '* Search teams with advanced filters');
 
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'teams'");
-    expect(section).toContain("table: 'team_hierarchy'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('teams')");
+    expect(section).toContain(".table('team_hierarchy')");
 
     expect(section).not.toMatch(/trx\('(?:teams|team_hierarchy)'\)\s*\.(?:where|first|pluck)/);
     expect(section).not.toMatch(/knex\('team_hierarchy'\)\s*\./);

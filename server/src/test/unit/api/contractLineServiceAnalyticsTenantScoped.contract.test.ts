@@ -19,11 +19,11 @@ describe('contract line service analytics tenant-scoped query contract', () => {
   it('uses structural tenant scoping for analytics aggregate roots', () => {
     const analyticsSection = sectionBetween('// ANALYTICS AND REPORTING', '// PRIVATE HELPER METHODS');
 
-    expect(analyticsSection).toContain('createTenantScopedQuery(knex, {');
-    expect(analyticsSection).toContain("table: 'contract_lines as cl'");
-    expect(analyticsSection).toContain("table: 'contract_line_service_configuration as psc'");
-    expect(analyticsSection).toContain("table: 'contract_lines'");
-    expect(analyticsSection).toContain("table: 'contracts'");
+    expect(analyticsSection).toContain('tenantDb(');
+    expect(analyticsSection).toContain(".table('contract_lines as cl')");
+    expect(analyticsSection).toContain(".table('contract_line_service_configuration as psc')");
+    expect(analyticsSection).toContain(".table('contract_lines')");
+    expect(analyticsSection).toContain(".table('contracts')");
     expect(analyticsSection).toContain(".andOn('psc.tenant', '=', 'sc.tenant')");
 
     expect(analyticsSection).not.toMatch(/knex\('contract_lines as cl'\)\s*\./);

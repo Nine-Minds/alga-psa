@@ -14,7 +14,7 @@ describe('KB article API service tenant-scoped query contract', () => {
     );
 
     expect(source).toContain('this.buildTenantScopedQuery(knex, context)');
-    expect(source).toContain('createTenantScopedQuery(knex, {');
+    expect(source).toContain('tenantDb(');
     for (const table of [
       'kb_articles as ka',
       'documents',
@@ -22,7 +22,7 @@ describe('KB article API service tenant-scoped query contract', () => {
       'kb_article_templates',
       'tickets',
     ]) {
-      expect(source).toContain(`table: '${table}'`);
+      expect(source).toContain(`.table('${table}')`);
     }
 
     expect(source).not.toMatch(/knex\('kb_articles(?: as ka)?'\)\s*\.(?:where|select|leftJoin)/);

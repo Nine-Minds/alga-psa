@@ -19,11 +19,11 @@ describe('time sheet service comments and periods tenant-scoped query contract',
   it('uses structural tenant scoping for comments and time periods', () => {
     const section = sectionBetween('// Time sheet comments', '// Time period settings');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'time_sheet_comments'");
-    expect(section).toContain("table: 'time_periods'");
-    expect(section).toContain("table: 'time_sheets'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('time_sheet_comments')");
+    expect(section).toContain(".table('time_periods')");
+    expect(section).toContain(".table('time_sheets')");
     expect(section).toContain("const [period] = await trx('time_periods')");
 
     expect(section).not.toMatch(/knex\('time_sheet_comments'\)\s*\./);

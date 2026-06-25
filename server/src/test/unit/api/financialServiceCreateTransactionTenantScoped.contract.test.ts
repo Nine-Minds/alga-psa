@@ -19,9 +19,9 @@ describe('financial service create transaction tenant-scoped query contract', ()
   it('uses structural tenant scoping for balance lookup and client update roots', () => {
     const createTransactionSection = sectionBetween('async createTransaction', 'async getTransaction');
 
-    expect(createTransactionSection).toContain('createTenantScopedQuery(trx, {');
-    expect(createTransactionSection).toContain("table: 'transactions'");
-    expect(createTransactionSection).toContain("table: 'clients'");
+    expect(createTransactionSection).toContain('tenantDb(');
+    expect(createTransactionSection).toContain(".table('transactions')");
+    expect(createTransactionSection).toContain(".table('clients')");
 
     expect(createTransactionSection).not.toMatch(/trx\('transactions'\)\s*\.(?:where|first|update|delete)/);
     expect(createTransactionSection).not.toMatch(/trx\('clients'\)\s*\.(?:where|first|update|delete)/);

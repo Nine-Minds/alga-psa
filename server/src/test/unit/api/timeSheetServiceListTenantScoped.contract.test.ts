@@ -19,10 +19,10 @@ describe('time sheet service list tenant-scoped query contract', () => {
   it('uses structural tenant scoping for time-sheet list roots', () => {
     const listSection = sectionBetween('async list(', 'async getById');
 
-    expect(source).toContain('createTenantScopedQuery');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(listSection).toContain('this.buildTenantScopedQuery(knex, context)');
-    expect(listSection).toContain('createTenantScopedQuery(knex, {');
-    expect(listSection).toContain("table: 'time_entries'");
+    expect(listSection).toContain('tenantDb(');
+    expect(listSection).toContain(".table('time_entries')");
     expect(listSection).toContain(".andOn('time_sheets.tenant', '=', 'time_periods.tenant')");
     expect(listSection).toContain(".andOn('time_sheets.tenant', '=', 'users.tenant')");
 

@@ -19,8 +19,8 @@ describe('team service searchTeams tenant-scoped query contract', () => {
   it('uses structural tenant scoping for searchTeams root', () => {
     const section = sectionBetween('async searchTeams', '* Get full team hierarchy');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'teams'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('teams')");
     expect(section).toContain(".andOn('teams.tenant', '=', 'manager.tenant')");
 
     expect(section).not.toMatch(/knex\('teams'\)\s*\./);

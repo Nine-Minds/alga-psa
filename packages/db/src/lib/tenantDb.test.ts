@@ -40,6 +40,10 @@ describe('tenantDb facade', () => {
     expect(isTenantScopedQuery(query)).toBe(true);
     expect(query.tenant).toBe('tenant-1');
     expect(query.rootAlias).toBe('t');
+
+    const filtered = query.withBuilder(query.builder.clone().where('t.ticket_id', 'ticket-1'));
+    expect(isTenantScopedQuery(filtered)).toBe(true);
+    expect(filtered.builder.toString()).toContain('"t"."ticket_id" = \'ticket-1\'');
   });
 
   it('fails closed for unknown tables', () => {

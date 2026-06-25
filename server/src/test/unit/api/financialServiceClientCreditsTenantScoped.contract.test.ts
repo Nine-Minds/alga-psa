@@ -19,10 +19,10 @@ describe('financial service client credits tenant-scoped query contract', () => 
   it('uses structural tenant scoping for client credit list and validation roots', () => {
     const creditSection = sectionBetween('async listClientCredits', '// BILLING AND INVOICING');
 
-    expect(creditSection).toContain('createTenantScopedQuery(knex, {');
-    expect(creditSection).toContain("table: 'credit_tracking'");
-    expect(creditSection).toContain("table: 'transactions'");
-    expect(creditSection).toContain("table: 'clients'");
+    expect(creditSection).toContain('tenantDb(');
+    expect(creditSection).toContain(".table('credit_tracking')");
+    expect(creditSection).toContain(".table('transactions')");
+    expect(creditSection).toContain(".table('clients')");
     expect(creditSection).toContain(".andOn('credit_tracking.tenant', '=', 'transactions.tenant')");
 
     expect(creditSection).not.toMatch(/knex\('(?:credit_tracking|transactions|clients)'\)\s*\./);

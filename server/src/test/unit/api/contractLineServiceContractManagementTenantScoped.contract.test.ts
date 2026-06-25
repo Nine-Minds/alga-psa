@@ -19,10 +19,10 @@ describe('contract line service contract-management tenant-scoped query contract
   it('uses structural tenant scoping for contract list and assignment guard roots', () => {
     const contractSection = sectionBetween('// CONTRACT MANAGEMENT', '// COMPANY ASSIGNMENT OPERATIONS');
 
-    expect(contractSection).toContain('createTenantScopedQuery(knex, {');
-    expect(contractSection).toContain('createTenantScopedQuery(trx, {');
-    expect(contractSection).toContain("table: 'contracts as c'");
-    expect(contractSection).toContain("table: 'client_contracts as cc'");
+    expect(contractSection).toContain('tenantDb(');
+    expect(contractSection).toContain('tenantDb(');
+    expect(contractSection).toContain(".table('contracts as c')");
+    expect(contractSection).toContain(".table('client_contracts as cc')");
 
     expect(contractSection).not.toMatch(/knex\('contracts as c'\)\s*\./);
     expect(contractSection).not.toMatch(/trx\('client_contracts as cc'\)\s*\./);

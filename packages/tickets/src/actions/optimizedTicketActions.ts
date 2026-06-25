@@ -21,8 +21,6 @@ import {
   registerAfterCommit,
   createTenantKnex,
   tenantDb,
-  cloneTenantScopedQuery,
-  withTenantScopedQueryBuilder,
   resolveUserTimeZone,
   normalizeIanaTimeZone,
   type TenantScopedQuery,
@@ -1353,7 +1351,7 @@ async function buildTicketListBaseQuery(
     // would execute the query instead of returning the builder.
     return {
       builder: baseQuery,
-      scopedQuery: withTenantScopedQueryBuilder(scopedQuery, baseQuery),
+      scopedQuery: scopedQuery.withBuilder(baseQuery),
     };
 }
 
@@ -1803,7 +1801,7 @@ export const getTicketsForList = withAuth(async (
     const normalizedPage = Math.max(1, Number.isFinite(page) ? Math.floor(page) : 1);
     const normalizedPageSize = Math.max(1, Number.isFinite(pageSize) ? Math.floor(pageSize) : 10);
     const offset = (normalizedPage - 1) * normalizedPageSize;
-    const scopedBaseQuery = cloneTenantScopedQuery(scopedQuery);
+    const scopedBaseQuery = scopedQuery.clone();
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
 
     if (authSqlResult.supported) {
@@ -1958,7 +1956,7 @@ export const getAllMatchingTicketIds = withAuth(async (
       user as IUserWithRoles
     );
 
-    const scopedBaseQuery = cloneTenantScopedQuery(scopedQuery);
+    const scopedBaseQuery = scopedQuery.clone();
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
     const rows = authSqlResult.supported
       ? await scopedBaseQuery.builder
@@ -3428,7 +3426,7 @@ export const getAdjacentTicketIds = withAuth(async (
       tenant,
       user as IUserWithRoles
     );
-    const scopedBaseQuery = cloneTenantScopedQuery(scopedQuery);
+    const scopedBaseQuery = scopedQuery.clone();
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
 
     if (authSqlResult.supported) {

@@ -20,9 +20,9 @@ describe('time sheet service search and helper tenant-scoped query contract', ()
     const section = sectionBetween('// Search and statistics', 'async getScheduleEntry');
 
     expect(section).toContain('this.buildTenantScopedQuery(knex, context)');
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'time_entries'");
-    expect(section).toContain("table: 'users'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('time_entries')");
+    expect(section).toContain(".table('users')");
 
     expect(section).not.toMatch(/knex\(tableName\)\s*\./);
     expect(section).not.toMatch(/knex\('time_entries'\)\s*\./);

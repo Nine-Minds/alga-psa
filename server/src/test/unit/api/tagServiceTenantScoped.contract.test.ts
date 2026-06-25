@@ -13,10 +13,10 @@ describe('tag API service tenant-scoped query contract', () => {
       'utf8'
     );
 
-    expect(source).toContain('createTenantScopedQuery(knex, {');
-    expect(source).toContain('createTenantScopedQuery(trx, {');
-    expect(source).toContain("table: 'tag_mappings as tm'");
-    expect(source).toContain("table: 'tag_mappings'");
+    expect(source).toContain('tenantDb(');
+    expect(source).toContain('tenantDb(');
+    expect(source).toContain(".table('tag_mappings as tm')");
+    expect(source).toContain(".table('tag_mappings')");
     expect(source).not.toMatch(/(?:knex|trx)\('tag_mappings as tm'\)[\s\S]*?\.where\('tm\.tenant', (?:tenant|context\.tenant)\)/);
     expect(source).not.toMatch(/(?:knex|trx)\('tag_mappings'\)[\s\S]*?\.where\('tenant', tenant\)/);
     expect(source).not.toMatch(/(?:knex|trx)\('tag_mappings'\)[\s\S]*?tenant: context\.tenant/);

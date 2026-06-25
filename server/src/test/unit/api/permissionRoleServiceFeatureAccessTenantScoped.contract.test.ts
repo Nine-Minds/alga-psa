@@ -19,9 +19,9 @@ describe('permission role service feature-access tenant-scoped query contract', 
   it('uses structural tenant scoping for feature access lookup roots', () => {
     const section = sectionBetween('// FEATURE TOGGLES', '// HELPER METHODS');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'feature_toggles'");
-    expect(section).toContain("table: 'users'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('feature_toggles')");
+    expect(section).toContain(".table('users')");
     expect(section).not.toMatch(/knex\('(?:feature_toggles|users)'\)\s*\./);
     expect(section).not.toMatch(/\.where\('tenant', context\.tenant\)/);
   });

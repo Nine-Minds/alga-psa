@@ -19,9 +19,9 @@ describe('time sheet service period settings tenant-scoped query contract', () =
   it('uses structural tenant scoping for period-settings roots', () => {
     const section = sectionBetween('// Time period settings', '// Schedule entries');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'time_period_settings'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('time_period_settings')");
     expect(section).toContain("const [settings] = await trx('time_period_settings')");
 
     expect(section).not.toMatch(/knex\('time_period_settings'\)\s*\.(?:where|orderBy)/);

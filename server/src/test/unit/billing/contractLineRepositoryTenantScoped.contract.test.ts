@@ -36,9 +36,9 @@ describe('contract line repositories tenant-scoped query contract', () => {
     const source = readRepoFile(relativePath);
     const section = sectionBetween(source, 'async function isTemplateContract', 'export async function ensureTemplateLineSnapshot');
 
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(knex: TenantScopedKnex, tenant: string, table: string): Knex.QueryBuilder');
-    expect(source).toContain('createTenantScopedQuery(knex, { table, tenant }).builder');
+    expect(source).toContain('tenantDb(knex, tenant).table(table)');
 
     expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_templates')");
     expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_template_lines')");

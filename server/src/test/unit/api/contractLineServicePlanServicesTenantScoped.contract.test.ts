@@ -19,10 +19,10 @@ describe('contract line service plan services tenant-scoped query contract', () 
   it('uses structural tenant scoping for service configuration roots', () => {
     const serviceSection = sectionBetween('// SERVICE MANAGEMENT', '// CONTRACT MANAGEMENT');
 
-    expect(serviceSection).toContain('createTenantScopedQuery(trx, {');
-    expect(serviceSection).toContain('createTenantScopedQuery(knex, {');
-    expect(serviceSection).toContain("table: 'contract_line_service_configuration'");
-    expect(serviceSection).toContain("table: 'contract_line_service_configuration as psc'");
+    expect(serviceSection).toContain('tenantDb(');
+    expect(serviceSection).toContain('tenantDb(');
+    expect(serviceSection).toContain(".table('contract_line_service_configuration')");
+    expect(serviceSection).toContain(".table('contract_line_service_configuration as psc')");
 
     expect(serviceSection).not.toMatch(
       /trx\('contract_line_service_configuration'\)\s*\.(?:where|first|update|delete)/

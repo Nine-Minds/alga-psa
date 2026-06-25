@@ -19,8 +19,8 @@ describe('invoice service PDF tenant-scoped query contract', () => {
   it('uses structural tenant scoping for PDF invoice lookup', () => {
     const pdfSection = sectionBetween('async generatePDF', 'async search');
 
-    expect(pdfSection).toContain('createTenantScopedQuery(knex, {');
-    expect(pdfSection).toContain("table: 'invoices'");
+    expect(pdfSection).toContain('tenantDb(');
+    expect(pdfSection).toContain(".table('invoices')");
     expect(pdfSection).not.toMatch(/knex\('invoices'\)\s*\./);
     expect(pdfSection).not.toMatch(/\.where\(\{\s*invoice_id: id,\s*tenant: context\.tenant\s*\}\)/);
   });

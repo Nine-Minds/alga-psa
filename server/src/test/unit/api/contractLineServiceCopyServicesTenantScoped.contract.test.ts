@@ -19,8 +19,8 @@ describe('contract line service copy services tenant-scoped query contract', () 
   it('uses structural tenant scoping for copy-service source configuration roots', () => {
     const copySection = sectionBetween('private async copyPlanServices', 'private async copyPlanConfigurations');
 
-    expect(copySection).toContain('createTenantScopedQuery(trx, {');
-    expect(copySection).toContain("table: 'contract_line_service_configuration'");
+    expect(copySection).toContain('tenantDb(');
+    expect(copySection).toContain(".table('contract_line_service_configuration')");
 
     expect(copySection).not.toMatch(
       /trx\('contract_line_service_configuration'\)\s*\.(?:where|first|update|delete)/

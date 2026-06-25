@@ -22,11 +22,11 @@ describe('contract line service client-assignment tenant-scoped query contract',
       '// PLAN ACTIVATION AND LIFECYCLE'
     );
 
-    expect(assignmentSection).toContain('createTenantScopedQuery(knex, {');
-    expect(assignmentSection).toContain('createTenantScopedQuery(trx, {');
-    expect(assignmentSection).toContain("table: 'contract_lines as cl'");
-    expect(assignmentSection).toContain("table: 'client_contracts'");
-    expect(assignmentSection).toContain("table: 'contract_lines'");
+    expect(assignmentSection).toContain('tenantDb(');
+    expect(assignmentSection).toContain('tenantDb(');
+    expect(assignmentSection).toContain(".table('contract_lines as cl')");
+    expect(assignmentSection).toContain(".table('client_contracts')");
+    expect(assignmentSection).toContain(".table('contract_lines')");
 
     expect(assignmentSection).not.toMatch(/knex\('contract_lines as cl'\)\s*\./);
     expect(assignmentSection).not.toMatch(/trx\('client_contracts'\)\s*\.(?:where|first)/);

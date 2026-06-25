@@ -19,11 +19,11 @@ describe('financial service account-balance tenant-scoped query contract', () =>
   it('uses structural tenant scoping for account-balance report roots', () => {
     const accountBalanceSection = sectionBetween('async getAccountBalanceReport', 'async getAgingReport');
 
-    expect(accountBalanceSection).toContain('createTenantScopedQuery(knex, {');
-    expect(accountBalanceSection).toContain("table: 'clients'");
-    expect(accountBalanceSection).toContain("table: 'credit_tracking'");
-    expect(accountBalanceSection).toContain("table: 'invoices'");
-    expect(accountBalanceSection).toContain("table: 'transactions'");
+    expect(accountBalanceSection).toContain('tenantDb(');
+    expect(accountBalanceSection).toContain(".table('clients')");
+    expect(accountBalanceSection).toContain(".table('credit_tracking')");
+    expect(accountBalanceSection).toContain(".table('invoices')");
+    expect(accountBalanceSection).toContain(".table('transactions')");
     expect(accountBalanceSection).toContain('const tenant = context?.tenant || defaultTenant;');
 
     expect(accountBalanceSection).not.toMatch(/knex\('(?:clients|credit_tracking|invoices|transactions)'\)\s*\./);

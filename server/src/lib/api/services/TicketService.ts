@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTenantScopedQueryBuilder, withTransaction, tenantDb } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
@@ -213,8 +213,8 @@ export class TicketService extends BaseService<ITicket> {
     // Push row-level read authorization into SQL (when the caller provides it)
     // so both the page and the total count reflect only authorized rows.
     if (options.applyAuthorization) {
-      options.applyAuthorization(withTenantScopedQueryBuilder(dataScopedQuery, dataQuery));
-      options.applyAuthorization(withTenantScopedQueryBuilder(countScopedQuery, countQuery));
+      options.applyAuthorization(dataScopedQuery.withBuilder(dataQuery));
+      options.applyAuthorization(countScopedQuery.withBuilder(countQuery));
     }
 
     // Apply sorting

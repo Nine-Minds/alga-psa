@@ -19,9 +19,9 @@ describe('contract line service usage tenant-scoped query contract', () => {
   it('uses structural tenant scoping for usage-metering roots', () => {
     const usageSection = sectionBetween('// USAGE TRACKING AND METERING', '// BULK OPERATIONS');
 
-    expect(usageSection).toContain('createTenantScopedQuery(knex, {');
-    expect(usageSection).toContain("table: 'bucket_usage'");
-    expect(usageSection).toContain("table: 'time_entries as te'");
+    expect(usageSection).toContain('tenantDb(');
+    expect(usageSection).toContain(".table('bucket_usage')");
+    expect(usageSection).toContain(".table('time_entries as te')");
 
     expect(usageSection).not.toMatch(/knex\('bucket_usage'\)\s*\./);
     expect(usageSection).not.toMatch(/knex\('time_entries as te'\)\s*\./);

@@ -19,8 +19,8 @@ describe('financial service invoice list tenant-scoped query contract', () => {
   it('uses structural tenant scoping for invoice list roots', () => {
     const invoiceSection = sectionBetween('async listInvoices', '// CREDIT MANAGEMENT');
 
-    expect(invoiceSection).toContain('createTenantScopedQuery(knex, {');
-    expect(invoiceSection).toContain("table: 'invoices as i'");
+    expect(invoiceSection).toContain('tenantDb(');
+    expect(invoiceSection).toContain(".table('invoices as i')");
     expect(invoiceSection).toContain(".andOn('i.tenant', '=', 'c.tenant')");
 
     expect(invoiceSection).not.toMatch(/knex\('invoices as i'\)\s*\./);

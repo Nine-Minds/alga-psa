@@ -22,11 +22,11 @@ describe('permission role service permission tenant-scoped query contract', () =
   it('uses structural tenant scoping for permission-management roots', () => {
     const section = readPermissionManagementSection();
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'permissions'");
-    expect(section).toContain("table: 'permissions as p'");
-    expect(section).toContain("table: 'role_permissions'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('permissions')");
+    expect(section).toContain(".table('permissions as p')");
+    expect(section).toContain(".table('role_permissions')");
     expect(section).not.toMatch(/knex\('permissions(?: as p)?'\)\s*\.(?:where|leftJoin)/);
     expect(section).not.toMatch(/trx\('permissions'\)\s*\.where/);
     expect(section).not.toMatch(/trx\('role_permissions'\)\s*\.where/);

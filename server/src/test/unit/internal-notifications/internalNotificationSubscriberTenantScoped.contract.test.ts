@@ -42,7 +42,7 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     const appointmentApprovedSection = sectionBetween('async function handleAppointmentRequestApproved', 'async function handleAppointmentRequestDeclined');
     const appointmentCancelledSection = sectionBetween('async function handleAppointmentRequestCancelled', 'async function handleInternalNotificationEvent');
 
-    expect(source).toContain("import { createTenantScopedQuery, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';");
+    expect(source).toContain("import { resolveEffectiveTimeZone, normalizeIanaTimeZone, tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
 
     expect(ticketCreatedSection).toContain("tenantScopedTable(db, 'tickets as t', tenantId)");

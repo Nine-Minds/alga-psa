@@ -19,14 +19,13 @@ describe('invoice service lower helper tenant-scoped query contract', () => {
   it('uses structural tenant scoping for lower helper read roots', () => {
     const helperSection = sectionBetween('// Additional helper methods...', 'private async createInvoiceLineItems');
 
-    expect(helperSection).toContain('createTenantScopedQuery(trx, {');
-    expect(helperSection).toContain("table: 'invoices'");
-    expect(helperSection).toContain("table: 'clients as c'");
-    expect(helperSection).toContain("alias: 'c'");
-    expect(helperSection).toContain("table: 'client_billing_cycles'");
-    expect(helperSection).toContain("table: 'tax_rates'");
-    expect(helperSection).toContain("table: 'invoice_payments'");
-    expect(helperSection).toContain("table: 'invoice_credits'");
+    expect(helperSection).toContain('tenantDb(');
+    expect(helperSection).toContain(".table('invoices')");
+    expect(helperSection).toContain(".table('clients as c')");
+    expect(helperSection).toContain(".table('client_billing_cycles')");
+    expect(helperSection).toContain(".table('tax_rates')");
+    expect(helperSection).toContain(".table('invoice_payments')");
+    expect(helperSection).toContain(".table('invoice_credits')");
 
     expect(helperSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|first)/);
     expect(helperSection).not.toMatch(/trx\('clients as c'\)\s*\./);

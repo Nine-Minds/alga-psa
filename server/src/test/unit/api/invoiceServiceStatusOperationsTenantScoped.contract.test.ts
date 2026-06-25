@@ -19,9 +19,9 @@ describe('invoice service status operation tenant-scoped query contract', () => 
   it('uses structural tenant scoping for finalize and send roots', () => {
     const statusSection = sectionBetween('async finalizeInvoice', 'async recordPayment');
 
-    expect(statusSection).toContain('createTenantScopedQuery(trx, {');
-    expect(statusSection).toContain("table: 'invoices'");
-    expect(statusSection).toContain("table: 'invoice_line_items'");
+    expect(statusSection).toContain('tenantDb(');
+    expect(statusSection).toContain(".table('invoices')");
+    expect(statusSection).toContain(".table('invoice_line_items')");
     expect(statusSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|update|first)/);
     expect(statusSection).not.toMatch(/trx\('invoice_line_items'\)\s*\.(?:where|first)/);
     expect(statusSection).not.toMatch(/\.where\(\{\s*invoice_id: data\.invoice_id,\s*tenant: context\.tenant\s*\}\)/);

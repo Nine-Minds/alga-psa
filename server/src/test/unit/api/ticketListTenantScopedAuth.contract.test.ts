@@ -17,12 +17,16 @@ describe('API ticket list tenant-scoped authorization contract', () => {
     const typesSource = readSource('server/src/lib/api/controllers/types.ts');
 
     expect(controllerSource).toContain('compileTenantScopedResourceReadAuthorizationSql');
-    expect(controllerSource).toContain('createTenantScopedQuery');
+    expect(controllerSource).toContain("tenantDb(knex, subject.tenant).scoped('tickets as t')");
     expect(controllerSource).toContain('TenantScopedQuery');
+    expect(controllerSource).not.toContain('createTenantScopedQuery');
     expect(controllerSource).not.toContain('compileResourceReadAuthorizationSql');
 
-    expect(serviceSource).toContain('createTenantScopedQuery');
-    expect(serviceSource).toContain('withTenantScopedQueryBuilder');
+    expect(serviceSource).toContain("tenantDb(knex, context.tenant).scoped('tickets as t')");
+    expect(serviceSource).toContain('dataScopedQuery.withBuilder(dataQuery)');
+    expect(serviceSource).toContain('countScopedQuery.withBuilder(countQuery)');
+    expect(serviceSource).not.toContain('withTenantScopedQueryBuilder');
+    expect(serviceSource).not.toContain('createTenantScopedQuery');
 
     expect(typesSource).toContain('applyAuthorization?: (query: TenantScopedQuery) => void');
   });

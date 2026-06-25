@@ -19,10 +19,10 @@ describe('financial service analytics tenant-scoped query contract', () => {
   it('uses structural tenant scoping for analytics aggregate roots', () => {
     const analyticsSection = sectionBetween('async getFinancialAnalytics', '// RECONCILIATION MANAGEMENT');
 
-    expect(analyticsSection).toContain('createTenantScopedQuery(knex, {');
-    expect(analyticsSection).toContain("table: 'invoices'");
-    expect(analyticsSection).toContain("table: 'transactions'");
-    expect(analyticsSection).toContain("table: 'clients'");
+    expect(analyticsSection).toContain('tenantDb(');
+    expect(analyticsSection).toContain(".table('invoices')");
+    expect(analyticsSection).toContain(".table('transactions')");
+    expect(analyticsSection).toContain(".table('clients')");
 
     expect(analyticsSection).not.toMatch(/knex\('(?:invoices|transactions|clients)'\)\s*\./);
     expect(analyticsSection).not.toMatch(/\.where\('tenant', context\.tenant\)/);

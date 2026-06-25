@@ -19,11 +19,11 @@ describe('team service analytics tenant-scoped query contract', () => {
   it('uses structural tenant scoping for team analytics roots', () => {
     const section = sectionBetween('// Team Analytics and Performance', '// Search and Filtering');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'teams'");
-    expect(section).toContain("table: 'team_members as tm'");
-    expect(section).toContain("table: 'project_team_assignments as pta'");
-    expect(section).toContain("table: 'time_entries as te'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('teams')");
+    expect(section).toContain(".table('team_members as tm')");
+    expect(section).toContain(".table('project_team_assignments as pta')");
+    expect(section).toContain(".table('time_entries as te')");
 
     expect(section).not.toMatch(/knex\('(?:teams|team_members as tm|project_team_assignments as pta|time_entries as te)'\)\s*\./);
     expect(section).not.toMatch(/\.where\(\{[^}]*tenant: context\.tenant/);

@@ -19,16 +19,16 @@ describe('contract line service helper tenant-scoped query contract', () => {
   it('uses structural tenant scoping for helper read and update roots', () => {
     const helperSection = sectionBetween('private async isPlanInUse', 'private async copyPlanServices');
 
-    expect(helperSection).toContain('createTenantScopedQuery(knex, {');
-    expect(helperSection).toContain('createTenantScopedQuery(trx, {');
-    expect(helperSection).toContain("table: 'contract_lines as clx'");
-    expect(helperSection).toContain("table: 'contract_line_service_configuration'");
-    expect(helperSection).toContain("table: 'contract_lines'");
-    expect(helperSection).toContain("table: 'contracts'");
-    expect(helperSection).toContain("table: 'clients'");
-    expect(helperSection).toContain("table: 'invoices'");
-    expect(helperSection).toContain("table: 'bucket_usage'");
-    expect(helperSection).toContain("table: 'service_catalog'");
+    expect(helperSection).toContain('tenantDb(');
+    expect(helperSection).toContain('tenantDb(');
+    expect(helperSection).toContain(".table('contract_lines as clx')");
+    expect(helperSection).toContain(".table('contract_line_service_configuration')");
+    expect(helperSection).toContain(".table('contract_lines')");
+    expect(helperSection).toContain(".table('contracts')");
+    expect(helperSection).toContain(".table('clients')");
+    expect(helperSection).toContain(".table('invoices')");
+    expect(helperSection).toContain(".table('bucket_usage')");
+    expect(helperSection).toContain(".table('service_catalog')");
     expect(helperSection).toContain(".andOn('cl.tenant', '=', 'cc.tenant')");
 
     expect(helperSection).not.toMatch(/knex\('contract_lines as clx'\)\s*\./);

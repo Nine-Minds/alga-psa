@@ -19,9 +19,9 @@ describe('financial service reconciliation tenant-scoped query contract', () => 
   it('uses structural tenant scoping for reconciliation resolve roots', () => {
     const reconciliationSection = sectionBetween('async resolveReconciliationReport', '// BULK OPERATIONS');
 
-    expect(reconciliationSection).toContain('createTenantScopedQuery(trx, {');
-    expect(reconciliationSection).toContain("table: 'credit_reconciliation_reports'");
-    expect(reconciliationSection).toContain("table: 'clients'");
+    expect(reconciliationSection).toContain('tenantDb(');
+    expect(reconciliationSection).toContain(".table('credit_reconciliation_reports')");
+    expect(reconciliationSection).toContain(".table('clients')");
     expect(reconciliationSection).toContain('const tenant = context?.tenant || defaultTenant;');
 
     expect(reconciliationSection).not.toMatch(/trx\('(?:credit_reconciliation_reports|clients)'\)\s*\.(?:where|first|update|delete)/);

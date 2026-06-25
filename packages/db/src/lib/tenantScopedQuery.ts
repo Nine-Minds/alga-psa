@@ -9,6 +9,8 @@ export interface TenantScopedQuery {
   readonly rootAlias: string;
   readonly tenantColumn: string;
   readonly qualifiedTenantColumn: string;
+  clone(): TenantScopedQuery;
+  withBuilder(builder: Knex.QueryBuilder): TenantScopedQuery;
   readonly [tenantScopedQueryBrand]: true;
 }
 
@@ -19,7 +21,10 @@ export interface TenantScopedQueryOptions {
   tenantColumn?: string;
 }
 
-type TenantScopedQueryMetadata = Omit<TenantScopedQuery, 'builder' | typeof tenantScopedQueryBrand>;
+type TenantScopedQueryMetadata = Pick<
+  TenantScopedQuery,
+  'tenant' | 'rootAlias' | 'tenantColumn' | 'qualifiedTenantColumn'
+>;
 
 function createMetadata(options: TenantScopedQueryOptions): TenantScopedQueryMetadata {
   const tenantColumn = options.tenantColumn ?? 'tenant';
@@ -39,6 +44,8 @@ function tagTenantScopedQuery(
   return {
     ...metadata,
     builder,
+    clone: () => tagTenantScopedQuery(builder.clone(), metadata),
+    withBuilder: (nextBuilder: Knex.QueryBuilder) => tagTenantScopedQuery(nextBuilder, metadata),
     [tenantScopedQueryBrand]: true,
   };
 }
@@ -62,14 +69,14 @@ export function createTenantScopedQuery(
 }
 
 export function cloneTenantScopedQuery(query: TenantScopedQuery): TenantScopedQuery {
-  return tagTenantScopedQuery(query.builder.clone(), query);
+  return query.clone();
 }
 
 export function withTenantScopedQueryBuilder(
   query: TenantScopedQuery,
   builder: Knex.QueryBuilder
 ): TenantScopedQuery {
-  return tagTenantScopedQuery(builder, query);
+  return query.withBuilder(builder);
 }
 
 export function isTenantScopedQuery(value: unknown): value is TenantScopedQuery {

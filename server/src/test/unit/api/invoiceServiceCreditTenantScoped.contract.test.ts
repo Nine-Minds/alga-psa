@@ -19,9 +19,9 @@ describe('invoice service credit tenant-scoped query contract', () => {
   it('uses structural tenant scoping for credit-application reads and updates', () => {
     const creditSection = sectionBetween('async applyCredit', 'async recordRefund');
 
-    expect(creditSection).toContain('createTenantScopedQuery(trx, {');
-    expect(creditSection).toContain("table: 'invoices'");
-    expect(creditSection).toContain("table: 'invoice_payments'");
+    expect(creditSection).toContain('tenantDb(');
+    expect(creditSection).toContain(".table('invoices')");
+    expect(creditSection).toContain(".table('invoice_payments')");
     expect(creditSection).toContain("await trx('invoice_credits').insert(creditData)");
 
     expect(creditSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|update|first)/);

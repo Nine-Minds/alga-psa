@@ -19,8 +19,8 @@ describe('permission role service permission-check tenant-scoped query contract'
   it('uses structural tenant scoping for user lookup roots', () => {
     const section = sectionBetween('// PERMISSION CHECKS', '// ROLE TEMPLATES AND CLONING');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'users'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('users')");
     expect(section).not.toMatch(/knex\('users'\)\s*\./);
     expect(section).not.toMatch(/\.where\('tenant', context\.tenant\)/);
   });

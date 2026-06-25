@@ -19,9 +19,9 @@ describe('financial service transaction tenant-scoped query contract', () => {
   it('uses structural tenant scoping for transaction get/list roots', () => {
     const transactionSection = sectionBetween('async getTransaction', 'async listInvoices');
 
-    expect(transactionSection).toContain('createTenantScopedQuery(knex, {');
-    expect(transactionSection).toContain("table: 'transactions'");
-    expect(transactionSection).toContain("table: 'transactions as t'");
+    expect(transactionSection).toContain('tenantDb(');
+    expect(transactionSection).toContain(".table('transactions')");
+    expect(transactionSection).toContain(".table('transactions as t')");
     expect(transactionSection).toContain(".andOn('t.tenant', '=', 'c.tenant')");
     expect(transactionSection).toContain(".andOn('t.tenant', '=', 'i.tenant')");
 

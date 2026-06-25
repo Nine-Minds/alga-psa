@@ -22,10 +22,10 @@ describe('contract line service lifecycle and template tenant-scoped query contr
       '// USAGE TRACKING AND METERING'
     );
 
-    expect(lifecycleSection).toContain('createTenantScopedQuery(trx, {');
-    expect(lifecycleSection).toContain("table: 'contract_lines'");
-    expect(lifecycleSection).toContain("table: 'plan_templates'");
-    expect(lifecycleSection).toContain("table: 'template_services'");
+    expect(lifecycleSection).toContain('tenantDb(');
+    expect(lifecycleSection).toContain(".table('contract_lines')");
+    expect(lifecycleSection).toContain(".table('plan_templates')");
+    expect(lifecycleSection).toContain(".table('template_services')");
 
     expect(lifecycleSection).not.toMatch(/trx\('contract_lines'\)\s*\.(?:where|update|delete)/);
     expect(lifecycleSection).not.toMatch(/trx\('plan_templates'\)\s*\.(?:where|first)/);

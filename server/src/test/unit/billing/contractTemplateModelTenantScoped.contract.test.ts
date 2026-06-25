@@ -13,9 +13,9 @@ describe('contract template model tenant-scoped query contract', () => {
   it('uses structural tenant scoping for template reads, mutations, and cleanup roots', () => {
     const source = readModel();
 
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
-    expect(source).toContain('createTenantScopedQuery(conn, { table, tenant }).builder');
+    expect(source).toContain('tenantDb(conn, tenant).table(table)');
 
     [
       'contract_templates',

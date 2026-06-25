@@ -19,11 +19,11 @@ describe('team service hierarchy tenant-scoped query contract', () => {
   it('uses structural tenant scoping for hierarchy roots', () => {
     const section = sectionBetween('// Team Hierarchy and Reporting', '// Team Permissions and Access Control');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'teams as t'");
-    expect(section).toContain("table: 'teams'");
-    expect(section).toContain("table: 'team_hierarchy'");
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain('tenantDb(');
+    expect(section).toContain(".table('teams as t')");
+    expect(section).toContain(".table('teams')");
+    expect(section).toContain(".table('team_hierarchy')");
 
     expect(section).not.toMatch(/knex\('(?:teams as t|team_hierarchy)'\)\s*\./);
     expect(section).not.toMatch(/trx\('teams'\)\s*\.(?:where|first)/);

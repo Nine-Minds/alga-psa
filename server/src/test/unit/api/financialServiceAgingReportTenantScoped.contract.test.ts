@@ -19,8 +19,8 @@ describe('financial service aging report tenant-scoped query contract', () => {
   it('uses structural tenant scoping for aging report roots', () => {
     const agingSection = sectionBetween('async getAgingReport', 'async getFinancialAnalytics');
 
-    expect(agingSection).toContain('createTenantScopedQuery(knex, {');
-    expect(agingSection).toContain("table: 'invoices as i'");
+    expect(agingSection).toContain('tenantDb(');
+    expect(agingSection).toContain(".table('invoices as i')");
     expect(agingSection).toContain('const tenant = context?.tenant || defaultTenant;');
     expect(agingSection).toContain(".andOn('i.tenant', '=', 'c.tenant')");
 

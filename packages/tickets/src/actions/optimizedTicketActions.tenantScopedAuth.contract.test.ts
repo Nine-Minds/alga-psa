@@ -12,9 +12,12 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(source).toContain('function tenantScopedTable(');
     expect(source).toContain('tenantDb(conn, tenant).table(table)');
     expect(source).toContain("tenantDb(trx, tenant).scoped('tickets as t')");
-    expect(source).toContain('cloneTenantScopedQuery');
+    expect(source).toContain('scopedQuery.clone()');
+    expect(source).toContain('scopedQuery.withBuilder(baseQuery)');
     expect(source).toContain('compileTenantScopedResourceReadAuthorizationSql');
     expect(source).not.toContain('createTenantScopedQuery');
+    expect(source).not.toContain('cloneTenantScopedQuery');
+    expect(source).not.toContain('withTenantScopedQueryBuilder');
     expect(source).not.toContain('compileResourceReadAuthorizationSql,');
   });
 
