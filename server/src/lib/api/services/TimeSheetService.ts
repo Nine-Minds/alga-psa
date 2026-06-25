@@ -200,7 +200,7 @@ export class TimeSheetService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
       const { knex } = await this.getKnex();
       
-      const timeSheet = await knex(this.tableName)
+      const timeSheet = await this.buildTenantScopedQuery(knex, context)
         .leftJoin('users', function() {
           this.on('time_sheets.user_id', '=', 'users.user_id')
             .andOn('time_sheets.tenant', '=', 'users.tenant');
@@ -213,10 +213,7 @@ export class TimeSheetService extends BaseService<any> {
           this.on('time_sheets.period_id', '=', 'time_periods.period_id')
             .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
         })
-        .where({
-          [`${this.tableName}.${this.primaryKey}`]: id,
-          [`${this.tableName}.tenant`]: context.tenant
-        })
+        .where(`${this.tableName}.${this.primaryKey}`, id)
         .select(
           `${this.tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -315,8 +312,8 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx(this.tableName)
-          .where({ [this.primaryKey]: id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ [this.primaryKey]: id })
           .update(updateData);
   
       });
@@ -357,8 +354,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Cannot delete approved time sheets');
         }
   
-        await trx(this.tableName)
-          .where({ [this.primaryKey]: id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ [this.primaryKey]: id })
           .del();
       });
 
