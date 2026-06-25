@@ -5,7 +5,7 @@
  */
 
 import type { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, createTenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { hasPermission } from '../../auth/rbac';
 import { Quote, QuoteItem, QuoteActivity } from '@alga-psa/billing/models';
@@ -84,11 +84,7 @@ export class QuoteService extends BaseService<IQuote> {
       const sortOrder = options.order ?? 'desc';
       const isTemplate = options.is_template ?? filters?.is_template ?? false;
 
-      const baseQuery = createTenantScopedQuery(trx, {
-        table: 'quotes as q',
-        alias: 'q',
-        tenant: context.tenant,
-      }).builder
+      const baseQuery = tenantDb(trx, context.tenant).table('quotes as q')
         .andWhere('q.is_template', isTemplate);
 
       if (options.status || filters?.status) {
@@ -167,20 +163,14 @@ export class QuoteService extends BaseService<IQuote> {
       let currencyCode = quoteData.currency_code;
       if (!currencyCode) {
         if (quoteData.client_id) {
-          const client = await createTenantScopedQuery(trx, {
-            table: 'clients',
-            tenant: context.tenant,
-          }).builder
+          const client = await tenantDb(trx, context.tenant).table('clients')
             .where('client_id', quoteData.client_id)
             .select('default_currency_code')
             .first();
           currencyCode = client?.default_currency_code ?? undefined;
         }
         if (!currencyCode) {
-          const billingSettings = await createTenantScopedQuery(trx, {
-            table: 'default_billing_settings',
-            tenant: context.tenant,
-          }).builder
+          const billingSettings = await tenantDb(trx, context.tenant).table('default_billing_settings')
             .select('default_currency_code')
             .first();
           currencyCode = billingSettings?.default_currency_code ?? 'USD';
@@ -274,10 +264,7 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const item = await createTenantScopedQuery(trx, {
-        table: 'quote_items',
-        tenant: context.tenant,
-      }).builder
+      const item = await tenantDb(trx, context.tenant).table('quote_items')
         .where('quote_item_id', itemId)
         .first<{ quote_id: string }>('quote_id');
 
@@ -297,10 +284,7 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     await withTransaction(knex, async (trx) => {
-      const item = await createTenantScopedQuery(trx, {
-        table: 'quote_items',
-        tenant: context.tenant,
-      }).builder
+      const item = await tenantDb(trx, context.tenant).table('quote_items')
         .where('quote_item_id', itemId)
         .first<{ quote_id: string }>('quote_id');
 

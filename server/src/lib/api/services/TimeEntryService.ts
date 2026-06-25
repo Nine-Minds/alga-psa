@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, createTenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import {
   CreateTimeEntryData,
   UpdateTimeEntryData,
@@ -260,10 +260,7 @@ export class TimeEntryService extends BaseService<any> {
         throw new ForbiddenError('Permission denied: Cannot read tickets');
       }
 
-      const ticketExists = await createTenantScopedQuery(knex, {
-        table: 'tickets',
-        tenant: context.tenant,
-      }).builder
+      const ticketExists = await tenantDb(knex, context.tenant).table('tickets')
         .where('ticket_id', data.work_item_id)
         .first('ticket_id');
 
@@ -1097,10 +1094,7 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     // Check for existing time sheet
-    let timeSheet = await createTenantScopedQuery(knex, {
-      table: 'time_sheets',
-      tenant: context.tenant,
-    }).builder
+    let timeSheet = await tenantDb(knex, context.tenant).table('time_sheets')
       .where('period_id', period.period_id)
       .where('user_id', userId)
       .first();
@@ -1124,10 +1118,7 @@ export class TimeEntryService extends BaseService<any> {
 
   private async getTimePeriodForWorkDate(workDate: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return createTenantScopedQuery(knex, {
-      table: 'time_periods',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(knex, context.tenant).table('time_periods')
       .where('start_date', '<=', workDate)
       .where('end_date', '>', workDate)
       .first();
@@ -1151,10 +1142,7 @@ export class TimeEntryService extends BaseService<any> {
 
   private async getTimeEntryUser(userId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return createTenantScopedQuery(knex, {
-      table: 'users',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(knex, context.tenant).table('users')
       .where('user_id', userId)
       .select('user_id', 'first_name', 'last_name', 'email')
       .first();
@@ -1167,18 +1155,12 @@ export class TimeEntryService extends BaseService<any> {
     
     switch (workItemType) {
       case 'ticket':
-        return createTenantScopedQuery(knex, {
-          table: 'tickets',
-          tenant: context.tenant,
-        }).builder
+        return tenantDb(knex, context.tenant).table('tickets')
           .where('ticket_id', workItemId)
           .select('ticket_id as id', 'title', knex.raw('? as type', [workItemType]), 'client_id')
           .first();
       case 'project_task':
-        return createTenantScopedQuery(knex, {
-          table: 'project_tasks',
-          tenant: context.tenant,
-        }).builder
+        return tenantDb(knex, context.tenant).table('project_tasks')
           .join('project_phases', function() {
             this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
               .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
@@ -1203,10 +1185,7 @@ export class TimeEntryService extends BaseService<any> {
 
   private async getServiceDetails(serviceId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return createTenantScopedQuery(knex, {
-      table: 'service_catalog',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(knex, context.tenant).table('service_catalog')
       .where('service_id', serviceId)
       .select('service_id', 'service_name', 'default_rate', 'unit_of_measure')
       .first();
@@ -1214,10 +1193,7 @@ export class TimeEntryService extends BaseService<any> {
 
   private async getTimeSheetDetails(timeSheetId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return createTenantScopedQuery(knex, {
-      table: 'time_sheets',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(knex, context.tenant).table('time_sheets')
       .where('id', timeSheetId)
       .select('id', 'period_id', 'approval_status', 'submitted_at', 'approved_at')
       .first();

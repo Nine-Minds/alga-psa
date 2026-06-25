@@ -1,33 +1,11 @@
 import { getEventBus } from '../index';
 import {
-  EventType,
-  BaseEvent,
-  EventSchemas,
-  TicketCreatedEvent,
-  TicketUpdatedEvent,
-  TicketClosedEvent,
-  TicketAssignedEvent,
-  TicketAdditionalAgentAssignedEvent,
-  TicketCommentAddedEvent,
-  TicketCommentUpdatedEvent,
-  ProjectCreatedEvent,
-  ProjectAssignedEvent,
-  ProjectTaskAssignedEvent,
-  ProjectTaskAdditionalAgentAssignedEvent,
-  TaskCommentAddedEvent,
-  TaskCommentUpdatedEvent,
-  InvoiceGeneratedEvent,
-  MessageSentEvent,
-  UserMentionedInDocumentEvent,
-  AppointmentRequestCreatedEvent,
-  AppointmentRequestApprovedEvent,
-  AppointmentRequestDeclinedEvent,
-  AppointmentRequestCancelledEvent
+  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent
 } from '@alga-psa/event-schemas';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
-import { createTenantScopedQuery, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { resolveEffectiveTimeZone, normalizeIanaTimeZone, tenantDb } from '@alga-psa/db';
 import { formatInTimeZone } from 'date-fns-tz';
 import { formatDate as formatAppointmentDate, formatTime as formatAppointmentTime } from '@alga-psa/scheduling/actions';
 import type { Knex } from 'knex';
@@ -35,7 +13,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils'
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
 
 function tenantScopedTable(db: Knex, table: string, tenant: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(db, { table, tenant }).builder;
+  return tenantDb(db, tenant).table(table);
 }
 
 /**

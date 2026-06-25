@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { IContractLine, IContractLineFixedConfig, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
 import { IContract, IContractLineMapping, IClientContract } from 'server/src/interfaces/contract.interfaces';
@@ -358,10 +358,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Update the plan
-        const [updatedPlan] = await createTenantScopedQuery(trx, {
-          table: 'contract_lines',
-          tenant: context.tenant,
-        }).builder
+        const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
           .update(updateData)
           .returning('*');
@@ -412,10 +409,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Update the plan
-        const [updatedPlan] = await createTenantScopedQuery(trx, {
-          table: 'contract_lines',
-          tenant: context.tenant,
-        }).builder
+        const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
           .update(updateData)
           .returning('*');
@@ -452,10 +446,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       await this.removeContractLineFromAllContracts(id, context, trx);
       
       // Delete the plan
-      const deletedCount = await createTenantScopedQuery(trx, {
-        table: 'contract_lines',
-        tenant: context.tenant,
-      }).builder
+      const deletedCount = await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', id)
         .delete();
       
@@ -569,10 +560,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Check if service already exists in plan
-        const existingConfig = await createTenantScopedQuery(trx, {
-          table: 'contract_line_service_configuration',
-          tenant: context.tenant,
-        }).builder
+        const existingConfig = await tenantDb(trx, context.tenant).table('contract_line_service_configuration')
           .where('contract_line_id', planId)
           .where('service_id', data.service_id)
           .first();
@@ -616,10 +604,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     return withTransaction(knex, async (trx) => {
       // Get configuration to delete
-      const config = await createTenantScopedQuery(trx, {
-        table: 'contract_line_service_configuration',
-        tenant: context.tenant,
-      }).builder
+      const config = await tenantDb(trx, context.tenant).table('contract_line_service_configuration')
         .where('contract_line_id', planId)
         .where('service_id', serviceId)
         .first();
@@ -647,10 +632,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       
       return withTransaction(knex, async (trx) => {
         // Get existing configuration
-        const config = await createTenantScopedQuery(trx, {
-          table: 'contract_line_service_configuration',
-          tenant: context.tenant,
-        }).builder
+        const config = await tenantDb(trx, context.tenant).table('contract_line_service_configuration')
           .where('contract_line_id', planId)
           .where('service_id', serviceId)
           .first();
@@ -683,10 +665,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<Array<any>> {
     const { knex } = await this.getKnex();
     
-    const services = await createTenantScopedQuery(knex, {
-      table: 'contract_line_service_configuration as psc',
-      tenant: context.tenant,
-    }).builder
+    const services = await tenantDb(knex, context.tenant).table('contract_line_service_configuration as psc')
       .join('service_catalog as sc', function() {
         this.on('psc.service_id', '=', 'sc.service_id')
             .andOn('psc.tenant', '=', 'sc.tenant');
@@ -758,10 +737,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const sortColumn = sort ? sortColumns[sort] ?? 'c.contract_name' : 'c.contract_name';
     const sortDirection = order === 'desc' ? 'desc' : 'asc';
 
-    const baseQuery = createTenantScopedQuery(knex, {
-      table: 'contracts as c',
-      tenant: context.tenant,
-    }).builder
+    const baseQuery = tenantDb(knex, context.tenant).table('contracts as c')
       .leftJoin('clients as oc', function joinOwnerClient() {
         this.on('c.owner_client_id', '=', 'oc.client_id').andOn('c.tenant', '=', 'oc.tenant');
       })
@@ -896,10 +872,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     return withTransaction(knex, async (trx) => {
       // Check if this contract is assigned to any clients via client_contracts
       // If so, we shouldn't allow removing contract lines
-      const clientAssignments = await createTenantScopedQuery(trx, {
-        table: 'client_contracts as cc',
-        tenant: context.tenant,
-      }).builder
+      const clientAssignments = await tenantDb(trx, context.tenant).table('client_contracts as cc')
         .where('cc.contract_id', contractId)
         .count<{ count: string }[]>({ count: '*' });
 
@@ -932,10 +905,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { page = 1, limit = 25, filters = {} as any, sort, order } = options;
 
     const buildQuery = () => {
-      let q = createTenantScopedQuery(knex, {
-        table: 'contract_lines as cl',
-        tenant: context.tenant,
-      }).builder
+      let q = tenantDb(knex, context.tenant).table('contract_lines as cl')
         .join('client_contracts as cc', function joinClientContracts(this: any) {
           this.on('cl.contract_id', '=', 'cc.contract_id').andOn('cl.tenant', '=', 'cc.tenant');
         });
@@ -997,10 +967,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       let templateContractId: string | null = null;
 
       if (data.client_contract_id) {
-        const clientContract = await createTenantScopedQuery(trx, {
-          table: 'client_contracts',
-          tenant: context.tenant,
-        }).builder
+        const clientContract = await tenantDb(trx, context.tenant).table('client_contracts')
           .where('client_contract_id', data.client_contract_id)
           .first('template_contract_id', 'contract_id');
 
@@ -1103,10 +1070,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const assignment = await createTenantScopedQuery(trx, {
-        table: 'contract_lines as cl',
-        tenant: context.tenant,
-      }).builder
+      const assignment = await tenantDb(trx, context.tenant).table('contract_lines as cl')
         .join('contracts as c', function joinContracts() {
           this.on('cl.contract_id', '=', 'c.contract_id')
             .andOn('cl.tenant', '=', 'c.tenant');
@@ -1126,10 +1090,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         is_active: false
       }, context);
 
-      await createTenantScopedQuery(trx, {
-        table: 'contract_lines',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', clientContractLineId)
         .update(updateData);
     });
@@ -1166,10 +1127,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }, context);
       updateData.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       
-      const [updatedPlan] = await createTenantScopedQuery(trx, {
-        table: 'contract_lines',
-        tenant: context.tenant,
-      }).builder
+      const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', planId)
         .update(updateData)
         .returning('*');
@@ -1277,10 +1235,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     return withTransaction(knex, async (trx) => {
       // Get template
-      const template = await createTenantScopedQuery(trx, {
-        table: 'plan_templates',
-        tenant: context.tenant,
-      }).builder
+      const template = await tenantDb(trx, context.tenant).table('plan_templates')
         .where('template_id', data.template_id)
         .first();
       
@@ -1300,10 +1255,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const [newPlan] = await trx('contract_lines').insert(planData).returning('*');
       
       // Add template services
-      const templateServices = await createTenantScopedQuery(trx, {
-        table: 'template_services',
-        tenant: context.tenant,
-      }).builder
+      const templateServices = await tenantDb(trx, context.tenant).table('template_services')
         .where('template_id', data.template_id);
       
       for (const templateService of templateServices) {
@@ -1354,10 +1306,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     // Get bucket usage data
-    const bucketUsage = await createTenantScopedQuery(knex, {
-      table: 'bucket_usage',
-      tenant: context.tenant,
-    }).builder
+    const bucketUsage = await tenantDb(knex, context.tenant).table('bucket_usage')
       .where('contract_line_id', planId)
       .whereBetween('period_start', [periodStart, periodEnd])
       .sum('minutes_used as total_usage')
@@ -1365,10 +1314,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .first();
     
     // Get time entries for billable usage
-    const timeEntries = await createTenantScopedQuery(knex, {
-      table: 'time_entries as te',
-      tenant: context.tenant,
-    }).builder
+    const timeEntries = await tenantDb(knex, context.tenant).table('time_entries as te')
       .join('contract_lines as cl', function joinLines() {
         this.on('cl.contract_line_id', '=', knex.raw('?', [planId]))
           .andOn('cl.tenant', '=', 'te.tenant');
@@ -1514,10 +1460,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const plan = await this.getExistingPlan(planId, context);
     
     // Get client assignments
-    const clientStats = await createTenantScopedQuery(knex, {
-      table: 'contract_lines as cl',
-      tenant: context.tenant,
-    }).builder
+    const clientStats = await tenantDb(knex, context.tenant).table('contract_lines as cl')
       .join('contracts as c', function joinContracts() {
         this.on('cl.contract_id', '=', 'c.contract_id')
           .andOn('cl.tenant', '=', 'c.tenant');
@@ -1546,10 +1489,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     };
     
     // Get service usage stats
-    const serviceStats = await createTenantScopedQuery(knex, {
-      table: 'contract_line_service_configuration as psc',
-      tenant: context.tenant,
-    }).builder
+    const serviceStats = await tenantDb(knex, context.tenant).table('contract_line_service_configuration as psc')
       .join('service_catalog as sc', function joinCatalog() {
         this.on('psc.service_id', '=', 'sc.service_id')
           .andOn('psc.tenant', '=', 'sc.tenant');
@@ -1590,18 +1530,9 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get basic counts
     const [planCount, contractCount, assignmentCount] = await Promise.all([
-      createTenantScopedQuery(knex, {
-        table: 'contract_lines',
-        tenant: context.tenant,
-      }).builder.count('* as count').first(),
-      createTenantScopedQuery(knex, {
-        table: 'contracts',
-        tenant: context.tenant,
-      }).builder.count('* as count').first(),
-      createTenantScopedQuery(knex, {
-        table: 'contract_lines as cl',
-        tenant: context.tenant,
-      }).builder
+      tenantDb(knex, context.tenant).table('contract_lines').count('* as count').first(),
+      tenantDb(knex, context.tenant).table('contracts').count('* as count').first(),
+      tenantDb(knex, context.tenant).table('contract_lines as cl')
         .join('contracts as c', function joinContracts() {
           this.on('cl.contract_id', '=', 'c.contract_id')
             .andOn('cl.tenant', '=', 'c.tenant');
@@ -1621,10 +1552,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     ]);
     
     // Get plans by type
-    const plansByType = await createTenantScopedQuery(knex, {
-      table: 'contract_lines',
-      tenant: context.tenant,
-    }).builder
+    const plansByType = await tenantDb(knex, context.tenant).table('contract_lines')
       .groupBy('contract_line_type')
       .select('contract_line_type')
       .count('* as count');
@@ -1635,10 +1563,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     });
     
     // Get billing frequency distribution
-    const frequencyDistribution = await createTenantScopedQuery(knex, {
-      table: 'contract_lines',
-      tenant: context.tenant,
-    }).builder
+    const frequencyDistribution = await tenantDb(knex, context.tenant).table('contract_lines')
       .groupBy('billing_frequency')
       .select('billing_frequency')
       .count('* as count');
@@ -1678,10 +1603,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     options: ContractLineServiceOptions
   ): Knex.QueryBuilder {
-    let query = createTenantScopedQuery(knex, {
-      table: 'contract_lines as cl',
-      tenant: context.tenant,
-    }).builder;
+    let query = tenantDb(knex, context.tenant).table('contract_lines as cl');
 
     query = query.select('cl.*');
 
@@ -1744,10 +1666,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = trx ? { knex: trx } : await this.getKnex();
       
       // Check for duplicate plan names
-      const existingPlan = await createTenantScopedQuery(knex, {
-        table: 'contract_lines',
-        tenant: context.tenant,
-      }).builder
+      const existingPlan = await tenantDb(knex, context.tenant).table('contract_lines')
         .where('contract_line_name', data.contract_line_name)
         .first();
       
@@ -1776,10 +1695,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<void> {
     // Check if plan name conflicts (if changing)
     if (data.contract_line_name && data.contract_line_name !== existingPlan.contract_line_name) {
-      const conflictingPlan = await createTenantScopedQuery(trx, {
-        table: 'contract_lines',
-        tenant: context.tenant,
-      }).builder
+      const conflictingPlan = await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_name', data.contract_line_name)
         .whereNot('contract_line_id', planId)
         .first();
@@ -1805,10 +1721,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<IContractLine> {
     const { knex } = trx ? { knex: trx } : await this.getKnex();
     
-    const plan = await createTenantScopedQuery(knex, {
-      table: 'contract_lines',
-      tenant: context.tenant,
-    }).builder
+    const plan = await tenantDb(knex, context.tenant).table('contract_lines')
       .where('contract_line_id', planId)
       .first();
     
@@ -1828,10 +1741,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
     // Check if plan is associated with any contracts and fetch associated clients
     // After migration 20251028090000, data is stored directly in contract_lines
-    const contractsWithClients = await createTenantScopedQuery(knex, {
-      table: 'contract_lines as clx',
-      tenant: context.tenant,
-    }).builder
+    const contractsWithClients = await tenantDb(knex, context.tenant).table('contract_lines as clx')
       .join('contracts as c', function() {
         this.on('clx.contract_id', '=', 'c.contract_id')
           .andOn('clx.tenant', '=', 'c.tenant');
@@ -1894,10 +1804,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<void> {
     // Get all service configurations for the plan
-    const configs = await createTenantScopedQuery(trx, {
-      table: 'contract_line_service_configuration',
-      tenant: context.tenant,
-    }).builder
+    const configs = await tenantDb(trx, context.tenant).table('contract_line_service_configuration')
       .where('contract_line_id', planId)
       .select('config_id');
     
@@ -1913,10 +1820,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    await createTenantScopedQuery(trx, {
-      table: 'contract_lines',
-      tenant: context.tenant,
-    }).builder
+    await tenantDb(trx, context.tenant).table('contract_lines')
       .where('contract_line_id', contractLineId)
       .update({ contract_id: null });
   }
@@ -1947,10 +1851,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const contract = await createTenantScopedQuery(trx, {
-      table: 'contracts',
-      tenant: context.tenant,
-    }).builder
+    const contract = await tenantDb(trx, context.tenant).table('contracts')
       .where('contract_id', contractId)
       .first();
     
@@ -1964,10 +1865,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const client = await createTenantScopedQuery(trx, {
-      table: 'clients',
-      tenant: context.tenant,
-    }).builder
+    const client = await tenantDb(trx, context.tenant).table('clients')
       .where('client_id', clientId)
       .first();
     
@@ -1988,10 +1886,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       cadence_owner: templateLine.cadence_owner,
     });
     const clonedCustomRate = data.custom_rate ?? templateLine.custom_rate ?? null;
-    const overlapping = await createTenantScopedQuery(trx, {
-      table: 'contract_lines',
-      tenant: context.tenant,
-    }).builder
+    const overlapping = await tenantDb(trx, context.tenant).table('contract_lines')
       .where('contract_id', targetContractId)
       .where('is_active', true)
       .where('contract_line_name', templateLine.contract_line_name)
@@ -2016,10 +1911,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       trx: Knex.Transaction
     ): Promise<void> {
       // Check for pending invoices
-      const pendingInvoices = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const pendingInvoices = await tenantDb(trx, context.tenant).table('invoices')
         .where('client_contract_line_id', clientContractLineId)
         .where('status', 'pending')
         .count('* as count')
@@ -2030,10 +1922,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
 
       // Check for active usage tracking for this client
-      const activeUsage = await createTenantScopedQuery(trx, {
-        table: 'bucket_usage',
-        tenant: context.tenant,
-      }).builder
+      const activeUsage = await tenantDb(trx, context.tenant).table('bucket_usage')
         .where('client_id', clientId)
         .where('period_end', '>', new Date())
         .count('* as count')
@@ -2050,10 +1939,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<IService | null> {
-    const service = await createTenantScopedQuery(trx, {
-      table: 'service_catalog',
-      tenant: context.tenant,
-    }).builder
+    const service = await tenantDb(trx, context.tenant).table('service_catalog')
       .where('service_id', serviceId)
       .first();
     
@@ -2068,10 +1954,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<void> {
     // Get source plan services
-    const sourceServices = await createTenantScopedQuery(trx, {
-      table: 'contract_line_service_configuration',
-      tenant: context.tenant,
-    }).builder
+    const sourceServices = await tenantDb(trx, context.tenant).table('contract_line_service_configuration')
       .where('contract_line_id', sourcePlanId);
     
     // Copy each service with modifications

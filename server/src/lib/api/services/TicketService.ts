@@ -5,13 +5,7 @@
 
 import { Knex } from 'knex';
 import {
-  BaseService,
-  ServiceContext,
-  ListResult,
-  createTenantScopedQuery,
-  withTenantScopedQueryBuilder,
-  withTransaction,
-} from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTenantScopedQueryBuilder, withTransaction, tenantDb } from '@alga-psa/db';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
@@ -100,7 +94,7 @@ function tenantScopedTable(
   table: string,
   tenant: string
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 export type BundleMode = 'link_only' | 'sync_updates';
@@ -207,16 +201,8 @@ export class TicketService extends BaseService<ITicket> {
     const selectedFields = this.normalizeTicketListFields(fields);
 
     // Build base query with all necessary joins
-    const dataScopedQuery = createTenantScopedQuery(knex, {
-      table: 'tickets as t',
-      alias: 't',
-      tenant: context.tenant,
-    });
-    const countScopedQuery = createTenantScopedQuery(knex, {
-      table: 'tickets as t',
-      alias: 't',
-      tenant: context.tenant,
-    });
+    const dataScopedQuery = tenantDb(knex, context.tenant).scoped('tickets as t');
+    const countScopedQuery = tenantDb(knex, context.tenant).scoped('tickets as t');
     let dataQuery = dataScopedQuery.builder;
     let countQuery = countScopedQuery.builder;
 

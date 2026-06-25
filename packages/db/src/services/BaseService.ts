@@ -5,7 +5,7 @@
 
 import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
-import { createTenantScopedQuery } from '../lib/tenantScopedQuery';
+import { tenantDb } from '../lib/tenantDb';
 
 // Import and re-export for services
 export interface ListOptions {
@@ -104,12 +104,7 @@ export abstract class BaseService<T = any> {
    * Build base query with tenant filtering
    */
   protected buildTenantScopedQuery(conn: Knex | Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
-    return createTenantScopedQuery(conn, {
-      table: this.tableName,
-      alias: this.tableName,
-      tenant: context.tenant,
-      tenantColumn: this.tenantColumn,
-    }).builder;
+    return tenantDb(conn, context.tenant).table(this.tableName);
   }
 
   protected buildBaseQuery(conn: Knex | Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {

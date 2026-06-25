@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseService, ServiceContext, ListOptions, ListResult, createTenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -179,10 +179,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceAmountDue(trx: Knex.Transaction, params: { invoiceId: string; totalAmount: number; creditApplied: number; tenantId: string }) {
-    const payments = await createTenantScopedQuery(trx, {
-      table: 'invoice_payments',
-      tenant: params.tenantId,
-    }).builder
+    const payments = await tenantDb(trx, params.tenantId).table('invoice_payments')
       .where({ invoice_id: params.invoiceId })
       .sum('amount as total_paid');
 
@@ -209,10 +206,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
-    const client = await createTenantScopedQuery(trx, {
-      table: 'clients',
-      tenant,
-    }).builder
+    const client = await tenantDb(trx, tenant).table('clients')
       .where({ client_id: clientId })
       .select('payment_terms')
       .first();
@@ -224,11 +218,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
-    return createTenantScopedQuery(trx, {
-      table: 'recurring_service_periods as rsp',
-      alias: 'rsp',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
       .min('rsp.service_period_start as recurring_service_period_start')
@@ -267,11 +257,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Add joins based on include options
       if ((options as any).include_client) {
         // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = createTenantScopedQuery(trx, {
-          table: 'client_locations as cl',
-          alias: 'cl',
-          tenant: context.tenant,
-        }).builder
+        const billingAddressSubquery = tenantDb(trx, context.tenant).table('client_locations as cl')
           .select(
             'cl.client_id',
             'cl.tenant',
@@ -531,10 +517,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const existing = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const existing = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
         .first();
 
@@ -562,26 +545,17 @@ export class InvoiceService extends BaseService<IInvoice> {
       });
 
       // Update invoice
-      await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
         .update(updateData);
 
       // Update line items if provided
       if (data.items) {
-        const replacedItemIds = await createTenantScopedQuery(trx, {
-          table: 'invoice_line_items',
-          tenant: context.tenant,
-        }).builder
+        const replacedItemIds = await tenantDb(trx, context.tenant).table('invoice_line_items')
           .where({ invoice_id: id })
           .pluck('item_id');
 
-        await createTenantScopedQuery(trx, {
-          table: 'invoice_line_items',
-          tenant: context.tenant,
-        }).builder
+        await tenantDb(trx, context.tenant).table('invoice_line_items')
           .where({ invoice_id: id })
           .del();
 
@@ -757,10 +731,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
     
     await withTransaction(knex, async (trx) => {
-      const invoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
         .first();
 
@@ -774,10 +745,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         (recurringProvenance.detailPeriodCount ?? 0) > 0;
 
       // Check if invoice has payments
-      const hasPayments = await createTenantScopedQuery(trx, {
-        table: 'invoice_payments',
-        tenant: context.tenant,
-      }).builder
+      const hasPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: id })
         .first();
 
@@ -790,10 +758,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       if (softCancelled) {
         // Soft delete - mark as cancelled
-        await createTenantScopedQuery(trx, {
-          table: 'invoices',
-          tenant: context.tenant,
-        }).builder
+        await tenantDb(trx, context.tenant).table('invoices')
           .where({ invoice_id: id })
           .update({
             status: 'cancelled',
@@ -802,17 +767,11 @@ export class InvoiceService extends BaseService<IInvoice> {
           });
       } else {
         // Hard delete if no payments
-        await createTenantScopedQuery(trx, {
-          table: 'invoice_line_items',
-          tenant: context.tenant,
-        }).builder
+        await tenantDb(trx, context.tenant).table('invoice_line_items')
           .where({ invoice_id: id })
           .del();
         
-        await createTenantScopedQuery(trx, {
-          table: 'invoices',
-          tenant: context.tenant,
-        }).builder
+        await tenantDb(trx, context.tenant).table('invoices')
           .where({ invoice_id: id })
           .del();
       }
@@ -877,10 +836,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .first();
 
@@ -896,10 +852,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const hasInvoiceChargesTable = await trx.schema.hasTable('invoice_charges');
       const lineItems = hasInvoiceChargesTable
         ? await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id)
-        : await createTenantScopedQuery(trx, {
-          table: 'invoice_line_items',
-          tenant: context.tenant,
-        }).builder
+        : await tenantDb(trx, context.tenant).table('invoice_line_items')
           .where({ invoice_id: data.invoice_id });
 
       if (!lineItems.length) {
@@ -925,10 +878,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status and amounts
-      await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .update(invoiceUpdate);
 
@@ -992,10 +942,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .first();
 
@@ -1016,10 +963,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status
-      await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .update({
           status: 'sent',
@@ -1114,10 +1058,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
-      const invoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .first();
 
@@ -1182,10 +1123,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }));
 
       // Calculate total payments
-      const payments = await createTenantScopedQuery(trx, {
-        table: 'invoice_payments',
-        tenant: context.tenant,
-      }).builder
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
 
@@ -1203,10 +1141,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .update({
           status: newStatus,
@@ -1281,10 +1216,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .first();
 
@@ -1319,10 +1251,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const newCreditApplied = (invoice.credit_applied || 0) + data.credit_amount;
 
       // Calculate total payments to determine correct status
-      const payments = await createTenantScopedQuery(trx, {
-        table: 'invoice_payments',
-        tenant: context.tenant,
-      }).builder
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
       const totalPayments = Number(payments[0]?.total_paid || 0);
@@ -1338,10 +1267,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .update({
           credit_applied: newCreditApplied,
@@ -1428,10 +1354,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
-      const invoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .first();
 
@@ -1445,10 +1368,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Calculate current payments
-      const payments = await createTenantScopedQuery(trx, {
-        table: 'invoice_payments',
-        tenant: context.tenant,
-      }).builder
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
       const totalPayments = Number(payments[0]?.total_paid || 0);
@@ -1493,10 +1413,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }));
 
       // Calculate net payments after refund
-      const netPayments = await createTenantScopedQuery(trx, {
-        table: 'invoice_payments',
-        tenant: context.tenant,
-      }).builder
+      const netPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
         .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
       const netPaid = Number(netPayments[0]?.total_paid || 0);
@@ -1515,10 +1432,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .update({
           status: newStatus,
@@ -1602,10 +1516,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       for (const invoiceId of data.invoice_ids) {
         try {
-          const invoice = await createTenantScopedQuery(trx, {
-            table: 'invoices',
-            tenant: context.tenant,
-          }).builder
+          const invoice = await tenantDb(trx, context.tenant).table('invoices')
             .where({ invoice_id: invoiceId })
             .first();
 
@@ -1620,10 +1531,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-          await createTenantScopedQuery(trx, {
-            table: 'invoices',
-            tenant: context.tenant,
-          }).builder
+          await tenantDb(trx, context.tenant).table('invoices')
             .where({ invoice_id: invoiceId })
             .update({
               status: data.status,
@@ -1850,10 +1758,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let baseQuery = createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder;
+      let baseQuery = tenantDb(trx, context.tenant).table('invoices');
 
       // Apply filters if provided
       if (filters) {
@@ -1962,17 +1867,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       );
 
-      const invoiceRecord = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant,
-      }).builder
+      const invoiceRecord = await tenantDb(trx, tenant).table('invoices')
         .where({ invoice_id: invoiceId })
         .first();
 
-      const updatedItems = await createTenantScopedQuery(trx, {
-        table: 'invoice_charges',
-        tenant,
-      }).builder
+      const updatedItems = await tenantDb(trx, tenant).table('invoice_charges')
         .where({ invoice_id: invoiceId })
         .orderBy('created_at', 'asc');
 
@@ -2053,10 +1952,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'read');
 
     const { knex } = await this.getKnex();
-    const invoice = await createTenantScopedQuery(knex, {
-      table: 'invoices',
-      tenant: context.tenant,
-    }).builder
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
       .where({ invoice_id: id })
       .select('invoice_id', 'invoice_number')
       .first();
@@ -2110,10 +2006,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
     const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
 
-    return createTenantScopedQuery(trx, {
-      table: 'invoices',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(trx, context.tenant).table('invoices')
       .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
       .select(
         'invoices.*',
@@ -2273,10 +2166,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'read');
     const { knex } = await this.getKnex();
     return withTransaction(knex, async (trx) => {
-      const exists = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const exists = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
@@ -2290,11 +2180,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return createTenantScopedQuery(trx, {
-      table: 'clients as c',
-      alias: 'c',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(trx, context.tenant).table('clients as c')
       .leftJoin('client_locations as cl', function() {
         this.on('c.client_id', '=', 'cl.client_id')
           .andOn('c.tenant', '=', 'cl.tenant')
@@ -2316,19 +2202,13 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return createTenantScopedQuery(trx, {
-      table: 'client_billing_cycles',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(trx, context.tenant).table('client_billing_cycles')
       .where({ billing_cycle_id: cycleId })
       .first();
   }
 
   private async getTaxDetails(taxRateId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return createTenantScopedQuery(trx, {
-      table: 'tax_rates',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(trx, context.tenant).table('tax_rates')
       .where({ tax_rate_id: taxRateId })
       .first();
   }
@@ -2338,10 +2218,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const exists = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant: context.tenant,
-      }).builder
+      const exists = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
@@ -2369,10 +2246,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       return [];
     }
 
-    return createTenantScopedQuery(trx, {
-      table: 'invoice_payments',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(trx, context.tenant).table('invoice_payments')
       .where({ invoice_id: invoiceId })
       .orderBy('payment_date', 'desc');
   }
@@ -2383,10 +2257,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       return [];
     }
 
-    return createTenantScopedQuery(trx, {
-      table: 'invoice_credits',
-      tenant: context.tenant,
-    }).builder
+    return tenantDb(trx, context.tenant).table('invoice_credits')
       .where({ invoice_id: invoiceId })
       .orderBy('applied_date', 'desc');
   }

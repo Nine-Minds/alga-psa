@@ -1,5 +1,5 @@
 import type { IService } from '@/interfaces/billing.interfaces';
-import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
 
@@ -69,11 +69,7 @@ export class ProductCatalogService extends BaseService<IService> {
       default_rate: 'sc.default_rate'
     };
 
-    const baseQuery = createTenantScopedQuery(knex, {
-      table: 'service_catalog as sc',
-      alias: 'sc',
-      tenant,
-    }).builder;
+    const baseQuery = tenantDb(knex, tenant).table('service_catalog as sc');
 
     // Count
     const countResult = await applyFilters(baseQuery.clone())
@@ -129,11 +125,7 @@ export class ProductCatalogService extends BaseService<IService> {
     // Fetch prices for returned products
     const serviceIds = productsData.map((s: any) => s.service_id);
     const allPrices = serviceIds.length > 0
-      ? await createTenantScopedQuery(knex, {
-          table: 'service_prices',
-          alias: 'service_prices',
-          tenant,
-        }).builder
+      ? await tenantDb(knex, tenant).table('service_prices')
           .whereIn('service_id', serviceIds)
           .select('*')
       : [];
@@ -167,11 +159,7 @@ export class ProductCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    const product = await createTenantScopedQuery(knex, {
-      table: 'service_catalog as sc',
-      alias: 'sc',
-      tenant,
-    }).builder
+    const product = await tenantDb(knex, tenant).table('service_catalog as sc')
       .leftJoin('service_types as st', function (this: any) {
         this.on('sc.custom_service_type_id', '=', 'st.id')
           .andOn('sc.tenant', '=', 'st.tenant');
@@ -188,11 +176,7 @@ export class ProductCatalogService extends BaseService<IService> {
     if (!product) return null;
     if (product.item_kind !== 'product') return null;
 
-    const prices = await createTenantScopedQuery(knex, {
-      table: 'service_prices',
-      alias: 'service_prices',
-      tenant,
-    }).builder
+    const prices = await tenantDb(knex, tenant).table('service_prices')
       .where('service_id', id)
       .select('*');
 
@@ -220,11 +204,7 @@ export class ProductCatalogService extends BaseService<IService> {
     // service_catalog.cost_currency DB column defaults to 'USD' when unset.
     let costCurrency = rest.cost_currency;
     if (!costCurrency) {
-      const billingSettings = await createTenantScopedQuery(knex, {
-        table: 'default_billing_settings',
-        alias: 'default_billing_settings',
-        tenant,
-      }).builder
+      const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
         .select('default_currency_code')
         .first();
       costCurrency = billingSettings?.default_currency_code || 'USD';
@@ -267,11 +247,7 @@ export class ProductCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     // Verify it's a product
-    const existing = await createTenantScopedQuery(knex, {
-      table: 'service_catalog',
-      alias: 'service_catalog',
-      tenant,
-    }).builder
+    const existing = await tenantDb(knex, tenant).table('service_catalog')
       .where('service_id', id)
       .select('item_kind')
       .first();
@@ -281,11 +257,7 @@ export class ProductCatalogService extends BaseService<IService> {
 
     const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
 
-    await createTenantScopedQuery(knex, {
-      table: 'service_catalog',
-      alias: 'service_catalog',
-      tenant,
-    }).builder
+    await tenantDb(knex, tenant).table('service_catalog')
       .where('service_id', id)
       .update({
         ...updateData,
@@ -311,11 +283,7 @@ export class ProductCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    await createTenantScopedQuery(knex, {
-      table: 'service_catalog',
-      alias: 'service_catalog',
-      tenant,
-    }).builder
+    await tenantDb(knex, tenant).table('service_catalog')
       .where('service_id', id)
       .delete();
 
@@ -332,11 +300,7 @@ export class ProductCatalogService extends BaseService<IService> {
     prices: Array<{ currency_code: string; rate: number }>
   ): Promise<void> {
     // Delete existing prices and insert new ones
-    await createTenantScopedQuery(knex, {
-      table: 'service_prices',
-      alias: 'service_prices',
-      tenant,
-    }).builder
+    await tenantDb(knex, tenant).table('service_prices')
       .where('service_id', serviceId)
       .delete();
 

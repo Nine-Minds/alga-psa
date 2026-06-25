@@ -5,7 +5,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -93,10 +93,7 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let query = createTenantScopedQuery(trx, {
-        table: 'service_categories',
-        tenant: context.tenant,
-      }).builder;
+      let query = tenantDb(trx, context.tenant).table('service_categories');
 
       // Apply filters
       if (filters.search) {
@@ -144,10 +141,7 @@ export class CategoryService extends BaseService {
    */
   async getServiceCategoryById(id: string, context: ServiceContext): Promise<ServiceCategoryResponse | null> {
     const { knex } = await this.getKnex();
-    const category = await createTenantScopedQuery(knex, {
-      table: 'service_categories',
-      tenant: context.tenant,
-    }).builder
+    const category = await tenantDb(knex, context.tenant).table('service_categories')
       .where('category_id', id)
       .first();
     return category as ServiceCategoryResponse | null;
@@ -213,10 +207,7 @@ export class CategoryService extends BaseService {
         updateData.is_active = data.is_active;
       }
 
-      const [updated] = await createTenantScopedQuery(trx, {
-        table: 'service_categories',
-        tenant: context.tenant,
-      }).builder
+      const [updated] = await tenantDb(trx, context.tenant).table('service_categories')
         .where('category_id', id)
         .update(updateData)
         .returning('*');
@@ -237,10 +228,7 @@ export class CategoryService extends BaseService {
 
     return withTransaction(knex, async (trx) => {
       // Check if category is in use
-      const usageCount = await createTenantScopedQuery(trx, {
-        table: 'service_items',
-        tenant: context.tenant,
-      }).builder
+      const usageCount = await tenantDb(trx, context.tenant).table('service_items')
         .where('category_id', id)
         .count('* as count')
         .first();
@@ -250,17 +238,11 @@ export class CategoryService extends BaseService {
       }
 
       // Clear category_id from service_request_definitions (replaces ON DELETE SET NULL)
-      await createTenantScopedQuery(trx, {
-        table: 'service_request_definitions',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('service_request_definitions')
         .where('category_id', id)
         .update({ category_id: null, category_name_snapshot: null });
 
-      const deleted = await createTenantScopedQuery(trx, {
-        table: 'service_categories',
-        tenant: context.tenant,
-      }).builder
+      const deleted = await tenantDb(trx, context.tenant).table('service_categories')
         .where('category_id', id)
         .del();
 
@@ -517,10 +499,7 @@ export class CategoryService extends BaseService {
       }
 
       // Check if category is in use by tickets
-      const usageCount = await createTenantScopedQuery(trx, {
-        table: 'tickets',
-        tenant: context.tenant,
-      }).builder
+      const usageCount = await tenantDb(trx, context.tenant).table('tickets')
         .where('category_id', id)
         .count('* as count')
         .first();
@@ -634,10 +613,7 @@ export class CategoryService extends BaseService {
       const categoryType = filters.category_type || 'ticket';
       const tableName = categoryType === 'service' ? 'service_categories' : 'categories';
       
-      let query = createTenantScopedQuery(trx, {
-        table: tableName,
-        tenant: context.tenant,
-      }).builder;
+      let query = tenantDb(trx, context.tenant).table(tableName);
 
       // Apply search (only service_categories has a description column)
       if (searchTerm) {
@@ -705,10 +681,7 @@ export class CategoryService extends BaseService {
       const activeCountExpr = categoryType === 'service'
         ? 'COUNT(CASE WHEN is_active = true THEN 1 END) as active_categories'
         : 'COUNT(*) as active_categories';
-      const categoryStats = await createTenantScopedQuery(trx, {
-        table: tableName,
-        tenant: context.tenant,
-      }).builder
+      const categoryStats = await tenantDb(trx, context.tenant).table(tableName)
         .select(
           trx.raw('COUNT(*) as total_categories'),
           trx.raw(activeCountExpr)
@@ -733,10 +706,7 @@ export class CategoryService extends BaseService {
       }
 
       // Get usage statistics
-      const usageStats = await createTenantScopedQuery(trx, {
-        table: `${tableName} as c`,
-        tenant: context.tenant,
-      }).builder
+      const usageStats = await tenantDb(trx, context.tenant).table(`${tableName} as c`)
         .leftJoin(`${usageTable} as u`, function() {
           this.on('c.category_id', '=', 'u.category_id')
               .andOn('c.tenant', '=', 'u.tenant');
@@ -810,10 +780,7 @@ export class CategoryService extends BaseService {
       enrichedCategory.path = depthAndPath.path;
 
       // Add children count
-      const childrenCount = await createTenantScopedQuery(trx, {
-        table: 'categories',
-        tenant: category.tenant,
-      }).builder
+      const childrenCount = await tenantDb(trx, category.tenant).table('categories')
         .where('parent_category', category.category_id)
         .count('* as count')
         .first();
@@ -888,10 +855,7 @@ export class CategoryService extends BaseService {
 
       visited.add(currentParentId);
 
-      const parent = await createTenantScopedQuery(trx, {
-        table: 'categories',
-        tenant,
-      }).builder
+      const parent = await tenantDb(trx, tenant).table('categories')
         .where('category_id', currentParentId)
         .select('parent_category')
         .first();
@@ -915,10 +879,7 @@ export class CategoryService extends BaseService {
     let depth = 0;
 
     while (currentId) {
-      const category = await createTenantScopedQuery(trx, {
-        table: 'categories',
-        tenant,
-      }).builder
+      const category = await tenantDb(trx, tenant).table('categories')
         .where('category_id', currentId)
         .select('category_name', 'parent_category')
         .first();

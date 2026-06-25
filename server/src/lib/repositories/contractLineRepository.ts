@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { IContractLineMapping } from 'server/src/interfaces/contract.interfaces';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
@@ -26,7 +26,7 @@ export type DetailedContractLine = IContractLineMapping & {
 type TenantScopedKnex = Knex | Knex.Transaction;
 
 function tenantScopedTable(knex: TenantScopedKnex, tenant: string, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(knex, { table, tenant }).builder;
+  return tenantDb(knex, tenant).table(table);
 }
 
 async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {

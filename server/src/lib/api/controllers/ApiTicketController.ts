@@ -7,18 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService } from '../services/TicketService';
 import { 
-  createTicketSchema,
-  updateTicketSchema,
-  ticketListQuerySchema,
-  ticketSearchSchema,
-  ticketStatsResponseSchema,
-  createTicketMaterialSchema,
-  createTicketCommentSchema,
-  updateTicketCommentSchema,
-  updateTicketStatusSchema,
-  updateTicketAssignmentSchema,
-  createTicketFromAssetSchema,
-  linkTicketAssetSchema
+  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema
 } from '../schemas/ticket';
 import { 
   ApiKeyServiceForApi 
@@ -38,7 +27,7 @@ import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination'
 import { compileTenantScopedResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
-import { createTenantScopedQuery, type TenantScopedQuery } from '@alga-psa/db';
+import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
@@ -90,11 +79,7 @@ async function resolveTicketReadAuthorizationApplier(
     });
 
   // Probe representability on a throwaway builder before committing to SQL.
-  const probe = createTenantScopedQuery(knex, {
-    table: 'tickets as t',
-    alias: 't',
-    tenant: subject.tenant,
-  });
+  const probe = tenantDb(knex, subject.tenant).scoped('tickets as t');
   if (!compile(probe).supported) {
     return null;
   }

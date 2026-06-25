@@ -17,7 +17,7 @@
  * that are explicitly service-period aware.
  */
 
-import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { hasPermission } from '../../auth/rbac';
@@ -288,10 +288,7 @@ export class FinancialService extends BaseService<ITransaction> {
     
     return withTransaction(knex, async (trx) => {
       // Calculate balance after transaction
-      const lastTransaction = await createTenantScopedQuery(trx, {
-        table: 'transactions',
-        tenant: context.tenant,
-      }).builder
+      const lastTransaction = await tenantDb(trx, context.tenant).table('transactions')
         .where('client_id', data.client_id)
         .orderBy('created_at', 'desc')
         .first();
@@ -312,10 +309,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // Update client credit balance if this is a credit-related transaction
       if (['credit_issuance', 'credit_application', 'credit_adjustment'].includes(data.type)) {
-        await createTenantScopedQuery(trx, {
-          table: 'clients',
-          tenant: context.tenant,
-        }).builder
+        await tenantDb(trx, context.tenant).table('clients')
           .where('client_id', data.client_id)
           .update({
             credit_balance: balanceAfter,
@@ -351,10 +345,7 @@ export class FinancialService extends BaseService<ITransaction> {
     
     const { knex } = await this.getKnex();
     
-    const transaction = await createTenantScopedQuery(knex, {
-      table: 'transactions',
-      tenant: context.tenant,
-    }).builder
+    const transaction = await tenantDb(knex, context.tenant).table('transactions')
       .where('transaction_id', transactionId)
       .first();
 
@@ -391,10 +382,7 @@ export class FinancialService extends BaseService<ITransaction> {
       order = 'desc'
     } = query;
 
-    let dataQuery = createTenantScopedQuery(knex, {
-      table: 'transactions as t',
-      tenant: context.tenant,
-    }).builder
+    let dataQuery = tenantDb(knex, context.tenant).table('transactions as t')
       .leftJoin('clients as c', function joinClients() {
         this.on('t.client_id', '=', 'c.client_id')
           .andOn('t.tenant', '=', 'c.tenant');
@@ -404,10 +392,7 @@ export class FinancialService extends BaseService<ITransaction> {
           .andOn('t.tenant', '=', 'i.tenant');
       });
 
-    let countQuery = createTenantScopedQuery(knex, {
-      table: 'transactions',
-      tenant: context.tenant,
-    }).builder;
+    let countQuery = tenantDb(knex, context.tenant).table('transactions');
 
     // Apply filters
     if (client_id) {
@@ -521,19 +506,13 @@ export class FinancialService extends BaseService<ITransaction> {
     ]);
     const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
 
-    let dataQuery = createTenantScopedQuery(knex, {
-      table: 'invoices as i',
-      tenant: context.tenant,
-    }).builder
+    let dataQuery = tenantDb(knex, context.tenant).table('invoices as i')
       .leftJoin('clients as c', function() {
         this.on('i.client_id', '=', 'c.client_id')
           .andOn('i.tenant', '=', 'c.tenant');
       });
 
-    let countQuery = createTenantScopedQuery(knex, {
-      table: 'invoices as i',
-      tenant: context.tenant,
-    }).builder;
+    let countQuery = tenantDb(knex, context.tenant).table('invoices as i');
 
     if (client_id) {
       dataQuery = dataQuery.where('i.client_id', client_id);
@@ -633,10 +612,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
     return withTransaction(knex, async (trx) => {
       // Get the invoice and its currency
-      const invoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant,
-      }).builder
+      const invoice = await tenantDb(trx, tenant).table('invoices')
         .where('invoice_id', request.invoice_id)
         .select('credit_applied', 'currency_code', 'subtotal', 'tax', 'total_amount')
         .first();
@@ -648,10 +624,7 @@ export class FinancialService extends BaseService<ITransaction> {
       const invoiceCurrency = invoice.currency_code || 'USD';
 
       // Check already-applied credit
-      const existingAllocations = await createTenantScopedQuery(trx, {
-        table: 'credit_allocations',
-        tenant,
-      }).builder
+      const existingAllocations = await tenantDb(trx, tenant).table('credit_allocations')
         .where('invoice_id', request.invoice_id)
         .sum('amount as total_applied')
         .first();
@@ -669,10 +642,7 @@ export class FinancialService extends BaseService<ITransaction> {
       }
 
       // Get client credit balance (lock row to prevent concurrent over-application)
-      const [client] = await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      const [client] = await tenantDb(trx, tenant).table('clients')
         .where('client_id', request.client_id)
         .select('credit_balance')
         .forUpdate();
@@ -684,10 +654,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // Get active credit entries in the same currency (FIFO by expiration, locked for update)
       const now = new Date().toISOString();
-      const creditEntries = await createTenantScopedQuery(trx, {
-        table: 'credit_tracking',
-        tenant,
-      }).builder
+      const creditEntries = await tenantDb(trx, tenant).table('credit_tracking')
         .where('client_id', request.client_id)
         .where('is_expired', false)
         .where('currency_code', invoiceCurrency)
@@ -713,10 +680,7 @@ export class FinancialService extends BaseService<ITransaction> {
         const applyAmount = Math.min(remainingRequested, Number(credit.remaining_amount));
         if (applyAmount <= 0) continue;
 
-        await createTenantScopedQuery(trx, {
-          table: 'credit_tracking',
-          tenant,
-        }).builder
+        await tenantDb(trx, tenant).table('credit_tracking')
           .where('credit_id', credit.credit_id)
           .update({ remaining_amount: Number(credit.remaining_amount) - applyAmount, updated_at: now });
 
@@ -756,28 +720,19 @@ export class FinancialService extends BaseService<ITransaction> {
       });
 
       // Update invoice (read-then-update to avoid Citus-unsafe SET col = col +/- val)
-      const currentInvoice = await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant,
-      }).builder
+      const currentInvoice = await tenantDb(trx, tenant).table('invoices')
         .where('invoice_id', request.invoice_id)
         .select('credit_applied', 'total_amount')
         .forUpdate()
         .first();
-      await createTenantScopedQuery(trx, {
-        table: 'invoices',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('invoices')
         .where('invoice_id', request.invoice_id)
         .update({
           credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
         });
 
       // Update client balance
-      await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('clients')
         .where('client_id', request.client_id)
         .update({ credit_balance: newBalance, updated_at: now });
 
@@ -814,10 +769,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const tenant = context.tenant;
 
     // Verify client exists
-    const client = await createTenantScopedQuery(knex, {
-      table: 'clients',
-      tenant,
-    }).builder
+    const client = await tenantDb(knex, tenant).table('clients')
       .where('client_id', request.client_id)
       .first();
     if (!client) {
@@ -829,16 +781,10 @@ export class FinancialService extends BaseService<ITransaction> {
       const clientCurrency = client.default_currency_code || 'USD';
 
       // Determine credit expiration settings
-      const clientSettings = await createTenantScopedQuery(trx, {
-        table: 'client_billing_settings',
-        tenant,
-      }).builder
+      const clientSettings = await tenantDb(trx, tenant).table('client_billing_settings')
         .where('client_id', request.client_id)
         .first();
-      const defaultSettings = await createTenantScopedQuery(trx, {
-        table: 'default_billing_settings',
-        tenant,
-      }).builder
+      const defaultSettings = await tenantDb(trx, tenant).table('default_billing_settings')
         .first();
 
       let isCreditExpirationEnabled = true;
@@ -889,10 +835,7 @@ export class FinancialService extends BaseService<ITransaction> {
         .returning('*');
 
       // Get current balance
-      const lastTx = await createTenantScopedQuery(trx, {
-        table: 'transactions',
-        tenant,
-      }).builder
+      const lastTx = await tenantDb(trx, tenant).table('transactions')
         .where('client_id', request.client_id)
         .orderBy('created_at', 'desc')
         .first();
@@ -959,10 +902,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
     return withTransaction(knex, async (trx) => {
       // Get source credit
-      const sourceCredit = await createTenantScopedQuery(trx, {
-        table: 'credit_tracking',
-        tenant,
-      }).builder
+      const sourceCredit = await tenantDb(trx, tenant).table('credit_tracking')
         .where('credit_id', request.source_credit_id)
         .first();
 
@@ -977,10 +917,7 @@ export class FinancialService extends BaseService<ITransaction> {
       }
 
       // Verify target client
-      const targetClient = await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      const targetClient = await tenantDb(trx, tenant).table('clients')
         .where('client_id', request.target_client_id)
         .first();
       if (!targetClient) {
@@ -991,10 +928,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // 1. Reduce source credit remaining amount
       const newSourceRemaining = Number(sourceCredit.remaining_amount) - request.amount;
-      await createTenantScopedQuery(trx, {
-        table: 'credit_tracking',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('credit_tracking')
         .where('credit_id', request.source_credit_id)
         .update({ remaining_amount: newSourceRemaining, updated_at: now });
 
@@ -1013,17 +947,11 @@ export class FinancialService extends BaseService<ITransaction> {
       });
 
       // 3. Update source client balance
-      const [sourceClient] = await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      const [sourceClient] = await tenantDb(trx, tenant).table('clients')
         .where('client_id', sourceCredit.client_id)
         .select('credit_balance');
       const newSourceBalance = Number(sourceClient.credit_balance) - request.amount;
-      await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('clients')
         .where('client_id', sourceCredit.client_id)
         .update({ credit_balance: newSourceBalance, updated_at: now });
 
@@ -1043,10 +971,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // 5. Update target client balance
       const newTargetBalance = Number(targetClient.credit_balance) + request.amount;
-      await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('clients')
         .where('client_id', request.target_client_id)
         .update({ credit_balance: newTargetBalance, updated_at: now });
 
@@ -1097,10 +1022,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const offset = (page - 1) * limit;
 
     // Build base query
-    let baseQuery = createTenantScopedQuery(knex, {
-      table: 'credit_tracking',
-      tenant,
-    }).builder
+    let baseQuery = tenantDb(knex, tenant).table('credit_tracking')
       .where('credit_tracking.client_id', client_id);
 
     if (!include_expired) {
@@ -1157,10 +1079,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const tenant = context.tenant;
 
     // Sum credit-related transactions
-    const transactions = await createTenantScopedQuery(knex, {
-      table: 'transactions',
-      tenant,
-    }).builder
+    const transactions = await tenantDb(knex, tenant).table('transactions')
       .where('client_id', clientId)
       .whereIn('type', [
         'credit_issuance', 'credit_application', 'credit_adjustment',
@@ -1174,10 +1093,7 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     // Get client's actual balance
-    const client = await createTenantScopedQuery(knex, {
-      table: 'clients',
-      tenant,
-    }).builder
+    const client = await tenantDb(knex, tenant).table('clients')
       .where('client_id', clientId)
       .select('credit_balance')
       .first();
@@ -1314,10 +1230,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // If this is set as default, unset other defaults for the client
       if (data.is_default) {
-        await createTenantScopedQuery(trx, {
-          table: 'payment_methods',
-          tenant: context.tenant,
-        }).builder
+        await tenantDb(trx, context.tenant).table('payment_methods')
           .where('client_id', data.client_id)
           .update({ is_default: false });
       }
@@ -1379,19 +1292,13 @@ export class FinancialService extends BaseService<ITransaction> {
     const sortableFields = new Set(['created_at', 'updated_at', 'type', 'is_default']);
     const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
 
-    let dataQuery = createTenantScopedQuery(knex, {
-      table: 'payment_methods as pm',
-      tenant: context.tenant,
-    }).builder
+    let dataQuery = tenantDb(knex, context.tenant).table('payment_methods as pm')
       .leftJoin('clients as c', function() {
         this.on('pm.client_id', '=', 'c.client_id')
           .andOn('pm.tenant', '=', 'c.tenant');
       });
 
-    let countQuery = createTenantScopedQuery(knex, {
-      table: 'payment_methods as pm',
-      tenant: context.tenant,
-    }).builder;
+    let countQuery = tenantDb(knex, context.tenant).table('payment_methods as pm');
 
     if (client_id) {
       dataQuery = dataQuery.where('pm.client_id', client_id);
@@ -1473,10 +1380,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const reportDate = asOfDate || new Date().toISOString();
     
     // Get current credit balance
-    const client = await createTenantScopedQuery(knex, {
-      table: 'clients',
-      tenant,
-    }).builder
+    const client = await tenantDb(knex, tenant).table('clients')
       .where('client_id', clientId)
       .first();
 
@@ -1486,10 +1390,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
     // Get available (non-expired) credits
     const now = new Date().toISOString();
-    const availableCredits = await createTenantScopedQuery(knex, {
-      table: 'credit_tracking',
-      tenant,
-    }).builder
+    const availableCredits = await tenantDb(knex, tenant).table('credit_tracking')
       .where('client_id', clientId)
       .where('is_expired', false)
       .where(function() {
@@ -1499,37 +1400,25 @@ export class FinancialService extends BaseService<ITransaction> {
       .sum('remaining_amount as total');
 
     // Get expired credits
-    const expiredCredits = await createTenantScopedQuery(knex, {
-      table: 'credit_tracking',
-      tenant,
-    }).builder
+    const expiredCredits = await tenantDb(knex, tenant).table('credit_tracking')
       .where('client_id', clientId)
       .where('is_expired', true)
       .sum('amount as total');
 
     // Get pending invoices (balance due is derived: total − credit applied)
-    const pendingInvoices = (await createTenantScopedQuery(knex, {
-      table: 'invoices',
-      tenant,
-    }).builder
+    const pendingInvoices = (await tenantDb(knex, tenant).table('invoices')
       .where('client_id', clientId)
       .where('status', 'sent')
       .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get overdue invoices
-    const overdueInvoices = (await createTenantScopedQuery(knex, {
-      table: 'invoices',
-      tenant,
-    }).builder
+    const overdueInvoices = (await tenantDb(knex, tenant).table('invoices')
       .where('client_id', clientId)
       .where('status', 'overdue')
       .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get last payment
-    const lastPayment = await createTenantScopedQuery(knex, {
-      table: 'transactions',
-      tenant,
-    }).builder
+    const lastPayment = await tenantDb(knex, tenant).table('transactions')
       .where('client_id', clientId)
       .where('type', 'payment')
       .orderBy('created_at', 'desc')
@@ -1582,10 +1471,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const reportDate = new Date().toISOString();
     const now = new Date();
 
-    let query = createTenantScopedQuery(knex, {
-      table: 'invoices as i',
-      tenant,
-    }).builder
+    let query = tenantDb(knex, tenant).table('invoices as i')
       .join('clients as c', function joinClients() {
         this.on('i.client_id', '=', 'c.client_id')
           .andOn('i.tenant', '=', 'c.tenant');
@@ -1711,10 +1597,7 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     // Revenue analytics
-    let revenueQuery = createTenantScopedQuery(knex, {
-      table: 'invoices',
-      tenant: context.tenant,
-    }).builder
+    let revenueQuery = tenantDb(knex, context.tenant).table('invoices')
       .select(
         knex.raw(`${dateGrouping} as period`),
         knex.raw('SUM(total_amount) as total_revenue'),
@@ -1735,10 +1618,7 @@ export class FinancialService extends BaseService<ITransaction> {
       .orderBy('period');
 
     // Credit analytics
-    let creditQuery = createTenantScopedQuery(knex, {
-      table: 'transactions',
-      tenant: context.tenant,
-    }).builder
+    let creditQuery = tenantDb(knex, context.tenant).table('transactions')
       .select(
         knex.raw(`${dateGrouping} as period`),
         knex.raw('SUM(CASE WHEN type IN (\'credit_issuance\', \'credit_issuance_from_negative_invoice\') THEN amount ELSE 0 END) as credits_issued'),
@@ -1773,10 +1653,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const creditAnalytics = await Promise.all(
       creditData.map(async (period: any) => {
         // Get credit balance at end of period
-        const balanceQuery = createTenantScopedQuery(knex, {
-          table: 'clients',
-          tenant: context.tenant,
-        }).builder
+        const balanceQuery = tenantDb(knex, context.tenant).table('clients')
           .sum('credit_balance as total_balance');
         
         if (client_id) {
@@ -1895,10 +1772,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
     const resolvedReport = await withTransaction(knex, async (trx) => {
       // Get the report
-      const report = await createTenantScopedQuery(trx, {
-        table: 'credit_reconciliation_reports',
-        tenant,
-      }).builder
+      const report = await tenantDb(trx, tenant).table('credit_reconciliation_reports')
         .where('report_id', reportId)
         .first();
 
@@ -1926,18 +1800,12 @@ export class FinancialService extends BaseService<ITransaction> {
       });
 
       // Update client balance
-      await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('clients')
         .where('client_id', report.client_id)
         .update({ credit_balance: report.expected_balance, updated_at: now });
 
       // Resolve the report
-      const [resolved] = await createTenantScopedQuery(trx, {
-        table: 'credit_reconciliation_reports',
-        tenant,
-      }).builder
+      const [resolved] = await tenantDb(trx, tenant).table('credit_reconciliation_reports')
         .where('report_id', reportId)
         .update({
           status: 'resolved',
@@ -2018,10 +1886,7 @@ export class FinancialService extends BaseService<ITransaction> {
           
           switch (operation.operation) {
             case 'finalize':
-              result = await createTenantScopedQuery(trx, {
-                table: 'invoices',
-                tenant: context.tenant,
-              }).builder
+              result = await tenantDb(trx, context.tenant).table('invoices')
                 .where('invoice_id', invoiceId)
                 .update({
                   status: 'sent',
@@ -2031,10 +1896,7 @@ export class FinancialService extends BaseService<ITransaction> {
               break;
               
             case 'cancel':
-              result = await createTenantScopedQuery(trx, {
-                table: 'invoices',
-                tenant: context.tenant,
-              }).builder
+              result = await tenantDb(trx, context.tenant).table('invoices')
                 .where('invoice_id', invoiceId)
                 .update({
                   status: 'cancelled'
@@ -2045,10 +1907,7 @@ export class FinancialService extends BaseService<ITransaction> {
             case 'apply_credit':
               // This would need additional parameters in the operation
               const creditAmount = operation.parameters?.credit_amount || 0;
-              const invoice = await createTenantScopedQuery(trx, {
-                table: 'invoices',
-                tenant: context.tenant,
-              }).builder
+              const invoice = await tenantDb(trx, context.tenant).table('invoices')
                 .where('invoice_id', invoiceId)
                 .first();
               
@@ -2136,10 +1995,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       for (const transactionId of operation.transaction_ids) {
         try {
-          const existing = await createTenantScopedQuery(trx, {
-            table: 'transactions',
-            tenant: context.tenant,
-          }).builder
+          const existing = await tenantDb(trx, context.tenant).table('transactions')
             .where('transaction_id', transactionId)
             .first();
           if (!existing) {
@@ -2149,20 +2005,14 @@ export class FinancialService extends BaseService<ITransaction> {
           let result: any;
           switch (operation.operation) {
             case 'approve':
-              [result] = await createTenantScopedQuery(trx, {
-                table: 'transactions',
-                tenant: context.tenant,
-              }).builder
+              [result] = await tenantDb(trx, context.tenant).table('transactions')
                 .where('transaction_id', transactionId)
                 .update({ status: 'completed' })
                 .returning('*');
               break;
 
             case 'reject':
-              [result] = await createTenantScopedQuery(trx, {
-                table: 'transactions',
-                tenant: context.tenant,
-              }).builder
+              [result] = await tenantDb(trx, context.tenant).table('transactions')
                 .where('transaction_id', transactionId)
                 .update({ status: 'rejected' })
                 .returning('*');
@@ -2173,10 +2023,7 @@ export class FinancialService extends BaseService<ITransaction> {
                 throw new Error('Transaction is already reversed');
               }
               const reversalAmount = -Number(existing.amount);
-              const lastTransaction = await createTenantScopedQuery(trx, {
-                table: 'transactions',
-                tenant: context.tenant,
-              }).builder
+              const lastTransaction = await tenantDb(trx, context.tenant).table('transactions')
                 .where('client_id', existing.client_id)
                 .orderBy('created_at', 'desc')
                 .first();
@@ -2204,18 +2051,12 @@ export class FinancialService extends BaseService<ITransaction> {
                 })
                 .returning('*');
 
-              await createTenantScopedQuery(trx, {
-                table: 'transactions',
-                tenant: context.tenant,
-              }).builder
+              await tenantDb(trx, context.tenant).table('transactions')
                 .where('transaction_id', transactionId)
                 .update({ status: 'reversed' });
 
               if (CREDIT_TYPES.includes(existing.type)) {
-                await createTenantScopedQuery(trx, {
-                  table: 'clients',
-                  tenant: context.tenant,
-                }).builder
+                await tenantDb(trx, context.tenant).table('clients')
                   .where('client_id', existing.client_id)
                   .update({ credit_balance: balanceAfter, updated_at: new Date().toISOString() });
               }
@@ -2295,10 +2136,7 @@ export class FinancialService extends BaseService<ITransaction> {
           if (!targetClientId) {
             throw new Error('target_client_id is required for transfer');
           }
-          const credit = await createTenantScopedQuery(knex, {
-            table: 'credit_tracking',
-            tenant: context.tenant,
-          }).builder
+          const credit = await tenantDb(knex, context.tenant).table('credit_tracking')
             .where('credit_id', creditId)
             .first();
           if (!credit) {
@@ -2314,10 +2152,7 @@ export class FinancialService extends BaseService<ITransaction> {
           result = transferred.data;
         } else {
           result = await withTransaction(knex, async (trx) => {
-            const credit = await createTenantScopedQuery(trx, {
-              table: 'credit_tracking',
-              tenant: context.tenant,
-            }).builder
+            const credit = await tenantDb(trx, context.tenant).table('credit_tracking')
               .where('credit_id', creditId)
               .first();
             if (!credit) {
@@ -2331,10 +2166,7 @@ export class FinancialService extends BaseService<ITransaction> {
               }
               const remaining = Number(credit.remaining_amount);
               if (remaining > 0) {
-                const [client] = await createTenantScopedQuery(trx, {
-                  table: 'clients',
-                  tenant: context.tenant,
-                }).builder
+                const [client] = await tenantDb(trx, context.tenant).table('clients')
                   .where('client_id', credit.client_id)
                   .select('credit_balance');
                 const newBalance = Number(client?.credit_balance || 0) - remaining;
@@ -2351,17 +2183,11 @@ export class FinancialService extends BaseService<ITransaction> {
                   related_transaction_id: credit.transaction_id,
                   currency_code: credit.currency_code
                 });
-                await createTenantScopedQuery(trx, {
-                  table: 'clients',
-                  tenant: context.tenant,
-                }).builder
+                await tenantDb(trx, context.tenant).table('clients')
                   .where('client_id', credit.client_id)
                   .update({ credit_balance: newBalance, updated_at: now });
               }
-              const [updated] = await createTenantScopedQuery(trx, {
-                table: 'credit_tracking',
-                tenant: context.tenant,
-              }).builder
+              const [updated] = await tenantDb(trx, context.tenant).table('credit_tracking')
                 .where('credit_id', creditId)
                 .update({ is_expired: true, remaining_amount: 0, updated_at: now })
                 .returning('*');
@@ -2373,10 +2199,7 @@ export class FinancialService extends BaseService<ITransaction> {
               if (!newExpiration) {
                 throw new Error('parameters.expiration_date is required for extend_expiration');
               }
-              const [updated] = await createTenantScopedQuery(trx, {
-                table: 'credit_tracking',
-                tenant: context.tenant,
-              }).builder
+              const [updated] = await tenantDb(trx, context.tenant).table('credit_tracking')
                 .where('credit_id', creditId)
                 .update({ expiration_date: newExpiration, is_expired: false, updated_at: now })
                 .returning('*');
