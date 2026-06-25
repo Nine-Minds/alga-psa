@@ -31,7 +31,7 @@ import {
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { omit } from 'lodash';
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
 import {
@@ -62,20 +62,28 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
+function tenantScopedTable(
+    conn: Knex | Knex.Transaction,
+    table: string,
+    tenant: string,
+): Knex.QueryBuilder {
+    return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 // Helper functions for workflow events
 async function resolveProjectStatusInfo(
   trx: Knex.Transaction,
   tenant: string,
   projectStatusMappingId: string
 ): Promise<{ status: string; isClosed: boolean }> {
-  const row = await trx('project_status_mappings as psm')
+  const row = await tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
     .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
-    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
       trx.raw(
         'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'
@@ -115,14 +123,14 @@ async function getProjectStatusMappingDetails(
   tenant: string,
   projectStatusMappingId: string
 ): Promise<ProjectStatusMappingDetails | null> {
-  const row = await trx('project_status_mappings as psm')
+  const row = await tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
     .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
-    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
       'psm.*',
       trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
@@ -214,8 +222,8 @@ async function resolveAuthorizationSubjectForUser(
     let roleIds = extractRoleIdsFromUser(user);
     if (roleIds.length === 0) {
         try {
-            const roleRows = await trx('user_roles')
-                .where({ tenant, user_id: user.user_id })
+            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+                .where({ user_id: user.user_id })
                 .select<{ role_id: string }[]>('role_id');
             roleIds = roleRows.map((row) => row.role_id);
         } catch {
@@ -224,8 +232,8 @@ async function resolveAuthorizationSubjectForUser(
     }
 
     const [teamRows, managedRows] = await Promise.all([
-        trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
     ]);
 
     return {
@@ -318,8 +326,7 @@ export async function buildTicketAssigneeSetByTicketId(
         return result;
     }
 
-    const tickets = await trx('tickets')
-        .where({ tenant })
+    const tickets = await tenantScopedTable(trx, 'tickets', tenant)
         .whereIn('ticket_id', uniqueIds)
         .select<{ ticket_id: string; assigned_to: string | null; assigned_team_id: string | null }[]>(
             'ticket_id',
@@ -333,8 +340,7 @@ export async function buildTicketAssigneeSetByTicketId(
         result.set(ticket.ticket_id, set);
     }
 
-    const additional = await trx('ticket_resources')
-        .where({ tenant })
+    const additional = await tenantScopedTable(trx, 'ticket_resources', tenant)
         .whereIn('ticket_id', uniqueIds)
         .whereNotNull('additional_user_id')
         .select<{ ticket_id: string; additional_user_id: string }[]>('ticket_id', 'additional_user_id');
@@ -344,8 +350,7 @@ export async function buildTicketAssigneeSetByTicketId(
 
     const teamIds = Array.from(new Set(tickets.map((t) => t.assigned_team_id).filter((id): id is string => Boolean(id))));
     if (teamIds.length > 0) {
-        const members = await trx('team_members')
-            .where({ tenant })
+        const members = await tenantScopedTable(trx, 'team_members', tenant)
             .whereIn('team_id', teamIds)
             .select<{ team_id: string; user_id: string }[]>('team_id', 'user_id');
         const membersByTeam = new Map<string, string[]>();
@@ -381,8 +386,7 @@ export async function buildTaskAssigneeSetByTaskId(
         return result;
     }
 
-    const tasks = await trx('project_tasks')
-        .where({ tenant })
+    const tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
         .whereIn('task_id', uniqueIds)
         .select<{ task_id: string; assigned_to: string | null; assigned_team_id: string | null }[]>(
             'task_id',
@@ -396,8 +400,7 @@ export async function buildTaskAssigneeSetByTaskId(
         result.set(task.task_id, set);
     }
 
-    const additional = await trx('task_resources')
-        .where({ tenant })
+    const additional = await tenantScopedTable(trx, 'task_resources', tenant)
         .whereIn('task_id', uniqueIds)
         .whereNotNull('additional_user_id')
         .select<{ task_id: string; additional_user_id: string }[]>('task_id', 'additional_user_id');
@@ -407,8 +410,7 @@ export async function buildTaskAssigneeSetByTaskId(
 
     const teamIds = Array.from(new Set(tasks.map((t) => t.assigned_team_id).filter((id): id is string => Boolean(id))));
     if (teamIds.length > 0) {
-        const members = await trx('team_members')
-            .where({ tenant })
+        const members = await tenantScopedTable(trx, 'team_members', tenant)
             .whereIn('team_id', teamIds)
             .select<{ team_id: string; user_id: string }[]>('team_id', 'user_id');
         const membersByTeam = new Map<string, string[]>();
@@ -488,8 +490,8 @@ async function resolveProjectIdForPhase(
     tenant: string,
     phaseId: string
 ): Promise<string | null> {
-    const row = await trx('project_phases')
-        .where({ tenant, phase_id: phaseId })
+    const row = await tenantScopedTable(trx, 'project_phases', tenant)
+        .where({ phase_id: phaseId })
         .first<{ project_id: string }>('project_id');
 
     return row?.project_id ?? null;
@@ -500,12 +502,12 @@ async function resolveProjectIdForTask(
     tenant: string,
     taskId: string
 ): Promise<string | null> {
-    const row = await trx('project_tasks as pt')
+    const row = await tenantScopedTable(trx, 'project_tasks as pt', tenant)
         .join('project_phases as pp', function() {
             this.on('pt.phase_id', '=', 'pp.phase_id')
                 .andOn('pt.tenant', '=', 'pp.tenant');
         })
-        .where({ 'pt.tenant': tenant, 'pt.task_id': taskId })
+        .where({ 'pt.task_id': taskId })
         .first<{ project_id: string }>('pp.project_id');
 
     return row?.project_id ?? null;
@@ -516,7 +518,7 @@ async function resolveProjectIdForChecklistItem(
     tenant: string,
     checklistItemId: string
 ): Promise<string | null> {
-    const row = await trx('task_checklist_items as tci')
+    const row = await tenantScopedTable(trx, 'task_checklist_items as tci', tenant)
         .join('project_tasks as pt', function() {
             this.on('tci.task_id', '=', 'pt.task_id')
                 .andOn('tci.tenant', '=', 'pt.tenant');
@@ -525,7 +527,7 @@ async function resolveProjectIdForChecklistItem(
             this.on('pt.phase_id', '=', 'pp.phase_id')
                 .andOn('pt.tenant', '=', 'pp.tenant');
         })
-        .where({ 'tci.tenant': tenant, 'tci.checklist_item_id': checklistItemId })
+        .where({ 'tci.checklist_item_id': checklistItemId })
         .first<{ project_id: string }>('pp.project_id');
 
     return row?.project_id ?? null;
@@ -536,7 +538,7 @@ async function resolveProjectIdForTaskResourceAssignment(
     tenant: string,
     assignmentId: string
 ): Promise<string | null> {
-    const row = await trx('task_resources as tr')
+    const row = await tenantScopedTable(trx, 'task_resources as tr', tenant)
         .join('project_tasks as pt', function() {
             this.on('tr.task_id', '=', 'pt.task_id')
                 .andOn('tr.tenant', '=', 'pt.tenant');
@@ -545,7 +547,7 @@ async function resolveProjectIdForTaskResourceAssignment(
             this.on('pt.phase_id', '=', 'pp.phase_id')
                 .andOn('pt.tenant', '=', 'pp.tenant');
         })
-        .where({ 'tr.tenant': tenant, 'tr.assignment_id': assignmentId })
+        .where({ 'tr.assignment_id': assignmentId })
         .first<{ project_id: string }>('pp.project_id');
 
     return row?.project_id ?? null;
@@ -556,8 +558,8 @@ async function resolveProjectIdForTaskTicketLink(
     tenant: string,
     linkId: string
 ): Promise<string | null> {
-    const row = await trx('project_ticket_links')
-        .where({ tenant, link_id: linkId })
+    const row = await tenantScopedTable(trx, 'project_ticket_links', tenant)
+        .where({ link_id: linkId })
         .first<{ project_id: string }>('project_id');
 
     return row?.project_id ?? null;
@@ -568,8 +570,8 @@ async function resolveProjectIdsForTicket(
     tenant: string,
     ticketId: string
 ): Promise<string[]> {
-    const rows = await trx('project_ticket_links')
-        .where({ tenant, ticket_id: ticketId })
+    const rows = await tenantScopedTable(trx, 'project_ticket_links', tenant)
+        .where({ ticket_id: ticketId })
         .select<{ project_id: string }[]>('project_id');
 
     return Array.from(new Set(rows.map((row) => row.project_id)));
