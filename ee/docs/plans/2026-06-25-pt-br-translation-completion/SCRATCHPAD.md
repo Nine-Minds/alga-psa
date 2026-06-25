@@ -153,3 +153,10 @@ npm run migrate
 - Tightened the glossary allowlist for legitimate identical asset/OS/hardware terms (`Virtual`, `Firewall`, `RAM (GB)`, `NVMe`, `Windows`, `macOS`, `Linux`, `iOS`, `Android`) and tax-rate placeholder labels.
 - Translated real UI labels `Download`→`Baixar`, `Claro`→`Limpar`, and `Cessionário`→`Responsável`.
 - Implemented T056-T061. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/assets --namespace msp/knowledge-base --namespace msp/service-catalog --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — i18n-admin group
+- Implemented F034-F041: completed pt-BR translations for `msp/admin.json`, `msp/settings.json`, `msp/integrations.json`, `msp/email-providers.json`, `msp/extensions.json`, `msp/licensing.json`, `msp/onboarding.json`, and `msp/jobs.json`.
+- Re-audited all 4,972 keys in the group and marked them reviewed in `pt-review-state.json` with reviewer `codex-pt-br-pass`.
+- Tightened the glossary allowlist for admin/integration technical labels and compact formats (`OAuth2 (XOAUTH2)`, `TTL:`, `Temporal`, `Cron`, `Xero CSV`, `ID: {{id}}`, duration formats, placeholder names, `TK-`, etc.).
+- Translated real UI labels and corrected obvious artifacts: `Clone`→`Clonar`, `Durar`→`Último`, `Ticketing`→`Chamados`, `Serial`→`Número de série`, and job `empregos`→`trabalhos`.
+- Implemented T062-T077. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/admin --namespace msp/settings --namespace msp/integrations --namespace msp/email-providers --namespace msp/extensions --namespace msp/licensing --namespace msp/onboarding --namespace msp/jobs --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).

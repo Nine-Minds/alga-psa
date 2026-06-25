@@ -1,871 +1,871 @@
 {
   "common": {
     "actions": {
-      "back": "Back",
-      "cancel": "Cancel",
-      "close": "Close",
-      "continue": "Continue",
-      "finish": "Finish",
-      "invite": "Invite",
-      "next": "Next",
-      "retry": "Retry",
-      "save": "Save",
-      "saving": "Saving...",
-      "skip": "Skip",
-      "submit": "Submit"
+      "back": "Voltar",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "continue": "Continuar",
+      "finish": "Terminar",
+      "invite": "Convidar",
+      "next": "Próximo",
+      "retry": "Tentar novamente",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "skip": "Pular",
+      "submit": "Enviar"
     },
     "states": {
-      "loading": "Loading...",
-      "optional": "Optional",
-      "required": "Required"
+      "loading": "Carregando...",
+      "optional": "Opcional",
+      "required": "Obrigatório"
     },
-    "no": "No",
-    "yes": "Yes"
+    "no": "Não",
+    "yes": "Sim"
   },
   "onboardingProvider": {
-    "title": "Onboarding Provider",
-    "description": "Route-level onboarding gate that checks tenant completion state and redirects incomplete tenants into the wizard"
+    "title": "Provedor de integração",
+    "description": "Gate de integração em nível de rota que verifica o estado de conclusão do locatário e redireciona locatários incompletos para o assistente"
   },
   "onboardingWizard": {
-    "title": "Onboarding Wizard",
-    "description": "Wizard shell for MSP tenant setup with dialog/full-page presentation, progress, validation, and completion flows",
+    "title": "Assistente de integração",
+    "description": "Shell do assistente para configuração de locatário MSP com diálogo/apresentação de página inteira, progresso, validação e fluxos de conclusão",
     "steps": {
-      "clientInfo": "Client Info",
-      "teamMembers": "Team Members",
-      "addClient": "Add Client",
-      "clientContact": "Client Contact",
-      "billing": "Billing",
-      "ticketing": "Ticketing",
+      "clientInfo": "Informações do cliente",
+      "teamMembers": "Membros da equipe",
+      "addClient": "Adicionar cliente",
+      "clientContact": "Contato do cliente",
+      "billing": "Cobrança",
+      "ticketing": "Chamados",
       "algadeskWorkspace": "Espaço de trabalho"
     },
     "errors": {
-      "saveClientInfo": "Failed to save client info",
-      "addTeamMembers": "Failed to add team members",
-      "saveClient": "Failed to save client",
-      "addContact": "Failed to add contact",
-      "setupBilling": "Failed to setup billing",
-      "unknown": "Unknown error",
-      "validationFailed": "Validation failed",
-      "configureTicketing": "Failed to configure ticketing",
-      "completeOnboarding": "Failed to complete onboarding"
+      "saveClientInfo": "Falha ao salvar informações do cliente",
+      "addTeamMembers": "Falha ao adicionar membros da equipe",
+      "saveClient": "Falha ao salvar o cliente",
+      "addContact": "Falha ao adicionar contato",
+      "setupBilling": "Falha ao configurar o faturamento",
+      "unknown": "Erro desconhecido",
+      "validationFailed": "Falha na validação",
+      "configureTicketing": "Falha ao configurar a emissão de chamados",
+      "completeOnboarding": "Falha ao concluir a integração"
     },
     "debug": {
-      "title": "Debug Info:",
-      "currentStep": "Current Step: {{stepIndex}} ({{stepName}})",
-      "isValid": "Is Valid: {{value}}",
-      "isRequired": "Is Required: {{value}}",
-      "viewData": "View Data"
+      "title": "Informações de depuração:",
+      "currentStep": "Etapa Atual: {{stepIndex}} ({{stepName}})",
+      "isValid": "É válido: {{value}}",
+      "isRequired": "É obrigatório: {{value}}",
+      "viewData": "Ver dados"
     },
     "actions": {
-      "finish": "Finish Setup",
-      "saving": "Saving...",
-      "completing": "Completing..."
+      "finish": "Concluir configuração",
+      "saving": "Salvando...",
+      "completing": "Concluindo..."
     },
     "shell": {
-      "title": "Setup Your System",
-      "description": "Let's get your workspace configured and ready to use.",
+      "title": "Configure seu sistema",
+      "description": "Vamos configurar seu espaço de trabalho e deixá-lo pronto para uso.",
       "algadeskTitle": "Configurar o AlgaDesk",
-      "algadeskDescription": "Configure seu espaço de trabalho de help desk, clientes e padrões de tickets."
+      "algadeskDescription": "Configure seu espaço de trabalho de suporte técnico, clientes e padrões de chamados."
     }
   },
   "addClientStep": {
-    "title": "Add Client Step",
-    "description": "Wizard step for creating or revisiting the primary client record during onboarding",
+    "title": "Adicionar etapa do cliente",
+    "description": "Etapa do assistente para criar ou revisitar o registro do cliente principal durante a integração",
     "validation": {
       "email": {
-        "invalid": "Please enter a valid email address"
+        "invalid": "Por favor insira um endereço de e-mail válido"
       },
       "website": {
-        "example": "Please enter a valid website (e.g., example.com)",
-        "format": "Please enter a valid website format"
+        "example": "Insira um site válido (por exemplo, example.com)",
+        "format": "Insira um formato de site válido"
       },
       "phone": {
-        "tooShort": "Phone number seems too short",
-        "tooLong": "Phone number seems too long",
-        "invalidCharacters": "Phone number contains invalid characters"
+        "tooShort": "O número de telefone parece muito curto",
+        "tooLong": "O número de telefone parece muito longo",
+        "invalidCharacters": "O número de telefone contém caracteres inválidos"
       }
     },
     "header": {
-      "title": "Add Your First Client",
-      "description": "Let's add your first client to get started. You can skip this and add clients later."
+      "title": "Adicione seu primeiro cliente",
+      "description": "Vamos adicionar seu primeiro cliente para começar. Você pode pular isso e adicionar clientes mais tarde."
     },
     "created": {
-      "title": "Client created successfully!",
-      "description": "{{clientName}} has been added to your client list."
+      "title": "Cliente criado com sucesso!",
+      "description": "{{clientName}} foi adicionado à sua lista de clientes."
     },
     "fields": {
       "clientName": {
-        "label": "Client Name",
-        "placeholder": "Example Corp"
+        "label": "Nome do cliente",
+        "placeholder": "Exemplo Corp"
       },
       "clientEmail": {
-        "label": "Client Email",
-        "placeholder": "contact@example.com"
+        "label": "E-mail do cliente",
+        "placeholder": "contato@exemplo.com"
       },
       "clientPhone": {
-        "label": "Phone Number",
+        "label": "Número de telefone",
         "placeholder": "+1 (555) 123-4567"
       },
       "website": {
-        "label": "Website",
+        "label": "Site",
         "placeholder": "https://example.com"
       }
     },
     "common": {
-      "noteLabel": "Note:",
-      "optionalLabel": "Optional:"
+      "noteLabel": "Observação:",
+      "optionalLabel": "Opcional:"
     },
     "note": {
-      "defaultTaxSettings": "The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.",
-      "optional": "You can skip this step and add clients later from your dashboard."
+      "defaultTaxSettings": "O cliente será criado com configurações fiscais padrão não tributáveis ​​(0%). Você pode configurar as taxas de imposto posteriormente nas configurações do cliente.",
+      "optional": "Você pode pular esta etapa e adicionar clientes posteriormente em seu painel."
     }
   },
   "billingSetupStep": {
-    "title": "Billing Setup Step",
-    "description": "Wizard step for defining the initial service, pricing, billing mode, and contract line defaults",
+    "title": "Etapa de configuração do faturamento",
+    "description": "Etapa do assistente para definir o serviço inicial, o preço, o modo de cobrança e os padrões de linha de contrato",
     "serviceTypes": {
       "toasts": {
-        "deleted": "Service type deleted successfully"
+        "deleted": "Tipo de serviço excluído com sucesso"
       },
       "errors": {
-        "delete": "Failed to delete service type",
-        "nameRequired": "Service type name is required",
-        "duplicate": "Service type with this name already exists",
-        "create": "Failed to create service type",
-        "createRetry": "Failed to create service type. Please try again."
+        "delete": "Falha ao excluir o tipo de serviço",
+        "nameRequired": "O nome do tipo de serviço é obrigatório",
+        "duplicate": "O tipo de serviço com este nome já existe",
+        "create": "Falha ao criar tipo de serviço",
+        "createRetry": "Falha ao criar o tipo de serviço. Por favor, tente novamente."
       },
       "actions": {
-        "manage": "Manage Service Types",
-        "import": "Import from Standard",
-        "add": "Add New",
-        "confirmAdd": "Add Service Type"
+        "manage": "Gerenciar tipos de serviço",
+        "import": "Importar do Padrão",
+        "add": "Adicionar novo",
+        "confirmAdd": "Adicionar tipo de serviço"
       },
-      "noteLabel": "Note:",
-      "description": "Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.",
+      "noteLabel": "Observação:",
+      "description": "Os tipos de serviço são rótulos de taxonomia para organização e filtragem. O modo de cobrança é configurado separadamente em cada serviço.",
       "addForm": {
-        "title": "Add New Service Type",
+        "title": "Adicionar novo tipo de serviço",
         "fields": {
           "name": {
-            "label": "Name *",
-            "placeholder": "e.g., Premium Support"
+            "label": "Nome *",
+            "placeholder": "por exemplo, Suporte Premium"
           },
           "description": {
-            "label": "Description",
-            "placeholder": "Describe this service type..."
+            "label": "Descrição",
+            "placeholder": "Descreva este tipo de serviço..."
           },
           "billingMethod": {
-            "label": "Billing Method *"
+            "label": "Método de cobrança *"
           },
           "displayOrder": {
-            "label": "Display Order",
-            "placeholder": "Leave empty for auto-generate",
-            "help": "Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first."
+            "label": "Ordem de exibição",
+            "placeholder": "Deixe em branco para geração automática",
+            "help": "Controla a ordem em que os tipos de serviço aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
           }
         }
       },
       "import": {
-        "title": "Import Standard Service Types",
-        "description": "Select standard service types to import into your system:",
+        "title": "Importar tipos de serviço padrão",
+        "description": "Selecione os tipos de serviço padrão para importar para o seu sistema:",
         "success": {
-          "titleOne": "Service type imported successfully!",
-          "titleOther": "Service types imported successfully!",
-          "description_one": "{{count}} type added to your catalog.",
-          "description_other": "{{count}} types added to your catalog.",
-          "skipped": "{{count}} skipped."
+          "titleOne": "Tipo de serviço importado com sucesso!",
+          "titleOther": "Tipos de serviço importados com sucesso!",
+          "description_one": "Tipo {{count}} adicionado ao seu catálogo.",
+          "description_other": "Tipos {{count}} adicionados ao seu catálogo.",
+          "skipped": "{{count}} ignorado."
         },
         "actions": {
-          "importing": "Importing...",
-          "importSelected": "Import Selected ({{count}})"
+          "importing": "Importando...",
+          "importSelected": "Importação selecionada ({{count}})"
         }
       },
       "table": {
         "headers": {
-          "name": "Name",
-          "billingMethod": "Billing Method",
-          "order": "Order",
-          "actions": "Actions"
+          "name": "Nome",
+          "billingMethod": "Método de cobrança",
+          "order": "Ordem",
+          "actions": "Ações"
         }
       },
       "current": {
-        "title": "Current Service Types",
-        "removeTitle": "Remove service type"
+        "title": "Tipos de serviço atuais",
+        "removeTitle": "Remover tipo de serviço"
       }
     },
     "header": {
-      "title": "Create Your First Service",
-      "description": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.",
-      "serviceTitle": "Create Your First Service",
-      "serviceDescription": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior."
+      "title": "Crie seu primeiro serviço",
+      "description": "Adicione um serviço e escolha como ele deve ser cobrado. O tipo de serviço identifica a categoria de serviço, enquanto o modo de cobrança controla o comportamento dos preços.",
+      "serviceTitle": "Crie seu primeiro serviço",
+      "serviceDescription": "Adicione um serviço e escolha como ele deve ser cobrado. O tipo de serviço identifica a categoria de serviço, enquanto o modo de cobrança controla o comportamento dos preços."
     },
     "created": {
-      "title": "Service created successfully!",
-      "description": "{{serviceName}} has been added to your service catalog."
+      "title": "Serviço criado com sucesso!",
+      "description": "{{serviceName}} foi adicionado ao seu catálogo de serviços."
     },
     "fields": {
       "serviceName": {
-        "label": "Service Name *",
-        "placeholder": "Managed IT Services"
+        "label": "Nome do serviço *",
+        "placeholder": "Serviços de TI gerenciados"
       },
       "serviceDescription": {
-        "label": "Service Description",
-        "placeholder": "Comprehensive IT support and management services..."
+        "label": "Descrição do serviço",
+        "placeholder": "Serviços abrangentes de suporte e gerenciamento de TI..."
       },
       "serviceType": {
-        "label": "Service Type *",
-        "required": "(Required)",
-        "emptyPlaceholder": "Create or import service types",
-        "placeholder": "Select a service type",
-        "emptyHelp": "Click \"Manage Service Types\" to create or import service types"
+        "label": "Tipo de serviço *",
+        "required": "(Obrigatório)",
+        "emptyPlaceholder": "Criar ou importar tipos de serviço",
+        "placeholder": "Selecione um tipo de serviço",
+        "emptyHelp": "Clique em \"Gerenciar tipos de serviço\" para criar ou importar tipos de serviço"
       },
       "billingMode": {
-        "label": "Billing Mode"
+        "label": "Modo de cobrança"
       },
       "defaultRate": {
-        "label": "Default Rate",
+        "label": "Taxa padrão",
         "placeholder": "150"
       },
       "defaultCurrency": {
-        "label": "Default Currency *",
-        "description": "This currency will be used as the default across all billing — services, contracts, quotes, and invoices. You can override it per client later."
+        "label": "Moeda padrão *",
+        "description": "Essa moeda será usada como padrão em todas as cobranças – serviços, contratos, cotações e faturas. Você pode substituí-lo por cliente posteriormente."
       }
     },
     "billingMethods": {
-      "fixed": "Fixed",
-      "hourly": "Hourly",
-      "usageBased": "Usage Based",
-      "usage": "Usage"
+      "fixed": "Fixo",
+      "hourly": "De hora em hora",
+      "usageBased": "Baseado no uso",
+      "usage": "Uso"
     },
     "validation": {
-      "actionRequiredLabel": "Action Required:",
-      "actionRequiredDescription": "Click \"Manage Service Types\" above to create or import at least one service type before creating a service."
+      "actionRequiredLabel": "Ação necessária:",
+      "actionRequiredDescription": "Clique em “Gerenciar tipos de serviço” acima para criar ou importar pelo menos um tipo de serviço antes de criar um serviço."
     }
   },
   "clientContactStep": {
-    "title": "Client Contact Step",
-    "description": "Wizard step for collecting the main client contact details",
+    "title": "Etapa de contato do cliente",
+    "description": "Etapa do assistente para coletar os principais dados de contato do cliente",
     "validation": {
       "email": {
-        "invalid": "Please enter a valid email address"
+        "invalid": "Por favor insira um endereço de e-mail válido"
       }
     },
     "empty": {
-      "title": "Client Contact",
-      "description": "No client information was provided. Skip this step or go back to add a client first."
+      "title": "Contato do cliente",
+      "description": "Nenhuma informação do cliente foi fornecida. Pule esta etapa ou volte para adicionar um cliente primeiro."
     },
     "header": {
-      "title": "Add Contact for {{clientName}}",
-      "clientFallback": "Client",
-      "description": "Add a primary contact person for this client."
+      "title": "Adicionar contato para {{clientName}}",
+      "clientFallback": "Cliente",
+      "description": "Adicione uma pessoa de contato principal para este cliente."
     },
     "created": {
-      "title": "Contact created successfully!",
-      "description": "{{contactName}} has been added to {{clientName}}.",
-      "contactFallback": "The contact",
-      "clientFallback": "the client"
+      "title": "Contato criado com sucesso!",
+      "description": "{{contactName}} foi adicionado a {{clientName}}.",
+      "contactFallback": "O contato",
+      "clientFallback": "o cliente"
     },
     "fields": {
       "contactName": {
-        "label": "Contact Name",
-        "placeholder": "John Smith"
+        "label": "Nome do contato",
+        "placeholder": "João Smith"
       },
       "contactEmail": {
-        "label": "Contact Email",
+        "label": "E-mail de contato",
         "placeholder": "john.smith@example.com"
       },
       "contactRole": {
-        "label": "Role/Title",
-        "placeholder": "IT Manager"
+        "label": "Função/Título",
+        "placeholder": "Gerente de TI"
       }
     },
     "common": {
-      "optionalLabel": "Optional:"
+      "optionalLabel": "Opcional:"
     },
     "footer": {
-      "optional": "You can skip this step and add contacts later from the client's profile."
+      "optional": "Você pode pular esta etapa e adicionar contatos posteriormente a partir do perfil do cliente."
     }
   },
   "clientInfoStep": {
-    "title": "Client Info Step",
-    "description": "Wizard step for collecting MSP operator identity, company information, and initial client basics",
+    "title": "Etapa de informações do cliente",
+    "description": "Etapa do assistente para coletar a identidade do operador MSP, informações da empresa e princípios básicos do cliente inicial",
     "revisit": {
-      "title": "Company Information",
-      "description": "Review or update your company details.",
+      "title": "Informações da empresa",
+      "description": "Revise ou atualize os detalhes da sua empresa.",
       "fields": {
         "companyName": {
-          "label": "Company Name",
-          "placeholder": "Acme IT Solutions"
+          "label": "nome da empresa",
+          "placeholder": "Acme Soluções de TI"
         }
       },
-      "note": "You can use this wizard to reconfigure your workspace settings at any time."
+      "note": "Você pode usar este assistente para reconfigurar as configurações do seu espaço de trabalho a qualquer momento."
     },
     "common": {
-      "noteLabel": "Note:"
+      "noteLabel": "Observação:"
     },
     "header": {
-      "title": "Client Information",
-      "description": "Let's start by setting up your client profile."
+      "title": "Informações do cliente",
+      "description": "Vamos começar configurando seu perfil de cliente."
     },
     "fields": {
       "firstName": {
-        "label": "First Name",
+        "label": "Primeiro nome",
         "placeholder": "John"
       },
       "lastName": {
-        "label": "Last Name",
-        "placeholder": "Doe"
+        "label": "Sobrenome",
+        "placeholder": "Corça"
       },
       "companyName": {
-        "label": "Company Name",
-        "placeholder": "Acme IT Solutions"
+        "label": "nome da empresa",
+        "placeholder": "Acme Soluções de TI"
       },
       "email": {
-        "label": "Email Address",
+        "label": "Endereço de email",
         "placeholder": "john@acmeit.com",
-        "help": "This will be used for signing in to your account."
+        "help": "Isso será usado para fazer login na sua conta."
       },
       "language": {
-        "label": "Idioma",
+        "label": "Linguagem",
         "placeholder": "Selecione um idioma",
-        "help": "Torna-se o padrão da organização para todos — equipe MSP e usuários do portal do cliente. Usuários individuais e clientes podem substituí-lo depois."
+        "help": "Torna-se o padrão da organização para todos — funcionários do MSP e usuários do portal do cliente. Usuários e clientes individuais podem substituí-lo posteriormente."
       }
     },
     "password": {
       "resetRequired": {
-        "title": "Password Reset Required",
-        "description": "You must set a new password to continue with the setup process. This step cannot be skipped."
+        "title": "Redefinição de senha necessária",
+        "description": "Você deve definir uma nova senha para continuar com o processo de configuração. Esta etapa não pode ser ignorada."
       },
-      "title": "Set Your Password",
-      "description": "Please set a new password to replace your temporary password.",
+      "title": "Defina sua senha",
+      "description": "Defina uma nova senha para substituir sua senha temporária.",
       "fields": {
         "newPassword": {
-          "label": "New Password",
-          "placeholder": "Create a strong password"
+          "label": "Nova Senha",
+          "placeholder": "Crie uma senha forte"
         },
         "confirmPassword": {
-          "label": "Confirm Password",
-          "placeholder": "Re-enter your password",
-          "match": "Passwords match",
-          "mismatch": "Passwords do not match"
+          "label": "Confirme sua senha",
+          "placeholder": "Digite novamente sua senha",
+          "match": "Correspondência de senhas",
+          "mismatch": "As senhas não coincidem"
         }
       },
       "requirements": {
-        "title": "Password must contain:",
-        "minLength": "At least 8 characters",
-        "uppercase": "One uppercase letter",
-        "lowercase": "One lowercase letter",
-        "number": "One number",
-        "specialCharacter": "One special character"
+        "title": "A senha deve conter:",
+        "minLength": "Pelo menos 8 caracteres",
+        "uppercase": "Uma letra maiúscula",
+        "lowercase": "Uma letra minúscula",
+        "number": "Um número",
+        "specialCharacter": "Um personagem especial"
       },
       "strength": {
-        "label": "Password strength: {{strength}}",
-        "strong": "Strong",
-        "medium": "Medium",
-        "weak": "Weak"
+        "label": "Força da senha: {{strength}}",
+        "strong": "Forte",
+        "medium": "Médio",
+        "weak": "Fraco"
       }
     },
     "footer": {
-      "note": "All fields on this page are required to proceed."
+      "note": "Todos os campos desta página são obrigatórios para prosseguir."
     }
   },
   "teamMembersStep": {
-    "title": "Team Members Step",
-    "description": "Wizard step for inviting initial team members and assigning onboarding roles",
+    "title": "Etapa dos membros da equipe",
+    "description": "Etapa do assistente para convidar os primeiros membros da equipe e atribuir funções de integração",
     "license": {
-      "limitReached": "License limit reached ({{current}}/{{limit}}). Contact support to increase your license limit.",
+      "limitReached": "Limite de licença atingido ({{current}}/{{limit}}). Entre em contato com o suporte para aumentar seu limite de licença.",
       "remaining": {
-        "one": "You can add 1 more team member.",
-        "other": "You can add {{count}} more team members."
+        "one": "Você pode adicionar mais 1 membro da equipe.",
+        "other": "Você pode adicionar mais membros à equipe {{count}}."
       },
       "summary": {
-        "noLimit": "Users: {{count}} (No limit)",
-        "limited": "Users: {{current}}/{{limit}}"
+        "noLimit": "Usuários: {{count}} (sem limite)",
+        "limited": "Usuários: {{current}}/{{limit}}"
       }
     },
     "errors": {
-      "requiredFields": "Please fill in all required fields including password",
-      "invalidEmail": "Please enter a valid email address",
-      "passwordLength": "Password must be at least 8 characters long",
-      "saveFailed": "Failed to save team member",
-      "generic": "An error occurred"
+      "requiredFields": "Por favor preencha todos os campos obrigatórios, incluindo senha",
+      "invalidEmail": "Por favor insira um endereço de e-mail válido",
+      "passwordLength": "A senha deve ter pelo menos 8 caracteres",
+      "saveFailed": "Falha ao salvar membro da equipe",
+      "generic": "Ocorreu um erro"
     },
     "header": {
-      "title": "Invite Team Members",
-      "description": "Add your team members to get them started. You can skip this step and add them later."
+      "title": "Convide membros da equipe",
+      "description": "Adicione membros da sua equipe para começar. Você pode pular esta etapa e adicioná-los mais tarde."
     },
     "created": {
-      "titleOne": "1 team member created successfully!",
-      "titleOther": "{{count}} team members created successfully!",
-      "users": "Created users: {{users}}"
+      "titleOne": "1 membro da equipe criado com sucesso!",
+      "titleOther": "Membros da equipe {{count}} criados com sucesso!",
+      "users": "Usuários criados: {{users}}"
     },
     "member": {
-      "title": "Team Member {{index}}",
-      "createdBadge": "Created",
+      "title": "Membro da equipe {{index}}",
+      "createdBadge": "Criado",
       "actions": {
-        "saving": "Saving...",
-        "save": "Save"
+        "saving": "Salvando...",
+        "save": "Salvar"
       }
     },
     "fields": {
       "firstName": {
-        "label": "First Name",
+        "label": "Primeiro nome",
         "placeholder": "Jane"
       },
       "lastName": {
-        "label": "Last Name",
+        "label": "Sobrenome",
         "placeholder": "Smith"
       },
       "email": {
-        "label": "Email",
+        "label": "E-mail",
         "placeholder": "jane@client.com"
       },
       "role": {
-        "label": "Role"
+        "label": "Papel"
       },
       "password": {
-        "label": "Temporary Password",
-        "placeholder": "Set temporary password",
-        "help": "The user will need to change this password on first login"
+        "label": "Senha temporária",
+        "placeholder": "Definir senha temporária",
+        "help": "O usuário precisará alterar esta senha no primeiro login"
       }
     },
     "roles": {
-      "admin": "Admin",
-      "technician": "Technician",
-      "manager": "Manager",
-      "user": "User"
+      "admin": "Administrador",
+      "technician": "Técnico",
+      "manager": "Gerente",
+      "user": "Usuário"
     },
     "actions": {
-      "saveCurrentFirst": "Save Current Team Member First",
-      "addAnother": "Add Another Team Member"
+      "saveCurrentFirst": "Salve primeiro o membro atual da equipe",
+      "addAnother": "Adicionar outro membro da equipe"
     },
     "unsaved": {
-      "title": "Unsaved team member",
-      "description": "Please save the current team member before adding a new one."
+      "title": "Membro da equipe não salvo",
+      "description": "Salve o membro atual da equipe antes de adicionar um novo."
     },
     "limitReached": {
-      "title": "User limit reached",
-      "description": "You've reached the maximum number of users for your current plan. Contact support to increase your limit."
+      "title": "Limite de usuários atingido",
+      "description": "Você atingiu o número máximo de usuários do seu plano atual. Entre em contato com o suporte para aumentar seu limite."
     },
     "optional": {
-      "label": "Optional:",
-      "description": "You can skip this step and invite team members later from the settings page."
+      "label": "Opcional:",
+      "description": "Você pode pular esta etapa e convidar membros da equipe posteriormente na página de configurações."
     }
   },
   "ticketingConfigStep": {
-    "title": "Ticketing Config Step",
-    "description": "Wizard step for configuring boards, statuses, priorities, categories, and SLA defaults during onboarding",
+    "title": "Etapa de configuração de chamados",
+    "description": "Etapa do assistente para configurar quadros, status, prioridades, categorias e padrões de SLA durante a integração",
     "boards": {
       "toasts": {
-        "firstDefaultSet": "First board automatically set as default",
-        "deleted": "Board deleted successfully",
-        "defaultUpdated": "Default board updated successfully"
+        "firstDefaultSet": "Primeira placa definida automaticamente como padrão",
+        "deleted": "Quadro excluído com sucesso",
+        "defaultUpdated": "Placa padrão atualizada com sucesso"
       },
       "errors": {
-        "import": "Failed to import boards",
-        "delete": "Failed to delete board.",
-        "defaultRequired": "At least one board must be set as default",
-        "defaultUpdate": "Failed to set default board",
-        "duplicate": "Board already exists",
-        "create": "Failed to create board. Please try again."
+        "import": "Falha ao importar placas",
+        "delete": "Falha ao excluir o quadro.",
+        "defaultRequired": "Pelo menos uma placa deve ser definida como padrão",
+        "defaultUpdate": "Falha ao definir placa padrão",
+        "duplicate": "O conselho já existe",
+        "create": "Falha ao criar o quadro. Por favor, tente novamente."
       },
       "delete": {
-        "fallbackEntity": "this board"
+        "fallbackEntity": "este quadro"
       },
-      "title": "Boards",
-      "description": "Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.",
-      "tip": "Click the star in the Default column to change which board is the default.",
+      "title": "Quadros",
+      "description": "Os quadros ajudam a organizar chamados por departamento, equipe ou tipo de fluxo de trabalho. Quando os clientes criam chamados através do portal do cliente, eles serão automaticamente atribuídos ao quadro marcado como padrão.",
+      "tip": "Clique na estrela na coluna Padrão para alterar qual placa é padrão.",
       "actions": {
-        "import": "Import from Standard",
-        "add": "Add New Board",
-        "confirmAdd": "Add Board"
+        "import": "Importar do Padrão",
+        "add": "Adicionar novo quadro",
+        "confirmAdd": "Adicionar quadro"
       },
       "addForm": {
-        "title": "Add New Board",
+        "title": "Adicionar novo quadro",
         "fields": {
           "name": {
-            "label": "Board Name *",
-            "placeholder": "Enter board name"
+            "label": "Nome do Conselho *",
+            "placeholder": "Digite o nome do quadro"
           },
           "description": {
-            "label": "Description",
-            "placeholder": "Enter description"
+            "label": "Descrição",
+            "placeholder": "Insira a descrição"
           },
           "displayOrder": {
-            "label": "Display Order",
-            "placeholder": "Leave empty for auto-generate",
-            "help": "Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first."
+            "label": "Ordem de exibição",
+            "placeholder": "Deixe em branco para geração automática",
+            "help": "Controla a ordem em que os painéis aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
           },
           "itil": {
-            "label": "Make this board ITIL compliant"
+            "label": "Torne esta placa compatível com ITIL"
           }
         },
-        "configurationTitle": "Board Configuration"
+        "configurationTitle": "Configuração da placa"
       },
       "import": {
-        "title": "Import Standard Boards",
+        "title": "Importar placas padrão",
         "success": {
-          "one": "Successfully imported 1 board.",
-          "other": "Successfully imported {{count}} boards."
+          "one": "1 placa importada com sucesso.",
+          "other": "Placas {{count}} importadas com sucesso."
         }
       },
       "table": {
         "headers": {
-          "name": "Name",
-          "default": "Default",
-          "order": "Order",
+          "name": "Nome",
+          "default": "Padrão",
+          "order": "Ordem",
           "itil": "ITIL"
         }
       },
       "current": {
-        "title": "Current Boards",
-        "defaultTitle": "Default board",
-        "setDefaultTitle": "Set as default board",
-        "removeTitle": "Remove board"
+        "title": "Quadros Atuais",
+        "defaultTitle": "Placa padrão",
+        "setDefaultTitle": "Definir como quadro padrão",
+        "removeTitle": "Remover placa"
       }
     },
     "categories": {
       "import": {
-        "unknownParent": "Unknown parent",
-        "title": "Import Standard Categories",
+        "unknownParent": "Pai desconhecido",
+        "title": "Importar categorias padrão",
         "success": {
-          "one": "Successfully imported 1 category.",
-          "other": "Successfully imported {{count}} categories."
+          "one": "1 categoria importada com sucesso.",
+          "other": "Categorias {{count}} importadas com sucesso."
         },
         "targetBoard": {
-          "label": "Target Board *",
-          "placeholder": "Select a board for imported categories",
-          "help": "All imported categories will be assigned to this board"
+          "label": "Quadro-alvo *",
+          "placeholder": "Selecione um quadro para categorias importadas",
+          "help": "Todas as categorias importadas serão atribuídas a este quadro"
         },
-        "parentAutoSelectTitle": "Parent category will be automatically selected"
+        "parentAutoSelectTitle": "A categoria pai será selecionada automaticamente"
       },
       "errors": {
-        "missingParents": "Cannot import subcategories without their parent categories. Please also select: {{parents}}",
-        "duplicate": "Category already exists in this board",
-        "create": "Failed to create category. Please try again.",
-        "delete": "Failed to delete category."
+        "missingParents": "Não é possível importar subcategorias sem suas categorias principais. Selecione também: {{parents}}",
+        "duplicate": "A categoria já existe neste fórum",
+        "create": "Falha ao criar categoria. Por favor, tente novamente.",
+        "delete": "Falha ao excluir categoria."
       },
       "delete": {
-        "fallbackEntity": "this category"
+        "fallbackEntity": "esta categoria"
       },
       "toasts": {
-        "deleted": "Category deleted successfully"
+        "deleted": "Categoria excluída com sucesso"
       },
-      "title": "Categories",
-      "requiresBoard": "(requires board)",
-      "description": "Categories help organize tickets by type of issue or request. You can create parent categories with subcategories for better organization. Examples include Technical Support (with subcategories like Hardware, Software, Network) or Service Requests.",
+      "title": "Categorias",
+      "requiresBoard": "(requer placa)",
+      "description": "As categorias ajudam a organizar os chamados por tipo de problema ou solicitação. Você pode criar categorias principais com subcategorias para melhor organização. Os exemplos incluem Suporte Técnico (com subcategorias como Hardware, Software, Rede) ou Solicitações de Serviço.",
       "actions": {
-        "import": "Import from Standard",
-        "add": "Add New Category",
-        "confirmAdd": "Add Category"
+        "import": "Importar do Padrão",
+        "add": "Adicionar nova categoria",
+        "confirmAdd": "Adicionar categoria"
       },
       "addForm": {
-        "title": "Add New Category",
+        "title": "Adicionar nova categoria",
         "fields": {
           "name": {
-            "label": "Category Name *",
-            "placeholder": "Enter category name"
+            "label": "Nome da categoria *",
+            "placeholder": "Digite o nome da categoria"
           },
           "board": {
-            "label": "Target Board *",
-            "placeholder": "Select a board"
+            "label": "Quadro-alvo *",
+            "placeholder": "Selecione um quadro"
           },
           "parent": {
-            "label": "Parent Category",
-            "noneOption": "None (Top-level category)",
-            "placeholder": "Select parent category"
+            "label": "Categoria pai",
+            "noneOption": "Nenhum (categoria de nível superior)",
+            "placeholder": "Selecione a categoria pai"
           },
           "displayOrder": {
-            "label": "Display Order",
-            "placeholder": "Leave empty for auto-generate",
-            "help": "Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first."
+            "label": "Ordem de exibição",
+            "placeholder": "Deixe em branco para geração automática",
+            "help": "Controla a ordem em que as categorias aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
           }
         }
       },
       "table": {
         "headers": {
-          "name": "Name",
-          "order": "Order"
+          "name": "Nome",
+          "order": "Ordem"
         }
       },
       "current": {
-        "title": "Current Categories ({{count}} total)",
-        "removeTitle": "Remove category"
+        "title": "Categorias atuais (total {{count}})",
+        "removeTitle": "Remover categoria"
       }
     },
     "statuses": {
       "toasts": {
-        "firstDefaultSet": "First open status automatically set as default",
-        "deleted": "Status deleted successfully",
-        "defaultUpdated": "Default status updated successfully"
+        "firstDefaultSet": "Primeiro status aberto definido automaticamente como padrão",
+        "deleted": "Status excluído com sucesso",
+        "defaultUpdated": "Status padrão atualizado com sucesso"
       },
       "delete": {
-        "fallbackEntity": "this status"
+        "fallbackEntity": "este estado"
       },
       "errors": {
-        "delete": "Failed to delete status.",
-        "defaultRequired": "At least one status must be set as default",
-        "closedCannotBeDefault": "Closed statuses cannot be set as default",
-        "selectBoardForDefault": "Select or create a board before changing status defaults.",
-        "defaultUpdate": "Failed to set default status",
-        "duplicate": "Status already exists",
-        "selectBoardForAdd": "Select or create a board before adding statuses.",
-        "create": "Failed to create status. Please try again."
+        "delete": "Falha ao excluir status.",
+        "defaultRequired": "Pelo menos um status deve ser definido como padrão",
+        "closedCannotBeDefault": "Os status fechados não podem ser definidos como padrão",
+        "selectBoardForDefault": "Selecione ou crie um quadro antes de alterar os padrões de status.",
+        "defaultUpdate": "Falha ao definir o status padrão",
+        "duplicate": "O status já existe",
+        "selectBoardForAdd": "Selecione ou crie um quadro antes de adicionar status.",
+        "create": "Falha ao criar status. Por favor, tente novamente."
       },
-      "title": "Statuses",
-      "description": "Statuses are configured per board. Select a board below to define the lifecycle for tickets on that board. The Default open status for the selected board is automatically assigned to new tickets created on that board.",
-      "tip": "Boards do not share statuses. Switch boards here to review or change each board's status set.",
+      "title": "Status",
+      "description": "Os status são configurados por placa. Selecione um quadro abaixo para definir o ciclo de vida dos chamados nesse quadro. O status aberto padrão do quadro selecionado é atribuído automaticamente aos novos chamados criados nesse quadro.",
+      "tip": "Os conselhos não compartilham status. Troque de quadro aqui para revisar ou alterar o conjunto de status de cada quadro.",
       "fields": {
         "board": {
-          "label": "Board",
-          "placeholder": "Select board"
+          "label": "Quadro",
+          "placeholder": "Selecione o quadro"
         }
       },
-      "noBoardWarning": "Create or import a board before configuring statuses. Each board needs its own open default status.",
+      "noBoardWarning": "Crie ou importe um quadro antes de configurar status. Cada placa precisa de seu próprio status padrão aberto.",
       "actions": {
-        "import": "Import from Standard",
-        "add": "Add New Status",
-        "confirmAdd": "Add Status"
+        "import": "Importar do Padrão",
+        "add": "Adicionar novo status",
+        "confirmAdd": "Adicionar status"
       },
       "addForm": {
-        "title": "Add New Status",
+        "title": "Adicionar novo status",
         "fields": {
           "name": {
-            "label": "Status Name *",
-            "placeholder": "Enter status name"
+            "label": "Nome do Estado *",
+            "placeholder": "Insira o nome do status"
           },
           "displayOrder": {
-            "label": "Display Order",
-            "placeholder": "Leave empty for auto-generate",
-            "help": "Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first."
+            "label": "Ordem de exibição",
+            "placeholder": "Deixe em branco para geração automática",
+            "help": "Controla a ordem em que os status aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
           },
           "state": {
-            "closedLabel": "Closed Status",
-            "openLabel": "Open Status",
-            "closedHelp": "This status indicates the ticket is resolved and closed",
-            "openHelp": "This status indicates the ticket is still open and needs attention"
+            "closedLabel": "Status Fechado",
+            "openLabel": "Status aberto",
+            "closedHelp": "Este status indica que o chamado foi resolvido e fechado",
+            "openHelp": "Este status indica que o chamado ainda está aberto e precisa de atenção"
           }
         }
       },
       "import": {
-        "title": "Import Standard Statuses",
-        "targetBoard": "Importing into {{boardName}}.",
+        "title": "Importar status padrão",
+        "targetBoard": "Importando para {{boardName}}.",
         "success": {
-          "one": "Successfully imported 1 status.",
-          "other": "Successfully imported {{count}} statuses."
+          "one": "1 status importado com sucesso.",
+          "other": "Status {{count}} importados com sucesso."
         }
       },
       "table": {
         "headers": {
-          "name": "Name",
-          "type": "Type",
-          "default": "Default",
-          "order": "Order"
+          "name": "Nome",
+          "type": "Tipo",
+          "default": "Padrão",
+          "order": "Ordem"
         }
       },
       "types": {
-        "closed": "Closed",
-        "open": "Open"
+        "closed": "Fechado",
+        "open": "Abrir"
       },
       "current": {
-        "title": "Current Statuses",
-        "titleWithBoard": "Current Statuses for {{boardName}}",
-        "defaultTitle": "Default status",
-        "setDefaultTitle": "Set as default status",
-        "removeTitle": "Remove status"
+        "title": "Status atuais",
+        "titleWithBoard": "Status atual para {{boardName}}",
+        "defaultTitle": "Status padrão",
+        "setDefaultTitle": "Definir como status padrão",
+        "removeTitle": "Remover status"
       },
       "empty": {
-        "forBoard": "{{boardName}} does not have any statuses yet. Add or import at least one open default status before completing onboarding.",
-        "noBoardSelected": "Select a board to configure its statuses."
+        "forBoard": "{{boardName}} ainda não possui nenhum status. Adicione ou importe pelo menos um status padrão aberto antes de concluir a integração.",
+        "noBoardSelected": "Selecione uma placa para configurar seus status."
       }
     },
     "priorities": {
       "errors": {
-        "duplicate": "Priority already exists",
-        "missingSession": "User session not found. Please refresh and try again.",
-        "create": "Failed to create priority. Please try again.",
-        "delete": "Failed to delete priority."
+        "duplicate": "A prioridade já existe",
+        "missingSession": "Sessão do usuário não encontrada. Atualize e tente novamente.",
+        "create": "Falha ao criar prioridade. Por favor, tente novamente.",
+        "delete": "Falha ao excluir prioridade."
       },
       "delete": {
-        "fallbackEntity": "this priority"
+        "fallbackEntity": "esta prioridade"
       },
       "toasts": {
-        "deleted": "Priority deleted successfully"
+        "deleted": "Prioridade excluída com sucesso"
       },
-      "title": "Priorities",
-      "description": "Priorities help determine the urgency of tickets and service level agreements (SLAs). Each priority has a color for quick visual identification. Typical priorities include Critical (red), High (orange), Medium (blue), and Low (green).",
+      "title": "Prioridades",
+      "description": "As prioridades ajudam a determinar a urgência de chamados e acordos de nível de serviço (SLAs). Cada prioridade possui uma cor para rápida identificação visual. As prioridades típicas incluem Crítica (vermelho), Alta (laranja), Média (azul) e Baixa (verde).",
       "actions": {
-        "import": "Import from Standard",
-        "add": "Add New Priority",
-        "confirmAdd": "Add Priority"
+        "import": "Importar do Padrão",
+        "add": "Adicionar nova prioridade",
+        "confirmAdd": "Adicionar prioridade"
       },
       "addForm": {
-        "title": "Add New Priority",
+        "title": "Adicionar nova prioridade",
         "fields": {
           "name": {
-            "label": "Priority Name *",
-            "placeholder": "Enter priority name"
+            "label": "Nome da Prioridade *",
+            "placeholder": "Insira o nome da prioridade"
           },
           "displayOrder": {
-            "label": "Display Order",
-            "placeholder": "Leave empty for auto-generate",
-            "help": "Controls the order in which priorities appear in dropdown menus throughout the platform. Lower numbers appear first."
+            "label": "Ordem de exibição",
+            "placeholder": "Deixe em branco para geração automática",
+            "help": "Controla a ordem em que as prioridades aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
           },
           "color": {
-            "label": "Priority Color",
-            "choose": "Choose Color"
+            "label": "Cor prioritária",
+            "choose": "Escolha a cor"
           }
         }
       },
       "import": {
-        "title": "Import Standard Priorities",
+        "title": "Importar prioridades padrão",
         "success": {
-          "one": "Successfully imported 1 priority.",
-          "other": "Successfully imported {{count}} priorities."
+          "one": "1 prioridade importada com sucesso.",
+          "other": "Prioridades {{count}} importadas com sucesso."
         }
       },
       "table": {
         "headers": {
-          "name": "Name",
-          "color": "Color",
-          "order": "Order"
+          "name": "Nome",
+          "color": "Cor",
+          "order": "Ordem"
         }
       },
       "current": {
-        "title": "Current Priorities",
-        "removeTitle": "Remove priority"
+        "title": "Prioridades Atuais",
+        "removeTitle": "Remover prioridade"
       }
     },
     "common": {
       "errors": {
-        "validateDeletion": "Failed to validate deletion. Please try again."
+        "validateDeletion": "Falha ao validar a exclusão. Por favor, tente novamente."
       },
-      "noteLabel": "Note:",
-      "tipLabel": "Tip:",
+      "noteLabel": "Observação:",
+      "tipLabel": "Dica:",
       "actions": {
-        "importing": "Importing...",
-        "importCount": "Import ({{count}})"
+        "importing": "Importando...",
+        "importCount": "Importar ({{count}})"
       },
       "table": {
-        "actions": "Actions"
+        "actions": "Ações"
       }
     },
     "header": {
-      "title": "Configure Ticketing System",
-      "description": "Set up your support ticketing system. Import standard configurations or create your own."
+      "title": "Configurar sistema de chamados",
+      "description": "Configure seu sistema de chamados de suporte. Importe configurações padrão ou crie as suas próprias."
     },
     "loading": {
-      "description": "Loading existing configuration..."
+      "description": "Carregando configuração existente..."
     },
     "numbering": {
-      "title": "Ticket Numbering",
-      "description": "Configure how ticket numbers are generated. Each ticket will have a unique identifier consisting of an optional prefix and a sequential number with optional zero-padding.",
+      "title": "Numeração de chamados",
+      "description": "Configure como os números dos chamados são gerados. Cada chamado terá um identificador exclusivo que consiste em um prefixo opcional e um número sequencial com preenchimento de zeros opcional.",
       "fields": {
         "prefix": {
-          "label": "Ticket Prefix",
+          "label": "Prefixo do chamado",
           "placeholder": "TK-",
-          "help": "Optional. Leave empty for no prefix or enter a custom prefix (e.g., \"TK-\", \"TICKET-\")"
+          "help": "Opcional. Deixe em branco para não ter prefixo ou insira um prefixo personalizado (por exemplo, \"TK-\", \"Chamado-\")"
         },
         "paddingLength": {
-          "label": "Padding Length",
-          "help": "Minimum total digits. E.g., 6 makes \"1\" become \"000001\""
+          "label": "Comprimento do preenchimento",
+          "help": "Total mínimo de dígitos. Por exemplo, 6 faz com que \"1\" se torne \"000001\""
         },
         "startNumber": {
-          "label": "Starting Number"
+          "label": "Número inicial"
         }
       },
-      "example": "Example: {{value}}"
+      "example": "Exemplo: {{value}}"
     },
     "itil": {
       "actions": {
-        "openReference": "View ITIL categories and priority matrix"
+        "openReference": "Veja categorias ITIL e matriz de prioridade"
       },
-      "title": "ITIL Standards Reference",
+      "title": "Referência dos padrões ITIL",
       "categories": {
-        "title": "ITIL Standard Categories and Subcategories",
+        "title": "Categorias e subcategorias padrão ITIL",
         "hardware": {
           "title": "Hardware",
-          "server": "• Server",
-          "desktopLaptop": "• Desktop/Laptop",
-          "networkEquipment": "• Network Equipment",
-          "printer": "• Printer",
-          "storage": "• Storage",
-          "mobileDevice": "• Mobile Device"
+          "server": "• Servidor",
+          "desktopLaptop": "• Computador de mesa/laptop",
+          "networkEquipment": "• Equipamento de rede",
+          "printer": "• Impressora",
+          "storage": "• Armazenar",
+          "mobileDevice": "• Dispositivo móvel"
         },
         "software": {
           "title": "Software",
-          "operatingSystem": "• Operating System",
-          "businessApplication": "• Business Application",
-          "database": "• Database",
-          "emailCollaboration": "• Email/Collaboration",
-          "securitySoftware": "• Security Software",
-          "customApplication": "• Custom Application"
+          "operatingSystem": "• Sistema operacional",
+          "businessApplication": "• Aplicação Empresarial",
+          "database": "• Banco de dados",
+          "emailCollaboration": "• E-mail/Colaboração",
+          "securitySoftware": "• Software de segurança",
+          "customApplication": "• Aplicativo personalizado"
         },
         "network": {
-          "title": "Network",
-          "connectivity": "• Connectivity",
-          "vpn": "• VPN",
-          "wifi": "• Wi-Fi",
-          "internetAccess": "• Internet Access",
+          "title": "Rede",
+          "connectivity": "• Conectividade",
+          "vpn": "•VPN",
+          "wifi": "• Wi-fi",
+          "internetAccess": "• Acesso à Internet",
           "lanWan": "• LAN/WAN",
           "firewall": "• Firewall"
         },
         "security": {
-          "title": "Security",
-          "malwareVirus": "• Malware/Virus",
-          "unauthorizedAccess": "• Unauthorized Access",
-          "dataBreach": "• Data Breach",
+          "title": "Segurança",
+          "malwareVirus": "• Malware/vírus",
+          "unauthorizedAccess": "• Acesso não autorizado",
+          "dataBreach": "• Violação de dados",
           "phishingSpam": "• Phishing/Spam",
-          "policyViolation": "• Policy Violation",
-          "accountLockout": "• Account Lockout"
+          "policyViolation": "• Violação de política",
+          "accountLockout": "• Bloqueio de conta"
         },
         "serviceRequest": {
-          "title": "Service Request",
-          "accessRequest": "• Access Request",
-          "newUserSetup": "• New User Setup",
-          "softwareInstallation": "• Software Installation",
-          "equipmentRequest": "• Equipment Request",
-          "informationRequest": "• Information Request",
-          "changeRequest": "• Change Request"
+          "title": "Solicitação de serviço",
+          "accessRequest": "• Solicitação de acesso",
+          "newUserSetup": "• Configuração de novo usuário",
+          "softwareInstallation": "• Instalação de software",
+          "equipmentRequest": "• Solicitação de Equipamento",
+          "informationRequest": "• Solicitação de informações",
+          "changeRequest": "• Solicitação de Mudança"
         }
       },
       "matrix": {
-        "title": "ITIL Priority Matrix (Impact × Urgency)",
+        "title": "Matriz de Prioridades ITIL (Impacto × Urgência)",
         "urgency": {
-          "high": "High",
-          "label": "Urgency",
-          "mediumHigh": "Medium-High",
-          "medium": "Medium",
-          "mediumLow": "Medium-Low",
-          "low": "Low"
+          "high": "Alto",
+          "label": "Urgência",
+          "mediumHigh": "Médio-alto",
+          "medium": "Médio",
+          "mediumLow": "Médio-Baixo",
+          "low": "Baixo"
         },
         "impact": {
-          "high": "High Impact (1)",
-          "mediumHigh": "Medium-High Impact (2)",
-          "medium": "Medium Impact (3)",
-          "mediumLow": "Medium-Low Impact (4)",
-          "low": "Low Impact (5)"
+          "high": "Alto Impacto (1)",
+          "mediumHigh": "Impacto Médio-Alto (2)",
+          "medium": "Impacto Médio (3)",
+          "mediumLow": "Impacto Médio-Baixo (4)",
+          "low": "Baixo Impacto (5)"
         },
         "priority": {
-          "critical": "Critical (1)",
-          "high": "High (2)",
-          "medium": "Medium (3)",
-          "low": "Low (4)",
-          "planning": "Planning (5)"
+          "critical": "Crítico (1)",
+          "high": "Alto (2)",
+          "medium": "Médio (3)",
+          "low": "Baixo (4)",
+          "planning": "Planejamento (5)"
         },
         "explanation": {
-          "impact": "Impact: How many users/business functions are affected?",
-          "urgency": "Urgency: How quickly does this need to be resolved?",
-          "priority": "Priority: Automatically calculated based on Impact × Urgency matrix above."
+          "impact": "Impacto: Quantos usuários/funções de negócios são afetados?",
+          "urgency": "Urgência: Com que rapidez isso precisa ser resolvido?",
+          "priority": "Prioridade: Calculada automaticamente com base na matriz Impacto × Urgência acima."
         }
       }
     },
     "supportEmail": {
-      "label": "Support Email",
-      "placeholder": "support@yourclient.com",
-      "help": "This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system."
+      "label": "E-mail de suporte",
+      "placeholder": "suporte@seucliente.com",
+      "help": "Este endereço de e-mail será usado para criar chamados de suporte. Os e-mails enviados para este endereço gerarão chamados automaticamente em seu sistema."
     },
     "finalRequirement": {
-      "label": "Required:",
-      "description": "Please configure at least one board and one priority to complete setup. Import standard configurations to quickly set up your ticketing system."
+      "label": "Obrigatório:",
+      "description": "Configure pelo menos uma placa e uma prioridade para concluir a configuração. Importe configurações padrão para configurar rapidamente seu sistema de chamados."
     }
   }
 }

@@ -359,7 +359,7 @@
   {
     "id": "F034",
     "description": "pt-BR complete for msp/admin.json: translate the 143 remaining key(s) and re-audit all 365 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
@@ -370,7 +370,7 @@
   {
     "id": "F035",
     "description": "pt-BR complete for msp/settings.json: translate the 804 remaining key(s) and re-audit all 1296 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
@@ -381,7 +381,7 @@
   {
     "id": "F036",
     "description": "pt-BR complete for msp/integrations.json: translate the 95 remaining key(s) and re-audit all 1679 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
@@ -392,7 +392,7 @@
   {
     "id": "F037",
     "description": "pt-BR complete for msp/email-providers.json: translate the 26 remaining key(s) and re-audit all 675 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
@@ -403,7 +403,7 @@
   {
     "id": "F038",
     "description": "pt-BR complete for msp/extensions.json: translate the 51 remaining key(s) and re-audit all 290 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
@@ -414,7 +414,7 @@
   {
     "id": "F039",
     "description": "pt-BR complete for msp/licensing.json: translate the 111 remaining key(s) and re-audit all 114 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
@@ -425,7 +425,7 @@
   {
     "id": "F040",
     "description": "pt-BR complete for msp/onboarding.json: translate the 467 remaining key(s) and re-audit all 473 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
@@ -436,7 +436,7 @@
   {
     "id": "F041",
     "description": "pt-BR complete for msp/jobs.json: translate the 48 remaining key(s) and re-audit all 80 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-admin",
     "prdRefs": [
       "3.2",
