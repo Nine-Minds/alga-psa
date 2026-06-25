@@ -628,8 +628,8 @@ export async function getAuthorizedDocumentByFileId(
   user: IUser,
   fileId: string
 ): Promise<IDocument | null> {
-  const document = await trx('documents')
-    .where({ tenant, file_id: fileId })
+  const document = await tenantScopedTable(trx, 'documents', tenant)
+    .where('file_id', fileId)
     .first();
 
   if (!document) {
@@ -646,8 +646,8 @@ export async function getAuthorizedDocumentById(
   user: IUser,
   documentId: string
 ): Promise<IDocument | null> {
-  const document = await trx('documents')
-    .where({ tenant, document_id: documentId })
+  const document = await tenantScopedTable(trx, 'documents', tenant)
+    .where('document_id', documentId)
     .first();
 
   if (!document) {
@@ -674,8 +674,7 @@ async function assertAuthorizedDocumentSetForMutation(
     return [];
   }
 
-  const documents = await trx('documents')
-    .where({ tenant })
+  const documents = await tenantScopedTable(trx, 'documents', tenant)
     .whereIn('document_id', uniqueDocumentIds)
     .select('document_id', 'created_by', 'is_client_visible');
 
@@ -843,8 +842,8 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
         return permissionError('Permission denied: Cannot update documents');
       }
 
-      await trx('documents')
-        .where({ document_id: documentId, tenant })
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where('document_id', documentId)
         .update({
           ...data,
           updated_at: new Date()
