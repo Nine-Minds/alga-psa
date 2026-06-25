@@ -1,4 +1,5 @@
 import type { TaggedEntityType } from '@alga-psa/types';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
@@ -25,6 +26,19 @@ export interface ITagWithDefinition {
   created_by?: string | null;
 }
 
+const tagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
+  createTenantScopedQuery(knexOrTrx, {
+    table: 'tag_mappings',
+    tenant
+  }).builder;
+
+const aliasedTagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
+  createTenantScopedQuery(knexOrTrx, {
+    table: 'tag_mappings as tm',
+    alias: 'tm',
+    tenant
+  }).builder;
+
 const TagMapping = {
   getByEntity: async (
     knexOrTrx: Knex | Knex.Transaction,
@@ -32,12 +46,11 @@ const TagMapping = {
     tagged_id: string,
     tagged_type: TaggedEntityType
   ): Promise<ITagWithDefinition[]> => {
-    const tags = await knexOrTrx('tag_mappings as tm')
+    const tags = await aliasedTagMappingsQuery(knexOrTrx, tenant)
       .join('tag_definitions as td', function() {
         this.on('tm.tenant', '=', 'td.tenant')
           .andOn('tm.tag_id', '=', 'td.tag_id');
       })
-      .where('tm.tenant', tenant)
       .where('tm.tagged_id', tagged_id)
       .where('tm.tagged_type', tagged_type)
       .select(
@@ -52,7 +65,7 @@ const TagMapping = {
         'tm.created_at',
         'tm.created_by'
       )
-      .orderBy('td.tag_text', 'asc');
+      .orderBy('td.tag_text', 'asc') as ITagWithDefinition[];
 
     return tags;
   },
@@ -67,12 +80,11 @@ const TagMapping = {
       return [];
     }
 
-    const tags = await knexOrTrx('tag_mappings as tm')
+    const tags = await aliasedTagMappingsQuery(knexOrTrx, tenant)
       .join('tag_definitions as td', function() {
         this.on('tm.tenant', '=', 'td.tenant')
           .andOn('tm.tag_id', '=', 'td.tag_id');
       })
-      .where('tm.tenant', tenant)
       .whereIn('tm.tagged_id', tagged_ids)
       .where('tm.tagged_type', tagged_type)
       .select(
@@ -86,7 +98,7 @@ const TagMapping = {
         'td.text_color',
         'tm.created_at',
         'tm.created_by'
-      );
+      ) as ITagWithDefinition[];
 
     return tags;
   },
@@ -112,16 +124,14 @@ const TagMapping = {
   },
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, mapping_id: string): Promise<void> => {
-    await knexOrTrx<ITagMapping>('tag_mappings')
+    await tagMappingsQuery(knexOrTrx, tenant)
       .where('mapping_id', mapping_id)
-      .where('tenant', tenant)
       .del();
   },
 
   deleteByTagId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tag_id: string): Promise<number> => {
-    const deleted = await knexOrTrx<ITagMapping>('tag_mappings')
+    const deleted = await tagMappingsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
-      .where('tenant', tenant)
       .del();
     return deleted;
   },
@@ -132,10 +142,9 @@ const TagMapping = {
     tagged_id: string,
     tagged_type: TaggedEntityType
   ): Promise<number> => {
-    const deleted = await knexOrTrx<ITagMapping>('tag_mappings')
+    const deleted = await tagMappingsQuery(knexOrTrx, tenant)
       .where('tagged_id', tagged_id)
       .where('tagged_type', tagged_type)
-      .where('tenant', tenant)
       .del();
     return deleted;
   },
@@ -146,21 +155,19 @@ const TagMapping = {
     tag_id: string,
     tagged_id: string
   ): Promise<boolean> => {
-    const mapping = await knexOrTrx<ITagMapping>('tag_mappings')
+    const mapping = await tagMappingsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
       .where('tagged_id', tagged_id)
-      .where('tenant', tenant)
-      .first();
+      .first() as ITagMapping | undefined;
 
     return !!mapping;
   },
 
   getUsageCount: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tag_id: string): Promise<number> => {
-    const result = await knexOrTrx('tag_mappings')
+    const result = await tagMappingsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
-      .where('tenant', tenant)
       .count('* as count')
-      .first();
+      .first() as { count?: string | number } | undefined;
 
     return Number(result?.count || 0);
   },
@@ -171,19 +178,20 @@ const TagMapping = {
     tag_id: string,
     tagged_type?: TaggedEntityType
   ): Promise<Array<{ tagged_id: string; tagged_type: TaggedEntityType }>> => {
-    let query = knexOrTrx<ITagMapping>('tag_mappings')
-      .where('tag_id', tag_id)
-      .where('tenant', tenant);
+    let query = tagMappingsQuery(knexOrTrx, tenant)
+      .where('tag_id', tag_id);
 
     if (tagged_type) {
       query = query.where('tagged_type', tagged_type);
     }
 
-    const entities = await query.select('tagged_id', 'tagged_type');
+    const entities = await query.select('tagged_id', 'tagged_type') as Array<{
+      tagged_id: string;
+      tagged_type: TaggedEntityType;
+    }>;
 
     return entities;
   }
 };
 
 export default TagMapping;
-

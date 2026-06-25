@@ -1,4 +1,5 @@
 import type { TaggedEntityType } from '@alga-psa/types';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
@@ -13,19 +14,29 @@ export interface ITagDefinition {
   created_at?: Date;
 }
 
+const tagDefinitionsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
+  createTenantScopedQuery(knexOrTrx, {
+    table: 'tag_definitions',
+    tenant
+  }).builder;
+
+const tagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
+  createTenantScopedQuery(knexOrTrx, {
+    table: 'tag_mappings',
+    tenant
+  }).builder;
+
 const TagDefinition = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITagDefinition[]> => {
-    const definitions = await knexOrTrx<ITagDefinition>('tag_definitions')
-      .where('tenant', tenant)
-      .orderBy('tag_text', 'asc');
+    const definitions = await tagDefinitionsQuery(knexOrTrx, tenant)
+      .orderBy('tag_text', 'asc') as ITagDefinition[];
     return definitions;
   },
 
   get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tag_id: string): Promise<ITagDefinition | undefined> => {
-    const definition = await knexOrTrx<ITagDefinition>('tag_definitions')
+    const definition = await tagDefinitionsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
-      .where('tenant', tenant)
-      .first();
+      .first() as ITagDefinition | undefined;
     return definition;
   },
 
@@ -35,11 +46,10 @@ const TagDefinition = {
     tag_text: string,
     tagged_type: TaggedEntityType
   ): Promise<ITagDefinition | undefined> => {
-    const definition = await knexOrTrx<ITagDefinition>('tag_definitions')
+    const definition = await tagDefinitionsQuery(knexOrTrx, tenant)
       .where('tag_text', tag_text.trim())
       .where('tagged_type', tagged_type)
-      .where('tenant', tenant)
-      .first();
+      .first() as ITagDefinition | undefined;
     return definition;
   },
 
@@ -48,10 +58,9 @@ const TagDefinition = {
     tenant: string,
     tagged_type: TaggedEntityType
   ): Promise<ITagDefinition[]> => {
-    const definitions = await knexOrTrx<ITagDefinition>('tag_definitions')
+    const definitions = await tagDefinitionsQuery(knexOrTrx, tenant)
       .where('tagged_type', tagged_type)
-      .where('tenant', tenant)
-      .orderBy('tag_text', 'asc');
+      .orderBy('tag_text', 'asc') as ITagDefinition[];
     return definitions;
   },
 
@@ -83,31 +92,27 @@ const TagDefinition = {
       updates.tag_text = updates.tag_text.trim();
     }
 
-    await knexOrTrx<ITagDefinition>('tag_definitions')
+    await tagDefinitionsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
-      .where('tenant', tenant)
       .update(updates);
   },
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tag_id: string): Promise<void> => {
-    await knexOrTrx<ITagDefinition>('tag_definitions')
+    await tagDefinitionsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
-      .where('tenant', tenant)
       .del();
   },
 
   deleteOrphaned: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tagIds: string[]): Promise<number> => {
     if (tagIds.length === 0) return 0;
 
-    return await knexOrTrx('tag_definitions')
-      .where('tenant', tenant)
+    return await tagDefinitionsQuery(knexOrTrx, tenant)
       .whereIn('tag_id', tagIds)
-      .whereNotExists(function() {
-        this.select(knexOrTrx.raw('1'))
-          .from('tag_mappings')
-          .where('tag_mappings.tenant', tenant)
-          .whereRaw('tag_mappings.tag_id = tag_definitions.tag_id');
-      })
+      .whereNotExists(
+        tagMappingsQuery(knexOrTrx, tenant)
+          .select(knexOrTrx.raw('1'))
+          .whereRaw('tag_mappings.tag_id = tag_definitions.tag_id')
+      )
       .del();
   },
 
