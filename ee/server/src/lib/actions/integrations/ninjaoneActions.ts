@@ -541,8 +541,8 @@ export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (u
     const { knex } = await createTenantKnex();
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -550,12 +550,11 @@ export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (u
     }
 
     // Get mappings with company names
-    const mappings = await knex('rmm_organization_mappings as rom')
+    const mappings = await tenantScopedTable(knex, 'rmm_organization_mappings as rom', tenant)
       .leftJoin('clients as c', function() {
         this.on('rom.tenant', '=', 'c.tenant')
           .andOn('rom.client_id', '=', 'c.client_id');
       })
-      .where('rom.tenant', tenant)
       .where('rom.integration_id', integration.integration_id)
       .select(
         'rom.*',
@@ -611,8 +610,8 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
       dbUpdates.default_contact_id = updates.default_contact_id;
     }
 
-    await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: mappingId })
+    await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
+      .where('mapping_id', mappingId)
       .update({
         ...dbUpdates,
         updated_at: knex.fn.now(),
@@ -690,8 +689,8 @@ export const triggerNinjaOneFullSync = withAdvancedAssetsAccess(async (
     const { knex } = await createTenantKnex();
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -744,8 +743,8 @@ export const triggerNinjaOneIncrementalSync = withAdvancedAssetsAccess(async (us
     const { knex } = await createTenantKnex();
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -806,8 +805,8 @@ export const syncNinjaOneDevice = withAdvancedAssetsAccess(async (user, { tenant
     const { knex } = await createTenantKnex();
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {

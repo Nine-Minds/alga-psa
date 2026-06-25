@@ -40,4 +40,17 @@ describe('NinjaOne action tenant-scoped query contract', () => {
     expect(section).toContain(".where('integration_id', integration.integration_id)");
     expectNoDirectTenantRoot(section);
   });
+
+  it('uses structural tenant scoping for organization mappings and sync trigger roots', () => {
+    const section = sectionBetween('export const getNinjaOneOrganizationMappings', 'export const getNinjaOneRemoteAccessUrl');
+
+    expect(section).toContain("tenantScopedTable(knex, 'rmm_integrations', tenant)");
+    expect(section).toContain("tenantScopedTable(knex, 'rmm_organization_mappings as rom', tenant)");
+    expect(section).toContain("tenantScopedTable(knex, 'rmm_organization_mappings', tenant)");
+    expect(section).toContain(".where('provider', 'ninjaone')");
+    expect(section).toContain(".where('rom.integration_id', integration.integration_id)");
+    expect(section).toContain(".where('mapping_id', mappingId)");
+    expectNoDirectTenantRoot(section);
+    expect(section).not.toMatch(/\.where\(['"]rom\.tenant['"],\s*tenant\)/);
+  });
 });
