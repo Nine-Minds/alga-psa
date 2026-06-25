@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote, truncateForIndex } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -48,7 +49,7 @@ function toSearchDoc(tenant: string, row: InteractionSearchRow): SearchDoc {
 }
 
 function baseInteractionQuery(knex: Knex, tenant: string) {
-  return knex<InteractionSearchRow>('interactions as i')
+  return createTenantScopedIndexerQuery<InteractionSearchRow>(knex, 'interactions as i', 'i', tenant)
     .leftJoin('interaction_types as it', function() {
       this.on('it.tenant', 'i.tenant').andOn('it.type_id', 'i.type_id');
     })
@@ -71,8 +72,7 @@ function baseInteractionQuery(knex: Knex, tenant: string) {
       'cn.full_name as contact_name',
       't.ticket_number',
       't.title as ticket_title',
-    )
-    .where('i.tenant', tenant);
+    );
 }
 
 export const interactionIndexer: EntityIndexer = {

@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -50,7 +51,7 @@ function toSearchDoc(tenant: string, row: ProjectTaskCommentSearchRow): SearchDo
 }
 
 function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
-  return knex<ProjectTaskCommentSearchRow>('project_task_comments as pc')
+  return createTenantScopedIndexerQuery<ProjectTaskCommentSearchRow>(knex, 'project_task_comments as pc', 'pc', tenant)
     .join('project_tasks as pt', function() {
       this.on('pt.tenant', 'pc.tenant').andOn('pt.task_id', 'pc.task_id');
     })
@@ -72,8 +73,7 @@ function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
       'ph.project_id',
       'p.project_name',
       'p.client_id',
-    )
-    .where('pc.tenant', tenant);
+    );
 }
 
 export const projectTaskCommentIndexer: EntityIndexer = {

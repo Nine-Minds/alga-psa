@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface TicketSearchRow {
@@ -40,7 +41,7 @@ function toSearchDoc(tenant: string, row: TicketSearchRow): SearchDoc {
 }
 
 function baseTicketQuery(knex: Knex, tenant: string) {
-  return knex<TicketSearchRow>('tickets as t')
+  return createTenantScopedIndexerQuery<TicketSearchRow>(knex, 'tickets as t', 't', tenant)
     .leftJoin('clients as c', function() {
       this.on('c.tenant', 't.tenant').andOn('c.client_id', 't.client_id');
     })
@@ -51,8 +52,7 @@ function baseTicketQuery(knex: Knex, tenant: string) {
       't.entered_at',
       't.updated_at',
       'c.client_name',
-    )
-    .where('t.tenant', tenant);
+    );
 }
 
 export const ticketIndexer: EntityIndexer = {

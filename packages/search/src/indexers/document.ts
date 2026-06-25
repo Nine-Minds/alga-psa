@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote, truncateForIndex } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -52,7 +53,7 @@ function toSearchDoc(tenant: string, row: DocumentSearchRow): SearchDoc {
 }
 
 function baseDocumentQuery(knex: Knex, tenant: string) {
-  return knex<DocumentSearchRow>('documents as d')
+  return createTenantScopedIndexerQuery<DocumentSearchRow>(knex, 'documents as d', 'd', tenant)
     .leftJoin('document_block_content as dbc', function () {
       this.on('dbc.tenant', 'd.tenant').andOn('dbc.document_id', 'd.document_id');
     })
@@ -67,8 +68,7 @@ function baseDocumentQuery(knex: Knex, tenant: string) {
       'd.updated_at',
       'dbc.block_data',
       'dc.content as side_content',
-    )
-    .where('d.tenant', tenant);
+    );
 }
 
 export const documentIndexer: EntityIndexer = {

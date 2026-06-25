@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface TimeEntrySearchRow {
@@ -87,7 +88,7 @@ function toSearchDoc(tenant: string, row: TimeEntrySearchRow): SearchDoc {
 }
 
 function baseTimeEntryQuery(knex: Knex, tenant: string) {
-  return knex<TimeEntrySearchRow>('time_entries as te')
+  return createTenantScopedIndexerQuery<TimeEntrySearchRow>(knex, 'time_entries as te', 'te', tenant)
     .leftJoin('tickets as t', function() {
       this.on('t.tenant', 'te.tenant').andOn('t.ticket_id', 'te.work_item_id');
     })
@@ -116,7 +117,6 @@ function baseTimeEntryQuery(knex: Knex, tenant: string) {
       'pp.project_id',
       'i.title as interaction_title',
     )
-    .where('te.tenant', tenant)
     .whereNotNull('te.notes')
     .andWhere('te.notes', '<>', '');
 }
