@@ -1828,7 +1828,10 @@ export class ContractLineService extends BaseService<IContractLine> {
 
     // Check if plan is associated with any contracts and fetch associated clients
     // After migration 20251028090000, data is stored directly in contract_lines
-    const contractsWithClients = await knex('contract_lines as clx')
+    const contractsWithClients = await createTenantScopedQuery(knex, {
+      table: 'contract_lines as clx',
+      tenant: context.tenant,
+    }).builder
       .join('contracts as c', function() {
         this.on('clx.contract_id', '=', 'c.contract_id')
           .andOn('clx.tenant', '=', 'c.tenant');
@@ -1840,10 +1843,9 @@ export class ContractLineService extends BaseService<IContractLine> {
       })
       .leftJoin('clients as cl', function() {
         this.on('cc.client_id', '=', 'cl.client_id')
-          .andOn('cl.tenant', '=', knex.raw('?', [context.tenant]));
+          .andOn('cl.tenant', '=', 'cc.tenant');
       })
       .where('clx.contract_line_id', planId)
-      .where('clx.tenant', context.tenant)
       .whereNotNull('clx.contract_id')
       .whereRaw('c.owner_client_id = cc.client_id')
       .andWhere(function limitToClientOwnedContracts() {
@@ -1892,9 +1894,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<void> {
     // Get all service configurations for the plan
-    const configs = await trx('contract_line_service_configuration')
+    const configs = await createTenantScopedQuery(trx, {
+      table: 'contract_line_service_configuration',
+      tenant: context.tenant,
+    }).builder
       .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
       .select('config_id');
     
     // Delete each configuration (which should cascade to type-specific configs)
@@ -1909,9 +1913,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    await trx('contract_lines')
+    await createTenantScopedQuery(trx, {
+      table: 'contract_lines',
+      tenant: context.tenant,
+    }).builder
       .where('contract_line_id', contractLineId)
-      .where('tenant', context.tenant)
       .update({ contract_id: null });
   }
 
@@ -1941,9 +1947,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const contract = await trx('contracts')
+    const contract = await createTenantScopedQuery(trx, {
+      table: 'contracts',
+      tenant: context.tenant,
+    }).builder
       .where('contract_id', contractId)
-      .where('tenant', context.tenant)
       .first();
     
     if (!contract) {
@@ -1956,9 +1964,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const client = await trx('clients')
+    const client = await createTenantScopedQuery(trx, {
+      table: 'clients',
+      tenant: context.tenant,
+    }).builder
       .where('client_id', clientId)
-      .where('tenant', context.tenant)
       .first();
     
     if (!client) {
@@ -1978,9 +1988,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       cadence_owner: templateLine.cadence_owner,
     });
     const clonedCustomRate = data.custom_rate ?? templateLine.custom_rate ?? null;
-    const overlapping = await trx('contract_lines')
+    const overlapping = await createTenantScopedQuery(trx, {
+      table: 'contract_lines',
+      tenant: context.tenant,
+    }).builder
       .where('contract_id', targetContractId)
-      .where('tenant', context.tenant)
       .where('is_active', true)
       .where('contract_line_name', templateLine.contract_line_name)
       .where('description', templateLine.description ?? null)
@@ -2004,9 +2016,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       trx: Knex.Transaction
     ): Promise<void> {
       // Check for pending invoices
-      const pendingInvoices = await trx('invoices')
+      const pendingInvoices = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
         .where('client_contract_line_id', clientContractLineId)
-        .where('tenant', context.tenant)
         .where('status', 'pending')
         .count('* as count')
         .first();
@@ -2016,9 +2030,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
 
       // Check for active usage tracking for this client
-      const activeUsage = await trx('bucket_usage')
+      const activeUsage = await createTenantScopedQuery(trx, {
+        table: 'bucket_usage',
+        tenant: context.tenant,
+      }).builder
         .where('client_id', clientId)
-        .where('tenant', context.tenant)
         .where('period_end', '>', new Date())
         .count('* as count')
         .first();
@@ -2034,9 +2050,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<IService | null> {
-    const service = await trx('service_catalog')
+    const service = await createTenantScopedQuery(trx, {
+      table: 'service_catalog',
+      tenant: context.tenant,
+    }).builder
       .where('service_id', serviceId)
-      .where('tenant', context.tenant)
       .first();
     
     return service || null;
