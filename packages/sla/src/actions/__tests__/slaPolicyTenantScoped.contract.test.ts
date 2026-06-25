@@ -21,8 +21,10 @@ describe('SLA policy actions tenant-scoped query contract', () => {
       '// SLA Policy Targets',
     );
 
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db'");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(');
+    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(policySection).toContain("tenantScopedTable(trx, 'sla_policies', tenant)");
     expect(policySection).toContain("tenantScopedTable(trx, 'sla_policy_targets', tenant)");
     expect(policySection).toContain("tenantScopedTable(trx, 'sla_notification_thresholds', tenant)");

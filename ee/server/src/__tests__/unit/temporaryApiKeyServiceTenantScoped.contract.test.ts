@@ -19,8 +19,10 @@ describe('temporary API key service tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tenant-specific api key reads and updates', () => {
     const tenantScopedSection = sectionBetween('static async issueForAiSession', 'static async cleanupExpiredAiKeys');
 
-    expect(tenantScopedSection).toContain('createTenantScopedQuery(knex, {');
-    expect(tenantScopedSection).toContain("table: 'api_keys'");
+    expect(source).toContain("import { tenantDb, withAdminTransaction } from '@alga-psa/db';");
+    expect(tenantScopedSection).toContain('const db = tenantDb(knex, tenant);');
+    expect(tenantScopedSection).toContain("db.table('api_keys')");
+    expect(tenantScopedSection).not.toContain('createTenantScopedQuery');
 
     expect(tenantScopedSection).not.toMatch(/knex\('api_keys'\)\s*\./);
     expect(tenantScopedSection).not.toMatch(/\.where\(\{\s*tenant: tenantId/);

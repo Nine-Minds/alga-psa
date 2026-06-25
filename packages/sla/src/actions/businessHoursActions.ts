@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction, normalizeIanaTimeZone } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, normalizeIanaTimeZone } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,7 +19,7 @@ import {
 } from '../services/businessHoursCalculator';
 
 function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(trx, { table, tenant }).builder;
+  return tenantDb(trx, tenant).table(table);
 }
 
 // ============================================================================

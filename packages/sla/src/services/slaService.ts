@@ -16,7 +16,7 @@
  */
 
 import { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import {
   ISlaPolicy,
   ISlaPolicyTarget,
@@ -39,7 +39,7 @@ function tenantScopedTable(
   tenant: string,
   table: string
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 /**

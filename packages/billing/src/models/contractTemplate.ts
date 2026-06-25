@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { CadenceOwner, IContractTemplate, IContractTemplateWithLines } from '@alga-psa/types';
 import { normalizeTemplateRecurringStorage, type RecurringBillingTiming } from '@shared/billingClients/recurrenceStorageModel';
 import type { Knex } from 'knex';
@@ -8,7 +8,7 @@ function tenantScopedTable(
   tenant: string,
   table: string
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 type ContractTemplateLineSummaryRow = Record<string, any> & {

@@ -15,7 +15,7 @@
 import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
@@ -237,7 +237,7 @@ type StripeLineItem = {
 };
 
 function tenantScopedTable(conn: Knex, table: string, tenant: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 export class StripeService {

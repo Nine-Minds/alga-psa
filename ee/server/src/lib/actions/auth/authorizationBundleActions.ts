@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
@@ -132,7 +132,7 @@ const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
 ]);
 
 function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(knexOrTrx, { table, tenant }).builder;
+  return tenantDb(knexOrTrx, tenant).table(table);
 }
 
 function normalizeRuleIdList(value: unknown): string[] {

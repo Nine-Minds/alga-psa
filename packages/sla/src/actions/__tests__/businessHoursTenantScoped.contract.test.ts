@@ -21,8 +21,10 @@ describe('business hours actions tenant-scoped query contract', () => {
       '// Business Hours Entries',
     );
 
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery, withTransaction, normalizeIanaTimeZone } from '@alga-psa/db'");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction, normalizeIanaTimeZone } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string)');
+    expect(source).toContain('tenantDb(trx, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(scheduleSection).toContain("tenantScopedTable(trx, 'business_hours_schedules', tenant)");
     expect(scheduleSection).toContain("tenantScopedTable(trx, 'business_hours_entries', tenant)");
     expect(scheduleSection).toContain("tenantScopedTable(trx, 'holidays', tenant)");

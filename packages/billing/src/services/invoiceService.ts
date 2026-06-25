@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
@@ -33,7 +33,7 @@ interface InvoiceContext {
 }
 
 function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(knexOrTrx, { table, tenant }).builder;
+  return tenantDb(knexOrTrx, tenant).table(table);
 }
 
 function normalizeRecurringDateForPersistence(value: unknown): string | null {
