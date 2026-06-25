@@ -191,6 +191,31 @@ const COPY = {
     updatedByVar: '{{ticket.updatedAt}} &middot; {{ticket.updatedBy}}',
   },
 };
+SUBJECTS.pt = 'Chamado atualizado • {{ticket.title}} ({{ticket.priority}})';
+COPY.pt = {
+  headerLabel: 'Chamado atualizado',
+  intro: 'Um chamado para <strong>{{ticket.clientName}}</strong> foi atualizado. Revise as alterações abaixo.',
+  badgePrefix: 'Chamado #',
+  priority: 'Prioridade',
+  status: 'Status',
+  updatedBy: 'Atualizado por',
+  assignedTo: 'Atribuído a',
+  requester: 'Solicitante',
+  board: 'Quadro',
+  category: 'Categoria',
+  location: 'Localização',
+  changesLabel: 'Alterações realizadas',
+  changesVar: '{{{ticket.changes}}}',
+  viewButton: 'Ver chamado',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Chamado atualizado',
+  textUpdatedBy: 'Atualizado por',
+  textAssigned: 'Atribuído a',
+  textRequester: 'Solicitante',
+  textChanges: 'Alterações realizadas',
+  textView: 'Ver chamado',
+};
+
 /* eslint-enable max-len */
 
 const CHANGES_BOX_BG = '#fff9e6';

@@ -578,7 +578,7 @@
   {
     "id": "F054",
     "description": "Add pt blocks to the source-of-truth email template files for: email-verification, password-reset, portal-invitation, tenant-recovery, no-account-found, ticket-created, ticket-created-client, ticket-assigned, ticket-updated, ticket-updated-client, ticket-closed, ticket-comment-added (subject + html_content + text_content), translated to pt-BR per glossary, {{variables}} preserved.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-auth-ticketing",
     "prdRefs": [
       "4.3",

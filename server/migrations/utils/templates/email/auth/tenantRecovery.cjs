@@ -422,6 +422,69 @@ Je\u015bli masz pytania lub potrzebujesz pomocy, skontaktuj si\u0119 z zespo\u01
 To automatyczna wiadomo\u015b\u0107. Nie odpowiadaj na ten e-mail.`,
   },
 };
+LANGS.pt = {
+  subject: '{{platformName}} - Seus links de login',
+  html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">{{platformName}}</h1>
+          </div>
+          <h2 style="color: #111827; font-size: 24px; margin: 30px 30px 0;">
+            Seus links de login
+          </h2>
+          <div style="padding: 40px 30px;">
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Olá,</p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
+              Você solicitou acesso ao{{#if isMultiple}}s{{/if}} seu{{#if isMultiple}}s{{/if}} portal{{#if isMultiple}}ais{{/if}} do cliente.
+              {{#if isMultiple}}Encontramos {{tenantCount}} organizações associadas ao seu endereço de email.{{else}}Aqui está seu link de login:{{/if}}
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin: 25px 0;">
+              {{tenantLinksHtml}}
+            </table>
+
+            <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
+              <p style="color: #4b5563; font-size: 14px; margin: 0;">
+                <strong>Observação de segurança:</strong> Se você não solicitou estes links de login, pode ignorar este email com segurança. Sua conta permanece protegida.
+              </p>
+            </div>
+
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+              <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">
+                Se tiver dúvidas ou precisar de ajuda, entre em contato com a equipe de suporte da sua organização.
+              </p>
+            </div>
+          </div>
+
+          <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">
+              © {{currentYear}} {{platformName}}. Todos os direitos reservados.
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 5px 0;">
+              Esta é uma mensagem automática. Não responda a este email.
+            </p>
+          </div>
+        </div>
+      `,
+  text: `{{platformName}} - Seus links de login
+
+Olá,
+
+Você solicitou acesso ao{{#if isMultiple}}s{{/if}} seu{{#if isMultiple}}s{{/if}} portal{{#if isMultiple}}ais{{/if}} do cliente.
+{{#if isMultiple}}Encontramos {{tenantCount}} organizações associadas ao seu endereço de email.{{else}}Aqui está seu link de login:{{/if}}
+
+Seus links de login:
+{{tenantLinksText}}
+
+Observação de segurança: Se você não solicitou estes links de login, pode ignorar este email com segurança. Sua conta permanece protegida.
+
+Se tiver dúvidas ou precisar de ajuda, entre em contato com a equipe de suporte da sua organização.
+
+---
+© {{currentYear}} {{platformName}}. Todos os direitos reservados.
+Esta é uma mensagem automática. Não responda a este email.`,
+};
+
 /* eslint-enable max-len */
 
 function getTemplate() {
