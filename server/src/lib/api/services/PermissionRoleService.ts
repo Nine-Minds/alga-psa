@@ -1551,7 +1551,10 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getRoleUsageAnalytics(context: ServiceContext): Promise<RoleUsageAnalytics[]> {
     const { knex } = await this.getKnex();
     
-    const results = await knex('roles as r')
+    const results = await createTenantScopedQuery(knex, {
+      table: 'roles as r',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('user_roles as ur', function() {
         this.on('r.role_id', '=', 'ur.role_id')
             .andOn('r.tenant', '=', 'ur.tenant');
@@ -1560,7 +1563,6 @@ export class PermissionRoleService extends BaseService<IRole> {
         this.on('r.role_id', '=', 'rp.role_id')
             .andOn('r.tenant', '=', 'rp.tenant');
       })
-      .where('r.tenant', context.tenant)
       .groupBy('r.role_id', 'r.role_name', 'r.created_at')
       .select(
         'r.role_id',
@@ -1595,34 +1597,63 @@ export class PermissionRoleService extends BaseService<IRole> {
       unusedRolesResult,
       unusedPermissionsResult
     ] = await Promise.all([
-      knex('roles').where('tenant', context.tenant).count('* as count').first(),
-      knex('permissions').where('tenant', context.tenant).count('* as count').first(),
-      knex('user_roles').where('tenant', context.tenant).countDistinct('user_id as count').first(),
-      knex('user_roles').where('tenant', context.tenant).countDistinct('role_id as count').first(),
-      knex('roles as r')
-        .leftJoin('user_roles as ur', 'r.role_id', 'ur.role_id')
-        .where('r.tenant', context.tenant)
+      createTenantScopedQuery(knex, {
+        table: 'roles',
+        tenant: context.tenant,
+      }).builder.count('* as count').first(),
+      createTenantScopedQuery(knex, {
+        table: 'permissions',
+        tenant: context.tenant,
+      }).builder.count('* as count').first(),
+      createTenantScopedQuery(knex, {
+        table: 'user_roles',
+        tenant: context.tenant,
+      }).builder.countDistinct('user_id as count').first(),
+      createTenantScopedQuery(knex, {
+        table: 'user_roles',
+        tenant: context.tenant,
+      }).builder.countDistinct('role_id as count').first(),
+      createTenantScopedQuery(knex, {
+        table: 'roles as r',
+        tenant: context.tenant,
+      }).builder
+        .leftJoin('user_roles as ur', function() {
+          this.on('r.role_id', '=', 'ur.role_id')
+              .andOn('r.tenant', '=', 'ur.tenant');
+        })
         .whereNull('ur.role_id')
         .count('r.role_id as count')
         .first(),
-      knex('permissions as p')
-        .leftJoin('role_permissions as rp', 'p.permission_id', 'rp.permission_id')
-        .where('p.tenant', context.tenant)
+      createTenantScopedQuery(knex, {
+        table: 'permissions as p',
+        tenant: context.tenant,
+      }).builder
+        .leftJoin('role_permissions as rp', function() {
+          this.on('p.permission_id', '=', 'rp.permission_id')
+              .andOn('p.tenant', '=', 'rp.tenant');
+        })
         .whereNull('rp.permission_id')
         .count('p.permission_id as count')
         .first()
     ]);
 
     // Get role distribution
-    const roleDistribution = await knex('user_roles as ur')
-      .join('roles as r', 'ur.role_id', 'r.role_id')
-      .where('ur.tenant', context.tenant)
+    const roleDistribution = await createTenantScopedQuery(knex, {
+      table: 'user_roles as ur',
+      tenant: context.tenant,
+    }).builder
+      .join('roles as r', function() {
+        this.on('ur.role_id', '=', 'r.role_id')
+            .andOn('ur.tenant', '=', 'r.tenant');
+      })
       .groupBy('r.role_name')
       .select('r.role_name', knex.raw('COUNT(*) as count'));
 
     // Get permission distribution by resource
-    const permissionDistribution = await knex('permissions')
-      .where('tenant', context.tenant)
+    const permissionDistribution = await createTenantScopedQuery(knex, {
+      table: 'permissions',
+      tenant: context.tenant,
+    }).builder
       .groupBy('resource')
       .select('resource', knex.raw('COUNT(*) as count'));
 
@@ -1671,7 +1702,10 @@ export class PermissionRoleService extends BaseService<IRole> {
     const f = options.filters || {};
 
     const buildQuery = () => {
-      let q = knex('audit_logs').where('tenant', context.tenant);
+      let q = createTenantScopedQuery(knex, {
+        table: 'audit_logs',
+        tenant: context.tenant,
+      }).builder;
       if (f.table_name && RBAC_TABLES.includes(f.table_name)) {
         q = q.where('table_name', f.table_name);
       } else {
