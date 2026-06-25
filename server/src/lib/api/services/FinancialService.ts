@@ -2018,11 +2018,11 @@ export class FinancialService extends BaseService<ITransaction> {
           
           switch (operation.operation) {
             case 'finalize':
-              result = await trx('invoices')
-                .where({
-                  invoice_id: invoiceId,
-                  tenant: context.tenant
-                })
+              result = await createTenantScopedQuery(trx, {
+                table: 'invoices',
+                tenant: context.tenant,
+              }).builder
+                .where('invoice_id', invoiceId)
                 .update({
                   status: 'sent',
                   finalized_at: new Date().toISOString()
@@ -2031,11 +2031,11 @@ export class FinancialService extends BaseService<ITransaction> {
               break;
               
             case 'cancel':
-              result = await trx('invoices')
-                .where({
-                  invoice_id: invoiceId,
-                  tenant: context.tenant
-                })
+              result = await createTenantScopedQuery(trx, {
+                table: 'invoices',
+                tenant: context.tenant,
+              }).builder
+                .where('invoice_id', invoiceId)
                 .update({
                   status: 'cancelled'
                 })
@@ -2045,11 +2045,11 @@ export class FinancialService extends BaseService<ITransaction> {
             case 'apply_credit':
               // This would need additional parameters in the operation
               const creditAmount = operation.parameters?.credit_amount || 0;
-              const invoice = await trx('invoices')
-                .where({
-                  invoice_id: invoiceId,
-                  tenant: context.tenant
-                })
+              const invoice = await createTenantScopedQuery(trx, {
+                table: 'invoices',
+                tenant: context.tenant,
+              }).builder
+                .where('invoice_id', invoiceId)
                 .first();
               
               if (invoice && creditAmount > 0) {
