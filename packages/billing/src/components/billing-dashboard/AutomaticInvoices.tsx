@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -2577,6 +2578,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {
                 title: t('automaticInvoices.history.columns.client', { defaultValue: 'Client' }),
                 dataIndex: 'clientName',
+                render: (value, record: InvoicedPeriod) => (
+                  <ClientNameCell
+                    clientName={value as string | null | undefined}
+                    clientId={record.clientId}
+                    logoUrl={record.logoUrl ?? null}
+                  />
+                ),
               },
               {
                 title: t('automaticInvoices.history.columns.assignmentScope', {

@@ -7,6 +7,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
@@ -379,6 +380,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     });
     return map;
   }, [assets, clients]);
+
+  const clientLogoById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    clients.forEach((client) => {
+      map.set(client.client_id, client.logoUrl ?? null);
+    });
+    return map;
+  }, [clients]);
 
 
 
@@ -972,21 +981,24 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       title: t('assetDashboardClient.table.client', { defaultValue: 'Client' }),
       render: (_: unknown, record: Asset) => {
         const name = record.client?.client_name || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' });
+        const logoUrl = record.client_id ? (clientLogoById.get(record.client_id) ?? null) : null;
         if (record.client_id && clientDrawer) {
           return (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                clientDrawer.openClientDrawer(record.client_id);
-              }}
-              className="text-sm font-medium text-blue-500 hover:underline text-left bg-transparent border-none p-0"
-            >
-              {name}
-            </button>
+            <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clientDrawer.openClientDrawer(record.client_id);
+                }}
+                className="text-sm font-medium text-blue-500 hover:underline text-left bg-transparent border-none p-0 truncate"
+              >
+                {name}
+              </button>
+            </ClientNameCell>
           );
         }
-        return <span className="text-sm font-medium text-gray-700">{name}</span>;
+        return <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl} />;
       }
     },
     location: {
@@ -1060,6 +1072,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     renderAssetDetails,
     openAssetRecordPage,
     clientDrawer,
+    clientLogoById,
     getAssetStatusLabel,
     getAssetTypeLabel,
   ]);
