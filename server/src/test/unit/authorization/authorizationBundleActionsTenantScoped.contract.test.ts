@@ -20,6 +20,14 @@ function sectionBetween(start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
+function sectionFrom(start: string): string {
+  const startIndex = source.indexOf(start);
+
+  expect(startIndex).toBeGreaterThanOrEqual(0);
+
+  return source.slice(startIndex);
+}
+
 const seedSection = sectionBetween(
   'export const seedStarterAuthorizationBundlesAction',
   'export const cloneAuthorizationBundleAction'
@@ -40,6 +48,11 @@ const simulationRecordLoaderSection = sectionBetween(
   'async function loadSimulationRecord',
   'function getSimulationModeValidationError'
 );
+const runSimulationSection = sectionBetween(
+  'export const runAuthorizationBundleSimulationAction',
+  'export const publishAuthorizationBundleDraftAction'
+);
+const auditTrailSection = sectionFrom('export const getAuthorizationBundleAuditTrailAction');
 
 describe('authorization bundle action tenant-scoped query contract', () => {
   it('uses structural tenant scoping for starter seeding and draft-editor roots', () => {
@@ -109,5 +122,38 @@ describe('authorization bundle action tenant-scoped query contract', () => {
     expect(simulationRecordLoaderSection).not.toContain("knex('projects')");
     expect(simulationRecordLoaderSection).not.toContain("knex('assets')");
     expect(simulationRecordLoaderSection).not.toContain("knex('quotes')");
+  });
+
+  it('uses structural tenant scoping for simulation execution and audit roots', () => {
+    expect(runSimulationSection).toContain("tenantScopedTable(knex, tenant, 'users as u')");
+    expect(runSimulationSection).toContain("tenantScopedTable(knex, tenant, 'user_roles')");
+    expect(runSimulationSection).toContain("tenantScopedTable(knex, tenant, 'team_members')");
+    expect(runSimulationSection).toContain("tenantScopedTable(knex, tenant, 'users')");
+    expect(runSimulationSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundles')");
+    expect(runSimulationSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')");
+    expect(auditTrailSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundles')");
+    expect(auditTrailSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')");
+    expect(auditTrailSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundle_assignments')");
+
+    for (const section of [runSimulationSection, auditTrailSection]) {
+      expect(section).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
+      expect(section).not.toMatch(/\.where\(['"][^'"]*tenant['"]\s*,\s*tenant\)/);
+    }
+
+    expect(runSimulationSection).not.toContain("knex('users as u')");
+    expect(runSimulationSection).not.toContain("knex('user_roles')");
+    expect(runSimulationSection).not.toContain("knex('team_members')");
+    expect(runSimulationSection).not.toContain("knex('users')");
+    expect(runSimulationSection).not.toContain("knex('authorization_bundles')");
+    expect(runSimulationSection).not.toContain("knex('authorization_bundle_revisions')");
+    expect(auditTrailSection).not.toContain("knex('authorization_bundles')");
+    expect(auditTrailSection).not.toContain("knex('authorization_bundle_revisions')");
+    expect(auditTrailSection).not.toContain("knex('authorization_bundle_assignments')");
+  });
+
+  it('has no remaining direct tenant-root predicates in the action file', () => {
+    expect(source).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
+    expect(source).not.toMatch(/\.andWhere\(\{[^}]*['"]?tenant['"]?\s*:/s);
+    expect(source).not.toMatch(/\.where\(['"][^'"]*tenant['"]\s*,\s*tenant\)/);
   });
 });

@@ -948,14 +948,11 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
-    const principal = await knex('users as u')
+    const principal = await tenantScopedTable(knex, tenant, 'users as u')
       .leftJoin('contacts as c', function joinPrincipalContact() {
         this.on('c.tenant', '=', 'u.tenant').andOn('c.contact_name_id', '=', 'u.contact_id');
       })
-      .where({
-        'u.tenant': tenant,
-        'u.user_id': input.principalUserId,
-      })
+      .where('u.user_id', input.principalUserId)
       .first<{ user_id: string; user_type: 'internal' | 'client'; client_id: string | null }>(
         'u.user_id as user_id',
         'u.user_type as user_type',
@@ -978,14 +975,11 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     const canWrite = await hasPermission(user as any, 'system_settings', 'update');
 
     const [roleRows, teamRows, managedRows, bundle] = await Promise.all([
-      knex('user_roles').where({ tenant, user_id: principal.user_id }).select<{ role_id: string }[]>('role_id'),
-      knex('team_members').where({ tenant, user_id: principal.user_id }).select<{ team_id: string }[]>('team_id'),
-      knex('users').where({ tenant, reports_to: principal.user_id }).select<{ user_id: string }[]>('user_id'),
-      knex('authorization_bundles')
-        .where({
-          tenant,
-          bundle_id: input.bundleId,
-        })
+      tenantScopedTable(knex, tenant, 'user_roles').where('user_id', principal.user_id).select<{ role_id: string }[]>('role_id'),
+      tenantScopedTable(knex, tenant, 'team_members').where('user_id', principal.user_id).select<{ team_id: string }[]>('team_id'),
+      tenantScopedTable(knex, tenant, 'users').where('reports_to', principal.user_id).select<{ user_id: string }[]>('user_id'),
+      tenantScopedTable(knex, tenant, 'authorization_bundles')
+        .where('bundle_id', input.bundleId)
         .first<{ published_revision_id: string | null }>('published_revision_id'),
     ]);
 
@@ -1002,9 +996,8 @@ export const runAuthorizationBundleSimulationAction = withAuth(
           })
         ).revisionId
       : (
-          await knex('authorization_bundle_revisions')
+          await tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')
             .where({
-              tenant,
               bundle_id: input.bundleId,
               lifecycle_state: 'draft',
             })
@@ -1228,8 +1221,8 @@ export const getAuthorizationBundleAuditTrailAction = withAuth(
     const { knex } = await createTenantKnex();
 
     const [bundle, revisions, assignments] = await Promise.all([
-      knex('authorization_bundles')
-        .where({ tenant, bundle_id: bundleId })
+      tenantScopedTable(knex, tenant, 'authorization_bundles')
+        .where('bundle_id', bundleId)
         .first<{
           created_at: string;
           created_by: string | null;
@@ -1237,8 +1230,8 @@ export const getAuthorizationBundleAuditTrailAction = withAuth(
           updated_by: string | null;
           status: 'active' | 'archived';
         }>('created_at', 'created_by', 'updated_at', 'updated_by', 'status'),
-      knex('authorization_bundle_revisions')
-        .where({ tenant, bundle_id: bundleId })
+      tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')
+        .where('bundle_id', bundleId)
         .select<
           Array<{
             revision_id: string;
@@ -1250,8 +1243,8 @@ export const getAuthorizationBundleAuditTrailAction = withAuth(
             summary: string | null;
           }>
         >('revision_id', 'lifecycle_state', 'created_at', 'created_by', 'published_at', 'published_by', 'summary'),
-      knex('authorization_bundle_assignments')
-        .where({ tenant, bundle_id: bundleId })
+      tenantScopedTable(knex, tenant, 'authorization_bundle_assignments')
+        .where('bundle_id', bundleId)
         .select<
           Array<{
             assignment_id: string;
