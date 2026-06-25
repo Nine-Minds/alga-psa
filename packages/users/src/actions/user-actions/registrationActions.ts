@@ -1,7 +1,7 @@
 'use server'
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { verifyContactEmail } from '@alga-psa/users/actions';
@@ -139,7 +139,10 @@ async function registerContactUser(
       }
 
       // Check if user already exists
-      const existingUser = await trx('users')
+      const existingUser = await createTenantScopedQuery(trx, {
+        table: 'users',
+        tenant: contact.tenant,
+      }).builder
         .where({ email })
         .first();
 
@@ -170,7 +173,10 @@ async function registerContactUser(
         .returning('*');
 
       // Get User role
-      const roles = await trx('roles').where({ tenant: contact.tenant });
+      const roles = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: contact.tenant,
+      }).builder as Array<{ role_id: string; role_name?: string | null }>;
       const userRole = roles.find(r => 
         r.role_name && r.role_name.toLowerCase() === 'user'
       );
