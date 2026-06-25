@@ -667,9 +667,9 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const existingTicket = await knex('tickets')
+    const existingTicket = await tenantScopedTable(knex, 'tickets', context.tenant)
       .select('ticket_id')
-      .where({ ticket_id: ticketId, tenant: context.tenant })
+      .where({ ticket_id: ticketId })
       .first();
 
     if (!existingTicket) {
@@ -691,9 +691,8 @@ export class TicketService extends BaseService<ITicket> {
       uploaded_by_id: context.userId,
     });
 
-    const folderRecord = await knex('document_folders')
+    const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
       .where({
-        tenant: context.tenant,
         entity_id: ticketId,
         entity_type: 'ticket',
         folder_path: '/Tickets/Attachments',
@@ -768,7 +767,7 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     // Verify the document belongs to this ticket and tenant
-    const doc = await knex('documents as d')
+    const doc = await tenantScopedTable(knex, 'documents as d', context.tenant)
       .join('document_associations as da', function () {
         this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
       })
@@ -776,7 +775,6 @@ export class TicketService extends BaseService<ITicket> {
         'da.entity_id': ticketId,
         'da.entity_type': 'ticket',
         'd.document_id': documentId,
-        'd.tenant': context.tenant,
       })
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
@@ -801,7 +799,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const doc = await knex('documents as d')
+    const doc = await tenantScopedTable(knex, 'documents as d', context.tenant)
       .join('document_associations as da', function () {
         this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
       })
@@ -809,7 +807,6 @@ export class TicketService extends BaseService<ITicket> {
         'da.entity_id': ticketId,
         'da.entity_type': 'ticket',
         'd.document_id': documentId,
-        'd.tenant': context.tenant,
       })
       .select('d.document_id', 'd.file_id', 'da.association_id')
       .first();
@@ -819,19 +816,19 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     await withTransaction(knex, async (trx) => {
-      await trx('document_associations')
-        .where({ association_id: doc.association_id, tenant: context.tenant })
+      await tenantScopedTable(trx, 'document_associations', context.tenant)
+        .where({ association_id: doc.association_id })
         .del();
 
       // Only delete the document itself if no other associations remain
-      const remaining = await trx('document_associations')
-        .where({ document_id: documentId, tenant: context.tenant })
+      const remaining = await tenantScopedTable(trx, 'document_associations', context.tenant)
+        .where({ document_id: documentId })
         .count('* as count')
         .first();
 
       if (!remaining || Number(remaining.count) === 0) {
-        await trx('documents')
-          .where({ document_id: documentId, tenant: context.tenant })
+        await tenantScopedTable(trx, 'documents', context.tenant)
+          .where({ document_id: documentId })
           .del();
       }
 
@@ -857,14 +854,13 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const materials = await knex('ticket_materials as tm')
+    const materials = await tenantScopedTable(knex, 'ticket_materials as tm', context.tenant)
       .leftJoin('service_catalog as sc', function () {
         this.on('tm.service_id', '=', 'sc.service_id')
           .andOn('tm.tenant', '=', 'sc.tenant');
       })
       .where({
         'tm.ticket_id': ticketId,
-        'tm.tenant': context.tenant,
       })
       .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
       .orderBy('tm.created_at', 'desc');
@@ -894,8 +890,8 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
-    const ticket = await knex('tickets')
-      .where({ ticket_id: ticketId, tenant: context.tenant })
+    const ticket = await tenantScopedTable(knex, 'tickets', context.tenant)
+      .where({ ticket_id: ticketId })
       .select('ticket_id', 'client_id')
       .first();
 
@@ -909,9 +905,8 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
-    const product = await knex('service_catalog')
+    const product = await tenantScopedTable(knex, 'service_catalog', context.tenant)
       .where({
-        tenant: context.tenant,
         service_id: data.service_id,
         item_kind: 'product',
       })
@@ -953,7 +948,7 @@ export class TicketService extends BaseService<ITicket> {
   private async getDocumentById(documentId: string, context: ServiceContext): Promise<IDocument | null> {
     const { knex } = await this.getKnex();
 
-    const document = await knex('documents as d')
+    const document = await tenantScopedTable(knex, 'documents as d', context.tenant)
       .leftJoin('users as u', function () {
         this.on('d.created_by', '=', 'u.user_id')
           .andOn('d.tenant', '=', 'u.tenant');
@@ -965,7 +960,6 @@ export class TicketService extends BaseService<ITicket> {
       .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
       .where({
         'd.document_id': documentId,
-        'd.tenant': context.tenant,
       })
       .select(
         'd.*',
@@ -984,14 +978,13 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<ITicketMaterial | null> {
     const { knex } = await this.getKnex();
 
-    const material = await knex('ticket_materials as tm')
+    const material = await tenantScopedTable(knex, 'ticket_materials as tm', context.tenant)
       .leftJoin('service_catalog as sc', function () {
         this.on('tm.service_id', '=', 'sc.service_id')
           .andOn('tm.tenant', '=', 'sc.tenant');
       })
       .where({
         'tm.ticket_material_id': ticketMaterialId,
-        'tm.tenant': context.tenant,
       })
       .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
       .first();
@@ -1004,8 +997,8 @@ export class TicketService extends BaseService<ITicket> {
     tenant: string,
     mimeType: string,
   ): Promise<{ typeId: string; isShared: boolean }> {
-    const tenantType = await knex('document_types')
-      .where({ tenant, type_name: mimeType })
+    const tenantType = await tenantScopedTable(knex, 'document_types', tenant)
+      .where({ type_name: mimeType })
       .first();
 
     if (tenantType) {
@@ -1022,8 +1015,8 @@ export class TicketService extends BaseService<ITicket> {
 
     const generalType = `${mimeType.split('/')[0]}/*`;
 
-    const generalTenantType = await knex('document_types')
-      .where({ tenant, type_name: generalType })
+    const generalTenantType = await tenantScopedTable(knex, 'document_types', tenant)
+      .where({ type_name: generalType })
       .first();
 
     if (generalTenantType) {
