@@ -17,7 +17,7 @@
  * that are explicitly service-period aware.
  */
 
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { hasPermission } from '../../auth/rbac';
@@ -345,11 +345,11 @@ export class FinancialService extends BaseService<ITransaction> {
     
     const { knex } = await this.getKnex();
     
-    const transaction = await knex('transactions')
-      .where({
-        transaction_id: transactionId,
-        tenant: context.tenant
-      })
+    const transaction = await createTenantScopedQuery(knex, {
+      table: 'transactions',
+      tenant: context.tenant,
+    }).builder
+      .where('transaction_id', transactionId)
       .first();
 
     if (!transaction) return null;
@@ -385,13 +385,23 @@ export class FinancialService extends BaseService<ITransaction> {
       order = 'desc'
     } = query;
 
-    let dataQuery = knex('transactions as t')
-      .leftJoin('clients as c', 't.client_id', 'c.client_id')
-      .leftJoin('invoices as i', 't.invoice_id', 'i.invoice_id')
-      .where('t.tenant', context.tenant);
+    let dataQuery = createTenantScopedQuery(knex, {
+      table: 'transactions as t',
+      tenant: context.tenant,
+    }).builder
+      .leftJoin('clients as c', function joinClients() {
+        this.on('t.client_id', '=', 'c.client_id')
+          .andOn('t.tenant', '=', 'c.tenant');
+      })
+      .leftJoin('invoices as i', function joinInvoices() {
+        this.on('t.invoice_id', '=', 'i.invoice_id')
+          .andOn('t.tenant', '=', 'i.tenant');
+      });
 
-    let countQuery = knex('transactions')
-      .where('tenant', context.tenant);
+    let countQuery = createTenantScopedQuery(knex, {
+      table: 'transactions',
+      tenant: context.tenant,
+    }).builder;
 
     // Apply filters
     if (client_id) {
