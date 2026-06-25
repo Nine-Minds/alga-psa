@@ -12,6 +12,12 @@ function section(start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
+function sectionToEnd(start: string): string {
+  const startIndex = source.indexOf(start);
+  expect(startIndex).toBeGreaterThanOrEqual(0);
+  return source.slice(startIndex);
+}
+
 describe('project template tenant-scoped query contract', () => {
   it('uses structural tenant scoping for template status mapping helper roots', () => {
     const helperSource = section(
@@ -193,5 +199,22 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).not.toContain('.where({ template_task_id: taskId, user_id: userId, tenant })');
     expect(actionSource).not.toContain('.where({ template_phase_id: task.template_phase_id, tenant })');
     expect(actionSource).not.toContain('.where({ template_id: phase.template_id, tenant })');
+  });
+
+  it('uses structural tenant scoping for template checklist roots', () => {
+    const actionSource = sectionToEnd('export const getTemplateTaskChecklistItems');
+
+    expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_checklist_items', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_checklist_items', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
+    expect(actionSource).not.toContain('.where({ template_task_id: taskId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_checklist_id: checklistId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_task_id: updated.template_task_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_task_id: item.template_task_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_phase_id: task.template_phase_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_id: phase.template_id, tenant })');
+    expect(actionSource).not.toContain('.andWhere({ tenant })');
   });
 });

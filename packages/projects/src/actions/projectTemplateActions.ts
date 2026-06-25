@@ -2343,8 +2343,8 @@ export const getTemplateTaskChecklistItems = withAuth(async (
 ): Promise<IProjectTemplateChecklistItem[]> => {
   const { knex } = await createTenantKnex();
 
-  const items = await knex('project_template_checklist_items')
-    .where({ template_task_id: taskId, tenant })
+  const items = await tenantScopedTable(knex, 'project_template_checklist_items', tenant)
+    .where({ template_task_id: taskId })
     .orderBy('order_number');
 
   return items;
@@ -2370,8 +2370,8 @@ export const addTemplateChecklistItem = withAuth(async (
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -2381,8 +2381,8 @@ export const addTemplateChecklistItem = withAuth(async (
     // Use provided order_number or calculate from max
     let orderNumber = data.order_number;
     if (orderNumber === undefined) {
-      const maxOrder = await trx('project_template_checklist_items')
-        .where({ template_task_id: taskId, tenant })
+      const maxOrder = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+        .where({ template_task_id: taskId })
         .max('order_number as max')
         .first();
       orderNumber = (maxOrder?.max ?? -1) + 1;
@@ -2401,13 +2401,13 @@ export const addTemplateChecklistItem = withAuth(async (
       .returning('*');
 
     // Update template timestamp via phase
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
 
@@ -2434,8 +2434,8 @@ export const updateTemplateChecklistItem = withAuth(async (
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const [updated] = await trx('project_template_checklist_items')
-      .where({ template_checklist_id: checklistId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_checklist_id: checklistId })
       .update({
         ...(data.item_name !== undefined && { item_name: data.item_name }),
         ...(data.description !== undefined && { description: data.description }),
@@ -2449,18 +2449,18 @@ export const updateTemplateChecklistItem = withAuth(async (
     }
 
     // Update template timestamp via task -> phase
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: updated.template_task_id, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: updated.template_task_id })
       .first();
 
     if (task) {
-      const phase = await trx('project_template_phases')
-        .where({ template_phase_id: task.template_phase_id, tenant })
+      const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+        .where({ template_phase_id: task.template_phase_id })
         .first();
 
       if (phase) {
-        await trx('project_templates')
-          .where({ template_id: phase.template_id, tenant })
+        await tenantScopedTable(trx, 'project_templates', tenant)
+          .where({ template_id: phase.template_id })
           .update({ updated_at: trx.fn.now() });
       }
     }
@@ -2483,8 +2483,8 @@ export const deleteTemplateChecklistItem = withAuth(async (
     await checkPermission(user, 'project', 'update', trx);
 
     // Get item first to find task for timestamp update
-    const item = await trx('project_template_checklist_items')
-      .where({ template_checklist_id: checklistId, tenant })
+    const item = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_checklist_id: checklistId })
       .first();
 
     if (!item) {
@@ -2492,23 +2492,23 @@ export const deleteTemplateChecklistItem = withAuth(async (
     }
 
     // Delete the item
-    await trx('project_template_checklist_items')
-      .where({ template_checklist_id: checklistId, tenant })
+    await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_checklist_id: checklistId })
       .delete();
 
     // Update template timestamp via task -> phase
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: item.template_task_id, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: item.template_task_id })
       .first();
 
     if (task) {
-      const phase = await trx('project_template_phases')
-        .where({ template_phase_id: task.template_phase_id, tenant })
+      const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+        .where({ template_phase_id: task.template_phase_id })
         .first();
 
       if (phase) {
-        await trx('project_templates')
-          .where({ template_id: phase.template_id, tenant })
+        await tenantScopedTable(trx, 'project_templates', tenant)
+          .where({ template_id: phase.template_id })
           .update({ updated_at: trx.fn.now() });
       }
     }
@@ -2541,8 +2541,8 @@ export const saveTemplateChecklistItems = withAuth(async (
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -2550,8 +2550,8 @@ export const saveTemplateChecklistItems = withAuth(async (
     }
 
     // Get existing items for this task
-    const existingItems = await trx('project_template_checklist_items')
-      .where({ template_task_id: taskId, tenant });
+    const existingItems = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_task_id: taskId }) as IProjectTemplateChecklistItem[];
 
     const existingIds = new Set(existingItems.map(i => i.template_checklist_id));
     const newItemIds = new Set(items.map(i => i.id));
@@ -2563,9 +2563,8 @@ export const saveTemplateChecklistItems = withAuth(async (
       .map(e => e.template_checklist_id);
 
     if (idsToDelete.length > 0) {
-      await trx('project_template_checklist_items')
+      await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
         .whereIn('template_checklist_id', idsToDelete)
-        .andWhere({ tenant })
         .delete();
     }
 
@@ -2590,8 +2589,8 @@ export const saveTemplateChecklistItems = withAuth(async (
         savedItems.push(created);
       } else if (existingIds.has(item.id)) {
         // Update existing item
-        const [updated] = await trx('project_template_checklist_items')
-          .where({ template_checklist_id: item.id, tenant })
+        const [updated] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+          .where({ template_checklist_id: item.id })
           .update({
             item_name: item.item_name.trim(),
             description: item.description || null,
@@ -2604,13 +2603,13 @@ export const saveTemplateChecklistItems = withAuth(async (
     }
 
     // Update template timestamp
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
 
