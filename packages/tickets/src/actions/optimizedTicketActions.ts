@@ -395,7 +395,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     try {
 
     // Fetch ticket with status and location info
-    const ticket = await trx('tickets as t')
+    const ticket = await tenantScopedTable(trx, 'tickets as t', tenant)
       .select(
         't.*',
         's.name as status_name',
@@ -426,10 +426,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         this.on('t.location_id', 'cl.location_id')
            .andOn('t.tenant', 'cl.tenant')
       })
-      .where({
-        't.ticket_id': ticketId,
-        't.tenant': tenant
-      })
+      .where({ 't.ticket_id': ticketId })
       .first();
 
     if (!ticket) {
@@ -460,15 +457,14 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       categories
     ] = await Promise.all([
       // Comments
-      trx('comments')
+      tenantScopedTable(trx, 'comments', tenant)
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          ticket_id: ticketId
         })
         .orderBy('created_at', 'asc'),
       
       // Documents
-      trx('documents as d')
+      tenantScopedTable(trx, 'documents as d', tenant)
         .select('d.*')
         .leftJoin('document_associations as da', function() {
           this.on('d.document_id', 'da.document_id')
@@ -476,11 +472,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         })
         .where({
           'da.entity_id': ticketId,
-          'da.entity_type': 'ticket',
-          'd.tenant': tenant
+          'da.entity_type': 'ticket'
         }),
       
-      trx('clients as c')
+      tenantScopedTable(trx, 'clients as c', tenant)
         .select(
           'c.*',
           'da.document_id'
@@ -490,38 +485,33 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
               .andOn('da.tenant', '=', 'c.tenant')
               .andOnVal('da.entity_type', '=', 'client');
         })
-        .where({ 'c.tenant': tenant })
         .orderBy('c.client_name', 'asc'),
 
-      trx('ticket_resources')
+      tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          ticket_id: ticketId
         }),
       
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
-      trx('users')
-        .where({ tenant })
+      tenantScopedTable(trx, 'users', tenant)
         .orderBy('first_name', 'asc'),
       
       // Statuses
-      trx('statuses')
+      tenantScopedTable(trx, 'statuses', tenant)
         .where({
-          tenant: tenant,
           status_type: 'ticket'
         })
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
       // Boards
-      trx('boards')
-        .where({ tenant })
+      tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
       
       // Priorities - fetch only tenant-specific ticket priorities
-      trx('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      tenantScopedTable(trx, 'priorities', tenant)
+        .where({ item_type: 'ticket' })
         .orderBy('priority_name', 'asc'),
       
       // Categories for the ticket's current board. This must match
@@ -529,25 +519,23 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       // show tenant-wide categories before the client-side board fetch returns.
       (async () => {
         if (!ticket.board_id) {
-          return trx<ITicketCategory>('categories')
-            .where({ tenant })
+          return tenantScopedTable(trx, 'categories', tenant)
             .orderBy('category_name', 'asc');
         }
 
-        const ticketBoard = await trx('boards')
-          .where({ tenant, board_id: ticket.board_id })
+        const ticketBoard = await tenantScopedTable(trx, 'boards', tenant)
+          .where({ board_id: ticket.board_id })
           .select('category_type')
           .first();
 
         if (ticketBoard?.category_type === 'itil') {
-          return trx<ITicketCategory>('categories')
-            .where({ tenant })
+          return tenantScopedTable(trx, 'categories', tenant)
             .where('is_from_itil_standard', true)
             .orderBy('category_name', 'asc');
         }
 
-        return trx<ITicketCategory>('categories')
-          .where({ tenant, board_id: ticket.board_id })
+        return tenantScopedTable(trx, 'categories', tenant)
+          .where({ board_id: ticket.board_id })
           .orderBy('category_name', 'asc');
       })()
     ]);
@@ -560,12 +548,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     let fileIdMap: Record<string, string> = {};
     if (documentIds.length > 0) {
-      const fileRecords = await trx('documents')
+      const fileRecords = await tenantScopedTable(trx, 'documents', tenant)
         .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds)
-        .andWhere({ tenant });
+        .whereIn('document_id', documentIds);
 
-      fileIdMap = fileRecords.reduce((acc, record) => {
+      fileIdMap = fileRecords.reduce((acc: Record<string, string>, record: { document_id: string; file_id?: string | null }) => {
         if (record.file_id) {
           acc[record.document_id] = record.file_id;
         }
@@ -692,7 +679,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       avatarUrl: userAvatarUrls.get(user.user_id) ?? null,
     }));
 
-    const userMap = usersWithAvatars.reduce((acc, user) => {
+    const userMap = usersWithAvatars.reduce((acc: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>, user: { user_id: string; first_name?: string | null; last_name?: string | null; email?: string; user_type: string; avatarUrl: string | null }) => {
       acc[user.user_id] = {
         user_id: user.user_id,
         first_name: user.first_name || '',
@@ -738,19 +725,19 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       board_id: status.board_id ?? null,
     }));
 
-    const agentOptions = users.map((agent) => ({
+    const agentOptions = (users as Array<{ user_id: string; first_name?: string | null; last_name?: string | null }>).map((agent) => ({
       value: agent.user_id,
       label: `${agent.first_name} ${agent.last_name}`
     }));
 
-    const boardOptions = boards
-      .filter(board => board.board_id !== undefined)
+    const boardOptions = (boards as Array<{ board_id?: string; board_name?: string | null }>)
+      .filter((board) => board.board_id !== undefined)
       .map((board) => ({
         value: board.board_id,
         label: board.board_name || ""
       }));
 
-    const priorityOptions = priorities.map((priority) => ({
+    const priorityOptions = (priorities as Array<{ priority_id: string; priority_name: string; color?: string | null }>).map((priority) => ({
       value: priority.priority_id,
       label: priority.priority_name,
       color: priority.color
