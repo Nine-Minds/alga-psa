@@ -30,6 +30,28 @@ describe('tenant scoped query helper', () => {
     );
   });
 
+  it('infers the root tenant column for common table expressions', () => {
+    const plainTableQuery = createTenantScopedQuery(db, {
+      table: 'clients',
+      tenant: 'tenant-1',
+    });
+    const aliasedTableQuery = createTenantScopedQuery(db, {
+      table: 'tickets as t',
+      tenant: 'tenant-1',
+    });
+
+    expect(plainTableQuery.rootAlias).toBe('clients');
+    expect(plainTableQuery.qualifiedTenantColumn).toBe('clients.tenant');
+    expect(plainTableQuery.builder.toString()).toBe(
+      `select * from "clients" where "clients"."tenant" = 'tenant-1'`
+    );
+    expect(aliasedTableQuery.rootAlias).toBe('t');
+    expect(aliasedTableQuery.qualifiedTenantColumn).toBe('t.tenant');
+    expect(aliasedTableQuery.builder.toString()).toBe(
+      `select * from "tickets" as "t" where "t"."tenant" = 'tenant-1'`
+    );
+  });
+
   it('preserves tenant metadata across clones and builder replacement', () => {
     const query = createTenantScopedQuery(db, {
       table: 'tickets as t',

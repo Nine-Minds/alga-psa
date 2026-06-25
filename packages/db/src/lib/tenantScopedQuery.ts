@@ -13,20 +13,36 @@ export interface TenantScopedQuery {
 
 export interface TenantScopedQueryOptions {
   table: string;
-  alias: string;
+  alias?: string;
   tenant: string;
   tenantColumn?: string;
 }
 
 type TenantScopedQueryMetadata = Omit<TenantScopedQuery, 'builder' | typeof tenantScopedQueryBrand>;
 
+function unquoteIdentifier(identifier: string): string {
+  return identifier.replace(/^["'`\[]/, '').replace(/["'`\]]$/, '');
+}
+
+function inferRootAlias(table: string): string {
+  const trimmedTable = table.trim();
+  const explicitAsAlias = trimmedTable.match(/\s+as\s+([^\s]+)$/i);
+  if (explicitAsAlias) {
+    return unquoteIdentifier(explicitAsAlias[1]);
+  }
+
+  const parts = trimmedTable.split(/\s+/);
+  return unquoteIdentifier(parts.length > 1 ? parts[parts.length - 1] : trimmedTable);
+}
+
 function createMetadata(options: TenantScopedQueryOptions): TenantScopedQueryMetadata {
   const tenantColumn = options.tenantColumn ?? 'tenant';
+  const rootAlias = options.alias ?? inferRootAlias(options.table);
   return {
     tenant: options.tenant,
-    rootAlias: options.alias,
+    rootAlias,
     tenantColumn,
-    qualifiedTenantColumn: `${options.alias}.${tenantColumn}`,
+    qualifiedTenantColumn: `${rootAlias}.${tenantColumn}`,
   };
 }
 

@@ -169,7 +169,6 @@ export class QuoteService extends BaseService<IQuote> {
         if (quoteData.client_id) {
           const client = await createTenantScopedQuery(trx, {
             table: 'clients',
-            alias: 'clients',
             tenant: context.tenant,
           }).builder
             .where('client_id', quoteData.client_id)
@@ -180,7 +179,6 @@ export class QuoteService extends BaseService<IQuote> {
         if (!currencyCode) {
           const billingSettings = await createTenantScopedQuery(trx, {
             table: 'default_billing_settings',
-            alias: 'default_billing_settings',
             tenant: context.tenant,
           }).builder
             .select('default_currency_code')
@@ -278,7 +276,6 @@ export class QuoteService extends BaseService<IQuote> {
     return withTransaction(knex, async (trx) => {
       const item = await createTenantScopedQuery(trx, {
         table: 'quote_items',
-        alias: 'quote_items',
         tenant: context.tenant,
       }).builder
         .where('quote_item_id', itemId)
@@ -302,7 +299,6 @@ export class QuoteService extends BaseService<IQuote> {
     await withTransaction(knex, async (trx) => {
       const item = await createTenantScopedQuery(trx, {
         table: 'quote_items',
-        alias: 'quote_items',
         tenant: context.tenant,
       }).builder
         .where('quote_item_id', itemId)
