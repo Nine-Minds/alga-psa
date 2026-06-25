@@ -374,12 +374,16 @@ export const updateActivityPriority = withAuth(async (
 
     // Update the priority based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       switch (activityType) {
         case ActivityType.TICKET:
           // For tickets, we need to get the priority ID
-          const ticketPriority = await trx("priorities")
+          const ticketPriority = await tenantScopedTable("priorities")
             .where("priority_name", newPriority)
-            .where("tenant", tenant)
             .where("item_type", "ticket")
             .select("priority_id")
             .first();
@@ -388,9 +392,8 @@ export const updateActivityPriority = withAuth(async (
             throw new Error(`Priority '${newPriority}' not found for tickets`);
           }
 
-          await trx("tickets")
+          await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: ticketPriority.priority_id,
               updated_at: new Date()
@@ -399,9 +402,8 @@ export const updateActivityPriority = withAuth(async (
 
         case ActivityType.PROJECT_TASK:
           // For project tasks, we need to get the priority ID
-          const projectTaskPriority = await trx("priorities")
+          const projectTaskPriority = await tenantScopedTable("priorities")
             .where("priority_name", newPriority)
-            .where("tenant", tenant)
             .where("item_type", "project_task")
             .select("priority_id")
             .first();
@@ -410,9 +412,8 @@ export const updateActivityPriority = withAuth(async (
             throw new Error(`Priority '${newPriority}' not found for project tasks`);
           }
 
-          await trx("project_tasks")
+          await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: projectTaskPriority.priority_id,
               updated_at: new Date()
@@ -420,9 +421,8 @@ export const updateActivityPriority = withAuth(async (
           break;
 
         case ActivityType.WORKFLOW_TASK:
-          await trx("workflow_tasks")
+          await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority: newPriority,
               updated_at: new Date()
@@ -477,11 +477,15 @@ export const updateActivityPriorityById = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       switch (activityType) {
         case ActivityType.TICKET:
-          await trx("tickets")
+          await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: priorityId,
               updated_at: new Date()
@@ -489,9 +493,8 @@ export const updateActivityPriorityById = withAuth(async (
           break;
 
         case ActivityType.PROJECT_TASK:
-          await trx("project_tasks")
+          await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({
               priority_id: priorityId,
               updated_at: new Date()
