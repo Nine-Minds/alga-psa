@@ -6,9 +6,16 @@ import {
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { SupportedLocale } from './lib/localeConfig';
+import type { Knex } from 'knex';
+
+const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
+  createTenantScopedQuery(knex, {
+    table,
+    tenant
+  }).builder;
 
 function extractEmailAddress(value: string): string {
   const trimmed = value.trim();
@@ -211,10 +218,9 @@ async function addCommentThreadReplyHeaders(params: {
 
   try {
     const { knex } = await createTenantKnex(params.tenantId);
-    const comment = await knex('comments')
+    const comment = await tenantScopedTable(knex, 'comments', params.tenantId)
       .select('thread_id', 'parent_comment_id')
       .where({
-        tenant: params.tenantId,
         comment_id: params.commentId,
       })
       .first<{ thread_id?: string | null; parent_comment_id?: string | null }>();
@@ -224,10 +230,9 @@ async function addCommentThreadReplyHeaders(params: {
     }
 
     const [latestOutbound, thread] = await Promise.all([
-      knex('email_sending_logs')
+      tenantScopedTable(knex, 'email_sending_logs', params.tenantId)
         .select('rfc_message_id')
         .where({
-          tenant: params.tenantId,
           comment_thread_id: comment.thread_id,
           status: 'sent',
         })
@@ -235,10 +240,9 @@ async function addCommentThreadReplyHeaders(params: {
         .orderBy('created_at', 'desc')
         .orderBy('id', 'desc')
         .first<{ rfc_message_id?: string | null }>(),
-      knex('comment_threads')
+      tenantScopedTable(knex, 'comment_threads', params.tenantId)
         .select('email_references')
         .where({
-          tenant: params.tenantId,
           thread_id: comment.thread_id,
         })
         .first<{ email_references?: string[] | string | null }>(),
@@ -284,9 +288,8 @@ async function persistCommentThreadReferences(params: {
 
   try {
     const { knex } = await createTenantKnex(params.tenantId);
-    await knex('comment_threads')
+    await tenantScopedTable(knex, 'comment_threads', params.tenantId)
       .where({
-        tenant: params.tenantId,
         thread_id: params.context.commentThreadId,
       })
       .update({
@@ -327,9 +330,12 @@ export async function applyTicketThreadHeaders(params: {
 
   try {
     const { knex } = await createTenantKnex(params.tenantId);
-    const ticket = await knex('tickets')
+    const ticket = await createTenantScopedQuery(knex, {
+        table: 'tickets',
+        tenant: params.tenantId
+      }).builder
       .select('email_metadata')
-      .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+      .where({ ticket_id: params.ticketId })
       .first<{ email_metadata?: Record<string, any> | null }>();
 
     const meta = ticket?.email_metadata && typeof ticket.email_metadata === 'object'
@@ -342,8 +348,11 @@ export async function applyTicketThreadHeaders(params: {
       const domain = (params.fromDomain && params.fromDomain.trim()) || 'alga-psa.local';
       root = `<ticket-${params.ticketId}@${domain}>`;
       // Deterministic value → concurrent first-events converge on the same anchor.
-      await knex('tickets')
-        .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+      await createTenantScopedQuery(knex, {
+          table: 'tickets',
+          tenant: params.tenantId
+        }).builder
+        .where({ ticket_id: params.ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(COALESCE(email_metadata, '{}'::jsonb), '{threadRoot}', to_jsonb(?::text), true)`,
@@ -767,10 +776,9 @@ export abstract class BaseEmailService {
         params.replyContext?.conversationToken
       );
       const comment = params.replyContext?.commentId
-        ? await knex('comments')
+        ? await tenantScopedTable(knex, 'comments', params.tenantId)
           .select('thread_id', 'parent_comment_id')
           .where({
-            tenant: params.tenantId,
             comment_id: params.replyContext.commentId,
           })
           .first<{ thread_id?: string | null; parent_comment_id?: string | null }>()
@@ -832,9 +840,8 @@ export abstract class BaseEmailService {
 
       if (params.providerResult.success && params.replyContext?.commentId && rfcMessageId) {
         if (comment?.thread_id && !comment.parent_comment_id) {
-          await knex('comment_threads')
+          await tenantScopedTable(knex, 'comment_threads', params.tenantId)
             .where({
-              tenant: params.tenantId,
               thread_id: comment.thread_id,
             })
             .update({

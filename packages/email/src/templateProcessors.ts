@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { SupportedLocale } from './lib/localeConfig';
 
@@ -89,6 +90,13 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     super();
   }
 
+  private tenantTemplatesQuery(tenantId: string) {
+    return createTenantScopedQuery(this.knex, {
+      table: 'tenant_email_templates',
+      tenant: tenantId
+    }).builder;
+  }
+
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
     const { tenantId, templateData, locale = 'en' } = options;
 
@@ -97,8 +105,8 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
 
     if (tenantId) {
       logger.debug(`[DatabaseTemplateProcessor] Looking for tenant template '${this.templateName}' with locale '${locale}' for tenant '${tenantId}'`);
-      template = await this.knex('tenant_email_templates')
-        .where({ tenant: tenantId, name: this.templateName, language_code: locale })
+      template = await this.tenantTemplatesQuery(tenantId)
+        .where({ name: this.templateName, language_code: locale })
         .first();
 
       logger.debug(`[DatabaseTemplateProcessor] Tenant template found:`, template ? {
@@ -110,8 +118,8 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
       // If requested language not found, fall back to English for tenant templates
       if (!template && locale !== 'en') {
         logger.debug(`[DatabaseTemplateProcessor] Tenant template not found for locale '${locale}', trying English`);
-        template = await this.knex('tenant_email_templates')
-          .where({ tenant: tenantId, name: this.templateName, language_code: 'en' })
+        template = await this.tenantTemplatesQuery(tenantId)
+          .where({ name: this.templateName, language_code: 'en' })
           .first();
 
         logger.debug(`[DatabaseTemplateProcessor] English tenant template:`, template ? {

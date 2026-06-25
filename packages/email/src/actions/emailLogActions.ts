@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import type { PaginatedResult } from '@alga-psa/types';
@@ -48,7 +48,10 @@ export const getEmailLogsForTicket = withAuth(
     const limit = Math.min(Math.max(options?.limit ?? 20, 1), 200);
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      return trx<EmailSendingLogRecord>('email_sending_logs')
+      return createTenantScopedQuery(trx, {
+          table: 'email_sending_logs',
+          tenant
+        }).builder
         .select(
           'id',
           'tenant',
@@ -81,7 +84,6 @@ export const getEmailLogsForTicket = withAuth(
           'updated_at'
         )
         .where({
-          tenant,
           entity_type: 'ticket',
           entity_id: ticketId
         })
@@ -150,13 +152,16 @@ export const getEmailLogs = withAuth(
     const offset = (page - 1) * pageSize;
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      let baseQuery = trx('email_sending_logs as esl')
+      let baseQuery = createTenantScopedQuery(trx, {
+          table: 'email_sending_logs as esl',
+          alias: 'esl',
+          tenant
+        }).builder
         .leftJoin('tickets as t', function () {
           this.on('esl.entity_id', '=', 't.ticket_id')
             .andOn('t.tenant', '=', 'esl.tenant')
             .andOn('esl.entity_type', '=', trx.raw('?', ['ticket']));
-        })
-        .where('esl.tenant', tenant);
+        });
 
       if (filters.status) {
         baseQuery = baseQuery.where('esl.status', filters.status);
@@ -265,8 +270,10 @@ export const getEmailLogMetrics = withAuth(
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
 
-      const result = (await trx('email_sending_logs')
-        .where({ tenant })
+      const result = (await createTenantScopedQuery(trx, {
+          table: 'email_sending_logs',
+          tenant
+        }).builder
         .select(
           trx.raw('COUNT(*)::int as total'),
           trx.raw(`COUNT(*) FILTER (WHERE status = 'failed')::int as failed`),
