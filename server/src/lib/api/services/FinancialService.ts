@@ -2136,8 +2136,11 @@ export class FinancialService extends BaseService<ITransaction> {
 
       for (const transactionId of operation.transaction_ids) {
         try {
-          const existing = await trx('transactions')
-            .where({ transaction_id: transactionId, tenant: context.tenant })
+          const existing = await createTenantScopedQuery(trx, {
+            table: 'transactions',
+            tenant: context.tenant,
+          }).builder
+            .where('transaction_id', transactionId)
             .first();
           if (!existing) {
             throw new Error('Transaction not found');
@@ -2146,15 +2149,21 @@ export class FinancialService extends BaseService<ITransaction> {
           let result: any;
           switch (operation.operation) {
             case 'approve':
-              [result] = await trx('transactions')
-                .where({ transaction_id: transactionId, tenant: context.tenant })
+              [result] = await createTenantScopedQuery(trx, {
+                table: 'transactions',
+                tenant: context.tenant,
+              }).builder
+                .where('transaction_id', transactionId)
                 .update({ status: 'completed' })
                 .returning('*');
               break;
 
             case 'reject':
-              [result] = await trx('transactions')
-                .where({ transaction_id: transactionId, tenant: context.tenant })
+              [result] = await createTenantScopedQuery(trx, {
+                table: 'transactions',
+                tenant: context.tenant,
+              }).builder
+                .where('transaction_id', transactionId)
                 .update({ status: 'rejected' })
                 .returning('*');
               break;
@@ -2164,8 +2173,11 @@ export class FinancialService extends BaseService<ITransaction> {
                 throw new Error('Transaction is already reversed');
               }
               const reversalAmount = -Number(existing.amount);
-              const lastTransaction = await trx('transactions')
-                .where({ client_id: existing.client_id, tenant: context.tenant })
+              const lastTransaction = await createTenantScopedQuery(trx, {
+                table: 'transactions',
+                tenant: context.tenant,
+              }).builder
+                .where('client_id', existing.client_id)
                 .orderBy('created_at', 'desc')
                 .first();
               const balanceAfter = Number(lastTransaction?.balance_after || 0) + reversalAmount;
@@ -2192,13 +2204,19 @@ export class FinancialService extends BaseService<ITransaction> {
                 })
                 .returning('*');
 
-              await trx('transactions')
-                .where({ transaction_id: transactionId, tenant: context.tenant })
+              await createTenantScopedQuery(trx, {
+                table: 'transactions',
+                tenant: context.tenant,
+              }).builder
+                .where('transaction_id', transactionId)
                 .update({ status: 'reversed' });
 
               if (CREDIT_TYPES.includes(existing.type)) {
-                await trx('clients')
-                  .where({ client_id: existing.client_id, tenant: context.tenant })
+                await createTenantScopedQuery(trx, {
+                  table: 'clients',
+                  tenant: context.tenant,
+                }).builder
+                  .where('client_id', existing.client_id)
                   .update({ credit_balance: balanceAfter, updated_at: new Date().toISOString() });
               }
               result = reversal;
