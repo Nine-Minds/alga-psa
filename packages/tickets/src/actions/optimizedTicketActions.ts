@@ -95,6 +95,14 @@ function getEmailEventChannel(): string {
 const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
 }
@@ -120,18 +128,18 @@ async function resolveAuthorizationSubjectForUser(
   tenant: string,
   user: IUserWithRoles
 ): Promise<AuthorizationSubject> {
-  const roleRows = await trx('user_roles')
-    .where({ tenant, user_id: user.user_id })
+  const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+    .where({ user_id: user.user_id })
     .select<{ role_id: string }[]>('role_id')
     .catch(() => []);
 
-  const teamRows = await trx('team_members')
-    .where({ tenant, user_id: user.user_id })
+  const teamRows = await tenantScopedTable(trx, 'team_members', tenant)
+    .where({ user_id: user.user_id })
     .select<{ team_id: string }[]>('team_id')
     .catch(() => []);
 
-  const managedRows = await trx('users')
-    .where({ tenant, reports_to: user.user_id })
+  const managedRows = await tenantScopedTable(trx, 'users', tenant)
+    .where({ reports_to: user.user_id })
     .select<{ user_id: string }[]>('user_id')
     .catch(() => []);
 
@@ -307,9 +315,9 @@ async function updateTicketResponseStateFromComment(
   isInternal: boolean,
   userId: string | null
 ): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  const ticket = await trx('tickets')
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('response_state')
-    .where({ ticket_id: ticketId, tenant })
+    .where({ ticket_id: ticketId })
     .first();
 
   const previousState = (ticket?.response_state || null) as TicketResponseState;
@@ -326,8 +334,8 @@ async function updateTicketResponseStateFromComment(
   }
 
   if (newState !== previousState) {
-    await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .update({ response_state: newState });
 
     registerAfterCommit(trx, () =>
