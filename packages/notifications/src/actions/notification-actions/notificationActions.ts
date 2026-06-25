@@ -2,7 +2,7 @@
 
 import { getEmailNotificationService } from "../../notifications/email";
 import { revalidatePath } from "next/cache";
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import {
@@ -14,6 +14,13 @@ import {
   UserNotificationPreference,
   isLockedCategory
 } from "../../types/notification";
+
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return createTenantScopedQuery(conn, {
+    table,
+    tenant,
+  }).builder;
+}
 
 export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
   const notificationService = getEmailNotificationService();
@@ -46,8 +53,7 @@ export async function getTemplatesAction(tenant: string): Promise<{
       .join("notification_categories as c", "s.category_id", "c.id")
       .orderBy(["c.name", "t.name"]);
       
-    const tenantTemplates = await trx("tenant_email_templates")
-      .where({ tenant })
+    const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant)
       .orderBy("name");
       
     return { systemTemplates, tenantTemplates };
@@ -116,8 +122,8 @@ export async function deactivateTenantTemplateAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
   
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx("tenant_email_templates")
-      .where({ tenant, name })
+    await tenantScopedTable(trx, "tenant_email_templates", tenant)
+      .where({ name })
       .del();
   });
     
@@ -237,8 +243,8 @@ export const updateCategoryAction = withAuth(async (
     }
 
     // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await trx('tenant_notification_category_settings')
-      .where({ tenant, category_id: id })
+    const existingSettings = await tenantScopedTable(trx, 'tenant_notification_category_settings', tenant)
+      .where({ category_id: id })
       .first();
 
     // Build update object with only defined values, defaulting to existing or true
@@ -315,8 +321,8 @@ export const updateSubtypeAction = withAuth(async (
     }
 
     // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await trx('tenant_notification_subtype_settings')
-      .where({ tenant, subtype_id: id })
+    const existingSettings = await tenantScopedTable(trx, 'tenant_notification_subtype_settings', tenant)
+      .where({ subtype_id: id })
       .first();
 
     // Build update object with only defined values, defaulting to existing or true
@@ -387,8 +393,8 @@ export const sendTestEmailAction = withAuth(async (
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // 1. Get the user's email from the database
-    const userRecord = await trx('users')
-      .where({ user_id: user.user_id, tenant })
+    const userRecord = await tenantScopedTable(trx, 'users', tenant)
+      .where({ user_id: user.user_id })
       .select('email')
       .first();
 
@@ -404,12 +410,9 @@ export const sendTestEmailAction = withAuth(async (
     }
 
     // 3. Load the template
-    const table = templateType === 'system' ? 'system_email_templates' : 'tenant_email_templates';
-    const whereClause = templateType === 'system'
-      ? { id: templateId }
-      : { id: templateId, tenant };
-
-    const template = await trx(table).where(whereClause).first();
+    const template = templateType === 'system'
+      ? await trx('system_email_templates').where({ id: templateId }).first()
+      : await tenantScopedTable(trx, 'tenant_email_templates', tenant).where({ id: templateId }).first();
     if (!template) {
       return { success: false, error: 'Template not found.' };
     }
