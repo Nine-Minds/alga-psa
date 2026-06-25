@@ -275,7 +275,7 @@ export async function validateSessionAndTenant(): Promise<InvoiceContext> {
 }
 
 export async function getClientDetails(knex: Knex, tenant: string, clientId: string): Promise<IClientWithLocation> {
-  const client = await knex('clients as c')
+  const client = await tenantScopedTable(knex, tenant, 'clients as c')
     .leftJoin('client_locations as cl', function() {
       this.on('c.client_id', '=', 'cl.client_id')
           .andOn('c.tenant', '=', 'cl.tenant')
@@ -286,8 +286,7 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
       'cl.address_line1 as location_address'
     )
     .where({
-      'c.client_id': clientId,
-      'c.tenant': tenant
+      'c.client_id': clientId
     })
     .first();
   if (!client) {
@@ -302,8 +301,7 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
  * Returns null if no email is found.
  */
 export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
-  const location = await knex('client_locations')
-    .where('tenant', tenant)
+  const location = await tenantScopedTable(knex, tenant, 'client_locations')
     .where('client_id', clientId)
     .where(function() {
       this.where('is_billing_address', true)
@@ -380,8 +378,8 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   existingInvoiceItems?: ManualInvoiceItem[],
 ): Promise<ManualInvoiceItem[]> {
   const invoiceItems: ManualInvoiceItem[] = existingInvoiceItems ??
-    await tx('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where('invoice_id', invoiceId)
       .select('*');
 
   const percentageDiscountItems = invoiceItems.filter(
@@ -417,8 +415,8 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       Number(discountItem.net_amount || 0) !== recalculatedNetAmount ||
       Number(discountItem.total_price || 0) !== recalculatedNetAmount
     ) {
-      await tx('invoice_charges')
-        .where({ item_id: discountItem.item_id, tenant })
+      await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', discountItem.item_id)
         .update({
           net_amount: recalculatedNetAmount,
           total_price: recalculatedNetAmount,
