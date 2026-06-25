@@ -491,16 +491,18 @@ export async function fetchProjectActivities(
         this.where("project_tasks.assigned_to", userId);
         
         // Or tasks where the user is an additional resource
-        this.orWhereExists(function() {
-          this.select(db.raw(1))
-            .from("task_resources")
+        this.orWhereExists(
+          createTenantScopedQuery(trx, {
+            table: "task_resources",
+            tenant,
+          }).builder
+            .select(db.raw(1))
             .whereRaw("task_resources.task_id = project_tasks.task_id")
-            .andWhere("task_resources.tenant", tenant)
             .andWhere(function() {
               this.where("task_resources.assigned_to", userId)
                 .orWhere("task_resources.additional_user_id", userId);
-            });
-        });
+            })
+        );
       })
       // Apply filters
       .modify(function(queryBuilder) {
