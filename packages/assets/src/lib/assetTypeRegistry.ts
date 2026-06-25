@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type {
   AssetTypeField,
   AssetTypeFieldKind,
@@ -196,9 +197,12 @@ function mapRow(row: any): AssetTypeRegistryEntry {
   };
 }
 
+function tenantScopedTable(knex: Knex, tenant: string, table: string): Knex.QueryBuilder<any, any> {
+  return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
+
 export async function listAssetTypes(knex: Knex, tenant: string): Promise<AssetTypeRegistryEntry[]> {
-  const rows = await knex('asset_type_registry')
-    .where({ tenant })
+  const rows = await tenantScopedTable(knex, tenant, 'asset_type_registry')
     .orderBy('is_builtin', 'desc')
     .orderBy('display_order', 'asc')
     .orderBy('name', 'asc');
@@ -210,7 +214,7 @@ export async function getAssetTypeBySlug(
   tenant: string,
   slug: string
 ): Promise<AssetTypeRegistryEntry | null> {
-  const row = await knex('asset_type_registry').where({ tenant, slug }).first();
+  const row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
   return row ? mapRow(row) : null;
 }
 
@@ -238,13 +242,13 @@ export async function createAssetType(
     return fail({ code: 'reserved_slug', slug });
   }
 
-  const existing = await knex('asset_type_registry').where({ tenant, slug }).first();
+  const existing = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
   if (existing) {
     return fail({ code: 'slug_conflict', slug });
   }
 
   try {
-    await knex('asset_type_registry').insert({
+    await tenantScopedTable(knex, tenant, 'asset_type_registry').insert({
       tenant,
       slug,
       name,
@@ -261,7 +265,7 @@ export async function createAssetType(
     throw error;
   }
 
-  const created = await knex('asset_type_registry').where({ tenant, slug }).first();
+  const created = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
   return ok(mapRow(created));
 }
 
@@ -271,7 +275,7 @@ export async function updateAssetType(
   slug: string,
   input: UpdateAssetTypeInput
 ): Promise<AssetTypeRegistryResult<AssetTypeRegistryEntry>> {
-  const row = await knex('asset_type_registry').where({ tenant, slug }).first();
+  const row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
   if (!row) {
     return fail({ code: 'not_found', slug });
   }
@@ -313,10 +317,10 @@ export async function updateAssetType(
 
   if (Object.keys(patch).length > 0) {
     patch.updated_at = knex.fn.now();
-    await knex('asset_type_registry').where({ tenant, slug }).update(patch);
+    await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).update(patch);
   }
 
-  const updated = await knex('asset_type_registry').where({ tenant, slug }).first();
+  const updated = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
   return ok(mapRow(updated));
 }
 
@@ -325,7 +329,7 @@ export async function deleteAssetType(
   tenant: string,
   slug: string
 ): Promise<AssetTypeRegistryResult<{ slug: string }>> {
-  const row = await knex('asset_type_registry').where({ tenant, slug }).first();
+  const row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
   if (!row) {
     return fail({ code: 'not_found', slug });
   }
@@ -334,8 +338,8 @@ export async function deleteAssetType(
     return fail({ code: 'builtin_undeletable', slug });
   }
 
-  const countRow = await knex('assets')
-    .where({ tenant, asset_type: slug })
+  const countRow = await tenantScopedTable(knex, tenant, 'assets')
+    .where({ asset_type: slug })
     .count<{ count: string }>('asset_id as count')
     .first();
   const assetCount = Number(countRow?.count ?? 0);
@@ -343,6 +347,6 @@ export async function deleteAssetType(
     return fail({ code: 'in_use', slug, asset_count: assetCount });
   }
 
-  await knex('asset_type_registry').where({ tenant, slug }).delete();
+  await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).delete();
   return ok({ slug });
 }

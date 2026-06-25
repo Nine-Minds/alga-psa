@@ -867,7 +867,7 @@ export const createAsset = withAuth(async (
             };
 
             // Create base asset
-            const [asset] = await trx('assets')
+            const [asset] = await tenantScopedTable(trx, 'assets', tenant)
                 .insert(baseAssetData)
                 .returning('*');
 
@@ -878,7 +878,7 @@ export const createAsset = withAuth(async (
             }
 
             // Create history record
-            await trx('asset_history').insert({
+            await tenantScopedTable(trx, 'asset_history', tenant).insert({
                 tenant,
                 asset_id: asset.asset_id,
                 changed_by: user.user_id,
@@ -1106,7 +1106,7 @@ export const updateAsset = withAuth(async (
             }
 
             // Create history record
-            await trx('asset_history').insert({
+            await tenantScopedTable(trx, 'asset_history', tenant).insert({
                 tenant,
                 asset_id,
                 changed_by: user.user_id,
@@ -1435,15 +1435,14 @@ export const bulkDeleteAssets = withAuth(async (
 
 async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: string): Promise<Asset> {
     // Get base asset data with client info
-    const asset = await tenantScopedTable(knex, 'assets', tenant)
+    const db = tenantDb(knex, tenant);
+    const assetQuery = tenantScopedTable(knex, 'assets', tenant)
         .select(
             'assets.*',
             'clients.client_name'
-        )
-        .leftJoin('clients', function(this: Knex.JoinClause) {
-            this.on('clients.client_id', '=', 'assets.client_id')
-                .andOn('clients.tenant', '=', 'assets.tenant');
-        })
+        );
+    db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
+    const asset = await assetQuery
         .where({ 'assets.asset_id': asset_id })
         .first();
 
@@ -1455,20 +1454,15 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);
 
     // Get relationships (include related asset name)
-    const rawRelationships = await tenantScopedTable(knex, 'asset_relationships as ar', tenant)
+    const relationshipsQuery = tenantScopedTable(knex, 'asset_relationships as ar', tenant)
         .select(
             'ar.*',
             'parent.name as parent_name',
             'child.name as child_name'
-        )
-        .leftJoin('assets as parent', function(this: Knex.JoinClause) {
-            this.on('ar.parent_asset_id', '=', 'parent.asset_id')
-                .andOn('ar.tenant', '=', 'parent.tenant');
-        })
-        .leftJoin('assets as child', function(this: Knex.JoinClause) {
-            this.on('ar.child_asset_id', '=', 'child.asset_id')
-                .andOn('ar.tenant', '=', 'child.tenant');
-        })
+        );
+    db.tenantJoin(relationshipsQuery, 'assets as parent', 'ar.parent_asset_id', 'parent.asset_id', { type: 'left' });
+    db.tenantJoin(relationshipsQuery, 'assets as child', 'ar.child_asset_id', 'child.asset_id', { type: 'left' });
+    const rawRelationships = await relationshipsQuery
         .andWhere(function(this: Knex.QueryBuilder) {
             this.where('ar.parent_asset_id', asset_id)
                 .orWhere('ar.child_asset_id', asset_id);
@@ -1518,20 +1512,16 @@ export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id:
     return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetRelationship[]> => {
         await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
-        const rawRelationships = await tenantScopedTable(trx, 'asset_relationships as ar', tenant)
+        const db = tenantDb(trx, tenant);
+        const relationshipsQuery = tenantScopedTable(trx, 'asset_relationships as ar', tenant)
             .select(
                 'ar.*',
                 'parent.name as parent_name',
                 'child.name as child_name'
-            )
-            .leftJoin('assets as parent', function(this: Knex.JoinClause) {
-                this.on('ar.parent_asset_id', '=', 'parent.asset_id')
-                    .andOn('ar.tenant', '=', 'parent.tenant');
-            })
-            .leftJoin('assets as child', function(this: Knex.JoinClause) {
-                this.on('ar.child_asset_id', '=', 'child.asset_id')
-                    .andOn('ar.tenant', '=', 'child.tenant');
-            })
+            );
+        db.tenantJoin(relationshipsQuery, 'assets as parent', 'ar.parent_asset_id', 'parent.asset_id', { type: 'left' });
+        db.tenantJoin(relationshipsQuery, 'assets as child', 'ar.child_asset_id', 'child.asset_id', { type: 'left' });
+        const rawRelationships = await relationshipsQuery
             .andWhere(function(this: Knex.QueryBuilder) {
                 this.where('ar.parent_asset_id', asset_id)
                     .orWhere('ar.child_asset_id', asset_id);
@@ -1576,7 +1566,7 @@ export const createAssetRelationship = withAuth(async (user, { tenant }, data: C
         await assertAssetReadAllowedById(trx, tenant, context, validated.parent_asset_id);
         await assertAssetReadAllowedById(trx, tenant, context, validated.child_asset_id);
 
-        await trx('asset_relationships')
+        await tenantScopedTable(trx, 'asset_relationships', tenant)
             .insert({
                 tenant,
                 parent_asset_id: validated.parent_asset_id,
@@ -1588,22 +1578,17 @@ export const createAssetRelationship = withAuth(async (user, { tenant }, data: C
             .returning('*');
 
         // Hydrate name for response
-        return trx('asset_relationships as ar')
+        const db = tenantDb(trx, tenant);
+        const relationshipQuery = tenantScopedTable(trx, 'asset_relationships as ar', tenant)
             .select(
                 'ar.*',
                 'parent.name as parent_name',
                 'child.name as child_name'
-            )
-            .leftJoin('assets as parent', function(this: Knex.JoinClause) {
-                this.on('ar.parent_asset_id', '=', 'parent.asset_id')
-                    .andOn('ar.tenant', '=', 'parent.tenant');
-            })
-            .leftJoin('assets as child', function(this: Knex.JoinClause) {
-                this.on('ar.child_asset_id', '=', 'child.asset_id')
-                    .andOn('ar.tenant', '=', 'child.tenant');
-            })
+            );
+        db.tenantJoin(relationshipQuery, 'assets as parent', 'ar.parent_asset_id', 'parent.asset_id', { type: 'left' });
+        db.tenantJoin(relationshipQuery, 'assets as child', 'ar.child_asset_id', 'child.asset_id', { type: 'left' });
+        return relationshipQuery
             .where({
-                'ar.tenant': tenant,
                 'ar.parent_asset_id': validated.parent_asset_id,
                 'ar.child_asset_id': validated.child_asset_id
             })
@@ -1649,9 +1634,8 @@ export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_
         await assertAssetReadAllowedById(trx, tenant, context, parent_asset_id);
         await assertAssetReadAllowedById(trx, tenant, context, child_asset_id);
 
-        await trx('asset_relationships')
+        await tenantScopedTable(trx, 'asset_relationships', tenant)
             .where({
-                tenant,
                 parent_asset_id,
                 child_asset_id
             })
@@ -1748,12 +1732,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             };
 
             const buildAssetListQuery = () => {
-                const query = tenantScopedTable(trx, 'assets', tenant)
-                    .leftJoin('clients', function(this: Knex.JoinClause) {
-                        this.on('clients.client_id', '=', 'assets.client_id')
-                            .andOn('clients.tenant', '=', 'assets.tenant')
-                            .andOn('clients.tenant', '=', trx.raw('?', [tenant]));
-                    });
+                const query = tenantScopedTable(trx, 'assets', tenant);
+                tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
 
                 applyFilters(query);
                 return query;
@@ -1848,7 +1828,7 @@ export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data:
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
 
             // Insert the schedule
-            const [createdSchedule] = await trx('asset_maintenance_schedules')
+            const [createdSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
                 .insert({
                     tenant,
                     asset_id: validatedData.asset_id,
@@ -1864,7 +1844,7 @@ export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data:
                 .returning('*');
 
             // Create initial notification
-            await trx('asset_maintenance_notifications')
+            await tenantScopedTable(trx, 'asset_maintenance_notifications', tenant)
                 .insert({
                     tenant,
                     schedule_id: createdSchedule.schedule_id,
@@ -2063,7 +2043,7 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, schedule.asset_id);
 
             // Record the maintenance history
-            const [createdHistory] = await trx('asset_maintenance_history')
+            const [createdHistory] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant)
                 .insert({
                     tenant,
                     ...validatedData,
@@ -2092,7 +2072,7 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 .returning('*');
 
             // Create next notification
-            await trx('asset_maintenance_notifications')
+            await tenantScopedTable(trx, 'asset_maintenance_notifications', tenant)
                 .insert({
                     tenant,
                     schedule_id: updatedSchedule.schedule_id,
@@ -2343,11 +2323,9 @@ async function fetchAssetHistory(
     tenant: string,
     asset_id: string
 ): Promise<AssetHistory[]> {
-    const history = await tenantScopedTable(db, 'asset_history as ah', tenant)
-        .leftJoin('users as u', function() {
-            this.on('ah.changed_by', '=', 'u.user_id')
-                .andOn('ah.tenant', '=', 'u.tenant');
-        })
+    const historyQuery = tenantScopedTable(db, 'asset_history as ah', tenant);
+    tenantDb(db, tenant).tenantJoin(historyQuery, 'users as u', 'ah.changed_by', 'u.user_id', { type: 'left' });
+    const history = await historyQuery
         .where({ 'ah.asset_id': asset_id })
         .select(
             'ah.*',
@@ -2375,27 +2353,14 @@ async function fetchAssetLinkedTickets(
     asset_id: string,
     authorizationContext?: AssetReadAuthorizationContext
 ): Promise<AssetTicketSummary[]> {
-    const rows = await tenantScopedTable(db, 'asset_associations as aa', tenant)
-        .leftJoin('tickets as t', function(this: Knex.JoinClause) {
-            this.on('aa.entity_id', '=', 't.ticket_id')
-                .andOn('aa.tenant', '=', 't.tenant');
-        })
-        .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-            this.on('t.status_id', '=', 's.status_id')
-                .andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('priorities as p', function(this: Knex.JoinClause) {
-            this.on('t.priority_id', '=', 'p.priority_id')
-                .andOn('t.tenant', '=', 'p.tenant');
-        })
-        .leftJoin('users as u', function(this: Knex.JoinClause) {
-            this.on('t.assigned_to', '=', 'u.user_id')
-                .andOn('t.tenant', '=', 'u.tenant');
-        })
-        .leftJoin('clients as c', function(this: Knex.JoinClause) {
-            this.on('t.client_id', '=', 'c.client_id')
-                .andOn('t.tenant', '=', 'c.tenant');
-        })
+    const tenantFacade = tenantDb(db, tenant);
+    const ticketQuery = tenantScopedTable(db, 'asset_associations as aa', tenant);
+    tenantFacade.tenantJoin(ticketQuery, 'tickets as t', 'aa.entity_id', 't.ticket_id', { type: 'left' });
+    tenantFacade.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+    tenantFacade.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+    tenantFacade.tenantJoin(ticketQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+    tenantFacade.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    const rows = await ticketQuery
         .where({
             'aa.asset_id': asset_id,
             'aa.entity_type': 'ticket'
@@ -2483,15 +2448,11 @@ async function fetchAssetDocuments(
     limit = 15,
     authorizationContext?: AssetReadAuthorizationContext
 ): Promise<IDocument[]> {
-    const records = await tenantScopedTable(db, 'documents', tenant)
-        .join('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', db.raw('?', [tenant]));
-        })
-        .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', db.raw('?', [tenant]));
-        })
+    const documentQuery = tenantScopedTable(db, 'documents', tenant);
+    const tenantFacade = tenantDb(db, tenant);
+    tenantFacade.tenantJoin(documentQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+    tenantFacade.tenantJoin(documentQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+    const records = await documentQuery
         .where('document_associations.entity_id', asset_id)
         .andWhere('document_associations.entity_type', 'asset')
         .orderBy('documents.updated_at', 'desc')
@@ -2591,7 +2552,7 @@ async function getClientMaintenanceSummaryForTenant(
         }) as ClientMaintenanceSummary;
     }
 
-    const assetStats = await tenantScopedTable(db, 'assets', tenant)
+    const assetStatsQuery = tenantScopedTable(db, 'assets', tenant)
         .where({ client_id })
         .whereIn('assets.asset_id', clientAssetIds)
         .select(
@@ -2602,11 +2563,15 @@ async function getClientMaintenanceSummaryForTenant(
                     THEN assets.asset_id
                 END) as assets_with_maintenance
             `)
-        )
-        .leftJoin('asset_maintenance_schedules', function(this: Knex.JoinClause) {
-            this.on('assets.asset_id', '=', 'asset_maintenance_schedules.asset_id')
-                .andOn('asset_maintenance_schedules.tenant', '=', db.raw('?', [tenant]));
-        })
+        );
+    tenantDb(db, tenant).tenantJoin(
+        assetStatsQuery,
+        'asset_maintenance_schedules',
+        'assets.asset_id',
+        'asset_maintenance_schedules.asset_id',
+        { type: 'left' }
+    );
+    const assetStats = await assetStatsQuery
         .first() as unknown as { total_assets: string; assets_with_maintenance: string } | undefined;
 
     const maintenanceStats = await tenantScopedTable(db, 'asset_maintenance_schedules', tenant)
@@ -2789,7 +2754,7 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
 
             // Create the association
-            const [createdAssociation] = await trx('asset_associations')
+            const [createdAssociation] = await tenantScopedTable(trx, 'asset_associations', tenant)
                 .insert({
                     tenant,
                     ...validatedData,
@@ -2925,17 +2890,13 @@ export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id
             const { health_status, health_reason } = calculateHealthStatus(asset);
 
             // Count open tickets associated with this asset
-            const ticketCountResult = await tenantScopedTable(trx, 'asset_associations', tenant)
+            const ticketCountQuery = tenantScopedTable(trx, 'asset_associations', tenant)
                 .where('asset_associations.asset_id', asset_id)
-                .where('asset_associations.entity_type', 'ticket')
-                .join('tickets', function() {
-                    this.on('tickets.tenant', '=', 'asset_associations.tenant')
-                        .andOn('tickets.ticket_id', '=', 'asset_associations.entity_id');
-                })
-                .join('statuses', function() {
-                    this.on('statuses.tenant', '=', 'tickets.tenant')
-                        .andOn('statuses.status_id', '=', 'tickets.status_id');
-                })
+                .where('asset_associations.entity_type', 'ticket');
+            const db = tenantDb(trx, tenant);
+            db.tenantJoin(ticketCountQuery, 'tickets', 'tickets.ticket_id', 'asset_associations.entity_id');
+            db.tenantJoin(ticketCountQuery, 'statuses', 'statuses.status_id', 'tickets.status_id');
+            const ticketCountResult = await ticketCountQuery
                 .where('statuses.is_closed', false)
                 .count('* as count')
                 .first();

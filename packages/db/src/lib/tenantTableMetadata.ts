@@ -11,6 +11,7 @@ export interface ParsedTableExpression {
 
 export const tenantTableMetadata: Record<string, TenantTableScope> = {
   assets: { scope: 'tenant' },
+  asset_type_registry: { scope: 'tenant' },
   apple_iap_subscriptions: { scope: 'tenant' },
   appointment_requests: { scope: 'tenant' },
   app_search_index: { scope: 'tenant' },
@@ -247,6 +248,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   user_notification_preferences: { scope: 'tenant' },
   user_roles: { scope: 'tenant' },
   users: { scope: 'tenant' },
+  software_catalog: { scope: 'tenant' },
+  v_asset_software_details: { scope: 'tenant' },
   workstation_assets: { scope: 'tenant' },
   workflow_runs: { scope: 'tenant' },
   workflow_tasks: { scope: 'tenant' },

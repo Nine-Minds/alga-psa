@@ -25,7 +25,10 @@ let knexMock: any;
 let idCounter: number;
 
 function matches(row: Row, where: Record<string, any>): boolean {
-  return Object.entries(where).every(([k, v]) => row[k] === v);
+  return Object.entries(where).every(([k, v]) => {
+    const key = k.includes('.') ? k.split('.').pop()! : k;
+    return row[key] === v;
+  });
 }
 
 function createFakeKnex(db: DbState) {
@@ -40,8 +43,12 @@ function createFakeKnex(db: DbState) {
       return db[this.table];
     }
 
-    where(where: Record<string, any>) {
-      this.whereClauses.push(where);
+    where(where: Record<string, any> | string, value?: any) {
+      if (typeof where === 'string') {
+        this.whereClauses.push({ [where]: value });
+      } else {
+        this.whereClauses.push(where);
+      }
       return this;
     }
 
