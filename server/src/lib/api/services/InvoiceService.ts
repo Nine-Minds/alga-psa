@@ -2273,8 +2273,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'read');
     const { knex } = await this.getKnex();
     return withTransaction(knex, async (trx) => {
-      const exists = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant: context.tenant })
+      const exists = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
 
@@ -2287,7 +2290,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('clients as c')
+    return createTenantScopedQuery(trx, {
+      table: 'clients as c',
+      alias: 'c',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('client_locations as cl', function() {
         this.on('c.client_id', '=', 'cl.client_id')
           .andOn('c.tenant', '=', 'cl.tenant')
@@ -2296,7 +2303,7 @@ export class InvoiceService extends BaseService<IInvoice> {
               .orOn('cl.is_default', '=', trx.raw('true'));
           });
       })
-      .where({ 'c.client_id': clientId, 'c.tenant': context.tenant })
+      .where({ 'c.client_id': clientId })
       .select(
         'c.client_id',
         'c.client_name',
@@ -2309,14 +2316,20 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('client_billing_cycles')
-      .where({ billing_cycle_id: cycleId, tenant: context.tenant })
+    return createTenantScopedQuery(trx, {
+      table: 'client_billing_cycles',
+      tenant: context.tenant,
+    }).builder
+      .where({ billing_cycle_id: cycleId })
       .first();
   }
 
   private async getTaxDetails(taxRateId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('tax_rates')
-      .where({ tax_rate_id: taxRateId, tenant: context.tenant })
+    return createTenantScopedQuery(trx, {
+      table: 'tax_rates',
+      tenant: context.tenant,
+    }).builder
+      .where({ tax_rate_id: taxRateId })
       .first();
   }
 
@@ -2325,8 +2338,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const exists = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant: context.tenant })
+      const exists = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
 
@@ -2353,8 +2369,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       return [];
     }
 
-    return trx('invoice_payments')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
+    return createTenantScopedQuery(trx, {
+      table: 'invoice_payments',
+      tenant: context.tenant,
+    }).builder
+      .where({ invoice_id: invoiceId })
       .orderBy('payment_date', 'desc');
   }
 
@@ -2364,8 +2383,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       return [];
     }
 
-    return trx('invoice_credits')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
+    return createTenantScopedQuery(trx, {
+      table: 'invoice_credits',
+      tenant: context.tenant,
+    }).builder
+      .where({ invoice_id: invoiceId })
       .orderBy('applied_date', 'desc');
   }
 
