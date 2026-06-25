@@ -1070,7 +1070,7 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
 
     // Use direct query to join with users table
     const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
+      return await tenantScopedTable(trx, 'documents', tenant)
         .select(
           'documents.*',
           'users.first_name',
@@ -1090,10 +1090,7 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
               .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
         })
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .where({
-          'documents.document_id': documentId,
-          'documents.tenant': tenant
-        })
+        .where({ 'documents.document_id': documentId })
         .first();
     });
 
@@ -1150,7 +1147,7 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
+      const documents = await tenantScopedTable(trx, 'documents', tenant)
         .join('document_associations', function() {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
@@ -1166,9 +1163,7 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': ticketId,
-          'document_associations.entity_type': 'ticket',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'ticket'
         })
         .select(
           'documents.*',
@@ -1200,7 +1195,7 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
+      const documents = await tenantScopedTable(trx, 'documents', tenant)
         .join('document_associations', function() {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
@@ -1216,9 +1211,7 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': clientId,
-          'document_associations.entity_type': 'client',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'client'
         })
         .select(
           'documents.*',
@@ -1310,7 +1303,7 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
+      const documents = await tenantScopedTable(trx, 'documents', tenant)
         .join('document_associations', function() {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
@@ -1326,9 +1319,7 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': contactNameId,
-          'document_associations.entity_type': 'contact',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'contact'
         })
         .select(
           'documents.*',
@@ -1365,16 +1356,14 @@ export const getDocumentsByContractId = withAuth(async (user, { tenant }, contra
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
+      const documents = await tenantScopedTable(trx, 'documents', tenant)
         .join('document_associations', function() {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
         })
         .where({
           'document_associations.entity_id': contractId,
-          'document_associations.entity_type': 'contract',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'contract'
         })
         .select('documents.*', 'document_associations.association_id');
       return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
@@ -1464,10 +1453,9 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existing = await trx('document_associations')
+      const existing = await tenantScopedTable(trx, 'document_associations', tenant)
         .where({
           association_id: associationId,
-          tenant,
           entity_type: 'contract'
         })
         .first();
@@ -1479,10 +1467,9 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
         return permissionError('Permission denied: Cannot remove document associations');
       }
 
-      await trx('document_associations')
+      await tenantScopedTable(trx, 'document_associations', tenant)
         .where({
           association_id: associationId,
-          tenant,
           entity_type: 'contract'
         })
         .delete();
