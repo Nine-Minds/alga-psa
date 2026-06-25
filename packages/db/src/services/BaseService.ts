@@ -5,6 +5,7 @@
 
 import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
+import { createTenantScopedQuery } from '../lib/tenantScopedQuery';
 
 // Import and re-export for services
 export interface ListOptions {
@@ -102,8 +103,17 @@ export abstract class BaseService<T = any> {
   /**
    * Build base query with tenant filtering
    */
-  protected buildBaseQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
-    let query = knex(this.tableName).where(this.tenantColumn, context.tenant);
+  protected buildTenantScopedQuery(conn: Knex | Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    return createTenantScopedQuery(conn, {
+      table: this.tableName,
+      alias: this.tableName,
+      tenant: context.tenant,
+      tenantColumn: this.tenantColumn,
+    }).builder;
+  }
+
+  protected buildBaseQuery(conn: Knex | Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    let query = this.buildTenantScopedQuery(conn, context);
 
     if (this.softDelete) {
       query = query.whereNull('deleted_at');
@@ -269,9 +279,8 @@ export abstract class BaseService<T = any> {
     return withTransaction(knex, async (trx) => {
       const auditedData = this.addUpdateAuditFields(data, context);
 
-      const [result] = await trx(this.tableName)
+      const [result] = await this.buildTenantScopedQuery(trx, context)
         .where(this.primaryKey, id)
-        .where(this.tenantColumn, context.tenant)
         .update(auditedData)
         .returning('*');
 
@@ -296,14 +305,12 @@ export abstract class BaseService<T = any> {
           context
         );
 
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, id)
-          .where(this.tenantColumn, context.tenant)
           .update(auditedData);
       } else {
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, id)
-          .where(this.tenantColumn, context.tenant)
           .delete();
       }
     });
@@ -344,9 +351,8 @@ export abstract class BaseService<T = any> {
       for (const update of updates) {
         const auditedData = this.addUpdateAuditFields(update.data, context);
 
-        const [result] = await trx(this.tableName)
+        const [result] = await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, update.id)
-          .where(this.tenantColumn, context.tenant)
           .update(auditedData)
           .returning('*');
 
@@ -369,14 +375,12 @@ export abstract class BaseService<T = any> {
           context
         );
 
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .whereIn(this.primaryKey, ids)
-          .where(this.tenantColumn, context.tenant)
           .update(auditedData);
       } else {
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .whereIn(this.primaryKey, ids)
-          .where(this.tenantColumn, context.tenant)
           .delete();
       }
     });
