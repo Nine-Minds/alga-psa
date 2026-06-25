@@ -1,6 +1,6 @@
 "use server"
 
-import { withTransaction } from '@alga-psa/db';
+import { createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hasPermissionAsync } from '../../lib/authHelpers';
 import {
@@ -31,6 +31,13 @@ import {
   buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
 
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return createTenantScopedQuery(conn, {
+    table,
+    tenant,
+  }).builder;
+}
+
 /**
  * Get user's locale preference with fallback hierarchy:
  *
@@ -52,7 +59,11 @@ async function getUserLocale(
   tenant: string,
   userId: string
 ): Promise<string> {
-  const user = await trx('users as u')
+  const user = await createTenantScopedQuery(trx, {
+    table: 'users as u',
+    alias: 'u',
+    tenant,
+  }).builder
     .select('u.user_type', 'u.contact_id', 'c.properties')
     .leftJoin('contacts as con', function() {
       this.on('u.contact_id', 'con.contact_name_id')
@@ -63,13 +74,11 @@ async function getUserLocale(
           .andOn('con.tenant', 'c.tenant');
     })
     .where('u.user_id', userId)
-    .andWhere('u.tenant', tenant)
     .first();
 
   // 1. User's language preference (applies to both internal and client users)
-  const userPreference = await trx('user_preferences')
+  const userPreference = await tenantScopedTable(trx, 'user_preferences', tenant)
     .where({
-      tenant,
       user_id: userId,
       setting_name: 'locale'
     })
@@ -87,9 +96,8 @@ async function getUserLocale(
   }
 
   // 3. Tenant settings — portal-specific default then tenant-wide default
-  const tenantSettings = await trx('tenant_settings')
+  const tenantSettings = await tenantScopedTable(trx, 'tenant_settings', tenant)
     .select('settings')
-    .where({ tenant })
     .first();
 
   if (user?.user_type === 'internal') {
@@ -357,8 +365,8 @@ async function checkInternalNotificationEnabled(
   }
 
   // 2. Check tenant-specific subtype setting (replaces global check)
-  const subtypeSetting = await trx('tenant_internal_notification_subtype_settings')
-    .where({ tenant, subtype_id: subtypeId })
+  const subtypeSetting = await tenantScopedTable(trx, 'tenant_internal_notification_subtype_settings', tenant)
+    .where({ subtype_id: subtypeId })
     .first();
 
   const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
@@ -376,8 +384,8 @@ async function checkInternalNotificationEnabled(
   }
 
   // 4. Check tenant-specific category setting (replaces global check)
-  const categorySetting = await trx('tenant_internal_notification_category_settings')
-    .where({ tenant, category_id: subtype.internal_category_id })
+  const categorySetting = await tenantScopedTable(trx, 'tenant_internal_notification_category_settings', tenant)
+    .where({ category_id: subtype.internal_category_id })
     .first();
 
   const isCategoryEnabled = categorySetting?.is_enabled ?? true;
@@ -386,8 +394,8 @@ async function checkInternalNotificationEnabled(
   }
 
   // 5. Check user-specific preferences (EXISTING - unchanged)
-  const userSubtypePreference = await trx('user_internal_notification_preferences')
-    .where({ tenant, user_id: userId, subtype_id: subtypeId })
+  const userSubtypePreference = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
+    .where({ user_id: userId, subtype_id: subtypeId })
     .first();
 
   if (userSubtypePreference) {
@@ -395,8 +403,8 @@ async function checkInternalNotificationEnabled(
   }
 
   // 6. Check user category preference (EXISTING - unchanged)
-  const userCategoryPreference = await trx('user_internal_notification_preferences')
-    .where({ tenant, user_id: userId, category_id: subtype.internal_category_id })
+  const userCategoryPreference = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
+    .where({ user_id: userId, category_id: subtype.internal_category_id })
     .whereNull('subtype_id')
     .first();
 
@@ -430,9 +438,8 @@ export async function getNotificationsAction(
     const offset = request.offset || 0;
 
     // Build base query
-    let query = trx('internal_notifications')
+    let query = tenantScopedTable(trx, 'internal_notifications', request.tenant)
       .where({
-        tenant: request.tenant,
         user_id: request.user_id
       })
       .whereNull('deleted_at');
@@ -456,9 +463,8 @@ export async function getNotificationsAction(
       .offset(offset);
 
     // Get unread count
-    const [{ count: unreadCount }] = await trx('internal_notifications')
+    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', request.tenant)
       .where({
-        tenant: request.tenant,
         user_id: request.user_id,
         is_read: false
       })
@@ -485,10 +491,9 @@ export async function getNotificationByIdAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const notification = await trx('internal_notifications')
+    const notification = await tenantScopedTable(trx, 'internal_notifications', tenant)
       .where({
         internal_notification_id: internalNotificationId,
-        tenant,
         user_id: userId
       })
       .whereNull('deleted_at')
@@ -510,9 +515,8 @@ export async function getUnreadCountAction(
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get total unread count
-    const [{ count: unreadCount }] = await trx('internal_notifications')
+    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
       .where({
-        tenant,
         user_id: userId,
         is_read: false
       })
@@ -525,9 +529,8 @@ export async function getUnreadCountAction(
 
     // Get counts by category if requested
     if (byCategory) {
-      const categoryCounts = await trx('internal_notifications')
+      const categoryCounts = await tenantScopedTable(trx, 'internal_notifications', tenant)
         .where({
-          tenant,
           user_id: userId,
           is_read: false
         })
@@ -535,7 +538,7 @@ export async function getUnreadCountAction(
         .whereNotNull('category')
         .select('category')
         .count('* as count')
-        .groupBy('category');
+        .groupBy('category') as Array<{ category: string; count: string | number }>;
 
       response.by_category = categoryCounts.reduce<Record<string, number>>((acc, row) => {
         acc[row.category] = Number(row.count);
@@ -558,10 +561,9 @@ export async function markAsReadAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   const notification = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [notif] = await trx('internal_notifications')
+    const [notif] = await tenantScopedTable(trx, 'internal_notifications', tenant)
       .where({
         internal_notification_id: notificationId,
-        tenant,
         user_id: userId
       })
       .update({
@@ -615,9 +617,8 @@ export async function markAllAsReadAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const updatedCount = await trx('internal_notifications')
+    const updatedCount = await tenantScopedTable(trx, 'internal_notifications', tenant)
       .where({
-        tenant,
         user_id: userId,
         is_read: false
       })
@@ -650,10 +651,9 @@ export async function deleteNotificationAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx('internal_notifications')
+    await tenantScopedTable(trx, 'internal_notifications', tenant)
       .where({
         internal_notification_id: notificationId,
-        tenant,
         user_id: userId
       })
       .update({
@@ -778,9 +778,8 @@ export async function getUserInternalNotificationPreferencesAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('user_internal_notification_preferences')
+    return await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
       .where({
-        tenant,
         user_id: userId
       })
       .orderBy('preference_id');
@@ -797,9 +796,8 @@ export async function updateUserInternalNotificationPreferenceAction(
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if preference exists
-    const existing = await trx('user_internal_notification_preferences')
+    const existing = await tenantScopedTable(trx, 'user_internal_notification_preferences', request.tenant)
       .where({
-        tenant: request.tenant,
         user_id: request.user_id,
         category_id: request.category_id || null,
         subtype_id: request.subtype_id || null
@@ -808,7 +806,7 @@ export async function updateUserInternalNotificationPreferenceAction(
 
     if (existing) {
       // Update existing preference
-      const [updated] = await trx('user_internal_notification_preferences')
+      const [updated] = await tenantScopedTable(trx, 'user_internal_notification_preferences', request.tenant)
         .where({
           preference_id: existing.preference_id
         })
@@ -846,9 +844,8 @@ export async function isInternalNotificationEnabledAction(
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check for specific subtype preference
-    const subtypePreference = await trx('user_internal_notification_preferences')
+    const subtypePreference = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
       .where({
-        tenant,
         user_id: userId,
         subtype_id: subtypeId
       })
@@ -868,9 +865,8 @@ export async function isInternalNotificationEnabledAction(
     }
 
     // Check for category-level preference
-    const categoryPreference = await trx('user_internal_notification_preferences')
+    const categoryPreference = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
       .where({
-        tenant,
         user_id: userId,
         category_id: subtype.internal_category_id,
         subtype_id: null
@@ -915,8 +911,8 @@ export const updateInternalCategoryAction = withAuth(async (
     }
 
     // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await trx('tenant_internal_notification_category_settings')
-      .where({ tenant, category_id: categoryId })
+    const existingSettings = await tenantScopedTable(trx, 'tenant_internal_notification_category_settings', tenant)
+      .where({ category_id: categoryId })
       .first();
 
     // Build update object with only defined values, defaulting to existing or true
@@ -977,8 +973,8 @@ export const updateInternalSubtypeAction = withAuth(async (
     }
 
     // Get existing tenant settings (if any) to preserve values not being updated
-    const existingSettings = await trx('tenant_internal_notification_subtype_settings')
-      .where({ tenant, subtype_id: subtypeId })
+    const existingSettings = await tenantScopedTable(trx, 'tenant_internal_notification_subtype_settings', tenant)
+      .where({ subtype_id: subtypeId })
       .first();
 
     // Build update object with only defined values, defaulting to existing or true
