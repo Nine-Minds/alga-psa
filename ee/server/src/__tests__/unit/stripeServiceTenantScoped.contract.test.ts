@@ -75,4 +75,16 @@ describe('StripeService top billing paths tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId)");
     expectNoDirectTenantRoot(section);
   });
+
+  it('uses structural tenant scoping for tier upgrade and downgrade database roots', () => {
+    const section = sectionBetween('private async getActiveInternalUserCount', 'async getUpgradePreview');
+
+    expect(section).toContain("tenantScopedTable(knex, 'users', tenantId)");
+    expect(section).toContain("tenantScopedTable(knex, 'stripe_subscriptions', tenantId)");
+    expect(section).toContain("tenantScopedTable(knex, 'stripe_prices', tenantId)");
+    expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId)");
+    expect(section).toContain(".where('stripe_subscription_external_id', sub.id)");
+    expect(section).toContain(".where('stripe_subscription_id', existingSubscription.stripe_subscription_id)");
+    expectNoDirectTenantRoot(section);
+  });
 });
