@@ -547,12 +547,16 @@ export const reassignActivity = withAuth(async (
 
     // Update the assignee based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       switch (activityType) {
         case ActivityType.SCHEDULE:
           // For schedule entries, we need to update the assigned_user_ids array
-          const scheduleEntry = await trx("schedule_entries")
+          const scheduleEntry = await tenantScopedTable("schedule_entries")
             .where("entry_id", activityId)
-            .where("tenant", tenant)
             .first();
             
           if (!scheduleEntry) {
@@ -560,9 +564,8 @@ export const reassignActivity = withAuth(async (
           }
           
           // Replace the assigned users with the new assignee
-          await trx("schedule_entries")
+          await tenantScopedTable("schedule_entries")
             .where("entry_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_user_ids: [newAssigneeId],
               updated_at: new Date()
@@ -570,9 +573,8 @@ export const reassignActivity = withAuth(async (
           break;
           
         case ActivityType.PROJECT_TASK:
-          await trx("project_tasks")
+          await tenantScopedTable("project_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_to: newAssigneeId,
               updated_at: new Date()
@@ -580,9 +582,8 @@ export const reassignActivity = withAuth(async (
           break;
           
         case ActivityType.TICKET:
-          await trx("tickets")
+          await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_to: newAssigneeId,
               updated_at: new Date()
@@ -591,9 +592,8 @@ export const reassignActivity = withAuth(async (
           
         case ActivityType.WORKFLOW_TASK:
           // For workflow tasks, we need to update the assigned_users array
-          const workflowTask = await trx("workflow_tasks")
+          const workflowTask = await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .first();
             
           if (!workflowTask) {
@@ -601,9 +601,8 @@ export const reassignActivity = withAuth(async (
           }
           
           // Replace the assigned users with the new assignee
-          await trx("workflow_tasks")
+          await tenantScopedTable("workflow_tasks")
             .where("task_id", activityId)
-            .where("tenant", tenant)
             .update({ 
               assigned_users: [newAssigneeId],
               updated_at: new Date()
