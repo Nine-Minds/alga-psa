@@ -442,7 +442,10 @@ export async function fetchProjectActivities(
 
     // Query for project tasks assigned to the user
     const tasks = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("project_tasks")
+      return await createTenantScopedQuery(trx, {
+        table: "project_tasks",
+        tenant,
+      }).builder
       .select(
         "project_tasks.*",
         "project_phases.phase_name",
@@ -483,7 +486,6 @@ export async function fetchProjectActivities(
         this.on("project_status_mappings.status_id", "custom_statuses.status_id")
             .andOn("project_status_mappings.tenant", "custom_statuses.tenant");
       })
-      .where("project_tasks.tenant", tenant)
       .where(function() {
         // Tasks directly assigned to the user
         this.where("project_tasks.assigned_to", userId);
