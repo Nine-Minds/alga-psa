@@ -1508,12 +1508,14 @@ export class TeamService extends BaseService<ITeam> {
     const { knex } = await this.getKnex();
     const { page = 1, limit = 25 } = paginationOptions;
 
-    let query = knex('teams as t')
+    let query = createTenantScopedQuery(knex, {
+      table: 'teams as t',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('users as manager', function() {
         this.on('t.manager_id', '=', 'manager.user_id')
             .andOn('t.tenant', '=', 'manager.tenant');
-      })
-      .where('t.tenant', context.tenant);
+      });
 
     // Apply search filters
     if (searchOptions.query) {
@@ -1553,14 +1555,19 @@ export class TeamService extends BaseService<ITeam> {
     // Enhance with members
     const enhancedTeams = await Promise.all(
       teams.map(async (team: any) => {
-        const memberIds = await knex('team_members')
-          .where({ team_id: team.team_id, tenant: context.tenant })
+        const memberIds = await createTenantScopedQuery(knex, {
+          table: 'team_members',
+          tenant: context.tenant,
+        }).builder
+          .where('team_id', team.team_id)
           .pluck('user_id');
         // Get user details for members
       const members = memberIds.length > 0 
-        ? await knex('users')
+        ? await createTenantScopedQuery(knex, {
+            table: 'users',
+            tenant: context.tenant,
+          }).builder
             .whereIn('user_id', memberIds)
-            .where('tenant', context.tenant)
             .select('user_id', 'username', 'email', 'first_name', 'last_name')
         : [];
         
