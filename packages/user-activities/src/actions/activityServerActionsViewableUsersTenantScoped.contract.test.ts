@@ -17,7 +17,7 @@ describe('activity server viewable users tenant-scoped query contract', () => {
   it('uses structural tenant scoping for viewable-user list root', () => {
     const section = sectionFrom('export const getActivityViewableUsers');
 
-    expect(section).toContain("table: \"users\"");
+    expect(section).toContain(".table(\"users");
     expect(section).toContain('.where({ user_type: "internal", is_inactive: false })');
 
     expect(section).not.toMatch(/knex\("users"\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);

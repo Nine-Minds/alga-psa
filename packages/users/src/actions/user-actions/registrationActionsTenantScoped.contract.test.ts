@@ -17,9 +17,9 @@ describe('registration actions tenant-scoped query contract', () => {
   it('uses structural tenant scoping after contact tenant resolution', () => {
     const section = sectionFrom('async function registerContactUser');
 
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'users'");
-    expect(section).toContain("table: 'roles'");
+    expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain(".table('users");
+    expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');
     expect(section).toContain("const [user] = await trx('users')");
     expect(section).toContain("await trx('user_roles').insert({");

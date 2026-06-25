@@ -21,8 +21,8 @@ describe('user service core CRUD tenant-scoped query contract', () => {
 
     expect(section).toContain('this.buildTenantScopedQuery(knex, context)');
     expect(section).toContain('this.buildTenantScopedQuery(trx, context)');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'roles'");
+    expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain(".table('roles");
     expect(section).toContain("const [createdUser] = await trx('users').insert(userData).returning(USER_RESPONSE_FIELD_NAMES)");
     expect(section).toContain("await trx('user_roles').insert(userRoles)");
 

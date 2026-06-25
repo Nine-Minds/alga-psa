@@ -19,7 +19,7 @@ describe('activity status update tenant-scoped query contract', () => {
   it('uses structural tenant scoping for status update roots', () => {
     const section = sectionBetween('export const updateActivityStatus', 'export const getActivityStatusOptions');
 
-    expect(section).toContain('const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {');
+    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
     expect(section).toContain('tenantScopedTable("schedule_entries")');
     expect(section).toContain('tenantScopedTable("project_status_mappings")');
     expect(section).toContain('tenantScopedTable("project_tasks")');

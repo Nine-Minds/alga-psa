@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -107,10 +107,7 @@ export const saveClientInfo = withAuth(async (
           updateData.hashed_password = await hashPassword(data.newPassword);
         }
 
-        await createTenantScopedQuery(trx, {
-          table: 'users',
-          tenant,
-        }).builder
+        await tenantDb(trx, tenant).table('users')
           .where({ user_id: currentUser.user_id })
           .update(updateData);
 
@@ -167,10 +164,7 @@ export const addSingleTeamMember = withAuth(async (
     let error: string | null = null;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       try {
         // Check if user already exists
@@ -314,10 +308,7 @@ export const addTeamMembers = withAuth(async (
     const failed: Array<{ member: TeamMember; error: string }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       for (const member of membersToProcess) {
         try {
@@ -446,10 +437,7 @@ export const createClient = withAuth(async (
     // If we have an existing clientId, update instead of create
     if (clientId) {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-          table,
-          tenant,
-        }).builder;
+        const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
         // Update the client
         await tenantScopedTable('clients')
@@ -570,10 +558,7 @@ export const addClientContact = withAuth(async (
 
     // First, check if a contact with this email already exists for this client
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await createTenantScopedQuery(trx, {
-        table: 'contacts',
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table('contacts')
         .where({ 
           email: data.contactEmail.toLowerCase(),
           client_id: data.clientId,
@@ -589,10 +574,7 @@ export const addClientContact = withAuth(async (
 
       if (needsUpdate) {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-          await createTenantScopedQuery(trx, {
-            table: 'contacts',
-            tenant,
-          }).builder
+          await tenantDb(trx, tenant).table('contacts')
             .where({ 
               contact_name_id: existingContact.contact_name_id,
             })
@@ -657,10 +639,7 @@ export const setupBilling = withAuth(async (
     let serviceId: string | undefined;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       // Use the selected service type
       if (!data.serviceTypeId) {
@@ -758,10 +737,7 @@ export const configureTicketing = withAuth(async (
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       // Configure ticket numbering - check if any numbering field is explicitly set
       if (data.ticketPrefix !== undefined || data.ticketStartNumber !== undefined || data.ticketPaddingLength !== undefined) {
@@ -1035,10 +1011,7 @@ export const validateOnboardingDefaults = withAuth(async (
     // Use withTransaction to check for defaults
     const validationResult = await withTransaction(db, async (trx) => {
       // Check for default board
-      const defaultBoard = await createTenantScopedQuery(trx, {
-        table: 'boards',
-        tenant,
-      }).builder
+      const defaultBoard = await tenantDb(trx, tenant).table('boards')
         .where({ 
           is_default: true
         })
@@ -1049,10 +1022,7 @@ export const validateOnboardingDefaults = withAuth(async (
       }
       
       // Check for default status
-      const defaultStatus = await createTenantScopedQuery(trx, {
-        table: 'statuses',
-        tenant,
-      }).builder
+      const defaultStatus = await tenantDb(trx, tenant).table('statuses')
         .where({ 
           is_default: true,
           status_type: 'ticket',
@@ -1108,10 +1078,7 @@ export const getAvailableRoles = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const roles = await withTransaction(knex, async (trx: Knex.Transaction): Promise<Array<{ role_id: string; role_name: string }>> => {
-      return await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table('roles')
         .where({
           msp: true  // Only fetch MSP roles
         })
@@ -1150,10 +1117,7 @@ export const getOnboardingInitialData = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Get the tenant's client information
-    const client = await createTenantScopedQuery(knex, {
-      table: 'clients',
-      tenant,
-    }).builder
+    const client = await tenantDb(knex, tenant).table('clients')
       .where({ is_inactive: false })
       .orderBy('created_at', 'asc')
       .first();
@@ -1191,10 +1155,7 @@ export const getTenantTicketingData = withAuth(async (
 }> => {
   try {
     const { knex } = await createTenantKnex();
-    const tenantScopedTable = (table: string) => createTenantScopedQuery(knex, {
-      table,
-      tenant,
-    }).builder;
+    const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
 
     const boards = await tenantScopedTable('boards')
       .orderBy('display_order', 'asc')

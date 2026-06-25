@@ -19,8 +19,8 @@ describe('activity server mark done tenant-scoped query contract', () => {
   it('uses structural tenant scoping for ad-hoc assignee check and done updates', () => {
     const section = sectionBetween('async function assertCanModifyAdHoc', 'export interface AdHocActivityDetails');
 
-    expect(section).toContain("table: \"schedule_entry_assignees\"");
-    expect(section).toContain("table: \"schedule_entries\"");
+    expect(section).toContain(".table(\"schedule_entry_assignees");
+    expect(section).toContain(".table(\"schedule_entries");
 
     expect(section).not.toMatch(/trx\("schedule_entry_assignees"\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/trx\("schedule_entries"\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);

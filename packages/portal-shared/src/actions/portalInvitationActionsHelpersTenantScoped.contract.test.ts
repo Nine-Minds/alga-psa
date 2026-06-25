@@ -30,10 +30,10 @@ describe('portal invitation action helper tenant-scoped query contract', () => {
       'export const createClientPortalUser'
     );
 
-    expect(contactContext).toContain('createTenantScopedQuery(db, {');
-    expect(contactContext).toContain("table: 'contacts'");
-    expect(invitationTarget).toContain("table: 'portal_invitations as pi'");
-    expect(clientUserTarget).toContain("table: 'users as u'");
+    expect(contactContext).toContain('tenantDb(db, ');
+    expect(contactContext).toContain(".table('contacts");
+    expect(invitationTarget).toContain(".table('portal_invitations as pi");
+    expect(clientUserTarget).toContain(".table('users as u");
 
     expect(contactContext).not.toMatch(/db\('contacts'\)\s*[\r\n]+\s*\.select[\s\S]*?\.where\(\{\s*tenant,/);
     expect(invitationTarget).not.toContain("'pi.tenant': tenant");

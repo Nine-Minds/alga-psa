@@ -19,11 +19,11 @@ describe('activity status options tenant-scoped query contract', () => {
   it('uses structural tenant scoping for ticket and project-task status option roots', () => {
     const section = sectionBetween('export const getActivityStatusOptions', 'export const updateActivityPriority');
 
-    expect(section).toContain('const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {');
+    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
     expect(section).toContain('tenantScopedTable("tickets")');
     expect(section).toContain('tenantScopedTable("statuses")');
     expect(section).toContain('tenantScopedTable("project_tasks")');
-    expect(section).toContain('table: "project_status_mappings as psm"');
+    expect(section).toContain('.table("project_status_mappings as psm');
 
     expect(section).not.toMatch(/trx\("(tickets|statuses|project_tasks)"\)\s*[\r\n]+\s*\.(?:where|leftJoin)/);
     expect(section).not.toContain('.where("tenant", tenant)');

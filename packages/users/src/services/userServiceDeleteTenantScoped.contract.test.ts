@@ -20,11 +20,11 @@ describe('user service delete tenant-scoped query contract', () => {
     const section = sectionBetween('async delete', 'USER AUTHENTICATION & SECURITY');
 
     expect(section).toContain('this.buildTenantScopedQuery(trx, context)');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'user_preferences'");
-    expect(section).toContain("table: 'user_roles'");
-    expect(section).toContain("table: 'api_keys'");
-    expect(section).toContain('table: tableName');
+    expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain(".table('user_preferences");
+    expect(section).toContain(".table('user_roles");
+    expect(section).toContain(".table('api_keys");
+    expect(section).toContain('.table(tableName)');
 
     expect(section).not.toMatch(/trx\('users'\)\s*\./);
     expect(section).not.toMatch(/trx\('user_preferences'\)\s*\./);

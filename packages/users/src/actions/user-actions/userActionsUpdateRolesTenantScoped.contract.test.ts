@@ -19,8 +19,8 @@ describe('user actions update roles tenant-scoped query contract', () => {
   it('uses structural tenant scoping for user-role deletion', () => {
     const section = sectionBetween('export const updateUserRoles', 'export async function verifyContactEmail');
 
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'user_roles'");
+    expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain(".table('user_roles");
     expect(section).toContain("await trx('user_roles').insert(userRoles)");
 
     expect(section).not.toMatch(/trx\('user_roles'\)\s*[\r\n]+\s*\.where/);

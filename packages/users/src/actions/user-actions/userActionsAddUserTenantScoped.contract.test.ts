@@ -20,12 +20,12 @@ describe('user actions add-user tenant-scoped query contract', () => {
     const helperSection = sectionBetween('async function getSafeUserWithRoles', 'async function findExistingUserByEmailGlobally');
     const addUserSection = sectionBetween('export const addUser', 'export const deleteUser');
 
-    expect(helperSection).toContain('createTenantScopedQuery(trx, {');
-    expect(helperSection).toContain("table: 'users'");
-    expect(addUserSection).toContain('createTenantScopedQuery(trx, {');
-    expect(addUserSection).toContain("table: 'tenants'");
-    expect(addUserSection).toContain("table: 'roles'");
-    expect(addUserSection).toContain("table: 'users'");
+    expect(helperSection).toContain('tenantDb(trx, ');
+    expect(helperSection).toContain(".table('users");
+    expect(addUserSection).toContain('tenantDb(trx, ');
+    expect(addUserSection).toContain(".table('tenants");
+    expect(addUserSection).toContain(".table('roles");
+    expect(addUserSection).toContain(".table('users");
     expect(addUserSection).toContain("const [newUser] = await trx('users')");
     expect(addUserSection).toContain("await trx('user_roles').insert({");
 

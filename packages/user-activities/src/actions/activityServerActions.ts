@@ -16,7 +16,7 @@ import {
   IUserWithRoles
 } from "@alga-psa/types";
 import type { Knex } from "knex";
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from "@alga-psa/db";
+import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import {
   fetchUserActivities,
   fetchScheduleActivities as fetchScheduleActivitiesInternal,
@@ -420,10 +420,7 @@ async function assertCanModifyAdHoc(
   entryId: string,
   user: IUserWithRoles
 ): Promise<void> {
-  const isAssignee = await createTenantScopedQuery(trx, {
-    table: "schedule_entry_assignees",
-    tenant,
-  }).builder
+  const isAssignee = await tenantDb(trx, tenant).table("schedule_entry_assignees")
     .where({ entry_id: entryId, user_id: user.user_id })
     .first();
   if (!isAssignee) {
@@ -454,10 +451,7 @@ export const setAdHocActivityDone = withAuth(async (
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await createTenantScopedQuery(trx, {
-      table: "schedule_entries",
-      tenant,
-    }).builder
+    const entry = await tenantDb(trx, tenant).table("schedule_entries")
       .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
@@ -466,10 +460,7 @@ export const setAdHocActivityDone = withAuth(async (
 
     await assertCanModifyAdHoc(trx, tenant, entryId, user);
 
-    await createTenantScopedQuery(trx, {
-      table: "schedule_entries",
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table("schedule_entries")
       .where({ entry_id: entryId })
       .update({ status: done ? "closed" : "scheduled", updated_at: trx.fn.now() });
   });
@@ -502,20 +493,14 @@ export const getAdHocActivity = withAuth(async (
   }
 
   const { knex } = await createTenantKnex(tenant);
-  const entry = await createTenantScopedQuery(knex, {
-    table: "schedule_entries",
-    tenant,
-  }).builder
+  const entry = await tenantDb(knex, tenant).table("schedule_entries")
     .where({ entry_id: entryId, work_item_type: "ad_hoc" })
     .first();
   if (!entry) {
     throw new Error("Ad-hoc item not found");
   }
 
-  const assignees: string[] = await createTenantScopedQuery(knex, {
-    table: "schedule_entry_assignees",
-    tenant,
-  }).builder
+  const assignees: string[] = await tenantDb(knex, tenant).table("schedule_entry_assignees")
     .where({ entry_id: entryId })
     .pluck("user_id");
 
@@ -561,10 +546,7 @@ export const updateAdHocActivity = withAuth(async (
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await createTenantScopedQuery(trx, {
-      table: "schedule_entries",
-      tenant,
-    }).builder
+    const entry = await tenantDb(trx, tenant).table("schedule_entries")
       .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
@@ -591,10 +573,7 @@ export const updateAdHocActivity = withAuth(async (
       patch.scheduled_end = end;
     }
 
-    await createTenantScopedQuery(trx, {
-      table: "schedule_entries",
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table("schedule_entries")
       .where({ entry_id: entryId })
       .update(patch);
   });
@@ -617,10 +596,7 @@ export const deleteAdHocActivity = withAuth(async (
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await createTenantScopedQuery(trx, {
-      table: "schedule_entries",
-      tenant,
-    }).builder
+    const entry = await tenantDb(trx, tenant).table("schedule_entries")
       .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
@@ -629,16 +605,10 @@ export const deleteAdHocActivity = withAuth(async (
 
     await assertCanModifyAdHoc(trx, tenant, entryId, user);
 
-    await createTenantScopedQuery(trx, {
-      table: "schedule_entry_assignees",
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table("schedule_entry_assignees")
       .where({ entry_id: entryId })
       .delete();
-    await createTenantScopedQuery(trx, {
-      table: "schedule_entries",
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table("schedule_entries")
       .where({ entry_id: entryId })
       .delete();
   });
@@ -677,10 +647,7 @@ export const getActivityViewableUsers = withAuth(async (
   }
 
   // Select only non-sensitive columns (never hashed_password / two_factor_secret).
-  const rows = await createTenantScopedQuery(knex, {
-    table: "users",
-    tenant,
-  }).builder
+  const rows = await tenantDb(knex, tenant).table("users")
     .where({ user_type: "internal", is_inactive: false })
     .whereNot({ user_id: user.user_id })
     .orderBy([{ column: "first_name" }, { column: "last_name" }])

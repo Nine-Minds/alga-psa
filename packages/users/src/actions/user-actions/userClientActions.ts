@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
@@ -27,11 +27,7 @@ export const getUsersClientInfo = withAuth(async (
       throw new Error('Permission denied: Cannot read user client info');
     }
 
-    const rows = await createTenantScopedQuery(trx, {
-      table: 'users as u',
-      alias: 'u',
-      tenant,
-    }).builder
+    const rows = await tenantDb(trx, tenant).table('users as u')
       .leftJoin('contacts as c', function () {
         this.on('u.contact_id', '=', 'c.contact_name_id')
             .andOn('u.tenant', '=', 'c.tenant');

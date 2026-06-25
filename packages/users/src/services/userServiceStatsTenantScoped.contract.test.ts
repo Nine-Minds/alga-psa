@@ -20,9 +20,9 @@ describe('user service statistics tenant-scoped query contract', () => {
     const section = sectionBetween('async getUserStats', 'async getUserActivityLogs');
 
     expect(section).toContain('this.buildTenantScopedQuery(knex, context)');
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'users as u'");
-    expect(section).toContain("alias: 'u'");
+    expect(section).toContain('tenantDb(knex, ');
+    expect(section).toContain(".table('users as u");
+    expect(section).toContain(".table('users as u");
 
     expect(section).not.toMatch(/knex\('users'\)\s*\./);
     expect(section).not.toMatch(/knex\('users as u'\)\s*\./);

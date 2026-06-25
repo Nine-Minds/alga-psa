@@ -19,12 +19,11 @@ describe('user actions delete basic tenant-scoped query contract', () => {
   it('uses structural tenant scoping for delete-user account-manager and reports-to roots', () => {
     const section = sectionBetween('export const deleteUser', 'export const updateUser');
 
-    expect(section).toContain("table: 'clients'");
-    expect(section).toContain("table: 'users'");
-    expect(section).toContain('tenant: tenantId');
-    expect(section).toContain('const tenantOrUndef = tenantId || undefined');
+    expect(section).toContain(".table('clients");
+    expect(section).toContain(".table('users");
+    expect(section).toContain('tenantDb(trx, tenantId)');
 
     expect(section).not.toMatch(/trx\('clients'\)\s*[\r\n]+\s*\.where\(\{\s*account_manager_id: userId,\s*tenant: tenant \|\| undefined\s*\}\)/);
-    expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where\(\{\s*reports_to: userId,\s*tenant: tenantOrUndef\s*\}\)/);
+    expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where\(\{\s*reports_to: userId,\s*tenant:/);
   });
 });

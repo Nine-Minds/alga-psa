@@ -20,9 +20,9 @@ describe('user service role management tenant-scoped query contract', () => {
     const section = sectionBetween('async assignRoles', 'TEAM MEMBERSHIPS');
 
     expect(section).toContain('this.buildTenantScopedQuery(trx, context)');
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'roles'");
-    expect(section).toContain("table: 'user_roles'");
+    expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain(".table('roles");
+    expect(section).toContain(".table('user_roles");
     expect(section).toContain("await trx('user_roles').insert(userRoles)");
 
     expect(section).not.toMatch(/trx\('users'\)\s*\./);

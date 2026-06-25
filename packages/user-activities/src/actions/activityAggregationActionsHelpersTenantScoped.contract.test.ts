@@ -20,9 +20,9 @@ describe('activity aggregation helper tenant-scoped query contract', () => {
     const filterSection = sectionBetween('async function filterScheduleEntriesByClient', 'async function resolveActivityTarget');
     const targetSection = sectionBetween('async function resolveActivityTarget', '/**\n * Fetch all activities');
 
-    expect(filterSection).toContain("table: 'tickets'");
-    expect(filterSection).toContain("table: 'project_tasks'");
-    expect(targetSection).toContain("table: 'users'");
+    expect(filterSection).toContain(".table('tickets");
+    expect(filterSection).toContain(".table('project_tasks");
+    expect(targetSection).toContain(".table('users");
 
     expect(filterSection).not.toMatch(/knex\('tickets'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(filterSection).not.toContain(".where('project_tasks.tenant', tenant)");

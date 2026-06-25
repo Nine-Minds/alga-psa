@@ -19,7 +19,7 @@ describe('activity aggregation project tag tenant-scoped query contract', () => 
   it('uses structural tenant scoping for project task tag filter subquery', () => {
     const section = sectionBetween('// Tag filter: task must have at least one of the requested tags', '// Apply search filter if provided');
 
-    expect(section).toContain("table: \"tag_mappings\"");
+    expect(section).toContain(".table(\"tag_mappings");
     expect(section).toContain('.whereRaw("tag_mappings.tagged_id = project_tasks.task_id::text")');
 
     expect(section).not.toContain('.from("tag_mappings")');

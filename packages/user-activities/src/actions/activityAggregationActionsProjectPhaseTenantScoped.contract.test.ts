@@ -19,7 +19,7 @@ describe('activity aggregation project phase tenant-scoped query contract', () =
   it('uses structural tenant scoping for project phase filter subqueries', () => {
     const section = sectionBetween('// Apply project and phase filters with OR semantics', '// Exclude tasks in the excluded phases');
 
-    expect(section).toContain("table: \"project_phases\"");
+    expect(section).toContain(".table(\"project_phases");
     expect(section).toContain('.whereRaw("project_phases.phase_id = project_tasks.phase_id")');
 
     expect(section).not.toContain('.from("project_phases")');

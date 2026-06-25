@@ -19,8 +19,8 @@ describe('activity group update/delete tenant-scoped query contract', () => {
   it('uses structural tenant scoping for group update and delete roots', () => {
     const section = sectionBetween('export const updateActivityGroup', 'export const moveActivityToGroup');
 
-    expect(section).toContain("table: 'user_activity_groups'");
-    expect(section).toContain("table: 'user_activity_group_items'");
+    expect(section).toContain(".table('user_activity_groups");
+    expect(section).toContain(".table('user_activity_group_items");
 
     expect(section).not.toMatch(/trx\('user_activity_groups'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/trx\('user_activity_group_items'\)\.where\(\{\s*tenant,/);

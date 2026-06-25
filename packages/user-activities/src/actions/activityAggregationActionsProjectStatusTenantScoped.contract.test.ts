@@ -19,8 +19,8 @@ describe('activity aggregation project status tenant-scoped query contract', () 
   it('uses structural tenant scoping for project status filter subqueries', () => {
     const section = sectionBetween('export async function fetchProjectActivities', '// Client filter');
 
-    expect(section).toContain("table: \"project_status_mappings\"");
-    expect(section).toContain('alias: "psm"');
+    expect(section).toContain(".table(\"project_status_mappings");
+    expect(section).toContain('.table("project_status_mappings as psm');
 
     expect(section).not.toContain('.from("project_status_mappings")');
     expect(section).not.toContain('.from({ psm: "project_status_mappings" })');

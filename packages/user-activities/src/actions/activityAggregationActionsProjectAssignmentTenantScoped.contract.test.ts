@@ -19,7 +19,7 @@ describe('activity aggregation project assignment tenant-scoped query contract',
   it('uses structural tenant scoping for task-resource assignment subquery', () => {
     const section = sectionBetween('export async function fetchProjectActivities', '// Apply filters');
 
-    expect(section).toContain("table: \"task_resources\"");
+    expect(section).toContain(".table(\"task_resources");
     expect(section).toContain('.whereRaw("task_resources.task_id = project_tasks.task_id")');
 
     expect(section).not.toContain('.from("task_resources")');

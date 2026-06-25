@@ -17,7 +17,7 @@ describe('activity reassignment tenant-scoped query contract', () => {
   it('uses structural tenant scoping for reassignment roots', () => {
     const section = sectionFrom('export const reassignActivity');
 
-    expect(section).toContain('const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {');
+    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
     expect(section).toContain('tenantScopedTable("schedule_entries")');
     expect(section).toContain('tenantScopedTable("project_tasks")');
     expect(section).toContain('tenantScopedTable("tickets")');

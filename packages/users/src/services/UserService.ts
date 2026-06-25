@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from '@alga-psa/types';
 import { ListOptions } from '../controllers/types';
 import { 
@@ -250,10 +250,7 @@ export class UserService extends BaseService<IUser> {
 
       // Validate role IDs if provided
       if (data.role_ids && data.role_ids.length > 0) {
-        const roles = await createTenantScopedQuery(trx, {
-          table: 'roles',
-          tenant: context.tenant,
-        }).builder
+        const roles = await tenantDb(trx, context.tenant).table('roles')
           .whereIn('role_id', data.role_ids)
           .select('*');
 
@@ -415,26 +412,17 @@ export class UserService extends BaseService<IUser> {
 
       // Delete related data in correct order to avoid foreign key constraints
       // 1. Delete user preferences
-      await createTenantScopedQuery(trx, {
-        table: 'user_preferences',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('user_preferences')
         .where({ user_id: id })
         .delete();
 
       // 2. Delete user roles
-      await createTenantScopedQuery(trx, {
-        table: 'user_roles',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: id })
         .delete();
 
       // 3. Delete API keys
-      await createTenantScopedQuery(trx, {
-        table: 'api_keys',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('api_keys')
         .where({ user_id: id })
         .delete();
 
@@ -459,10 +447,7 @@ export class UserService extends BaseService<IUser> {
             if (hasCreatedBy) updates.created_by = null;
             if (hasUpdatedBy) updates.updated_by = null;
 
-            await createTenantScopedQuery(trx, {
-              table: tableName,
-              tenant: context.tenant,
-            }).builder
+            await tenantDb(trx, context.tenant).table(tableName)
               .where(function() {
                 if (hasCreatedBy) this.orWhere('created_by', id);
                 if (hasUpdatedBy) this.orWhere('updated_by', id);
@@ -665,10 +650,7 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Verify all roles exist
-      const roles = await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant: context.tenant,
-      }).builder
+      const roles = await tenantDb(trx, context.tenant).table('roles')
         .whereIn('role_id', roleIds)
         .select('*');
 
@@ -677,10 +659,7 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Remove existing roles
-      await createTenantScopedQuery(trx, {
-        table: 'user_roles',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
         .del();
 
@@ -723,10 +702,7 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Remove specified roles
-      await createTenantScopedQuery(trx, {
-        table: 'user_roles',
-        tenant: context.tenant,
-      }).builder
+      await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
         .whereIn('role_id', roleIds)
         .del();
@@ -759,11 +735,7 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const teams = await createTenantScopedQuery(knex, {
-      table: 'teams as t',
-      alias: 't',
-      tenant: context.tenant,
-    }).builder
+    const teams = await tenantDb(knex, context.tenant).table('teams as t')
       .join('team_members as tm', function() {
         this.on('t.team_id', '=', 'tm.team_id')
             .andOn('t.tenant', '=', 'tm.tenant');
@@ -849,10 +821,7 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const preferences = await createTenantScopedQuery(knex, {
-      table: 'user_preferences',
-      tenant: context.tenant,
-    }).builder
+    const preferences = await tenantDb(knex, context.tenant).table('user_preferences')
       .where({ user_id: userId })
       .select('setting_name', 'setting_value');
 
@@ -1123,11 +1092,7 @@ export class UserService extends BaseService<IUser> {
         .select('user_type', knex.raw('COUNT(*) as count')),
 
       // Users by role
-      createTenantScopedQuery(knex, {
-        table: 'users as u',
-        alias: 'u',
-        tenant: context.tenant,
-      }).builder
+      tenantDb(knex, context.tenant).table('users as u')
         .join('user_roles as ur', function() {
           this.on('u.user_id', '=', 'ur.user_id')
               .andOn('u.tenant', '=', 'ur.tenant');

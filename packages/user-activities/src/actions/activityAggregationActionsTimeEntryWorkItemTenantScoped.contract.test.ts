@@ -19,8 +19,8 @@ describe('activity aggregation time-entry work-item tenant-scoped query contract
   it('uses structural tenant scoping for time-entry work-item client filter subqueries', () => {
     const section = sectionBetween('export async function fetchTimeEntryActivities', 'export async function fetchNotificationActivities');
 
-    expect(section).toContain("table: \"tickets\"");
-    expect(section).toContain("table: \"project_tasks\"");
+    expect(section).toContain(".table(\"tickets");
+    expect(section).toContain(".table(\"project_tasks");
     expect(section).toContain('.whereRaw("tickets.ticket_id = time_entries.work_item_id")');
     expect(section).toContain('.whereRaw("project_tasks.task_id = time_entries.work_item_id")');
 

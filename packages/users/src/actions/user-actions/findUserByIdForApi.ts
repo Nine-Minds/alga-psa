@@ -5,7 +5,7 @@
  * This version doesn't require session context and is used for API authentication
  */
 
-import { createTenantScopedQuery, getConnection, runWithTenant } from '@alga-psa/db';
+import { tenantDb, getConnection, runWithTenant } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 import { API_USER_CONTEXT_COLUMNS, type SafeApiUser } from '../../services/userResponseSanitizer';
@@ -23,10 +23,7 @@ export async function findUserByIdForApi(
       const knex = await getConnection(tenantId);
 
       // Get user with their basic info
-      const user = await createTenantScopedQuery(knex, {
-        table: 'users',
-        tenant: tenantId,
-      }).builder
+      const user = await tenantDb(knex, tenantId).table('users')
         .where({ 
           user_id: userId,
           is_inactive: false

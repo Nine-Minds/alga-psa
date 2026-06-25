@@ -19,9 +19,9 @@ describe('activity aggregation ad-hoc helper tenant-scoped query contract', () =
   it('uses structural tenant scoping for ad-hoc schedule entry and assignee roots', () => {
     const section = sectionBetween('async function fetchAdHocEntriesForUser', '/**\n * Fetch schedule activities');
 
-    expect(section).toContain("table: 'schedule_entries'");
-    expect(section).toContain("alias: 'se'");
-    expect(section).toContain("table: 'schedule_entry_assignees'");
+    expect(section).toContain(".table('schedule_entries");
+    expect(section).toContain(".table('schedule_entries as se");
+    expect(section).toContain(".table('schedule_entry_assignees");
 
     expect(section).not.toContain("knex('schedule_entries as se')");
     expect(section).not.toContain(".where('se.tenant', tenant)");

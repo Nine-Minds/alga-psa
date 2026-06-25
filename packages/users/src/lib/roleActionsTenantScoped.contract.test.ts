@@ -7,10 +7,10 @@ const source = readFileSync(sourcePath, 'utf8');
 
 describe('role actions tenant-scoped query contract', () => {
   it('uses structural tenant scoping for role/user reads and user-role deletes', () => {
-    expect(source).toContain('createTenantScopedQuery(trx, {');
-    expect(source).toContain("table: 'roles'");
-    expect(source).toContain("table: 'users'");
-    expect(source).toContain("table: 'user_roles'");
+    expect(source).toContain('tenantDb(trx, ');
+    expect(source).toContain(".table('roles");
+    expect(source).toContain(".table('users");
+    expect(source).toContain(".table('user_roles");
     expect(source).toContain("const [userRole] = await trx('user_roles')");
 
     expect(source).not.toMatch(/trx\('roles'\)\s*\./);

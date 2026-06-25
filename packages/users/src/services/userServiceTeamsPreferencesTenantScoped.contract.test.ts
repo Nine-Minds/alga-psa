@@ -19,10 +19,10 @@ describe('user service team and preferences tenant-scoped query contract', () =>
   it('uses structural tenant scoping for team and preference read roots', () => {
     const section = sectionBetween('TEAM MEMBERSHIPS', 'SEARCH & FILTERING');
 
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain("table: 'teams as t'");
-    expect(section).toContain("alias: 't'");
-    expect(section).toContain("table: 'user_preferences'");
+    expect(section).toContain('tenantDb(knex, ');
+    expect(section).toContain(".table('teams as t");
+    expect(section).toContain(".table('teams as t");
+    expect(section).toContain(".table('user_preferences");
 
     expect(section).not.toMatch(/knex\('teams as t'\)\s*\./);
     expect(section).not.toMatch(/knex\('user_preferences'\)\s*\./);

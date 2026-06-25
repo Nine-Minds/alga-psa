@@ -19,7 +19,7 @@ describe('activity server update ad-hoc tenant-scoped query contract', () => {
   it('uses structural tenant scoping for update-ad-hoc entry lookup and update', () => {
     const section = sectionBetween('export const updateAdHocActivity', '/**\n * Permanently delete an ad-hoc item');
 
-    expect(section).toContain("table: \"schedule_entries\"");
+    expect(section).toContain(".table(\"schedule_entries");
 
     expect(section).not.toMatch(/trx\("schedule_entries"\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toContain('trx("schedule_entries").where({ tenant, entry_id: entryId }).update(patch)');

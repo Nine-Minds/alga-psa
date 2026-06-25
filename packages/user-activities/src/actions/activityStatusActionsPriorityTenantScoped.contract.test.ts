@@ -19,7 +19,7 @@ describe('activity priority tenant-scoped query contract', () => {
   it('uses structural tenant scoping for priority update roots', () => {
     const section = sectionBetween('export const updateActivityPriority', 'export const reassignActivity');
 
-    expect(section).toContain('const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {');
+    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
     expect(section).toContain('tenantScopedTable("priorities")');
     expect(section).toContain('tenantScopedTable("tickets")');
     expect(section).toContain('tenantScopedTable("project_tasks")');

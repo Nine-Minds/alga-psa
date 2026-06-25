@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { importReferenceData, getAvailableReferenceData } from '@alga-psa/reference-data/actions';
@@ -72,10 +72,7 @@ export const getTenantServiceTypes = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const serviceTypes = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await createTenantScopedQuery(trx, {
-        table: 'service_types',
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table('service_types')
         .where({ is_active: true })
         .select('id', 'name', 'order_number')
         .orderBy('name');

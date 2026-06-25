@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
@@ -64,10 +64,7 @@ export const getUserActivityGroups = withAuth(async (
       if (!canUpdate && !canReadAll) {
         throw new Error("Permission denied: cannot view another user's groups");
       }
-      const target = await createTenantScopedQuery(trx, {
-        table: 'users',
-        tenant,
-      }).builder
+      const target = await tenantDb(trx, tenant).table('users')
         .where({ user_id: targetUserId, user_type: 'internal' })
         .first();
       if (!target) {
@@ -76,10 +73,7 @@ export const getUserActivityGroups = withAuth(async (
       ownerUserId = targetUserId;
     }
 
-    const groups = await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    const groups = await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ user_id: ownerUserId })
       .orderBy('sort_order')
       .select('group_id', 'group_name', 'sort_order', 'is_collapsed') as ActivityGroupRow[];
@@ -88,10 +82,7 @@ export const getUserActivityGroups = withAuth(async (
 
     const groupIds = groups.map((g) => g.group_id);
 
-    const items = await createTenantScopedQuery(trx, {
-      table: 'user_activity_group_items',
-      tenant,
-    }).builder
+    const items = await tenantDb(trx, tenant).table('user_activity_group_items')
       .whereIn('group_id', groupIds)
       .orderBy('sort_order')
       .select('item_id', 'group_id', 'activity_id', 'activity_type', 'sort_order') as ActivityGroupItemRow[];
@@ -134,10 +125,7 @@ export const createActivityGroup = withAuth(async (
 
   const group = await withTransaction(db, async (trx: Knex.Transaction) => {
     // Next sort order = max + 1
-    const maxSort = await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    const maxSort = await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ user_id: user.user_id })
       .max('sort_order as max')
       .first();
@@ -191,10 +179,7 @@ export const updateActivityGroup = withAuth(async (
       patch.is_collapsed = updates.isCollapsed;
     }
 
-    await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ group_id: groupId, user_id: user.user_id })
       .update(patch);
   });
@@ -215,26 +200,17 @@ export const deleteActivityGroup = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     // Verify ownership first
-    const group = await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    const group = await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ group_id: groupId, user_id: user.user_id })
       .first();
     if (!group) {
       throw new Error('Group not found');
     }
 
-    await createTenantScopedQuery(trx, {
-      table: 'user_activity_group_items',
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table('user_activity_group_items')
       .where({ group_id: groupId })
       .del();
-    await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ group_id: groupId })
       .del();
   });
@@ -260,10 +236,7 @@ export const moveActivityToGroup = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     // Verify target group belongs to user
-    const target = await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    const target = await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ group_id: targetGroupId, user_id: user.user_id })
       .first();
     if (!target) {
@@ -271,19 +244,13 @@ export const moveActivityToGroup = withAuth(async (
     }
 
     // Remove any existing membership of this activity in any of the user's groups
-    const userGroups = await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    const userGroups = await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ user_id: user.user_id })
       .select('group_id') as ActivityGroupIdRow[];
     const userGroupIds = userGroups.map((g) => g.group_id);
 
     if (userGroupIds.length > 0) {
-      await createTenantScopedQuery(trx, {
-        table: 'user_activity_group_items',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('user_activity_group_items')
         .where({ activity_id: activityId, activity_type: activityType })
         .whereIn('group_id', userGroupIds)
         .del();
@@ -292,10 +259,7 @@ export const moveActivityToGroup = withAuth(async (
     // Make room at the insertion index. Without this, multiple rows would
     // share the same sort_order and the final order on reload would be
     // non-deterministic.
-    await createTenantScopedQuery(trx, {
-      table: 'user_activity_group_items',
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table('user_activity_group_items')
       .where({ group_id: targetGroupId })
       .andWhere('sort_order', '>=', sortOrder)
       .increment('sort_order', 1);
@@ -326,20 +290,14 @@ export const removeActivityFromGroups = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
-    const userGroups = await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    const userGroups = await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ user_id: user.user_id })
       .select('group_id') as ActivityGroupIdRow[];
     const userGroupIds = userGroups.map((g) => g.group_id);
 
     if (userGroupIds.length === 0) return;
 
-    await createTenantScopedQuery(trx, {
-      table: 'user_activity_group_items',
-      tenant,
-    }).builder
+    await tenantDb(trx, tenant).table('user_activity_group_items')
       .where({ activity_id: activityId, activity_type: activityType })
       .whereIn('group_id', userGroupIds)
       .del();
@@ -363,10 +321,7 @@ export const reorderActivitiesInGroup = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     // Verify group ownership
-    const group = await createTenantScopedQuery(trx, {
-      table: 'user_activity_groups',
-      tenant,
-    }).builder
+    const group = await tenantDb(trx, tenant).table('user_activity_groups')
       .where({ group_id: groupId, user_id: user.user_id })
       .first();
     if (!group) {
@@ -374,10 +329,7 @@ export const reorderActivitiesInGroup = withAuth(async (
     }
 
     for (const item of orderedItems) {
-      await createTenantScopedQuery(trx, {
-        table: 'user_activity_group_items',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('user_activity_group_items')
         .where({
           group_id: groupId,
           activity_id: item.activityId,
@@ -403,10 +355,7 @@ export const reorderGroups = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     for (const g of orderedGroups) {
-      await createTenantScopedQuery(trx, {
-        table: 'user_activity_groups',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('user_activity_groups')
         .where({ group_id: g.groupId, user_id: user.user_id })
         .update({ sort_order: g.sortOrder, updated_at: new Date() });
     }

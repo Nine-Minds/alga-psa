@@ -19,8 +19,8 @@ describe('user actions update user tenant-scoped query contract', () => {
   it('uses structural tenant scoping for update-user board and user roots', () => {
     const section = sectionBetween('export const updateUser', 'export const updateUserRoles');
 
-    expect(section).toContain("table: 'boards'");
-    expect(section).toContain("table: 'users'");
+    expect(section).toContain(".table('boards");
+    expect(section).toContain(".table('users");
     expect(section).toContain('findExistingUserByEmailGlobally(normalizedEmail');
     expect(section).toContain('await User.update(trx, userId, normalizedUserData)');
 

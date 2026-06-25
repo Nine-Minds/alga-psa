@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, createTenantScopedQuery, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
@@ -73,10 +73,7 @@ async function getContactAuthContext(
   tenant: string,
   contactId: string
 ): Promise<PortalContactAuthContext | null> {
-  const contact = await createTenantScopedQuery(db, {
-    table: 'contacts',
-    tenant,
-  }).builder
+  const contact = await tenantDb(db, tenant).table('contacts')
     .select('contact_name_id', 'client_id', 'is_client_admin')
     .where({ contact_name_id: contactId })
     .first();
@@ -142,10 +139,7 @@ async function resolveInvitationTargetClientId(
   tenant: string,
   invitationId: string
 ): Promise<string | null | undefined> {
-  const invitation = await createTenantScopedQuery(db, {
-    table: 'portal_invitations as pi',
-    tenant,
-  }).builder
+  const invitation = await tenantDb(db, tenant).table('portal_invitations as pi')
     .leftJoin('contacts as c', function() {
       this.on('pi.tenant', '=', 'c.tenant')
         .andOn('pi.contact_id', '=', 'c.contact_name_id');
@@ -168,10 +162,7 @@ async function resolveClientUserTargetClientId(
   tenant: string,
   userId: string
 ): Promise<string | null | undefined> {
-  const targetUser = await createTenantScopedQuery(db, {
-    table: 'users as u',
-    tenant,
-  }).builder
+  const targetUser = await tenantDb(db, tenant).table('users as u')
     .leftJoin('contacts as c', function() {
       this.on('u.tenant', '=', 'c.tenant')
         .andOn('u.contact_id', '=', 'c.contact_name_id');
@@ -234,10 +225,7 @@ export const createClientPortalUser = withAuth(async (
 
     // Create user and assign role
     const result = await knex.transaction(async (trx) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       // 1) Resolve or create contact
       let contact: any = null;
@@ -472,10 +460,7 @@ export const sendPortalInvitation = withAuth(async (
     }
 
     // Get contact details
-    const contact = await createTenantScopedQuery(knex, {
-      table: 'contacts',
-      tenant,
-    }).builder
+    const contact = await tenantDb(knex, tenant).table('contacts')
       .where({ contact_name_id: contactId })
       .first();
 
@@ -502,10 +487,7 @@ export const sendPortalInvitation = withAuth(async (
     }
 
     // Do not send invitations for contacts that already have a portal user
-    const existingUserForContact = await createTenantScopedQuery(knex, {
-      table: 'users',
-      tenant,
-    }).builder
+    const existingUserForContact = await tenantDb(knex, tenant).table('users')
       .where({ contact_id: contactId })
       .first();
 
@@ -519,10 +501,7 @@ export const sendPortalInvitation = withAuth(async (
 
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       // Create invitation within transaction
       const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
@@ -740,10 +719,7 @@ export async function completePortalSetup(
         } as CompleteSetupResult;
       }
 
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(knex, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
 
       // Check if user already exists
       const existingUser = await tenantScopedTable('users')
@@ -1004,16 +980,13 @@ export const updateClientUser = withAuth(async (
       allowedUpdates.is_inactive = userData.is_inactive;
     }
 
-    const [updatedUser] = await createTenantScopedQuery(knex, {
-      table: 'users',
-      tenant,
-    }).builder
+    const [updatedUser] = await tenantDb(knex, tenant).table('users')
       .where({ user_id: userId, user_type: 'client' })
       .update({
         ...allowedUpdates,
         updated_at: new Date().toISOString()
       })
-      .returning('*');
+      .returning('*') as IUser[];
 
     return updatedUser || null;
   } catch (error) {

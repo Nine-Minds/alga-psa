@@ -19,8 +19,8 @@ describe('onboarding team-member tenant-scoped query contract', () => {
   it('uses structural tenant scoping for client info and team-member roots', () => {
     const section = sectionBetween('export const saveClientInfo', 'export const createClient');
 
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain("table: 'users'");
+    expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain(".table('users");
     expect(section).toContain("tenantScopedTable('users')");
     expect(section).toContain("tenantScopedTable('roles')");
     expect(section).toContain("await trx('users').insert({");

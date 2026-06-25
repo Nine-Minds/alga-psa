@@ -21,7 +21,7 @@ describe('onboarding client and billing tenant-scoped query contract', () => {
 
     expect(section).toContain("tenantScopedTable('clients')");
     expect(section).toContain("tenantScopedTable('client_locations')");
-    expect(section).toContain("table: 'contacts'");
+    expect(section).toContain(".table('contacts");
     expect(section).toContain("tenantScopedTable('service_types')");
     expect(section).toContain("tenantScopedTable('default_billing_settings')");
     expect(section).toContain("await trx('client_locations').insert({");

@@ -19,7 +19,7 @@ describe('portal invitation create-user tenant-scoped query contract', () => {
   it('uses a transaction-local tenant-scoped root helper for tenant-known reads', () => {
     const section = sectionBetween('export const createClientPortalUser', 'export const sendPortalInvitation');
 
-    expect(section).toContain('const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {');
+    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
     expect(section).toContain("tenantScopedTable('contacts')");
     expect(section).toContain("tenantScopedTable('users')");
     expect(section).toContain("tenantScopedTable('roles')");

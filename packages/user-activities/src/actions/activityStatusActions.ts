@@ -4,7 +4,7 @@ import {
   ActivityType,
   Activity
 } from "@alga-psa/types";
-import { createTenantKnex, createTenantScopedQuery } from "@alga-psa/db";
+import { createTenantKnex, tenantDb } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
@@ -35,10 +35,7 @@ export const updateActivityStatus = withAuth(async (
 
     // Update the status based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       switch (activityType) {
         case ActivityType.SCHEDULE:
@@ -158,10 +155,7 @@ export const updateActivityStatusById = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       switch (activityType) {
         case ActivityType.TICKET:
@@ -239,10 +233,7 @@ export const getActivityStatusOptions = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-      table,
-      tenant,
-    }).builder;
+    const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
     if (activityType === ActivityType.TICKET) {
       const ticket = await tenantScopedTable("tickets")
@@ -287,10 +278,7 @@ export const getActivityStatusOptions = withAuth(async (
       if (!task) return [];
 
       // First, check for phase-specific mappings
-      const phaseMappings = await createTenantScopedQuery(trx, {
-        table: "project_status_mappings as psm",
-        tenant,
-      }).builder
+      const phaseMappings = await tenantDb(trx, tenant).table("project_status_mappings as psm")
         .leftJoin("statuses as s", function () {
           this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
         })
@@ -319,10 +307,7 @@ export const getActivityStatusOptions = withAuth(async (
       }
 
       // Fall back to project-default mappings (phase_id IS NULL)
-      const projectMappings = await createTenantScopedQuery(trx, {
-        table: "project_status_mappings as psm",
-        tenant,
-      }).builder
+      const projectMappings = await tenantDb(trx, tenant).table("project_status_mappings as psm")
         .leftJoin("statuses as s", function () {
           this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
         })
@@ -374,10 +359,7 @@ export const updateActivityPriority = withAuth(async (
 
     // Update the priority based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       switch (activityType) {
         case ActivityType.TICKET:
@@ -477,10 +459,7 @@ export const updateActivityPriorityById = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       switch (activityType) {
         case ActivityType.TICKET:
@@ -547,10 +526,7 @@ export const reassignActivity = withAuth(async (
 
     // Update the assignee based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       switch (activityType) {
         case ActivityType.SCHEDULE:

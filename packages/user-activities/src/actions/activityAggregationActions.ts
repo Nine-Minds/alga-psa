@@ -1,6 +1,6 @@
 // @ts-nocheck
 // TODO: Argument count issues
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   Activity,
@@ -108,19 +108,13 @@ async function filterScheduleEntriesByClient<T extends ScheduleEntryWorkItemLink
 
   const [matchingTicketIds, matchingProjectTaskIds] = await Promise.all([
     ticketIds.length > 0
-      ? createTenantScopedQuery(knex, {
-          table: 'tickets',
-          tenant,
-        }).builder
+      ? tenantDb(knex, tenant).table('tickets')
           .where({ client_id: clientId })
           .whereIn('ticket_id', ticketIds)
           .pluck('ticket_id')
       : Promise.resolve([]),
     projectTaskIds.length > 0
-      ? createTenantScopedQuery(knex, {
-          table: 'project_tasks',
-          tenant,
-        }).builder
+      ? tenantDb(knex, tenant).table('project_tasks')
           .join('project_phases', function() {
             this.on('project_tasks.phase_id', 'project_phases.phase_id')
               .andOn('project_tasks.tenant', 'project_phases.tenant');
@@ -173,10 +167,7 @@ async function resolveActivityTarget(
     throw new Error("Permission denied: cannot view another user's activities");
   }
 
-  const target = await createTenantScopedQuery(knex, {
-    table: 'users',
-    tenant,
-  }).builder
+  const target = await tenantDb(knex, tenant).table('users')
     .where({ user_id: targetUserId, user_type: 'internal' })
     .first();
   if (!target) {
@@ -298,11 +289,7 @@ async function fetchAdHocEntriesForUser(
   tenant: string,
   userId: string
 ): Promise<any[]> {
-  const rows = await createTenantScopedQuery(knex, {
-    table: 'schedule_entries',
-    alias: 'se',
-    tenant,
-  }).builder
+  const rows = await tenantDb(knex, tenant).table('schedule_entries as se')
     .join('schedule_entry_assignees as sea', function () {
       this.on('se.entry_id', 'sea.entry_id').andOn('se.tenant', 'sea.tenant');
     })
@@ -318,10 +305,7 @@ async function fetchAdHocEntriesForUser(
 
   // Resolve the full assignee list for each entry
   const entryIds = rows.map((r: any) => r.entry_id);
-  const assigneeRows = await createTenantScopedQuery(knex, {
-    table: 'schedule_entry_assignees',
-    tenant,
-  }).builder
+  const assigneeRows = await tenantDb(knex, tenant).table('schedule_entry_assignees')
     .whereIn('entry_id', entryIds)
     .select('entry_id', 'user_id');
   const assigneesByEntry = new Map<string, string[]>();
@@ -442,10 +426,7 @@ export async function fetchProjectActivities(
 
     // Query for project tasks assigned to the user
     const tasks = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await createTenantScopedQuery(trx, {
-        table: "project_tasks",
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table("project_tasks")
       .select(
         "project_tasks.*",
         "project_phases.phase_name",
@@ -492,10 +473,7 @@ export async function fetchProjectActivities(
         
         // Or tasks where the user is an additional resource
         this.orWhereExists(
-          createTenantScopedQuery(trx, {
-            table: "task_resources",
-            tenant,
-          }).builder
+          tenantDb(trx, tenant).table("task_resources")
             .select(db.raw(1))
             .whereRaw("task_resources.task_id = project_tasks.task_id")
             .andWhere(function() {
@@ -510,10 +488,7 @@ export async function fetchProjectActivities(
         if (filters.status && filters.status.length > 0) {
           queryBuilder.whereIn(
             "project_tasks.project_status_mapping_id",
-            createTenantScopedQuery(trx, {
-              table: "project_status_mappings",
-              tenant,
-            }).builder
+            tenantDb(trx, tenant).table("project_status_mappings")
               .select("project_status_mappings.project_status_mapping_id")
               .join("standard_statuses", function() {
                 this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
@@ -540,11 +515,7 @@ export async function fetchProjectActivities(
             this.whereNull("project_tasks.project_status_mapping_id")
               .orWhereIn(
                 "project_tasks.project_status_mapping_id",
-                createTenantScopedQuery(trx, {
-                  table: "project_status_mappings",
-                  alias: "psm",
-                  tenant,
-                }).builder
+                tenantDb(trx, tenant).table("project_status_mappings as psm")
                   .select("psm.project_status_mapping_id")
                   .leftJoin({ ss: "standard_statuses" }, function() {
                     this.on("psm.standard_status_id", "ss.standard_status_id");
@@ -572,10 +543,7 @@ export async function fetchProjectActivities(
           queryBuilder.where(function() {
             if (hasProjectIds) {
               this.whereExists(
-                createTenantScopedQuery(trx, {
-                  table: "project_phases",
-                  tenant,
-                }).builder
+                tenantDb(trx, tenant).table("project_phases")
                   .select(db.raw(1))
                   .whereRaw("project_phases.phase_id = project_tasks.phase_id")
                   .whereIn("project_phases.project_id", filters.projectIds!)
@@ -587,10 +555,7 @@ export async function fetchProjectActivities(
           });
         } else if (filters.projectId) {
           queryBuilder.whereExists(
-            createTenantScopedQuery(trx, {
-              table: "project_phases",
-              tenant,
-            }).builder
+            tenantDb(trx, tenant).table("project_phases")
               .select(db.raw(1))
               .whereRaw("project_phases.phase_id = project_tasks.phase_id")
               .andWhere("project_phases.project_id", filters.projectId)
@@ -610,10 +575,7 @@ export async function fetchProjectActivities(
         // Exclude tasks whose project is in the excluded set
         if (filters.excludeProjectIds && filters.excludeProjectIds.length > 0) {
           queryBuilder.whereNotExists(
-            createTenantScopedQuery(trx, {
-              table: "project_phases",
-              tenant,
-            }).builder
+            tenantDb(trx, tenant).table("project_phases")
               .select(db.raw(1))
               .whereRaw("project_phases.phase_id = project_tasks.phase_id")
               .whereIn("project_phases.project_id", filters.excludeProjectIds!)
@@ -638,10 +600,7 @@ export async function fetchProjectActivities(
         // Tag filter: task must have at least one of the requested tags
         if (filters.projectTaskTagIds && filters.projectTaskTagIds.length > 0) {
           queryBuilder.whereExists(
-            createTenantScopedQuery(trx, {
-              table: "tag_mappings",
-              tenant,
-            }).builder
+            tenantDb(trx, tenant).table("tag_mappings")
               .select(db.raw(1))
               .whereRaw("tag_mappings.tagged_id = project_tasks.task_id::text")
               .andWhere("tag_mappings.tagged_type", "project_task")
@@ -748,10 +707,7 @@ export async function fetchTicketActivities(
 
     // Query for tickets assigned to the user
     const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await createTenantScopedQuery(trx, {
-        table: "tickets",
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table("tickets")
       .select(
         "tickets.*",
         "clients.client_name",
@@ -783,10 +739,7 @@ export async function fetchTicketActivities(
         
         // Or tickets where the user is an additional resource
         this.orWhereExists(
-          createTenantScopedQuery(trx, {
-            table: "ticket_resources",
-            tenant,
-          }).builder
+          tenantDb(trx, tenant).table("ticket_resources")
             .select(db.raw(1))
             .whereRaw("ticket_resources.ticket_id = tickets.ticket_id")
             .andWhere(function() {
@@ -855,10 +808,7 @@ export async function fetchTicketActivities(
         // Tag filter: ticket must have at least one of the requested tags
         if (filters.ticketTagIds && filters.ticketTagIds.length > 0) {
           queryBuilder.whereExists(
-            createTenantScopedQuery(trx, {
-              table: "tag_mappings",
-              tenant,
-            }).builder
+            tenantDb(trx, tenant).table("tag_mappings")
               .select(db.raw(1))
               .whereRaw("tag_mappings.tagged_id = tickets.ticket_id::text")
               .andWhere("tag_mappings.tagged_type", "ticket")
@@ -965,10 +915,7 @@ export async function fetchTimeEntryActivities(
 
     // Query for time entries created by the user
     const timeEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await createTenantScopedQuery(trx, {
-        table: "time_entries",
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table("time_entries")
       .where("time_entries.user_id", userId)
       // Apply date range filter if provided
       .modify(function(queryBuilder) {
@@ -990,10 +937,7 @@ export async function fetchTimeEntryActivities(
             this.where(function() {
               this.where("time_entries.work_item_type", "ticket")
                 .whereExists(
-                  createTenantScopedQuery(trx, {
-                    table: "tickets",
-                    tenant,
-                  }).builder
+                  tenantDb(trx, tenant).table("tickets")
                     .select(db.raw(1))
                     .whereRaw("tickets.ticket_id = time_entries.work_item_id")
                     .andWhere("tickets.client_id", filters.clientId)
@@ -1001,10 +945,7 @@ export async function fetchTimeEntryActivities(
             }).orWhere(function() {
               this.where("time_entries.work_item_type", "project_task")
                 .whereExists(
-                  createTenantScopedQuery(trx, {
-                    table: "project_tasks",
-                    tenant,
-                  }).builder
+                  tenantDb(trx, tenant).table("project_tasks")
                     .select(db.raw(1))
                     .join("project_phases", function() {
                       this.on("project_tasks.phase_id", "project_phases.phase_id")
@@ -1218,10 +1159,7 @@ export async function fetchNotificationActivities(
 
     // Query for notifications for the user
     const notifications = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await createTenantScopedQuery(trx, {
-        table: "internal_notifications",
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table("internal_notifications")
         .where("internal_notifications.user_id", userId)
         .whereNull("internal_notifications.deleted_at")
         .modify(function(queryBuilder) {

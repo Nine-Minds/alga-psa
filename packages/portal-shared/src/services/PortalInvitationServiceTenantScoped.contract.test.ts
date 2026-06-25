@@ -34,12 +34,12 @@ describe('portal invitation service tenant-scoped query contract', () => {
       'static async verifyToken'
     );
 
-    expect(transactionalCreate).toContain('createTenantScopedQuery(trx, {');
-    expect(transactionalCreate).toContain("table: 'contacts'");
-    expect(transactionalCreate).toContain("table: 'portal_invitations'");
-    expect(directCreate).toContain('createTenantScopedQuery(knex, {');
-    expect(directCreate).toContain("table: 'contacts'");
-    expect(directCreate).toContain("table: 'portal_invitations'");
+    expect(transactionalCreate).toContain('tenantDb(trx, ');
+    expect(transactionalCreate).toContain(".table('contacts");
+    expect(transactionalCreate).toContain(".table('portal_invitations");
+    expect(directCreate).toContain('tenantDb(knex, ');
+    expect(directCreate).toContain(".table('contacts");
+    expect(directCreate).toContain(".table('portal_invitations");
 
     expect(transactionalCreate).not.toMatch(/trx\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(transactionalCreate).not.toMatch(/trx\('portal_invitations'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
@@ -51,18 +51,18 @@ describe('portal invitation service tenant-scoped query contract', () => {
     const section = sectionBetween('static async verifyToken', 'static async markTokenAsUsed');
 
     expect(section).toContain("const tokenInfo = await trx('portal_invitations')");
-    expect(section).toContain('tenant: tokenTenant');
-    expect(section).toContain("table: 'portal_invitations as pi'");
+    expect(section).toContain("tenantDb(trx, tokenTenant).table('portal_invitations");
+    expect(section).toContain(".table('portal_invitations as pi");
     expect(section).not.toContain(".where('pi.tenant', tokenTenant)");
   });
 
   it('uses structural tenant scoping for invitation update and cleanup roots', () => {
     const section = sectionFrom('static async markTokenAsUsed');
 
-    expect(section).toContain('createTenantScopedQuery(trx, {');
-    expect(section).toContain('createTenantScopedQuery(knex, {');
-    expect(section).toContain('createTenantScopedQuery(tx, {');
-    expect(section).toContain("table: 'portal_invitations'");
+    expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain('tenantDb(knex, ');
+    expect(section).toContain('tenantDb(tx, ');
+    expect(section).toContain(".table('portal_invitations");
 
     expect(section).not.toMatch(/trx\('portal_invitations'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('portal_invitations'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);

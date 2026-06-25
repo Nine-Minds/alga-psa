@@ -17,7 +17,7 @@ describe('activity aggregation notification root tenant-scoped query contract', 
   it('uses structural tenant scoping for the notification activity root', () => {
     const section = sectionFrom('export async function fetchNotificationActivities');
 
-    expect(section).toContain("table: \"internal_notifications\"");
+    expect(section).toContain(".table(\"internal_notifications");
     expect(section).toContain('.where("internal_notifications.user_id", userId)');
 
     expect(section).not.toContain('return await trx("internal_notifications")');

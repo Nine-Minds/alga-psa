@@ -3,7 +3,7 @@
 import User from '@alga-psa/db/models/user';
 import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -88,10 +88,7 @@ async function getSafeUserWithRoles(
     throw new Error('Tenant context is required for safe user lookup');
   }
 
-  const user = await createTenantScopedQuery(trx, {
-    table: 'users',
-    tenant,
-  }).builder
+  const user = await tenantDb(trx, tenant).table('users')
     .where({ user_id: userId })
     .select(USER_RESPONSE_FIELD_NAMES)
     .first();
@@ -189,10 +186,7 @@ export const addUser = withAuth(async (
       }
 
       // Validate that the role exists
-      const role = await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant,
-      }).builder
+      const role = await tenantDb(trx, tenant).table('roles')
         .where({ role_id: userData.roleId })
         .first();
 
@@ -232,20 +226,14 @@ export const addUser = withAuth(async (
 
       // Check license limits for  MSP (internal) users
       if (userData.userType !== 'client') {
-        const tenantRow = await createTenantScopedQuery(trx, {
-          table: 'tenants',
-          tenant,
-        }).builder
+        const tenantRow = await tenantDb(trx, tenant).table('tenants')
           .first('licensed_user_count', 'plan');
 
         if (!tenantRow) {
           throw new Error(`Tenant not found: ${tenant}`);
         }
 
-        const usedResult = await createTenantScopedQuery(trx, {
-          table: 'users',
-          tenant,
-        }).builder
+        const usedResult = await tenantDb(trx, tenant).table('users')
           .where({
             user_type: 'internal',
             is_inactive: false,
@@ -369,10 +357,7 @@ export const deleteUser = withAuth(async (
         throwPermissionError('delete user');
       }
 
-      return await createTenantScopedQuery(trx, {
-        table: 'clients',
-        tenant,
-      }).builder
+      return await tenantDb(trx, tenant).table('clients')
         .where({ account_manager_id: userId })
         .first();
     });
@@ -401,20 +386,14 @@ export const deleteUser = withAuth(async (
 
     const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
       const actorId = user.user_id;
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant: tenantId,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenantId).table(table);
 
       // Citus does not enforce ON DELETE SET NULL / CASCADE on distributed
       // tables, so every FK pointing at users(tenant, user_id) must be
       // cleared explicitly here regardless of what the migration declared.
 
       // ── Self-FK on users ──────────────────────────────────────────────
-      await createTenantScopedQuery(trx, {
-        table: 'users',
-        tenant: tenantId,
-      }).builder
+      await tenantDb(trx, tenantId).table('users')
         .where({ reports_to: userId })
         .update({ reports_to: null });
 
@@ -634,10 +613,7 @@ export const updateUser = withAuth(async (
 
       // If user is being deactivated, clear default_assigned_to on boards
       if (userData.is_inactive === true) {
-        await createTenantScopedQuery(trx, {
-          table: 'boards',
-          tenant,
-        }).builder
+        await tenantDb(trx, tenant).table('boards')
           .where({ default_assigned_to: userId })
           .update({ default_assigned_to: null });
       }
@@ -670,10 +646,7 @@ export const updateUser = withAuth(async (
         // changing — otherwise editing any field (e.g. setting a manager)
         // would re-validate the unchanged email and could trip on legitimate
         // cross-tenant duplicates.
-        const existing = await createTenantScopedQuery(trx, {
-          table: 'users',
-          tenant,
-        }).builder
+        const existing = await tenantDb(trx, tenant).table('users')
           .where({ user_id: userId })
           .select('email', 'user_type')
           .first();
@@ -752,10 +725,7 @@ export const updateUserRoles = withAuth(async (
       }
 
       // Delete existing roles
-      await createTenantScopedQuery(trx, {
-        table: 'user_roles',
-        tenant,
-      }).builder
+      await tenantDb(trx, tenant).table('user_roles')
         .where({ user_id: userId })
         .del();
 
@@ -897,10 +867,7 @@ export const registerClientUser = withAuth(async (
         .returning(['user_id']);
 
       // Get the default client portal user role (must exist via migrations)
-      const clientRole = await createTenantScopedQuery(trx, {
-        table: 'roles',
-        tenant: contact.tenant,
-      }).builder
+      const clientRole = await tenantDb(trx, contact.tenant).table('roles')
         .where({
           client: true,
           msp: false

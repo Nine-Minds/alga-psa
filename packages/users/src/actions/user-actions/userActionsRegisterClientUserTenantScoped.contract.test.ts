@@ -23,7 +23,7 @@ describe('user actions register client user tenant-scoped query contract', () =>
     expect(section).toContain('findExistingUserByEmailGlobally(email');
     expect(section).toContain("await trx('users')");
     expect(section).toContain("await trx('user_roles').insert");
-    expect(section).toContain("table: 'roles'");
+    expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');
     expect(section).toContain("whereRaw('LOWER(role_name) = ?', ['user'])");
 

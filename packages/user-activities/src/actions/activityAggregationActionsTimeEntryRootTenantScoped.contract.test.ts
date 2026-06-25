@@ -19,7 +19,7 @@ describe('activity aggregation time-entry root tenant-scoped query contract', ()
   it('uses structural tenant scoping for the time-entry activity root', () => {
     const section = sectionBetween('export async function fetchTimeEntryActivities', '/**\n * Fetch notification activities');
 
-    expect(section).toContain("table: \"time_entries\"");
+    expect(section).toContain(".table(\"time_entries");
     expect(section).toContain('.where("time_entries.user_id", userId)');
 
     expect(section).not.toContain('return await trx("time_entries")');

@@ -19,9 +19,9 @@ describe('activity aggregation project root tenant-scoped query contract', () =>
   it('uses structural tenant scoping for the project task activity root', () => {
     const section = sectionBetween('export async function fetchProjectActivities', '/**\n * Fetch ticket activities');
 
-    expect(section).toContain("table: \"project_tasks\"");
+    expect(section).toContain(".table(\"project_tasks");
     expect(section).toContain('.select(');
-    expect(section).toContain('.orWhereExists(function()');
+    expect(section).toContain('this.orWhereExists(');
 
     expect(section).not.toContain('return await trx("project_tasks")');
     expect(section).not.toContain('.where("project_tasks.tenant", tenant)');

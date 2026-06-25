@@ -29,8 +29,8 @@ describe('activity group reorder tenant-scoped query contract', () => {
     const groupSection = sectionFrom('export const reorderGroups');
     const section = `${activitySection}\n${groupSection}`;
 
-    expect(section).toContain("table: 'user_activity_groups'");
-    expect(section).toContain("table: 'user_activity_group_items'");
+    expect(section).toContain(".table('user_activity_groups");
+    expect(section).toContain(".table('user_activity_group_items");
 
     expect(section).not.toMatch(/trx\('user_activity_groups'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/trx\('user_activity_group_items'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);

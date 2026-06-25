@@ -20,7 +20,7 @@ describe('user actions delete dynamic updates tenant-scoped query contract', () 
     const deleteSection = sectionBetween('export const deleteUser', 'export const updateUser');
     const loopSection = sectionBetween('const nullColumns', 'const deleteByUserId');
 
-    expect(deleteSection).toContain('const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {');
+    expect(deleteSection).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
     expect(loopSection).toContain('await tenantScopedTable(table)');
     expect(loopSection).toContain('.update({ [column]: null })');
     expect(loopSection).toContain('.update({ [column]: actorId })');
