@@ -959,20 +959,19 @@ export const updateSlaPolicyBoardAssignments = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     // Clear boards previously assigned to this policy but no longer selected
     if (boardIds.length > 0) {
-      await trx('boards')
-        .where({ tenant, sla_policy_id: policyId })
+      await tenantScopedTable(trx, 'boards', tenant)
+        .where({ sla_policy_id: policyId })
         .whereNotIn('board_id', boardIds)
         .update({ sla_policy_id: null });
     } else {
-      await trx('boards')
-        .where({ tenant, sla_policy_id: policyId })
+      await tenantScopedTable(trx, 'boards', tenant)
+        .where({ sla_policy_id: policyId })
         .update({ sla_policy_id: null });
     }
 
     // Assign this policy to newly selected boards
     if (boardIds.length > 0) {
-      await trx('boards')
-        .where({ tenant })
+      await tenantScopedTable(trx, 'boards', tenant)
         .whereIn('board_id', boardIds)
         .update({ sla_policy_id: policyId });
     }
@@ -998,20 +997,19 @@ export const updateSlaPolicyClientAssignments = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     // Clear clients previously assigned to this policy but no longer selected
     if (clientIds.length > 0) {
-      await trx('clients')
-        .where({ tenant, sla_policy_id: policyId })
+      await tenantScopedTable(trx, 'clients', tenant)
+        .where({ sla_policy_id: policyId })
         .whereNotIn('client_id', clientIds)
         .update({ sla_policy_id: null, updated_at: trx.fn.now() });
     } else {
-      await trx('clients')
-        .where({ tenant, sla_policy_id: policyId })
+      await tenantScopedTable(trx, 'clients', tenant)
+        .where({ sla_policy_id: policyId })
         .update({ sla_policy_id: null, updated_at: trx.fn.now() });
     }
 
     // Assign this policy to newly selected clients
     if (clientIds.length > 0) {
-      await trx('clients')
-        .where({ tenant })
+      await tenantScopedTable(trx, 'clients', tenant)
         .whereIn('client_id', clientIds)
         .update({ sla_policy_id: policyId, updated_at: trx.fn.now() });
     }
@@ -1039,32 +1037,32 @@ export const resolveTicketSlaPolicy = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // 1. Check client's SLA policy
-      const client = await trx('clients')
-        .where({ tenant, client_id: clientId })
+      const client = await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
 
       if (client?.sla_policy_id) {
-        const policy = await trx('sla_policies')
-          .where({ tenant, sla_policy_id: client.sla_policy_id })
+        const policy = await tenantScopedTable(trx, 'sla_policies', tenant)
+          .where({ sla_policy_id: client.sla_policy_id })
           .first();
         if (policy) return policy as ISlaPolicy;
       }
 
       // 2. Check board's SLA policy
-      const board = await trx('boards')
-        .where({ tenant, board_id: boardId })
+      const board = await tenantScopedTable(trx, 'boards', tenant)
+        .where({ board_id: boardId })
         .first();
 
       if (board?.sla_policy_id) {
-        const policy = await trx('sla_policies')
-          .where({ tenant, sla_policy_id: board.sla_policy_id })
+        const policy = await tenantScopedTable(trx, 'sla_policies', tenant)
+          .where({ sla_policy_id: board.sla_policy_id })
           .first();
         if (policy) return policy as ISlaPolicy;
       }
 
       // 3. Check tenant's default SLA policy
-      const defaultPolicy = await trx('sla_policies')
-        .where({ tenant, is_default: true })
+      const defaultPolicy = await tenantScopedTable(trx, 'sla_policies', tenant)
+        .where({ is_default: true })
         .first();
 
       return defaultPolicy || null;
@@ -1090,8 +1088,8 @@ export const resolveSlaPolicy = withAuth(async (_user, { tenant }, ticketId: str
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Step 1: Fetch the ticket to get client_id and board_id
-      const ticket = await trx('tickets')
-        .where({ tenant, ticket_id: ticketId })
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
         .select('client_id', 'board_id')
         .first();
 
@@ -1157,8 +1155,8 @@ async function resolveSlaPolicyForContextInternal(
 
   // Step 1: Check client's SLA policy (if companyId provided)
   if (companyId) {
-    const client = await trx('clients')
-      .where({ tenant, client_id: companyId })
+    const client = await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: companyId })
       .select('sla_policy_id')
       .first();
 
@@ -1169,8 +1167,8 @@ async function resolveSlaPolicyForContextInternal(
 
   // Step 2: Check board's SLA policy (if no client policy and boardId provided)
   if (!policyId && boardId) {
-    const board = await trx('boards')
-      .where({ tenant, board_id: boardId })
+    const board = await tenantScopedTable(trx, 'boards', tenant)
+      .where({ board_id: boardId })
       .select('sla_policy_id')
       .first();
 
@@ -1181,8 +1179,8 @@ async function resolveSlaPolicyForContextInternal(
 
   // Step 3: Check tenant's default SLA policy
   if (!policyId) {
-    const defaultPolicy = await trx('sla_policies')
-      .where({ tenant, is_default: true })
+    const defaultPolicy = await tenantScopedTable(trx, 'sla_policies', tenant)
+      .where({ is_default: true })
       .select('sla_policy_id')
       .first();
 
@@ -1197,8 +1195,8 @@ async function resolveSlaPolicyForContextInternal(
   }
 
   // Fetch the full policy with targets and notification thresholds
-  const policy = await trx('sla_policies')
-    .where({ tenant, sla_policy_id: policyId })
+  const policy = await tenantScopedTable(trx, 'sla_policies', tenant)
+    .where({ sla_policy_id: policyId })
     .first();
 
   if (!policy) {
@@ -1207,11 +1205,11 @@ async function resolveSlaPolicyForContextInternal(
 
   // Fetch targets and notification thresholds in parallel
   const [targets, notificationThresholds] = await Promise.all([
-    trx('sla_policy_targets')
-      .where({ tenant, sla_policy_id: policyId })
+    tenantScopedTable(trx, 'sla_policy_targets', tenant)
+      .where({ sla_policy_id: policyId })
       .orderBy('created_at', 'asc'),
-    trx('sla_notification_thresholds')
-      .where({ tenant, sla_policy_id: policyId })
+    tenantScopedTable(trx, 'sla_notification_thresholds', tenant)
+      .where({ sla_policy_id: policyId })
       .orderBy('threshold_percent', 'asc')
   ]);
 
