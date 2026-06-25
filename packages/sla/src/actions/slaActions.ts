@@ -387,8 +387,8 @@ export const getSlaPolicyTargets = withAuth(async (user, { tenant }, policyId: s
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const targets = await trx('sla_policy_targets')
-        .where({ tenant, sla_policy_id: policyId })
+      const targets = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+        .where({ sla_policy_id: policyId })
         .orderBy('created_at', 'asc');
 
       return targets as ISlaPolicyTarget[];
@@ -416,8 +416,8 @@ export const createSlaPolicyTarget = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Verify policy exists
-      const policy = await trx('sla_policies')
-        .where({ tenant, sla_policy_id: policyId })
+      const policy = await tenantScopedTable(trx, 'sla_policies', tenant)
+        .where({ sla_policy_id: policyId })
         .first();
 
       if (!policy) {
@@ -425,8 +425,8 @@ export const createSlaPolicyTarget = withAuth(async (
       }
 
       // Verify priority exists
-      const priority = await trx('priorities')
-        .where({ tenant, priority_id: input.priority_id })
+      const priority = await tenantScopedTable(trx, 'priorities', tenant)
+        .where({ priority_id: input.priority_id })
         .first();
 
       if (!priority) {
@@ -434,8 +434,8 @@ export const createSlaPolicyTarget = withAuth(async (
       }
 
       // Check if target already exists for this policy/priority combination
-      const existingTarget = await trx('sla_policy_targets')
-        .where({ tenant, sla_policy_id: policyId, priority_id: input.priority_id })
+      const existingTarget = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+        .where({ sla_policy_id: policyId, priority_id: input.priority_id })
         .first();
 
       if (existingTarget) {
@@ -484,8 +484,8 @@ export const updateSlaPolicyTarget = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Verify target exists
-      const existingTarget = await trx('sla_policy_targets')
-        .where({ tenant, target_id: targetId })
+      const existingTarget = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+        .where({ target_id: targetId })
         .first();
 
       if (!existingTarget) {
@@ -494,16 +494,16 @@ export const updateSlaPolicyTarget = withAuth(async (
 
       // If changing priority, verify the new priority exists and isn't already used
       if (input.priority_id && input.priority_id !== existingTarget.priority_id) {
-        const priority = await trx('priorities')
-          .where({ tenant, priority_id: input.priority_id })
+        const priority = await tenantScopedTable(trx, 'priorities', tenant)
+          .where({ priority_id: input.priority_id })
           .first();
 
         if (!priority) {
           throw new Error(`Priority ${input.priority_id} not found`);
         }
 
-        const duplicateTarget = await trx('sla_policy_targets')
-          .where({ tenant, sla_policy_id: existingTarget.sla_policy_id, priority_id: input.priority_id })
+        const duplicateTarget = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+          .where({ sla_policy_id: existingTarget.sla_policy_id, priority_id: input.priority_id })
           .whereNot({ target_id: targetId })
           .first();
 
@@ -538,8 +538,8 @@ export const updateSlaPolicyTarget = withAuth(async (
         updateData.is_24x7 = input.is_24x7;
       }
 
-      const [updatedTarget] = await trx('sla_policy_targets')
-        .where({ tenant, target_id: targetId })
+      const [updatedTarget] = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+        .where({ target_id: targetId })
         .update(updateData)
         .returning('*');
 
@@ -562,8 +562,8 @@ export const deleteSlaPolicyTarget = withAuth(async (user, { tenant }, targetId:
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const deleted = await trx('sla_policy_targets')
-        .where({ tenant, target_id: targetId })
+      const deleted = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+        .where({ target_id: targetId })
         .delete();
 
       if (!deleted) {
@@ -594,8 +594,8 @@ export const upsertSlaPolicyTargets = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Verify policy exists
-      const policy = await trx('sla_policies')
-        .where({ tenant, sla_policy_id: policyId })
+      const policy = await tenantScopedTable(trx, 'sla_policies', tenant)
+        .where({ sla_policy_id: policyId })
         .first();
 
       if (!policy) {
@@ -603,11 +603,11 @@ export const upsertSlaPolicyTargets = withAuth(async (
       }
 
       // Get existing targets for this policy
-      const existingTargets = await trx('sla_policy_targets')
-        .where({ tenant, sla_policy_id: policyId });
+      const existingTargets = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+        .where({ sla_policy_id: policyId }) as ISlaPolicyTarget[];
 
-      const existingByPriority = new Map(
-        existingTargets.map(t => [t.priority_id, t])
+      const existingByPriority = new Map<string, ISlaPolicyTarget>(
+        existingTargets.map((target) => [target.priority_id, target])
       );
 
       const results: ISlaPolicyTarget[] = [];
@@ -615,8 +615,8 @@ export const upsertSlaPolicyTargets = withAuth(async (
 
       for (const target of targets) {
         // Verify priority exists
-        const priority = await trx('priorities')
-          .where({ tenant, priority_id: target.priority_id })
+        const priority = await tenantScopedTable(trx, 'priorities', tenant)
+          .where({ priority_id: target.priority_id })
           .first();
 
         if (!priority) {
@@ -627,8 +627,8 @@ export const upsertSlaPolicyTargets = withAuth(async (
 
         if (existing) {
           // Update existing target
-          const [updated] = await trx('sla_policy_targets')
-            .where({ tenant, target_id: existing.target_id })
+          const [updated] = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
+            .where({ target_id: existing.target_id })
             .update({
               response_time_minutes: target.response_time_minutes ?? null,
               resolution_time_minutes: target.resolution_time_minutes ?? null,
