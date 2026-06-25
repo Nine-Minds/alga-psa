@@ -51,7 +51,7 @@
   {
     "id": "F006",
     "description": "pt-BR complete for common.json: translate the 688 remaining key(s) and re-audit all 898 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "prdRefs": [
       "3.2",
@@ -62,7 +62,7 @@
   {
     "id": "F007",
     "description": "pt-BR complete for client-portal.json: translate the 390 remaining key(s) and re-audit all 561 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "prdRefs": [
       "3.2",
@@ -73,7 +73,7 @@
   {
     "id": "F008",
     "description": "pt-BR complete for client-portal/service-requests.json: translate the 6 remaining key(s) and re-audit all 53 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "prdRefs": [
       "3.2",
@@ -84,7 +84,7 @@
   {
     "id": "F009",
     "description": "pt-BR complete for msp/service-requests.json: translate the 16 remaining key(s) and re-audit all 217 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "prdRefs": [
       "3.2",

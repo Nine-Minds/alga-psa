@@ -47,7 +47,7 @@
   {
     "id": "T006",
     "description": "validate-translations.cjs passes for pt common.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F006"
@@ -56,7 +56,7 @@
   {
     "id": "T007",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for common.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F006"
@@ -65,7 +65,7 @@
   {
     "id": "T008",
     "description": "validate-translations.cjs passes for pt client-portal.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F007"
@@ -74,7 +74,7 @@
   {
     "id": "T009",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for client-portal.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F007"
@@ -83,7 +83,7 @@
   {
     "id": "T010",
     "description": "validate-translations.cjs passes for pt client-portal/service-requests.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F008"
@@ -92,7 +92,7 @@
   {
     "id": "T011",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for client-portal/service-requests.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F008"
@@ -101,7 +101,7 @@
   {
     "id": "T012",
     "description": "validate-translations.cjs passes for pt msp/service-requests.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F009"
@@ -110,7 +110,7 @@
   {
     "id": "T013",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/service-requests.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-common",
     "featureIds": [
       "F009"
