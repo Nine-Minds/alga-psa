@@ -758,7 +758,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     const sortColumn = sort ? sortColumns[sort] ?? 'c.contract_name' : 'c.contract_name';
     const sortDirection = order === 'desc' ? 'desc' : 'asc';
 
-    const baseQuery = knex('contracts as c')
+    const baseQuery = createTenantScopedQuery(knex, {
+      table: 'contracts as c',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('clients as oc', function joinOwnerClient() {
         this.on('c.owner_client_id', '=', 'oc.client_id').andOn('c.tenant', '=', 'oc.tenant');
       })
@@ -768,7 +771,6 @@ export class ContractLineService extends BaseService<IContractLine> {
       .leftJoin('client_contracts as cc', function joinAssignments() {
         this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
       })
-      .where({ 'c.tenant': context.tenant })
       .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
       .whereNotNull('c.owner_client_id')
       .groupBy('c.contract_id', 'oc.client_name')
@@ -894,9 +896,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     return withTransaction(knex, async (trx) => {
       // Check if this contract is assigned to any clients via client_contracts
       // If so, we shouldn't allow removing contract lines
-      const clientAssignments = await trx('client_contracts as cc')
+      const clientAssignments = await createTenantScopedQuery(trx, {
+        table: 'client_contracts as cc',
+        tenant: context.tenant,
+      }).builder
         .where('cc.contract_id', contractId)
-        .where('cc.tenant', context.tenant)
         .count<{ count: string }[]>({ count: '*' });
 
       const assignmentCount = parseInt(clientAssignments?.[0]?.count ?? '0', 10);
