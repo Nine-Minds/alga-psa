@@ -190,8 +190,8 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const user = await knex('users')
-      .where({ user_id: id, tenant: context.tenant })
+    const user = await this.buildTenantScopedQuery(knex, context)
+      .where({ user_id: id })
       .select(USER_RESPONSE_COLUMNS)
       .first();
 
@@ -227,8 +227,7 @@ export class UserService extends BaseService<IUser> {
     return withTransaction(knex, async (trx) => {
       // Validate email uniqueness per tenant + user_type (allow same email across different types)
       const targetUserType = data.user_type || 'internal';
-      const existingUserByEmail = await trx('users')
-        .where('tenant', context.tenant)
+      const existingUserByEmail = await this.buildTenantScopedQuery(trx, context)
         .andWhere('email', data.email.toLowerCase())
         .andWhere('user_type', targetUserType)
         .select('user_id')
@@ -239,8 +238,7 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Validate username uniqueness within tenant + user_type (allow same username across different types)
-      const existingUserByUsername = await trx('users')
-        .where('tenant', context.tenant)
+      const existingUserByUsername = await this.buildTenantScopedQuery(trx, context)
         .andWhere('username', data.username.toLowerCase())
         .andWhere('user_type', targetUserType)
         .select('user_id')
@@ -252,9 +250,12 @@ export class UserService extends BaseService<IUser> {
 
       // Validate role IDs if provided
       if (data.role_ids && data.role_ids.length > 0) {
-        const roles = await trx('roles')
+        const roles = await createTenantScopedQuery(trx, {
+          table: 'roles',
+          tenant: context.tenant,
+        }).builder
           .whereIn('role_id', data.role_ids)
-          .where('tenant', context.tenant);
+          .select('*');
 
         if (roles.length !== data.role_ids.length) {
           throw new Error('One or more invalid role IDs provided');
@@ -326,8 +327,8 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Verify user exists and belongs to tenant
-      const existingUser = await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      const existingUser = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .select('user_id', 'email', 'user_type')
         .first();
 
@@ -338,7 +339,7 @@ export class UserService extends BaseService<IUser> {
       // Validate email uniqueness per user_type if changing email
       if (data.email && data.email.toLowerCase() !== existingUser.email) {
         const userTypeToCheck = (data.user_type || existingUser.user_type || 'internal');
-        const emailExists = await trx('users')
+        const emailExists = await this.buildTenantScopedQuery(trx, context)
           .where('email', data.email.toLowerCase())
           .andWhere('user_type', userTypeToCheck)
           .whereNot('user_id', id)
@@ -366,8 +367,8 @@ export class UserService extends BaseService<IUser> {
       });
 
       // Update user
-      const [updatedUser] = await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .update(updateData)
         .returning(USER_RESPONSE_FIELD_NAMES);
 
