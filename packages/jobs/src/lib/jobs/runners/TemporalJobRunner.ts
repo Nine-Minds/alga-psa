@@ -2,7 +2,8 @@ import { Client, Connection, WorkflowHandle } from '@temporalio/client';
 import { Duration } from '@temporalio/common';
 import logger from '@alga-psa/core/logger';
 import { JobStatus } from '../../../types/job';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, runWithTenant } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import {
   IJobRunner,
   JobHandlerConfig,
@@ -12,6 +13,10 @@ import {
   BaseJobData,
   TemporalConfig,
 } from '../interfaces';
+
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 /**
  * Temporal implementation of the IJobRunner interface
@@ -367,8 +372,8 @@ export class TemporalJobRunner implements IJobRunner {
       // Get the external ID from our database
       const { knex } = await createTenantKnex();
       const job = await runWithTenant(tenantId, async () => {
-        return knex('jobs')
-          .where({ job_id: jobId, tenant: tenantId })
+        return tenantScopedTable(knex, 'jobs', tenantId)
+          .where({ job_id: jobId })
           .first('external_id', 'status', 'metadata');
       });
 
@@ -431,8 +436,8 @@ export class TemporalJobRunner implements IJobRunner {
     try {
       const { knex } = await createTenantKnex();
       const job = await runWithTenant(tenantId, async () => {
-        return knex('jobs')
-          .where({ job_id: jobId, tenant: tenantId })
+        return tenantScopedTable(knex, 'jobs', tenantId)
+          .where({ job_id: jobId })
           .first();
       });
 
@@ -555,8 +560,7 @@ export class TemporalJobRunner implements IJobRunner {
 
       let userId: string | null = options?.userId ?? null;
       if (!userId) {
-        const row = await knex('users')
-          .where({ tenant: data.tenantId })
+        const row = await tenantScopedTable(knex, 'users', data.tenantId)
           .orderBy([{ column: 'created_at', order: 'asc' }])
           .first(['user_id']);
         userId = row?.user_id ? String(row.user_id) : null;
@@ -592,8 +596,8 @@ export class TemporalJobRunner implements IJobRunner {
   ): Promise<void> {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
-      await knex('jobs')
-        .where({ job_id: jobId, tenant: tenantId })
+      await tenantScopedTable(knex, 'jobs', tenantId)
+        .where({ job_id: jobId })
         .update({
           external_id: externalId,
           external_run_id: externalRunId,
@@ -615,8 +619,8 @@ export class TemporalJobRunner implements IJobRunner {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
 
-      const currentJob = await knex('jobs')
-        .where({ job_id: jobId, tenant: tenantId })
+      const currentJob = await tenantScopedTable(knex, 'jobs', tenantId)
+        .where({ job_id: jobId })
         .first('metadata');
 
       const currentMetadata = currentJob?.metadata
@@ -630,8 +634,8 @@ export class TemporalJobRunner implements IJobRunner {
         ...(updates?.error ? { error: updates.error } : {}),
       };
 
-      await knex('jobs')
-        .where({ job_id: jobId, tenant: tenantId })
+      await tenantScopedTable(knex, 'jobs', tenantId)
+        .where({ job_id: jobId })
         .update({
           status,
           metadata: JSON.stringify(updatedMetadata),
