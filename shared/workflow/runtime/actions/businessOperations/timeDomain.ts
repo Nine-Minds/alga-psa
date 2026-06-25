@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate, toPlainDate } from '@alga-psa/core';
@@ -195,6 +196,14 @@ function hasOwnProperty(obj: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 function ensureValidDate(value: string, field: string): Date {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -225,13 +234,12 @@ async function isManagerOfSubject(
   actorUserId: string,
   subjectUserId: string
 ): Promise<boolean> {
-  const teamManagerRow = await trx('teams')
+  const teamManagerRow = await tenantScopedTable(trx, 'teams', tenantId)
     .join('team_members', function joinTeamMembers() {
       this.on('teams.team_id', '=', 'team_members.team_id')
         .andOn('teams.tenant', '=', 'team_members.tenant');
     })
     .where({
-      'teams.tenant': tenantId,
       'teams.manager_id': actorUserId,
       'team_members.user_id': subjectUserId,
     })
@@ -241,8 +249,8 @@ async function isManagerOfSubject(
     return true;
   }
 
-  const reportsToRow = await trx('users')
-    .where({ tenant: tenantId, user_id: subjectUserId, reports_to: actorUserId })
+  const reportsToRow = await tenantScopedTable(trx, 'users', tenantId)
+    .where({ user_id: subjectUserId, reports_to: actorUserId })
     .first('user_id');
 
   return Boolean(reportsToRow);
@@ -254,18 +262,18 @@ async function hasAssignedNotSelfApproverBundleRuleForWorkflowTime(
   actorUserId: string
 ): Promise<boolean> {
   const [roleRows, teamRows] = await Promise.all([
-    trx('user_roles')
-      .where({ tenant: tenantId, user_id: actorUserId })
+    tenantScopedTable(trx, 'user_roles', tenantId)
+      .where({ user_id: actorUserId })
       .select<Array<{ role_id: string }>>('role_id'),
-    trx('team_members')
-      .where({ tenant: tenantId, user_id: actorUserId })
+    tenantScopedTable(trx, 'team_members', tenantId)
+      .where({ user_id: actorUserId })
       .select<Array<{ team_id: string }>>('team_id'),
   ]);
 
   const roleIds = roleRows.map((row) => row.role_id).filter(Boolean);
   const teamIds = teamRows.map((row) => row.team_id).filter(Boolean);
 
-  const rule = await trx('authorization_bundle_assignments as a')
+  const rule = await tenantScopedTable(trx, 'authorization_bundle_assignments as a', tenantId)
     .join('authorization_bundles as b', function joinBundles() {
       this.on('b.tenant', '=', 'a.tenant').andOn('b.bundle_id', '=', 'a.bundle_id');
     })
@@ -274,7 +282,6 @@ async function hasAssignedNotSelfApproverBundleRuleForWorkflowTime(
         .andOn('r.bundle_id', '=', 'b.bundle_id')
         .andOn('r.revision_id', '=', 'b.published_revision_id');
     })
-    .where('a.tenant', tenantId)
     .andWhere('a.status', 'active')
     .andWhere('b.status', 'active')
     .whereNotNull('b.published_revision_id')
@@ -379,8 +386,7 @@ async function scopeFindEntriesInputForActor<T extends WorkflowTimeFindEntriesIn
 
   const entryIds = (input as { entry_ids?: string[] }).entry_ids;
   if (entryIds?.length) {
-    const rows = await trx('time_entries')
-      .where({ tenant: tenantId })
+    const rows = await tenantScopedTable(trx, 'time_entries', tenantId)
       .whereIn('entry_id', entryIds)
       .distinct<{ user_id: string }[]>('user_id');
     for (const row of rows) {
@@ -390,8 +396,8 @@ async function scopeFindEntriesInputForActor<T extends WorkflowTimeFindEntriesIn
   }
 
   if (input.time_sheet_id) {
-    const sheet = await trx('time_sheets')
-      .where({ tenant: tenantId, id: input.time_sheet_id })
+    const sheet = await tenantScopedTable(trx, 'time_sheets', tenantId)
+      .where({ id: input.time_sheet_id })
       .first<{ user_id: string }>('user_id');
     if (sheet?.user_id) {
       await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(sheet.user_id));
@@ -434,8 +440,8 @@ async function getWorkItemClientContext(
 
   switch (link.type) {
     case 'ticket': {
-      const ticket = await trx('tickets')
-        .where({ tenant: tenantId, ticket_id: link.id })
+      const ticket = await tenantScopedTable(trx, 'tickets', tenantId)
+        .where({ ticket_id: link.id })
         .select('ticket_id', 'client_id', 'assigned_to')
         .first();
 
@@ -454,14 +460,14 @@ async function getWorkItemClientContext(
       };
     }
     case 'project_task': {
-      const task = await trx('project_tasks as pt')
+      const task = await tenantScopedTable(trx, 'project_tasks as pt', tenantId)
         .join('project_phases as pp', function joinPhases() {
           this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
         })
         .join('projects as p', function joinProjects() {
           this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
         })
-        .where({ 'pt.tenant': tenantId, 'pt.task_id': link.id })
+        .where({ 'pt.task_id': link.id })
         .select('pt.task_id', 'pt.assigned_to', 'p.client_id')
         .first();
 
@@ -480,8 +486,8 @@ async function getWorkItemClientContext(
       };
     }
     case 'project': {
-      const project = await trx('projects')
-        .where({ tenant: tenantId, project_id: link.id })
+      const project = await tenantScopedTable(trx, 'projects', tenantId)
+        .where({ project_id: link.id })
         .select('project_id', 'client_id')
         .first();
 
@@ -497,8 +503,8 @@ async function getWorkItemClientContext(
       return { clientId: (project.client_id as string | null) ?? null };
     }
     case 'interaction': {
-      const interaction = await trx('interactions')
-        .where({ tenant: tenantId, interaction_id: link.id })
+      const interaction = await tenantScopedTable(trx, 'interactions', tenantId)
+        .where({ interaction_id: link.id })
         .select('interaction_id', 'client_id')
         .first();
 
@@ -514,8 +520,8 @@ async function getWorkItemClientContext(
       return { clientId: (interaction.client_id as string | null) ?? null };
     }
     case 'ad_hoc': {
-      const adHoc = await trx('schedule_entries')
-        .where({ tenant: tenantId, entry_id: link.id })
+      const adHoc = await tenantScopedTable(trx, 'schedule_entries', tenantId)
+        .where({ entry_id: link.id })
         .select('entry_id')
         .first();
 
