@@ -531,8 +531,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const existing = await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      const existing = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: id })
         .first();
 
       if (!existing) {
@@ -559,18 +562,27 @@ export class InvoiceService extends BaseService<IInvoice> {
       });
 
       // Update invoice
-      await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: id })
         .update(updateData);
 
       // Update line items if provided
       if (data.items) {
-        const replacedItemIds = await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        const replacedItemIds = await createTenantScopedQuery(trx, {
+          table: 'invoice_line_items',
+          tenant: context.tenant,
+        }).builder
+          .where({ invoice_id: id })
           .pluck('item_id');
 
-        await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'invoice_line_items',
+          tenant: context.tenant,
+        }).builder
+          .where({ invoice_id: id })
           .del();
 
         for (const itemId of replacedItemIds) {
@@ -745,8 +757,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
     
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      const invoice = await createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: id })
         .first();
 
       if (!invoice) {
@@ -759,34 +774,46 @@ export class InvoiceService extends BaseService<IInvoice> {
         (recurringProvenance.detailPeriodCount ?? 0) > 0;
 
       // Check if invoice has payments
-	      const hasPayments = await trx('invoice_payments')
-	        .where({ invoice_id: id, tenant: context.tenant })
-	        .first();
+      const hasPayments = await createTenantScopedQuery(trx, {
+        table: 'invoice_payments',
+        tenant: context.tenant,
+      }).builder
+        .where({ invoice_id: id })
+        .first();
 
-	      const occurredAt = new Date().toISOString();
-	      const softCancelled = Boolean(
-          hasPayments ||
-          invoice.status === 'paid' ||
-          hasCanonicalRecurringDetailPeriods
-        );
+      const occurredAt = new Date().toISOString();
+      const softCancelled = Boolean(
+        hasPayments ||
+        invoice.status === 'paid' ||
+        hasCanonicalRecurringDetailPeriods
+      );
 
-	      if (softCancelled) {
-	        // Soft delete - mark as cancelled
-	        await trx('invoices')
-	          .where({ invoice_id: id, tenant: context.tenant })
-	          .update({
-	            status: 'cancelled',
-	            updated_by: context.userId,
-	            updated_at: new Date()
-	          });
-	      } else {
+      if (softCancelled) {
+        // Soft delete - mark as cancelled
+        await createTenantScopedQuery(trx, {
+          table: 'invoices',
+          tenant: context.tenant,
+        }).builder
+          .where({ invoice_id: id })
+          .update({
+            status: 'cancelled',
+            updated_by: context.userId,
+            updated_at: new Date()
+          });
+      } else {
         // Hard delete if no payments
-        await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'invoice_line_items',
+          tenant: context.tenant,
+        }).builder
+          .where({ invoice_id: id })
           .del();
         
-        await trx('invoices')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'invoices',
+          tenant: context.tenant,
+        }).builder
+          .where({ invoice_id: id })
           .del();
       }
 
