@@ -8,6 +8,7 @@ import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { TicketModel } from '@shared/models/ticketModel';
 
 const DEFAULT_RENEWALS_HORIZON_DAYS = 90;
@@ -142,6 +143,8 @@ export type RenewalQueueRow = {
   contract_name?: string | null;
   client_id: string;
   client_name?: string | null;
+  /** Real uploaded client logo URL (batched); null when none. */
+  logoUrl?: string | null;
   assigned_to?: string | null;
   status?: RenewalWorkItemStatus;
   contract_type: 'fixed-term' | 'evergreen';
@@ -270,7 +273,7 @@ export const listRenewalQueueRows = withAuth(async (
 
   const rows = await query;
 
-  return rows
+  const queueRows = rows
     .map(normalizeClientContract)
     .filter(
       (row) =>
@@ -302,6 +305,16 @@ export const listRenewalQueueRows = withAuth(async (
       available_actions: getAvailableActionsForStatus(toRenewalWorkItemStatus((row as any).status)),
     }))
     .sort((a, b) => (a.decision_due_date ?? '').localeCompare(b.decision_due_date ?? ''));
+
+  const clientIds = Array.from(
+    new Set(queueRows.map((row) => row.client_id).filter((clientId): clientId is string => Boolean(clientId)))
+  );
+  const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+
+  return queueRows.map((row) => ({
+    ...row,
+    logoUrl: row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null,
+  }));
 });
 
 export const markRenewalQueueItemRenewing = withAuth(async (

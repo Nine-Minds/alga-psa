@@ -50,6 +50,7 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
