@@ -1035,10 +1035,12 @@ export const validateOnboardingDefaults = withAuth(async (
     // Use withTransaction to check for defaults
     const validationResult = await withTransaction(db, async (trx) => {
       // Check for default board
-      const defaultBoard = await trx('boards')
+      const defaultBoard = await createTenantScopedQuery(trx, {
+        table: 'boards',
+        tenant,
+      }).builder
         .where({ 
-          is_default: true,
-          tenant 
+          is_default: true
         })
         .first();
       
@@ -1047,11 +1049,13 @@ export const validateOnboardingDefaults = withAuth(async (
       }
       
       // Check for default status
-      const defaultStatus = await trx('statuses')
+      const defaultStatus = await createTenantScopedQuery(trx, {
+        table: 'statuses',
+        tenant,
+      }).builder
         .where({ 
           is_default: true,
           status_type: 'ticket',
-          tenant,
           board_id: defaultBoard.board_id
         })
         .first();
@@ -1103,10 +1107,12 @@ export const getAvailableRoles = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const roles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('roles')
+    const roles = await withTransaction(knex, async (trx: Knex.Transaction): Promise<Array<{ role_id: string; role_name: string }>> => {
+      return await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant,
+      }).builder
         .where({
-          tenant,
           msp: true  // Only fetch MSP roles
         })
         .select('role_id', 'role_name')
@@ -1144,8 +1150,11 @@ export const getOnboardingInitialData = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Get the tenant's client information
-    const client = await knex('clients')
-      .where({ tenant, is_inactive: false })
+    const client = await createTenantScopedQuery(knex, {
+      table: 'clients',
+      tenant,
+    }).builder
+      .where({ is_inactive: false })
       .orderBy('created_at', 'asc')
       .first();
 
@@ -1182,25 +1191,27 @@ export const getTenantTicketingData = withAuth(async (
 }> => {
   try {
     const { knex } = await createTenantKnex();
+    const tenantScopedTable = (table: string) => createTenantScopedQuery(knex, {
+      table,
+      tenant,
+    }).builder;
 
-    const boards = await knex('boards')
-      .where({ tenant })
+    const boards = await tenantScopedTable('boards')
       .orderBy('display_order', 'asc')
       .orderBy('board_name', 'asc');
 
     const [categories, statuses, priorities] = await Promise.all([
-      knex('categories')
-        .where({ tenant })
+      tenantScopedTable('categories')
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
-      knex('statuses')
-        .where({ tenant, status_type: 'ticket' })
+      tenantScopedTable('statuses')
+        .where({ status_type: 'ticket' })
         .whereNotNull('board_id')
         .orderBy('board_id', 'asc')
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
-      knex('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      tenantScopedTable('priorities')
+        .where({ item_type: 'ticket' })
         .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc')
     ]);
