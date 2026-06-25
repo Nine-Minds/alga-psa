@@ -731,7 +731,10 @@ export async function fetchTicketActivities(
 
     // Query for tickets assigned to the user
     const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("tickets")
+      return await createTenantScopedQuery(trx, {
+        table: "tickets",
+        tenant,
+      }).builder
       .select(
         "tickets.*",
         "clients.client_name",
@@ -757,7 +760,6 @@ export async function fetchTicketActivities(
         this.on("tickets.priority_id", "priorities.priority_id")
             .andOn("tickets.tenant", "priorities.tenant");
       })
-      .where("tickets.tenant", tenant)
       .where(function() {
         // Tickets directly assigned to the user
         this.where("tickets.assigned_to", userId);
