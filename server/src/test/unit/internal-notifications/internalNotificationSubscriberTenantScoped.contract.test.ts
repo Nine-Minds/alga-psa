@@ -37,6 +37,10 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     const projectCreatedSection = sectionBetween('async function handleProjectCreated', 'async function handleProjectAssigned');
     const projectAssignedSection = sectionBetween('async function handleProjectAssigned', 'async function handleTaskAssigned');
     const taskAssignedSection = sectionBetween('async function handleTaskAssigned', 'async function handleInvoiceGenerated');
+    const invoiceGeneratedSection = sectionBetween('async function handleInvoiceGenerated', 'async function handleMessageSent');
+    const appointmentCreatedSection = sectionBetween('async function handleAppointmentRequestCreated', 'async function handleAppointmentRequestApproved');
+    const appointmentApprovedSection = sectionBetween('async function handleAppointmentRequestApproved', 'async function handleAppointmentRequestDeclined');
+    const appointmentCancelledSection = sectionBetween('async function handleAppointmentRequestCancelled', 'async function handleInternalNotificationEvent');
 
     expect(source).toContain("import { createTenantScopedQuery, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
@@ -146,5 +150,24 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     expect(taskAssignedSection).not.toContain('.where({ user_id: assignedByUserId, tenant: tenantId })');
     expect(taskAssignedSection).not.toContain('.where({ team_id: assignedToId, tenant: tenantId })');
     expect(taskAssignedSection).not.toContain("'team_members.tenant': tenantId");
+
+    expect(invoiceGeneratedSection).toContain("tenantScopedTable(db, 'invoices as i', tenantId)");
+
+    expect(appointmentCreatedSection).toContain("tenantScopedTable(db, 'users as u', tenantId)");
+    expect(appointmentCreatedSection).toContain("tenantScopedTable(db, 'companies', tenantId)");
+    expect(appointmentCreatedSection).not.toContain("'u.tenant': tenantId");
+    expect(appointmentCreatedSection).not.toContain('.where({ company_id: clientId, tenant: tenantId })');
+
+    expect(appointmentApprovedSection).toContain("tenantScopedTable(db, 'appointment_requests', tenantId)");
+    expect(appointmentApprovedSection).toContain("tenantScopedTable(db, 'schedule_entries', tenantId)");
+    expect(appointmentApprovedSection).toContain("tenantScopedTable(db, 'users', tenantId)");
+    expect(appointmentApprovedSection).toContain("tenantScopedTable(db, 'clients', tenantId)");
+    expect(appointmentApprovedSection).not.toContain('.where({ appointment_request_id: appointmentRequestId, tenant: tenantId })');
+    expect(appointmentApprovedSection).not.toContain('.where({ entry_id: entryId, tenant: tenantId })');
+    expect(appointmentApprovedSection).not.toContain('.where({ user_id: assignedUserId, tenant: tenantId })');
+    expect(appointmentApprovedSection).not.toContain('.where({ client_id: clientId, tenant: tenantId })');
+
+    expect(appointmentCancelledSection).toContain("tenantScopedTable(db, 'users as u', tenantId)");
+    expect(appointmentCancelledSection).not.toContain("'u.tenant': tenantId");
   });
 });

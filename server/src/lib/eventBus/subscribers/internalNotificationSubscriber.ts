@@ -2297,7 +2297,7 @@ async function handleInvoiceGenerated(event: InvoiceGeneratedEvent): Promise<voi
     const db = await getConnection(tenantId);
 
     // Get invoice and client details
-    const invoice = await db('invoices as i')
+    const invoice = await tenantScopedTable(db, 'invoices as i', tenantId)
       .select(
         'i.invoice_number',
         'c.client_name'
@@ -2443,7 +2443,7 @@ async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedE
 
     // Send notification to MSP STAFF
     // Get users with 'schedule' 'update' permission
-    const staffUsers = await db('users as u')
+    const staffUsers = await tenantScopedTable(db, 'users as u', tenantId)
       .join('user_roles as ur', function() {
         this.on('u.user_id', 'ur.user_id')
             .andOn('u.tenant', 'ur.tenant');
@@ -2460,7 +2460,6 @@ async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedE
         this.on('rp.permission_id', 'p.permission_id');
       })
       .where({
-        'u.tenant': tenantId,
         'u.user_type': 'internal',
         'p.resource': 'schedule',
         'p.action': 'update'
@@ -2470,9 +2469,9 @@ async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedE
     // Get client name if available
     let clientName = 'Unknown';
     if (clientId) {
-      const client = await db('companies')
+      const client = await tenantScopedTable(db, 'companies', tenantId)
         .select('company_name')
-        .where({ company_id: clientId, tenant: tenantId })
+        .where('company_id', clientId)
         .first();
       clientName = client?.company_name || 'Unknown';
     }
@@ -2536,14 +2535,14 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
     // requestedDate/requestedTime are the requester's wall-clock. Render the
     // schedule entry's UTC instant per recipient, labeled with their timezone.
     const scheduleEntryId = (payload as any).scheduleEntryId as string | undefined;
-    const request = await db('appointment_requests')
-      .where({ appointment_request_id: appointmentRequestId, tenant: tenantId })
+    const request = await tenantScopedTable(db, 'appointment_requests', tenantId)
+      .where('appointment_request_id', appointmentRequestId)
       .select('requester_timezone', 'schedule_entry_id')
       .first();
     const entryId = scheduleEntryId || request?.schedule_entry_id;
     const entry = entryId
-      ? await db('schedule_entries')
-          .where({ entry_id: entryId, tenant: tenantId })
+      ? await tenantScopedTable(db, 'schedule_entries', tenantId)
+          .where('entry_id', entryId)
           .select('scheduled_start')
           .first()
       : null;
@@ -2558,9 +2557,9 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
     // Get technician name for client notification
     let technicianName = 'Your technician';
     if (assignedUserId) {
-      const technician = await db('users')
+      const technician = await tenantScopedTable(db, 'users', tenantId)
         .select('first_name', 'last_name')
-        .where({ user_id: assignedUserId, tenant: tenantId })
+        .where('user_id', assignedUserId)
         .first();
 
       if (technician) {
@@ -2597,9 +2596,9 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
     if (assignedUserId) {
       let clientName = requesterName || '';
       if (clientId) {
-        const client = await db('clients')
+        const client = await tenantScopedTable(db, 'clients', tenantId)
           .select('client_name')
-          .where({ client_id: clientId, tenant: tenantId })
+          .where('client_id', clientId)
           .first();
         if (client?.client_name) {
           clientName = client.client_name;
@@ -2700,7 +2699,7 @@ async function handleAppointmentRequestCancelled(event: AppointmentRequestCancel
     const db = await getConnection(tenantId);
 
     // Send notification to MSP STAFF (who had been notified about this request)
-    const staffUsers = await db('users as u')
+    const staffUsers = await tenantScopedTable(db, 'users as u', tenantId)
       .join('user_roles as ur', function() {
         this.on('u.user_id', 'ur.user_id')
             .andOn('u.tenant', 'ur.tenant');
@@ -2717,7 +2716,6 @@ async function handleAppointmentRequestCancelled(event: AppointmentRequestCancel
         this.on('rp.permission_id', 'p.permission_id');
       })
       .where({
-        'u.tenant': tenantId,
         'u.user_type': 'internal',
         'p.resource': 'schedule',
         'p.action': 'update'
