@@ -1303,8 +1303,7 @@ export class UserService extends BaseService<IUser> {
    * Enhanced user query with joins for roles and other data
    */
   private buildEnhancedUserQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
-    return knex('users')
-      .where('tenant', context.tenant)
+    return this.buildTenantScopedQuery(knex, context)
       .select(USER_RESPONSE_COLUMNS);
   }
 
