@@ -1,9 +1,16 @@
 'use server';
 
-import { getConnection } from '@alga-psa/db';
+import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import type { Knex } from 'knex';
+
+const tenantSettingsQuery = (knex: Knex, tenant: string) =>
+  createTenantScopedQuery(knex, {
+    table: 'tenant_settings',
+    tenant
+  }).builder;
 
 /**
  * Update MSP portal locale settings for the tenant.
@@ -24,8 +31,7 @@ export const updateTenantMspLocaleSettingsAction = withAuth(async (
 
   const knex = await getConnection(tenant);
 
-  const existingRecord = await knex('tenant_settings')
-    .where({ tenant })
+  const existingRecord = await tenantSettingsQuery(knex, tenant)
     .first();
 
   const existingSettings = existingRecord?.settings || {};
@@ -40,8 +46,7 @@ export const updateTenantMspLocaleSettingsAction = withAuth(async (
   };
 
   if (existingRecord) {
-    await knex('tenant_settings')
-      .where({ tenant })
+    await tenantSettingsQuery(knex, tenant)
       .update({
         settings: updatedSettings,
         updated_at: knex.fn.now(),
@@ -75,8 +80,7 @@ export const getTenantMspLocaleSettingsAction = withOptionalAuth(async (
   const { tenant } = ctx;
   const knex = await getConnection(tenant);
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await tenantSettingsQuery(knex, tenant)
     .first();
 
   if (!tenantSettings?.settings) {
