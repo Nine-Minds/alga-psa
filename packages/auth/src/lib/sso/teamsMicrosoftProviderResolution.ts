@@ -1,4 +1,5 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 export interface TeamsMicrosoftProviderResolution {
@@ -40,9 +41,10 @@ export async function resolveTeamsMicrosoftProviderConfig(
   tenantId: string
 ): Promise<TeamsMicrosoftProviderResolution> {
   const db = await getAdminConnection();
-  const integration = await db<TeamsIntegrationRow>('teams_integrations')
-    .where({ tenant: tenantId })
-    .first();
+  const integration = await createTenantScopedQuery(db, {
+    table: 'teams_integrations',
+    tenant: tenantId,
+  }).builder.first() as TeamsIntegrationRow | undefined;
 
   if (!integration || integration.install_status === 'not_configured' || !integration.selected_profile_id) {
     return {
@@ -52,9 +54,12 @@ export async function resolveTeamsMicrosoftProviderConfig(
     };
   }
 
-  const profile = await db<MicrosoftProfileRow>('microsoft_profiles')
-    .where({ tenant: tenantId, profile_id: integration.selected_profile_id })
-    .first();
+  const profile = await createTenantScopedQuery(db, {
+    table: 'microsoft_profiles',
+    tenant: tenantId,
+  }).builder
+    .where({ profile_id: integration.selected_profile_id })
+    .first() as MicrosoftProfileRow | undefined;
 
   if (!profile || profile.is_archived) {
     return {
