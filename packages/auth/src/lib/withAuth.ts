@@ -67,13 +67,15 @@ export interface WithAuthOptions {
  * // Basic usage - throws if not authenticated
  * export const getMyData = withAuth(async (user, ctx) => {
  *   const { knex } = await createTenantKnex();
- *   return await knex('my_table').where({ tenant: ctx.tenant }).first();
+ *   return await createTenantScopedQuery(knex, { table: 'my_table', tenant: ctx.tenant }).builder.first();
  * });
  *
  * // With arguments
  * export const updateItem = withAuth(async (user, ctx, itemId: string, data: ItemData) => {
  *   const { knex } = await createTenantKnex();
- *   return await knex('items').where({ item_id: itemId, tenant: ctx.tenant }).update(data);
+ *   return await createTenantScopedQuery(knex, { table: 'items', tenant: ctx.tenant }).builder
+ *     .where({ item_id: itemId })
+ *     .update(data);
  * });
  * ```
  */
@@ -114,7 +116,7 @@ export function withAuth<TArgs extends unknown[], TResult>(
  *     return { publicData: 'only' };
  *   }
  *   const { knex } = await createTenantKnex();
- *   return await knex('my_table').where({ tenant: ctx.tenant }).first();
+ *   return await createTenantScopedQuery(knex, { table: 'my_table', tenant: ctx.tenant }).builder.first();
  * });
  * ```
  */
