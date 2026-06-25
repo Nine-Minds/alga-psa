@@ -2347,8 +2347,8 @@ export function registerProjectActions(): void {
         };
         if (taskColumns.has('assigned_team_id')) taskPatch.assigned_team_id = null;
 
-        await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.task_id)
           .update(taskPatch);
 
         await reconcileTaskAdditionalUsers(
