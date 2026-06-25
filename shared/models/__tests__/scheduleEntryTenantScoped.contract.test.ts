@@ -21,6 +21,10 @@ const basicRetrievalSection = sectionBetween(
   'getAll: async',
   'create: async'
 );
+const updateDeleteSection = sectionBetween(
+  'update: async',
+  'getByWorkItem: async'
+);
 
 describe('schedule entry model tenant-scoped query contract', () => {
   it('uses the structural tenant-scoped query helper for schedule entry roots', () => {
@@ -43,5 +47,12 @@ describe('schedule entry model tenant-scoped query contract', () => {
   it('uses structural tenant scoping for basic schedule entry retrieval roots', () => {
     expect(basicRetrievalSection).toContain("tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)");
     expect(basicRetrievalSection).not.toContain(".where('schedule_entries.tenant', tenant)");
+  });
+
+  it('uses structural tenant scoping for update and delete roots', () => {
+    expect(updateDeleteSection).toContain("tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)");
+    expect(updateDeleteSection).toContain("tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)");
+    expect(updateDeleteSection).not.toContain(".where('schedule_entries.tenant', tenant)");
+    expect(updateDeleteSection).not.toContain(".where('schedule_entry_assignees.tenant', tenant)");
   });
 });

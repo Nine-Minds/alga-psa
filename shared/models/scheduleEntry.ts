@@ -469,9 +469,8 @@ const ScheduleEntry = {
     const virtualTimestamp = timestamp ? new Date(parseInt(timestamp, 10)) : undefined;
 
     // Get the master entry
-    const originalEntry = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', masterEntryId)
+    const originalEntry = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', masterEntryId)
       .first();
 
     if (!originalEntry) {
@@ -531,9 +530,8 @@ const ScheduleEntry = {
               exceptions: [...(originalPattern.exceptions || []), exceptionDate],
             };
 
-            await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .update({
                 recurrence_pattern: JSON.stringify(updatedPattern),
               });
@@ -576,9 +574,8 @@ const ScheduleEntry = {
               ),
             };
 
-            await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .update({
                 recurrence_pattern: JSON.stringify(futureOriginalPattern),
               });
@@ -654,9 +651,8 @@ const ScheduleEntry = {
                 }
               : originalPattern;
 
-            const [updatedMasterEntry] = await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            const [updatedMasterEntry] = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .update({
                 title: entry.title || originalEntry.title,
                 scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
@@ -732,9 +728,8 @@ const ScheduleEntry = {
     }
 
     // Update the entry
-    const [updatedEntry] = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', masterEntryId)
+    const [updatedEntry] = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', masterEntryId)
       .update(updateData)
       .returning('*');
 
@@ -781,9 +776,8 @@ const ScheduleEntry = {
     const virtualTimestamp = timestamp ? new Date(parseInt(timestamp, 10)) : undefined;
 
     // Get the master entry
-    const originalEntry = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', masterEntryId)
+    const originalEntry = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', masterEntryId)
       .first();
 
     if (!originalEntry) {
@@ -808,9 +802,8 @@ const ScheduleEntry = {
                 exceptions: [...(originalPattern.exceptions || []), exceptionDate],
               };
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .update({
                   recurrence_pattern: JSON.stringify(updatedPattern),
                 });
@@ -878,14 +871,12 @@ const ScheduleEntry = {
               }
 
               // Delete assignees then original master
-              await knexOrTrx('schedule_entry_assignees')
-                .where('schedule_entry_assignees.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
               return true;
@@ -908,9 +899,8 @@ const ScheduleEntry = {
                   ) || [],
               };
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .update({
                   recurrence_pattern: JSON.stringify(updatedPattern),
                 });
@@ -918,14 +908,12 @@ const ScheduleEntry = {
               return true;
             } else {
               // Master entry in FUTURE mode = delete entire series
-              await knexOrTrx('schedule_entry_assignees')
-                .where('schedule_entry_assignees.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
               return true;
@@ -934,14 +922,12 @@ const ScheduleEntry = {
 
           case 'all': {
             // Delete assignees first, then the master entry
-            await knexOrTrx('schedule_entry_assignees')
-              .where('schedule_entry_assignees.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+              .where('entry_id', masterEntryId)
               .del();
 
-            const deletedCount = await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            const deletedCount = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .del();
 
             return deletedCount > 0;
@@ -951,14 +937,12 @@ const ScheduleEntry = {
     }
 
     // Non-recurring path: simple delete
-    await knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('entry_id', entry_id)
       .del();
 
-    const deletedCount = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    const deletedCount = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', entry_id)
       .del();
 
     return deletedCount > 0;
