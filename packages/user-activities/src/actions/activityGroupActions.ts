@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
@@ -18,6 +18,21 @@ export interface ActivityGroupItem {
   activityId: string;
   activityType: string;
   sortOrder: number;
+}
+
+interface ActivityGroupRow {
+  group_id: string;
+  group_name: string;
+  sort_order: number;
+  is_collapsed: boolean;
+}
+
+interface ActivityGroupItemRow {
+  item_id: string;
+  group_id: string;
+  activity_id: string;
+  activity_type: string;
+  sort_order: number;
 }
 
 /**
@@ -45,8 +60,11 @@ export const getUserActivityGroups = withAuth(async (
       if (!canUpdate && !canReadAll) {
         throw new Error("Permission denied: cannot view another user's groups");
       }
-      const target = await trx('users')
-        .where({ tenant, user_id: targetUserId, user_type: 'internal' })
+      const target = await createTenantScopedQuery(trx, {
+        table: 'users',
+        tenant,
+      }).builder
+        .where({ user_id: targetUserId, user_type: 'internal' })
         .first();
       if (!target) {
         throw new Error('User not found');
@@ -54,20 +72,25 @@ export const getUserActivityGroups = withAuth(async (
       ownerUserId = targetUserId;
     }
 
-    const groups = await trx('user_activity_groups')
-      .where({ tenant, user_id: ownerUserId })
+    const groups = await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ user_id: ownerUserId })
       .orderBy('sort_order')
-      .select('group_id', 'group_name', 'sort_order', 'is_collapsed');
+      .select('group_id', 'group_name', 'sort_order', 'is_collapsed') as ActivityGroupRow[];
 
     if (groups.length === 0) return [];
 
     const groupIds = groups.map((g) => g.group_id);
 
-    const items = await trx('user_activity_group_items')
-      .where({ tenant })
+    const items = await createTenantScopedQuery(trx, {
+      table: 'user_activity_group_items',
+      tenant,
+    }).builder
       .whereIn('group_id', groupIds)
       .orderBy('sort_order')
-      .select('item_id', 'group_id', 'activity_id', 'activity_type', 'sort_order');
+      .select('item_id', 'group_id', 'activity_id', 'activity_type', 'sort_order') as ActivityGroupItemRow[];
 
     const itemsByGroup = new Map<string, ActivityGroupItem[]>();
     for (const item of items) {
@@ -107,8 +130,11 @@ export const createActivityGroup = withAuth(async (
 
   const group = await withTransaction(db, async (trx: Knex.Transaction) => {
     // Next sort order = max + 1
-    const maxSort = await trx('user_activity_groups')
-      .where({ tenant, user_id: user.user_id })
+    const maxSort = await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ user_id: user.user_id })
       .max('sort_order as max')
       .first();
 
