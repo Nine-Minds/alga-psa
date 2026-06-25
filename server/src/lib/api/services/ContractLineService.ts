@@ -1166,9 +1166,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       }, context);
       updateData.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       
-      const [updatedPlan] = await trx('contract_lines')
+      const [updatedPlan] = await createTenantScopedQuery(trx, {
+        table: 'contract_lines',
+        tenant: context.tenant,
+      }).builder
         .where('contract_line_id', planId)
-        .where('tenant', context.tenant)
         .update(updateData)
         .returning('*');
       
@@ -1275,9 +1277,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     return withTransaction(knex, async (trx) => {
       // Get template
-      const template = await trx('plan_templates')
+      const template = await createTenantScopedQuery(trx, {
+        table: 'plan_templates',
+        tenant: context.tenant,
+      }).builder
         .where('template_id', data.template_id)
-        .where('tenant', context.tenant)
         .first();
       
       if (!template) {
@@ -1296,9 +1300,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       const [newPlan] = await trx('contract_lines').insert(planData).returning('*');
       
       // Add template services
-      const templateServices = await trx('template_services')
-        .where('template_id', data.template_id)
-        .where('tenant', context.tenant);
+      const templateServices = await createTenantScopedQuery(trx, {
+        table: 'template_services',
+        tenant: context.tenant,
+      }).builder
+        .where('template_id', data.template_id);
       
       for (const templateService of templateServices) {
         let rate = templateService.default_rate;
