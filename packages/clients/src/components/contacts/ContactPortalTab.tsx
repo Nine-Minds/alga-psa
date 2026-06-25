@@ -853,6 +853,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                           >
                             <Checkbox
                               id={`visibility-group-board-${board.board_id}`}
+                              containerClassName=""
                               checked={checked}
                               onChange={() => handleToggleGroupBoard(board.board_id!)}
                               disabled={isUpdating}

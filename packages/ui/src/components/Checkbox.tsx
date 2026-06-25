@@ -72,6 +72,8 @@ export function Checkbox({
     }
   }, [indeterminate, checked]);
 
+  // LEVERAGE: friction checkbox-default-mb4 — the mb-4 form-field default forces inline/list
+  // callers (pickers, dropdown rows) to pass containerClassName="" to avoid a stray 16px row gap.
   const wrapperClasses = cn('flex items-center gap-2', containerClassName ?? 'mb-4');
 
   return (

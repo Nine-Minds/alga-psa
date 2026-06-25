@@ -931,6 +931,7 @@ export function ContractDialog({
                               >
                                 <Checkbox
                                   id={`preset-${preset.preset_id}`}
+                                  containerClassName=""
                                   checked={selectedContractLinePresetIds.has(preset.preset_id)}
                                   onChange={() => preset.preset_id && toggleContractLinePreset(preset.preset_id)}
                                 />

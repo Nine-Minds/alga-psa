@@ -80,6 +80,7 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
                       checked={selectedStatuses.includes(status.standard_status_id)}
                       onChange={() => onSelectionChange(status.standard_status_id)}
                       id={`status-${status.standard_status_id}`}
+                      containerClassName=""
                     />
                     <label
                       htmlFor={`status-${status.standard_status_id}`}

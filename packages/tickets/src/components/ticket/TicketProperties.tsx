@@ -1467,6 +1467,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     <label key={memberId} className="flex items-center gap-2 text-sm">
                     <Checkbox
                       id={`${id}-team-member-${memberId}`}
+                      containerClassName=""
                       checked={selectedTeamMemberIds.includes(memberId)}
                       onChange={() => {
                         setSelectedTeamMemberIds(prev =>
