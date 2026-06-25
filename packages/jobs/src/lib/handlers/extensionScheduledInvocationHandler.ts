@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 
 import logger from '@alga-psa/core/logger';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
+import type { Knex } from 'knex';
 import type { BaseJobData } from '../jobs/interfaces';
 
 export interface ExtensionScheduledInvocationJobData extends BaseJobData {
@@ -61,6 +63,14 @@ function advisoryLockKey(scheduleId: string): number {
   return hash;
 }
 
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenantId: string) {
+  return createTenantScopedQuery(conn, {
+    table,
+    tenant: tenantId,
+    tenantColumn: 'tenant_id',
+  }).builder;
+}
+
 async function readResponseTextWithLimit(
   resp: { text: () => Promise<string> },
   maxBytes: number
@@ -107,8 +117,8 @@ export async function extensionScheduledInvocationHandler(
     }
 
     // Load schedule (must be enabled).
-    const scheduleRow = await trx('tenant_extension_schedule')
-      .where({ id: scheduleId, tenant_id: tenantId, install_id: installId })
+    const scheduleRow = await tenantScopedTable(trx, 'tenant_extension_schedule', tenantId)
+      .where({ id: scheduleId, install_id: installId })
       .first(['id', 'enabled', 'payload_json', 'cron', 'timezone', 'endpoint_id', 'job_id', 'runner_schedule_id']);
 
     if (!scheduleRow) {
@@ -136,8 +146,8 @@ export async function extensionScheduledInvocationHandler(
         errorMessage = 'Schedule endpoint not found; disabling schedule';
         // Policy: disable schedule if its endpoint reference is broken.
         try {
-          await trx('tenant_extension_schedule')
-            .where({ id: scheduleId, tenant_id: tenantId })
+          await tenantScopedTable(trx, 'tenant_extension_schedule', tenantId)
+            .where({ id: scheduleId })
             .update({ enabled: false, updated_at: trx.fn.now() });
         } catch {
           // Best-effort; last_run fields update is handled below.
@@ -162,8 +172,8 @@ export async function extensionScheduledInvocationHandler(
         throw new Error('Install content hash missing');
       }
 
-      const installRow = await trx('tenant_extension_install')
-        .where({ id: installId, tenant_id: tenantId })
+      const installRow = await tenantScopedTable(trx, 'tenant_extension_install', tenantId)
+        .where({ id: installId })
         .first(['registry_id', 'is_enabled']);
       const registryId = installRow?.registry_id ? safeString(installRow.registry_id) : '';
       if (!registryId) {
@@ -272,8 +282,8 @@ export async function extensionScheduledInvocationHandler(
 
       // Update schedule last-run fields (best-effort).
       try {
-        await trx('tenant_extension_schedule')
-          .where({ id: scheduleId, tenant_id: tenantId })
+        await tenantScopedTable(trx, 'tenant_extension_schedule', tenantId)
+          .where({ id: scheduleId })
           .update({
             last_run_at: trx.fn.now(),
             last_run_status: status,
