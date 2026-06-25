@@ -607,8 +607,8 @@ export const submitForReview = withAuth(
       throw new Error('At least one reviewer is required');
     }
 
-    const existing = await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
+    const existing = await tenantScopedTable(knex, 'kb_articles', tenant)
+      .where({ article_id: articleId })
       .first();
 
     if (!existing) {
@@ -616,8 +616,8 @@ export const submitForReview = withAuth(
     }
 
     // Update article status to review
-    await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
+    await tenantScopedTable(knex, 'kb_articles', tenant)
+      .where({ article_id: articleId })
       .update({
         status: 'review',
         updated_at: knex.fn.now(),
@@ -625,9 +625,8 @@ export const submitForReview = withAuth(
       });
 
     // Validate all reviewer user IDs belong to this tenant
-    const validUsers = await knex('users')
+    const validUsers = await tenantScopedTable(knex, 'users', tenant)
       .select('user_id')
-      .where('tenant', tenant)
       .whereIn('user_id', reviewerUserIds);
     const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
     const invalidIds = reviewerUserIds.filter((id) => !validUserIds.has(id));
@@ -636,8 +635,8 @@ export const submitForReview = withAuth(
     }
 
     // Create reviewer assignments (remove existing pending ones first)
-    await knex('kb_article_reviewers')
-      .where({ tenant, article_id: articleId, review_status: 'pending' })
+    await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
+      .where({ article_id: articleId, review_status: 'pending' })
       .del();
 
     const reviewerRecords = reviewerUserIds.map((userId) => ({
@@ -678,9 +677,8 @@ export const completeReview = withAuth(
     }
 
     // Update the reviewer record
-    const updated = await knex('kb_article_reviewers')
+    const updated = await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
       .where({
-        tenant,
         article_id: articleId,
         user_id: user.user_id,
       })
@@ -695,8 +693,8 @@ export const completeReview = withAuth(
     }
 
     // Update article's last_reviewed metadata
-    await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
+    await tenantScopedTable(knex, 'kb_articles', tenant)
+      .where({ article_id: articleId })
       .update({
         last_reviewed_at: knex.fn.now(),
         last_reviewed_by: user.user_id,
