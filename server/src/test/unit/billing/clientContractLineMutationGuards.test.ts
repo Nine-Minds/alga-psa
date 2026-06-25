@@ -15,6 +15,12 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
+// Grant the MSP permission gate so the domain guards under test actually run.
+vi.mock('../../../../../packages/clients/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertMspPermission: vi.fn(async () => {}),
+}));
+
 function createCanonicalDetailBuilder(servicePeriodEnd: string) {
   const builder: any = {
     join: vi.fn(() => builder),
