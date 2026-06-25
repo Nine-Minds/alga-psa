@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, createTenantScopedQuery } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -179,8 +179,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceAmountDue(trx: Knex.Transaction, params: { invoiceId: string; totalAmount: number; creditApplied: number; tenantId: string }) {
-    const payments = await trx('invoice_payments')
-      .where({ invoice_id: params.invoiceId, tenant: params.tenantId })
+    const payments = await createTenantScopedQuery(trx, {
+      table: 'invoice_payments',
+      tenant: params.tenantId,
+    }).builder
+      .where({ invoice_id: params.invoiceId })
       .sum('amount as total_paid');
 
     const totalPayments = Number(payments[0]?.total_paid || 0);
@@ -206,8 +209,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
-    const client = await trx('clients')
-      .where({ client_id: clientId, tenant })
+    const client = await createTenantScopedQuery(trx, {
+      table: 'clients',
+      tenant,
+    }).builder
+      .where({ client_id: clientId })
       .select('payment_terms')
       .first();
 
@@ -218,8 +224,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
-    return trx('recurring_service_periods as rsp')
-      .where('rsp.tenant', context.tenant)
+    return createTenantScopedQuery(trx, {
+      table: 'recurring_service_periods as rsp',
+      alias: 'rsp',
+      tenant: context.tenant,
+    }).builder
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
       .min('rsp.service_period_start as recurring_service_period_start')
