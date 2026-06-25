@@ -569,10 +569,12 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Check if service already exists in plan
-        const existingConfig = await trx('contract_line_service_configuration')
+        const existingConfig = await createTenantScopedQuery(trx, {
+          table: 'contract_line_service_configuration',
+          tenant: context.tenant,
+        }).builder
           .where('contract_line_id', planId)
           .where('service_id', data.service_id)
-          .where('tenant', context.tenant)
           .first();
         
         if (existingConfig) {
@@ -614,10 +616,12 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     return withTransaction(knex, async (trx) => {
       // Get configuration to delete
-      const config = await trx('contract_line_service_configuration')
+      const config = await createTenantScopedQuery(trx, {
+        table: 'contract_line_service_configuration',
+        tenant: context.tenant,
+      }).builder
         .where('contract_line_id', planId)
         .where('service_id', serviceId)
-        .where('tenant', context.tenant)
         .first();
       
       if (!config) {
@@ -643,10 +647,12 @@ export class ContractLineService extends BaseService<IContractLine> {
       
       return withTransaction(knex, async (trx) => {
         // Get existing configuration
-        const config = await trx('contract_line_service_configuration')
+        const config = await createTenantScopedQuery(trx, {
+          table: 'contract_line_service_configuration',
+          tenant: context.tenant,
+        }).builder
           .where('contract_line_id', planId)
           .where('service_id', serviceId)
-          .where('tenant', context.tenant)
           .first();
         
         if (!config) {
@@ -677,13 +683,15 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<Array<any>> {
     const { knex } = await this.getKnex();
     
-    const services = await knex('contract_line_service_configuration as psc')
+    const services = await createTenantScopedQuery(knex, {
+      table: 'contract_line_service_configuration as psc',
+      tenant: context.tenant,
+    }).builder
       .join('service_catalog as sc', function() {
         this.on('psc.service_id', '=', 'sc.service_id')
             .andOn('psc.tenant', '=', 'sc.tenant');
       })
       .where('psc.contract_line_id', planId)
-      .where('psc.tenant', context.tenant)
       .select(
         'psc.*',
         'sc.service_name',
