@@ -911,7 +911,7 @@
   {
     "id": "T102",
     "description": "Each listed template file exports a pt variant with non-empty subject/html/text and identical {{variable}} set to en.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-billing-projects",
     "featureIds": [
       "F055"
@@ -920,7 +920,7 @@
   {
     "id": "T103",
     "description": "pt email copy for this group passes the glossary forbidden-term audit.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-billing-projects",
     "featureIds": [
       "F055"

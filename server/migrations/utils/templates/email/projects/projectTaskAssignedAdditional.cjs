@@ -165,6 +165,27 @@ const COPY = {
     textView: 'Zobacz zadanie pod adresem',
   },
 };
+SUBJECTS.pt = 'Você foi adicionado como recurso adicional à tarefa: {{task.name}}';
+COPY.pt = {
+  headerLabel: 'Atribuição de tarefa',
+  intro: 'Olá{{#if recipientName}} {{recipientName}}{{/if}}, você foi adicionado(a) como recurso adicional de uma tarefa do projeto.',
+  assignedBadge: 'Recurso adicional',
+  badgeBg: 'rgba(138,77,234,0.12)',
+  badgeColor: '#5b38b0',
+  taskLabel: 'Tarefa',
+  projectLabel: 'Projeto',
+  dueDateLabel: 'Data de vencimento',
+  assignedByLabel: 'Atribuído por',
+  roleLabel: 'Função',
+  descriptionTitle: 'Descrição',
+  viewButton: 'Ver tarefa',
+  buttonColor: '#8A4DEA',
+  footer: 'Powered by Alga PSA',
+  textHeader: 'Atribuição de tarefa',
+  textIntro: 'Você foi adicionado(a) como recurso adicional para esta tarefa:',
+  textView: 'Ver tarefa em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

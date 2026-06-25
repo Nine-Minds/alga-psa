@@ -188,3 +188,9 @@ npm run migrate
 - Translation decisions: use Brazilian product terminology from the glossary (`chamado`, `solicitante`, `quadro`, `equipe de suporte`) and preserve every English Handlebars placeholder in subject/html/text output. For structured ticket templates, `pt` uses the standard full-detail layouts rather than the Polish simplified variants so placeholder parity stays exact.
 - Implemented T100/T101 with `scripts/tests/pt-br-email-templates.test.mjs`: verifies the 12 templates export non-empty `pt` subject/html/text, exact placeholder parity with English, no rendered `undefined`, and no forbidden pt-PT or wrong-register terms.
 - Verification: `node --test scripts/tests/pt-br-email-templates.test.mjs` passed (2 tests). `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — email-pt-billing-projects group
+- Implemented F055: added explicit `pt` variants to the source-of-truth email templates for invoice generated, invoice email, payment received, payment overdue, credits expiring, project created, project updated, project closed, project assigned, primary task assignment, additional task assignment, task updated, and milestone completed.
+- Translation decisions: use glossary-consistent Brazilian terms (`fatura`, `créditos`, `projeto`, `tarefa`, `marco`) and preserve the existing template builders/visual variants, including task-assignment badge color constants.
+- Implemented T102/T103 by extending `scripts/tests/pt-br-email-templates.test.mjs` to cover the 13 billing/project templates in addition to the previous auth/ticketing group.
+- Verification: `node --test scripts/tests/pt-br-email-templates.test.mjs` passed (2 tests), checking non-empty `pt` output, exact placeholder parity with English, no `undefined`, and no forbidden glossary terms.

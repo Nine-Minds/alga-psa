@@ -588,7 +588,7 @@
   {
     "id": "F055",
     "description": "Add pt blocks to the source-of-truth email template files for: invoice-generated, invoice-email, payment-received, payment-overdue, credits-expiring, project-created, project-updated, project-closed, project-assigned, project-task-assigned-primary, project-task-assigned-additional, task-updated, milestone-completed (subject + html_content + text_content), translated to pt-BR per glossary, {{variables}} preserved.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-billing-projects",
     "prdRefs": [
       "4.3",
