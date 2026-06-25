@@ -1850,7 +1850,10 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let baseQuery = trx('invoices').where('tenant', context.tenant);
+      let baseQuery = createTenantScopedQuery(trx, {
+        table: 'invoices',
+        tenant: context.tenant,
+      }).builder;
 
       // Apply filters if provided
       if (filters) {
@@ -2442,7 +2445,10 @@ export class InvoiceService extends BaseService<IInvoice> {
 
   private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction): Promise<any[]> {
     return query
-      .join('clients', 'invoices.client_id', 'clients.client_id')
+      .join('clients', function() {
+        this.on('invoices.client_id', '=', 'clients.client_id')
+          .andOn('invoices.tenant', '=', 'clients.tenant');
+      })
       .groupBy('clients.client_id', 'clients.client_name')
       .select(
         'clients.client_id',
