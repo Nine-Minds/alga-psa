@@ -55,7 +55,7 @@ import {
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -140,6 +140,14 @@ async function mapWithConcurrency<T, R>(
 }
 
 const normalizeNullableString = (value: string | null | undefined) => (value ?? undefined);
+
+function tenantScopedTable(
+    conn: Knex | Knex.Transaction,
+    table: string,
+    tenant: string,
+): Knex.QueryBuilder {
+    return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 function normalizeBulkAssetIds(assetIds: string[]): string[] {
     const ids = Array.from(new Set(assetIds.map((id) => id.trim()).filter(Boolean)));
@@ -234,9 +242,8 @@ async function resolveValidatedAssetLocation(
         return { location_id: null };
     }
 
-    const location = await trx('client_locations')
+    const location = await tenantScopedTable(trx, 'client_locations', tenant)
         .where({
-            tenant,
             client_id: clientId,
             location_id: locationId,
             is_active: true,
@@ -283,8 +290,8 @@ async function resolveAuthorizationSubjectForUser(
     let roleIds = extractRoleIdsFromUser(user);
     if (roleIds.length === 0) {
         try {
-            const roleRows = await trx('user_roles')
-                .where({ tenant, user_id: user.user_id })
+            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+                .where({ user_id: user.user_id })
                 .select<{ role_id: string }[]>('role_id');
             roleIds = roleRows.map((row) => row.role_id);
         } catch {
@@ -293,8 +300,8 @@ async function resolveAuthorizationSubjectForUser(
     }
 
     const [teamRows, managedRows] = await Promise.all([
-        trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
     ]);
 
     return {
@@ -319,8 +326,7 @@ async function resolveAssetAuthorizationRecords(
         return new Map();
     }
 
-    const associationRows = await trx('asset_associations')
-        .where({ tenant })
+    const associationRows = await tenantScopedTable(trx, 'asset_associations', tenant)
         .whereIn('asset_id', assetIds)
         .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
 
@@ -426,8 +432,8 @@ async function resolveAssetAuthorizationInputById(
     tenant: string,
     asset_id: string
 ): Promise<AssetAuthorizationInput> {
-    const asset = await trx('assets')
-        .where({ tenant, asset_id })
+    const asset = await tenantScopedTable(trx, 'assets', tenant)
+        .where({ asset_id })
         .select('asset_id', 'client_id')
         .first() as AssetAuthorizationInput | undefined;
 
@@ -466,8 +472,8 @@ async function getAuthorizedAssetIdsForClient(
     context: AssetReadAuthorizationContext,
     client_id: string
 ): Promise<string[]> {
-    const assets = await trx('assets')
-        .where({ tenant, client_id })
+    const assets = await tenantScopedTable(trx, 'assets', tenant)
+        .where({ client_id })
         .select('asset_id', 'client_id') as AssetAuthorizationInput[];
 
     if (assets.length === 0) {
@@ -509,24 +515,24 @@ async function getExtensionData(knex: Knex, tenant: string, asset_id: string, as
     
     switch (asset_type.toLowerCase()) {
         case 'workstation':
-            return knex('workstation_assets')
-                .where({ tenant, asset_id })
+            return tenantScopedTable(knex, 'workstation_assets', tenant)
+                .where({ asset_id })
                 .first() as Promise<WorkstationAsset>;
         case 'network_device':
-            return knex('network_device_assets')
-                .where({ tenant, asset_id })
+            return tenantScopedTable(knex, 'network_device_assets', tenant)
+                .where({ asset_id })
                 .first() as Promise<NetworkDeviceAsset>;
         case 'server':
-            return knex('server_assets')
-                .where({ tenant, asset_id })
+            return tenantScopedTable(knex, 'server_assets', tenant)
+                .where({ asset_id })
                 .first() as Promise<ServerAsset>;
         case 'mobile_device':
-            return knex('mobile_device_assets')
-                .where({ tenant, asset_id })
+            return tenantScopedTable(knex, 'mobile_device_assets', tenant)
+                .where({ asset_id })
                 .first() as Promise<MobileDeviceAsset>;
         case 'printer':
-            return knex('printer_assets')
-                .where({ tenant, asset_id })
+            return tenantScopedTable(knex, 'printer_assets', tenant)
+                .where({ asset_id })
                 .first() as Promise<PrinterAsset>;
         default:
             return null;
@@ -567,14 +573,14 @@ async function upsertExtensionData(
     const { tenant: _t, asset_id: _a, ...extensionFields } = data as Record<string, unknown>;
 
     // Check if record exists
-    const exists = await knex(table)
-        .where({ tenant, asset_id })
+    const exists = await tenantScopedTable(knex, table, tenant)
+        .where({ asset_id })
         .first();
 
     if (exists) {
         if (Object.keys(extensionFields).length === 0) return;
-        await knex(table)
-            .where({ tenant, asset_id })
+        await tenantScopedTable(knex, table, tenant)
+            .where({ asset_id })
             .update(extensionFields);
     } else {
         await knex(table).insert({ tenant, asset_id, ...extensionFields });
@@ -594,8 +600,8 @@ async function deleteExtensionData(
     // 'unknown' and custom registry slugs carry no extension table.
     const table = EXTENSION_TABLE_BY_ASSET_TYPE[asset_type.toLowerCase()];
     if (!table) return;
-    await knex(table)
-        .where({ tenant, asset_id })
+    await tenantScopedTable(knex, table, tenant)
+        .where({ asset_id })
         .delete();
 }
 
