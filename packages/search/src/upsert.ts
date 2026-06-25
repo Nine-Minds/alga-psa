@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { composeAclHints } from './acl';
 import { buildTsvectorSql } from './sql';
 import type { SearchDoc, SearchObjectType } from '@alga-psa/types';
@@ -108,7 +109,10 @@ export async function deleteSearchDoc(
   objectType: SearchObjectType,
   objectId: string,
 ): Promise<void> {
-  await knex('app_search_index')
-    .where({ tenant, object_type: objectType, object_id: objectId })
+  await createTenantScopedQuery(knex, {
+    table: 'app_search_index',
+    tenant,
+  }).builder
+    .where({ object_type: objectType, object_id: objectId })
     .delete();
 }
