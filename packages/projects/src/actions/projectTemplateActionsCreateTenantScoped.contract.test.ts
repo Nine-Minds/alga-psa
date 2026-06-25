@@ -159,4 +159,22 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).not.toContain('.where({ template_task_id: afterTaskId, tenant })');
     expect(actionSource).not.toContain('.where({ template_id: phase.template_id, tenant })');
   });
+
+  it('uses structural tenant scoping for template status mapping roots', () => {
+    const actionSource = section(
+      'export const addTemplateStatusMapping',
+      '// ============================================================\n// TASK RESOURCE (ADDITIONAL AGENTS) ACTIONS'
+    );
+
+    expect(actionSource).toContain("tenantScopedTable(trx, 'statuses', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_status_mappings', tenant)");
+    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
+    expect(actionSource).not.toContain('.where({ status_id: data.status_id, tenant })');
+    expect(actionSource).not.toContain('.where({ template_status_mapping_id: mappingId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_status_mapping_id: orderedMappingIds[i], tenant })');
+    expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
+    expect(actionSource).not.toContain('.where({ template_id: mapping.template_id, tenant })');
+    expect(actionSource).not.toContain('.where({\n        tenant,');
+  });
 });

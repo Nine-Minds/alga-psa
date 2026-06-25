@@ -1993,12 +1993,12 @@ export const addTemplateStatusMapping = withAuth(async (
       .returning('*');
 
     // Enrich with status info
-    const status = await trx('statuses')
-      .where({ status_id: data.status_id, tenant })
+    const status = await tenantScopedTable(trx, 'statuses', tenant)
+      .where({ status_id: data.status_id })
       .first();
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
     return {
@@ -2023,8 +2023,8 @@ export const removeTemplateStatusMapping = withAuth(async (
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const mapping = await trx('project_template_status_mappings')
-      .where({ template_status_mapping_id: mappingId, tenant })
+    const mapping = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_status_mapping_id: mappingId })
       .first();
 
     if (!mapping) {
@@ -2032,17 +2032,17 @@ export const removeTemplateStatusMapping = withAuth(async (
     }
 
     // Clear template_status_mapping_id from tasks that use this status
-    await trx('project_template_tasks')
-      .where({ template_status_mapping_id: mappingId, tenant })
+    await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_status_mapping_id: mappingId })
       .update({ template_status_mapping_id: null });
 
     // Delete the mapping
-    await trx('project_template_status_mappings')
-      .where({ template_status_mapping_id: mappingId, tenant })
+    await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_status_mapping_id: mappingId })
       .delete();
 
-    await trx('project_templates')
-      .where({ template_id: mapping.template_id, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: mapping.template_id })
       .update({ updated_at: trx.fn.now() });
   });
 });
@@ -2078,13 +2078,13 @@ export const reorderTemplateStatusMappings = withAuth(async (
         continue;
       }
 
-      await trx('project_template_status_mappings')
-        .where({ template_status_mapping_id: orderedMappingIds[i], tenant })
+      await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+        .where({ template_status_mapping_id: orderedMappingIds[i] })
         .update({ display_order: i });
     }
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
   });
 });
@@ -2137,8 +2137,8 @@ export const copyTemplateStatusesToPhase = withAuth(async (
       copiedMappings.push(copiedMapping);
     }
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
     return copiedMappings;
@@ -2156,16 +2156,15 @@ export const removeTemplatePhaseStatuses = withAuth(async (
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    await trx('project_template_status_mappings')
+    await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
       .where({
-        tenant,
         template_id: templateId,
         template_phase_id: templatePhaseId,
       })
       .delete();
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
   });
 });
