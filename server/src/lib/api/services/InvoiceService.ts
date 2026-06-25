@@ -1602,8 +1602,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       for (const invoiceId of data.invoice_ids) {
         try {
-          const invoice = await trx('invoices')
-            .where({ invoice_id: invoiceId, tenant: context.tenant })
+          const invoice = await createTenantScopedQuery(trx, {
+            table: 'invoices',
+            tenant: context.tenant,
+          }).builder
+            .where({ invoice_id: invoiceId })
             .first();
 
           if (!invoice) {
@@ -1617,17 +1620,20 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-	          await trx('invoices')
-	            .where({ invoice_id: invoiceId, tenant: context.tenant })
-	            .update({
-	              status: data.status,
+          await createTenantScopedQuery(trx, {
+            table: 'invoices',
+            tenant: context.tenant,
+          }).builder
+            .where({ invoice_id: invoiceId })
+            .update({
+              status: data.status,
               finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
             });
 
-	          results.updated_count++;
-            const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
+          results.updated_count++;
+          const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
 
 	          // Audit log
 	          await auditLog(trx, {
