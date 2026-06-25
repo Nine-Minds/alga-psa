@@ -1986,8 +1986,8 @@ export function registerProjectActions(): void {
         const nowIso = new Date().toISOString();
 
         if (changedFields.length > 0) {
-          await tx.trx('projects')
-            .where({ tenant: tx.tenantId, project_id: input.project_id })
+          await tenantScopedTable(tx, 'projects')
+            .where('project_id', input.project_id)
             .update({ ...patch, updated_at: nowIso });
 
           await writeRunAudit(ctx, tx, {
@@ -2049,8 +2049,8 @@ export function registerProjectActions(): void {
         const nowIso = new Date().toISOString();
 
         if (changedFields.length > 0) {
-          await tx.trx('project_phases')
-            .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+          await tenantScopedTable(tx, 'project_phases')
+            .where('phase_id', input.phase_id)
             .update({ ...patch, updated_at: nowIso });
 
           await writeRunAudit(ctx, tx, {
@@ -2113,8 +2113,8 @@ export function registerProjectActions(): void {
         const nowIso = new Date().toISOString();
 
         if (changedFields.length > 0) {
-          await tx.trx('project_tasks')
-            .where({ tenant: tx.tenantId, task_id: input.task_id })
+          await tenantScopedTable(tx, 'project_tasks')
+            .where('task_id', input.task_id)
             .update({ ...patch, updated_at: nowIso });
 
           await writeRunAudit(ctx, tx, {
