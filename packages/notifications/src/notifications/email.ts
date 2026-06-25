@@ -4,7 +4,8 @@
  * Handles system-wide and tenant-specific email notifications.
  */
 
-import { createTenantKnex, getConnection } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import type {
   NotificationSettings,
   SystemEmailTemplate,
@@ -21,11 +22,23 @@ import { resolveEmailLocale } from './emailLocaleResolver';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
 export class EmailNotificationService implements NotificationService {
+  private tenantScopedTable(
+    knex: Knex,
+    table: string,
+    tenant: string,
+    tenantColumn: string = 'tenant'
+  ) {
+    return createTenantScopedQuery(knex, {
+      table,
+      tenant,
+      tenantColumn,
+    }).builder;
+  }
+
   private async getTenantEmailSettings(tenantId: string): Promise<TenantEmailSettings | null> {
     try {
       const knex = await getConnection(tenantId);
-      const settings = await knex('tenant_email_settings')
-        .where({ tenant_id: tenantId })
+      const settings = await this.tenantScopedTable(knex, 'tenant_email_settings', tenantId, 'tenant_id')
         .first();
 
       if (!settings) {
@@ -64,8 +77,7 @@ export class EmailNotificationService implements NotificationService {
 
   async getSettings(tenant: string): Promise<NotificationSettings> {
     const knex = await this.getTenantKnex();
-    const settings = await knex('notification_settings')
-      .where({ tenant })
+    const settings = await this.tenantScopedTable(knex, 'notification_settings', tenant)
       .first();
 
     if (!settings) {
@@ -84,8 +96,7 @@ export class EmailNotificationService implements NotificationService {
 
   async updateSettings(tenant: string, settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
     const knex = await this.getTenantKnex();
-    const [updated] = await knex('notification_settings')
-      .where({ tenant })
+    const [updated] = await this.tenantScopedTable(knex, 'notification_settings', tenant)
       .update(settings)
       .returning('*');
     return updated;
@@ -112,23 +123,23 @@ export class EmailNotificationService implements NotificationService {
     const knex = await this.getTenantKnex();
 
     if (locale) {
-      let template = await knex('tenant_email_templates')
-        .where({ tenant, name, language_code: locale })
+      let template = await this.tenantScopedTable(knex, 'tenant_email_templates', tenant)
+        .where({ name, language_code: locale })
         .first();
 
       if (template) return template;
 
       if (locale !== 'en') {
-        template = await knex('tenant_email_templates')
-          .where({ tenant, name, language_code: 'en' })
+        template = await this.tenantScopedTable(knex, 'tenant_email_templates', tenant)
+          .where({ name, language_code: 'en' })
           .first();
 
         if (template) return template;
       }
     }
 
-    return knex('tenant_email_templates')
-      .where({ tenant, name })
+    return this.tenantScopedTable(knex, 'tenant_email_templates', tenant)
+      .where({ name })
       .whereNull('language_code')
       .first();
   }
@@ -165,8 +176,8 @@ export class EmailNotificationService implements NotificationService {
     template: Partial<TenantEmailTemplate>
   ): Promise<TenantEmailTemplate> {
     const knex = await this.getTenantKnex();
-    const [updated] = await knex('tenant_email_templates')
-      .where({ tenant, id })
+    const [updated] = await this.tenantScopedTable(knex, 'tenant_email_templates', tenant)
+      .where({ id })
       .update(template)
       .returning('*');
     return updated;
@@ -313,9 +324,8 @@ export class EmailNotificationService implements NotificationService {
 
   async getUserPreferences(tenant: string, userId: string): Promise<UserNotificationPreference[]> {
     const knex = await this.getTenantKnex();
-    return knex('user_notification_preferences')
+    return this.tenantScopedTable(knex, 'user_notification_preferences', tenant)
       .where({
-        tenant,
         user_id: userId
       })
       .orderBy('id');
@@ -374,8 +384,8 @@ export class EmailNotificationService implements NotificationService {
       throw new Error('Notification subtype not found');
     }
 
-    const subtypeSetting = await knex('tenant_notification_subtype_settings')
-      .where({ tenant: params.tenant, subtype_id: params.subtypeId })
+    const subtypeSetting = await this.tenantScopedTable(knex, 'tenant_notification_subtype_settings', params.tenant)
+      .where({ subtype_id: params.subtypeId })
       .first();
 
     const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
@@ -383,8 +393,8 @@ export class EmailNotificationService implements NotificationService {
       return;
     }
 
-    const categorySetting = await knex('tenant_notification_category_settings')
-      .where({ tenant: params.tenant, category_id: subtype.category_id })
+    const categorySetting = await this.tenantScopedTable(knex, 'tenant_notification_category_settings', params.tenant)
+      .where({ category_id: subtype.category_id })
       .first();
 
     const isCategoryEnabled = categorySetting?.is_enabled ?? true;
@@ -392,7 +402,7 @@ export class EmailNotificationService implements NotificationService {
       return;
     }
 
-    const preference = await knex('user_notification_preferences')
+    const preference = await this.tenantScopedTable(knex, 'user_notification_preferences', params.tenant)
       .where({
         user_id: params.userId,
         subtype_id: params.subtypeId
@@ -465,8 +475,7 @@ export class EmailNotificationService implements NotificationService {
   }): Promise<NotificationLog[]> {
     const knex = await this.getTenantKnex();
 
-    const query = knex('notification_logs')
-      .where({ tenant })
+    const query = this.tenantScopedTable(knex, 'notification_logs', tenant)
       .orderBy('created_at', 'desc');
 
     if (filters.userId) {
@@ -501,4 +510,3 @@ export function getEmailNotificationService(): EmailNotificationService {
   }
   return instance;
 }
-
