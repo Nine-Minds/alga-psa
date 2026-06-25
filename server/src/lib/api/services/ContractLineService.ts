@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { IContractLine, IContractLineFixedConfig, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
 import { IContract, IContractLineMapping, IClientContract } from 'server/src/interfaces/contract.interfaces';
@@ -358,9 +358,11 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Update the plan
-        const [updatedPlan] = await trx('contract_lines')
+        const [updatedPlan] = await createTenantScopedQuery(trx, {
+          table: 'contract_lines',
+          tenant: context.tenant,
+        }).builder
           .where('contract_line_id', id)
-          .where('tenant', context.tenant)
           .update(updateData)
           .returning('*');
         
@@ -410,9 +412,11 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Update the plan
-        const [updatedPlan] = await trx('contract_lines')
+        const [updatedPlan] = await createTenantScopedQuery(trx, {
+          table: 'contract_lines',
+          tenant: context.tenant,
+        }).builder
           .where('contract_line_id', id)
-          .where('tenant', context.tenant)
           .update(updateData)
           .returning('*');
         
@@ -448,9 +452,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       await this.removeContractLineFromAllContracts(id, context, trx);
       
       // Delete the plan
-      const deletedCount = await trx('contract_lines')
+      const deletedCount = await createTenantScopedQuery(trx, {
+        table: 'contract_lines',
+        tenant: context.tenant,
+      }).builder
         .where('contract_line_id', id)
-        .where('tenant', context.tenant)
         .delete();
       
       if (deletedCount === 0) {
@@ -1623,8 +1629,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     options: ContractLineServiceOptions
   ): Knex.QueryBuilder {
-    let query = knex('contract_lines as cl')
-      .where('cl.tenant', context.tenant);
+    let query = createTenantScopedQuery(knex, {
+      table: 'contract_lines as cl',
+      tenant: context.tenant,
+    }).builder;
 
     query = query.select('cl.*');
 
@@ -1687,9 +1695,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = trx ? { knex: trx } : await this.getKnex();
       
       // Check for duplicate plan names
-      const existingPlan = await knex('contract_lines')
+      const existingPlan = await createTenantScopedQuery(knex, {
+        table: 'contract_lines',
+        tenant: context.tenant,
+      }).builder
         .where('contract_line_name', data.contract_line_name)
-        .where('tenant', context.tenant)
         .first();
       
       if (existingPlan) {
@@ -1717,9 +1727,11 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<void> {
     // Check if plan name conflicts (if changing)
     if (data.contract_line_name && data.contract_line_name !== existingPlan.contract_line_name) {
-      const conflictingPlan = await trx('contract_lines')
+      const conflictingPlan = await createTenantScopedQuery(trx, {
+        table: 'contract_lines',
+        tenant: context.tenant,
+      }).builder
         .where('contract_line_name', data.contract_line_name)
-        .where('tenant', context.tenant)
         .whereNot('contract_line_id', planId)
         .first();
       
@@ -1744,9 +1756,11 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<IContractLine> {
     const { knex } = trx ? { knex: trx } : await this.getKnex();
     
-    const plan = await knex('contract_lines')
+    const plan = await createTenantScopedQuery(knex, {
+      table: 'contract_lines',
+      tenant: context.tenant,
+    }).builder
       .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
       .first();
     
     if (!plan) {
