@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { DeletionValidationResult, IProjectStatusMapping, IStatus } from '@alga-psa/types';
@@ -24,6 +24,14 @@ type ProjectStatusUsage = {
   projectNames: string[];
 };
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 function formatProjectUsageDescription(projectNames: string[], count: number): string {
   const visibleNames = projectNames.slice(0, 5);
   const remainingCount = count - visibleNames.length;
@@ -37,15 +45,12 @@ async function getTenantProjectStatusUsage(
   tenant: string,
   statusId: string
 ): Promise<ProjectStatusUsage> {
-  const rows = await trx('project_status_mappings as psm')
+  const rows = await tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
     .leftJoin('projects as p', function() {
       this.on('psm.project_id', '=', 'p.project_id')
         .andOn('psm.tenant', '=', 'p.tenant');
     })
-    .where({
-      'psm.tenant': tenant,
-      'psm.status_id': statusId
-    })
+    .where({ 'psm.status_id': statusId })
     .distinct<{ project_id: string; project_name: string | null }[]>(
       'psm.project_id as project_id',
       'p.project_name as project_name'
@@ -63,8 +68,8 @@ async function buildTenantProjectStatusDeletionValidation(
   tenant: string,
   statusId: string
 ): Promise<DeletionValidationResult> {
-  const status = await trx('statuses')
-    .where({ tenant, status_id: statusId, status_type: 'project_task' })
+  const status = await tenantScopedTable(trx, 'statuses', tenant)
+    .where({ status_id: statusId, status_type: 'project_task' })
     .first<{ status_id: string; name: string }>('status_id', 'name');
 
   if (!status) {
@@ -125,8 +130,8 @@ async function resolveAuthorizationSubjectForUser(
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
     try {
-      const roleRows = await trx('user_roles')
-        .where({ tenant, user_id: user.user_id })
+      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+        .where({ user_id: user.user_id })
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
     } catch {
@@ -135,8 +140,8 @@ async function resolveAuthorizationSubjectForUser(
   }
 
   const [teamRows, managedRows] = await Promise.all([
-    trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+    tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
   ]);
 
   return {
@@ -257,8 +262,8 @@ export const addStatusToProject = withAuth(async (
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     // Get next display_order
-    const maxOrderQuery = trx('project_status_mappings')
-      .where({ project_id: projectId, tenant });
+    const maxOrderQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_id: projectId });
 
     if (phaseId) {
       maxOrderQuery.andWhere('phase_id', phaseId);
@@ -328,26 +333,26 @@ export const copyProjectStatusesToPhase = withAuth(async (
   return await withTransaction(knex, async (trx) => {
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
-    const phase = await trx('project_phases')
-      .where({ tenant, project_id: projectId, phase_id: phaseId })
+    const phase = await tenantScopedTable(trx, 'project_phases', tenant)
+      .where({ project_id: projectId, phase_id: phaseId })
       .first();
 
     if (!phase) {
       throw new Error('Project phase not found');
     }
 
-    const existingPhaseMappings = await trx('project_status_mappings')
-      .where({ tenant, project_id: projectId, phase_id: phaseId })
-      .orderBy('display_order');
+    const existingPhaseMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_id: projectId, phase_id: phaseId })
+      .orderBy('display_order') as IProjectStatusMapping[];
 
     if (existingPhaseMappings.length > 0) {
       return existingPhaseMappings;
     }
 
-    const defaultMappings = await trx('project_status_mappings')
-      .where({ tenant, project_id: projectId })
+    const defaultMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_id: projectId })
       .whereNull('phase_id')
-      .orderBy('display_order');
+      .orderBy('display_order') as IProjectStatusMapping[];
 
     if (defaultMappings.length === 0) {
       return [];
@@ -382,8 +387,8 @@ export const copyProjectStatusesToPhase = withAuth(async (
     }
 
     for (const [newId, oldIds] of updatesByReplacement) {
-      await trx('project_tasks')
-        .where({ tenant, phase_id: phaseId })
+      await tenantScopedTable(trx, 'project_tasks', tenant)
+        .where({ phase_id: phaseId })
         .whereIn('project_status_mapping_id', oldIds)
         .update({ project_status_mapping_id: newId });
     }
@@ -407,8 +412,8 @@ export const removePhaseStatuses = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    const phase = await trx('project_phases')
-      .where({ tenant, phase_id: phaseId })
+    const phase = await tenantScopedTable(trx, 'project_phases', tenant)
+      .where({ phase_id: phaseId })
       .first();
 
     if (!phase) {
@@ -442,14 +447,14 @@ export const removePhaseStatuses = withAuth(async (
 
     // Batch update: one UPDATE per replacement target
     for (const [replacementId, oldIds] of updatesByReplacement) {
-      await trx('project_tasks')
-        .where({ tenant, phase_id: phaseId })
+      await tenantScopedTable(trx, 'project_tasks', tenant)
+        .where({ phase_id: phaseId })
         .whereIn('project_status_mapping_id', oldIds)
         .update({ project_status_mapping_id: replacementId });
     }
 
-    await trx('project_status_mappings')
-      .where({ tenant, phase_id: phaseId })
+    await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ phase_id: phaseId })
       .del();
   });
 });
@@ -475,8 +480,8 @@ export const updateProjectStatusMapping = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
-    const existingMapping = await trx('project_status_mappings')
-      .where({ project_status_mapping_id: mappingId, tenant })
+    const existingMapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_status_mapping_id: mappingId })
       .first();
 
     if (!existingMapping) {
@@ -485,8 +490,8 @@ export const updateProjectStatusMapping = withAuth(async (
 
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id);
 
-    await trx('project_status_mappings')
-      .where({ project_status_mapping_id: mappingId, tenant })
+    await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_status_mapping_id: mappingId })
       .update(updates);
   });
 });
@@ -505,8 +510,8 @@ export const getStatusMappingTaskCount = withAuth(async (
   }
 
   await withTransaction(knex, async (trx) => {
-    const mapping = await trx('project_status_mappings')
-      .where({ project_status_mapping_id: mappingId, tenant })
+    const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_status_mapping_id: mappingId })
       .first();
 
     if (!mapping) {
@@ -515,8 +520,8 @@ export const getStatusMappingTaskCount = withAuth(async (
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);
   });
 
-  const result = await knex('project_tasks')
-    .where({ project_status_mapping_id: mappingId, tenant })
+  const result = await tenantScopedTable(knex, 'project_tasks', tenant)
+    .where({ project_status_mapping_id: mappingId })
     .count('* as count')
     .first();
   return parseInt(result?.count as string) || 0;
@@ -538,8 +543,8 @@ export const deleteProjectStatusMapping = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    const mapping = await trx('project_status_mappings')
-      .where({ project_status_mapping_id: mappingId, tenant })
+    const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_status_mapping_id: mappingId })
       .first();
 
     if (!mapping) {
@@ -549,13 +554,13 @@ export const deleteProjectStatusMapping = withAuth(async (
 
     // Move tasks if a target mapping is provided
     if (moveTasksToMappingId) {
-      await trx('project_tasks')
-        .where({ project_status_mapping_id: mappingId, tenant })
+      await tenantScopedTable(trx, 'project_tasks', tenant)
+        .where({ project_status_mapping_id: mappingId })
         .update({ project_status_mapping_id: moveTasksToMappingId });
     } else {
       // Check for orphaned tasks
-      const taskCount = await trx('project_tasks')
-        .where({ project_status_mapping_id: mappingId, tenant })
+      const taskCount = await tenantScopedTable(trx, 'project_tasks', tenant)
+        .where({ project_status_mapping_id: mappingId })
         .count('* as count')
         .first();
 
@@ -568,8 +573,8 @@ export const deleteProjectStatusMapping = withAuth(async (
     }
 
     // Validate: Must have at least 1 status remaining in the same scope
-    const remainingQuery = trx('project_status_mappings')
-      .where({ project_id: mapping.project_id, tenant })
+    const remainingQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_id: mapping.project_id })
       .whereNot({ project_status_mapping_id: mappingId });
 
     if (mapping.phase_id) {
@@ -584,8 +589,8 @@ export const deleteProjectStatusMapping = withAuth(async (
       throw new Error('Cannot delete the last status in a project');
     }
 
-    await trx('project_status_mappings')
-      .where({ project_status_mapping_id: mappingId, tenant })
+    await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_status_mapping_id: mappingId })
       .del();
   });
 });
@@ -611,11 +616,10 @@ export const reorderProjectStatuses = withAuth(async (
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     for (const { mapping_id, display_order } of statusOrder) {
-      const query = trx('project_status_mappings')
+      const query = tenantScopedTable(trx, 'project_status_mappings', tenant)
         .where({
           project_status_mapping_id: mapping_id,
-          project_id: projectId,
-          tenant
+          project_id: projectId
         });
 
       if (phaseId) {
@@ -646,8 +650,8 @@ export const getTenantProjectStatuses = withAuth(async (
   }
 
   // First try the new statuses table
-  const regularStatuses = await knex('statuses')
-    .where({ tenant, status_type: 'project_task' })
+  const regularStatuses = await tenantScopedTable(knex, 'statuses', tenant)
+    .where({ status_type: 'project_task' })
     .orderBy('order_number');
 
   console.log(`[getTenantProjectStatuses] Found ${regularStatuses.length} statuses in 'statuses' table for tenant ${tenant}`);
@@ -716,8 +720,8 @@ export const createTenantProjectStatus = withAuth(async (
     console.log(`[DEBUG] Lock acquired, calculating order_number`);
 
     // Get next order number - filter by status_type since that's what the constraint uses
-    const maxOrder = await trx('statuses')
-      .where({ tenant, status_type: 'project_task' })
+    const maxOrder = await tenantScopedTable(trx, 'statuses', tenant)
+      .where({ status_type: 'project_task' })
       .max('order_number as max')
       .first();
 
@@ -760,8 +764,8 @@ export const updateTenantProjectStatus = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  await knex('statuses')
-    .where({ status_id: statusId, tenant, status_type: 'project_task' })
+  await tenantScopedTable(knex, 'statuses', tenant)
+    .where({ status_id: statusId, status_type: 'project_task' })
     .update(updates);
 });
 
@@ -813,8 +817,8 @@ export const deleteTenantProjectStatus = withAuth(async (
     }
 
     // Delete the status
-    await trx('statuses')
-      .where({ status_id: statusId, tenant, status_type: 'project_task' })
+    await tenantScopedTable(trx, 'statuses', tenant)
+      .where({ status_id: statusId, status_type: 'project_task' })
       .del();
   });
 });
@@ -836,10 +840,9 @@ export const reorderTenantProjectStatuses = withAuth(async (
 
   return await withTransaction(knex, async (trx) => {
     for (const { status_id, order_number } of statusOrder) {
-      await trx('statuses')
+      await tenantScopedTable(trx, 'statuses', tenant)
         .where({
           status_id,
-          tenant,
           status_type: 'project_task'
         })
         .update({ order_number });
