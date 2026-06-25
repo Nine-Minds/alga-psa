@@ -1,6 +1,6 @@
 import { runWithTenant, createTenantKnex } from '@/lib/db';
 import { ApiKeyService } from '@alga-psa/auth';
-import { withAdminTransaction } from '@alga-psa/db';
+import { createTenantScopedQuery, withAdminTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
 const PURPOSE_AI_SESSION = 'ai_session';
@@ -53,10 +53,12 @@ export class TemporaryApiKeyService {
       }
 
       // Deactivate any existing active keys for the same chat/function pair
-      const existingKeys = await knex('api_keys')
+      const existingKeys = await createTenantScopedQuery(knex, {
+        table: 'api_keys',
+        tenant: tenantId,
+      }).builder
         .select('api_key_id')
         .where({
-          tenant: tenantId,
           user_id: userId,
           purpose: PURPOSE_AI_SESSION,
           active: true,
@@ -66,7 +68,10 @@ export class TemporaryApiKeyService {
 
       if (existingKeys.length > 0) {
         const existingIds = existingKeys.map((row) => row.api_key_id);
-        await knex('api_keys')
+        await createTenantScopedQuery(knex, {
+          table: 'api_keys',
+          tenant: tenantId,
+        }).builder
           .whereIn('api_key_id', existingIds)
           .update({
             active: false,
@@ -131,11 +136,13 @@ export class TemporaryApiKeyService {
         throw new Error(`Tenant context mismatch while revoking AI session key ${apiKeyId}`);
       }
 
-      const record = await knex('api_keys')
+      const record = await createTenantScopedQuery(knex, {
+        table: 'api_keys',
+        tenant: tenantId,
+      }).builder
         .select(['metadata', 'active'])
         .where({
           api_key_id: apiKeyId,
-          tenant: tenantId,
         })
         .first();
 
@@ -155,10 +162,12 @@ export class TemporaryApiKeyService {
         ...(additionalMetadata ?? {}),
       };
 
-      await knex('api_keys')
+      await createTenantScopedQuery(knex, {
+        table: 'api_keys',
+        tenant: tenantId,
+      }).builder
         .where({
           api_key_id: apiKeyId,
-          tenant: tenantId,
         })
         .update({
           active: false,
@@ -175,6 +184,7 @@ export class TemporaryApiKeyService {
    */
   static async cleanupExpiredAiKeys(): Promise<number> {
     return withAdminTransaction(async (trx) => {
+      // Intentional admin-wide sweep: there is no single tenant context here.
       const result = await trx('api_keys')
         .where({
           purpose: PURPOSE_AI_SESSION,
