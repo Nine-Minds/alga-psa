@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import type { TaggedEntityType } from '@alga-psa/types';
 
 import TagDefinition from '../models/tagDefinition';
@@ -53,6 +53,11 @@ const addTagToEntityByExternalIdAction: InboundActionDefinition<AddTagToEntityBy
 
     const { knex } = await createTenantKnex(ctx.tenant);
     const result = await withTransaction(knex, async (trx) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant: ctx.tenant
+      }).builder;
+
       const lookup = await lookupAlgaEntityByExternalId(
         ctx.tenant,
         ctx.webhookSlug,
@@ -79,9 +84,8 @@ const addTagToEntityByExternalIdAction: InboundActionDefinition<AddTagToEntityBy
         },
       );
 
-      const existingMapping = await trx('tag_mappings')
+      const existingMapping = await tenantScopedTable('tag_mappings')
         .where({
-          tenant: ctx.tenant,
           tag_id: definition.tag_id,
           tagged_id: lookup.algaEntityId,
           tagged_type: mappedValues.entity_type,
@@ -151,7 +155,12 @@ async function assertTaggedEntityExists(
   entityId: string,
 ): Promise<void> {
   const table = taggedEntityTable(entityType);
-  const entity = await trx(table.table).where({ tenant, [table.idColumn]: entityId }).first(table.idColumn);
+  const entity = await createTenantScopedQuery(trx, {
+    table: table.table,
+    tenant
+  }).builder
+    .where({ [table.idColumn]: entityId })
+    .first(table.idColumn);
   if (!entity) {
     throw new Error(`lookup_miss: mapped ${entityType} "${entityId}" no longer exists`);
   }
@@ -162,7 +171,12 @@ async function assertCreatedByExistsIfProvided(trx: any, tenant: string, userId?
     return;
   }
 
-  const user = await trx('users').where({ tenant, user_id: userId }).first('user_id');
+  const user = await createTenantScopedQuery(trx, {
+    table: 'users',
+    tenant
+  }).builder
+    .where({ user_id: userId })
+    .first('user_id');
   if (!user) {
     throw new Error(`VALIDATION_ERROR: created_by user "${userId}" does not exist`);
   }
