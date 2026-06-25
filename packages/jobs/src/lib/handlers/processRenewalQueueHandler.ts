@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { normalizeClientContract } from '@shared/billingClients/clientContracts';
 import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
@@ -96,6 +96,10 @@ const buildRenewalTicketIdempotencyKey = (params: {
   clientContractId: string;
   cycleKey: string;
 }): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;
+
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 const tryCreateRenewalTicketViaWorkflowAction = async (params: {
   knex: Knex;
@@ -310,7 +314,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     'dbs.renewal_ticket_assignee_id as tenant_renewal_ticket_assignee_id',
   ];
 
-  const contractQuery = knex('client_contracts as cc')
+  const contractQuery = tenantScopedTable(knex, 'client_contracts as cc', tenantId)
     .join('contracts as c', function joinContracts() {
       this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
     })
@@ -321,7 +325,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       this.on('cc.tenant', '=', 'dbs.tenant');
     })
     .where({
-      'cc.tenant': tenantId,
       'cc.is_active': true,
       'c.status': 'active',
     })
@@ -332,8 +335,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   if (hasWorkflowRunsTable) {
     try {
       workflowRunIdForTenant = (
-        await knex('workflow_runs')
-          .where({ tenant: tenantId })
+        await tenantScopedTable(knex, 'workflow_runs', tenantId)
           .orderBy('updated_at', 'desc')
           .first('run_id')
       )?.run_id ?? null;
@@ -504,8 +506,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
 
         let createdTicketId: string | null = null;
         try {
-          const existingTicket = await knex('tickets')
-            .where({ tenant: tenantId })
+          const existingTicket = await tenantScopedTable(knex, 'tickets', tenantId)
             .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
             .first('ticket_id');
           const existingTicketId = normalizeOptionalUuid(existingTicket?.ticket_id);
@@ -604,9 +605,8 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       continue;
     }
 
-    await knex('client_contracts')
+    await tenantScopedTable(knex, 'client_contracts', tenantId)
       .where({
-        tenant: tenantId,
         client_contract_id: (row as any).client_contract_id,
       })
       .update({
