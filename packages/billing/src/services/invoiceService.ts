@@ -810,9 +810,8 @@ async function persistFixedInvoiceCharges(
   if (validDbPlanIds.length > 0) {
     // Query contract_lines directly since client_contract_line_id is actually a contract_line_id
     // (see billingEngine.ts getClientContractLinesAndCycle which sets 'cl.contract_line_id as client_contract_line_id')
-    const planDetails = await tx('contract_lines as cl')
+    const planDetails = await tenantScopedTable(tx, tenant, 'contract_lines as cl')
       .whereIn('cl.contract_line_id', validDbPlanIds)
-      .andWhere('cl.tenant', tenant)
       .select(
         'cl.contract_line_id as client_contract_line_id',
         'cl.contract_line_name',
@@ -1417,8 +1416,8 @@ export async function calculateAndDistributeTax(
   if (detailUpdates.length > 0) {
     for (const update of detailUpdates) {
       updatePromises.push(
-        tx('invoice_charge_fixed_details')
-          .where({ item_detail_id: update.item_detail_id, tenant })
+        tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details')
+          .where('item_detail_id', update.item_detail_id)
           .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
       );
     }
@@ -1428,8 +1427,8 @@ export async function calculateAndDistributeTax(
   if (itemTaxUpdates.length > 0) {
     for (const update of itemTaxUpdates) {
       updatePromises.push(
-        tx('invoice_charges')
-          .where({ item_id: update.item_id, tenant })
+        tenantScopedTable(tx, tenant, 'invoice_charges')
+          .where('item_id', update.item_id)
           .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
       );
       // This log was misplaced inside the loop, moving it after the loop in step 7
@@ -1443,14 +1442,12 @@ export async function calculateAndDistributeTax(
   const consolidatedUpdatePromises: Array<Promise<any>> = [];
   if (consolidatedItemIds.length > 0) {
       // Fetch the *updated* tax amounts from details
-      const updatedDetailsTaxSum = await tx('invoice_charge_fixed_details as iifd')
+      const updatedDetailsTaxSum = await tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details as iifd')
           .join('invoice_charge_details as iid', function() {
               this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
                   .andOn('iid.tenant', '=', 'iifd.tenant');
           })
           .whereIn('iid.item_id', consolidatedItemIds)
-          .andWhere('iid.tenant', tenant)
-          .andWhere('iifd.tenant', tenant)
           .groupBy('iid.item_id')
           .select(
               'iid.item_id',
@@ -1460,8 +1457,8 @@ export async function calculateAndDistributeTax(
 
       for (const consolidated of updatedDetailsTaxSum) {
           consolidatedUpdatePromises.push(
-              tx('invoice_charges')
-                  .where({ item_id: consolidated.item_id, tenant })
+              tenantScopedTable(tx, tenant, 'invoice_charges')
+                  .where('item_id', consolidated.item_id)
                   .update({ tax_amount: Number(consolidated.total_detail_tax || 0) }) // Update parent with sum
           );
       }
@@ -1473,8 +1470,8 @@ export async function calculateAndDistributeTax(
   // 8 & 9. Final Pass: Update total_price and apply final tax zeroing if needed
   const finalItemUpdatePromises: Array<Promise<any>> = [];
   // Fetch all items again to get potentially updated tax amounts (especially the consolidated ones from step 7)
-  const allFinalItems = await tx('invoice_charges')
-    .where({ invoice_id: invoiceId, tenant })
+  const allFinalItems = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
     .select('*');
 
   for (const item of allFinalItems) {
@@ -1494,8 +1491,8 @@ export async function calculateAndDistributeTax(
 
       // Prepare final update for this item
       finalItemUpdatePromises.push(
-          tx('invoice_charges')
-              .where({ item_id: item.item_id, tenant })
+          tenantScopedTable(tx, tenant, 'invoice_charges')
+              .where('item_id', item.item_id)
               .update({
                   tax_amount: finalTax, // Persist the final tax amount (pre-discount, or 0 if non-taxable)
                   tax_rate: finalRate,   // Persist the final tax rate
@@ -1509,8 +1506,8 @@ export async function calculateAndDistributeTax(
 
   // 10. Return total calculated tax for the invoice
   // Recalculate from the final state of invoice_charges for definitive total
-  const finalTaxSumResult = await tx('invoice_charges')
-    .where({ invoice_id: invoiceId, tenant })
+  const finalTaxSumResult = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
     .sum('tax_amount as totalTax')
     .first();
 
@@ -1539,15 +1536,17 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   } = options;
 
   // Recalculate totals directly from the updated invoice items
-  const finalItems = await tx('invoice_charges').where({ invoice_id: invoiceId, tenant });
+  const finalItems = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
+    .select<{ net_amount?: unknown; tax_amount?: unknown }[]>('*');
   const finalSubtotal = finalItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
   const finalTotalTax = finalItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
   const finalTotalAmount = finalSubtotal + finalTotalTax;
 
 
   // Update invoice with final totals
-  await tx('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  await tenantScopedTable(tx, tenant, 'invoices')
+    .where('invoice_id', invoiceId)
     .update({
       subtotal: Math.round(finalSubtotal), // Use Math.round for final cents
       tax: Math.round(finalTotalTax),
@@ -1555,14 +1554,11 @@ export async function updateInvoiceTotalsAndRecordTransaction(
     });
 
   // Get current balance
-  const currentBalance = await tx('transactions')
-    .where({
-      client_id: client.client_id,
-      tenant
-    })
+  const lastTransaction = await tenantScopedTable(tx, tenant, 'transactions')
+    .where('client_id', client.client_id)
     .orderBy('created_at', 'desc')
-    .first()
-    .then(lastTx => lastTx?.balance_after || 0);
+    .first<{ balance_after?: unknown }>();
+  const currentBalance = Number(lastTransaction?.balance_after || 0);
 
   // Record transaction
   await tx('transactions').insert({

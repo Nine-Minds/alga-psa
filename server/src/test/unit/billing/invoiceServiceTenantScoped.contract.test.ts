@@ -36,6 +36,14 @@ const taxReadSection = sectionBetween(
   'export async function calculateAndDistributeTax',
   '// 6. Update Detail and Item Tables'
 );
+const taxWriteSection = sectionBetween(
+  '// 6. Update Detail and Item Tables',
+  'export async function updateInvoiceTotalsAndRecordTransaction'
+);
+const totalUpdateSection = sectionBetween(
+  'export async function updateInvoiceTotalsAndRecordTransaction',
+  'await tx(\'transactions\').insert'
+);
 
 describe('invoiceService tenant-scoped query contract', () => {
   it('uses structural tenant scoping for top invoice linkage and source-marking roots', () => {
@@ -96,5 +104,25 @@ describe('invoiceService tenant-scoped query contract', () => {
     expect(taxReadSection).not.toContain("tx('invoice_charges')");
     expect(taxReadSection).not.toContain("tx('invoice_charge_details')");
     expect(taxReadSection).not.toContain("tx('invoice_charge_fixed_details as iifd')");
+  });
+
+  it('uses structural tenant scoping for invoice tax writeback and total update roots', () => {
+    expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details')");
+    expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
+    expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details as iifd')");
+    expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
+    expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
+    expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'transactions')");
+
+    expect(taxWriteSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
+    expect(taxWriteSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
+    expect(totalUpdateSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
+    expect(totalUpdateSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
+  });
+
+  it('has no remaining direct tenant root predicates in invoiceService', () => {
+    expect(source).toContain("tenantScopedTable(tx, tenant, 'contract_lines as cl')");
+    expect(source).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
+    expect(source).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
   });
 });
