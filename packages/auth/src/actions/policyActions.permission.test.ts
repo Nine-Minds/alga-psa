@@ -12,6 +12,7 @@ const withTransactionMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
+  createTenantScopedQuery: (conn: any, options: { table: string }) => ({ builder: conn(options.table) }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
 
