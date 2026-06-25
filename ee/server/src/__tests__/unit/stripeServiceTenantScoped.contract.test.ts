@@ -15,8 +15,8 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 }
 
 function expectNoDirectTenantRoot(section: string): void {
-  expect(section).not.toMatch(/\.where\(\{\s*tenant:\s*tenantId/);
-  expect(section).not.toMatch(/\.where\(['"]tenant['"],\s*tenantId\)/);
+  expect(section).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+  expect(section).not.toMatch(/\.where\(['"]tenant['"],/);
 }
 
 describe('StripeService top billing paths tenant-scoped query contract', () => {
@@ -53,6 +53,17 @@ describe('StripeService top billing paths tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId)");
     expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId).select('plan').first()");
     expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId).select('plan', 'product_code').first()");
+    expectNoDirectTenantRoot(section);
+  });
+
+  it('uses structural tenant scoping for webhook bookkeeping, add-ons, and checkout completion', () => {
+    const section = sectionBetween('async handleWebhookEvent', 'private async handleSubscriptionUpdated');
+
+    expect(section).toContain("tenantScopedTable(knex, 'stripe_webhook_events', eventTenantId)");
+    expect(section).toContain("tenantScopedTable(db, 'tenant_addons', tenantId)");
+    expect(section).toContain("tenantScopedTable(knex, 'stripe_customers', tenantId)");
+    expect(section).toContain("tenantScopedTable(knex, 'apple_iap_subscriptions', tenantId)");
+    expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId)");
     expectNoDirectTenantRoot(section);
   });
 });

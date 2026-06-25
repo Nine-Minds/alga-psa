@@ -1069,11 +1069,8 @@ export class StripeService {
     const knex = await getConnection(eventTenantId);
 
     // Check idempotency
-    const existingEvent = await knex('stripe_webhook_events')
-      .where({
-        tenant: eventTenantId,
-        stripe_event_id: event.id,
-      })
+    const existingEvent = await tenantScopedTable(knex, 'stripe_webhook_events', eventTenantId)
+      .where('stripe_event_id', event.id)
       .first();
 
     if (existingEvent && existingEvent.processed) {
@@ -1115,11 +1112,8 @@ export class StripeService {
       }
 
       // Mark as processed
-      await knex('stripe_webhook_events')
-        .where({
-          tenant: eventTenantId,
-          stripe_event_id: event.id,
-        })
+      await tenantScopedTable(knex, 'stripe_webhook_events', eventTenantId)
+        .where('stripe_event_id', event.id)
         .update({
           processed: true,
           processing_status: 'completed',
@@ -1131,11 +1125,8 @@ export class StripeService {
       logger.error(`[StripeService] Error processing event ${event.id}:`, error);
 
       // Record error
-      await knex('stripe_webhook_events')
-        .where({
-          tenant: eventTenantId,
-          stripe_event_id: event.id,
-        })
+      await tenantScopedTable(knex, 'stripe_webhook_events', eventTenantId)
+        .where('stripe_event_id', event.id)
         .update({
           processed: false,
           processing_status: 'failed',
@@ -1220,8 +1211,8 @@ export class StripeService {
   ): Promise<void> {
     const db = knex || (await getConnection(tenantId));
 
-    await db('tenant_addons')
-      .where({ tenant: tenantId, addon_key: addOn })
+    await tenantScopedTable(db, 'tenant_addons', tenantId)
+      .where('addon_key', addOn)
       .update({
         expires_at: db.fn.now(),
         metadata,
@@ -1268,11 +1259,8 @@ export class StripeService {
     }
 
     // Get customer
-    const customer = await knex<StripeCustomer>('stripe_customers')
-      .where({
-        tenant: tenantId,
-        stripe_customer_external_id: session.customer as string,
-      })
+    const customer = await tenantScopedTable(knex, 'stripe_customers', tenantId)
+      .where('stripe_customer_external_id', session.customer as string)
       .first();
 
     if (!customer) {
@@ -1301,15 +1289,14 @@ export class StripeService {
     const iapOriginalTransactionId = subscription.metadata?.iap_original_transaction_id;
 
     if (isIapTransition && iapOriginalTransactionId) {
-      await knex('apple_iap_subscriptions')
-        .where({ tenant: tenantId, original_transaction_id: iapOriginalTransactionId })
+      await tenantScopedTable(knex, 'apple_iap_subscriptions', tenantId)
+        .where('original_transaction_id', iapOriginalTransactionId)
         .update({
           transition_stripe_subscription_external_id: subscription.id,
           updated_at: knex.fn.now(),
         });
 
-      await knex('tenants')
-        .where({ tenant: tenantId })
+      await tenantScopedTable(knex, 'tenants', tenantId)
         .update({
           plan,
           updated_at: knex.fn.now(),
@@ -1321,8 +1308,7 @@ export class StripeService {
       return;
     }
 
-    await knex('tenants')
-      .where({ tenant: tenantId })
+    await tenantScopedTable(knex, 'tenants', tenantId)
       .update({
         licensed_user_count: quantity,
         plan,
