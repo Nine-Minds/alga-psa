@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 /**
@@ -10,9 +10,13 @@ import type { Knex } from 'knex';
  * @param useTransaction Whether to use database transaction (default: true)
  * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
  */
-async function getImageUrlCore(file_id: string, useTransaction: boolean = true): Promise<string | null> {
+async function getImageUrlCore(
+  file_id: string,
+  useTransaction: boolean = true,
+  tenantId?: string
+): Promise<string | null> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
 
     if (!tenant) {
       console.error('getImageUrlCore: No tenant found');
@@ -22,14 +26,20 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
     // Fetch minimal file details to check MIME type and existence
     const fileDetails = useTransaction
       ? await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('external_files')
+          return await createTenantScopedQuery(trx, {
+            table: 'external_files',
+            tenant
+          }).builder
             .select('mime_type', 'storage_path')
-            .where({ file_id, tenant })
+            .where({ file_id })
             .first();
         })
-      : await knex('external_files')
+      : await createTenantScopedQuery(knex, {
+          table: 'external_files',
+          tenant
+        }).builder
           .select('mime_type', 'storage_path')
-          .where({ file_id, tenant })
+          .where({ file_id })
           .first();
 
     if (!fileDetails) {
@@ -72,5 +82,5 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
  */
 export async function getImageUrlInternal(file_id: string, tenant?: string): Promise<string | null> {
   // For internal use, we can use runWithTenant if tenant is provided
-  return await getImageUrlCore(file_id, false);
+  return await getImageUrlCore(file_id, false, tenant);
 }
