@@ -1383,11 +1383,8 @@ export class StripeService {
     const quantity = this.getLicensedUserCountFromStripeItems(subscription.items.data, plan);
 
     // Get existing subscription to check for scheduled changes
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: tenantId,
-        stripe_subscription_external_id: subscription.id,
-      })
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
+      .where('stripe_subscription_external_id', subscription.id)
       .first();
 
     // Check if this update matches a scheduled quantity change
@@ -1449,11 +1446,8 @@ export class StripeService {
       subscriptionUpdateData.stripe_price_id = stripePriceId;
     }
 
-    await knex<StripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: tenantId,
-        stripe_subscription_external_id: subscription.id,
-      })
+    await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
+      .where('stripe_subscription_external_id', subscription.id)
       .update(subscriptionUpdateData);
 
     // Update tenant licensed_user_count and plan if subscription is active or trialing
@@ -1466,8 +1460,7 @@ export class StripeService {
         updateData.plan = plan;
       }
 
-      await knex('tenants')
-        .where({ tenant: tenantId })
+      await tenantScopedTable(knex, 'tenants', tenantId)
         .update(updateData);
 
       if (subscription.status === 'trialing') {
@@ -1525,11 +1518,8 @@ export class StripeService {
     }
 
     // Mark subscription as canceled in database
-    await knex<StripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: tenantId,
-        stripe_subscription_external_id: subscription.id,
-      })
+    await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
+      .where('stripe_subscription_external_id', subscription.id)
       .update({
         status: 'canceled',
         canceled_at: knex.fn.now(),

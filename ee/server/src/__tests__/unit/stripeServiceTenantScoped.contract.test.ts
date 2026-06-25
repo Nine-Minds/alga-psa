@@ -66,4 +66,13 @@ describe('StripeService top billing paths tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId)");
     expectNoDirectTenantRoot(section);
   });
+
+  it('uses structural tenant scoping for subscription update and deletion webhook handlers', () => {
+    const section = sectionBetween('private async handleSubscriptionUpdated', 'async verifyWebhookSignature');
+
+    expect(section).toContain("tenantScopedTable(knex, 'stripe_subscriptions', tenantId)");
+    expect(section).toContain(".where('stripe_subscription_external_id', subscription.id)");
+    expect(section).toContain("tenantScopedTable(knex, 'tenants', tenantId)");
+    expectNoDirectTenantRoot(section);
+  });
 });
