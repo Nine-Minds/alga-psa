@@ -18,7 +18,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { createTenantKnex, createTenantScopedQuery, getTenantContext } from '@alga-psa/db';
+import { createTenantKnex, getTenantContext, tenantDb } from '@alga-psa/db';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -699,10 +699,7 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
     console.log(`[batchGeneratePreviews] Starting batch preview generation (limit: ${limit})`);
 
     // Find documents without previews that have files
-    const documents = await createTenantScopedQuery(knex, {
-      table: 'documents',
-      tenant,
-    }).builder
+    const documents = await tenantDb(knex, tenant).table<IDocument>('documents')
       .whereNotNull('file_id')
       .whereNull('preview_file_id')
       .limit(limit)
@@ -717,6 +714,11 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
       try {
         console.log(`[batchGeneratePreviews] Processing document ${doc.document_id}`);
 
+        if (!doc.file_id) {
+          errorCount++;
+          continue;
+        }
+
         // Download file from storage
         const downloadResult = await StorageService.downloadFile(doc.file_id);
         if (!downloadResult) {
@@ -729,10 +731,7 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
         const previewResult = await generateDocumentPreviews(doc, downloadResult.buffer);
 
         // Update document with preview file IDs
-        await createTenantScopedQuery(knex, {
-          table: 'documents',
-          tenant,
-        }).builder
+        await tenantDb(knex, tenant).table('documents')
           .where({ document_id: doc.document_id })
           .update({
             thumbnail_file_id: previewResult.thumbnail_file_id,
@@ -775,10 +774,7 @@ export async function regenerateDocumentPreview(documentId: string): Promise<boo
     console.log(`[regenerateDocumentPreview] Regenerating preview for document ${documentId}`);
 
     // Get document
-    const document = await createTenantScopedQuery(knex, {
-      table: 'documents',
-      tenant,
-    }).builder
+    const document = await tenantDb(knex, tenant).table<IDocument>('documents')
       .where({ document_id: documentId })
       .first();
 
@@ -803,10 +799,7 @@ export async function regenerateDocumentPreview(documentId: string): Promise<boo
     const previewResult = await generateDocumentPreviews(document, downloadResult.buffer);
 
     // Update document with preview file IDs
-    await createTenantScopedQuery(knex, {
-      table: 'documents',
-      tenant,
-    }).builder
+    await tenantDb(knex, tenant).table('documents')
       .where({ document_id: documentId })
       .update({
         thumbnail_file_id: previewResult.thumbnail_file_id,

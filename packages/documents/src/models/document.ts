@@ -1,5 +1,5 @@
 import type { IDocument } from '@alga-psa/types';
-import { createTenantScopedQuery, requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 type DocumentAssociationLookupRow = {
@@ -18,10 +18,7 @@ const Document = {
         try {
             const tenant = await requireTenantId(knexOrTrx);
 
-            return await createTenantScopedQuery(knexOrTrx, {
-                table: 'documents',
-                tenant,
-            }).builder
+            return await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
                 .select(
                     'documents.*',
                     'users.first_name',
@@ -42,10 +39,7 @@ const Document = {
         try {
             const tenant = await requireTenantId(knexOrTrx);
 
-            return await createTenantScopedQuery(knexOrTrx, {
-                table: 'documents',
-                tenant,
-            }).builder
+            return await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
                     .select(
                         'documents.*',
                         'users.first_name as created_by_first_name',
@@ -87,10 +81,7 @@ const Document = {
         try {
             const tenant = await requireTenantId(knexOrTrx);
             const { tenant: _, ...updateData } = document;
-            await createTenantScopedQuery(knexOrTrx, {
-                table: 'documents',
-                tenant,
-            }).builder
+            await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
                 .where('document_id', document_id)
                 .update(updateData);
         } catch (error) {
@@ -102,10 +93,7 @@ const Document = {
     delete: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> => {
         try {
             const tenant = await requireTenantId(knexOrTrx);
-            await createTenantScopedQuery(knexOrTrx, {
-                table: 'documents',
-                tenant,
-            }).builder
+            await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
                 .where('document_id', document_id)
                 .del();
         } catch (error) {
@@ -119,15 +107,10 @@ const Document = {
             const tenant = await requireTenantId(knexOrTrx);
 
             // First, get document IDs from associations
-            const associations = await createTenantScopedQuery(knexOrTrx, {
-                table: 'document_associations',
-                tenant,
-            }).builder
+            const associations = await tenantDb(knexOrTrx, tenant).table<DocumentAssociationLookupRow>('document_associations')
                 .select('document_id', 'tenant')
-                .where({
-                    entity_id: ticket_id,
-                    entity_type: 'ticket'
-                }) as DocumentAssociationLookupRow[];
+                .where('entity_id', ticket_id)
+                .andWhere('entity_type', 'ticket') as DocumentAssociationLookupRow[];
 
             if (associations.length === 0) {
                 return [];
@@ -137,22 +120,16 @@ const Document = {
             const documentIds = associations.map(a => a.document_id);
 
             // Get documents
-            const documents = await createTenantScopedQuery(knexOrTrx, {
-                table: 'documents',
-                tenant,
-            }).builder
-                .select('documents.*')
-                .whereIn('document_id', documentIds) as IDocument[];
+            const documents = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .select('*')
+                .whereIn('document_id', documentIds);
 
             // Get user information separately
             const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await createTenantScopedQuery(knexOrTrx, {
-                    table: 'users',
-                    tenant,
-                }).builder
+                const users = await tenantDb(knexOrTrx, tenant).table<DocumentUserSummaryRow>('users')
                     .select('user_id', 'first_name', 'last_name')
                     .whereIn('user_id', userIds) as DocumentUserSummaryRow[];
                 
@@ -183,15 +160,10 @@ const Document = {
             const tenant = await requireTenantId(knexOrTrx);
 
             // First, get document IDs from associations
-            const associations = await createTenantScopedQuery(knexOrTrx, {
-                table: 'document_associations',
-                tenant,
-            }).builder
+            const associations = await tenantDb(knexOrTrx, tenant).table<DocumentAssociationLookupRow>('document_associations')
                 .select('document_id', 'tenant')
-                .where({
-                    entity_id: client_id,
-                    entity_type: 'client'
-                }) as DocumentAssociationLookupRow[];
+                .where('entity_id', client_id)
+                .andWhere('entity_type', 'client') as DocumentAssociationLookupRow[];
 
             if (associations.length === 0) {
                 return [];
@@ -201,22 +173,16 @@ const Document = {
             const documentIds = associations.map(a => a.document_id);
 
             // Get documents
-            const documents = await createTenantScopedQuery(knexOrTrx, {
-                table: 'documents',
-                tenant,
-            }).builder
-                .select('documents.*')
-                .whereIn('document_id', documentIds) as IDocument[];
+            const documents = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .select('*')
+                .whereIn('document_id', documentIds);
 
             // Get user information separately
             const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await createTenantScopedQuery(knexOrTrx, {
-                    table: 'users',
-                    tenant,
-                }).builder
+                const users = await tenantDb(knexOrTrx, tenant).table<DocumentUserSummaryRow>('users')
                     .select('user_id', 'first_name', 'last_name')
                     .whereIn('user_id', userIds) as DocumentUserSummaryRow[];
                 
@@ -247,15 +213,10 @@ const Document = {
             const tenant = await requireTenantId(knexOrTrx);
 
             // First, get document IDs from associations
-            const associations = await createTenantScopedQuery(knexOrTrx, {
-                table: 'document_associations',
-                tenant,
-            }).builder
+            const associations = await tenantDb(knexOrTrx, tenant).table<DocumentAssociationLookupRow>('document_associations')
                 .select('document_id', 'tenant')
-                .where({
-                    entity_id: contact_name_id,
-                    entity_type: 'contact'
-                }) as DocumentAssociationLookupRow[];
+                .where('entity_id', contact_name_id)
+                .andWhere('entity_type', 'contact') as DocumentAssociationLookupRow[];
 
             if (associations.length === 0) {
                 return [];
@@ -265,22 +226,16 @@ const Document = {
             const documentIds = associations.map(a => a.document_id);
 
             // Get documents
-            const documents = await createTenantScopedQuery(knexOrTrx, {
-                table: 'documents',
-                tenant,
-            }).builder
-                .select('documents.*')
-                .whereIn('document_id', documentIds) as IDocument[];
+            const documents = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .select('*')
+                .whereIn('document_id', documentIds);
 
             // Get user information separately
             const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await createTenantScopedQuery(knexOrTrx, {
-                    table: 'users',
-                    tenant,
-                }).builder
+                const users = await tenantDb(knexOrTrx, tenant).table<DocumentUserSummaryRow>('users')
                     .select('user_id', 'first_name', 'last_name')
                     .whereIn('user_id', userIds) as DocumentUserSummaryRow[];
                 

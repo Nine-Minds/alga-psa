@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrl, EntityType } from '@alga-psa/formatting/avatarUtils';
@@ -59,10 +59,7 @@ async function ensureImageFolder(
 ): Promise<string> {
   const folderPath = getImageFolderPath(entityType);
 
-  const existing = await createTenantScopedQuery(trx, {
-    table: 'document_folders',
-    tenant,
-  }).builder
+  const existing = await tenantDb(trx, tenant).table('document_folders')
     .where({
       folder_path: folderPath,
       entity_id: entityId,
@@ -163,10 +160,7 @@ export async function uploadEntityImage(
       }
 
       if (isLogoUpload) {
-        await createTenantScopedQuery(trx, {
-          table: 'document_associations',
-          tenant,
-        }).builder
+        await tenantDb(trx, tenant).table('document_associations')
           .where({
             entity_id: entityId,
             entity_type: entityType,
@@ -234,10 +228,7 @@ export async function deleteEntityImage(
   const { knex } = await createTenantKnex(tenant);
 
   try {
-    const tenantScopedTable = (table: string) => createTenantScopedQuery(knex, {
-      table,
-      tenant,
-    }).builder;
+    const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
 
     let associationToDelete;
 
@@ -314,10 +305,7 @@ export async function linkExistingDocumentAsEntityImage(
 
   try {
     // Verify the document exists and is an image
-    const document = await createTenantScopedQuery(knex, {
-      table: 'documents',
-      tenant,
-    }).builder
+    const document = await tenantDb(knex, tenant).table('documents')
       .where({ document_id: documentId })
       .first();
 
@@ -330,10 +318,7 @@ export async function linkExistingDocumentAsEntityImage(
     }
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant,
-      }).builder;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       // Step 1: Unmark any existing logo/avatar for this entity
       await tenantScopedTable('document_associations')

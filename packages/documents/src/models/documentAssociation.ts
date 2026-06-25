@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import type { IDocumentAssociation, IDocumentAssociationInput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantScopedQuery, requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 
 class DocumentAssociation {
   static async create(
@@ -24,10 +24,7 @@ class DocumentAssociation {
   static async deleteByDocument(knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    await createTenantScopedQuery(knexOrTrx, {
-      table: 'document_associations',
-      tenant,
-    }).builder
+    await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
       .where({ document_id })
       .delete();
   }
@@ -39,11 +36,9 @@ class DocumentAssociation {
   ): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    await createTenantScopedQuery(knexOrTrx, {
-      table: 'document_associations',
-      tenant,
-    }).builder
-      .where({ entity_id, entity_type })
+    await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where('entity_id', entity_id)
+      .andWhere('entity_type', entity_type)
       .delete();
   }
 
@@ -52,10 +47,7 @@ class DocumentAssociation {
     document_id: string
   ): Promise<IDocumentAssociation[]> {
     const tenant = await requireTenantId(knexOrTrx);
-    return createTenantScopedQuery(knexOrTrx, {
-      table: 'document_associations',
-      tenant,
-    }).builder
+    return tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
       .where({ document_id })
       .orderBy('created_at', 'desc');
   }
@@ -67,11 +59,9 @@ class DocumentAssociation {
   ): Promise<IDocumentAssociation[]> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    return createTenantScopedQuery(knexOrTrx, {
-      table: 'document_associations',
-      tenant,
-    }).builder
-      .where({ entity_id, entity_type })
+    return tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where('entity_id', entity_id)
+      .andWhere('entity_type', entity_type)
       .orderBy('created_at', 'desc');
   }
 
@@ -83,11 +73,10 @@ class DocumentAssociation {
   ): Promise<boolean> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    const result = await createTenantScopedQuery(knexOrTrx, {
-      table: 'document_associations',
-      tenant,
-    }).builder
-      .where({ document_id, entity_id, entity_type })
+    const result = await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations')
+      .where('document_id', document_id)
+      .andWhere('entity_id', entity_id)
+      .andWhere('entity_type', entity_type)
       .first();
 
     return !!result;

@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -58,10 +58,7 @@ export const getDefaultFolders = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const query = createTenantScopedQuery(knex, {
-    table: 'document_default_folders',
-    tenant,
-  }).builder;
+  const query = tenantDb(knex, tenant).table('document_default_folders');
 
   if (entityType) {
     query.andWhere('entity_type', entityType);
@@ -116,10 +113,7 @@ export const saveDefaultFolders = withAuth(async (
   });
 
   return withTransaction(knex, async (trx) => {
-    const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-      table,
-      tenant,
-    }).builder;
+    const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
     await tenantScopedTable('document_default_folders').where({ entity_type: type }).del();
 
@@ -147,10 +141,7 @@ export const removeDefaultFolders = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  return await createTenantScopedQuery(knex, {
-    table: 'document_default_folders',
-    tenant,
-  }).builder
+  return await tenantDb(knex, tenant).table('document_default_folders')
     .where({ entity_type: entityType.trim().toLowerCase() })
     .del();
 });
@@ -245,10 +236,7 @@ export const loadSuggestedDefaults = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const existing = await createTenantScopedQuery(knex, {
-    table: 'document_default_folders',
-    tenant,
-  }).builder
+  const existing = await tenantDb(knex, tenant).table('document_default_folders')
     .select('entity_type')
     .groupBy('entity_type');
 

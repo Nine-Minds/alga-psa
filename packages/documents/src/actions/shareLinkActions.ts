@@ -2,7 +2,7 @@
 
 import { randomBytes, randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { createTenantKnex, getConnection, tenantDb } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import bcrypt from 'bcryptjs';
@@ -149,10 +149,7 @@ export const createShareLink = withAuth(
     }
 
     // Verify document exists in tenant
-    const document = await createTenantScopedQuery(knex, {
-      table: 'documents',
-      tenant,
-    }).builder
+    const document = await tenantDb(knex, tenant).table('documents')
       .where({ document_id: input.documentId })
       .first();
 
@@ -187,10 +184,7 @@ export const createShareLink = withAuth(
       created_by: user.user_id,
     });
 
-    const shareLink = await createTenantScopedQuery(knex, {
-      table: 'document_share_links',
-      tenant,
-    }).builder
+    const shareLink = await tenantDb(knex, tenant).table('document_share_links')
       .select(SHARE_LINK_SELECT_COLUMNS)
       .where({ share_id: shareIdValue })
       .first();
@@ -228,10 +222,7 @@ export const getShareLinksForDocument = withAuth(
       throw new Error('documentId is required');
     }
 
-    const shareLinks = await createTenantScopedQuery(knex, {
-      table: 'document_share_links',
-      tenant,
-    }).builder
+    const shareLinks = await tenantDb(knex, tenant).table('document_share_links')
       .select(SHARE_LINK_SELECT_COLUMNS)
       .where({
         document_id: documentId,
@@ -264,10 +255,7 @@ export const revokeShareLink = withAuth(
       throw new Error('shareId is required');
     }
 
-    const tenantScopedShareLinks = createTenantScopedQuery(knex, {
-      table: 'document_share_links',
-      tenant,
-    }).builder;
+    const tenantScopedShareLinks = tenantDb(knex, tenant).table('document_share_links');
 
     const shareLink = await tenantScopedShareLinks
       .clone()
@@ -369,10 +357,7 @@ export async function verifySharePassword(
 ): Promise<boolean> {
   const knex = await getConnection();
 
-  const shareLink = await createTenantScopedQuery(knex, {
-    table: 'document_share_links',
-    tenant,
-  }).builder
+  const shareLink = await tenantDb(knex, tenant).table('document_share_links')
     .select('password_hash')
     .where('token', token)
     .first();
@@ -429,10 +414,7 @@ export async function incrementDownloadCount(
 ): Promise<void> {
   const knex = await getConnection();
 
-  await createTenantScopedQuery(knex, {
-    table: 'document_share_links',
-    tenant,
-  }).builder
+  await tenantDb(knex, tenant).table('document_share_links')
     .where('token', token)
     .increment('download_count', 1);
 }

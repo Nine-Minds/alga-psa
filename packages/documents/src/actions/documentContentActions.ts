@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -77,10 +77,7 @@ export const getDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot read documents');
             }
 
-            return createTenantScopedQuery(trx, {
-                table: 'document_content',
-                tenant,
-            }).builder
+            return tenantDb(trx, tenant).table<IDocumentContent>('document_content')
                 .where({ document_id: documentId })
                 .first();
         });
@@ -116,10 +113,7 @@ export const updateDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot update documents');
             }
 
-            const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-                table,
-                tenant,
-            }).builder;
+            const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
             const existingContent = await tenantScopedTable('document_content')
                 .where({ document_id: documentId })
@@ -175,10 +169,7 @@ export const deleteDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot delete documents');
             }
 
-            return createTenantScopedQuery(trx, {
-                table: 'document_content',
-                tenant,
-            }).builder
+            return tenantDb(trx, tenant).table('document_content')
                 .where({ document_id: documentId })
                 .delete();
         });

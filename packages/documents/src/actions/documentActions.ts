@@ -1,7 +1,7 @@
 'use server'
 
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { marked } from 'marked';
@@ -155,7 +155,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 export const getDocumentAssociationClientsForPicker = withAuth(async (

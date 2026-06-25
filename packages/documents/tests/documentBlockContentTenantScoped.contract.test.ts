@@ -6,8 +6,9 @@ const source = readFileSync(resolve(__dirname, '../src/actions/documentBlockCont
 
 describe('document block-content tenant-scoped query contract', () => {
   it('uses structural tenant scoping for block content, document, and user roots', () => {
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db'");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).toContain("tenantScopedTable(knex, 'users', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'document_block_content', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'documents', tenant)");

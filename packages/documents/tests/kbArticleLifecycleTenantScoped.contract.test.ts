@@ -21,8 +21,9 @@ describe('KB article lifecycle tenant-scoped query contract', () => {
       '/**\n * Submits an article for review.',
     );
 
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db'");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(lifecycleSection).toContain("tenantScopedTable(knex, 'kb_articles', tenant)");
     expect(lifecycleSection).toContain("tenantScopedTable(knex, 'documents', tenant)");
     expect(lifecycleSection).toContain("tenantScopedTable(trx, 'kb_articles', tenant)");

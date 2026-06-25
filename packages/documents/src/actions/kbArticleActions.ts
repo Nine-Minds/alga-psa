@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -72,7 +72,7 @@ function tenantScopedTable(
   tenant: string,
   alias?: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant, alias }).builder;
+  return tenantDb(conn, tenant).table(alias ? `${table} as ${alias}` : table);
 }
 
 const KB_ARTICLE_SELECT_COLUMNS = [
