@@ -15,6 +15,7 @@
 import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
@@ -235,6 +236,10 @@ type StripeLineItem = {
   quantity: number;
 };
 
+function tenantScopedTable(conn: Knex, table: string, tenant: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
+
 export class StripeService {
   private stripe!: Stripe;
   private config!: Awaited<ReturnType<typeof getStripeConfig>>;
@@ -292,8 +297,7 @@ export class StripeService {
     const knex = await getConnection(tenantId);
 
     // 1. Check database first
-    let customer = await knex<StripeCustomer>('stripe_customers')
-      .where({ tenant: tenantId })
+    let customer = await tenantScopedTable(knex, 'stripe_customers', tenantId)
       .first();
 
     if (customer) {
@@ -304,8 +308,7 @@ export class StripeService {
     // 2. Customer not in database, fetch tenant info and search Stripe
     logger.info(`[StripeService] Customer not in database, searching Stripe for tenant ${tenantId}`);
 
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const tenant = await tenantScopedTable(knex, 'tenants', tenantId)
       .first();
 
     if (!tenant) {
@@ -387,9 +390,8 @@ export class StripeService {
     const db = knex || (await getConnection(tenantId));
 
     // Get our customer record
-    const customer = await db<StripeCustomer>('stripe_customers')
+    const customer = await tenantScopedTable(db, 'stripe_customers', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_external_id: stripeCustomerId
       })
       .first();
@@ -429,9 +431,8 @@ export class StripeService {
       return null;
     }
 
-    let dbProduct = await db<StripeProduct>('stripe_products')
+    let dbProduct = await tenantScopedTable(db, 'stripe_products', tenantId)
       .where({
-        tenant: tenantId,
         stripe_product_external_id: product.id,
       })
       .first();
@@ -452,9 +453,8 @@ export class StripeService {
       dbProduct = newProduct;
     }
 
-    let dbPrice = await db<StripePrice>('stripe_prices')
+    let dbPrice = await tenantScopedTable(db, 'stripe_prices', tenantId)
       .where({
-        tenant: tenantId,
         stripe_price_external_id: stripePrice.id,
       })
       .first();
@@ -506,9 +506,8 @@ export class StripeService {
     const product = price.product as Stripe.Product;
 
     // Import product if not exists
-    let dbProduct = await db<StripeProduct>('stripe_products')
+    let dbProduct = await tenantScopedTable(db, 'stripe_products', tenantId)
       .where({
-        tenant: tenantId,
         stripe_product_external_id: product.id,
       })
       .first();
@@ -530,9 +529,8 @@ export class StripeService {
     }
 
     // Import price if not exists
-    let dbPrice = await db<StripePrice>('stripe_prices')
+    let dbPrice = await tenantScopedTable(db, 'stripe_prices', tenantId)
       .where({
-        tenant: tenantId,
         stripe_price_external_id: price.id,
       })
       .first();
@@ -558,9 +556,8 @@ export class StripeService {
     }
 
     // Import subscription
-    const existingSubscription = await db<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(db, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_subscription_external_id: subscription.id,
       })
       .first();
@@ -573,8 +570,8 @@ export class StripeService {
         const baseProduct = basePrice.product as Stripe.Product;
 
         // Ensure base product exists
-        let dbBaseProduct = await db<StripeProduct>('stripe_products')
-          .where({ tenant: tenantId, stripe_product_external_id: baseProduct.id })
+        let dbBaseProduct = await tenantScopedTable(db, 'stripe_products', tenantId)
+          .where('stripe_product_external_id', baseProduct.id)
           .first();
         if (!dbBaseProduct) {
           const [newProduct] = await db<StripeProduct>('stripe_products')
@@ -592,8 +589,8 @@ export class StripeService {
           dbBaseProduct = newProduct;
         }
 
-        dbBasePrice = await db<StripePrice>('stripe_prices')
-          .where({ tenant: tenantId, stripe_price_external_id: basePrice.id })
+        dbBasePrice = await tenantScopedTable(db, 'stripe_prices', tenantId)
+          .where('stripe_price_external_id', basePrice.id)
           .first();
         if (!dbBasePrice) {
           const interval = basePrice.recurring?.interval;
@@ -667,9 +664,8 @@ export class StripeService {
     const customer = await this.getOrImportCustomer(tenantId);
 
     // Get existing subscription
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
         status: 'active',
       })
@@ -686,8 +682,7 @@ export class StripeService {
     // the per-user line item only carries the billable portion; preview must
     // use that same number or Stripe will compute proration against the
     // wrong quantity. Early-adopter subscriptions have no included-seat.
-    const tenantRecord = await knex('tenants')
-      .where('tenant', tenantId)
+    const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId)
       .select('plan')
       .first();
     const isMultiItem = this.isMultiItemSubscription(existingSubscription);
@@ -757,15 +752,14 @@ export class StripeService {
       'Seat count changes are not available while your subscription is managed by Apple. To add seats, upgrade to a web-billed plan first.',
     );
 
-    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId).select('plan').first();
 
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
 
     // Check for an existing active or trialing subscription for the license price.
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
       })
       .whereIn('status', ['active', 'trialing'])
@@ -835,8 +829,7 @@ export class StripeService {
             updated_at: knex.fn.now(),
           });
 
-        await knex('tenants')
-          .where({ tenant: tenantId })
+        await tenantScopedTable(knex, 'tenants', tenantId)
           .update({
             licensed_user_count: quantity,
             updated_at: knex.fn.now(),
@@ -1000,7 +993,7 @@ export class StripeService {
     // Resolve line items: AlgaDesk and Pro use per-seat pricing (no base fee);
     // other tiers can use tier-specific base/user pricing.
     const knex = await getConnection(tenantId);
-    const tenant = await knex('tenants').where('tenant', tenantId).select('plan', 'product_code').first();
+    const tenant = await tenantScopedTable(knex, 'tenants', tenantId).select('plan', 'product_code').first();
 
     let line_items: Stripe.Checkout.SessionCreateParams.LineItem[];
 
