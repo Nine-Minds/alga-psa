@@ -472,8 +472,11 @@ export const sendPortalInvitation = withAuth(async (
     }
 
     // Get contact details
-    const contact = await knex('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const contact = await createTenantScopedQuery(knex, {
+      table: 'contacts',
+      tenant,
+    }).builder
+      .where({ contact_name_id: contactId })
       .first();
 
     if (!contact) {
@@ -499,8 +502,11 @@ export const sendPortalInvitation = withAuth(async (
     }
 
     // Do not send invitations for contacts that already have a portal user
-    const existingUserForContact = await knex('users')
-      .where({ tenant, contact_id: contactId })
+    const existingUserForContact = await createTenantScopedQuery(knex, {
+      table: 'users',
+      tenant,
+    }).builder
+      .where({ contact_id: contactId })
       .first();
 
     if (existingUserForContact) {
@@ -513,6 +519,11 @@ export const sendPortalInvitation = withAuth(async (
 
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       // Create invitation within transaction
       const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
       if (!invitationResult.success) {
@@ -520,13 +531,12 @@ export const sendPortalInvitation = withAuth(async (
       }
 
       // Get the tenant's default client (MSP client) for reply-to email
-      const tenantDefaultClient = await trx('tenant_companies')
+      const tenantDefaultClient = await tenantScopedTable('tenant_companies')
         .join('clients', function() {
           this.on('clients.client_id', '=', 'tenant_companies.client_id')
               .andOn('clients.tenant', '=', 'tenant_companies.tenant');
         })
         .where({ 
-          'tenant_companies.tenant': tenant,
           'tenant_companies.is_default': true 
         })
         .select('clients.*')
@@ -540,9 +550,8 @@ export const sendPortalInvitation = withAuth(async (
       }
       
       // Get MSP client's default location for reply-to email
-      const mspLocation = await trx('client_locations')
+      const mspLocation = await tenantScopedTable('client_locations')
         .where({ 
-          tenant, 
           client_id: tenantDefaultClient.client_id,
           is_default: true,
           is_active: true
@@ -564,8 +573,8 @@ export const sendPortalInvitation = withAuth(async (
       }
       
       // Get the client's client info for the email template
-      const clientClient = contact.client_id ? await trx('clients')
-        .where({ tenant, client_id: contact.client_id })
+      const clientClient = contact.client_id ? await tenantScopedTable('clients')
+        .where({ client_id: contact.client_id })
         .first() : null;
 
       const tenantSlug = await getTenantSlugForTenant(tenant);
