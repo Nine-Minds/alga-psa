@@ -12,13 +12,22 @@ export interface ParsedTableExpression {
 export const tenantTableMetadata: Record<string, TenantTableScope> = {
   assets: { scope: 'tenant' },
   clients: { scope: 'tenant' },
+  contact_additional_email_addresses: { scope: 'tenant' },
+  contact_email_type_definitions: { scope: 'tenant' },
+  contact_phone_numbers: { scope: 'tenant' },
+  contact_phone_type_definitions: { scope: 'tenant' },
+  contacts: { scope: 'tenant' },
+  holidays: { scope: 'tenant' },
   knex_migrations: { scope: 'global' },
   rmm_alerts: { scope: 'tenant' },
   rmm_integrations: { scope: 'tenant' },
   rmm_organization_mappings: { scope: 'tenant' },
+  schedule_entries: { scope: 'tenant' },
+  schedule_entry_assignees: { scope: 'tenant' },
   server_assets: { scope: 'tenant' },
   tenants: { scope: 'tenant' },
   tickets: { scope: 'tenant' },
+  users: { scope: 'tenant' },
   workstation_assets: { scope: 'tenant' },
 };
 

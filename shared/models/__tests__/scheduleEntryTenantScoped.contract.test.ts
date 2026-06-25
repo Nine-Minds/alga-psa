@@ -32,9 +32,10 @@ const workItemAndUserSection = sectionBetween(
 
 describe('schedule entry model tenant-scoped query contract', () => {
   it('uses the structural tenant-scoped query helper for schedule entry roots', () => {
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
-    expect(source).toContain('createTenantScopedQuery(knexOrTrx, { table, tenant }).builder');
+    expect(source).toContain('tenantDb(knexOrTrx, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
   });
 
   it('uses structural tenant scoping for assignment and recurrence helper roots', () => {

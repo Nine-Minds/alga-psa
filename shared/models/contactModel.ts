@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
@@ -224,7 +224,7 @@ const phonePattern = /^[0-9A-Za-z+().\-#\s/]+$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(trx, { table, tenant }).builder;
+  return tenantDb(trx, tenant).table(table);
 }
 
 // =============================================================================

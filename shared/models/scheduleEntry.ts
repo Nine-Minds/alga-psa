@@ -12,7 +12,7 @@
  */
 
 import type { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import type {
   IScheduleEntry,
   IRecurrencePattern,
@@ -28,7 +28,7 @@ function tenantScopedTable(
   table: string,
   tenant: string
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(knexOrTrx, { table, tenant }).builder;
+  return tenantDb(knexOrTrx, tenant).table(table);
 }
 
 /**

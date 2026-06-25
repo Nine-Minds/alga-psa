@@ -28,8 +28,10 @@ const typeDefinitionSection = sectionBetween(
 
 describe('contact model tenant-scoped query contract', () => {
   it('uses the structural tenant-scoped query helper for contact model roots', () => {
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string)');
+    expect(source).toContain('tenantDb(trx, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toMatch(/\.where\(\{[^}]*tenant[^}]*\}/s);
     expect(source).not.toMatch(/\.where\(['"][^'"]*tenant['"],\s*tenant\)/);
     expect(source).not.toMatch(/\.where\(['"][^'"]*\.tenant['"],\s*tenant\)/);
