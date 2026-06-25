@@ -20,11 +20,14 @@ const helperSection = sectionBetween(
 
 describe('CRM workflow action tenant-scoped query contract', () => {
   it('uses structural tenant scoping for CRM action helper roots', () => {
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder');
     expect(source).toContain(
       'function tenantScopedTableForTenant(trx: Knex.Transaction, tenantId: string, table: string): Knex.QueryBuilder'
     );
+    expect(source).toContain('tenantDb(tx.trx, tx.tenantId).table(table)');
+    expect(source).toContain('tenantDb(trx, tenantId).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
 
     expect(helperSection).toContain("tenantScopedTable(tx, 'interaction_types')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'statuses')");

@@ -25,8 +25,10 @@ describe('workflow time domain tenant-scoped query contract', () => {
     const scopeEntriesSection = sectionBetween('async function scopeFindEntriesInputForActor', 'async function scopeFindTimeSheetsInputForActor');
     const workItemSection = sectionBetween('async function getWorkItemClientContext', 'function resolveDeterministicContractLineSelection');
 
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
+    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
 
     expect(managerSection).toContain("tenantScopedTable(trx, 'teams', tenantId)");
     expect(managerSection).toContain("tenantScopedTable(trx, 'users', tenantId)");

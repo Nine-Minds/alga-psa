@@ -18,7 +18,7 @@ import {
   getQuoteApprovalWorkflowSettings,
   quoteStatusSchema,
 } from './crmWorkerDal';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -69,11 +69,11 @@ const supportedActivityTagTargetTypes = ['ticket', 'contact', 'client'] as const
 type SupportedActivityTagTargetType = Extract<TaggedEntityType, typeof supportedActivityTagTargetTypes[number]>;
 
 function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(tx.trx, { table, tenant: tx.tenantId }).builder;
+  return tenantDb(tx.trx, tx.tenantId).table(table);
 }
 
 function tenantScopedTableForTenant(trx: Knex.Transaction, tenantId: string, table: string): Knex.QueryBuilder {
-  return createTenantScopedQuery(trx, { table, tenant: tenantId }).builder;
+  return tenantDb(trx, tenantId).table(table);
 }
 
 const activitySummarySchema = z.object({

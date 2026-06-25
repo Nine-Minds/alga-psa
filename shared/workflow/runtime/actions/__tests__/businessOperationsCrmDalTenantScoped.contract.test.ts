@@ -18,9 +18,10 @@ describe('CRM workflow DAL tenant-scoped query contract', () => {
   it('uses structural tenant scoping for quote tax and financial helper roots', () => {
     const section = sectionBetween('async function calculateTaxWithConnection', 'export const QuoteActivity');
 
-    expect(source).toContain("import { createTenantScopedQuery } from '@alga-psa/db';");
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
-    expect(source).toContain('createTenantScopedQuery(knexOrTrx, { table, tenant }).builder');
+    expect(source).toContain('tenantDb(knexOrTrx, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
 
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'clients')");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'client_tax_settings')");

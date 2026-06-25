@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate, toPlainDate } from '@alga-psa/core';
@@ -201,7 +201,7 @@ function tenantScopedTable(
   table: string,
   tenant: string
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 function ensureValidDate(value: string, field: string): Date {

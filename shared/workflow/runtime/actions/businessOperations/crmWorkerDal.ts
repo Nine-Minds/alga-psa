@@ -12,7 +12,7 @@ import type {
   QuoteStatus,
   TaggedEntityType,
 } from '@alga-psa/types';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
 export const quoteStatusSchema = z.enum([
@@ -37,7 +37,7 @@ function tenantScopedTable(
   tenant: string,
   table: string
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(knexOrTrx, { table, tenant }).builder;
+  return tenantDb(knexOrTrx, tenant).table(table);
 }
 
 const createQuoteBaseSchema = z.object({
