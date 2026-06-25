@@ -55,4 +55,43 @@ describe('workflow time domain tenant-scoped query contract', () => {
     expect(workItemSection).not.toContain('.where({ tenant: tenantId, interaction_id: link.id })');
     expect(workItemSection).not.toContain('.where({ tenant: tenantId, entry_id: link.id })');
   });
+
+  it('uses structural tenant scoping for usage, timesheet resolution, and entry side-effect roots', () => {
+    const usageSection = sectionBetween('async function applyBucketUsageDeltaForEntry', 'async function resolveOrCreateTimeSheet');
+    const timesheetSection = sectionBetween('async function resolveOrCreateTimeSheet', 'async function applyTicketAssignmentSideEffects');
+    const ticketSideEffectSection = sectionBetween('async function applyTicketAssignmentSideEffects', 'async function recalculateProjectTaskActualMinutes');
+    const taskRecalcSection = sectionBetween('async function recalculateProjectTaskActualMinutes', 'async function applyProjectTaskAssignmentSideEffects');
+    const taskSideEffectSection = sectionBetween('async function applyProjectTaskAssignmentSideEffects', 'export async function createWorkflowTimeEntry');
+    const createEntryValidationSection = sectionBetween('export async function createWorkflowTimeEntry', '  const startDate = ensureValidDate');
+
+    expect(usageSection).toContain("tenantScopedTable(trx, 'contract_line_service_configuration as cfg', tenantId)");
+    expect(usageSection).toContain("tenantScopedTable(trx, 'bucket_usage', tenantId)");
+    expect(usageSection).not.toContain("'cfg.tenant': tenantId");
+    expect(usageSection).not.toContain('.where({ tenant: tenantId, usage_id: usageId })');
+
+    expect(timesheetSection).toContain("tenantScopedTable(trx, 'time_sheets as ts', tenantId)");
+    expect(timesheetSection).toContain("tenantScopedTable(trx, 'time_periods', tenantId)");
+    expect(timesheetSection).toContain("tenantScopedTable(trx, 'time_sheets', tenantId)");
+    expect(timesheetSection).not.toContain(".where({ 'ts.tenant': tenantId, 'ts.id': providedTimeSheetId })");
+    expect(timesheetSection).not.toContain('.where({ tenant: tenantId, is_closed: false })');
+    expect(timesheetSection).not.toContain('.where({ tenant: tenantId, user_id: userId, period_id: period.period_id })');
+
+    expect(ticketSideEffectSection).toContain("tenantScopedTable(trx, 'ticket_resources', tenantId)");
+    expect(ticketSideEffectSection).toContain("tenantScopedTable(trx, 'tickets', tenantId)");
+    expect(ticketSideEffectSection).not.toContain('.where({ tenant: tenantId, ticket_id: ticketId })');
+
+    expect(taskRecalcSection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
+    expect(taskRecalcSection).toContain("tenantScopedTable(trx, 'project_tasks', tenantId)");
+    expect(taskRecalcSection).not.toContain(".where({ tenant: tenantId, work_item_type: 'project_task', work_item_id: taskId })");
+    expect(taskRecalcSection).not.toContain('.where({ tenant: tenantId, task_id: taskId })');
+
+    expect(taskSideEffectSection).toContain("tenantScopedTable(trx, 'project_tasks', tenantId)");
+    expect(taskSideEffectSection).toContain("tenantScopedTable(trx, 'task_resources', tenantId)");
+    expect(taskSideEffectSection).not.toContain('.where({ tenant: tenantId, task_id: taskId })');
+
+    expect(createEntryValidationSection).toContain("tenantScopedTable(trx, 'users', tenantId)");
+    expect(createEntryValidationSection).toContain("tenantScopedTable(trx, 'service_catalog', tenantId)");
+    expect(createEntryValidationSection).not.toContain('.where({ tenant: tenantId, user_id: input.user_id })');
+    expect(createEntryValidationSection).not.toContain('.where({ tenant: tenantId, service_id: input.service_id })');
+  });
 });
