@@ -623,8 +623,11 @@ export const updateUser = withAuth(async (
 
       // If user is being deactivated, clear default_assigned_to on boards
       if (userData.is_inactive === true) {
-        await trx('boards')
-          .where({ default_assigned_to: userId, tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'boards',
+          tenant,
+        }).builder
+          .where({ default_assigned_to: userId })
           .update({ default_assigned_to: null });
       }
 
@@ -656,8 +659,11 @@ export const updateUser = withAuth(async (
         // changing — otherwise editing any field (e.g. setting a manager)
         // would re-validate the unchanged email and could trip on legitimate
         // cross-tenant duplicates.
-        const existing = await trx('users')
-          .where({ user_id: userId, tenant: tenant || undefined })
+        const existing = await createTenantScopedQuery(trx, {
+          table: 'users',
+          tenant,
+        }).builder
+          .where({ user_id: userId })
           .select('email', 'user_type')
           .first();
         const currentEmail = existing?.email?.toLowerCase();
