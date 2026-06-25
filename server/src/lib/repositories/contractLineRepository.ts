@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { IContractLineMapping } from 'server/src/interfaces/contract.interfaces';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
@@ -24,9 +25,13 @@ export type DetailedContractLine = IContractLineMapping & {
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 
+function tenantScopedTable(knex: TenantScopedKnex, tenant: string, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(knex, { table, tenant }).builder;
+}
+
 async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
-  const record = await knex('contract_templates')
-    .where({ tenant, template_id: contractId })
+  const record = await tenantScopedTable(knex, tenant, 'contract_templates')
+    .where('template_id', contractId)
     .first('template_id');
 
   return Boolean(record);
@@ -54,8 +59,8 @@ export async function fetchContractLineMappings(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const rows = await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId })
+    const rows = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where('template_id', contractId)
       .orderBy('display_order', 'asc')
       .select([
         'tenant',
@@ -70,8 +75,8 @@ export async function fetchContractLineMappings(
     return rows.map(mapContractLineRow);
   }
 
-  const rows = await knex('contract_lines')
-    .where({ tenant, contract_id: contractId })
+  const rows = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where('contract_id', contractId)
     .orderBy('display_order', 'asc')
     .select([
       'tenant',
@@ -94,11 +99,11 @@ export async function fetchDetailedContractLines(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const rows = await knex('contract_template_lines as lines')
+    const rows = await tenantScopedTable(knex, tenant, 'contract_template_lines as lines')
       .leftJoin('contract_template_line_fixed_config as fixed', function joinTemplateFixed() {
         this.on('fixed.template_line_id', '=', 'lines.template_line_id').andOn('fixed.tenant', '=', 'lines.tenant');
       })
-      .where({ 'lines.template_id': contractId, 'lines.tenant': tenant })
+      .where('lines.template_id', contractId)
       .select([
         'lines.tenant',
         'lines.template_id as contract_id',
@@ -142,8 +147,8 @@ export async function fetchDetailedContractLines(
     }));
   }
 
-  const rows = await knex('contract_lines as cl')
-    .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
+  const rows = await tenantScopedTable(knex, tenant, 'contract_lines as cl')
+    .where('cl.contract_id', contractId)
     .select([
       'cl.tenant',
       'cl.contract_id',
@@ -189,14 +194,14 @@ export async function isContractLineAttached(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const record = await knex('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+    const record = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId })
       .first('template_line_id');
     return Boolean(record);
   }
 
-  const record = await knex('contract_lines')
-    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+  const record = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId })
     .first('contract_line_id');
   return Boolean(record);
 }
