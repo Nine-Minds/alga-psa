@@ -1589,11 +1589,11 @@ export function registerProjectActions(): void {
         let matchedBy: 'phase_id' | 'name' | null = null;
 
         if (input.phase_id) {
-          phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: input.phase_id }).first();
+          phase = await tenantScopedTable(tx, 'project_phases').where('phase_id', input.phase_id).first();
           matchedBy = 'phase_id';
         } else if (input.name && input.project_id) {
-          phase = await tx.trx('project_phases')
-            .where({ tenant: tx.tenantId, project_id: input.project_id })
+          phase = await tenantScopedTable(tx, 'project_phases')
+            .where('project_id', input.project_id)
             .andWhereRaw('lower(phase_name) = ?', [String(input.name).trim().toLowerCase()])
             .first();
           matchedBy = 'name';
@@ -1661,11 +1661,10 @@ export function registerProjectActions(): void {
         const queryText = String(input.query ?? '').trim();
         const queryPattern = `%${queryText.replace(/[%_\\]/g, (match) => `\\${match}`)}%`;
 
-        let base = tx.trx('project_phases as pp')
+        let base = tenantScopedTable(tx, 'project_phases as pp')
           .join('projects as p', function joinProjects(this: Knex.JoinClause) {
             this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
-          })
-          .where({ 'pp.tenant': tx.tenantId });
+          });
 
         if (input.project_id) {
           base = base.andWhere('pp.project_id', input.project_id);
