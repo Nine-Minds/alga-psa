@@ -62,10 +62,10 @@
       "failed": "55555",
       "pending": "55555",
       "processing": "55555",
-      "pgboss": "55555",
-      "temporal": "55555",
       "queued": "55555",
-      "running": "55555"
+      "running": "55555",
+      "pgboss": "55555",
+      "temporal": "55555"
     },
     "successRate": "55555 {{count}} 55555",
     "successRateNone": "55555"
@@ -131,10 +131,10 @@
       "toggle": "55555"
     },
     "toast": {
-      "success_one": "55555",
-      "success_other": "55555",
       "none": "55555",
-      "error": "55555"
+      "error": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555"
     }
   }
 }

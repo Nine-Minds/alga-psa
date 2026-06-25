@@ -35,7 +35,10 @@ import { scheduleAccountingSyncCycleJob } from '@/lib/jobs/handlers/accountingSy
 
 describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
   beforeEach(() => {
+    // Pin BOTH edition env vars so the isEnterpriseEdition() guard is deterministic
+    // even if an earlier test file leaks NEXT_PUBLIC_EDITION into the worker.
     vi.stubEnv('EDITION', 'ee');
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
     getStoredQboCredentialsMapMock.mockReset();
     scheduleRecurringJobMock.mockReset();
     cancelJobMock.mockReset();
@@ -84,6 +87,7 @@ describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
 
   it('returns null in CE without touching the runner', async () => {
     vi.stubEnv('EDITION', 'community');
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
     const result = await scheduleAccountingSyncCycleJob('t4');
     expect(getStoredQboCredentialsMapMock).not.toHaveBeenCalled();
     expect(scheduleRecurringJobMock).not.toHaveBeenCalled();
