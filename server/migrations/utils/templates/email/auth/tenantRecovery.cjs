@@ -435,7 +435,7 @@ LANGS.pt = {
           <div style="padding: 40px 30px;">
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Olá,</p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
-              Você solicitou acesso ao{{#if isMultiple}}s{{/if}} seu{{#if isMultiple}}s{{/if}} portal{{#if isMultiple}}ais{{/if}} do cliente.
+              Você solicitou acesso ao portal{{#if isMultiple}}s{{/if}} do cliente.
               {{#if isMultiple}}Encontramos {{tenantCount}} organizações associadas ao seu endereço de email.{{else}}Aqui está seu link de login:{{/if}}
             </p>
 
@@ -470,7 +470,7 @@ LANGS.pt = {
 
 Olá,
 
-Você solicitou acesso ao{{#if isMultiple}}s{{/if}} seu{{#if isMultiple}}s{{/if}} portal{{#if isMultiple}}ais{{/if}} do cliente.
+Você solicitou acesso ao portal{{#if isMultiple}}s{{/if}} do cliente.
 {{#if isMultiple}}Encontramos {{tenantCount}} organizações associadas ao seu endereço de email.{{else}}Aqui está seu link de login:{{/if}}
 
 Seus links de login:

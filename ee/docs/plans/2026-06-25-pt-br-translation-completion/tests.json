@@ -1001,7 +1001,7 @@
   {
     "id": "T112",
     "description": "Parity check fails if any en template lacks a pt counterpart, and passes once all pt rows exist.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "templates-verify",
     "featureIds": [
       "F060"
@@ -1010,7 +1010,7 @@
   {
     "id": "T113",
     "description": "Variable-set diff is empty for all pt vs en template pairs (email + notifications).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "templates-verify",
     "featureIds": [
       "F060"

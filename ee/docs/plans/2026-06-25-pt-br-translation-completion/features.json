@@ -607,7 +607,7 @@
   },
   {
     "id": "F057",
-    "description": "Create production migration server/migrations/<ts>_add_portuguese_email_templates.cjs that upserts all 34 source-of-truth pt rows into system_email_templates (language_code=pt, correct notification_subtype_id), mirroring the dev seed template list; idempotent up()/down().",
+    "description": "Create production migration server/migrations/<ts>_add_portuguese_email_templates.cjs that upserts all 41 source-of-truth pt rows into system_email_templates (language_code=pt, correct notification_subtype_id), mirroring the dev seed template list; idempotent up()/down().",
     "implemented": true,
     "commitGroup": "email-pt-migration",
     "prdRefs": [
@@ -638,7 +638,7 @@
   {
     "id": "F060",
     "description": "Add an automated parity check (test/script) asserting pt template coverage equals en for both system_email_templates and internal_notification_templates, and that {{variable}} sets match per template.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "templates-verify",
     "prdRefs": [
       "4.4",

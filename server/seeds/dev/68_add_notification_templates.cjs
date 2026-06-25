@@ -28,6 +28,9 @@ const { getTemplate: ticketUpdated } = require('../../migrations/utils/templates
 const { getTemplate: ticketUpdatedClient } = require('../../migrations/utils/templates/email/tickets/ticketUpdatedClient.cjs');
 const { getTemplate: ticketClosed } = require('../../migrations/utils/templates/email/tickets/ticketClosed.cjs');
 const { getTemplate: ticketCommentAdded } = require('../../migrations/utils/templates/email/tickets/ticketCommentAdded.cjs');
+const { getTemplate: ticketAgentAssignedClient } = require('../../migrations/utils/templates/email/tickets/ticketAgentAssignedClient.cjs');
+const { getTemplate: ticketAutoCloseWarning } = require('../../migrations/utils/templates/email/tickets/ticketAutoCloseWarning.cjs');
+const { getTemplate: ticketTeamAssigned } = require('../../migrations/utils/templates/email/tickets/ticketTeamAssigned.cjs');
 
 // Invoices
 const { getTemplate: invoiceGenerated } = require('../../migrations/utils/templates/email/invoices/invoiceGenerated.cjs');
@@ -47,6 +50,7 @@ const { getTemplate: projectTaskPrimary } = require('../../migrations/utils/temp
 const { getTemplate: projectTaskAdditional } = require('../../migrations/utils/templates/email/projects/projectTaskAssignedAdditional.cjs');
 const { getTemplate: taskUpdated } = require('../../migrations/utils/templates/email/projects/taskUpdated.cjs');
 const { getTemplate: milestoneCompleted } = require('../../migrations/utils/templates/email/projects/milestoneCompleted.cjs');
+const { getTemplate: taskCommentAdded } = require('../../migrations/utils/templates/email/projects/taskCommentAdded.cjs');
 
 // Appointments
 const { getTemplate: apptReceived } = require('../../migrations/utils/templates/email/appointments/appointmentRequestReceived.cjs');
@@ -63,6 +67,11 @@ const { getTemplate: timeRejected } = require('../../migrations/utils/templates/
 // Surveys
 const { getTemplate: surveyTicketClosed } = require('../../migrations/utils/templates/email/surveys/surveyTicketClosed.cjs');
 
+// SLA
+const { getTemplate: slaWarning } = require('../../migrations/utils/templates/email/sla/slaWarning.cjs');
+const { getTemplate: slaBreach } = require('../../migrations/utils/templates/email/sla/slaBreach.cjs');
+const { getTemplate: slaEscalation } = require('../../migrations/utils/templates/email/sla/slaEscalation.cjs');
+
 // ── Collect all template getters ──────────────────────────────────
 const TEMPLATE_GETTERS = [
   authPasswordReset,
@@ -77,6 +86,9 @@ const TEMPLATE_GETTERS = [
   ticketUpdatedClient,
   ticketClosed,
   ticketCommentAdded,
+  ticketAgentAssignedClient,
+  ticketAutoCloseWarning,
+  ticketTeamAssigned,
   invoiceGenerated,
   invoiceEmail,
   paymentReceived,
@@ -90,6 +102,7 @@ const TEMPLATE_GETTERS = [
   projectTaskAdditional,
   taskUpdated,
   milestoneCompleted,
+  taskCommentAdded,
   apptReceived,
   apptApproved,
   apptDeclined,
@@ -99,6 +112,9 @@ const TEMPLATE_GETTERS = [
   timeApproved,
   timeRejected,
   surveyTicketClosed,
+  slaWarning,
+  slaBreach,
+  slaEscalation,
 ];
 
 exports.TEMPLATE_GETTERS = TEMPLATE_GETTERS;

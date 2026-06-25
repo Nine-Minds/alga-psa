@@ -94,6 +94,14 @@ node scripts/validate-translations.cjs
 npm run migrate
 ```
 
+## 2026-06-25 — templates-verify completion
+- Added `scripts/check-pt-template-parity.cjs` as the final source-of-truth parity gate for templates. It scans all email template source files, compares them with the dev seed and Portuguese email migration lists, checks pt coverage for every email/internal template, verifies `{{variable}}` token parity, and applies the pt-BR forbidden-term audit to template copy.
+- Final email source count is **41**, not the earlier 34/36 planning snapshot. The parity scan found 7 later source templates without pt (`ticket-agent-assigned-client`, `ticket-auto-close-warning`, `ticket-team-assigned`, `task-comment-added`, `sla-warning`, `sla-breach`, `sla-escalation`), so they were translated and wired into both `server/seeds/dev/68_add_notification_templates.cjs` and `server/migrations/20260625120000_add_portuguese_email_templates.cjs`.
+- Fixed an existing `tenant-recovery` pt placeholder-control mismatch: the pt copy had extra `{{#if isMultiple}}` / `{{/if}}` tokens versus English. Reworded the pt sentence so HTML/text preserve the English conditional token set.
+- Commands run:
+  - `node scripts/check-pt-template-parity.cjs`
+  - `node --test scripts/tests/pt-br-template-parity-check.test.mjs scripts/tests/pt-br-email-templates.test.mjs scripts/tests/pt-br-email-migration.test.mjs scripts/tests/pt-br-internal-notification-templates.test.mjs`
+
 ## Open questions
 - Native reviewer identity + preferred export format (CSV vs md). Export supports both.
 - Glossary home: `.ai/translation/pt-br-glossary.*` (reusable, preferred) vs plan folder.
