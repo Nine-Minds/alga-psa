@@ -1320,8 +1320,11 @@ export class TeamService extends BaseService<ITeam> {
     const endDate = options.endDate || new Date();
 
     // Get team basic info
-    const team = await knex('teams')
-      .where({ team_id: teamId, tenant: context.tenant })
+    const team = await createTenantScopedQuery(knex, {
+      table: 'teams',
+      tenant: context.tenant,
+    }).builder
+      .where('team_id', teamId)
       .first();
 
     if (!team) {
@@ -1329,14 +1332,16 @@ export class TeamService extends BaseService<ITeam> {
     }
 
     // Get member count
-    const memberCount = await knex('team_members as tm')
+    const memberCount = await createTenantScopedQuery(knex, {
+      table: 'team_members as tm',
+      tenant: context.tenant,
+    }).builder
       .join('users as u', function() {
         this.on('tm.user_id', '=', 'u.user_id')
             .andOn('tm.tenant', '=', 'u.tenant');
       })
       .where({
         'tm.team_id': teamId,
-        'tm.tenant': context.tenant,
         'u.is_inactive': false
       })
       .count('* as count')
@@ -1344,28 +1349,32 @@ export class TeamService extends BaseService<ITeam> {
 
     // Get project statistics
     const [activeProjects, completedProjects] = await Promise.all([
-      knex('project_team_assignments as pta')
+      createTenantScopedQuery(knex, {
+        table: 'project_team_assignments as pta',
+        tenant: context.tenant,
+      }).builder
         .join('projects as p', function() {
           this.on('pta.project_id', '=', 'p.project_id')
               .andOn('pta.tenant', '=', 'p.tenant');
         })
         .where({
           'pta.team_id': teamId,
-          'pta.tenant': context.tenant,
           'pta.is_active': true,
           'p.status': 'active'
         })
         .count('* as count')
         .first(),
       
-      knex('project_team_assignments as pta')
+      createTenantScopedQuery(knex, {
+        table: 'project_team_assignments as pta',
+        tenant: context.tenant,
+      }).builder
         .join('projects as p', function() {
           this.on('pta.project_id', '=', 'p.project_id')
               .andOn('pta.tenant', '=', 'p.tenant');
         })
         .where({
-          'pta.team_id': teamId,
-          'pta.tenant': context.tenant
+          'pta.team_id': teamId
         })
         .whereIn('p.status', ['completed', 'closed'])
         .count('* as count')
@@ -1373,15 +1382,15 @@ export class TeamService extends BaseService<ITeam> {
     ]);
 
     // Get time tracking statistics
-    const timeStats = await knex('time_entries as te')
+    const timeStats = await createTenantScopedQuery(knex, {
+      table: 'time_entries as te',
+      tenant: context.tenant,
+    }).builder
       .join('team_members as tm', function() {
         this.on('te.user_id', '=', 'tm.user_id')
             .andOn('te.tenant', '=', 'tm.tenant');
       })
-      .where({
-        'tm.team_id': teamId,
-        'tm.tenant': context.tenant
-      })
+      .where('tm.team_id', teamId)
       .whereBetween('te.start_time', [startDate, endDate])
       .select(
         knex.raw('SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 3600) as total_hours'),
@@ -1390,7 +1399,10 @@ export class TeamService extends BaseService<ITeam> {
       .first();
 
     // Get member utilization
-    const memberUtilization = await knex('team_members as tm')
+    const memberUtilization = await createTenantScopedQuery(knex, {
+      table: 'team_members as tm',
+      tenant: context.tenant,
+    }).builder
       .join('users as u', function() {
         this.on('tm.user_id', '=', 'u.user_id')
             .andOn('tm.tenant', '=', 'u.tenant');
@@ -1402,7 +1414,6 @@ export class TeamService extends BaseService<ITeam> {
       })
       .where({
         'tm.team_id': teamId,
-        'tm.tenant': context.tenant,
         'u.is_inactive': false
       })
       .groupBy('tm.user_id', 'u.first_name', 'u.last_name', 'u.username')
