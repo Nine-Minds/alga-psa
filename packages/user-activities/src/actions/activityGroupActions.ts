@@ -363,17 +363,22 @@ export const reorderActivitiesInGroup = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     // Verify group ownership
-    const group = await trx('user_activity_groups')
-      .where({ tenant, group_id: groupId, user_id: user.user_id })
+    const group = await createTenantScopedQuery(trx, {
+      table: 'user_activity_groups',
+      tenant,
+    }).builder
+      .where({ group_id: groupId, user_id: user.user_id })
       .first();
     if (!group) {
       throw new Error('Group not found');
     }
 
     for (const item of orderedItems) {
-      await trx('user_activity_group_items')
+      await createTenantScopedQuery(trx, {
+        table: 'user_activity_group_items',
+        tenant,
+      }).builder
         .where({
-          tenant,
           group_id: groupId,
           activity_id: item.activityId,
           activity_type: item.activityType,
@@ -398,8 +403,11 @@ export const reorderGroups = withAuth(async (
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     for (const g of orderedGroups) {
-      await trx('user_activity_groups')
-        .where({ tenant, group_id: g.groupId, user_id: user.user_id })
+      await createTenantScopedQuery(trx, {
+        table: 'user_activity_groups',
+        tenant,
+      }).builder
+        .where({ group_id: g.groupId, user_id: user.user_id })
         .update({ sort_order: g.sortOrder, updated_at: new Date() });
     }
   });
