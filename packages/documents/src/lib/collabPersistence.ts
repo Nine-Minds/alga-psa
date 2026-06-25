@@ -1,4 +1,4 @@
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, runWithTenant, withTransaction } from '@alga-psa/db';
 import { CacheFactory } from '../cache/CacheFactory';
 
 export interface PersistCollabResult {
@@ -21,16 +21,21 @@ export async function persistCollabSnapshot(
     const { knex } = await createTenantKnex();
 
     const updated = await withTransaction(knex, async (trx) => {
-      const existing = await trx('document_block_content')
-        .where({ document_id: documentId, tenant })
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
+      const existing = await tenantScopedTable('document_block_content')
+        .where({ document_id: documentId })
         .first();
 
       if (!existing) {
         return null;
       }
 
-      const [result] = await trx('document_block_content')
-        .where({ document_id: documentId, tenant })
+      const [result] = await tenantScopedTable('document_block_content')
+        .where({ document_id: documentId })
         .update({
           block_data: JSON.stringify(json),
           updated_at: trx.fn.now(),

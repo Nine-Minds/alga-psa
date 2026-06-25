@@ -1,7 +1,7 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 /**
@@ -58,8 +58,11 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
 
       // Get document block content from database
       const blockContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('document_block_content')
-          .where({ document_id: document.document_id, tenant })
+        return await createTenantScopedQuery(trx, {
+          table: 'document_block_content',
+          tenant,
+        }).builder
+          .where({ document_id: document.document_id })
           .first();
       });
 
@@ -108,8 +111,11 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
     try {
       // Get document block content from database
       const blockContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('document_block_content')
-          .where({ document_id: document.document_id, tenant })
+        return await createTenantScopedQuery(trx, {
+          table: 'document_block_content',
+          tenant,
+        }).builder
+          .where({ document_id: document.document_id })
           .first();
       });
 
