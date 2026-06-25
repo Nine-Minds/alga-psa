@@ -3136,9 +3136,8 @@ async function _getFolderTreeInternal(
   const hasEntityScope = Boolean(entityId && entityType);
 
   // Get explicit folders from document_folders table
-  const explicitFolderQuery = knex('document_folders')
-    .select('folder_path', 'entity_id', 'entity_type', 'is_client_visible')
-    .where('tenant', tenant);
+  const explicitFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
+    .select('folder_path', 'entity_id', 'entity_type', 'is_client_visible');
 
   if (hasEntityScope) {
     explicitFolderQuery
@@ -3167,21 +3166,19 @@ async function _getFolderTreeInternal(
   }
 
   // Get implicit folder paths from documents
-  const implicitFoldersQuery = knex('documents')
+  const implicitFoldersQuery = tenantScopedTable(knex, 'documents', tenant)
     .select('folder_path')
-    .where('tenant', tenant)
     .whereNotNull('folder_path')
     .andWhere('folder_path', '!=', '');
 
   if (hasEntityScope) {
-    implicitFoldersQuery.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
+    implicitFoldersQuery.whereExists(
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
         .whereRaw('da.document_id = documents.document_id')
-        .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType);
-    });
+        .andWhere('da.entity_type', entityType)
+    );
   }
   // When no entity scope, don't filter — include all documents' folder paths
   // so the global Documents page shows everything.
@@ -3238,9 +3235,8 @@ export const getFolders = withAuth(async (
   const hasEntityScope = Boolean(entityId && entityType);
 
   // Get explicit folders from document_folders table
-  const explicitFolderQuery = knex('document_folders')
-    .select('folder_path')
-    .where('tenant', tenant);
+  const explicitFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
+    .select('folder_path');
 
   if (hasEntityScope) {
     // Entity context: show ONLY this entity's folders
@@ -3254,22 +3250,20 @@ export const getFolders = withAuth(async (
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
 
   // Get implicit folder paths from documents
-  const implicitFoldersQuery = knex('documents')
+  const implicitFoldersQuery = tenantScopedTable(knex, 'documents', tenant)
     .select('folder_path')
-    .where('tenant', tenant)
     .whereNotNull('folder_path')
     .andWhere('folder_path', '!=', '');
 
   if (hasEntityScope) {
     // Entity context: show folders only from this entity's docs
-    implicitFoldersQuery.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
+    implicitFoldersQuery.whereExists(
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
         .whereRaw('da.document_id = documents.document_id')
-        .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType);
-    });
+        .andWhere('da.entity_type', entityType)
+    );
   }
   // No entity scope: show all documents' folder paths
 
