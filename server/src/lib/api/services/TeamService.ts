@@ -1648,8 +1648,10 @@ export class TeamService extends BaseService<ITeam> {
       performanceStats
     ] = await Promise.all([
       // Total and active team counts
-      knex('teams')
-        .where('tenant', context.tenant)
+      createTenantScopedQuery(knex, {
+        table: 'teams',
+        tenant: context.tenant,
+      }).builder
         .select(
           knex.raw('COUNT(*) as total_teams'),
           knex.raw('COUNT(CASE WHEN manager_id IS NOT NULL THEN 1 END) as teams_with_managers'),
@@ -1673,8 +1675,10 @@ export class TeamService extends BaseService<ITeam> {
         .first(),
 
       // Get largest team size
-      knex('team_members')
-        .where({ tenant: context.tenant })
+      createTenantScopedQuery(knex, {
+        table: 'team_members',
+        tenant: context.tenant,
+      }).builder
         .select('team_id')
         .count('* as size')
         .groupBy('team_id')
