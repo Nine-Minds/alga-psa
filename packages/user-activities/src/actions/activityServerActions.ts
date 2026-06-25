@@ -561,8 +561,11 @@ export const updateAdHocActivity = withAuth(async (
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await trx("schedule_entries")
-      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+    const entry = await createTenantScopedQuery(trx, {
+      table: "schedule_entries",
+      tenant,
+    }).builder
+      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
       throw new Error("Ad-hoc item not found");
@@ -588,7 +591,12 @@ export const updateAdHocActivity = withAuth(async (
       patch.scheduled_end = end;
     }
 
-    await trx("schedule_entries").where({ tenant, entry_id: entryId }).update(patch);
+    await createTenantScopedQuery(trx, {
+      table: "schedule_entries",
+      tenant,
+    }).builder
+      .where({ entry_id: entryId })
+      .update(patch);
   });
 
   revalidatePath("/msp/user-activities");
