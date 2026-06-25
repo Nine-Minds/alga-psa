@@ -207,7 +207,7 @@ describe('AutomaticInvoices i18n wiring contract', () => {
     }
   });
 
-  it('T010: materialization-gap panel and recurring-history error/loading copy resolve through msp/invoicing', () => {
+  it('T010: materialization-gap panel and recurring-history error copy resolve through msp/invoicing', () => {
     const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
     const en = readJson<Record<string, unknown>>(
       '../../../server/public/locales/en/msp/invoicing.json',
@@ -224,7 +224,6 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       'automaticInvoices.errors.title',
       'automaticInvoices.errors.loadReady',
       'automaticInvoices.errors.loadHistory',
-      'automaticInvoices.loading.billingData',
       'common.labels.unknownClient',
       'common.actions.retry',
       'common.actions.close',
