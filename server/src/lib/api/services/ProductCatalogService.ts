@@ -1,5 +1,5 @@
 import type { IService } from '@/interfaces/billing.interfaces';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
 
@@ -69,7 +69,11 @@ export class ProductCatalogService extends BaseService<IService> {
       default_rate: 'sc.default_rate'
     };
 
-    const baseQuery = knex('service_catalog as sc').where({ 'sc.tenant': tenant });
+    const baseQuery = createTenantScopedQuery(knex, {
+      table: 'service_catalog as sc',
+      alias: 'sc',
+      tenant,
+    }).builder;
 
     // Count
     const countResult = await applyFilters(baseQuery.clone())
@@ -125,8 +129,11 @@ export class ProductCatalogService extends BaseService<IService> {
     // Fetch prices for returned products
     const serviceIds = productsData.map((s: any) => s.service_id);
     const allPrices = serviceIds.length > 0
-      ? await knex('service_prices')
-          .where({ tenant })
+      ? await createTenantScopedQuery(knex, {
+          table: 'service_prices',
+          alias: 'service_prices',
+          tenant,
+        }).builder
           .whereIn('service_id', serviceIds)
           .select('*')
       : [];
