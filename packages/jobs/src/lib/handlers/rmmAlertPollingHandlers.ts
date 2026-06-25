@@ -26,7 +26,7 @@
 
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import {
   getRmmAlertFetcher,
   registerRmmAlertFetcher,
@@ -34,6 +34,7 @@ import {
 } from '@alga-psa/shared/rmm/alerts';
 import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
 import { tacticalRmmAlertFetcher } from '@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher';
+import type { Knex } from 'knex';
 import type { IJobRunner } from '../jobs/interfaces';
 
 export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
@@ -50,6 +51,10 @@ export interface RmmAlertReconciliationJobData extends Record<string, unknown> {
 export interface HuntressIncidentPollJobData extends Record<string, unknown> {
   tenantId: string;
   integrationId: string;
+}
+
+function tenantScopedTable(knex: Knex, table: string, tenant: string) {
+  return createTenantScopedQuery(knex, { table, tenant }).builder;
 }
 
 let fetchersEnsured = false;
@@ -111,8 +116,8 @@ export async function rmmAlertReconciliationHandler(
   await ensureFetchersRegistered();
 
   const adminKnex = await getAdminConnection();
-  const row = await adminKnex('rmm_integrations')
-    .where({ tenant: data.tenantId, integration_id: data.integrationId })
+  const row = await tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
+    .where({ integration_id: data.integrationId })
     .first('is_active', 'settings');
   const state = row ? parseRmmPollState(row) : null;
   if (!state?.active || !state.pollingEnabled) {
@@ -147,8 +152,8 @@ export async function huntressIncidentPollHandler(
   data: HuntressIncidentPollJobData
 ): Promise<void> {
   const adminKnex = await getAdminConnection();
-  const row = await adminKnex('rmm_integrations')
-    .where({ tenant: data.tenantId, integration_id: data.integrationId, is_active: true })
+  const row = await tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
+    .where({ integration_id: data.integrationId, is_active: true })
     .first('integration_id');
   if (!row) {
     logger.info('[HuntressIncidentPollJob] Skipping: integration inactive', data);
@@ -181,8 +186,7 @@ async function findExistingRecurringJob(
   singletonKey: string,
   options?: { anyStatus?: boolean }
 ): Promise<ExistingRecurringJob | null> {
-  const query = adminKnex('jobs')
-    .where({ tenant: tenantId })
+  const query = tenantScopedTable(adminKnex, 'jobs', tenantId)
     .whereRaw(`metadata->>'singletonKey' = ?`, [singletonKey])
     .whereRaw(`metadata->>'recurring' = 'true'`)
     // external_id is the live schedule pointer; cancelJob nulls it on teardown.
