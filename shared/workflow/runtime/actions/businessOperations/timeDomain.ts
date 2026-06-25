@@ -1025,7 +1025,10 @@ async function recalculateProjectTaskActualMinutes(
     .where({ work_item_type: 'project_task', work_item_id: taskId })
     .select('billable_duration');
 
-  const totalMinutes = rows.reduce((acc, row) => acc + Number(row.billable_duration ?? 0), 0);
+  const totalMinutes = rows.reduce(
+    (acc: number, row: { billable_duration?: unknown }) => acc + Number(row.billable_duration ?? 0),
+    0
+  );
 
   await tenantScopedTable(trx, 'project_tasks', tenantId)
     .where({ task_id: taskId })
@@ -1895,7 +1898,7 @@ export async function findWorkflowTimeEntries(params: {
     billable_minutes?: string | number | null;
   } | undefined;
 
-  const entries = rows.map((row) => normalizeEntrySummary({
+  const entries = rows.map((row: Record<string, unknown>) => normalizeEntrySummary({
     entry_id: String(row.entry_id),
     user_id: String(row.user_id),
     work_item_id: (row.work_item_id as string | null) ?? null,
@@ -2192,7 +2195,7 @@ export async function getWorkflowTimeSheet(params: {
 
   return {
     time_sheet: summary,
-    comments: comments.map((comment) => ({
+    comments: comments.map((comment: Record<string, unknown>) => ({
       comment_id: String(comment.comment_id),
       user_id: String(comment.user_id),
       comment: String(comment.comment),
@@ -2251,8 +2254,8 @@ export async function findWorkflowTimeSheets(params: {
     .limit(limit)
     .select('ts.id');
 
-  const ids = rows.map((row) => String(row.id));
-  const summaries = await Promise.all(ids.map((id) => summarizeTimeSheet(trx, tenantId, id)));
+  const ids = rows.map((row: { id: unknown }) => String(row.id));
+  const summaries = await Promise.all(ids.map((id: string) => summarizeTimeSheet(trx, tenantId, id)));
 
   const countRow = await base.clone().count<{ count: string }[]>('* as count').first();
 

@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 // Import from the concrete modules rather than the '@alga-psa/jobs' barrel: this
 // file is itself reached via the barrel's `export * from './actions'`, so a
@@ -42,10 +42,7 @@ export interface JobRecord {
 }
 
 const tenantScopedTable = (conn: Knex | Knex.Transaction, table: string, tenant: string) =>
-  createTenantScopedQuery(conn, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(conn, tenant).table(table);
 
 export const getQueueMetricsAction = withAuth(async (user, { tenant }): Promise<JobMetrics> => {
   const { knex } = await createTenantKnex();

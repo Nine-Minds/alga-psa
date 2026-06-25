@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import type { PaginatedResult } from '@alga-psa/types';
@@ -48,10 +48,7 @@ export const getEmailLogsForTicket = withAuth(
     const limit = Math.min(Math.max(options?.limit ?? 20, 1), 200);
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      return createTenantScopedQuery(trx, {
-          table: 'email_sending_logs',
-          tenant
-        }).builder
+      return tenantDb(trx, tenant).table('email_sending_logs')
         .select(
           'id',
           'tenant',
@@ -152,11 +149,7 @@ export const getEmailLogs = withAuth(
     const offset = (page - 1) * pageSize;
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      let baseQuery = createTenantScopedQuery(trx, {
-          table: 'email_sending_logs as esl',
-          alias: 'esl',
-          tenant
-        }).builder
+      let baseQuery = tenantDb(trx, tenant).table('email_sending_logs as esl')
         .leftJoin('tickets as t', function () {
           this.on('esl.entity_id', '=', 't.ticket_id')
             .andOn('t.tenant', '=', 'esl.tenant')
@@ -270,10 +263,7 @@ export const getEmailLogMetrics = withAuth(
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
 
-      const result = (await createTenantScopedQuery(trx, {
-          table: 'email_sending_logs',
-          tenant
-        }).builder
+      const result = (await tenantDb(trx, tenant).table('email_sending_logs')
         .select(
           trx.raw('COUNT(*)::int as total'),
           trx.raw(`COUNT(*) FILTER (WHERE status = 'failed')::int as failed`),

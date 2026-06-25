@@ -6,9 +6,8 @@ const source = readFileSync(resolve(__dirname, 'googleGmailWatchRenewalHandler.t
 
 describe('Google Gmail watch renewal handler tenant-scoped query contract', () => {
   it('uses structural tenant scoping for aliased email provider roots', () => {
-    expect(source).toContain('createTenantScopedQuery');
-    expect(source).toContain("table: 'email_providers as ep'");
-    expect(source).toContain('tenant: tenantId');
+    expect(source).toContain("tenantDb(knex, tenantId).table('email_providers as ep')");
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toContain(".andWhere('ep.tenant', tenantId)");
     expect(source).not.toContain(".where('ep.tenant', tenantId)");
   });

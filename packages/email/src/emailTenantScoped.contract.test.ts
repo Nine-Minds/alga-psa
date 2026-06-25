@@ -17,7 +17,8 @@ describe('email tenant-scoped query contract', () => {
   it('uses structural tenant scoping for email tenant-owned roots', () => {
     for (const file of files) {
       const source = readFileSync(resolve(__dirname, file), 'utf8');
-      expect(source).toContain('createTenantScopedQuery');
+      expect(source).toContain('tenantDb');
+      expect(source).not.toContain('createTenantScopedQuery');
       expect(source).not.toMatch(/\.where\(\{\s*tenant[\s,:}]/);
       expect(source).not.toContain(".where('esl.tenant', tenant)");
       expect(source).not.toContain("knex('tenant_email_templates')");

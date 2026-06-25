@@ -284,7 +284,10 @@ async function calculateTaxWithConnection(
       })
       .select('tax_percentage');
 
-    const combinedTaxRate = applicableRates.reduce((sum, rate) => sum + toNumber(rate.tax_percentage), 0);
+    const combinedTaxRate = applicableRates.reduce(
+      (sum: number, rate: { tax_percentage?: unknown }) => sum + toNumber(rate.tax_percentage),
+      0
+    );
     return {
       taxAmount: netAmount > 0 ? Math.ceil((netAmount * combinedTaxRate) / 100) : 0,
       taxRate: combinedTaxRate,

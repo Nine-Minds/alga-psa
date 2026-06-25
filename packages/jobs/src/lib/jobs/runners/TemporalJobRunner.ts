@@ -2,7 +2,7 @@ import { Client, Connection, WorkflowHandle } from '@temporalio/client';
 import { Duration } from '@temporalio/common';
 import logger from '@alga-psa/core/logger';
 import { JobStatus } from '../../../types/job';
-import { createTenantKnex, createTenantScopedQuery, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
   IJobRunner,
@@ -15,7 +15,7 @@ import {
 } from '../interfaces';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 /**

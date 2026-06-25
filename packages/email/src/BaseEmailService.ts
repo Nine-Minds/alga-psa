@@ -6,16 +6,13 @@ import {
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '@alga-psa/types';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
 
 const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table(table);
 
 function extractEmailAddress(value: string): string {
   const trimmed = value.trim();
@@ -330,10 +327,7 @@ export async function applyTicketThreadHeaders(params: {
 
   try {
     const { knex } = await createTenantKnex(params.tenantId);
-    const ticket = await createTenantScopedQuery(knex, {
-        table: 'tickets',
-        tenant: params.tenantId
-      }).builder
+    const ticket = await tenantDb(knex, params.tenantId).table('tickets')
       .select('email_metadata')
       .where({ ticket_id: params.ticketId })
       .first<{ email_metadata?: Record<string, any> | null }>();
@@ -348,10 +342,7 @@ export async function applyTicketThreadHeaders(params: {
       const domain = (params.fromDomain && params.fromDomain.trim()) || 'alga-psa.local';
       root = `<ticket-${params.ticketId}@${domain}>`;
       // Deterministic value → concurrent first-events converge on the same anchor.
-      await createTenantScopedQuery(knex, {
-          table: 'tickets',
-          tenant: params.tenantId
-        }).builder
+      await tenantDb(knex, params.tenantId).table('tickets')
         .where({ ticket_id: params.ticketId })
         .update({
           email_metadata: knex.raw(

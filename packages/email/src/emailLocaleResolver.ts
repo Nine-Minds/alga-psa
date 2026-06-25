@@ -19,7 +19,7 @@
  * defaultLocale is respected.
  */
 
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { tenantDb, getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from './lib/localeConfig';
 import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
@@ -32,10 +32,7 @@ export interface EmailRecipient {
 }
 
 const tenantScopedTable = (knex: Knex, table: string, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table(table);
 
 /**
  * Get the user's client ID from their contact

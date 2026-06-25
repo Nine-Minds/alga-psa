@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 import logger from '@alga-psa/core/logger';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 import type { Knex } from 'knex';
@@ -64,11 +64,7 @@ function advisoryLockKey(scheduleId: string): number {
 }
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenantId: string) {
-  return createTenantScopedQuery(conn, {
-    table,
-    tenant: tenantId,
-    tenantColumn: 'tenant_id',
-  }).builder;
+  return tenantDb(conn, tenantId).table(table);
 }
 
 async function readResponseTextWithLimit(

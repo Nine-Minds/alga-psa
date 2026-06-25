@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { runWithTenant, getConnection, createTenantScopedQuery } from '@alga-psa/db';
+import { runWithTenant, getConnection, tenantDb } from '@alga-psa/db';
 import { auditLog } from '../handler-utils/auditLog';
 import { ICreditTracking } from '@alga-psa/types';
 
@@ -10,10 +10,7 @@ export interface ExpiredCreditsJobData extends Record<string, unknown> {
 }
 
 const tenantScopedTable = (trx: Knex.Transaction, table: string, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table(table);
 
 /**
  * Job handler for processing expired credits
@@ -46,7 +43,7 @@ export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promis
         const now = new Date().toISOString();
 
         // Find credits that have expired but are not yet marked as expired
-        let query = tenantScopedTable(trx, 'credit_tracking', tenantId)
+        let query = (tenantScopedTable(trx, 'credit_tracking', tenantId) as Knex.QueryBuilder<ICreditTracking, ICreditTracking[]>)
           .where('is_expired', false)
           .whereNotNull('expiration_date')
           .where('expiration_date', '<', now)

@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantScopedQuery, withAdminTransaction } from '@alga-psa/db';
+import { tenantDb, withAdminTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 
@@ -27,24 +27,16 @@ type JobHeaderRow = {
 export const getJobProgressAction = withAuth(async (user, { tenant }, jobId: string): Promise<JobProgressData> => {
   try {
     const { header, details } = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const [headerResult] = await createTenantScopedQuery(trx, {
-          table: 'jobs as j',
-          alias: 'j',
-          tenant
-        }).builder
+      const [headerResult] = await tenantDb(trx, tenant).table('jobs as j')
         .select(
           'j.job_id as id',
           'j.type as name',
           'j.status',
           'j.created_at as createdOn'
         )
-        .where('j.job_id', jobId) as JobHeaderRow[];
+        .where('j.job_id', jobId) as unknown as JobHeaderRow[];
 
-      const detailsResult = await createTenantScopedQuery(trx, {
-          table: 'job_details as jd',
-          alias: 'jd',
-          tenant
-        }).builder
+      const detailsResult = await tenantDb(trx, tenant).table('job_details as jd')
         .select(
           'jd.detail_id as id',
           'jd.step_name as stepName',
@@ -54,7 +46,7 @@ export const getJobProgressAction = withAuth(async (user, { tenant }, jobId: str
           'jd.result'
         )
         .where('jd.job_id', jobId)
-        .orderBy('jd.processed_at', 'asc') as JobDetail[];
+        .orderBy('jd.processed_at', 'asc') as unknown as JobDetail[];
 
       return { header: headerResult, details: detailsResult };
     });

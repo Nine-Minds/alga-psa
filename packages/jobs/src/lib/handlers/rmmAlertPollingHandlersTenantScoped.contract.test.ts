@@ -6,7 +6,8 @@ const source = readFileSync(resolve(__dirname, 'rmmAlertPollingHandlers.ts'), 'u
 
 describe('RMM alert polling handlers tenant-scoped query contract', () => {
   it('uses structural tenant scoping for RMM integration and recurring job roots', () => {
-    expect(source).toContain('createTenantScopedQuery');
+    expect(source).toContain('tenantDb(knex, tenant).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).toContain("tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)");
     expect(source).toContain("tenantScopedTable(adminKnex, 'jobs', tenantId)");
     expect(source).not.toContain('.where({ tenant: data.tenantId');

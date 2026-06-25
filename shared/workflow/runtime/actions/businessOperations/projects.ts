@@ -757,8 +757,9 @@ async function generateTaskWbsCode(
   targetPhase: Record<string, unknown>
 ): Promise<string> {
   const baseWbs = String(targetPhase.wbs_code ?? '1');
+  const phaseId = String(targetPhase.phase_id);
   const countRow = await tenantScopedTable(tx, 'project_tasks')
-    .where('phase_id', targetPhase.phase_id)
+    .where('phase_id', phaseId)
     .count('* as count')
     .first();
   const nextNumber = parseInt(String((countRow as any)?.count ?? 0), 10) + 1;
@@ -1692,7 +1693,7 @@ export function registerProjectActions(): void {
           .orderBy('pp.order_number', 'asc')
           .orderBy('pp.phase_id', 'asc');
 
-        const authorizedRows = await Promise.all(rows.map(async (row) => {
+        const authorizedRows = await Promise.all(rows.map(async (row: Record<string, unknown>) => {
           const allowed = await canReadProject(tx, {
             project_id: row.project_project_id,
             client_id: row.project_client_id,
@@ -1918,7 +1919,7 @@ export function registerProjectActions(): void {
           .orderBy('pt.task_name', 'asc')
           .orderBy('pt.task_id', 'asc');
 
-        const authorizedRows = await Promise.all(rows.map(async (row) => {
+        const authorizedRows = await Promise.all(rows.map(async (row: Record<string, unknown>) => {
           const allowed = await canReadProject(tx, {
             project_id: row.project_project_id,
             client_id: row.project_client_id,
@@ -2543,7 +2544,7 @@ export function registerProjectActions(): void {
             const ticketAuthorization = await Promise.all(tickets.map((ticket: Record<string, unknown>) => authorizeTicket(ticket)));
             const allowedTicketIds = new Set(
               tickets
-                .filter((_, idx) => ticketAuthorization[idx])
+                .filter((_ticket: Record<string, unknown>, idx: number) => ticketAuthorization[idx])
                 .map((ticket: Record<string, unknown>) => String(ticket.ticket_id))
             );
 

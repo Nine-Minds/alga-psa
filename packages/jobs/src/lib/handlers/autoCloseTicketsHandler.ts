@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -72,7 +72,7 @@ interface PendingClose {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 async function computePendingCloses(

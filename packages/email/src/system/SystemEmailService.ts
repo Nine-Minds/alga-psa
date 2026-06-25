@@ -16,7 +16,7 @@ import {
 } from './types';
 import { IEmailProvider } from '@alga-psa/types';
 import { SystemEmailProviderFactory } from './SystemEmailProviderFactory';
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { tenantDb, getConnection } from '@alga-psa/db';
 import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '../lib/localeConfig';
 import { resolveEmailLocale } from '../emailLocaleResolver';
 import Handlebars from 'handlebars';
@@ -156,10 +156,7 @@ export class SystemEmailService extends BaseEmailService {
     // With tenant context, check tenant and system templates
     try {
       const knex = await getConnection(tenantId);
-      const tenantTemplatesQuery = () => createTenantScopedQuery(knex, {
-        table: 'tenant_email_templates',
-        tenant: tenantId
-      }).builder;
+      const tenantTemplatesQuery = () => tenantDb(knex, tenantId).table('tenant_email_templates');
 
       // Try tenant-specific template in requested language
       const tenantTemplate = await tenantTemplatesQuery()

@@ -26,7 +26,7 @@
 
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   getRmmAlertFetcher,
   registerRmmAlertFetcher,
@@ -54,7 +54,7 @@ export interface HuntressIncidentPollJobData extends Record<string, unknown> {
 }
 
 function tenantScopedTable(knex: Knex, table: string, tenant: string) {
-  return createTenantScopedQuery(knex, { table, tenant }).builder;
+  return tenantDb(knex, tenant).table(table);
 }
 
 let fetchersEnsured = false;

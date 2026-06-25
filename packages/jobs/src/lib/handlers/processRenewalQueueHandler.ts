@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { normalizeClientContract } from '@shared/billingClients/clientContracts';
 import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
@@ -98,7 +98,7 @@ const buildRenewalTicketIdempotencyKey = (params: {
 }): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 const tryCreateRenewalTicketViaWorkflowAction = async (params: {

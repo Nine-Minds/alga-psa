@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, getConnection } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 import { allIndexers, getIndexer } from '@alga-psa/search';
@@ -27,10 +27,7 @@ interface IndexedObjectRow {
 }
 
 const searchIndexQuery = (knex: Knex, tenant: string) =>
-  createTenantScopedQuery(knex, {
-    table: 'app_search_index',
-    tenant
-  }).builder;
+  tenantDb(knex, tenant).table('app_search_index');
 
 async function resolveReconcileTenants(data: SearchReconcileJobData): Promise<string[]> {
   if (data.tenantId) {

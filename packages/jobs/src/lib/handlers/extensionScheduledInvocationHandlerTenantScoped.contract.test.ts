@@ -6,8 +6,8 @@ const source = readFileSync(resolve(__dirname, 'extensionScheduledInvocationHand
 
 describe('extension scheduled invocation tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tenant extension schedule and install roots', () => {
-    expect(source).toContain('createTenantScopedQuery');
-    expect(source).toContain("tenantColumn: 'tenant_id'");
+    expect(source).toContain('tenantDb(conn, tenantId).table(table)');
+    expect(source).not.toContain('createTenantScopedQuery');
     expect(source).toContain("tenantScopedTable(trx, 'tenant_extension_schedule', tenantId)");
     expect(source).toContain("tenantScopedTable(trx, 'tenant_extension_install', tenantId)");
     expect(source).not.toContain('tenant_id: tenantId, install_id: installId');

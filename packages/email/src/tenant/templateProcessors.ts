@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
 export interface EmailTemplateContent {
@@ -13,6 +13,14 @@ export interface TemplateProcessorOptions {
   templateData?: Record<string, any>;
   locale?: string;
 }
+
+type EmailTemplateRecord = {
+  name: string;
+  language_code: string;
+  subject: string;
+  html_content: string;
+  text_content: string | null;
+};
 
 /**
  * Base interface for all template processors
@@ -90,10 +98,7 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   }
 
   private tenantTemplatesQuery(tenantId: string) {
-    return createTenantScopedQuery(this.knex, {
-      table: 'tenant_email_templates',
-      tenant: tenantId
-    }).builder;
+    return tenantDb(this.knex, tenantId).table<EmailTemplateRecord>('tenant_email_templates');
   }
 
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
@@ -128,7 +133,7 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   private async fetchTemplate(params: {
     tenantId?: string;
     locales: string[];
-  }): Promise<{ subject: string; html_content: string; text_content: string | null } | null> {
+  }): Promise<EmailTemplateRecord | null> {
     const { tenantId, locales } = params;
 
     if (tenantId) {
