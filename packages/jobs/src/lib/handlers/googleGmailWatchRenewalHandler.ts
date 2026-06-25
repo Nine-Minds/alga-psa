@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
@@ -16,13 +17,15 @@ export async function renewGoogleGmailWatchSubscriptions(
   const knex = await getAdminConnection();
   const threshold = new Date(Date.now() + lookAheadMinutes * 60_000);
 
-  const providers = await knex('email_providers as ep')
+  const providers = await createTenantScopedQuery(knex, {
+    table: 'email_providers as ep',
+    tenant: tenantId,
+  }).builder
     .join('google_email_provider_config as gc', function () {
       this.on('ep.id', '=', 'gc.email_provider_id').andOn('ep.tenant', '=', 'gc.tenant');
     })
     .where('ep.provider_type', 'google')
     .andWhere('ep.is_active', true)
-    .andWhere('ep.tenant', tenantId)
     .andWhere(function () {
       this.whereNull('gc.watch_expiration').orWhere('gc.watch_expiration', '<=', threshold.toISOString());
     })
