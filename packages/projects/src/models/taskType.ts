@@ -1,6 +1,15 @@
 import type { ICustomTaskType, ITaskType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
+import { createTenantScopedQuery } from '@alga-psa/db';
+
+function tenantScopedTable(
+    conn: Knex | Knex.Transaction,
+    table: string,
+    tenant: string,
+): Knex.QueryBuilder {
+    return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 const TaskTypeModel = {
     getAllTaskTypes: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITaskType[]> => {
@@ -10,9 +19,9 @@ const TaskTypeModel = {
             .where({ is_active: true })
             .orderBy('display_order');
             
-        const customTypes = await knexOrTrx('custom_task_types')
-            .where({ tenant, is_active: true })
-            .orderBy('display_order');
+        const customTypes = await tenantScopedTable(knexOrTrx, 'custom_task_types', tenant)
+            .where({ is_active: true })
+            .orderBy('display_order') as ITaskType[];
             
         const typeMap = new Map<string, ITaskType>();
         
@@ -25,8 +34,8 @@ const TaskTypeModel = {
     getTaskTypeByKey: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, typeKey: string): Promise<ITaskType | null> => {
         if (!tenant) throw new Error('Tenant context is required for task type operations');
         
-        const customType = await knexOrTrx('custom_task_types')
-            .where({ tenant, type_key: typeKey, is_active: true })
+        const customType = await tenantScopedTable(knexOrTrx, 'custom_task_types', tenant)
+            .where({ type_key: typeKey, is_active: true })
             .first();
             
         if (customType) return customType;
@@ -64,8 +73,8 @@ const TaskTypeModel = {
     ): Promise<ICustomTaskType> => {
         if (!tenant) throw new Error('Tenant context is required for task type operations');
         
-        const [taskType] = await knexOrTrx('custom_task_types')
-            .where({ type_id: typeId, tenant })
+        const [taskType] = await tenantScopedTable(knexOrTrx, 'custom_task_types', tenant)
+            .where({ type_id: typeId })
             .update({
                 ...data,
                 updated_at: new Date()
@@ -78,8 +87,8 @@ const TaskTypeModel = {
     deleteCustomTaskType: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, typeId: string): Promise<void> => {
         if (!tenant) throw new Error('Tenant context is required for task type operations');
         
-        await knexOrTrx('custom_task_types')
-            .where({ type_id: typeId, tenant })
+        await tenantScopedTable(knexOrTrx, 'custom_task_types', tenant)
+            .where({ type_id: typeId })
             .update({ is_active: false, updated_at: new Date() });
     }
 };
