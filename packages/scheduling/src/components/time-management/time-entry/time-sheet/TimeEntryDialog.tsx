@@ -50,6 +50,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     workItem,
     date,
     existingEntries,
+    timePeriod,
     isEditable,
     defaultStartTime,
     defaultEndTime,
@@ -308,6 +309,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             onDelete={handleDeleteEntry}
             onUpdateEntry={updateEntry}
             onUpdateTimeInputs={updateTimeInputs}
+            timePeriod={timePeriod}
             date={date}
             isNewEntry={!hasExistingEntry}
           />
