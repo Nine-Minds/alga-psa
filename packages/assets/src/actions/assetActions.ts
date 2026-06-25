@@ -1242,8 +1242,8 @@ export const deleteAsset = withAuth(async (
         const result = await deleteEntityWithValidation('asset', asset_id, knex, tenant, async (trx, tenantId) => {
             await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);
 
-            const asset = await trx('assets')
-                .where({ tenant: tenantId, asset_id })
+            const asset = await tenantScopedTable(trx as Knex.Transaction, 'assets', tenantId)
+                .where({ asset_id })
                 .first();
 
             if (!asset) {
@@ -1264,46 +1264,48 @@ export const deleteAsset = withAuth(async (
                 'network_device_assets',
                 'printer_assets',
             ]) {
-                await trx(subtypeTable).where({ tenant: tenantId, asset_id }).delete();
+                await tenantScopedTable(trx as Knex.Transaction, subtypeTable, tenantId).where({ asset_id }).delete();
             }
 
-            await trx('asset_history').where({ tenant: tenantId, asset_id }).delete();
-            await trx('asset_maintenance_history').where({ tenant: tenantId, asset_id }).delete();
-            await trx('asset_maintenance_schedules').where({ tenant: tenantId, asset_id }).delete();
-            await trx('asset_maintenance_notifications').where({ tenant: tenantId, asset_id }).delete();
-            await trx('asset_ticket_associations').where({ tenant: tenantId, asset_id }).delete();
-            await trx('asset_service_history').where({ tenant: tenantId, asset_id }).delete();
-            await trx('asset_document_associations').where({ tenant: tenantId, asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_history', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_history', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_schedules', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_notifications', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_ticket_associations', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_service_history', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_document_associations', tenantId).where({ asset_id }).delete();
             if (await trx.schema.hasTable('asset_facts')) {
-                await trx('asset_facts').where({ tenant: tenantId, asset_id }).delete();
+                await tenantScopedTable(trx as Knex.Transaction, 'asset_facts', tenantId).where({ asset_id }).delete();
             }
             if (await trx.schema.hasTable('asset_software')) {
-                await trx('asset_software').where({ tenant: tenantId, asset_id }).delete();
+                await tenantScopedTable(trx as Knex.Transaction, 'asset_software', tenantId).where({ asset_id }).delete();
             }
-            await trx('asset_relationships')
-                .where({ tenant: tenantId, parent_asset_id: asset_id })
-                .orWhere({ tenant: tenantId, child_asset_id: asset_id })
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_relationships', tenantId)
+                .where(function(this: Knex.QueryBuilder) {
+                    this.where({ parent_asset_id: asset_id })
+                        .orWhere({ child_asset_id: asset_id });
+                })
                 .delete();
-            await trx('asset_associations').where({ tenant: tenantId, asset_id }).delete();
-            await trx('document_associations')
-                .where({ tenant: tenantId, entity_type: 'asset', entity_id: asset_id })
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_associations', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'document_associations', tenantId)
+                .where({ entity_type: 'asset', entity_id: asset_id })
                 .delete();
             // Polymorphic link table — no FK, but otherwise leaves dangling rows.
-            await trx('ticket_entity_links')
-                .where({ tenant: tenantId, entity_type: 'asset', entity_id: asset_id })
+            await tenantScopedTable(trx as Knex.Transaction, 'ticket_entity_links', tenantId)
+                .where({ entity_type: 'asset', entity_id: asset_id })
                 .delete();
-            await trx('tenant_external_entity_mappings')
-                .where({ tenant: tenantId, alga_entity_type: 'asset', alga_entity_id: asset_id })
+            await tenantScopedTable(trx as Knex.Transaction, 'tenant_external_entity_mappings', tenantId)
+                .where({ alga_entity_type: 'asset', alga_entity_id: asset_id })
                 .delete();
-            await trx('external_entity_mappings')
-                .where({ tenant: tenantId, asset_id })
+            await tenantScopedTable(trx as Knex.Transaction, 'external_entity_mappings', tenantId)
+                .where({ asset_id })
                 .delete();
-            await trx('import_job_items')
-                .where({ tenant: tenantId, asset_id })
+            await tenantScopedTable(trx as Knex.Transaction, 'import_job_items', tenantId)
+                .where({ asset_id })
                 .delete();
 
-            await trx('assets')
-                .where({ tenant: tenantId, asset_id })
+            await tenantScopedTable(trx as Knex.Transaction, 'assets', tenantId)
+                .where({ asset_id })
                 .delete();
         });
 
