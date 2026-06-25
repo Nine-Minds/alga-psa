@@ -15,6 +15,10 @@ const tagAuthHelperSection = source.slice(
   source.indexOf('async function ensureTagMappings'),
   source.indexOf('async function createProjectReadAuthorizer')
 );
+const createTaskSection = source.slice(
+  source.indexOf("id: 'projects.create_task'"),
+  source.indexOf("id: 'projects.find'")
+);
 
 describe('project workflow business operations tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared project helper roots', () => {
@@ -53,5 +57,20 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(tagAuthHelperSection).not.toContain(".where({ tenant: tx.tenantId");
     expect(tagAuthHelperSection).not.toContain("tx.trx('user_roles')");
     expect(tagAuthHelperSection).not.toContain("tx.trx('team_members')");
+  });
+
+  it('uses structural tenant scoping for create-task validation roots', () => {
+    expect(createTaskSection).toContain("tenantScopedTable(tx, 'projects')");
+    expect(createTaskSection).toContain("tenantScopedTable(tx, 'project_phases')");
+    expect(createTaskSection).toContain("tenantScopedTable(tx, 'teams')");
+    expect(createTaskSection).toContain("tenantScopedTable(tx, 'users')");
+    expect(createTaskSection).toContain("tenantScopedTable(tx, 'statuses')");
+    expect(createTaskSection).toContain("tenantScopedTable(tx, 'project_tasks')");
+    expect(createTaskSection).not.toContain("tx.trx('projects').where({ tenant: tx.tenantId");
+    expect(createTaskSection).not.toContain("tx.trx('project_phases')");
+    expect(createTaskSection).not.toContain("tx.trx('teams').where({ tenant: tx.tenantId");
+    expect(createTaskSection).not.toContain("tx.trx('users').where({ tenant: tx.tenantId");
+    expect(createTaskSection).not.toContain("tx.trx('statuses')");
+    expect(createTaskSection).not.toContain(".where({ tenant: tx.tenantId");
   });
 });

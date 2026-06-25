@@ -1250,15 +1250,15 @@ export function registerProjectActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'project_task', action: 'create' });
 
-      const project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: input.project_id }).first();
+      const project = await tenantScopedTable(tx, 'projects').where('project_id', input.project_id).first();
       if (!project) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project not found' });
 
-      const phaseId = input.phase_id ?? (await tx.trx('project_phases')
-        .where({ tenant: tx.tenantId, project_id: input.project_id })
+      const phaseId = input.phase_id ?? (await tenantScopedTable(tx, 'project_phases')
+        .where('project_id', input.project_id)
         .orderBy('order_number', 'asc')
         .first())?.phase_id;
       if (!phaseId) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project phase not found' });
-      const phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: phaseId }).first();
+      const phase = await tenantScopedTable(tx, 'project_phases').where('phase_id', phaseId).first();
       if (!phase || phase.project_id !== input.project_id) {
         throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Project phase does not belong to project' });
       }
@@ -1266,13 +1266,13 @@ export function registerProjectActions(): void {
       const assignedTo = input.assignee
         ? (input.assignee.type === 'user'
             ? input.assignee.id
-            : (await tx.trx('teams').where({ tenant: tx.tenantId, team_id: input.assignee.id }).first())?.manager_id)
+            : (await tenantScopedTable(tx, 'teams').where('team_id', input.assignee.id).first())?.manager_id)
         : null;
       if (input.assignee && input.assignee.type === 'team' && !assignedTo) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Team not found' });
       }
       if (assignedTo) {
-        const user = await tx.trx('users').where({ tenant: tx.tenantId, user_id: assignedTo }).first();
+        const user = await tenantScopedTable(tx, 'users').where('user_id', assignedTo).first();
         if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Assignee user not found' });
       }
 
@@ -1295,11 +1295,11 @@ export function registerProjectActions(): void {
           statusId = taskColumns.has('status_id') ? (defaultMapping?.status_id ?? null) : projectStatusMappingId;
         }
       } else if (statusId) {
-        const status = await tx.trx('statuses').where({ tenant: tx.tenantId, status_id: statusId, status_type: 'project_task' }).first();
+        const status = await tenantScopedTable(tx, 'statuses').where({ status_id: statusId, status_type: 'project_task' }).first();
         if (!status) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid project task status_id' });
       } else {
-        const defaultStatus = await tx.trx('statuses')
-          .where({ tenant: tx.tenantId, status_type: 'project_task' })
+        const defaultStatus = await tenantScopedTable(tx, 'statuses')
+          .where('status_type', 'project_task')
           .orderBy('is_default', 'desc')
           .orderBy('order_number', 'asc')
           .first();
@@ -1307,8 +1307,8 @@ export function registerProjectActions(): void {
       }
 
       const baseWbs = (phase?.wbs_code as string) ?? '1';
-      const countRow = await tx.trx('project_tasks')
-        .where({ tenant: tx.tenantId, phase_id: phaseId })
+      const countRow = await tenantScopedTable(tx, 'project_tasks')
+        .where('phase_id', phaseId)
         .count('* as count')
         .first();
       const n = parseInt(String((countRow as any)?.count ?? 0), 10) + 1;
