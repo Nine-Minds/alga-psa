@@ -2327,9 +2327,8 @@ export class TicketService extends BaseService<ITicket> {
 
   private async findBundleMasterIds(trx: Knex.Transaction, tenant: string, ticketIds: string[]): Promise<string[]> {
     if (ticketIds.length === 0) return [];
-    const rows = await trx('tickets')
+    const rows = await tenantScopedTable(trx, 'tickets', tenant)
       .distinct('master_ticket_id')
-      .where({ tenant })
       .whereIn('master_ticket_id', ticketIds);
     return rows.map((r: any) => r.master_ticket_id).filter(Boolean);
   }
@@ -2338,9 +2337,8 @@ export class TicketService extends BaseService<ITicket> {
     const offending = await this.findBundleMasterIds(trx, tenant, childIds);
     if (offending.length === 0) return;
 
-    const rows = await trx('tickets')
+    const rows = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_number')
-      .where({ tenant })
       .whereIn('ticket_id', offending);
     const labels = rows
       .map((r: any) => r.ticket_number)
@@ -2365,9 +2363,8 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const tickets = await trx('tickets')
+      const tickets = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
-        .where({ tenant: context.tenant })
         .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
 
       const byId = new Map(tickets.map((t: any) => [t.ticket_id, t]));
@@ -2394,8 +2391,7 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      const updatedChildrenCount = await trx('tickets')
-        .where({ tenant: context.tenant })
+      const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', context.tenant)
         .whereIn('ticket_id', uniqueChildIds)
         .whereNull('master_ticket_id')
         .update({
@@ -2444,16 +2440,15 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const master = await trx('tickets')
+      const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .where({ ticket_id: params.masterTicketId })
         .first();
       if (!master) throw new NotFoundError('Master ticket not found.');
       if (master.master_ticket_id) throw new ValidationError('Cannot add children to a bundled child ticket.');
 
-      const children = await trx('tickets')
+      const children = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
-        .where({ tenant: context.tenant })
         .whereIn('ticket_id', childIds);
       const byId = new Map(children.map((t: any) => [t.ticket_id, t]));
       for (const childId of childIds) {
@@ -2464,8 +2459,7 @@ export class TicketService extends BaseService<ITicket> {
 
       await this.assertChildrenAreNotMasters(trx, context.tenant, childIds);
 
-      const updatedChildrenCount = await trx('tickets')
-        .where({ tenant: context.tenant })
+      const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', context.tenant)
         .whereIn('ticket_id', childIds)
         .whereNull('master_ticket_id')
         .update({
@@ -2503,16 +2497,16 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const oldMaster = await trx('tickets')
+      const oldMaster = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+        .where({ ticket_id: params.oldMasterTicketId })
         .first();
       if (!oldMaster) throw new NotFoundError('Old master ticket not found');
       if (oldMaster.master_ticket_id) throw new ValidationError('Old master ticket is not a master');
 
-      const newMaster = await trx('tickets')
+      const newMaster = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+        .where({ ticket_id: params.newMasterTicketId })
         .first();
       if (!newMaster) throw new NotFoundError('New master ticket not found');
       if (newMaster.master_ticket_id !== params.oldMasterTicketId) {
@@ -2526,12 +2520,12 @@ export class TicketService extends BaseService<ITicket> {
 
       const now = new Date().toISOString();
 
-      const settings = await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+      const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.oldMasterTicketId })
         .first();
       if (settings) {
-        await trx('ticket_bundle_settings')
-          .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+        await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+          .where({ master_ticket_id: params.oldMasterTicketId })
           .delete();
         await trx('ticket_bundle_settings')
           .insert({ ...settings, master_ticket_id: params.newMasterTicketId })
@@ -2539,17 +2533,17 @@ export class TicketService extends BaseService<ITicket> {
           .merge({ mode: settings.mode, reopen_on_child_reply: settings.reopen_on_child_reply });
       }
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ master_ticket_id: params.oldMasterTicketId })
         .andWhereNot({ ticket_id: params.newMasterTicketId })
         .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: params.newMasterTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: now });
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: params.oldMasterTicketId })
         .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
 
       return { oldMasterTicketId: params.oldMasterTicketId, newMasterTicketId: params.newMasterTicketId };
@@ -2572,8 +2566,8 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const existing = await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .first();
       if (!existing) throw new NotFoundError('Bundle settings not found');
 
@@ -2589,8 +2583,8 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
-      const [updated] = await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .update(update)
         .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
 
@@ -2604,9 +2598,9 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketId: string; remainingChildren: number }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const child = await trx('tickets')
+      const child = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+        .where({ ticket_id: params.childTicketId })
         .first();
 
       if (!child) throw new NotFoundError('Ticket not found');
@@ -2614,17 +2608,17 @@ export class TicketService extends BaseService<ITicket> {
 
       const masterTicketId = child.master_ticket_id;
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: params.childTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
-      const [{ count }] = await trx('tickets')
-        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+      const [{ count }] = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ master_ticket_id: masterTicketId })
         .count('ticket_id as count');
       const remaining = Number.parseInt(String(count), 10) || 0;
       if (remaining === 0) {
-        await trx('ticket_bundle_settings')
-          .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+          .where({ master_ticket_id: masterTicketId })
           .delete();
       }
 
@@ -2647,24 +2641,24 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const master = await trx('tickets')
+      const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .where({ ticket_id: params.masterTicketId })
         .first();
       if (!master) throw new NotFoundError('Master ticket not found');
       if (master.master_ticket_id) throw new ValidationError('Cannot unbundle from a child ticket id');
 
-      const childTicketRows = await trx('tickets')
+      const childTicketRows = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId });
+        .where({ master_ticket_id: params.masterTicketId });
       const childTicketIds = childTicketRows.map((r: any) => r.ticket_id);
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
-      await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .delete();
 
       return { masterTicketId: params.masterTicketId, childTicketIds };
@@ -2687,27 +2681,27 @@ export class TicketService extends BaseService<ITicket> {
     const memberColumns = ['ticket_id', 'ticket_number', 'title', 'status_id', 'client_id'];
 
     return withTransaction(knex, async (trx) => {
-      const ticket = await trx('tickets')
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: ticketId })
+        .where({ ticket_id: ticketId })
         .first();
       if (!ticket) throw new NotFoundError('Ticket not found');
 
       const masterTicketId: string = ticket.master_ticket_id || ticket.ticket_id;
 
-      const master = await trx('tickets')
+      const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select(memberColumns)
-        .where({ tenant: context.tenant, ticket_id: masterTicketId })
+        .where({ ticket_id: masterTicketId })
         .first();
 
-      const children = await trx('tickets')
+      const children = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select(memberColumns)
-        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .where({ master_ticket_id: masterTicketId })
         .orderBy('ticket_number', 'asc');
 
-      const settingsRow = await trx('ticket_bundle_settings')
+      const settingsRow = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .select('mode', 'reopen_on_child_reply')
-        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .where({ master_ticket_id: masterTicketId })
         .first();
 
       let role: BundleView['role'];
