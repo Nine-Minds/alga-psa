@@ -1401,20 +1401,18 @@ export function registerProjectActions(): void {
         let matchedBy: 'project_id' | 'name' | 'external_ref' | null = null;
 
         if (input.project_id) {
-          project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: input.project_id }).first();
+          project = await tenantScopedTable(tx, 'projects').where('project_id', input.project_id).first();
           matchedBy = 'project_id';
         } else if (input.name) {
           const exactName = String(input.name).trim();
-          project = await tx.trx('projects')
-            .where({ tenant: tx.tenantId })
+          project = await tenantScopedTable(tx, 'projects')
             .andWhereRaw('lower(project_name) = ?', [exactName.toLowerCase()])
             .first();
           matchedBy = 'name';
         } else if (input.external_ref) {
           matchedBy = 'external_ref';
           if (projectColumns.has('properties')) {
-            project = await tx.trx('projects')
-              .where({ tenant: tx.tenantId })
+            project = await tenantScopedTable(tx, 'projects')
               .andWhereRaw(`(properties->>'external_ref') = ?`, [input.external_ref])
               .first();
           }
@@ -1487,7 +1485,7 @@ export function registerProjectActions(): void {
 
         const projectColumns = await getTableColumns(tx, 'projects');
 
-        let base = tx.trx('projects as p').where({ 'p.tenant': tx.tenantId });
+        let base = tenantScopedTable(tx, 'projects as p');
         base = base.andWhere(function searchByQuery() {
           this.whereRaw(`p.project_name ILIKE ?`, [pattern]);
           if (projectColumns.has('description')) {

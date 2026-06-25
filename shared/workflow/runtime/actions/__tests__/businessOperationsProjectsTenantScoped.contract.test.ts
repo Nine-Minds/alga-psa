@@ -19,6 +19,10 @@ const createTaskSection = source.slice(
   source.indexOf("id: 'projects.create_task'"),
   source.indexOf("id: 'projects.find'")
 );
+const projectFindSearchSection = source.slice(
+  source.indexOf("id: 'projects.find'"),
+  source.indexOf("id: 'projects.find_phase'")
+);
 
 describe('project workflow business operations tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared project helper roots', () => {
@@ -72,5 +76,15 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(createTaskSection).not.toContain("tx.trx('users').where({ tenant: tx.tenantId");
     expect(createTaskSection).not.toContain("tx.trx('statuses')");
     expect(createTaskSection).not.toContain(".where({ tenant: tx.tenantId");
+  });
+
+  it('uses structural tenant scoping for project find/search roots', () => {
+    expect(projectFindSearchSection).toContain("tenantScopedTable(tx, 'projects')");
+    expect(projectFindSearchSection).toContain("tenantScopedTable(tx, 'projects as p')");
+    expect(projectFindSearchSection).not.toContain("tx.trx('projects').where({ tenant: tx.tenantId");
+    expect(projectFindSearchSection).not.toContain("tx.trx('projects')");
+    expect(projectFindSearchSection).not.toContain("tx.trx('projects as p')");
+    expect(projectFindSearchSection).not.toContain(".where({ tenant: tx.tenantId");
+    expect(projectFindSearchSection).not.toContain(".where({ 'p.tenant': tx.tenantId");
   });
 });
