@@ -254,8 +254,10 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   workstation_assets: { scope: 'tenant' },
   tenant_workflow_schedule: { scope: 'tenant' },
   workflow_action_invocations: { scope: 'tenant' },
+  workflow_data_store: { scope: 'tenant' },
   workflow_definitions: { scope: 'tenant' },
   workflow_definition_versions: { scope: 'tenant' },
+  workflow_entity_links: { scope: 'tenant' },
   workflow_run_logs: { scope: 'tenant' },
   workflow_run_snapshots: { scope: 'tenant' },
   workflow_run_steps: { scope: 'tenant' },
@@ -266,6 +268,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   workflow_form_schemas: { scope: 'tenant' },
   workflow_step_usage_periods: { scope: 'tenant' },
   workflow_task_definitions: { scope: 'tenant' },
+  workflow_task_history: { scope: 'tenant' },
   workflow_tasks: { scope: 'tenant' },
 };
 

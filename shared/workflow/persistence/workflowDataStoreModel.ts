@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowDataStoreValue = unknown;
 
@@ -85,6 +86,13 @@ const activeRows = (query: Knex.QueryBuilder): void => {
   });
 };
 
+function workflowDataStore(
+  knex: Knex,
+  tenant: string,
+): Knex.QueryBuilder<WorkflowDataStoreRecord, WorkflowDataStoreRecord[]> {
+  return tenantDb(knex, tenant).table<WorkflowDataStoreRecord>(TABLE);
+}
+
 const WorkflowDataStoreModel = {
   get: async (
     knex: Knex,
@@ -92,13 +100,13 @@ const WorkflowDataStoreModel = {
     namespace: string,
     key: string
   ): Promise<WorkflowDataStoreRecord | null> => {
-    const record = await knex<WorkflowDataStoreRecord>(TABLE)
-      .where({ tenant, namespace, key })
+    const record = await workflowDataStore(knex, tenant)
+      .where({ namespace, key })
       .first();
 
     if (!record) return null;
     if (record.expires_at && new Date(record.expires_at).getTime() <= Date.now()) {
-      await knex<WorkflowDataStoreRecord>(TABLE).where({ tenant, store_id: record.store_id }).delete();
+      await workflowDataStore(knex, tenant).where({ store_id: record.store_id }).delete();
       return null;
     }
     return normalizeRevision(record);
@@ -123,7 +131,7 @@ const WorkflowDataStoreModel = {
       updated_at: timestamp,
     };
 
-    const inserted = await knex<WorkflowDataStoreRecord>(TABLE)
+    const inserted = await workflowDataStore(knex, tenant)
       .insert(insertData)
       .onConflict(UNIQUE_COLUMNS)
       .ignore()
@@ -137,8 +145,7 @@ const WorkflowDataStoreModel = {
       return { record: null, created: false, conflict: true };
     }
 
-    const query = knex<WorkflowDataStoreRecord>(TABLE).where({
-      tenant,
+    const query = workflowDataStore(knex, tenant).where({
       namespace: input.namespace,
       key: input.key,
     });
@@ -164,8 +171,8 @@ const WorkflowDataStoreModel = {
   },
 
   delete: async (knex: Knex, tenant: string, namespace: string, key: string): Promise<boolean> => {
-    const deleted = await knex<WorkflowDataStoreRecord>(TABLE)
-      .where({ tenant, namespace, key })
+    const deleted = await workflowDataStore(knex, tenant)
+      .where({ namespace, key })
       .delete();
     return deleted > 0;
   },
@@ -237,7 +244,7 @@ const WorkflowDataStoreModel = {
   ): Promise<WorkflowDataStoreListResult> => {
     const limit = normalizeLimit(options.limit);
     const cursor = normalizeCursor(options.cursor);
-    const query = knex<WorkflowDataStoreRecord>(TABLE).where({ tenant, namespace });
+    const query = workflowDataStore(knex, tenant).where({ namespace });
     activeRows(query);
     if (options.prefix) {
       query.andWhere('key', 'like', `${options.prefix}%`);
@@ -258,8 +265,7 @@ const WorkflowDataStoreModel = {
   },
 
   listNamespaces: async (knex: Knex, tenant: string): Promise<WorkflowDataStoreNamespace[]> => {
-    const query = knex<WorkflowDataStoreRecord>(TABLE)
-      .where({ tenant })
+    const query = workflowDataStore(knex, tenant)
       .select('namespace')
       .count<{ key_count: string | number }[]>({ key_count: '*' })
       .groupBy('namespace')

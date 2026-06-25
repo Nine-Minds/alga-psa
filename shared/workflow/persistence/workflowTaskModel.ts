@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
@@ -109,6 +110,20 @@ export interface IWorkflowTaskHistory {
   details?: Record<string, any>;
 }
 
+function workflowTasks(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table('workflow_tasks') as Knex.QueryBuilder<any, any>;
+}
+
+function workflowTaskHistory(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table('workflow_task_history') as Knex.QueryBuilder<any, any>;
+}
+
 /**
  * Model for workflow_tasks table
  */
@@ -143,7 +158,7 @@ const WorkflowTaskModel = {
         response_data: taskToInsert.response_data ? JSON.stringify(taskToInsert.response_data) : null,
       };
       
-      const [result] = await knex('workflow_tasks')
+      const [result] = await workflowTasks(knex, tenant)
         .insert(finalTaskRecord)
         .returning('task_id');
       
@@ -174,10 +189,9 @@ const WorkflowTaskModel = {
     taskId: string
   ): Promise<IWorkflowTask | null> => {
     try {
-      const task = await knex<IWorkflowTask>('workflow_tasks')
+      const task = await workflowTasks(knex, tenant)
         .where({
           task_id: taskId,
-          tenant
         })
         .first();
       
@@ -197,10 +211,9 @@ const WorkflowTaskModel = {
     executionId: string
   ): Promise<IWorkflowTask[]> => {
     try {
-      const tasks = await knex<IWorkflowTask>('workflow_tasks')
+      const tasks = await workflowTasks(knex, tenant)
         .where({
           execution_id: executionId,
-          tenant
         })
         .orderBy('created_at', 'desc');
       
@@ -221,8 +234,7 @@ const WorkflowTaskModel = {
     status?: WorkflowTaskStatus | WorkflowTaskStatus[]
   ): Promise<IWorkflowTask[]> => {
     try {
-      let query = knex<IWorkflowTask>('workflow_tasks')
-        .where('tenant', tenant)
+      let query = workflowTasks(knex, tenant)
         .whereRaw("assigned_users @> ?", [[userId]]);
       
       if (status) {
@@ -252,8 +264,7 @@ const WorkflowTaskModel = {
     status?: WorkflowTaskStatus | WorkflowTaskStatus[]
   ): Promise<IWorkflowTask[]> => {
     try {
-      let query = knex<IWorkflowTask>('workflow_tasks')
-        .where('tenant', tenant)
+      let query = workflowTasks(knex, tenant)
         .where(function() {
           for (const role of roles) {
             this.orWhereRaw("assigned_roles @> ?", [[role]]);
@@ -303,10 +314,9 @@ const WorkflowTaskModel = {
         // updates.completed_by = userId;
       }
       
-      const result = await knex('workflow_tasks')
+      const result = await workflowTasks(knex, tenant)
         .where({
           task_id: taskId,
-          tenant
         })
         .update(updates);
 
@@ -335,10 +345,9 @@ const WorkflowTaskModel = {
     responseData: Record<string, any>
   ): Promise<boolean> => {
     try {
-      const result = await knex('workflow_tasks')
+      const result = await workflowTasks(knex, tenant)
         .where({
           task_id: taskId,
-          tenant
         })
         .update({
           response_data: responseData,
@@ -369,10 +378,9 @@ const WorkflowTaskModel = {
     userId?: string
   ): Promise<boolean> => {
     try {
-      const result = await knex('workflow_tasks')
+      const result = await workflowTasks(knex, tenant)
         .where({
           task_id: taskId,
-          tenant
         })
         .update({
           assigned_users: JSON.stringify(assignedUserIds),
@@ -404,10 +412,9 @@ const WorkflowTaskModel = {
     userId?: string
   ): Promise<boolean> => {
     try {
-      const task = await knex<IWorkflowTask>('workflow_tasks')
+      const task = await workflowTasks(knex, tenant)
         .where({
           task_id: taskId,
-          tenant
         })
         .first();
 
@@ -417,17 +424,15 @@ const WorkflowTaskModel = {
 
       let deleted = 0;
       await knex.transaction(async (trx) => {
-        await trx('workflow_task_history')
+        await workflowTaskHistory(trx, tenant)
           .where({
             task_id: taskId,
-            tenant
           })
           .delete();
 
-        const deletedRows = await trx('workflow_tasks')
+        const deletedRows = await workflowTasks(trx, tenant)
           .where({
             task_id: taskId,
-            tenant
           })
           .delete();
 
@@ -462,10 +467,9 @@ const WorkflowTaskModel = {
     try {
       const now = new Date().toISOString();
       
-      const result = await knex('workflow_tasks')
+      const result = await workflowTasks(knex, tenant)
         .where({
           task_id: taskId,
-          tenant
         })
         .update({
           status: WorkflowTaskStatus.COMPLETED,
@@ -501,7 +505,7 @@ const WorkflowTaskModel = {
     try {
       const historyId = uuidv4(); // Removed "hist-" prefix
       
-      const [result] = await knex('workflow_task_history')
+      const [result] = await workflowTaskHistory(knex, tenant)
         .insert({
           ...history,
           history_id: historyId,
@@ -526,10 +530,9 @@ const WorkflowTaskModel = {
     taskId: string
   ): Promise<IWorkflowTaskHistory[]> => {
     try {
-      const history = await knex<IWorkflowTaskHistory>('workflow_task_history')
+      const history = await workflowTaskHistory(knex, tenant)
         .where({
           task_id: taskId,
-          tenant
         })
         .orderBy('timestamp', 'asc');
       

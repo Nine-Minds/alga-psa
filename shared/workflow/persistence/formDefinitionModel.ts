@@ -1,9 +1,14 @@
 /**
  * Form Definition Model
  */
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { IFormDefinition, FormStatus } from './formRegistryInterfaces';
 import { v4 as uuidv4 } from 'uuid';
+
+function workflowFormDefinitions(knex: Knex, tenant: string): Knex.QueryBuilder<IFormDefinition, IFormDefinition[]> {
+  return tenantDb(knex, tenant).table<IFormDefinition>('workflow_form_definitions');
+}
 
 export default class FormDefinitionModel {
   private static readonly TABLE_NAME = 'workflow_form_definitions';
@@ -16,8 +21,8 @@ export default class FormDefinitionModel {
     tenant: string,
     formId: string
   ): Promise<IFormDefinition | null> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId })
+    const result = await workflowFormDefinitions(knex, tenant)
+      .where({ form_id: formId })
       .first();
     
     return result || null;
@@ -53,8 +58,8 @@ export default class FormDefinitionModel {
       if (!tenant) {
         throw new Error("Tenant ID is required for formType 'tenant' in getByIdAndVersion");
       }
-      const result = await knex(this.TABLE_NAME)
-        .where({ tenant, form_id: formId, version })
+      const result = await workflowFormDefinitions(knex, tenant)
+        .where({ form_id: formId, version })
         .first();
       return result ? { ...result, created_at: new Date(result.created_at).toISOString(), updated_at: new Date(result.updated_at).toISOString()} as IFormDefinition : null;
     } else {
@@ -74,7 +79,7 @@ export default class FormDefinitionModel {
       name?: string;
     } = {}
   ): Promise<IFormDefinition[]> {
-    let query = knex(this.TABLE_NAME).where({ tenant });
+    let query = workflowFormDefinitions(knex, tenant);
     
     if (filters.status) {
       query = query.where('status', filters.status);
@@ -99,8 +104,8 @@ export default class FormDefinitionModel {
     tenant: string,
     formId: string
   ): Promise<IFormDefinition[]> {
-    return knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId })
+    return workflowFormDefinitions(knex, tenant)
+      .where({ form_id: formId })
       .orderBy('version', 'desc');
   }
 
@@ -134,8 +139,8 @@ export default class FormDefinitionModel {
       if (!tenant) {
         throw new Error("Tenant ID is required for formType 'tenant' in getLatestVersion");
       }
-      const result = await knex(this.TABLE_NAME)
-        .where({ tenant, form_id: formId })
+      const result = await workflowFormDefinitions(knex, tenant)
+        .where({ form_id: formId })
          // Tenant forms use 'version' field, assuming it's sortable to find latest.
         .orderBy('version', 'desc')
         .first();
@@ -155,7 +160,7 @@ export default class FormDefinitionModel {
   ): Promise<string> {
     const now = new Date().toISOString();
     
-    const [result] = await knex(this.TABLE_NAME)
+    const [result] = await workflowFormDefinitions(knex, tenant)
       .insert({
         ...formDefinition,
         tenant,
@@ -179,8 +184,8 @@ export default class FormDefinitionModel {
   ): Promise<boolean> {
     const now = new Date().toISOString();
     
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId, version })
+    const result = await workflowFormDefinitions(knex, tenant)
+      .where({ form_id: formId, version })
       .update({
         ...updates,
         updated_at: now
@@ -201,8 +206,8 @@ export default class FormDefinitionModel {
   ): Promise<boolean> {
     const now = new Date().toISOString();
     
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId, version })
+    const result = await workflowFormDefinitions(knex, tenant)
+      .where({ form_id: formId, version })
       .update({
         status,
         updated_at: now
@@ -220,8 +225,8 @@ export default class FormDefinitionModel {
     formId: string,
     version: string
   ): Promise<boolean> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId, version })
+    const result = await workflowFormDefinitions(knex, tenant)
+      .where({ form_id: formId, version })
       .delete();
     
     return result > 0;
@@ -244,7 +249,7 @@ export default class FormDefinitionModel {
       offset?: number;
     } = {}
   ): Promise<{ total: number; forms: IFormDefinition[] }> {
-    let query = knex(this.TABLE_NAME).where({ tenant });
+    let query = workflowFormDefinitions(knex, tenant);
     
     if (searchParams.formId) {
       query = query.where('form_id', searchParams.formId);
@@ -263,7 +268,7 @@ export default class FormDefinitionModel {
     }
     
     // Get total count
-    const countResult = await query.clone().count('* as count').first();
+    const countResult = await query.clone().count('* as count').first() as { count?: string | number } | undefined;
     const total = parseInt(String(countResult?.count || '0'), 10);
     
     // Apply pagination
@@ -289,8 +294,8 @@ export default class FormDefinitionModel {
     tenant: string,
     category: string
   ): Promise<IFormDefinition[]> {
-    return knex(this.TABLE_NAME)
-      .where({ tenant, category })
+    return workflowFormDefinitions(knex, tenant)
+      .where({ category })
       .orderBy('created_at', 'desc');
   }
 
@@ -301,8 +306,7 @@ export default class FormDefinitionModel {
     knex: Knex,
     tenant: string
   ): Promise<string[]> {
-    const results = await knex(this.TABLE_NAME)
-      .where({ tenant })
+    const results = await workflowFormDefinitions(knex, tenant)
       .whereNotNull('category')
       .distinct('category');
     

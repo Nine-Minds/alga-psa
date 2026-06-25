@@ -24,8 +24,12 @@ describe('workflow tenant facade roots', () => {
     expect(source).not.toContain("knex('workflow_run_steps as s')");
   });
 
-  it('routes workflow V2 tenant-aware persistence helpers through tenantDb', () => {
+  it('routes workflow tenant-aware persistence helpers through tenantDb', () => {
     const files = [
+      'shared/workflow/persistence/formDefinitionModel.ts',
+      'shared/workflow/persistence/formSchemaModel.ts',
+      'shared/workflow/persistence/workflowDataStoreModel.ts',
+      'shared/workflow/persistence/workflowEntityLinkModel.ts',
       'shared/workflow/persistence/workflowActionInvocationModelV2.ts',
       'shared/workflow/persistence/workflowDefinitionModelV2.ts',
       'shared/workflow/persistence/workflowDefinitionVersionModelV2.ts',
@@ -36,6 +40,7 @@ describe('workflow tenant facade roots', () => {
       'shared/workflow/persistence/workflowRunWaitModelV2.ts',
       'shared/workflow/persistence/workflowRuntimeEventModelV2.ts',
       'shared/workflow/persistence/workflowScheduleStateModel.ts',
+      'shared/workflow/persistence/workflowTaskModel.ts',
     ];
 
     for (const file of files) {
@@ -53,14 +58,17 @@ describe('workflow tenant facade roots', () => {
     const expectedEntries = [
       "tenant_workflow_schedule: { scope: 'tenant' }",
       "workflow_action_invocations: { scope: 'tenant' }",
+      "workflow_data_store: { scope: 'tenant' }",
       "workflow_definitions: { scope: 'tenant' }",
       "workflow_definition_versions: { scope: 'tenant' }",
+      "workflow_entity_links: { scope: 'tenant' }",
       "workflow_run_logs: { scope: 'tenant' }",
       "workflow_run_snapshots: { scope: 'tenant' }",
       "workflow_run_steps: { scope: 'tenant' }",
       "workflow_run_waits: { scope: 'tenant' }",
       "workflow_runtime_events: { scope: 'tenant' }",
       "workflow_step_usage_periods: { scope: 'tenant' }",
+      "workflow_task_history: { scope: 'tenant' }",
     ];
 
     for (const entry of expectedEntries) {
