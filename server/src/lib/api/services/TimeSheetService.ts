@@ -916,8 +916,10 @@ export class TimeSheetService extends BaseService<any> {
   async getScheduleEntries(context: ServiceContext, filters?: any): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      let query = knex('schedule_entries')
-        .where('schedule_entries.tenant', context.tenant);
+      let query = createTenantScopedQuery(knex, {
+        table: 'schedule_entries',
+        tenant: context.tenant,
+      }).builder;
   
       // Apply date filters if provided
       if (filters?.start_date) {
@@ -1048,8 +1050,11 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const result = await withTransaction(knex, async (trx) => {
-        const existing = await knex('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        const existing = await createTenantScopedQuery(trx, {
+          table: 'schedule_entries',
+          tenant: context.tenant,
+        }).builder
+          .where({ entry_id: id })
           .first();
   
         if (!existing) {
@@ -1057,8 +1062,11 @@ export class TimeSheetService extends BaseService<any> {
         }
 
         // Check permissions
-        const assigneeIds = await trx('schedule_entry_assignees')
-          .where({ entry_id: id, tenant: context.tenant })
+        const assigneeIds = await createTenantScopedQuery(trx, {
+          table: 'schedule_entry_assignees',
+          tenant: context.tenant,
+        }).builder
+          .where({ entry_id: id })
           .pluck('user_id');
         const isOwnEntry = existing.created_by === context.userId ||
           (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
@@ -1081,14 +1089,20 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'schedule_entries',
+          tenant: context.tenant,
+        }).builder
+          .where({ entry_id: id })
           .update(updateData);
   
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
-          await trx('schedule_entry_assignees')
-            .where({ entry_id: id, tenant: context.tenant })
+          await createTenantScopedQuery(trx, {
+            table: 'schedule_entry_assignees',
+            tenant: context.tenant,
+          }).builder
+            .where({ entry_id: id })
             .del();
   
           if (data.assigned_user_ids.length > 0) {
@@ -1102,8 +1116,11 @@ export class TimeSheetService extends BaseService<any> {
           }
         }
 
-        const updated = await trx('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        const updated = await createTenantScopedQuery(trx, {
+          table: 'schedule_entries',
+          tenant: context.tenant,
+        }).builder
+          .where({ entry_id: id })
           .first();
 
         return {
@@ -1136,8 +1153,11 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const existing = await withTransaction(knex, async (trx) => {
-        const existing = await knex('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        const existing = await createTenantScopedQuery(trx, {
+          table: 'schedule_entries',
+          tenant: context.tenant,
+        }).builder
+          .where({ entry_id: id })
           .first();
   
         if (!existing) {
@@ -1145,8 +1165,11 @@ export class TimeSheetService extends BaseService<any> {
         }
 
         // Check permissions
-        const assigneeIds = await trx('schedule_entry_assignees')
-          .where({ entry_id: id, tenant: context.tenant })
+        const assigneeIds = await createTenantScopedQuery(trx, {
+          table: 'schedule_entry_assignees',
+          tenant: context.tenant,
+        }).builder
+          .where({ entry_id: id })
           .pluck('user_id');
         const isOwnEntry = existing.created_by === context.userId ||
           (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
@@ -1159,8 +1182,11 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Permission denied: Cannot delete this schedule entry');
         }
 
-        await trx('schedule_entries')
-          .where({ entry_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'schedule_entries',
+          tenant: context.tenant,
+        }).builder
+          .where({ entry_id: id })
           .del();
 
         return existing;
@@ -1365,8 +1391,11 @@ export class TimeSheetService extends BaseService<any> {
   async getScheduleEntry(id: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const entry = await knex('schedule_entries')
-        .where({ entry_id: id, tenant: context.tenant })
+      const entry = await createTenantScopedQuery(knex, {
+        table: 'schedule_entries',
+        tenant: context.tenant,
+      }).builder
+        .where({ entry_id: id })
         .first();
   
       if (!entry) return null;
@@ -1385,12 +1414,15 @@ export class TimeSheetService extends BaseService<any> {
   private async getScheduleAssignees(entryId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      return knex('schedule_entry_assignees')
+      return createTenantScopedQuery(knex, {
+        table: 'schedule_entry_assignees',
+        tenant: context.tenant,
+      }).builder
         .join('users', function() {
           this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
             .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
         })
-        .where({ 'schedule_entry_assignees.entry_id': entryId, 'schedule_entry_assignees.tenant': context.tenant })
+        .where({ 'schedule_entry_assignees.entry_id': entryId })
         .select('users.user_id', 'users.first_name', 'users.last_name', 'users.email');
     }
 
