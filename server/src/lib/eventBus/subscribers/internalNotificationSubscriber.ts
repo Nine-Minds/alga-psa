@@ -720,9 +720,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'status_id', 'priority_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -730,9 +730,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     }
 
     // Get user who made the change
-    const performedByUser = await db('users')
+    const performedByUser = await tenantScopedTable(db, 'users', tenantId)
       .select('user_id', 'first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
@@ -751,13 +751,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Handle status change
       if (changes.status_id && typeof changes.status_id === 'object') {
-        const oldStatus = await db('statuses')
+        const oldStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
-          .where({ status_id: changes.status_id.old, tenant: tenantId })
+          .where('status_id', changes.status_id.old)
           .first();
-        const newStatus = await db('statuses')
+        const newStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
-          .where({ status_id: changes.status_id.new, tenant: tenantId })
+          .where('status_id', changes.status_id.new)
           .first();
 
         if (oldStatus || newStatus) {
@@ -772,13 +772,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Handle priority change
       if (changes.priority_id && typeof changes.priority_id === 'object') {
-        const oldPriority = await db('priorities')
+        const oldPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
-          .where({ priority_id: changes.priority_id.old, tenant: tenantId })
+          .where('priority_id', changes.priority_id.old)
           .first();
-        const newPriority = await db('priorities')
+        const newPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
-          .where({ priority_id: changes.priority_id.new, tenant: tenantId })
+          .where('priority_id', changes.priority_id.new)
           .first();
 
         if (oldPriority || newPriority) {
@@ -797,13 +797,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Handle assignment change
       if (changes.assigned_to && typeof changes.assigned_to === 'object') {
-        const oldAssignee = changes.assigned_to.old ? await db('users')
+        const oldAssignee = changes.assigned_to.old ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where({ user_id: changes.assigned_to.old, tenant: tenantId })
+          .where('user_id', changes.assigned_to.old)
           .first() : null;
-        const newAssignee = changes.assigned_to.new ? await db('users')
+        const newAssignee = changes.assigned_to.new ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where({ user_id: changes.assigned_to.new, tenant: tenantId })
+          .where('user_id', changes.assigned_to.new)
           .first() : null;
 
         changeDetails.assigned_to = {
@@ -862,11 +862,10 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
     // Create notification for client contact if they have portal access
     if (ticket.contact_name_id && portalUrl) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -909,9 +908,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -922,9 +921,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const userId = payload.userId || '';
 
     // Get user who closed it for the notification
-    const performedByUser = userId ? await db('users')
+    const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first() : null;
 
     const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
@@ -967,11 +966,10 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     // Create notification for client contact if they have portal access
     if (ticket.contact_name_id && portalUrl) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
