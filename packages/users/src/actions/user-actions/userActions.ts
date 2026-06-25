@@ -367,8 +367,11 @@ export const deleteUser = withAuth(async (
         throwPermissionError('delete user');
       }
 
-      return await trx('clients')
-        .where({ account_manager_id: userId, tenant: tenant || undefined })
+      return await createTenantScopedQuery(trx, {
+        table: 'clients',
+        tenant,
+      }).builder
+        .where({ account_manager_id: userId })
         .first();
     });
 
@@ -403,8 +406,11 @@ export const deleteUser = withAuth(async (
       // cleared explicitly here regardless of what the migration declared.
 
       // ── Self-FK on users ──────────────────────────────────────────────
-      await trx('users')
-        .where({ reports_to: userId, tenant: tenantOrUndef })
+      await createTenantScopedQuery(trx, {
+        table: 'users',
+        tenant: tenantId,
+      }).builder
+        .where({ reports_to: userId })
         .update({ reports_to: null });
 
       // ── Audit / owner columns (nullable) → SET NULL ───────────────────
