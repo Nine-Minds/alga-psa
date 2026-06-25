@@ -1533,7 +1533,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    const comments = await knex('comments as tc')
+    const comments = await tenantScopedTable(knex, 'comments as tc', context.tenant)
       .leftJoin('users as u', function() {
         this.on('tc.user_id', '=', 'u.user_id')
             .andOn('tc.tenant', '=', 'u.tenant');
@@ -1555,7 +1555,6 @@ export class TicketService extends BaseService<ITicket> {
       )
       .where({
         'tc.ticket_id': ticketId,
-        'tc.tenant': context.tenant
       })
       .orderBy('tc.created_at', options?.order ?? 'asc')
       .modify((query) => {
@@ -1581,8 +1580,7 @@ export class TicketService extends BaseService<ITicket> {
     let reactionsMap: Record<string, any[]> = {};
     let reactionUserNames: Record<string, string> = {};
     if (commentIds.length > 0) {
-      const reactionRows = await knex('comment_reactions')
-        .where({ tenant: context.tenant })
+      const reactionRows = await tenantScopedTable(knex, 'comment_reactions', context.tenant)
         .whereIn('comment_id', commentIds)
         .select('comment_id', 'emoji', 'user_id')
         .orderBy('created_at', 'asc');
@@ -1591,8 +1589,7 @@ export class TicketService extends BaseService<ITicket> {
 
       const reactionUserIds = [...new Set(reactionRows.map(r => r.user_id))];
       if (reactionUserIds.length > 0) {
-        const reactionUsers = await knex('users')
-          .where({ tenant: context.tenant })
+        const reactionUsers = await tenantScopedTable(knex, 'users', context.tenant)
           .whereIn('user_id', reactionUserIds)
           .select('user_id', 'first_name', 'last_name');
         for (const u of reactionUsers) {
@@ -1659,8 +1656,8 @@ export class TicketService extends BaseService<ITicket> {
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
-      const ticket = await trx('tickets')
-        .where({ ticket_id: ticketId, tenant: context.tenant })
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
         .first();
 
       if (!ticket) {
@@ -1681,7 +1678,7 @@ export class TicketService extends BaseService<ITicket> {
         // native composer never sends is_internal for replies, so the
         // schema-defaulted false is intentionally ignored here and the thread
         // root's visibility is inherited instead.
-        const parent = await trx('comments as parent')
+        const parent = await tenantScopedTable(trx, 'comments as parent', context.tenant)
           .join('comment_threads as thread', function () {
             this.on('parent.tenant', 'thread.tenant')
               .andOn('parent.thread_id', 'thread.thread_id');
@@ -1692,7 +1689,6 @@ export class TicketService extends BaseService<ITicket> {
             'parent.deleted_at',
             'thread.is_internal as thread_is_internal'
           )
-          .where('parent.tenant', context.tenant)
           .where('parent.comment_id', apiParentCommentId)
           .first();
 
@@ -1763,8 +1759,8 @@ export class TicketService extends BaseService<ITicket> {
       const [comment] = await trx('comments').insert(commentData).returning('*');
 
       if (apiIsReply) {
-        await trx('comment_threads')
-          .where({ tenant: context.tenant, thread_id: apiThreadId })
+        await tenantScopedTable(trx, 'comment_threads', context.tenant)
+          .where({ thread_id: apiThreadId })
           .update({
             reply_count: trx.raw('reply_count + 1'),
             last_activity_at: apiNowIso,
@@ -1776,17 +1772,17 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       // Update ticket updated_at
-      await trx('tickets')
-        .where({ ticket_id: ticketId, tenant: context.tenant })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
         .update({
           updated_by: context.userId,
           updated_at: knex.raw('now()')
         });
 
       // Get user details for event
-      const user = await trx('users')
+      const user = await tenantScopedTable(trx, 'users', context.tenant)
         .select('first_name', 'last_name')
-        .where({ user_id: context.userId, tenant: context.tenant })
+        .where({ user_id: context.userId })
         .first();
 
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
@@ -1836,8 +1832,8 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const comment = await trx('comments')
-        .where({ comment_id: commentId, ticket_id: ticketId, tenant: context.tenant })
+      const comment = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, ticket_id: ticketId })
         .first();
 
       if (!comment) {
@@ -1852,8 +1848,8 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('You can only edit your own comments');
       }
 
-      const [updated] = await trx('comments')
-        .where({ comment_id: commentId, tenant: context.tenant })
+      const [updated] = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId })
         .update({
           note: data.comment_text,
           updated_at: knex.raw('now()'),
@@ -1877,7 +1873,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     const searchStartTime = Date.now();
 
-    let query = knex('tickets as t')
+    let query = tenantScopedTable(knex, 'tickets as t', context.tenant)
       .leftJoin('clients as comp', function() {
         this.on('t.client_id', '=', 'comp.client_id')
             .andOn('t.tenant', '=', 'comp.tenant');
@@ -1889,8 +1885,7 @@ export class TicketService extends BaseService<ITicket> {
       .leftJoin('statuses as stat', function() {
         this.on('t.status_id', '=', 'stat.status_id')
             .andOn('t.tenant', '=', 'stat.tenant');
-      })
-      .where('t.tenant', context.tenant);
+      });
 
     // Apply search filters
     if (!searchData.include_closed) {
