@@ -234,12 +234,17 @@ export const createClientPortalUser = withAuth(async (
 
     // Create user and assign role
     const result = await knex.transaction(async (trx) => {
+      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
+        table,
+        tenant,
+      }).builder;
+
       // 1) Resolve or create contact
       let contact: any = null;
 
       if (params.contactId) {
-        contact = await trx('contacts')
-          .where({ tenant, contact_name_id: params.contactId })
+        contact = await tenantScopedTable('contacts')
+          .where({ contact_name_id: params.contactId })
           .first();
         if (!contact && params.contact) {
           // Create new contact since provided ID not found and details are available
@@ -264,8 +269,8 @@ export const createClientPortalUser = withAuth(async (
       if (!contact && params.contact) {
         // Try to find by email + client; else create
         const normalizedClientId = params.contact.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
-        const q = trx('contacts')
-          .where({ tenant, email: params.contact.email.toLowerCase() });
+        const q = tenantScopedTable('contacts')
+          .where({ email: params.contact.email.toLowerCase() });
         if (normalizedClientId) {
           q.andWhere('client_id', normalizedClientId);
         } else {
@@ -312,8 +317,8 @@ export const createClientPortalUser = withAuth(async (
       }
 
       // 2) Ensure no existing user for contact
-      const existingUser = await trx('users')
-        .where({ tenant, contact_id: contact.contact_name_id })
+      const existingUser = await tenantScopedTable('users')
+        .where({ contact_id: contact.contact_name_id })
         .first();
       if (existingUser) {
         throw new Error('A user account already exists for this contact');
@@ -325,16 +330,14 @@ export const createClientPortalUser = withAuth(async (
       const lastName = nameParts.slice(1).join(' ') || undefined;
 
       // Enforce uniqueness across tenant (regardless of user_type)
-      const existingByEmailAnyType = await trx('users')
-        .where({ tenant })
-        .andWhere('email', contact.email.toLowerCase())
+      const existingByEmailAnyType = await tenantScopedTable('users')
+        .where('email', contact.email.toLowerCase())
         .first();
       if (existingByEmailAnyType) {
         throw new Error('A user with this email already exists in this organization');
       }
-      const existingByUsernameAnyType = await trx('users')
-        .where({ tenant })
-        .andWhere('username', contact.email)
+      const existingByUsernameAnyType = await tenantScopedTable('users')
+        .where('username', contact.email)
         .first();
       if (existingByUsernameAnyType) {
         throw new Error('A user with this username already exists in this organization');
@@ -367,8 +370,8 @@ export const createClientPortalUser = withAuth(async (
       // 4) Assign role (prefer UI-selected roleId; fallback to contact's admin flag)
       let targetRoleId: string | undefined = undefined;
       if (params.roleId) {
-        const uiRole = await trx('roles')
-          .where({ tenant, role_id: params.roleId, client: true })
+        const uiRole = await tenantScopedTable('roles')
+          .where({ role_id: params.roleId, client: true })
           .first();
         if (uiRole) {
           targetRoleId = uiRole.role_id;
@@ -377,8 +380,8 @@ export const createClientPortalUser = withAuth(async (
       if (!targetRoleId) {
         // Use actual role names from seeds: "Admin" or "User"
         const roleName = contact?.is_client_admin ? 'Admin' : 'User';
-        const fallbackRole = await trx('roles')
-          .where({ tenant, role_name: roleName, client: true })
+        const fallbackRole = await tenantScopedTable('roles')
+          .where({ role_name: roleName, client: true })
           .first();
         if (fallbackRole) {
           targetRoleId = fallbackRole.role_id;
