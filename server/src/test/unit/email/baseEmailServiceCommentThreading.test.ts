@@ -123,6 +123,9 @@ async function waitForInsertedLog(timeoutMs = 500) {
   return dbState.insertedLogs[0];
 }
 
+// Comment-thread reply headers apply to non-ticket comments; since #2742, ticket-associated
+// comments thread via the per-ticket anchor instead. So replyContext omits ticketId here, and
+// the generated Message-ID uses the sender's From domain (example.com), not a synthetic one.
 describe('BaseEmailService comment thread outbound headers', () => {
   beforeEach(() => {
     dbState.commentRows.clear();
@@ -173,14 +176,13 @@ describe('BaseEmailService comment thread outbound headers', () => {
       subject: 'Top-level comment',
       html: '<p>Top-level comment</p>',
       replyContext: {
-        ticketId: 'ticket-t039',
         commentId,
         threadId: 'provider-thread-t039',
       },
     });
 
     expect(result.success).toBe(true);
-    expect(capturedMessage?.headers?.['Message-ID']).toMatch(/^<.+@tenant-t039\.alga-psa\.local>$/);
+    expect(capturedMessage?.headers?.['Message-ID']).toMatch(/^<.+@example\.com>$/);
     expect(capturedMessage?.headers).not.toHaveProperty('In-Reply-To');
     expect(capturedMessage?.headers).not.toHaveProperty('References');
     expect(result.rfcMessageId).toBe(capturedMessage?.headers?.['Message-ID']);
@@ -244,7 +246,6 @@ describe('BaseEmailService comment thread outbound headers', () => {
       subject: 'Reply comment',
       html: '<p>Reply comment</p>',
       replyContext: {
-        ticketId: 'ticket-t040',
         commentId,
         threadId: 'provider-thread-t040',
       },
@@ -252,7 +253,7 @@ describe('BaseEmailService comment thread outbound headers', () => {
 
     expect(result.success).toBe(true);
     expect(capturedMessage?.headers?.['In-Reply-To']).toBe(previousMessageId);
-    expect(capturedMessage?.headers?.['Message-ID']).toMatch(/^<.+@tenant-t040\.alga-psa\.local>$/);
+    expect(capturedMessage?.headers?.['Message-ID']).toMatch(/^<.+@example\.com>$/);
   });
 
   it('T041: reply send appends previous Message-ID to References and persists the chain', async () => {
@@ -304,7 +305,6 @@ describe('BaseEmailService comment thread outbound headers', () => {
       subject: 'Reply with references',
       html: '<p>Reply with references</p>',
       replyContext: {
-        ticketId: 'ticket-t041',
         commentId,
         threadId: 'provider-thread-t041',
       },
@@ -363,7 +363,6 @@ describe('BaseEmailService comment thread outbound headers', () => {
       subject: 'Logged comment',
       html: '<p>Logged comment</p>',
       replyContext: {
-        ticketId: 'ticket-t043',
         commentId,
         threadId: 'provider-thread-t043',
         conversationToken,
@@ -385,7 +384,7 @@ describe('BaseEmailService comment thread outbound headers', () => {
       comment_id: commentId,
       reply_token_suffix: conversationToken.slice(-8),
     });
-    expect(log.rfc_message_id).toMatch(/^<.+@tenant-t043\.alga-psa\.local>$/);
+    expect(log.rfc_message_id).toMatch(/^<.+@example\.com>$/);
     expect(log.reply_token_hash).toEqual(expect.stringMatching(/^[a-f0-9]{64}$/));
   });
 });
