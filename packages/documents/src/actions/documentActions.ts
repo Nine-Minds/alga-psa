@@ -3521,9 +3521,8 @@ export const moveDocumentsToFolder = withAuth(async (
       return authorizationResult;
     }
 
-    await trx('documents')
+    await tenantScopedTable(trx, 'documents', tenant)
       .whereIn('document_id', documentIds)
-      .andWhere('tenant', tenant)
       .update({
         folder_path: newFolderPath,
         updated_at: new Date(),
@@ -3571,8 +3570,7 @@ export const toggleDocumentVisibility = withAuth(async (
       return authorizationResult;
     }
 
-    const updatedCount = await trx('documents')
-      .where('tenant', tenant)
+    const updatedCount = await tenantScopedTable(trx, 'documents', tenant)
       .whereIn('document_id', documentIds)
       .update({
         is_client_visible: isClientVisible,
