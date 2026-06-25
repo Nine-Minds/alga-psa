@@ -720,7 +720,7 @@ export const getKnowledgeBaseCategories = withAuth(
       return permissionError('Permission denied');
     }
 
-    const rows = await knex('categories as c')
+    const rows = await tenantScopedTable(knex, 'categories as c', tenant)
       .leftJoin('categories as p', function () {
         this.on('p.category_id', '=', 'c.parent_category').andOn('p.tenant', '=', 'c.tenant');
       })
@@ -729,7 +729,6 @@ export const getKnowledgeBaseCategories = withAuth(
         'c.category_name as name',
         'p.category_name as parentName'
       )
-      .where('c.tenant', tenant)
       .orderBy('c.category_name', 'asc');
 
     return rows.map((row: { id: string; name: string; parentName?: string | null }) => ({
@@ -760,15 +759,14 @@ export const getArticles = withAuth(
       return permissionError('Permission denied');
     }
 
-    let query = knex('kb_articles as ka')
+    let query = tenantScopedTable(knex, 'kb_articles as ka', tenant)
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
       ])
       .leftJoin('documents as d', function () {
         this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      })
-      .where('ka.tenant', tenant);
+      });
 
     if (filters.status) {
       query = query.andWhere('ka.status', filters.status);
@@ -847,11 +845,10 @@ async function reconcileOrphanedKBDocuments(
   tenant: string,
   userId: string
 ): Promise<void> {
-  const orphaned = await knex('documents as d')
+  const orphaned = await tenantScopedTable(knex, 'documents as d', tenant)
     .leftJoin('kb_articles as ka', function () {
       this.on('ka.document_id', '=', 'd.document_id').andOn('ka.tenant', '=', 'd.tenant');
     })
-    .where('d.tenant', tenant)
     .where('d.folder_path', '/Knowledge Base')
     .whereNull('ka.article_id')
     .select('d.document_id', 'd.document_name');
@@ -859,8 +856,7 @@ async function reconcileOrphanedKBDocuments(
   if (orphaned.length === 0) return;
 
   // Collect existing slugs to avoid collisions
-  const existingSlugs = await knex('kb_articles')
-    .where('tenant', tenant)
+  const existingSlugs = await tenantScopedTable(knex, 'kb_articles', tenant)
     .select('slug');
   const slugSet = new Set(existingSlugs.map((r: { slug: string }) => r.slug));
 
@@ -917,15 +913,14 @@ export const getArticlesWithTags = withAuth(
     await reconcileOrphanedKBDocuments(knex, tenant, user.user_id);
 
     // --- articles query (same logic as getArticles) ---
-    let query = knex('kb_articles as ka')
+    let query = tenantScopedTable(knex, 'kb_articles as ka', tenant)
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
       ])
       .leftJoin('documents as d', function () {
         this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      })
-      .where('ka.tenant', tenant);
+      });
 
     if (filters.status) {
       query = query.andWhere('ka.status', filters.status);
@@ -982,11 +977,10 @@ export const getArticlesWithTags = withAuth(
     const articleTags: Record<string, ITag[]> = {};
 
     if (articleIds.length > 0) {
-      const tagRows = await knex('tag_mappings as tm')
+      const tagRows = await tenantScopedTable(knex, 'tag_mappings as tm', tenant)
         .join('tag_definitions as td', function () {
           this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
         })
-        .where('tm.tenant', tenant)
         .where('tm.tagged_type', 'knowledge_base_article')
         .whereIn('tm.tagged_id', articleIds)
         .select(
@@ -1063,7 +1057,7 @@ export const getArticle = withAuth(
       return null;
     }
 
-    const article = await knex('kb_articles as ka')
+    const article = await tenantScopedTable(knex, 'kb_articles as ka', tenant)
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
@@ -1078,7 +1072,6 @@ export const getArticle = withAuth(
       .leftJoin('document_block_content as dbc', function () {
         this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
       })
-      .where('ka.tenant', tenant)
       .andWhere('ka.article_id', articleId)
       .first();
 
@@ -1105,7 +1098,7 @@ export const getStaleArticles = withAuth(
       return permissionError('Permission denied');
     }
 
-    const articles = await knex('kb_articles as ka')
+    const articles = await tenantScopedTable(knex, 'kb_articles as ka', tenant)
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
@@ -1113,7 +1106,6 @@ export const getStaleArticles = withAuth(
       .leftJoin('documents as d', function () {
         this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
       })
-      .where('ka.tenant', tenant)
       .andWhere('ka.status', 'published')
       .andWhere('ka.next_review_due', '<=', knex.fn.now())
       .orderBy('ka.next_review_due', 'asc');
