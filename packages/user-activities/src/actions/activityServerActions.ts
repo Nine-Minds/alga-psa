@@ -502,15 +502,21 @@ export const getAdHocActivity = withAuth(async (
   }
 
   const { knex } = await createTenantKnex(tenant);
-  const entry = await knex("schedule_entries")
-    .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+  const entry = await createTenantScopedQuery(knex, {
+    table: "schedule_entries",
+    tenant,
+  }).builder
+    .where({ entry_id: entryId, work_item_type: "ad_hoc" })
     .first();
   if (!entry) {
     throw new Error("Ad-hoc item not found");
   }
 
-  const assignees: string[] = await knex("schedule_entry_assignees")
-    .where({ tenant, entry_id: entryId })
+  const assignees: string[] = await createTenantScopedQuery(knex, {
+    table: "schedule_entry_assignees",
+    tenant,
+  }).builder
+    .where({ entry_id: entryId })
     .pluck("user_id");
 
   return {
