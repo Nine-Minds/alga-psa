@@ -497,7 +497,7 @@
   {
     "id": "T056",
     "description": "validate-translations.cjs passes for pt msp/assets.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "featureIds": [
       "F031"
@@ -506,7 +506,7 @@
   {
     "id": "T057",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/assets.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "featureIds": [
       "F031"
@@ -515,7 +515,7 @@
   {
     "id": "T058",
     "description": "validate-translations.cjs passes for pt msp/knowledge-base.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "featureIds": [
       "F032"
@@ -524,7 +524,7 @@
   {
     "id": "T059",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/knowledge-base.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "featureIds": [
       "F032"
@@ -533,7 +533,7 @@
   {
     "id": "T060",
     "description": "validate-translations.cjs passes for pt msp/service-catalog.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "featureIds": [
       "F033"
@@ -542,7 +542,7 @@
   {
     "id": "T061",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/service-catalog.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "featureIds": [
       "F033"

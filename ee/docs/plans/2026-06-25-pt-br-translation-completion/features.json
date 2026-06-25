@@ -326,7 +326,7 @@
   {
     "id": "F031",
     "description": "pt-BR complete for msp/assets.json: translate the 798 remaining key(s) and re-audit all 909 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "prdRefs": [
       "3.2",
@@ -337,7 +337,7 @@
   {
     "id": "F032",
     "description": "pt-BR complete for msp/knowledge-base.json: translate the 162 remaining key(s) and re-audit all 183 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "prdRefs": [
       "3.2",
@@ -348,7 +348,7 @@
   {
     "id": "F033",
     "description": "pt-BR complete for msp/service-catalog.json: translate the 9 remaining key(s) and re-audit all 261 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-assets-catalog",
     "prdRefs": [
       "3.2",

@@ -146,3 +146,10 @@ npm run migrate
 - Tightened the glossary allowlist for legitimate identical client/profile values (`Individual`, `Local`, `Fax`, `Solo`, `Webhooks`, `HMAC-SHA256`) and compact technical patterns (`URL:`, `~{{percent}}%`, `via {{method}}`, `{{duration}} ms`, IP/CIDR placeholders).
 - Translated real UI labels `Downgrade`→`Fazer downgrade`, `Claro`→`Limpar`, and phone type `Lar`→`Residencial`.
 - Implemented T048-T055. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/clients --namespace msp/contacts --namespace msp/account --namespace msp/profile --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — i18n-assets-catalog group
+- Implemented F031-F033: completed pt-BR translations for `msp/assets.json`, `msp/knowledge-base.json`, and `msp/service-catalog.json`.
+- Re-audited all 1,353 keys in the group and marked them reviewed in `pt-review-state.json` with reviewer `codex-pt-br-pass`.
+- Tightened the glossary allowlist for legitimate identical asset/OS/hardware terms (`Virtual`, `Firewall`, `RAM (GB)`, `NVMe`, `Windows`, `macOS`, `Linux`, `iOS`, `Android`) and tax-rate placeholder labels.
+- Translated real UI labels `Download`→`Baixar`, `Claro`→`Limpar`, and `Cessionário`→`Responsável`.
+- Implemented T056-T061. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/assets --namespace msp/knowledge-base --namespace msp/service-catalog --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
