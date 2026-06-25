@@ -1202,7 +1202,7 @@ export const getTasksForPhase = withAuth(async (
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Get phase to get its WBS code
-            const phase = await trx('project_phases')
+            const phase = await tenantScopedTable(trx, 'project_phases', tenant)
                 .where({ phase_id: phaseId })
                 .first();
 
@@ -1219,9 +1219,8 @@ export const getTasksForPhase = withAuth(async (
                 taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, tenant, taskIds) : [],
                 taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds) : [],
                 taskIds.length > 0
-                    ? trx('task_checklist_items')
+                    ? tenantScopedTable(trx, 'task_checklist_items', tenant)
                         .whereIn('task_id', taskIds)
-                        .andWhere('tenant', tenant)
                         .orderBy('order_number')
                     : [],
                 taskIds.length > 0
@@ -1229,9 +1228,8 @@ export const getTasksForPhase = withAuth(async (
                     : [],
                 // Fetch dependencies where task is the successor (predecessors of task)
                 taskIds.length > 0
-                    ? trx('project_task_dependencies as ptd')
+                    ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
                         .whereIn('ptd.successor_task_id', taskIds)
-                        .andWhere('ptd.tenant', tenant)
                         .leftJoin('project_tasks as pt', function() {
                             this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
                                 .andOn('ptd.tenant', '=', 'pt.tenant');
@@ -1240,9 +1238,8 @@ export const getTasksForPhase = withAuth(async (
                     : [],
                 // Fetch dependencies where task is the predecessor (successors of task)
                 taskIds.length > 0
-                    ? trx('project_task_dependencies as ptd')
+                    ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
                         .whereIn('ptd.predecessor_task_id', taskIds)
-                        .andWhere('ptd.tenant', tenant)
                         .leftJoin('project_tasks as pt', function() {
                             this.on('ptd.successor_task_id', '=', 'pt.task_id')
                                 .andOn('ptd.tenant', '=', 'pt.tenant');
