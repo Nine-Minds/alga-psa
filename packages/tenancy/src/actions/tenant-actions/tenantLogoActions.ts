@@ -1,9 +1,16 @@
 'use server';
 
 import { uploadEntityImage, deleteEntityImage, type EntityType } from '@alga-psa/storage';
-import { getConnection } from '@alga-psa/db';
+import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import type { Knex } from 'knex';
+
+const tenantSettingsQuery = (knex: Knex, tenant: string) =>
+  createTenantScopedQuery(knex, {
+    table: 'tenant_settings',
+    tenant
+  }).builder;
 
 /**
  * Upload a logo for the tenant
@@ -35,8 +42,7 @@ export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
       // Update tenant settings with logo URL
       const knex = await getConnection(tenant);
 
-      const existingRecord = await knex('tenant_settings')
-        .where({ tenant })
+      const existingRecord = await tenantSettingsQuery(knex, tenant)
         .first();
 
       const existingSettings = existingRecord?.settings || {};
@@ -53,8 +59,7 @@ export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
       };
 
       if (existingRecord) {
-        await knex('tenant_settings')
-          .where({ tenant })
+        await tenantSettingsQuery(knex, tenant)
           .update({
             settings: updatedSettings,
             updated_at: knex.fn.now()
@@ -104,8 +109,7 @@ export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
       // Update tenant settings to remove logo URL
       const knex = await getConnection(tenant);
 
-      const existingRecord = await knex('tenant_settings')
-        .where({ tenant })
+      const existingRecord = await tenantSettingsQuery(knex, tenant)
         .first();
 
       if (existingRecord) {
@@ -122,8 +126,7 @@ export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
           }
         };
 
-        await knex('tenant_settings')
-          .where({ tenant })
+        await tenantSettingsQuery(knex, tenant)
           .update({
             settings: updatedSettings,
             updated_at: knex.fn.now()
