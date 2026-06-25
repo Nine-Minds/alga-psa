@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, createTenantScopedQuery } from '@alga-psa/db';
 import { 
   CreateTimeSheetData,
   UpdateTimeSheetData,
@@ -51,8 +51,7 @@ export class TimeSheetService extends BaseService<any> {
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
       
-      let query = knex(this.tableName)
-        .where(`${this.tableName}.tenant`, context.tenant);
+      let query = this.buildTenantScopedQuery(knex, context);
   
       // Apply filters
       if (filters) {
@@ -115,7 +114,10 @@ export class TimeSheetService extends BaseService<any> {
           query.where('time_periods.end_date', '<=', filters.period_end_to);
         }
         if (filters.has_entries !== undefined) {
-          const subquery = knex('time_entries')
+          const subquery = createTenantScopedQuery(knex, {
+            table: 'time_entries',
+            tenant: context.tenant,
+          }).builder
             .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
             .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
             .select(knex.raw('1'));
@@ -150,7 +152,10 @@ export class TimeSheetService extends BaseService<any> {
         );
   
       // Add computed fields
-      const timeEntrySubquery = knex('time_entries')
+      const timeEntrySubquery = createTenantScopedQuery(knex, {
+        table: 'time_entries',
+        tenant: context.tenant,
+      }).builder
         .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
         .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
         .select([
