@@ -1296,8 +1296,7 @@ export const addTemplateDependency = withAuth(async (
     await checkPermission(user, 'project', 'update', trx);
 
     // Validate that both tasks belong to the template
-    const tasks = await trx('project_template_tasks')
-      .where('tenant', tenant)
+    const tasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
       .whereIn('template_task_id', [predecessorTaskId, successorTaskId]);
 
     if (tasks.length !== 2) {
@@ -1310,9 +1309,8 @@ export const addTemplateDependency = withAuth(async (
     }
 
     // Check for existing dependency
-    const existing = await trx('project_template_dependencies')
+    const existing = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
       .where({
-        tenant,
         predecessor_task_id: predecessorTaskId,
         successor_task_id: successorTaskId
       })
@@ -1357,8 +1355,8 @@ export const updateTemplateDependency = withAuth(async (
   return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const [dependency] = await trx('project_template_dependencies')
-      .where({ template_dependency_id: dependencyId, tenant })
+    const [dependency] = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+      .where({ template_dependency_id: dependencyId })
       .update(data)
       .returning('*');
 
@@ -1383,8 +1381,8 @@ export const removeTemplateDependency = withAuth(async (
   return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const deleted = await trx('project_template_dependencies')
-      .where({ template_dependency_id: dependencyId, tenant })
+    const deleted = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+      .where({ template_dependency_id: dependencyId })
       .delete();
 
     if (!deleted) {
@@ -1405,8 +1403,8 @@ export const getTemplateDependencies = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  return await knex('project_template_dependencies')
-    .where({ template_id: templateId, tenant });
+  return await tenantScopedTable(knex, 'project_template_dependencies', tenant)
+    .where({ template_id: templateId });
 });
 
 /**
@@ -1425,15 +1423,15 @@ export const getTaskTemplateDependencies = withAuth(async (
   await checkPermission(user, 'project', 'read', knex);
 
   const [predecessors, successors] = await Promise.all([
-    knex('project_template_dependencies as ptd')
-      .where({ 'ptd.successor_task_id': taskId, 'ptd.tenant': tenant })
+    tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
+      .where({ 'ptd.successor_task_id': taskId })
       .leftJoin('project_template_tasks as ptt', function() {
         this.on('ptd.predecessor_task_id', '=', 'ptt.template_task_id')
             .andOn('ptd.tenant', '=', 'ptt.tenant');
       })
       .select('ptd.*', 'ptt.task_name as predecessor_task_name'),
-    knex('project_template_dependencies as ptd')
-      .where({ 'ptd.predecessor_task_id': taskId, 'ptd.tenant': tenant })
+    tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
+      .where({ 'ptd.predecessor_task_id': taskId })
       .leftJoin('project_template_tasks as ptt', function() {
         this.on('ptd.successor_task_id', '=', 'ptt.template_task_id')
             .andOn('ptd.tenant', '=', 'ptt.tenant');
