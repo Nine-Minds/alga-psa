@@ -1827,9 +1827,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     
     try {
       // Get feature configuration
-      const feature = await knex('feature_toggles')
+      const feature = await createTenantScopedQuery(knex, {
+        table: 'feature_toggles',
+        tenant: context.tenant,
+      }).builder
         .where('feature_name', featureName)
-        .where('tenant', context.tenant)
         .first();
       
       if (!feature || !feature.is_enabled) {
@@ -1841,9 +1843,11 @@ export class PermissionRoleService extends BaseService<IRole> {
         };
       }
 
-      const user = await knex('users')
+      const user = await createTenantScopedQuery(knex, {
+        table: 'users',
+        tenant: context.tenant,
+      }).builder
         .where('user_id', userId)
-        .where('tenant', context.tenant)
         .first();
       
       if (!user) {
