@@ -502,8 +502,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Get user
-      const user = await trx('users')
-        .where({ user_id: targetUserId, tenant: context.tenant })
+      const user = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: targetUserId })
         .select('user_id', 'hashed_password')
         .first();
 
@@ -533,8 +533,8 @@ export class UserService extends BaseService<IUser> {
       const hashedPassword = await hashPassword(data.new_password);
 
       // Update password
-      await trx('users')
-        .where({ user_id: targetUserId, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: targetUserId })
         .update({ 
           hashed_password: hashedPassword,
           updated_at: knex.raw('now()')
@@ -573,8 +573,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Update user 2FA settings
-      await trx('users')
-        .where({ user_id: userId, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
         .update({
           two_factor_enabled: true,
           two_factor_secret: secret,
@@ -605,8 +605,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Update user 2FA settings
-      await trx('users')
-        .where({ user_id: userId, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
         .update({
           two_factor_enabled: false,
           two_factor_secret: null,
