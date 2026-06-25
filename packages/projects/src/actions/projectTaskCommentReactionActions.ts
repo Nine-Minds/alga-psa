@@ -1,9 +1,30 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
+import type { Knex } from 'knex';
+
+type TaskCommentReactionRow = {
+  task_comment_id: string;
+  emoji: string;
+  user_id: string;
+};
+
+type ReactionUserRow = {
+  user_id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+};
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 /**
  * Toggle a reaction on a project task comment.
@@ -20,13 +41,13 @@ export const toggleTaskCommentReaction = withAuth(async (
   const userId = user.user_id;
 
   return withTransaction(db, async (trx) => {
-    const existing = await trx('project_task_comment_reactions')
-      .where({ tenant, task_comment_id: taskCommentId, user_id: userId, emoji })
+    const existing = await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
+      .where({ task_comment_id: taskCommentId, user_id: userId, emoji })
       .first();
 
     if (existing) {
-      await trx('project_task_comment_reactions')
-        .where({ tenant, reaction_id: existing.reaction_id })
+      await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
+        .where({ reaction_id: existing.reaction_id })
         .del();
       return { added: false };
     }
@@ -52,11 +73,10 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   const { knex: db } = await createTenantKnex();
   const currentUserId = user.user_id;
 
-  const rows = await db('project_task_comment_reactions')
-    .where({ tenant })
+  const rows = await tenantScopedTable(db, 'project_task_comment_reactions', tenant)
     .whereIn('task_comment_id', taskCommentIds)
     .select('task_comment_id', 'emoji', 'user_id')
-    .orderBy('created_at', 'asc');
+    .orderBy('created_at', 'asc') as TaskCommentReactionRow[];
 
   const reactions = aggregateReactions(rows, 'task_comment_id', currentUserId);
 
@@ -64,10 +84,9 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   const allUserIds = [...new Set(rows.map(r => r.user_id))];
   const userNames: Record<string, string> = {};
   if (allUserIds.length > 0) {
-    const users = await db('users')
-      .where({ tenant })
+    const users = await tenantScopedTable(db, 'users', tenant)
       .whereIn('user_id', allUserIds)
-      .select('user_id', 'first_name', 'last_name');
+      .select('user_id', 'first_name', 'last_name') as ReactionUserRow[];
     for (const u of users) {
       userNames[u.user_id] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
     }
