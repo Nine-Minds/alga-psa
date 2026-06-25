@@ -97,15 +97,12 @@ COPY --from=prebuilt /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/
 # Copy integrations node_modules to both locations for module resolution
 COPY --from=base /app/packages/integrations/node_modules /app/packages/integrations/node_modules
 COPY --from=base /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
-# Copy the freshly-built @alga-psa/jobs (tsup dist) — see production stage note.
-COPY --from=development /app/packages/jobs /app/packages/jobs
 # Expose all local monorepo packages under @alga-psa/* for runtime resolution.
 RUN mkdir -p /app/node_modules/@alga-psa \
     && for pkg in /app/packages/*; do \
       name="$(basename "$pkg")"; \
       ln -sfn "$pkg" "/app/node_modules/@alga-psa/$name"; \
     done \
-    && ln -sfn /app/packages/jobs /app/ee/temporal-workflows/node_modules/@alga-psa/jobs \
     && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt production stage"
@@ -133,11 +130,6 @@ COPY --from=development /app/shared /app/shared
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
 COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
-# Copy the freshly-built @alga-psa/jobs (tsup dist). Without this the worker
-# resolves a stale jobs copy baked into its node_modules at base-stage npm
-# install (before jobs was built), which is missing newer handlers such as
-# workflowScheduledRunHandlers -> ERR_MODULE_NOT_FOUND at startup.
-COPY --from=development /app/packages/jobs /app/packages/jobs
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
 COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
 # Copy integrations node_modules to both locations for module resolution
@@ -151,7 +143,6 @@ RUN mkdir -p /app/node_modules/@alga-psa /app/ee/temporal-workflows/node_modules
     done \
     && ln -sfn /app/ee/packages/workflows /app/node_modules/@alga-psa/workflows \
     && ln -sfn /app/ee/packages/workflows /app/ee/temporal-workflows/node_modules/@alga-psa/workflows \
-    && ln -sfn /app/packages/jobs /app/ee/temporal-workflows/node_modules/@alga-psa/jobs \
     && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
 
 # Verify seeds are present in production stage
