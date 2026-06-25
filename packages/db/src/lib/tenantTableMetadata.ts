@@ -138,6 +138,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   next_number: { scope: 'tenant' },
   notification_logs: { scope: 'tenant' },
   notification_settings: { scope: 'tenant' },
+  online_meetings: { scope: 'tenant' },
   password_reset_tokens: { scope: 'tenant' },
   payment_methods: { scope: 'tenant' },
   permissions: { scope: 'tenant' },
