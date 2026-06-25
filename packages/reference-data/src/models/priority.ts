@@ -7,13 +7,10 @@
 
 import type { Knex } from 'knex';
 import type { IPriority } from '@alga-psa/types';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 
 const prioritiesQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
-  createTenantScopedQuery(knexOrTrx, {
-    table: 'priorities',
-    tenant
-  }).builder;
+  tenantDb(knexOrTrx, tenant).table<IPriority>('priorities');
 
 const Priority = {
   getAll: async (
@@ -59,7 +56,7 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const [insertedPriority] = await knexOrTrx('priorities')
+    const [insertedPriority] = await tenantDb(knexOrTrx, tenant).table<IPriority>('priorities')
       .insert({
         ...priority,
         tenant,

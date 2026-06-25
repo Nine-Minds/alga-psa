@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { IStandardPriority, IPriority, DeletionValidationResult } from '@alga-psa/types';
 import { IStandardStatus, IStatus } from '@alga-psa/types';
@@ -24,10 +24,7 @@ function normalizeBoolean(value: unknown): boolean {
 }
 
 const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table(table);
 
 async function seedBoardTicketStatusesFromStandards(
   trx: Knex.Transaction,
@@ -55,7 +52,7 @@ async function seedBoardTicketStatusesFromStandards(
   const columns = await trx('statuses').columnInfo();
   const hasColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(columns, columnName);
 
-  await trx('statuses').insert(standardStatuses.map((status: any) => ({
+  await tenantDb(trx, tenant).table('statuses').insert(standardStatuses.map((status: any) => ({
     tenant,
     board_id: boardId,
     name: status.name,
@@ -87,9 +84,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('priorities')
+      const existing = await tenantDb(db, tenantId).table('priorities')
         .where({
-          tenant: tenantId,
           priority_name: data.priority_name,
           item_type: data.item_type
         })
@@ -112,9 +108,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('statuses')
+      const existing = await tenantDb(db, tenantId).table('statuses')
         .where({
-          tenant: tenantId,
           name: data.name,
           status_type: data.status_type,
           ...(data.status_type === 'ticket' ? { board_id: data.board_id ?? null } : {})
@@ -136,9 +131,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('service_types')
+      const existing = await tenantDb(db, tenantId).table('service_types')
         .where({
-          tenant: tenantId,
           name: data.name
         })
         .first();
@@ -160,9 +154,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('custom_task_types')
+      const existing = await tenantDb(db, tenantId).table('custom_task_types')
         .where({
-          tenant: tenantId,
           type_key: data.type_key
         })
         .first();
@@ -184,9 +177,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('interaction_types')
+      const existing = await tenantDb(db, tenantId).table('interaction_types')
         .where({
-          tenant: tenantId,
           type_name: data.type_name
         })
         .first();
@@ -204,9 +196,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('service_categories')
+      const existing = await tenantDb(db, tenantId).table('service_categories')
         .where({
-          tenant: tenantId,
           category_name: data.category_name
         })
         .first();
@@ -225,9 +216,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('categories')
+      const existing = await tenantDb(db, tenantId).table('categories')
         .where({
-          tenant: tenantId,
           category_name: data.category_name
         })
         .first();
@@ -247,9 +237,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('boards')
+      const existing = await tenantDb(db, tenantId).table('boards')
         .where({
-          tenant: tenantId,
           board_name: data.board_name
         })
         .first();
@@ -352,7 +341,6 @@ export const checkImportConflicts = withAuth(async (
           // No need to check for conflicts here
         } else {
           const whereClause: any = {
-            tenant: tenant,
             [orderField]: orderValue
           };
           
@@ -366,15 +354,13 @@ export const checkImportConflicts = withAuth(async (
             whereClause.parent_category = null;
           }
           
-          const existingWithOrder = await trx(config.targetTable)
+          const existingWithOrder = await tenantDb(trx, tenant).table(config.targetTable)
             .where(whereClause)
             .first();
 
           if (existingWithOrder) {
             // Find next available order number
-            const maxOrderWhereClause: any = {
-              tenant: tenant
-            };
+            const maxOrderWhereClause: any = {};
             
             // For statuses, use status_type; for priorities, use item_type
             if (dataType === 'statuses' && mappedData.status_type) {
@@ -386,7 +372,7 @@ export const checkImportConflicts = withAuth(async (
               maxOrderWhereClause.parent_category = null;
             }
             
-            const maxOrder = await trx(config.targetTable)
+            const maxOrder = await tenantDb(trx, tenant).table(config.targetTable)
               .where(maxOrderWhereClause)
               .max(orderField + ' as max')
               .first();
@@ -495,7 +481,6 @@ export const importReferenceData = withAuth(async (
         // No conflict checking needed
       } else {
         const orderCheckClause: any = {
-          tenant: tenant,
           [orderField]: mappedData[orderField]
         };
         
@@ -512,13 +497,13 @@ export const importReferenceData = withAuth(async (
           orderCheckClause.parent_category = null;
         }
         
-        const existingWithOrder = await trx(config.targetTable)
+        const existingWithOrder = await tenantDb(trx, tenant).table(config.targetTable)
           .where(orderCheckClause)
           .first();
         
         if (existingWithOrder) {
           // Find next available order
-          const maxOrderWhereClause: any = { tenant: tenant };
+          const maxOrderWhereClause: any = {};
           
           if (dataType === 'statuses' && mappedData.status_type) {
             maxOrderWhereClause.status_type = mappedData.status_type;
@@ -532,7 +517,7 @@ export const importReferenceData = withAuth(async (
             maxOrderWhereClause.parent_category = null;
           }
           
-          const maxOrderResult = await trx(config.targetTable)
+          const maxOrderResult = await tenantDb(trx, tenant).table(config.targetTable)
             .where(maxOrderWhereClause)
             .max(orderField + ' as max')
             .first();
@@ -554,9 +539,8 @@ export const importReferenceData = withAuth(async (
 
         if (standardParentCategory) {
           // Now find the corresponding category in the tenant
-          const parentCategory = await trx('categories')
+          const parentCategory = await tenantDb(trx, tenant).table('categories')
             .where({
-              tenant: tenant,
               category_name: standardParentCategory.category_name,
               board_id: filters?.board_id
             })
@@ -604,7 +588,7 @@ export const importReferenceData = withAuth(async (
         }
       }
       
-	      const [savedItem] = await trx(config.targetTable)
+	      const [savedItem] = await tenantDb(trx, tenant).table(config.targetTable)
 	        .insert(mappedData)
 	        .returning('*');
 
@@ -730,10 +714,9 @@ export const deleteReferenceDataItem = withAuth(async (
               : 'interaction_type';
       const { knex } = await createTenantKnex();
       const result = await deleteEntityWithValidation(deletionEntityType, itemId, knex, tenant, async (trx, tenantId) => {
-        const deletedCount = await trx(config.targetTable)
+        const deletedCount = await tenantDb(trx, tenantId).table(config.targetTable)
           .where({
-            [idField]: itemId,
-            tenant: tenantId
+            [idField]: itemId
           })
           .delete();
 
@@ -776,10 +759,9 @@ export const deleteReferenceDataItem = withAuth(async (
     const { knex: db } = await createTenantKnex();
     await withTransaction(db, async (trx) => {
       // Check if the item exists and belongs to the tenant
-      const existing = await trx(config.targetTable)
+      const existing = await tenantDb(trx, tenant).table(config.targetTable)
         .where({
-          [idField]: itemId,
-          tenant: tenant
+          [idField]: itemId
         })
         .first();
 
@@ -789,10 +771,9 @@ export const deleteReferenceDataItem = withAuth(async (
 
       // Special handling for service_types - check if it has service catalog entries
       if (dataType === 'service_types') {
-        const serviceCount = await trx('service_catalog')
+        const serviceCount = await tenantDb(trx, tenant).table('service_catalog')
           .where({
-            custom_service_type_id: itemId,
-            tenant: tenant
+            custom_service_type_id: itemId
           })
           .count('* as count')
           .first();
@@ -803,10 +784,9 @@ export const deleteReferenceDataItem = withAuth(async (
       }
 
       // Delete the item
-      await trx(config.targetTable)
+      await tenantDb(trx, tenant).table(config.targetTable)
         .where({
-          [idField]: itemId,
-          tenant: tenant
+          [idField]: itemId
         })
         .delete();
     });

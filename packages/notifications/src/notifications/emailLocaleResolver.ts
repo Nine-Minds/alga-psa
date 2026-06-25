@@ -4,7 +4,7 @@
  * Resolves the appropriate locale for email notifications sent to users.
  */
 
-import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
@@ -17,10 +17,7 @@ export interface EmailRecipient {
 }
 
 function tenantScopedTable(knex: Knex, table: string, tenantId: string) {
-  return createTenantScopedQuery(knex, {
-    table,
-    tenant: tenantId,
-  }).builder;
+  return tenantDb(knex, tenantId).table(table);
 }
 
 async function getUserClientId(userId: string, tenantId: string): Promise<string | null> {

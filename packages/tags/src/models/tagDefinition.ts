@@ -1,5 +1,5 @@
 import type { TaggedEntityType } from '@alga-psa/types';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
@@ -15,16 +15,10 @@ export interface ITagDefinition {
 }
 
 const tagDefinitionsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
-  createTenantScopedQuery(knexOrTrx, {
-    table: 'tag_definitions',
-    tenant
-  }).builder;
+  tenantDb(knexOrTrx, tenant).table('tag_definitions');
 
 const tagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
-  createTenantScopedQuery(knexOrTrx, {
-    table: 'tag_mappings',
-    tenant
-  }).builder;
+  tenantDb(knexOrTrx, tenant).table('tag_mappings');
 
 const TagDefinition = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITagDefinition[]> => {
@@ -76,7 +70,7 @@ const TagDefinition = {
       tenant
     };
 
-    const [inserted] = await knexOrTrx<ITagDefinition>('tag_definitions')
+    const [inserted] = await tenantDb(knexOrTrx, tenant).table<ITagDefinition>('tag_definitions')
       .insert(normalizedDefinition)
       .returning('*');
     return inserted;

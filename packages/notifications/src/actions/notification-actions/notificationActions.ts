@@ -2,7 +2,7 @@
 
 import { getEmailNotificationService } from "../../notifications/email";
 import { revalidatePath } from "next/cache";
-import { withTransaction, createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import {
@@ -16,10 +16,7 @@ import {
 } from "../../types/notification";
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
-  return createTenantScopedQuery(conn, {
-    table,
-    tenant,
-  }).builder;
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
 export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
@@ -254,7 +251,7 @@ export const updateCategoryAction = withAuth(async (
     const now = new Date();
 
     // Upsert into tenant-specific settings table
-    await trx('tenant_notification_category_settings')
+    await tenantDb(trx, tenant).table('tenant_notification_category_settings')
       .insert({
         tenant,
         category_id: id,
@@ -332,7 +329,7 @@ export const updateSubtypeAction = withAuth(async (
     const now = new Date();
 
     // Upsert into tenant-specific settings table
-    await trx('tenant_notification_subtype_settings')
+    await tenantDb(trx, tenant).table('tenant_notification_subtype_settings')
       .insert({
         tenant,
         subtype_id: id,

@@ -3,7 +3,7 @@
 import TagDefinition, { ITagDefinition } from '../models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMapping';
 import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/types';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
@@ -51,18 +51,10 @@ type TagMappingDefinitionWithDefinitionIdRow = TagMappingDefinitionRow & {
 };
 
 const projectTasksQuery = (trx: Knex.Transaction, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table: 'project_tasks as pt',
-    alias: 'pt',
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table('project_tasks as pt');
 
 const tagMappingsWithDefinitionsQuery = (trx: Knex.Transaction, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table: 'tag_mappings as tm',
-    alias: 'tm',
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table('tag_mappings as tm');
 
 async function getTagTextSnapshot(
   trx: Knex.Transaction,
@@ -1062,7 +1054,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
   // unique(tenant, tag_id, tagged_id) and roll back the entire batch. RETURNING
   // yields only the rows we actually inserted, so events fire for real changes
   // only; a skipped row just means the tag is already present.
-  const insertedRows = await trx('tag_mappings')
+  const insertedRows = await tenantDb(trx, tenant).table('tag_mappings')
     .insert(rows)
     .onConflict(['tenant', 'tag_id', 'tagged_id'])
     .ignore()

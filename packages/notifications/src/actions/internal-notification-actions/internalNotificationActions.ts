@@ -1,6 +1,6 @@
 "use server"
 
-import { createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hasPermissionAsync } from '../../lib/authHelpers';
 import {
@@ -32,10 +32,7 @@ import {
 } from '@alga-psa/workflow-streams';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
-  return createTenantScopedQuery(conn, {
-    table,
-    tenant,
-  }).builder;
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
 /**
@@ -59,11 +56,7 @@ async function getUserLocale(
   tenant: string,
   userId: string
 ): Promise<string> {
-  const user = await createTenantScopedQuery(trx, {
-    table: 'users as u',
-    alias: 'u',
-    tenant,
-  }).builder
+  const user = await tenantScopedTable(trx, 'users as u', tenant)
     .select('u.user_type', 'u.contact_id', 'c.properties')
     .leftJoin('contacts as con', function() {
       this.on('u.contact_id', 'con.contact_name_id')
@@ -211,7 +204,7 @@ export async function createNotificationFromTemplateInternal(
     const message = renderTemplate(template.message, request.data);
 
     // Insert notification
-    const [notification] = await trx('internal_notifications')
+    const [notification] = await tenantDb(trx, request.tenant).table<any>('internal_notifications')
       .insert({
         tenant: request.tenant,
         user_id: request.user_id,
@@ -227,7 +220,7 @@ export async function createNotificationFromTemplateInternal(
         delivery_status: 'pending',
         delivery_attempts: 0
       })
-      .returning('*');
+      .returning('*') as InternalNotification[];
 
     const createdAt = normalizeDateTime(notification?.created_at);
 
@@ -299,7 +292,7 @@ export async function createNotificationFromTemplateAction(
     const message = renderTemplate(template.message, request.data);
 
     // Insert notification
-    const [notification] = await trx('internal_notifications')
+    const [notification] = await tenantDb(trx, request.tenant).table<any>('internal_notifications')
       .insert({
         tenant: request.tenant,
         user_id: request.user_id,
@@ -315,7 +308,7 @@ export async function createNotificationFromTemplateAction(
         delivery_status: 'pending',
         delivery_attempts: 0
       })
-      .returning('*');
+      .returning('*') as InternalNotification[];
 
     const createdAt = normalizeDateTime(notification?.created_at);
 
@@ -818,7 +811,7 @@ export async function updateUserInternalNotificationPreferenceAction(
       return updated;
     } else {
       // Create new preference
-      const [created] = await trx('user_internal_notification_preferences')
+      const [created] = await tenantDb(trx, request.tenant).table<UserInternalNotificationPreference>('user_internal_notification_preferences')
         .insert({
           tenant: request.tenant,
           user_id: request.user_id,
@@ -922,7 +915,7 @@ export const updateInternalCategoryAction = withAuth(async (
     const now = new Date();
 
     // Upsert into tenant-specific settings table
-    await trx('tenant_internal_notification_category_settings')
+    await tenantDb(trx, tenant).table('tenant_internal_notification_category_settings')
       .insert({
         tenant,
         category_id: categoryId,
@@ -984,7 +977,7 @@ export const updateInternalSubtypeAction = withAuth(async (
     const now = new Date();
 
     // Upsert into tenant-specific settings table
-    await trx('tenant_internal_notification_subtype_settings')
+    await tenantDb(trx, tenant).table('tenant_internal_notification_subtype_settings')
       .insert({
         tenant,
         subtype_id: subtypeId,

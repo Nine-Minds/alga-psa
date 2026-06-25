@@ -1,7 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { isEnterprise } from '@alga-psa/core/features';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
 import { ADD_ONS } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -191,18 +191,12 @@ async function getTeamsIntegrationRow(
   knex: any,
   tenant: string
 ): Promise<TeamsIntegrationRow | undefined> {
-  const row = await createTenantScopedQuery(knex, {
-    table: 'teams_integrations',
-    tenant,
-  }).builder.first();
+  const row = await tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations').first();
   return row || undefined;
 }
 
 async function tenantHasTeamsAddOn(knex: any, tenant: string): Promise<boolean> {
-  const row = await createTenantScopedQuery(knex, {
-    table: 'tenant_addons',
-    tenant,
-  }).builder
+  const row = await tenantDb(knex, tenant).table('tenant_addons')
     .where({ addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
@@ -216,10 +210,7 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | undefined> {
-  const row = await createTenantScopedQuery(knex, {
-    table: 'microsoft_profiles',
-    tenant,
-  }).builder.where({
+  const row = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').where({
     profile_id: profileId,
   }).first();
   return row || undefined;

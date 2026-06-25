@@ -4,7 +4,7 @@
  * Handles system-wide and tenant-specific email notifications.
  */
 
-import { createTenantKnex, createTenantScopedQuery, getConnection } from '@alga-psa/db';
+import { createTenantKnex, getConnection, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type {
   NotificationSettings,
@@ -25,20 +25,15 @@ export class EmailNotificationService implements NotificationService {
   private tenantScopedTable(
     knex: Knex,
     table: string,
-    tenant: string,
-    tenantColumn: string = 'tenant'
+    tenant: string
   ) {
-    return createTenantScopedQuery(knex, {
-      table,
-      tenant,
-      tenantColumn,
-    }).builder;
+    return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
   }
 
   private async getTenantEmailSettings(tenantId: string): Promise<TenantEmailSettings | null> {
     try {
       const knex = await getConnection(tenantId);
-      const settings = await this.tenantScopedTable(knex, 'tenant_email_settings', tenantId, 'tenant_id')
+      const settings = await this.tenantScopedTable(knex, 'tenant_email_settings', tenantId)
         .first();
 
       if (!settings) {
@@ -81,7 +76,7 @@ export class EmailNotificationService implements NotificationService {
       .first();
 
     if (!settings) {
-      return knex('notification_settings')
+      return tenantDb(knex, tenant).table<NotificationSettings>('notification_settings')
         .insert({
           tenant,
           is_enabled: true,
@@ -160,7 +155,7 @@ export class EmailNotificationService implements NotificationService {
       }
     }
 
-    const [created] = await knex('tenant_email_templates')
+    const [created] = await tenantDb(knex, tenant).table<TenantEmailTemplate>('tenant_email_templates')
       .insert({
         ...template,
         tenant,
@@ -288,7 +283,7 @@ export class EmailNotificationService implements NotificationService {
   ): Promise<NotificationCategory> {
     const knex = await this.getTenantKnex();
 
-    await knex('tenant_notification_category_settings')
+    await tenantDb(knex, tenant).table('tenant_notification_category_settings')
       .insert({
         tenant,
         category_id: id,
@@ -342,7 +337,7 @@ export class EmailNotificationService implements NotificationService {
       throw new Error('subtype_id is required');
     }
 
-    const [updated] = await knex('user_notification_preferences')
+    const [updated] = await tenantDb(knex, tenant).table<any>('user_notification_preferences')
       .insert({
         tenant,
         user_id: userId,
@@ -354,7 +349,7 @@ export class EmailNotificationService implements NotificationService {
         is_enabled: preference.is_enabled,
         updated_at: new Date().toISOString()
       })
-      .returning('*');
+      .returning('*') as UserNotificationPreference[];
 
     return updated;
   }
@@ -437,7 +432,7 @@ export class EmailNotificationService implements NotificationService {
       });
       const success = result.success;
 
-      await knex('notification_logs').insert({
+      await tenantDb(knex, params.tenant).table('notification_logs').insert({
         tenant: params.tenant,
         user_id: params.userId,
         subtype_id: params.subtypeId,
@@ -452,7 +447,7 @@ export class EmailNotificationService implements NotificationService {
       }
 
     } catch (error) {
-      await knex('notification_logs').insert({
+      await tenantDb(knex, params.tenant).table('notification_logs').insert({
         tenant: params.tenant,
         user_id: params.userId,
         subtype_id: params.subtypeId,

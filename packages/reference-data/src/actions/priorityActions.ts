@@ -2,17 +2,14 @@
 
 import type { IPriority, DeletionValidationResult } from '@alga-psa/types';
 import Priority from '../models/priority';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth';
 
 const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table,
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table(table);
 
 export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 'ticket' | 'project_task') => {
   const { knex: db } = await createTenantKnex();

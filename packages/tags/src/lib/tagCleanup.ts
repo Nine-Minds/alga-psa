@@ -5,15 +5,12 @@
 
 import type { Knex } from 'knex';
 import type { TaggedEntityType } from '@alga-psa/types';
-import { createTenantScopedQuery, requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import TagMapping from '../models/tagMapping';
 import TagDefinition from '../models/tagDefinition';
 
 const tagMappingsQuery = (trx: Knex.Transaction, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table: 'tag_mappings',
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table('tag_mappings');
 
 /**
  * Delete all tags associated with an entity.

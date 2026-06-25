@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { TaggedEntityType } from '@alga-psa/types';
 
 import TagDefinition from '../models/tagDefinition';
@@ -53,10 +53,7 @@ const addTagToEntityByExternalIdAction: InboundActionDefinition<AddTagToEntityBy
 
     const { knex } = await createTenantKnex(ctx.tenant);
     const result = await withTransaction(knex, async (trx) => {
-      const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
-        table,
-        tenant: ctx.tenant
-      }).builder;
+      const db = tenantDb(trx, ctx.tenant);
 
       const lookup = await lookupAlgaEntityByExternalId(
         ctx.tenant,
@@ -84,7 +81,7 @@ const addTagToEntityByExternalIdAction: InboundActionDefinition<AddTagToEntityBy
         },
       );
 
-      const existingMapping = await tenantScopedTable('tag_mappings')
+      const existingMapping = await db.table('tag_mappings')
         .where({
           tag_id: definition.tag_id,
           tagged_id: lookup.algaEntityId,
@@ -101,7 +98,7 @@ const addTagToEntityByExternalIdAction: InboundActionDefinition<AddTagToEntityBy
         };
       }
 
-      const [mapping] = await trx('tag_mappings')
+      const [mapping] = await db.table('tag_mappings')
         .insert({
           tenant: ctx.tenant,
           tag_id: definition.tag_id,
@@ -155,10 +152,7 @@ async function assertTaggedEntityExists(
   entityId: string,
 ): Promise<void> {
   const table = taggedEntityTable(entityType);
-  const entity = await createTenantScopedQuery(trx, {
-    table: table.table,
-    tenant
-  }).builder
+  const entity = await tenantDb(trx, tenant).table(table.table)
     .where({ [table.idColumn]: entityId })
     .first(table.idColumn);
   if (!entity) {
@@ -171,10 +165,7 @@ async function assertCreatedByExistsIfProvided(trx: any, tenant: string, userId?
     return;
   }
 
-  const user = await createTenantScopedQuery(trx, {
-    table: 'users',
-    tenant
-  }).builder
+  const user = await tenantDb(trx, tenant).table('users')
     .where({ user_id: userId })
     .first('user_id');
   if (!user) {

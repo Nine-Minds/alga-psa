@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
@@ -12,10 +12,7 @@ import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
 type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
 
 const statusesQuery = (trx: Knex | Knex.Transaction, tenant: string) =>
-  createTenantScopedQuery(trx, {
-    table: 'statuses',
-    tenant
-  }).builder;
+  tenantDb(trx, tenant).table('statuses');
 
 // Keeps the app-wide search index in sync when project / project_task statuses
 // change. Failures are swallowed: the daily search reconcile job is the backstop.
@@ -161,7 +158,7 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
         isDefault = false;
       }
       
-      const [status] = await trx<IStatus>('statuses')
+      const [status] = await tenantDb(trx, tenant).table<IStatus>('statuses')
         .insert({
           ...statusData,
           tenant,
