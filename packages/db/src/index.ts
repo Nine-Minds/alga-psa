@@ -18,6 +18,8 @@ export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, wit
 
 // Tenant Connection
 export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
+export { createTenantScopedQuery, cloneTenantScopedQuery, withTenantScopedQueryBuilder, isTenantScopedQuery } from './lib/tenantScopedQuery';
+export type { TenantScopedQuery, TenantScopedQueryOptions } from './lib/tenantScopedQuery';
 
 // After-commit hooks (flushed by the transaction-owning withTransaction frame)
 export { registerAfterCommit } from './lib/afterCommit';
