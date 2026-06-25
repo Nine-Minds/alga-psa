@@ -1,9 +1,15 @@
 import type { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
+
+const portalDomainsQuery = (knex: Knex, tenant: string) =>
+  createTenantScopedQuery(knex, {
+    table: PORTAL_DOMAIN_TABLE,
+    tenant
+  }).builder;
 
 export const PORTAL_DOMAIN_STATUSES = [
   'pending_dns',
@@ -134,7 +140,7 @@ async function getKnexForTenant(tenant: string): Promise<{ knex: Knex; tenant: s
 }
 
 export async function getPortalDomain(knex: Knex, tenant: string): Promise<PortalDomain | null> {
-  const record = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE).where({ tenant }).first();
+  const record = await portalDomainsQuery(knex, tenant).first() as PortalDomainRecord | undefined;
 
   if (!record) {
     return null;
@@ -242,11 +248,9 @@ export async function updatePortalDomain(
     updates.last_synced_resource_version = patch.lastSyncedResourceVersion;
   }
 
-  const [record] = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
-    .where({ tenant })
+  const [record] = await portalDomainsQuery(knex, tenant)
     .update(updates)
-    .returning('*');
+    .returning('*') as PortalDomainRecord[];
 
   return record ? mapRow(record) : null;
 }
-
