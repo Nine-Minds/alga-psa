@@ -27,12 +27,16 @@ import {
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
-import { resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { createTenantScopedQuery, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { formatInTimeZone } from 'date-fns-tz';
 import { formatDate as formatAppointmentDate, formatTime as formatAppointmentTime } from '@alga-psa/scheduling/actions';
 import type { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
+
+function tenantScopedTable(db: Knex, table: string, tenant: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(db, { table, tenant }).builder;
+}
 
 /**
  * Handle ticket created events
@@ -47,7 +51,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // Get ticket details including contact and the board's default team so we
     // can notify dispatchers when the ticket lands unassigned (e.g. from an
     // inbound email hitting a board with no default agent).
-    const ticket = await db('tickets as t')
+    const ticket = await tenantScopedTable(db, 'tickets as t', tenantId)
       .select(
         't.ticket_id',
         't.ticket_number',
@@ -120,9 +124,9 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       // languish until someone manually scans the board.
       const teamId = ticket.assigned_team_id || ticket.board_default_team_id;
       if (teamId) {
-        const teamMembers = await db('team_members')
+        const teamMembers = await tenantScopedTable(db, 'team_members', tenantId)
           .select('user_id')
-          .where({ team_id: teamId, tenant: tenantId });
+          .where({ team_id: teamId });
 
         await Promise.all(
           teamMembers
@@ -149,11 +153,10 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // Create notification for client contact if they have portal access
     if (ticket.contact_name_id && portalUrl) {
       // Check if contact has a user account
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -197,9 +200,9 @@ async function getAllTicketAssignees(
   ticketId: string
 ): Promise<string[]> {
   // Get primary assignee
-  const ticket = await db('tickets')
+  const ticket = await tenantScopedTable(db, 'tickets', tenantId)
     .select('assigned_to')
-    .where({ ticket_id: ticketId, tenant: tenantId })
+    .where({ ticket_id: ticketId })
     .first();
 
   const assignees: string[] = [];
@@ -208,9 +211,9 @@ async function getAllTicketAssignees(
   }
 
   // Get additional agents
-  const additionalAgents = await db('ticket_resources')
+  const additionalAgents = await tenantScopedTable(db, 'ticket_resources', tenantId)
     .select('additional_user_id')
-    .where({ tenant: tenantId, ticket_id: ticketId })
+    .where({ ticket_id: ticketId })
     .whereNotNull('additional_user_id');
 
   for (const agent of additionalAgents) {
@@ -231,9 +234,9 @@ async function getAllTaskAssignees(
   taskId: string
 ): Promise<string[]> {
   // Get primary assignee
-  const task = await db('project_tasks')
+  const task = await tenantScopedTable(db, 'project_tasks', tenantId)
     .select('assigned_to')
-    .where({ task_id: taskId, tenant: tenantId })
+    .where({ task_id: taskId })
     .first();
 
   const assignees: string[] = [];
@@ -242,9 +245,9 @@ async function getAllTaskAssignees(
   }
 
   // Get additional agents
-  const additionalAgents = await db('task_resources')
+  const additionalAgents = await tenantScopedTable(db, 'task_resources', tenantId)
     .select('additional_user_id')
-    .where({ tenant: tenantId, task_id: taskId })
+    .where({ task_id: taskId })
     .whereNotNull('additional_user_id');
 
   for (const agent of additionalAgents) {
@@ -267,7 +270,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     // Get ticket details including priority + creation time + contact so we
     // can decide whether to also post a client-portal notification.
-    const ticket = await db('tickets as t')
+    const ticket = await tenantScopedTable(db, 'tickets as t', tenantId)
       .select(
         't.ticket_number',
         't.title',
@@ -285,7 +288,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         this.on('t.assigned_to', 'au.user_id')
             .andOn('t.tenant', 'au.tenant');
       })
-      .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
+      .where({ 't.ticket_id': ticketId })
       .first();
 
     if (!ticket) {
@@ -297,9 +300,9 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     }
 
     // Get the user who performed the assignment
-    const assignedByUser = assignedByUserId ? await db('users')
+    const assignedByUser = assignedByUserId ? await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where({ user_id: assignedByUserId })
       .first() : null;
 
     const performedByName = assignedByUser
@@ -349,11 +352,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       isFirstIndividualAssignment &&
       !isCreationTimeAssignment
     ) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -391,18 +393,18 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     // If this is a team assignment, notify team members (excluding primary assignee)
     const assignedTeamId = (event.payload as any).changes?.assigned_team_id as string | undefined;
     if (assignedTeamId) {
-      const team = await db('teams')
+      const team = await tenantScopedTable(db, 'teams', tenantId)
         .select('team_name')
-        .where({ team_id: assignedTeamId, tenant: tenantId })
+        .where({ team_id: assignedTeamId })
         .first();
 
       if (team) {
-        const teamMembers = await db('team_members')
+        const teamMembers = await tenantScopedTable(db, 'team_members', tenantId)
           .join('users', function() {
             this.on('team_members.user_id', 'users.user_id')
                 .andOn('team_members.tenant', 'users.tenant');
           })
-          .where({ 'team_members.team_id': assignedTeamId, 'team_members.tenant': tenantId })
+          .where({ 'team_members.team_id': assignedTeamId })
           .andWhere('users.is_inactive', false)
           .select('team_members.user_id');
 
@@ -453,7 +455,7 @@ async function handleTicketAdditionalAgentAssigned(
     const db = await getConnection(tenantId);
 
     // Get ticket details including priority
-    const ticket = await db('tickets as t')
+    const ticket = await tenantScopedTable(db, 'tickets as t', tenantId)
       .select(
         't.ticket_number',
         't.title',
@@ -464,7 +466,7 @@ async function handleTicketAdditionalAgentAssigned(
         this.on('t.priority_id', 'p.priority_id')
             .andOn('t.tenant', 'p.tenant');
       })
-      .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
+      .where({ 't.ticket_id': ticketId })
       .first();
 
     if (!ticket) {
@@ -476,9 +478,9 @@ async function handleTicketAdditionalAgentAssigned(
     }
 
     // Get assigner name
-    const assigner = await db('users')
+    const assigner = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where({ user_id: assignedByUserId })
       .first();
 
     const assignerName = assigner
@@ -517,9 +519,9 @@ async function handleTicketAdditionalAgentAssigned(
 
     // 2. Notify the primary agent (if they exist and didn't perform the action)
     if (primaryAgentId && primaryAgentId !== assignedByUserId) {
-      const additionalAgent = await db('users')
+      const additionalAgent = await tenantScopedTable(db, 'users', tenantId)
         .select('first_name', 'last_name')
-        .where({ user_id: additionalAgentId, tenant: tenantId })
+        .where({ user_id: additionalAgentId })
         .first();
 
       const additionalAgentName = additionalAgent
@@ -557,15 +559,15 @@ async function handleTicketAdditionalAgentAssigned(
 
     // 3. Notify client (if they have portal access)
     if (ticket.contact_name_id) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'first_name', 'last_name')
-        .where({ contact_id: ticket.contact_name_id, tenant: tenantId })
+        .where({ contact_id: ticket.contact_name_id })
         .first();
 
       if (contactUser) {
-        const additionalAgent = await db('users')
+        const additionalAgent = await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where({ user_id: additionalAgentId, tenant: tenantId })
+          .where({ user_id: additionalAgentId })
           .first();
 
         const additionalAgentName = additionalAgent
@@ -611,7 +613,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
     const db = await getConnection(tenantId);
 
     // Get task and project details
-    const taskData = await db('project_tasks as pt')
+    const taskData = await tenantScopedTable(db, 'project_tasks as pt', tenantId)
       .select('pt.task_name', 'pt.phase_id', 'p.project_name')
       .leftJoin('project_phases as ph', function() {
         this.on('pt.phase_id', 'ph.phase_id')
@@ -621,7 +623,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
         this.on('ph.project_id', 'p.project_id')
            .andOn('ph.tenant', 'p.tenant');
       })
-      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+      .where({ 'pt.task_id': taskId })
       .first();
 
     if (!taskData) {
@@ -633,9 +635,9 @@ async function handleProjectTaskAdditionalAgentAssigned(
     }
 
     // Get assigner name
-    const assigner = await db('users')
+    const assigner = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .where({ user_id: assignedByUserId })
       .first();
 
     const assignerName = assigner
@@ -673,9 +675,9 @@ async function handleProjectTaskAdditionalAgentAssigned(
 
     // 2. Notify the primary agent (if they didn't perform the action)
     if (primaryAgentId !== assignedByUserId) {
-      const additionalAgent = await db('users')
+      const additionalAgent = await tenantScopedTable(db, 'users', tenantId)
         .select('first_name', 'last_name')
-        .where({ user_id: additionalAgentId, tenant: tenantId })
+        .where({ user_id: additionalAgentId })
         .first();
 
       const additionalAgentName = additionalAgent
