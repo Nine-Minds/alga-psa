@@ -1999,12 +1999,11 @@ export class TicketService extends BaseService<ITicket> {
       timeStats
     ] = await Promise.all([
       // Total and basic counts
-      knex('tickets as t')
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
         .leftJoin('statuses as s', function() {
           this.on('t.status_id', '=', 's.status_id')
               .andOn('t.tenant', '=', 's.tenant');
         })
-        .where('t.tenant', context.tenant)
         .select(
           knex.raw('COUNT(*) as total_tickets'),
           knex.raw('COUNT(CASE WHEN s.is_closed = false THEN 1 END) as open_tickets'),
@@ -2014,49 +2013,44 @@ export class TicketService extends BaseService<ITicket> {
         .first(),
 
       // Tickets by status
-      knex('tickets as t')
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
         .leftJoin('statuses as s', function() {
           this.on('t.status_id', '=', 's.status_id')
               .andOn('t.tenant', '=', 's.tenant');
         })
-        .where('t.tenant', context.tenant)
         .groupBy('s.status_id', 's.name')
         .select('s.status_id', 's.name as status_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by priority
-      knex('tickets as t')
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
         .leftJoin('priorities as p', function() {
           this.on('t.priority_id', '=', 'p.priority_id')
               .andOn('t.tenant', '=', 'p.tenant');
         })
-        .where('t.tenant', context.tenant)
         .groupBy('p.priority_name')
         .select('p.priority_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by category
-      knex('tickets as t')
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
         .leftJoin('categories as c', function() {
           this.on('t.category_id', '=', 'c.category_id')
               .andOn('t.tenant', '=', 'c.tenant');
         })
-        .where('t.tenant', context.tenant)
         .whereNotNull('t.category_id')
         .groupBy('c.category_name')
         .select('c.category_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by board
-      knex('tickets as t')
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
         .leftJoin('boards as ch', function() {
           this.on('t.board_id', '=', 'ch.board_id')
               .andOn('t.tenant', '=', 'ch.tenant');
         })
-        .where('t.tenant', context.tenant)
         .groupBy('ch.board_name')
         .select('ch.board_name', knex.raw('COUNT(*) as count')),
 
       // Time-based statistics
-      knex('tickets')
-        .where('tenant', context.tenant)
+      tenantScopedTable(knex, 'tickets', context.tenant)
         .select(
           knex.raw("COUNT(CASE WHEN entered_at >= CURRENT_DATE THEN 1 END) as tickets_created_today"),
           knex.raw("COUNT(CASE WHEN entered_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as tickets_created_this_week"),
