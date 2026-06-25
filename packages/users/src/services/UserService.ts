@@ -654,8 +654,8 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Verify user exists
-      const user = await trx('users')
-        .where({ user_id: userId, tenant: context.tenant })
+      const user = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
         .select('user_id')
         .first();
 
@@ -664,17 +664,23 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Verify all roles exist
-      const roles = await trx('roles')
+      const roles = await createTenantScopedQuery(trx, {
+        table: 'roles',
+        tenant: context.tenant,
+      }).builder
         .whereIn('role_id', roleIds)
-        .where('tenant', context.tenant);
+        .select('*');
 
       if (roles.length !== roleIds.length) {
         throw new Error('One or more invalid role IDs provided');
       }
 
       // Remove existing roles
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'user_roles',
+        tenant: context.tenant,
+      }).builder
+        .where({ user_id: userId })
         .del();
 
       // Add new roles
@@ -716,8 +722,11 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Remove specified roles
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: context.tenant })
+      await createTenantScopedQuery(trx, {
+        table: 'user_roles',
+        tenant: context.tenant,
+      }).builder
+        .where({ user_id: userId })
         .whereIn('role_id', roleIds)
         .del();
 
