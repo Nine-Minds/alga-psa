@@ -2946,8 +2946,8 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // First try to find a tenant-specific type
-    const tenantType = await trx('document_types')
-      .where({ tenant, type_name: mimeType })
+    const tenantType = await tenantScopedTable(trx, 'document_types', tenant)
+      .where({ type_name: mimeType })
       .first();
 
     if (tenantType) {
@@ -2967,8 +2967,8 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     const generalType = mimeType.split('/')[0] + '/*';
 
     // Check tenant-specific general type first
-    const generalTenantType = await trx('document_types')
-      .where({ tenant, type_name: generalType })
+    const generalTenantType = await tenantScopedTable(trx, 'document_types', tenant)
+      .where({ type_name: generalType })
       .first();
 
     if (generalTenantType) {
@@ -3025,14 +3025,14 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
     // Fetch minimal file details to check MIME type and existence
     const fileDetails = useTransaction
       ? await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('external_files')
+          return await tenantScopedTable(trx, 'external_files', tenant)
             .select('mime_type', 'storage_path')
-            .where({ file_id, tenant })
+            .where({ file_id })
             .first();
         })
-      : await knex('external_files')
+      : await tenantScopedTable(knex, 'external_files', tenant)
           .select('mime_type', 'storage_path')
-          .where({ file_id, tenant })
+          .where({ file_id })
           .first();
 
     if (!fileDetails) {
@@ -3100,9 +3100,8 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
     const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('document_associations')
+      return await tenantScopedTable(trx, 'document_associations', tenant)
         .distinct('entity_type')
-        .where('tenant', tenant)
         .orderBy('entity_type', 'asc');
     });
 
