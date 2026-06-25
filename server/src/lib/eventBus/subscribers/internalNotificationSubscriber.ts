@@ -1889,9 +1889,9 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     const db = await getConnection(tenantId);
 
     // Get document details
-    const document = await db('documents')
+    const document = await tenantScopedTable(db, 'documents', tenantId)
       .select('document_id', 'document_name', 'tenant')
-      .where({ document_id: documentId, tenant: tenantId })
+      .where('document_id', documentId)
       .first();
 
     if (!document) {
@@ -1900,9 +1900,9 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1941,10 +1941,9 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     }
 
     // Get user details for mentioned users (single batch query)
-    const mentionedUsers = await db('users')
+    const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
       .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-      .whereIn('user_id', usersToNotify)
-      .andWhere('tenant', tenantId);
+      .whereIn('user_id', usersToNotify);
 
     if (mentionedUsers.length === 0) {
       return;
@@ -2005,7 +2004,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get project details including assigned_to
-    const project = await db('projects as p')
+    const project = await tenantScopedTable(db, 'projects as p', tenantId)
       .select(
         'p.project_id',
         'p.project_name',
@@ -2018,7 +2017,6 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
             .andOn('p.tenant', 'c.tenant');
       })
       .where('p.project_id', projectId)
-      .andWhere('p.tenant', tenantId)
       .first();
 
     if (!project) {
@@ -2081,9 +2079,9 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
     const db = await getConnection(tenantId);
 
     // Get project details
-    const project = await db('projects')
+    const project = await tenantScopedTable(db, 'projects', tenantId)
       .select('project_id', 'project_name', 'tenant')
-      .where({ project_id: projectId, tenant: tenantId })
+      .where('project_id', projectId)
       .first();
 
     if (!project || !assignedTo) {
