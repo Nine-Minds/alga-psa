@@ -4084,24 +4084,22 @@ async function enrichFolderTreeWithCounts(
   }
 
   // Gather candidate documents first, then apply kernel authorization before counting.
-  let documentsQuery = knex('documents as d')
+  let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant)
     .leftJoin('document_types as dt', function joinDocumentTypes() {
       this.on('d.type_id', '=', 'dt.type_id')
         .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
     })
     .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
-    .where('d.tenant', tenant)
     .whereIn('d.folder_path', allPaths);
 
   if (entityId && entityType) {
-    documentsQuery = documentsQuery.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
+    documentsQuery = documentsQuery.whereExists(
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
         .whereRaw('da.document_id = d.document_id')
-        .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType);
-    });
+        .andWhere('da.entity_type', entityType)
+    );
   } else {
     // No entity scope: include all documents and rely on kernel decisions for narrowing.
   }
@@ -4182,20 +4180,19 @@ async function enrichFolderTreeWithCounts(
   }
 
   if (filters?.entityType || filters?.entityId) {
-    documentsQuery = documentsQuery.whereExists(function filterEntityAssociation() {
-      this.select('*')
-        .from('document_associations as filter_da')
-        .whereRaw('filter_da.document_id = d.document_id')
-        .andWhere('filter_da.tenant', tenant);
+    const filterAssociationQuery = tenantScopedTable(knex, 'document_associations as filter_da', tenant)
+      .select('*')
+      .whereRaw('filter_da.document_id = d.document_id');
 
-      if (filters?.entityType) {
-        this.andWhere('filter_da.entity_type', filters.entityType);
-      }
+    if (filters?.entityType) {
+      filterAssociationQuery.andWhere('filter_da.entity_type', filters.entityType);
+    }
 
-      if (filters?.entityId) {
-        this.andWhere('filter_da.entity_id', filters.entityId);
-      }
-    });
+    if (filters?.entityId) {
+      filterAssociationQuery.andWhere('filter_da.entity_id', filters.entityId);
+    }
+
+    documentsQuery = documentsQuery.whereExists(filterAssociationQuery);
   }
 
   if (filters?.clientVisibility === 'visible') {
