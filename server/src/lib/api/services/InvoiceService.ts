@@ -267,7 +267,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Add joins based on include options
       if ((options as any).include_client) {
         // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = trx('client_locations as cl')
+        const billingAddressSubquery = createTenantScopedQuery(trx, {
+          table: 'client_locations as cl',
+          alias: 'cl',
+          tenant: context.tenant,
+        }).builder
           .select(
             'cl.client_id',
             'cl.tenant',
@@ -289,7 +293,10 @@ export class InvoiceService extends BaseService<IInvoice> {
           .as('billing_loc');
 
         query = query
-          .leftJoin('clients', 'invoices.client_id', 'clients.client_id')
+          .leftJoin('clients', function() {
+            this.on('invoices.client_id', '=', 'clients.client_id')
+              .andOn('invoices.tenant', '=', 'clients.tenant');
+          })
           .leftJoin(billingAddressSubquery, function() {
             this.on('clients.client_id', '=', 'billing_loc.client_id')
                 .andOn('clients.tenant', '=', 'billing_loc.tenant');
@@ -302,7 +309,10 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       if ((options as any).include_billing_cycle) {
         query = query
-          .leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.billing_cycle_id')
+          .leftJoin('client_billing_cycles', function() {
+            this.on('invoices.billing_cycle_id', '=', 'client_billing_cycles.billing_cycle_id')
+              .andOn('invoices.tenant', '=', 'client_billing_cycles.tenant');
+          })
           .select(
             'client_billing_cycles.period_start_date as period_start',
             'client_billing_cycles.period_end_date as period_end',
@@ -310,7 +320,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_tax_details) {
-        query = query.leftJoin('tax_rates', 'invoices.tax_rate_id', 'tax_rates.tax_rate_id')
+        query = query.leftJoin('tax_rates', function() {
+          this.on('invoices.tax_rate_id', '=', 'tax_rates.tax_rate_id')
+            .andOn('invoices.tenant', '=', 'tax_rates.tenant');
+        })
           .select('tax_rates.rate_percentage', 'tax_rates.tax_name');
       }
 
@@ -2007,9 +2020,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
     const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
 
-    return trx('invoices')
+    return createTenantScopedQuery(trx, {
+      table: 'invoices',
+      tenant: context.tenant,
+    }).builder
       .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
-      .where('invoices.tenant', context.tenant)
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
