@@ -836,8 +836,10 @@ export class TimeSheetService extends BaseService<any> {
   async getTimePeriodSettings(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
-      return knex('time_period_settings')
-        .where({ tenant: context.tenant })
+      return createTenantScopedQuery(knex, {
+        table: 'time_period_settings',
+        tenant: context.tenant,
+      }).builder
         .orderBy('effective_from', 'desc');
     }
 
@@ -848,8 +850,11 @@ export class TimeSheetService extends BaseService<any> {
       return withTransaction(knex, async (trx) => {
         // Deactivate previous settings if new one is active
         if (data.is_active) {
-          await trx('time_period_settings')
-            .where({ tenant: context.tenant, is_active: true })
+          await createTenantScopedQuery(trx, {
+            table: 'time_period_settings',
+            tenant: context.tenant,
+          }).builder
+            .where({ is_active: true })
             .update({ is_active: false, updated_at: new Date() });
         }
   
@@ -875,8 +880,11 @@ export class TimeSheetService extends BaseService<any> {
       return withTransaction(knex, async (trx) => {
         // Deactivate other settings if this one is being activated
         if (data.is_active) {
-          await trx('time_period_settings')
-            .where({ tenant: context.tenant, is_active: true })
+          await createTenantScopedQuery(trx, {
+            table: 'time_period_settings',
+            tenant: context.tenant,
+          }).builder
+            .where({ is_active: true })
             .whereNot('settings_id', id)
             .update({ is_active: false, updated_at: new Date() });
         }
@@ -886,12 +894,18 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        await trx('time_period_settings')
-          .where({ settings_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'time_period_settings',
+          tenant: context.tenant,
+        }).builder
+          .where({ settings_id: id })
           .update(updateData);
   
-        return trx('time_period_settings')
-          .where({ settings_id: id, tenant: context.tenant })
+        return createTenantScopedQuery(trx, {
+          table: 'time_period_settings',
+          tenant: context.tenant,
+        }).builder
+          .where({ settings_id: id })
           .first();
       });
     }
