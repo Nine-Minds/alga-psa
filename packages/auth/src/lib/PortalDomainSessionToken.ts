@@ -1,6 +1,7 @@
 import { randomBytes, createHash } from 'crypto';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 import type { PortalSessionTokenPayload } from './session';
@@ -143,9 +144,12 @@ async function getConnection(): Promise<Knex> {
 }
 
 async function loadPortalDomain(knex: Knex, tenant: string, portalDomainId: string): Promise<PortalDomainRecord | null> {
-  const record = await knex<PortalDomainRecord>(PORTAL_DOMAINS_TABLE)
-    .where({ tenant, id: portalDomainId })
-    .first();
+  const record = await createTenantScopedQuery(knex, {
+    table: PORTAL_DOMAINS_TABLE,
+    tenant,
+  }).builder
+    .where({ id: portalDomainId })
+    .first() as PortalDomainRecord | undefined;
 
   return record ?? null;
 }
@@ -248,9 +252,12 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
   const now = new Date();
 
   return knex.transaction(async (trx) => {
-    const row = await trx<PortalDomainSessionOttRow>(TABLE_NAME)
-      .where({ token_hash: tokenHash, tenant, portal_domain_id: portalDomainId })
-      .first();
+    const row = await createTenantScopedQuery(trx, {
+      table: TABLE_NAME,
+      tenant,
+    }).builder
+      .where({ token_hash: tokenHash, portal_domain_id: portalDomainId })
+      .first() as PortalDomainSessionOttRow | undefined;
 
     if (!row) {
       logger.info(FAILURE_EVENT, {
@@ -283,7 +290,10 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
       return null;
     }
 
-    const [updated] = await trx<PortalDomainSessionOttRow>(TABLE_NAME)
+    const [updated] = await createTenantScopedQuery(trx, {
+      table: TABLE_NAME,
+      tenant,
+    }).builder
       .where({ id: row.id })
       .update({
         consumed_at: now,
@@ -313,21 +323,17 @@ export interface PruneOttOptions {
 export async function pruneExpiredPortalDomainOtts(options: PruneOttOptions = {}): Promise<number> {
   const knex = await getConnection();
   const cutoff = options.before ?? new Date();
+  const createOttQuery = (): Knex.QueryBuilder<PortalDomainSessionOttRow, any> => (
+    options.tenant
+      ? createTenantScopedQuery(knex, { table: TABLE_NAME, tenant: options.tenant }).builder
+      : knex<PortalDomainSessionOttRow>(TABLE_NAME)
+  ) as Knex.QueryBuilder<PortalDomainSessionOttRow, any>;
 
-  const expiredQuery = knex<PortalDomainSessionOttRow>(TABLE_NAME)
-    .where('expires_at', '<', cutoff);
+  const expiredQuery = createOttQuery().where('expires_at', '<', cutoff);
 
-  if (options.tenant) {
-    expiredQuery.andWhere('tenant', options.tenant);
-  }
-
-  const consumedQuery = knex<PortalDomainSessionOttRow>(TABLE_NAME)
+  const consumedQuery = createOttQuery()
     .whereNotNull('consumed_at')
     .andWhere('consumed_at', '<', cutoff);
-
-  if (options.tenant) {
-    consumedQuery.andWhere('tenant', options.tenant);
-  }
 
   if (options.dryRun) {
     const expiredIds = await expiredQuery.clone().pluck('id');
