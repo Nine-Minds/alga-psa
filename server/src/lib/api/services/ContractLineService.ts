@@ -1354,16 +1354,21 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     // Get bucket usage data
-    const bucketUsage = await knex('bucket_usage')
+    const bucketUsage = await createTenantScopedQuery(knex, {
+      table: 'bucket_usage',
+      tenant: context.tenant,
+    }).builder
       .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
       .whereBetween('period_start', [periodStart, periodEnd])
       .sum('minutes_used as total_usage')
       .sum('overage_minutes as overage_usage')
       .first();
     
     // Get time entries for billable usage
-    const timeEntries = await knex('time_entries as te')
+    const timeEntries = await createTenantScopedQuery(knex, {
+      table: 'time_entries as te',
+      tenant: context.tenant,
+    }).builder
       .join('contract_lines as cl', function joinLines() {
         this.on('cl.contract_line_id', '=', knex.raw('?', [planId]))
           .andOn('cl.tenant', '=', 'te.tenant');
@@ -1377,7 +1382,6 @@ export class ContractLineService extends BaseService<IContractLine> {
           .andOn('c.tenant', '=', 'cc.tenant')
           .andOn('cc.client_id', '=', 'te.client_id');
       })
-      .where('te.tenant', context.tenant)
       .where('cl.contract_line_id', planId)
       .where('cc.is_active', true)
       .andWhere(function limitToClientOwnedContracts() {
