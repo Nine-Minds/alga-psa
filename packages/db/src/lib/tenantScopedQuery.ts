@@ -68,17 +68,6 @@ export function createTenantScopedQuery(
   );
 }
 
-export function cloneTenantScopedQuery(query: TenantScopedQuery): TenantScopedQuery {
-  return query.clone();
-}
-
-export function withTenantScopedQueryBuilder(
-  query: TenantScopedQuery,
-  builder: Knex.QueryBuilder
-): TenantScopedQuery {
-  return query.withBuilder(builder);
-}
-
 export function isTenantScopedQuery(value: unknown): value is TenantScopedQuery {
   return Boolean(
     value &&

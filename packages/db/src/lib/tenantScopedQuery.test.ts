@@ -1,11 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import knexFactory from 'knex';
-import {
-  cloneTenantScopedQuery,
-  createTenantScopedQuery,
-  isTenantScopedQuery,
-  withTenantScopedQueryBuilder,
-} from './tenantScopedQuery';
+import { createTenantScopedQuery, isTenantScopedQuery } from './tenantScopedQuery';
 
 const db = knexFactory({ client: 'pg' });
 
@@ -59,27 +54,15 @@ describe('tenant scoped query helper', () => {
       tenant: 'tenant-1',
     });
 
-    const clone = cloneTenantScopedQuery(query);
+    const clone = query.clone();
     clone.builder.where('t.ticket_id', 'ticket-1');
 
     expect(clone.tenant).toBe(query.tenant);
     expect(query.builder.toString()).not.toContain('ticket-1');
     expect(clone.builder.toString()).toContain('"t"."ticket_id" = \'ticket-1\'');
 
-    const methodClone = query.clone();
-    methodClone.builder.where('t.status_id', 'status-1');
-    expect(query.builder.toString()).not.toContain('status-1');
-    expect(methodClone.builder.toString()).toContain('"t"."status_id" = \'status-1\'');
-
     const replaced = query.withBuilder(query.builder.clone().whereNull('t.closed_at'));
     expect(replaced.tenant).toBe(query.tenant);
     expect(replaced.builder.toString()).toContain('"t"."closed_at" is null');
-
-    const replacedViaCompatibility = withTenantScopedQueryBuilder(
-      query,
-      query.builder.clone().whereNull('t.resolved_at')
-    );
-    expect(replacedViaCompatibility.tenant).toBe(query.tenant);
-    expect(replacedViaCompatibility.builder.toString()).toContain('"t"."resolved_at" is null');
   });
 });

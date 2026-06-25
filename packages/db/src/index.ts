@@ -18,8 +18,8 @@ export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, wit
 
 // Tenant Connection
 export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
-export { createTenantScopedQuery, cloneTenantScopedQuery, withTenantScopedQueryBuilder, isTenantScopedQuery } from './lib/tenantScopedQuery';
-export type { TenantScopedQuery, TenantScopedQueryOptions } from './lib/tenantScopedQuery';
+export { isTenantScopedQuery } from './lib/tenantScopedQuery';
+export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
 export { getTenantTableScope, parseTableExpression, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
