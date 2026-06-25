@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { generateKeyBetween } from 'fractional-indexing';
 import { getDeletionConfig, validateDeletion } from '@alga-psa/core';
+import { createTenantScopedQuery } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -424,8 +425,12 @@ async function getTableColumns(tx: TenantTxContext, tableName: string): Promise<
   return new Set(rows.map((row: { column_name: string }) => row.column_name));
 }
 
+function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(tx.trx, { table, tenant: tx.tenantId }).builder;
+}
+
 async function ensureProjectExists(ctx: any, tx: TenantTxContext, projectId: string): Promise<Record<string, unknown>> {
-  const project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: projectId }).first();
+  const project = await tenantScopedTable(tx, 'projects').where('project_id', projectId).first();
   if (!project) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -438,7 +443,7 @@ async function ensureProjectExists(ctx: any, tx: TenantTxContext, projectId: str
 }
 
 async function ensurePhaseExists(ctx: any, tx: TenantTxContext, phaseId: string): Promise<Record<string, unknown>> {
-  const phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: phaseId }).first();
+  const phase = await tenantScopedTable(tx, 'project_phases').where('phase_id', phaseId).first();
   if (!phase) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -451,14 +456,14 @@ async function ensurePhaseExists(ctx: any, tx: TenantTxContext, phaseId: string)
 }
 
 async function ensureTaskContext(ctx: any, tx: TenantTxContext, taskId: string): Promise<Record<string, unknown>> {
-  const task = await tx.trx('project_tasks as pt')
+  const task = await tenantScopedTable(tx, 'project_tasks as pt')
     .join('project_phases as pp', function joinPhases(this: Knex.JoinClause) {
       this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
     })
     .join('projects as p', function joinProjects(this: Knex.JoinClause) {
       this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
     })
-    .where({ 'pt.tenant': tx.tenantId, 'pt.task_id': taskId })
+    .where('pt.task_id', taskId)
     .select('pt.*', 'pp.project_id')
     .first();
 
@@ -498,7 +503,7 @@ function validateOptionalTaskScope(
 }
 
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, unknown>> {
-  const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: ticketId }).first();
+  const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', ticketId).first();
   if (!ticket) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -515,8 +520,8 @@ async function ensureStatusMappingExists(
   tx: TenantTxContext,
   projectStatusMappingId: string
 ): Promise<Record<string, unknown>> {
-  const row = await tx.trx('project_status_mappings')
-    .where({ tenant: tx.tenantId, project_status_mapping_id: projectStatusMappingId })
+  const row = await tenantScopedTable(tx, 'project_status_mappings')
+    .where('project_status_mapping_id', projectStatusMappingId)
     .first();
 
   if (!row) {
@@ -570,14 +575,14 @@ async function getProjectStatusMappingDetails(
   tx: TenantTxContext,
   projectStatusMappingId: string
 ): Promise<ProjectStatusMappingDetails | null> {
-  const row = await tx.trx('project_status_mappings as psm')
+  const row = await tenantScopedTable(tx, 'project_status_mappings as psm')
     .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
-    .where({ 'psm.tenant': tx.tenantId, 'psm.project_status_mapping_id': projectStatusMappingId })
+    .where('psm.project_status_mapping_id', projectStatusMappingId)
     .select(
       'psm.*',
       tx.trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
@@ -605,14 +610,14 @@ async function getScopedProjectStatusMappings(
   projectId: string,
   phaseId?: string | null
 ): Promise<ProjectStatusMappingDetails[]> {
-  let query = tx.trx('project_status_mappings as psm')
+  let query = tenantScopedTable(tx, 'project_status_mappings as psm')
     .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
-    .where({ 'psm.tenant': tx.tenantId, 'psm.project_id': projectId });
+    .where('psm.project_id', projectId);
 
   query = phaseId ? query.andWhere('psm.phase_id', phaseId) : query.whereNull('psm.phase_id');
 
