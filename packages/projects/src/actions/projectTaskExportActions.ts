@@ -1,7 +1,7 @@
 'use server'
 
 import type { ITag } from '@alga-psa/types';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, throwPermissionError } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
@@ -54,7 +54,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 function formatDate(value: string | Date | null | undefined): string {

@@ -1,7 +1,7 @@
 'use server';
 
 import type { IService } from '@alga-psa/types';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
 
@@ -17,7 +17,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 export const getServices = withAuth(async (_user, { tenant }, page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> => {

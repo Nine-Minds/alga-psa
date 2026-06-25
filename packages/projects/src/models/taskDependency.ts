@@ -1,7 +1,7 @@
 import type { DependencyType, IProjectTaskDependency } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 
 type DependencyWithTaskDetails = IProjectTaskDependency & {
     predecessor_task_name?: string | null;
@@ -21,7 +21,7 @@ function tenantScopedTable(
     table: string,
     tenant: string,
 ): Knex.QueryBuilder {
-    return createTenantScopedQuery(conn, { table, tenant }).builder;
+    return tenantDb(conn, tenant).table(table);
 }
 
 const TaskDependencyModel = {

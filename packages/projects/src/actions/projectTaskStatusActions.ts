@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { DeletionValidationResult, IProjectStatusMapping, IStatus } from '@alga-psa/types';
@@ -29,7 +29,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 function formatProjectUsageDescription(projectNames: string[], count: number): string {

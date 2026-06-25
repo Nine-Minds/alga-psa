@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import type { IProjectStatusMapping } from '@alga-psa/types';
 
 export type ProjectStatusMappingDetails = IProjectStatusMapping & {
@@ -14,10 +14,8 @@ export async function getScopedProjectStatusMappings(
   projectId: string,
   phaseId?: string | null
 ): Promise<ProjectStatusMappingDetails[]> {
-  const query = createTenantScopedQuery(trx, {
-    table: 'project_status_mappings as psm',
-    tenant,
-  }).builder
+  const query = tenantDb(trx, tenant)
+    .table('project_status_mappings as psm')
     .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })

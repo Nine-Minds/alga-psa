@@ -1,4 +1,4 @@
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IProjectTask } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -34,7 +34,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedValues> = {

@@ -50,7 +50,7 @@ describe('per-phase custom status scenarios', () => {
     it('remaps tasks from phase-specific statuses to default replacements before deletion', () => {
       expect(actionsSource).toContain('export const removePhaseStatuses = withAuth(async (');
       expect(actionsSource).toContain('resolveReplacementStatusMapping(phaseMapping, defaultMappings)');
-      expect(actionsSource).toContain("await trx('project_tasks')");
+      expect(actionsSource).toContain("await tenantScopedTable(trx, 'project_tasks', tenant)");
       expect(actionsSource).toContain('.del();');
     });
 
@@ -96,7 +96,8 @@ describe('per-phase custom status scenarios', () => {
   describe('getStatusMappingTaskCount returns the task count for a mapping', () => {
     it('queries project_tasks by mapping id', () => {
       expect(actionsSource).toContain('export const getStatusMappingTaskCount = withAuth(async (');
-      expect(actionsSource).toContain("{ project_status_mapping_id: mappingId, tenant }");
+      expect(actionsSource).toContain("tenantScopedTable(knex, 'project_tasks', tenant)");
+      expect(actionsSource).toContain("{ project_status_mapping_id: mappingId }");
       expect(actionsSource).toContain(".count('* as count')");
     });
   });

@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -19,7 +19,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 function buildCommentAuthorizationSubject(user: { user_id: string; user_type: 'internal' | 'client' }, tenant: string) {

@@ -12,7 +12,7 @@
 import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
 export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
@@ -22,7 +22,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 /**

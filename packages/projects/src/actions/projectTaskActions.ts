@@ -31,7 +31,7 @@ import {
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { omit } from 'lodash';
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
 import {
@@ -67,7 +67,7 @@ function tenantScopedTable(
     table: string,
     tenant: string,
 ): Knex.QueryBuilder {
-    return createTenantScopedQuery(conn, { table, tenant }).builder;
+    return tenantDb(conn, tenant).table(table);
 }
 
 // Helper functions for workflow events

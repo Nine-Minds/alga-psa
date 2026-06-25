@@ -28,7 +28,7 @@ import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-act
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { z } from 'zod';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
@@ -84,7 +84,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<ActionPermissionError | null> {

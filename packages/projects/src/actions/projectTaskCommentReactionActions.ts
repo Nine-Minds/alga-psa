@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
@@ -23,7 +23,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 /**

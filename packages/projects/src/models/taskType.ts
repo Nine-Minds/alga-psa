@@ -1,14 +1,14 @@
 import type { ICustomTaskType, ITaskType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 
 function tenantScopedTable(
     conn: Knex | Knex.Transaction,
     table: string,
     tenant: string,
 ): Knex.QueryBuilder {
-    return createTenantScopedQuery(conn, { table, tenant }).builder;
+    return tenantDb(conn, tenant).table(table);
 }
 
 const TaskTypeModel = {

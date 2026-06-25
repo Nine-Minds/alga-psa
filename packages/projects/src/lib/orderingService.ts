@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { generateKeyForPosition } from './orderingUtils';
 
@@ -9,7 +9,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ) {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 /**

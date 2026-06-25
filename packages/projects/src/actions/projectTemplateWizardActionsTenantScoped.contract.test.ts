@@ -6,7 +6,7 @@ const source = readFileSync(resolve(__dirname, 'projectTemplateWizardActions.ts'
 
 describe('project template wizard tenant-scoped query contract', () => {
   it('uses structural tenant scoping for editor update and save-as-copy roots', () => {
-    expect(source).toContain("import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db'");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
     expect(source).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_template_status_mappings', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");

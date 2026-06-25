@@ -8,7 +8,7 @@ import type {
   IProjectTaskCardInfo,
   ITicketLinkedTask,
 } from '@alga-psa/types';
-import { createTenantScopedQuery } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import ProjectModel from './project';
 
 function tenantScopedTable(
@@ -16,7 +16,7 @@ function tenantScopedTable(
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
-  return createTenantScopedQuery(conn, { table, tenant }).builder;
+  return tenantDb(conn, tenant).table(table);
 }
 
 const ProjectTaskModel = {
