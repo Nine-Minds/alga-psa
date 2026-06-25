@@ -571,26 +571,30 @@ export async function fetchProjectActivities(
         if (hasProjectIds || hasPhaseIds) {
           queryBuilder.where(function() {
             if (hasProjectIds) {
-              this.whereExists(function() {
-                this.select(db.raw(1))
-                  .from("project_phases")
+              this.whereExists(
+                createTenantScopedQuery(trx, {
+                  table: "project_phases",
+                  tenant,
+                }).builder
+                  .select(db.raw(1))
                   .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-                  .andWhere("project_phases.tenant", tenant)
-                  .whereIn("project_phases.project_id", filters.projectIds!);
-              });
+                  .whereIn("project_phases.project_id", filters.projectIds!)
+              );
             }
             if (hasPhaseIds) {
               this.orWhereIn("project_tasks.phase_id", filters.phaseIds!);
             }
           });
         } else if (filters.projectId) {
-          queryBuilder.whereExists(function() {
-            this.select(db.raw(1))
-              .from("project_phases")
+          queryBuilder.whereExists(
+            createTenantScopedQuery(trx, {
+              table: "project_phases",
+              tenant,
+            }).builder
+              .select(db.raw(1))
               .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-              .andWhere("project_phases.tenant", tenant)
-              .andWhere("project_phases.project_id", filters.projectId);
-          });
+              .andWhere("project_phases.project_id", filters.projectId)
+          );
         }
 
         // Apply singular phase filter if provided (backward compat, combined with AND)
@@ -605,13 +609,15 @@ export async function fetchProjectActivities(
 
         // Exclude tasks whose project is in the excluded set
         if (filters.excludeProjectIds && filters.excludeProjectIds.length > 0) {
-          queryBuilder.whereNotExists(function() {
-            this.select(db.raw(1))
-              .from("project_phases")
+          queryBuilder.whereNotExists(
+            createTenantScopedQuery(trx, {
+              table: "project_phases",
+              tenant,
+            }).builder
+              .select(db.raw(1))
               .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-              .andWhere("project_phases.tenant", tenant)
-              .whereIn("project_phases.project_id", filters.excludeProjectIds!);
-          });
+              .whereIn("project_phases.project_id", filters.excludeProjectIds!)
+          );
         }
 
         // Exclude tasks in the excluded phases
