@@ -398,7 +398,6 @@ export const deleteUser = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
-      const tenantOrUndef = tenantId || undefined;
       const actorId = user.user_id;
       const tenantScopedTable = (table: string) => createTenantScopedQuery(trx, {
         table,
@@ -541,23 +540,23 @@ export const deleteUser = withAuth(async (
       // ── EE-only tables (guarded) ──────────────────────────────────────
       if (isEnterprise) {
         if (await trx.schema.hasTable('platform_notification_recipients')) {
-          await trx('platform_notification_recipients')
-            .where({ user_id: userId, tenant: tenantOrUndef })
+          await tenantScopedTable('platform_notification_recipients')
+            .where({ user_id: userId })
             .del();
         }
         if (await trx.schema.hasTable('user_auth_accounts')) {
-          await trx('user_auth_accounts')
-            .where({ user_id: userId, tenant: tenantOrUndef })
+          await tenantScopedTable('user_auth_accounts')
+            .where({ user_id: userId })
             .del();
         }
         if (await trx.schema.hasTable('chats')) {
-          await trx('chats')
-            .where({ user_id: userId, tenant: tenantOrUndef })
+          await tenantScopedTable('chats')
+            .where({ user_id: userId })
             .update({ user_id: null });
         }
       }
 
-      const deleted = await trx('users').where({ user_id: userId, tenant: tenantOrUndef }).del();
+      const deleted = await tenantScopedTable('users').where({ user_id: userId }).del();
       if (!deleted || deleted === 0) {
         throw new Error('User record not found or could not be deleted');
       }
