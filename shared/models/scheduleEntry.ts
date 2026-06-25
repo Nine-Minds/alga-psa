@@ -961,9 +961,8 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting schedule entries by work item');
     }
 
-    const entries = (await knexOrTrx('schedule_entries')
+    const entries = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .where({
-        'schedule_entries.tenant': tenant,
         work_item_id: workItemId,
         work_item_type: workItemType,
       })
@@ -999,9 +998,8 @@ const ScheduleEntry = {
     }
 
     // Get entry IDs assigned to this user
-    let assignmentQuery = knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
-      .andWhere('user_id', userId)
+    const assignmentQuery = tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('user_id', userId)
       .select('entry_id');
 
     const assignmentResult = await assignmentQuery;
@@ -1010,8 +1008,7 @@ const ScheduleEntry = {
     if (entryIds.length === 0) return [];
 
     // Get the actual entries
-    let entriesQuery = knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    let entriesQuery = tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .whereIn('entry_id', entryIds);
 
     if (start && end) {

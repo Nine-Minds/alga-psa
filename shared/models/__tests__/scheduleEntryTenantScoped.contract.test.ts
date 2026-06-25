@@ -25,6 +25,10 @@ const updateDeleteSection = sectionBetween(
   'update: async',
   'getByWorkItem: async'
 );
+const workItemAndUserSection = sectionBetween(
+  'getByWorkItem: async',
+  'parseRecurrencePattern: ('
+);
 
 describe('schedule entry model tenant-scoped query contract', () => {
   it('uses the structural tenant-scoped query helper for schedule entry roots', () => {
@@ -54,5 +58,12 @@ describe('schedule entry model tenant-scoped query contract', () => {
     expect(updateDeleteSection).toContain("tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)");
     expect(updateDeleteSection).not.toContain(".where('schedule_entries.tenant', tenant)");
     expect(updateDeleteSection).not.toContain(".where('schedule_entry_assignees.tenant', tenant)");
+  });
+
+  it('uses structural tenant scoping for work-item and user retrieval roots', () => {
+    expect(workItemAndUserSection).toContain("tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)");
+    expect(workItemAndUserSection).toContain("tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)");
+    expect(workItemAndUserSection).not.toContain(".where('schedule_entries.tenant', tenant)");
+    expect(workItemAndUserSection).not.toContain(".where('schedule_entry_assignees.tenant', tenant)");
   });
 });
