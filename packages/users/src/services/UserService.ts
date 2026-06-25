@@ -1108,8 +1108,7 @@ export class UserService extends BaseService<IUser> {
       activityStats
     ] = await Promise.all([
       // Total and active/inactive counts
-      knex('users')
-        .where('tenant', context.tenant)
+      this.buildTenantScopedQuery(knex, context)
         .select(
           knex.raw('COUNT(*) as total_users'),
           knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_users'),
@@ -1118,13 +1117,16 @@ export class UserService extends BaseService<IUser> {
         .first(),
 
       // Users by type
-      knex('users')
-        .where('tenant', context.tenant)
+      this.buildTenantScopedQuery(knex, context)
         .groupBy('user_type')
         .select('user_type', knex.raw('COUNT(*) as count')),
 
       // Users by role
-      knex('users as u')
+      createTenantScopedQuery(knex, {
+        table: 'users as u',
+        alias: 'u',
+        tenant: context.tenant,
+      }).builder
         .join('user_roles as ur', function() {
           this.on('u.user_id', '=', 'ur.user_id')
               .andOn('u.tenant', '=', 'ur.tenant');
@@ -1133,13 +1135,11 @@ export class UserService extends BaseService<IUser> {
           this.on('ur.role_id', '=', 'r.role_id')
               .andOn('ur.tenant', '=', 'r.tenant');
         })
-        .where('u.tenant', context.tenant)
         .groupBy('r.role_name')
         .select('r.role_name', knex.raw('COUNT(DISTINCT u.user_id) as count')),
 
       // Security stats
-      knex('users')
-        .where('tenant', context.tenant)
+      this.buildTenantScopedQuery(knex, context)
         .select(
           knex.raw('COUNT(CASE WHEN two_factor_enabled = true THEN 1 END) as users_with_2fa'),
           knex.raw('COUNT(*) as users_without_avatar') // Stub for now since image column might not exist
