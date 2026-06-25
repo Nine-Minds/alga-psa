@@ -40,4 +40,36 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(deleteSection).not.toContain("trx('contact_phone_numbers')");
     expect(deleteSection).not.toContain("trx('document_block_content')");
   });
+
+  it('uses structural tenant scoping for invitation and contact update roots', () => {
+    const invitationSection = sectionBetween('export const getContactsEligibleForInvitation', 'export const addContact');
+    const phoneTypeSection = sectionBetween('export const listContactPhoneTypeSuggestions', 'export const getCustomPhoneTypeUsageCount');
+    const updateSection = sectionBetween('export const updateContact', 'export const updateContactsForClient');
+    const updateClientContactsSection = sectionBetween('export const updateContactsForClient', 'export async function exportContactsToCSV');
+
+    expect(invitationSection).toContain("tenantScopedTable(trx, 'contacts as c', tenant)");
+    expect(invitationSection).not.toContain("trx('contacts as c')");
+    expect(invitationSection).not.toContain(".where('c.tenant', tenant)");
+
+    expect(phoneTypeSection).toContain("tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)");
+    expect(phoneTypeSection).not.toContain("trx('contact_phone_type_definitions')");
+    expect(phoneTypeSection).not.toContain('.where({ tenant })');
+
+    expect(updateSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(updateSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
+    expect(updateSection).toContain("tenantScopedTable(trx, 'inbound_ticket_defaults', tenant)");
+    expect(updateSection).toContain("tenantScopedTable(trx, 'users', tenant)");
+    expect(updateSection).not.toContain("trx('contacts')");
+    expect(updateSection).not.toContain("trx('clients')");
+    expect(updateSection).not.toContain("trx('inbound_ticket_defaults')");
+    expect(updateSection).not.toContain("trx('users')");
+    expect(updateSection).not.toContain(".where({ email: contactData.email!.trim().toLowerCase(), tenant })");
+    expect(updateSection).not.toContain('tenant, user_type');
+
+    expect(updateClientContactsSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
+    expect(updateClientContactsSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(updateClientContactsSection).not.toContain(".where({ client_id: clientId, tenant })");
+    expect(updateClientContactsSection).not.toContain("trx('clients')");
+    expect(updateClientContactsSection).not.toContain("trx('contacts')");
+  });
 });

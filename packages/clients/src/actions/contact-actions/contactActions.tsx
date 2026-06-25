@@ -332,7 +332,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
 
   try {
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = trx('contacts as c')
+      const q = tenantScopedTable(trx, 'contacts as c', tenant)
         .leftJoin('users as u', function(this: Knex.JoinClause) {
           this.on('u.contact_id', 'c.contact_name_id')
             .andOn('u.tenant', 'c.tenant')
@@ -342,7 +342,6 @@ export const getContactsEligibleForInvitation = withAuth(async (
           this.on('c.client_id', 'comp.client_id')
             .andOn('comp.tenant', 'c.tenant');
         })
-        .where('c.tenant', tenant)
         .whereNull('u.user_id')
         .modify((qb: Knex.QueryBuilder) => {
           if (clientId) qb.andWhere('c.client_id', clientId);
@@ -468,8 +467,7 @@ export const listContactPhoneTypeSuggestions = withAuth(async (
   }
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('contact_phone_type_definitions')
-      .where({ tenant })
+    const rows = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .orderBy('label', 'asc')
       .select('label');
 
@@ -556,8 +554,8 @@ export const updateContact = withAuth(async (
       }
 
       const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('contacts')
-          .where({ email: contactData.email!.trim().toLowerCase(), tenant })
+        return await tenantScopedTable(trx, 'contacts', tenant)
+          .where({ email: contactData.email!.trim().toLowerCase() })
           .whereNot({ contact_name_id: contactData.contact_name_id })
           .first();
       });
@@ -569,8 +567,8 @@ export const updateContact = withAuth(async (
 
     if ('client_id' in contactData && contactData.client_id) {
       const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('clients')
-          .where({ client_id: contactData.client_id, tenant })
+        return await tenantScopedTable(trx, 'clients', tenant)
+          .where({ client_id: contactData.client_id })
           .first();
       });
 
@@ -587,8 +585,8 @@ export const updateContact = withAuth(async (
     ) {
       const inboundDestinationId = String(inboundDestinationIdRaw).trim();
       const destination = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('inbound_ticket_defaults')
-          .where({ id: inboundDestinationId, tenant })
+        return await tenantScopedTable(trx, 'inbound_ticket_defaults', tenant)
+          .where({ id: inboundDestinationId })
           .first();
       });
 
@@ -626,8 +624,8 @@ export const updateContact = withAuth(async (
       }, tenant, trx);
 
       if (contactData.is_inactive === true) {
-        await trx('users')
-          .where({ contact_id: contactData.contact_name_id, tenant, user_type: 'client' })
+        await tenantScopedTable(trx, 'users', tenant)
+          .where({ contact_id: contactData.contact_name_id, user_type: 'client' })
           .update({ is_inactive: true });
       }
 
@@ -735,8 +733,8 @@ export const updateContactsForClient = withAuth(async (
     await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts', db);
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
+      return await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
     });
 
@@ -796,8 +794,8 @@ export const updateContactsForClient = withAuth(async (
     }, {});
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const updated = await trx('contacts')
-        .where({ client_id: clientId, tenant })
+      const updated = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId })
         .update({
           ...sanitizedData,
           updated_at: new Date().toISOString()
