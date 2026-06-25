@@ -3820,8 +3820,7 @@ export const getFolderStats = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const rows = await trx('documents')
-      .where('tenant', tenant)
+    const rows = await tenantScopedTable(trx, 'documents', tenant)
       .where(function() {
         this.where('folder_path', folderPath)
           .orWhere('folder_path', 'like', `${folderPath}/%`);
@@ -3836,7 +3835,7 @@ export const getFolderStats = withAuth(async (
     })) as IDocument[];
     const authorizedDocuments = await authorizeAndRedactDocuments(trx, tenant, user, authorizationInput);
     const authorizedDocumentIds = new Set(authorizedDocuments.map((document) => document.document_id));
-    const totalSize = rows.reduce((sum, row: { document_id: string; file_size: number | string | null }) => {
+    const totalSize = rows.reduce((sum: number, row: { document_id: string; file_size: number | string | null }) => {
       if (!authorizedDocumentIds.has(row.document_id)) {
         return sum;
       }
@@ -3907,8 +3906,7 @@ export const createFolder = withAuth(async (
   // Get parent folder ID if exists
   let parentFolderId = null;
   if (parentPath) {
-    const parentFolderQuery = knex('document_folders')
-      .where('tenant', tenant)
+    const parentFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
       .where('folder_path', parentPath);
 
     if (hasEntityScope) {
@@ -3929,8 +3927,7 @@ export const createFolder = withAuth(async (
   }
 
   // Check if folder already exists
-  const existingFolderQuery = knex('document_folders')
-    .where('tenant', tenant)
+  const existingFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
     .where('folder_path', folderPath);
 
   if (hasEntityScope) {
@@ -3976,8 +3973,7 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
 
   const { knex } = await createTenantKnex();
 
-  const documentsInFolder = await knex('documents')
-    .where('tenant', tenant)
+  const documentsInFolder = await tenantScopedTable(knex, 'documents', tenant)
     .where('folder_path', folderPath)
     .select('document_id', 'created_by', 'is_client_visible');
 
@@ -3995,8 +3991,7 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
   }
 
   // Check if folder has documents
-  const docCount = await knex('documents')
-    .where('tenant', tenant)
+  const docCount = await tenantScopedTable(knex, 'documents', tenant)
     .where('folder_path', folderPath)
     .count('* as count')
     .first();
@@ -4006,8 +4001,7 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
   }
 
   // Check if folder has subfolders
-  const subfolderCount = await knex('document_folders')
-    .where('tenant', tenant)
+  const subfolderCount = await tenantScopedTable(knex, 'document_folders', tenant)
     .where('folder_path', 'like', `${folderPath}/%`)
     .count('* as count')
     .first();
@@ -4017,8 +4011,7 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
   }
 
   // Delete folder
-  await knex('document_folders')
-    .where('tenant', tenant)
+  await tenantScopedTable(knex, 'document_folders', tenant)
     .where('folder_path', folderPath)
     .delete();
 });
