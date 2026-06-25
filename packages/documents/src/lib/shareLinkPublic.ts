@@ -6,7 +6,7 @@
  * Next.js API routes without triggering server-action authentication.
  */
 
-import { getConnection } from '@alga-psa/db';
+import { createTenantScopedQuery, getConnection } from '@alga-psa/db';
 import bcrypt from 'bcryptjs';
 import type { IShareLinkWithDocument, IValidateShareTokenResult } from '../actions/shareLinkActions';
 
@@ -87,10 +87,12 @@ export async function verifySharePassword(
 ): Promise<boolean> {
   const knex = await getConnection();
 
-  const shareLink = await knex('document_share_links')
+  const shareLink = await createTenantScopedQuery(knex, {
+    table: 'document_share_links',
+    tenant,
+  }).builder
     .select('password_hash')
     .where('token', token)
-    .andWhere('tenant', tenant)
     .first();
 
   if (!shareLink || !shareLink.password_hash) {
@@ -142,8 +144,10 @@ export async function incrementDownloadCount(
 ): Promise<void> {
   const knex = await getConnection();
 
-  await knex('document_share_links')
+  await createTenantScopedQuery(knex, {
+    table: 'document_share_links',
+    tenant,
+  }).builder
     .where('token', token)
-    .andWhere('tenant', tenant)
     .increment('download_count', 1);
 }
