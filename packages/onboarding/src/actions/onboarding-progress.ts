@@ -3,7 +3,7 @@
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
-import { createTenantKnex, getConnection } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, getConnection } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import {
@@ -128,8 +128,10 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
     try {
       const adminDb = await getAdminConnection();
       type LinkAggregateRow = { total?: string | number | null; latest_updated?: Date | string | null };
-      const aggregate = (await adminDb('user_auth_accounts')
-        .where({ tenant: tenantId })
+      const aggregate = (await createTenantScopedQuery(adminDb, {
+        table: 'user_auth_accounts',
+        tenant: tenantId,
+      }).builder
         .count('user_id as total')
         .max({ latest_updated: 'updated_at' })
         .first()) as LinkAggregateRow | undefined;
@@ -305,8 +307,10 @@ async function resolvePortalCustomDomainSubstep(tenantId: string): Promise<Onboa
 
 async function resolvePortalBrandingSubstep(tenantId: string): Promise<OnboardingSubstepServerState> {
   const knex = await getConnection(tenantId);
-  const row = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const row = await createTenantScopedQuery(knex, {
+    table: 'tenant_settings',
+    tenant: tenantId,
+  }).builder
     .select('settings', 'updated_at', 'created_at')
     .first();
 
@@ -328,8 +332,10 @@ async function resolvePortalInviteSubstep(tenantId: string): Promise<OnboardingS
   const knex = await getConnection(tenantId);
 
   type InviteAggregateRow = { total?: string | number | null; latest_created?: Date | string | null };
-  const aggregate = (await knex('portal_invitations')
-    .where({ tenant: tenantId })
+  const aggregate = (await createTenantScopedQuery(knex, {
+    table: 'portal_invitations',
+    tenant: tenantId,
+  }).builder
     .count('* as total')
     .max({ latest_created: 'created_at' })
     .first()) as InviteAggregateRow | undefined;
@@ -353,8 +359,10 @@ async function resolveImportStep(tenantId: string): Promise<OnboardingStepServer
   try {
     const knex = await getConnection(tenantId);
     type ContactAggregateRow = { total?: string | number | null; latest_created?: Date | string | null };
-    const contactAggregate = (await knex('contacts')
-      .where({ tenant: tenantId })
+    const contactAggregate = (await createTenantScopedQuery(knex, {
+      table: 'contacts',
+      tenant: tenantId,
+    }).builder
       .count('* as total')
       .max({ latest_created: 'created_at' })
       .first()) as ContactAggregateRow | undefined;
@@ -407,8 +415,10 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
 
     // Query calendar providers directly to avoid permission checks
     // The onboarding progress should be visible regardless of specific permissions
-    const providers = await knex('calendar_providers')
-      .where({ tenant: tenantId })
+    const providers = await createTenantScopedQuery(knex, {
+      table: 'calendar_providers',
+      tenant: tenantId,
+    }).builder
       .orderBy('created_at', 'desc') as CalendarProviderConfig[];
 
     const connected = providers.filter((provider) => provider.active && provider.connection_status === 'connected');
@@ -538,8 +548,10 @@ async function resolveInboundEmailProviderSubstep(tenantId: string): Promise<Onb
   const knex = await getConnection(tenantId);
 
   type ProviderAggregateRow = { total?: string | number | null; latest_updated?: Date | string | null };
-  const aggregate = (await knex('email_providers')
-    .where({ tenant: tenantId })
+  const aggregate = (await createTenantScopedQuery(knex, {
+    table: 'email_providers',
+    tenant: tenantId,
+  }).builder
     .count('* as total')
     .max({ latest_updated: 'updated_at' })
     .first()) as ProviderAggregateRow | undefined;
