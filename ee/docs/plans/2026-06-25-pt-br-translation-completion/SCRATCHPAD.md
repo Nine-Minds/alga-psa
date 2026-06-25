@@ -131,3 +131,11 @@ npm run migrate
 - Tightened the glossary allowlist for legitimate identical billing/layout terms (`Subtotal`, `Item`, `Visual`, `Vertical`, `Horizontal`, `Normal`, `Zoom`, `Xero`, `T&M`) and narrow placeholder patterns (`Item {{index}}`, `PO {{number}}`, etc.).
 - Translated real UI actions `Clone`→`Clonar` and `Clear`→`Limpar`; adjusted product-area Billing labels to `Faturamento` while leaving charge/frequency contexts as natural `cobrança`.
 - Implemented T020-T035. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace msp/billing --namespace msp/billing-settings --namespace msp/invoicing --namespace msp/credits --namespace msp/quotes --namespace msp/contracts --namespace msp/contract-lines --namespace features/billing --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).
+
+## 2026-06-25 — i18n-projects-time group
+- Implemented F021-F026: completed pt-BR translations for `features/projects.json`, `projects.json`, `msp/schedule.json`, `msp/dispatch.json`, `msp/calendar.json`, and `msp/time-entry.json`.
+- Re-audited all 2,267 keys in the group and marked them reviewed in `pt-review-state.json` with reviewer `codex-pt-br-pass`.
+- Fixed a placeholder regression from glossary post-processing (`{{chamado}}` back to `{{ticket}}`) and kept `validate-translations.cjs` as the guard for future placeholder drift.
+- Tightened the glossary allowlist for legitimate identical project/time labels and compact formatting (`Kanban`, `h`, `download`, UUID placeholders, `Status: {{status}}`, `({{hours}}h)`, `{{type}} • {{client}}`).
+- Fixed obvious machine-translation artifacts found during sample review: `Claro`→`Limpar`, `Download`→`Baixar`, `Link`→`Vincular`, and `Cessionário`→`Responsável` for assignee labels.
+- Implemented T036-T047. Verification: `node scripts/validate-translations.cjs` passed. `node scripts/audit-pt-br.cjs --namespace features/projects --namespace projects --namespace msp/schedule --namespace msp/dispatch --namespace msp/calendar --namespace msp/time-entry --no-write-report` passed with `untranslated=0 forbidden=0 unreviewed=0`. `node --test scripts/tests/pt-br-glossary.test.mjs scripts/tests/pt-br-audit-tooling.test.mjs` passed (6 tests).

@@ -317,7 +317,7 @@
   {
     "id": "T036",
     "description": "validate-translations.cjs passes for pt features/projects.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F021"
@@ -326,7 +326,7 @@
   {
     "id": "T037",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for features/projects.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F021"
@@ -335,7 +335,7 @@
   {
     "id": "T038",
     "description": "validate-translations.cjs passes for pt projects.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F022"
@@ -344,7 +344,7 @@
   {
     "id": "T039",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for projects.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F022"
@@ -353,7 +353,7 @@
   {
     "id": "T040",
     "description": "validate-translations.cjs passes for pt msp/schedule.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F023"
@@ -362,7 +362,7 @@
   {
     "id": "T041",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/schedule.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F023"
@@ -371,7 +371,7 @@
   {
     "id": "T042",
     "description": "validate-translations.cjs passes for pt msp/dispatch.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F024"
@@ -380,7 +380,7 @@
   {
     "id": "T043",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/dispatch.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F024"
@@ -389,7 +389,7 @@
   {
     "id": "T044",
     "description": "validate-translations.cjs passes for pt msp/calendar.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F025"
@@ -398,7 +398,7 @@
   {
     "id": "T045",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/calendar.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F025"
@@ -407,7 +407,7 @@
   {
     "id": "T046",
     "description": "validate-translations.cjs passes for pt msp/time-entry.json (keys present, no extras, interpolation + plural forms valid).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F026"
@@ -416,7 +416,7 @@
   {
     "id": "T047",
     "description": "audit-pt-br.cjs reports 0 untranslated (identical-to-en minus allowlist) and 0 forbidden-term violations for msp/time-entry.json.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "featureIds": [
       "F026"

@@ -2,7 +2,7 @@
   "projectPrint": {
     "tasks": {
       "fields": {
-        "assignee": "Atribuído a",
+        "assignee": "Responsável",
         "description": "Descrição",
         "dueDate": "Data de vencimento",
         "estimatedHours": "Horas estimadas",

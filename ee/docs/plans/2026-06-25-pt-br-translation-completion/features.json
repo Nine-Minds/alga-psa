@@ -216,7 +216,7 @@
   {
     "id": "F021",
     "description": "pt-BR complete for features/projects.json: translate the 1247 remaining key(s) and re-audit all 1342 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "prdRefs": [
       "3.2",
@@ -227,7 +227,7 @@
   {
     "id": "F022",
     "description": "pt-BR complete for projects.json: translate the 1 remaining key(s) and re-audit all 7 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "prdRefs": [
       "3.2",
@@ -238,7 +238,7 @@
   {
     "id": "F023",
     "description": "pt-BR complete for msp/schedule.json: translate the 304 remaining key(s) and re-audit all 380 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "prdRefs": [
       "3.2",
@@ -249,7 +249,7 @@
   {
     "id": "F024",
     "description": "pt-BR complete for msp/dispatch.json: translate the 98 remaining key(s) and re-audit all 98 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "prdRefs": [
       "3.2",
@@ -260,7 +260,7 @@
   {
     "id": "F025",
     "description": "pt-BR complete for msp/calendar.json: translate the 13 remaining key(s) and re-audit all 139 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "prdRefs": [
       "3.2",
@@ -271,7 +271,7 @@
   {
     "id": "F026",
     "description": "pt-BR complete for msp/time-entry.json: translate the 268 remaining key(s) and re-audit all 301 key(s); 0 keys identical to English (except allowlist), 0 glossary violations, valid {{interpolation}} + CLDR plural forms.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "i18n-projects-time",
     "prdRefs": [
       "3.2",
