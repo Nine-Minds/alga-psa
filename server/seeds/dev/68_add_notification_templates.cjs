@@ -101,6 +101,8 @@ const TEMPLATE_GETTERS = [
   surveyTicketClosed,
 ];
 
+exports.TEMPLATE_GETTERS = TEMPLATE_GETTERS;
+
 exports.seed = async function (knex) {
   console.log('Seed 68: Upserting all email templates from source-of-truth files...');
 

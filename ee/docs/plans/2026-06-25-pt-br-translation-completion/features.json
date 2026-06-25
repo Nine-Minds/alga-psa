@@ -607,8 +607,8 @@
   },
   {
     "id": "F057",
-    "description": "Create production migration server/migrations/<ts>_add_portuguese_email_templates.cjs that upserts all 36 pt rows into system_email_templates (language_code=pt, correct notification_subtype_id), mirroring the Polish migration; idempotent up()/down().",
-    "implemented": false,
+    "description": "Create production migration server/migrations/<ts>_add_portuguese_email_templates.cjs that upserts all 34 source-of-truth pt rows into system_email_templates (language_code=pt, correct notification_subtype_id), mirroring the dev seed template list; idempotent up()/down().",
+    "implemented": true,
     "commitGroup": "email-pt-migration",
     "prdRefs": [
       "4.3",
@@ -618,7 +618,7 @@
   {
     "id": "F058",
     "description": "Verify the dev seed (server/seeds/dev/68_add_notification_templates.cjs via upsertEmailTemplate) picks up the new pt blocks so fresh DBs get pt automatically.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-migration",
     "prdRefs": [
       "4.5"

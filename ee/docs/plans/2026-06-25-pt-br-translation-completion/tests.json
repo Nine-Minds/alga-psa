@@ -946,8 +946,8 @@
   },
   {
     "id": "T106",
-    "description": "Migration up() inserts 36 pt rows into system_email_templates; re-running is a no-op; down() removes only language_code=pt rows.",
-    "implemented": false,
+    "description": "Migration up() inserts 34 source-of-truth pt rows into system_email_templates; re-running is a no-op via (name, language_code) upsert; down() removes only language_code=pt rows for those templates.",
+    "implemented": true,
     "commitGroup": "email-pt-migration",
     "featureIds": [
       "F057"
@@ -956,7 +956,7 @@
   {
     "id": "T107",
     "description": "After migrate, emailLocaleResolver returning pt selects the pt template (not English fallback) for a client-portal recipient.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-migration",
     "featureIds": [
       "F057"
@@ -965,7 +965,7 @@
   {
     "id": "T108",
     "description": "Every pt email row has the same {{variable}} tokens as its English counterpart (no dropped/renamed placeholders).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "email-pt-migration",
     "featureIds": [
       "F057"

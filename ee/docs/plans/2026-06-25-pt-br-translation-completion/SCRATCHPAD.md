@@ -201,3 +201,10 @@ npm run migrate
 - Implemented T104/T105 by extending `scripts/tests/pt-br-email-templates.test.mjs` to cover this 9-template group along with the prior completed email groups.
 - Verification: `node --test scripts/tests/pt-br-email-templates.test.mjs` passed (2 tests), checking non-empty `pt` output, exact placeholder parity with English, no `undefined`, and no forbidden glossary terms.
 - Gotcha for next groups: F054-F056 name 34 source templates, while F057/T106 refer to 36 production email rows. Reconcile the authoritative DB/template count before marking migration/parity work complete.
+
+## 2026-06-25 — email-pt-migration group
+- Reconciled template count: the dev seed `server/seeds/dev/68_add_notification_templates.cjs` has 34 source-of-truth email template getters, and the PRD category breakdown also sums to 34 (auth 5 + ticketing 7 + invoices 4 + credits 1 + projects 8 + appointments 5 + time 3 + surveys 1). The earlier “36” wording is stale; updated F057/T106 descriptions to say 34 source-of-truth rows so migration and seed parity remain exact.
+- Implemented F057: added `server/migrations/20260625120000_add_portuguese_email_templates.cjs`. It filters each source template to its `pt` variant, resolves `notification_subtypes.name` to IDs, upserts rows into `system_email_templates` on `(name, language_code)`, and `down()` deletes only `language_code='pt'` rows for those template names.
+- Implemented F058: exported `TEMPLATE_GETTERS` from the dev seed for test visibility; seed behavior is unchanged, and every getter now returns a `pt` translation from the source files.
+- Implemented T106-T108 with `scripts/tests/pt-br-email-migration.test.mjs`: verifies migration/seed template-name parity, 34 pt rows, exact placeholder parity with English, scoped idempotent upsert/down behavior, and that `pt` rows satisfy the system-template locale lookup before English fallback.
+- Verification: `node --test scripts/tests/pt-br-email-migration.test.mjs` passed (4 tests). `node --test scripts/tests/pt-br-email-templates.test.mjs` passed (2 tests).
