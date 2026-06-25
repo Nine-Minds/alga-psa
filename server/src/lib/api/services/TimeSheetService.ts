@@ -397,8 +397,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Cannot submit time sheet without time entries');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'SUBMITTED',
             submitted_at: new Date(),
@@ -443,8 +443,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Time sheet must be submitted before approval');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'APPROVED',
             approved_at: new Date(),
@@ -454,8 +454,11 @@ export class TimeSheetService extends BaseService<any> {
           });
   
         // Update all time entries to approved status
-        await trx('time_entries')
-          .where({ time_sheet_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'time_entries',
+          tenant: context.tenant,
+        }).builder
+          .where({ time_sheet_id: id })
           .update({
             approval_status: 'APPROVED',
             approved_at: new Date(),
@@ -500,8 +503,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Time sheet must be submitted before requesting changes');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
             change_reason: data.change_reason,
@@ -575,8 +578,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new Error('Cannot reverse approval of time sheet that has been invoiced');
         }
   
-        await trx(this.tableName)
-          .where({ id, tenant: context.tenant })
+        await this.buildTenantScopedQuery(trx, context)
+          .where({ id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
             approved_at: null,
@@ -588,8 +591,11 @@ export class TimeSheetService extends BaseService<any> {
           });
   
         // Revert time entries to changes requested status
-        await trx('time_entries')
-          .where({ time_sheet_id: id, tenant: context.tenant })
+        await createTenantScopedQuery(trx, {
+          table: 'time_entries',
+          tenant: context.tenant,
+        }).builder
+          .where({ time_sheet_id: id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
             approved_at: null,
