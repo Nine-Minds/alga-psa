@@ -2226,11 +2226,17 @@ export class TeamService extends BaseService<ITeam> {
     return await knex.transaction(async (trx) => {
       // Verify both teams exist and belong to the tenant
       const [team, parentTeam] = await Promise.all([
-        trx('teams')
-          .where({ team_id: teamId, tenant: context.tenant })
+        createTenantScopedQuery(trx, {
+          table: 'teams',
+          tenant: context.tenant,
+        }).builder
+          .where('team_id', teamId)
           .first(),
-        trx('teams')
-          .where({ team_id: parentTeamId, tenant: context.tenant })
+        createTenantScopedQuery(trx, {
+          table: 'teams',
+          tenant: context.tenant,
+        }).builder
+          .where('team_id', parentTeamId)
           .first()
       ]);
 
@@ -2243,11 +2249,13 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Check if hierarchy already exists
-      const existingHierarchy = await trx('team_hierarchy')
+      const existingHierarchy = await createTenantScopedQuery(trx, {
+        table: 'team_hierarchy',
+        tenant: context.tenant,
+      }).builder
         .where({
           child_team_id: teamId,
-          parent_team_id: parentTeamId,
-          tenant: context.tenant
+          parent_team_id: parentTeamId
         })
         .first();
 
@@ -2292,11 +2300,11 @@ export class TeamService extends BaseService<ITeam> {
   async removeFromHierarchy(teamId: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const result = await knex('team_hierarchy')
-      .where({
-        child_team_id: teamId,
-        tenant: context.tenant
-      })
+    const result = await createTenantScopedQuery(knex, {
+      table: 'team_hierarchy',
+      tenant: context.tenant,
+    }).builder
+      .where('child_team_id', teamId)
       .delete();
 
     if (result === 0) {
@@ -2314,11 +2322,11 @@ export class TeamService extends BaseService<ITeam> {
     tenant: string
   ): Promise<boolean> {
     // Get all parent teams of the proposed parent
-    const parents = await trx('team_hierarchy')
-      .where({
-        child_team_id: parentId,
-        tenant
-      })
+    const parents = await createTenantScopedQuery(trx, {
+      table: 'team_hierarchy',
+      tenant,
+    }).builder
+      .where('child_team_id', parentId)
       .pluck('parent_team_id');
 
     // If the child is in the parent's hierarchy, it would create a circle
