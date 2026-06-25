@@ -18,6 +18,14 @@ function sectionBetween(source: string, startMarker: string, endMarker: string):
   return source.slice(start, end);
 }
 
+function sectionFrom(source: string, startMarker: string): string {
+  const start = source.indexOf(startMarker);
+
+  expect(start).toBeGreaterThanOrEqual(0);
+
+  return source.slice(start);
+}
+
 describe('contract line repositories tenant-scoped query contract', () => {
   const repositoryPaths = [
     'packages/billing/src/repositories/contractLineRepository.ts',
@@ -57,6 +65,20 @@ describe('contract line repositories tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')");
     expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')");
     expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_defaults')");
+
+    expect(section).not.toMatch(/\.where\(\{\s*tenant[,}]/);
+    expect(section).not.toMatch(/\.where\(\{\s*'[^']*\.tenant':\s*tenant/);
+    expect(section).not.toMatch(/\.where\(['"]tenant['"],\s*tenant\)/);
+  });
+
+  it.each(repositoryPaths)('uses structural tenant scoping for line add/remove/update/rate roots in %s', (relativePath) => {
+    const source = readRepoFile(relativePath);
+    const section = sectionFrom(source, 'export async function addContractLine');
+
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_template_lines')");
+    expect(section).toContain("tenantScopedTable(trx, tenant, 'contract_lines')");
+    expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_template_lines')");
+    expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_lines')");
 
     expect(section).not.toMatch(/\.where\(\{\s*tenant[,}]/);
     expect(section).not.toMatch(/\.where\(\{\s*'[^']*\.tenant':\s*tenant/);
