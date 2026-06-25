@@ -31,6 +31,8 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     const mentionedUsersSection = sectionBetween('async function findMentionedUsers', 'async function handleTaskCommentAdded');
     const taskCommentAddedSection = sectionBetween('async function handleTaskCommentAdded', 'async function handleTaskCommentUpdated');
     const taskCommentUpdatedSection = sectionBetween('async function handleTaskCommentUpdated', 'async function handleTicketCommentAdded');
+    const ticketCommentAddedSection = sectionBetween('async function handleTicketCommentAdded', 'async function handleTicketCommentUpdated');
+    const ticketCommentUpdatedSection = sectionBetween('async function handleTicketCommentUpdated', 'async function handleUserMentionedInDocument');
 
     expect(source).toContain("import { createTenantScopedQuery, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
@@ -106,5 +108,18 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     expect(taskCommentUpdatedSection).not.toContain(".where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })");
     expect(taskCommentUpdatedSection).not.toContain('.where({ user_id: userId, tenant: tenantId })');
     expect(taskCommentUpdatedSection).not.toContain(".andWhere('tenant', tenantId)");
+
+    expect(ticketCommentAddedSection).toContain("tenantScopedTable(db, 'tickets', tenantId)");
+    expect(ticketCommentAddedSection).toContain("tenantScopedTable(db, 'users', tenantId)");
+    expect(ticketCommentAddedSection).not.toContain('.where({ ticket_id: ticketId, tenant: tenantId })');
+    expect(ticketCommentAddedSection).not.toContain('.where({ user_id: userId, tenant: tenantId })');
+    expect(ticketCommentAddedSection).not.toContain(".andWhere('tenant', tenantId)");
+    expect(ticketCommentAddedSection).not.toContain('tenant: tenantId,\n          user_type:');
+
+    expect(ticketCommentUpdatedSection).toContain("tenantScopedTable(db, 'tickets', tenantId)");
+    expect(ticketCommentUpdatedSection).toContain("tenantScopedTable(db, 'users', tenantId)");
+    expect(ticketCommentUpdatedSection).not.toContain('.where({ ticket_id: ticketId, tenant: tenantId })');
+    expect(ticketCommentUpdatedSection).not.toContain('.where({ user_id: userId, tenant: tenantId })');
+    expect(ticketCommentUpdatedSection).not.toContain(".andWhere('tenant', tenantId)");
   });
 });

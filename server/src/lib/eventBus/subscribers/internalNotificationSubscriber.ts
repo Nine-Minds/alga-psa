@@ -1543,9 +1543,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -1554,9 +1554,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1590,10 +1590,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .filter(id => id !== userId);
 
       if (resolvedMentionedUserIds.length > 0) {
-        const mentionedUsers = await db('users')
+        const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedMentionedUserIds)
-          .andWhere('tenant', tenantId);
+          .whereIn('user_id', resolvedMentionedUserIds);
 
         if (mentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1692,11 +1691,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Create notification for client contact if they have portal access (and are not the comment author)
     // Skip if comment is internal - internal comments are not visible to client portal users
     if (ticket.contact_name_id && !comment?.isInternal && ticketPortalUrl) {
-      const contactUser = await db('users')
+      const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
           contact_id: ticket.contact_name_id,
-          tenant: tenantId,
           user_type: 'client'
         })
         .first();
@@ -1761,9 +1759,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
-    const ticket = await db('tickets')
+    const ticket = await tenantScopedTable(db, 'tickets', tenantId)
       .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+      .where('ticket_id', ticketId)
       .first();
 
     if (!ticket) {
@@ -1772,9 +1770,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
     }
 
     // Get author name
-    const author = await db('users')
+    const author = await tenantScopedTable(db, 'users', tenantId)
       .select('first_name', 'last_name')
-      .where({ user_id: userId, tenant: tenantId })
+      .where('user_id', userId)
       .first();
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
@@ -1814,10 +1812,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await db('users')
+        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .andWhere('tenant', tenantId);
+          .whereIn('user_id', resolvedNewlyMentionedUserIds);
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
