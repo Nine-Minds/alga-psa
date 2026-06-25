@@ -2295,8 +2295,11 @@ export class FinancialService extends BaseService<ITransaction> {
           if (!targetClientId) {
             throw new Error('target_client_id is required for transfer');
           }
-          const credit = await knex('credit_tracking')
-            .where({ credit_id: creditId, tenant: context.tenant })
+          const credit = await createTenantScopedQuery(knex, {
+            table: 'credit_tracking',
+            tenant: context.tenant,
+          }).builder
+            .where('credit_id', creditId)
             .first();
           if (!credit) {
             throw new Error('Credit not found');
@@ -2311,8 +2314,11 @@ export class FinancialService extends BaseService<ITransaction> {
           result = transferred.data;
         } else {
           result = await withTransaction(knex, async (trx) => {
-            const credit = await trx('credit_tracking')
-              .where({ credit_id: creditId, tenant: context.tenant })
+            const credit = await createTenantScopedQuery(trx, {
+              table: 'credit_tracking',
+              tenant: context.tenant,
+            }).builder
+              .where('credit_id', creditId)
               .first();
             if (!credit) {
               throw new Error('Credit not found');
@@ -2325,8 +2331,11 @@ export class FinancialService extends BaseService<ITransaction> {
               }
               const remaining = Number(credit.remaining_amount);
               if (remaining > 0) {
-                const [client] = await trx('clients')
-                  .where({ client_id: credit.client_id, tenant: context.tenant })
+                const [client] = await createTenantScopedQuery(trx, {
+                  table: 'clients',
+                  tenant: context.tenant,
+                }).builder
+                  .where('client_id', credit.client_id)
                   .select('credit_balance');
                 const newBalance = Number(client?.credit_balance || 0) - remaining;
                 await trx('transactions').insert({
@@ -2342,12 +2351,18 @@ export class FinancialService extends BaseService<ITransaction> {
                   related_transaction_id: credit.transaction_id,
                   currency_code: credit.currency_code
                 });
-                await trx('clients')
-                  .where({ client_id: credit.client_id, tenant: context.tenant })
+                await createTenantScopedQuery(trx, {
+                  table: 'clients',
+                  tenant: context.tenant,
+                }).builder
+                  .where('client_id', credit.client_id)
                   .update({ credit_balance: newBalance, updated_at: now });
               }
-              const [updated] = await trx('credit_tracking')
-                .where({ credit_id: creditId, tenant: context.tenant })
+              const [updated] = await createTenantScopedQuery(trx, {
+                table: 'credit_tracking',
+                tenant: context.tenant,
+              }).builder
+                .where('credit_id', creditId)
                 .update({ is_expired: true, remaining_amount: 0, updated_at: now })
                 .returning('*');
               return updated;
@@ -2358,8 +2373,11 @@ export class FinancialService extends BaseService<ITransaction> {
               if (!newExpiration) {
                 throw new Error('parameters.expiration_date is required for extend_expiration');
               }
-              const [updated] = await trx('credit_tracking')
-                .where({ credit_id: creditId, tenant: context.tenant })
+              const [updated] = await createTenantScopedQuery(trx, {
+                table: 'credit_tracking',
+                tenant: context.tenant,
+              }).builder
+                .where('credit_id', creditId)
                 .update({ expiration_date: newExpiration, is_expired: false, updated_at: now })
                 .returning('*');
               return updated;
