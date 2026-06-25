@@ -799,10 +799,9 @@ export const updateTaskStatus = withAuth(async (
 
         try {
             // Get the current task to preserve its phase_id
-            const task = await trx<IProjectTask>('project_tasks')
+            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('task_id', taskId)
-                .andWhere('tenant', tenant)
-                .first();
+                .first() as IProjectTask | undefined;
             if (!task) {
                 throw new Error('Task not found');
             }
@@ -813,9 +812,8 @@ export const updateTaskStatus = withAuth(async (
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);
 
             // Validate the target status exists in the same project
-            const targetStatus = await trx('project_status_mappings')
+            const targetStatus = await tenantScopedTable(trx, 'project_status_mappings', tenant)
                 .where('project_status_mapping_id', projectStatusMappingId)
-                .andWhere('tenant', tenant)
                 .first();
 
             if (!targetStatus) {
@@ -830,8 +828,8 @@ export const updateTaskStatus = withAuth(async (
             let afterKey: string | null = null;
 
             if (beforeTaskId) {
-                const beforeTask = await trx('project_tasks')
-                    .where({ task_id: beforeTaskId, tenant })
+                const beforeTask = await tenantScopedTable(trx, 'project_tasks', tenant)
+                    .where({ task_id: beforeTaskId })
                     .select('order_key')
                     .first();
                 beforeKey = beforeTask?.order_key || null;
@@ -839,8 +837,8 @@ export const updateTaskStatus = withAuth(async (
             }
 
             if (afterTaskId) {
-                const afterTask = await trx('project_tasks')
-                    .where({ task_id: afterTaskId, tenant })
+                const afterTask = await tenantScopedTable(trx, 'project_tasks', tenant)
+                    .where({ task_id: afterTaskId })
                     .select('order_key')
                     .first();
                 afterKey = afterTask?.order_key || null;
@@ -849,11 +847,10 @@ export const updateTaskStatus = withAuth(async (
 
             // If no position specified (checking for both null and undefined), add to end of target status
             if ((beforeKey === null || beforeKey === undefined) && (afterKey === null || afterKey === undefined)) {
-                const lastTask = await trx('project_tasks')
+                const lastTask = await tenantScopedTable(trx, 'project_tasks', tenant)
                     .where({
                         phase_id: task.phase_id,
-                        project_status_mapping_id: projectStatusMappingId,
-                        tenant
+                        project_status_mapping_id: projectStatusMappingId
                     })
                     .orderBy('order_key', 'desc')
                     .first();
@@ -865,19 +862,17 @@ export const updateTaskStatus = withAuth(async (
             console.log('Generated new order key:', newOrderKey, 'between:', beforeKey, 'and', afterKey);
 
             // Update the task
-            await trx('project_tasks')
+            await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('task_id', taskId)
-                .andWhere('tenant', tenant)
                 .update({
                     project_status_mapping_id: projectStatusMappingId,
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
                 });
 
-            const updatedTask = await trx<IProjectTask>('project_tasks')
+            const updatedTask = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('task_id', taskId)
-                .andWhere('tenant', tenant)
-                .first();
+                .first() as IProjectTask | undefined;
             if (!updatedTask) {
                 throw new Error('Task not found after status update');
             }
