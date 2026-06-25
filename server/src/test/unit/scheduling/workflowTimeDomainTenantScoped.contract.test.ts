@@ -111,4 +111,30 @@ describe('workflow time domain tenant-scoped query contract', () => {
     expect(getEntrySection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
     expect(getEntrySection).not.toContain('.where({ tenant: tenantId, entry_id: entryId })');
   });
+
+  it('uses structural tenant scoping for find-entry, approval, and time-sheet summary roots', () => {
+    const filtersSection = sectionBetween('function applyFindEntriesFilters', 'export async function findWorkflowTimeEntries');
+    const findEntriesSection = sectionBetween('export async function findWorkflowTimeEntries', 'export async function setWorkflowTimeEntryApprovalStatus');
+    const approvalSection = sectionBetween('export async function setWorkflowTimeEntryApprovalStatus', 'export async function requestWorkflowTimeEntryChanges');
+    const summarySection = sectionBetween('async function summarizeTimeSheet', 'export async function findOrCreateWorkflowTimeSheet');
+
+    expect(filtersSection).not.toContain("query.where('te.tenant', tenantId)");
+    expect(findEntriesSection).toContain("tenantScopedTable(trx, 'time_entries as te', tenantId)");
+    expect(findEntriesSection).toContain('applyFindEntriesFilters(listQuery, input)');
+    expect(findEntriesSection).toContain('applyFindEntriesFilters(aggregateQuery, input)');
+    expect(findEntriesSection).not.toContain("trx('time_entries as te')");
+    expect(findEntriesSection).not.toContain('applyFindEntriesFilters(listQuery, tenantId, input)');
+    expect(source).not.toContain('applyFindEntriesFilters(query, tenantId,');
+
+    expect(approvalSection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
+    expect(approvalSection).toContain("tenantScopedTable(trx, 'time_sheets', tenantId)");
+    expect(approvalSection).not.toContain('.where({ tenant: tenantId, entry_id: entryId })');
+    expect(approvalSection).not.toContain('.where({ tenant: tenantId, id: existing.time_sheet_id })');
+
+    expect(summarySection).toContain("tenantScopedTable(trx, 'time_sheets as ts', tenantId)");
+    expect(summarySection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
+    expect(summarySection).toContain("tenantScopedTable(trx, 'time_sheet_comments', tenantId)");
+    expect(summarySection).not.toContain("'ts.tenant': tenantId");
+    expect(summarySection).not.toContain('.where({ tenant: tenantId, time_sheet_id: timeSheetId })');
+  });
 });

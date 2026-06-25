@@ -1752,11 +1752,8 @@ export async function getWorkflowTimeEntry(params: {
 
 function applyFindEntriesFilters(
   query: Knex.QueryBuilder,
-  tenantId: string,
   filters: WorkflowTimeFindEntriesInput
 ): void {
-  query.where('te.tenant', tenantId);
-
   if (filters.user_id) {
     query.andWhere('te.user_id', filters.user_id);
   }
@@ -1862,7 +1859,7 @@ export async function findWorkflowTimeEntries(params: {
 
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
 
-  const listQuery = trx('time_entries as te')
+  const listQuery = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .select(
       'te.entry_id',
       'te.user_id',
@@ -1883,16 +1880,16 @@ export async function findWorkflowTimeEntries(params: {
     .orderBy('te.start_time', 'desc')
     .limit(limit);
 
-  applyFindEntriesFilters(listQuery, tenantId, input);
+  applyFindEntriesFilters(listQuery, input);
 
-  const aggregateQuery = trx('time_entries as te')
+  const aggregateQuery = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .count<{ count: string }[]>('* as count')
     .sum<{ total_minutes: string | null }[]>({
       total_minutes: trx.raw('EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 60'),
     })
     .sum<{ billable_minutes: string | null }[]>('te.billable_duration as billable_minutes');
 
-  applyFindEntriesFilters(aggregateQuery, tenantId, input);
+  applyFindEntriesFilters(aggregateQuery, input);
 
   const [rows, aggregateRows] = await Promise.all([listQuery, aggregateQuery]);
   const aggregate = (Array.isArray(aggregateRows) ? aggregateRows[0] : aggregateRows) as unknown as {
@@ -1939,8 +1936,8 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
 }): Promise<WorkflowTimeEntryApprovalResult> {
   const { trx, tenantId, actorUserId, entryId, approvalStatus, changeRequestComment } = params;
 
-  const existing = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  const existing = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id')
     .first();
 
@@ -1968,8 +1965,8 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
     await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
   }
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .update({
       approval_status: approvalStatus,
       updated_at: new Date().toISOString(),
@@ -1977,8 +1974,8 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
     });
 
   if (approvalStatus === 'CHANGES_REQUESTED' && existing.time_sheet_id) {
-    await trx('time_sheets')
-      .where({ tenant: tenantId, id: existing.time_sheet_id })
+    await tenantScopedTable(trx, 'time_sheets', tenantId)
+      .where({ id: existing.time_sheet_id })
       .update({
         approval_status: 'CHANGES_REQUESTED',
         approved_at: null,
@@ -2050,12 +2047,11 @@ async function summarizeTimeSheet(
   tenantId: string,
   timeSheetId: string
 ): Promise<WorkflowTimeSheetSummary> {
-  const row = await trx('time_sheets as ts')
+  const row = await tenantScopedTable(trx, 'time_sheets as ts', tenantId)
     .join('time_periods as tp', function joinPeriods() {
       this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
     })
     .where({
-      'ts.tenant': tenantId,
       'ts.id': timeSheetId,
     })
     .select(
@@ -2081,16 +2077,16 @@ async function summarizeTimeSheet(
   }
 
   const [entryAggregate, commentAggregate] = await Promise.all([
-    trx('time_entries')
-      .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    tenantScopedTable(trx, 'time_entries', tenantId)
+      .where({ time_sheet_id: timeSheetId })
       .countDistinct<{ entry_count: string | number }>('entry_id as entry_count')
       .sum<{ total_minutes: string | number | null }>({
         total_minutes: trx.raw('EXTRACT(EPOCH FROM (end_time - start_time)) / 60'),
       })
       .sum<{ billable_minutes: string | number | null }>('billable_duration as billable_minutes')
       .first(),
-    trx('time_sheet_comments')
-      .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    tenantScopedTable(trx, 'time_sheet_comments', tenantId)
+      .where({ time_sheet_id: timeSheetId })
       .count<{ comment_count: string | number }>('comment_id as comment_count')
       .first(),
   ]);
@@ -2621,7 +2617,7 @@ export async function summarizeWorkflowTimeEntries(params: {
   const limit = Math.min(Math.max(input.limit ?? 200, 1), 500);
   const groupBy = input.group_by ?? [];
 
-  const query = trx('time_entries as te')
+  const query = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .select(
       'te.entry_id',
       'te.user_id',
@@ -2639,7 +2635,7 @@ export async function summarizeWorkflowTimeEntries(params: {
     .orderBy('te.start_time', 'desc')
     .limit(limit);
 
-  applyFindEntriesFilters(query, tenantId, input);
+  applyFindEntriesFilters(query, input);
 
   const rows = await query;
   const cache = new Map<string, string | null>();
@@ -2741,7 +2737,7 @@ async function findBillingBlockersInternal(params: {
 }): Promise<WorkflowBillingBlocker[]> {
   const { trx, tenantId, filters, entryIds, requireTimesheet, limit } = params;
 
-  const query = trx('time_entries as te')
+  const query = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .select(
       'te.entry_id',
       'te.approval_status',
@@ -2756,7 +2752,7 @@ async function findBillingBlockersInternal(params: {
     )
     .limit(limit);
 
-  applyFindEntriesFilters(query, tenantId, filters);
+  applyFindEntriesFilters(query, filters);
   if (entryIds?.length) {
     query.whereIn('te.entry_id', entryIds);
   }
