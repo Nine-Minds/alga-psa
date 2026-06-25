@@ -1133,8 +1133,8 @@ export class TicketService extends BaseService<ITicket> {
         }
 
         // Get the full ticket data for return
-        const fullTicket = await trx('tickets')
-          .where({ ticket_id: ticketResult.ticket_id, tenant: context.tenant })
+        const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
+          .where({ ticket_id: ticketResult.ticket_id })
           .first();
 
         if (!fullTicket) {
@@ -1197,8 +1197,8 @@ export class TicketService extends BaseService<ITicket> {
 
     return withTransaction(knex, async (trx) => {
       // Get current ticket for event comparison
-      const currentTicket = await trx('tickets')
-        .where({ ticket_id: id, tenant: context.tenant })
+      const currentTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: id })
         .first();
 
       if (!currentTicket) {
@@ -1254,11 +1254,11 @@ export class TicketService extends BaseService<ITicket> {
       // open to a closed status, enforce the board's close rules before any
       // writes. Surfaces as a 422 with structured failure details.
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const nextStatus = await trx('statuses')
-          .where({ status_id: cleanedData.status_id, tenant: context.tenant })
+        const nextStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: cleanedData.status_id })
           .first();
-        const previousStatus = await trx('statuses')
-          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+        const previousStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: currentTicket.status_id })
           .first();
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
           const merged = { ...currentTicket, ...cleanedData };
@@ -1306,8 +1306,8 @@ export class TicketService extends BaseService<ITicket> {
       };
 
       // Update ticket
-      const [ticket] = await trx('tickets')
-        .where({ ticket_id: id, tenant: context.tenant })
+      const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: id })
         .update(updateData)
         .returning('*');
 
@@ -1319,26 +1319,26 @@ export class TicketService extends BaseService<ITicket> {
       // Publish appropriate events
       if (data.status_id && data.status_id !== currentTicket.status_id) {
         // Check if ticket is being closed or reopened
-        const newStatus = await trx('statuses')
-          .where({ status_id: data.status_id, tenant: context.tenant })
+        const newStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: data.status_id })
           .first();
-        const oldStatus = await trx('statuses')
-          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+        const oldStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: currentTicket.status_id })
           .first();
 
         // Keep the ticket row's denormalized close flag aligned with the selected status.
-        await trx('tickets')
-          .where({ ticket_id: id, tenant: context.tenant })
+        await tenantScopedTable(trx, 'tickets', context.tenant)
+          .where({ ticket_id: id })
           .update({ is_closed: !!newStatus?.is_closed });
 
         // Record closed_at / closed_by when transitioning to/from closed status
         if (newStatus?.is_closed && !oldStatus?.is_closed) {
-          await trx('tickets')
-            .where({ ticket_id: id, tenant: context.tenant })
+          await tenantScopedTable(trx, 'tickets', context.tenant)
+            .where({ ticket_id: id })
             .update({ closed_at: new Date(), closed_by: context.userId });
         } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-          await trx('tickets')
-            .where({ ticket_id: id, tenant: context.tenant })
+          await tenantScopedTable(trx, 'tickets', context.tenant)
+            .where({ ticket_id: id })
             .update({ closed_at: null, closed_by: null });
         }
 
@@ -1439,8 +1439,8 @@ export class TicketService extends BaseService<ITicket> {
 
     const fullTicket = await withTransaction(knex, async (trx) => {
       // Verify asset exists
-      const asset = await trx('assets')
-        .where({ asset_id: data.asset_id, tenant: context.tenant })
+      const asset = await tenantScopedTable(trx, 'assets', context.tenant)
+        .where({ asset_id: data.asset_id })
         .first();
 
       if (!asset) {
@@ -1496,8 +1496,8 @@ export class TicketService extends BaseService<ITicket> {
       });
 
       // Get the full ticket data for return
-      const fullTicket = await trx('tickets')
-        .where({ ticket_id: ticketResult.ticket_id, tenant: context.tenant })
+      const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketResult.ticket_id })
         .first();
 
       if (!fullTicket) {
