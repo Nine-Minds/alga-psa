@@ -992,8 +992,8 @@ async function ensureTagMappings(
       .onConflict(['tenant', 'tag_text', 'tagged_type'])
       .ignore();
 
-    const definition = await tx.trx('tag_definitions')
-      .where({ tenant: tx.tenantId, tag_text: tagText, tagged_type: params.taggedType })
+    const definition = await tenantScopedTable(tx, 'tag_definitions')
+      .where({ tag_text: tagText, tagged_type: params.taggedType })
       .first();
     if (!definition?.tag_id) {
       throw new Error(`Failed to resolve tag definition for "${tagText}"`);
@@ -1029,9 +1029,8 @@ async function ensureTagMappings(
       continue;
     }
 
-    const mapping = await tx.trx('tag_mappings')
+    const mapping = await tenantScopedTable(tx, 'tag_mappings')
       .where({
-        tenant: tx.tenantId,
         tag_id: definition.tag_id,
         tagged_id: params.taggedId,
         tagged_type: params.taggedType,
@@ -1072,22 +1071,22 @@ function toTicketAuthorizationRecord(ticket: Record<string, unknown>): Authoriza
 
 async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<AuthorizationSubject> {
   const userColumns = await getTableColumns(tx, 'users');
-  const actor = await tx.trx('users')
-    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+  const actor = await tenantScopedTable(tx, 'users')
+    .where('user_id', tx.actorUserId)
     .select('*')
     .first<Record<string, unknown>>();
 
-  const roleRows = await tx.trx('user_roles')
-    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+  const roleRows = await tenantScopedTable(tx, 'user_roles')
+    .where('user_id', tx.actorUserId)
     .select<{ role_id: string }[]>('role_id')
     .catch(() => []);
-  const teamRows = await tx.trx('team_members')
-    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+  const teamRows = await tenantScopedTable(tx, 'team_members')
+    .where('user_id', tx.actorUserId)
     .select<{ team_id: string }[]>('team_id')
     .catch(() => []);
   const managedRows = userColumns.has('reports_to')
-    ? await tx.trx('users')
-        .where({ tenant: tx.tenantId, reports_to: tx.actorUserId })
+    ? await tenantScopedTable(tx, 'users')
+        .where('reports_to', tx.actorUserId)
         .select<{ user_id: string }[]>('user_id')
         .catch(() => [])
     : [];
