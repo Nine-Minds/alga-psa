@@ -1,8 +1,7 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery, withTransaction } from '@alga-psa/db';
 import { checkPasswordResetLimit, formatRateLimitError } from '../lib/security/rateLimiting';
 import crypto from 'crypto';
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '../lib/getCurrentUser';
 
 export interface PasswordResetToken {
@@ -30,6 +29,10 @@ export interface TokenVerificationResult {
   };
   token?: PasswordResetToken;
   error?: string;
+}
+
+function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
 }
 
 export class PasswordResetService {
@@ -72,15 +75,13 @@ export class PasswordResetService {
 
       // Clean up expired tokens for this tenant before creating a new one
       // This helps keep the table clean without relying on scheduled jobs
-      await trx('password_reset_tokens')
-        .where('tenant', tenant)
+      await tenantScopedTable(trx, 'password_reset_tokens', tenant)
         .where('expires_at', '<', trx.fn.now())
         .del();
 
       // Find user by email and type (using transaction)
-      const user = await trx('users')
+      const user = await tenantScopedTable(trx, 'users', tenant)
         .where({ 
-          tenant, 
           email: email.toLowerCase(),
           user_type: userType,
           is_inactive: false
@@ -97,9 +98,8 @@ export class PasswordResetService {
       const tokenHash = this.hashToken(token);
 
       // Invalidate any existing unused tokens for this user (using transaction)
-      await trx('password_reset_tokens')
+      await tenantScopedTable(trx, 'password_reset_tokens', tenant)
         .where({
-          tenant,
           user_id: user.user_id,
           used_at: null
         })
@@ -214,18 +214,16 @@ export class PasswordResetService {
         const tokenTenant = tokenInfo.tenant;
 
         // Clean up expired tokens for this tenant (single-shard query)
-        await trx('password_reset_tokens')
-          .where('tenant', tokenTenant)
+        await tenantScopedTable(trx, 'password_reset_tokens', tokenTenant)
           .where('expires_at', '<', trx.fn.now())
           .del();
         
         // Now fetch the full token with user info (single-shard query)
-        const resetToken = await trx('password_reset_tokens as prt')
+        const resetToken = await tenantScopedTable(trx, 'password_reset_tokens as prt', tokenTenant)
           .join('users as u', function() {
             this.on('prt.tenant', '=', 'u.tenant')
                 .andOn('prt.user_id', '=', 'u.user_id');
           })
-          .where('prt.tenant', tokenTenant)
           .where({
             'prt.token_hash': tokenHash,  // Compare hashes
             'prt.used_at': null
@@ -306,9 +304,8 @@ export class PasswordResetService {
           return false;
         }
 
-        const updateCount = await trx('password_reset_tokens')
+        const updateCount = await tenantScopedTable(trx, 'password_reset_tokens', tokenInfo.tenant)
           .where({
-            tenant: tokenInfo.tenant,
             token_hash: tokenHash,  // Compare hashes
             used_at: null
           })
@@ -347,9 +344,8 @@ export class PasswordResetService {
       }
       const { knex } = await createTenantKnex(tenant);
 
-      const tokens = await knex('password_reset_tokens')
+      const tokens = await tenantScopedTable(knex, 'password_reset_tokens', tenant)
         .where({
-          tenant,
           user_id: userId
         })
         .orderBy('created_at', 'desc')
@@ -382,12 +378,12 @@ export class PasswordResetService {
       if (!tenant) {
         return 0;
       }
+      const resolvedTenant = tenant;
 
       // Use provided transaction or create a new one
       const cleanup = async (tx: Knex.Transaction) => {
         // Delete expired tokens for this tenant only (single-shard query)
-        const deletedRows = await tx('password_reset_tokens')
-          .where('tenant', tenant)
+        const deletedRows = await tenantScopedTable(tx, 'password_reset_tokens', resolvedTenant)
           .where('expires_at', '<', tx.fn.now())
           .del();
 
