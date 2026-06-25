@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuid4 } from 'uuid';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
 import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { NotFoundError, ValidationError, ConflictError, BadRequestError } from '../middleware/apiMiddleware';
 
@@ -124,15 +124,19 @@ export class TeamService extends BaseService<ITeam> {
       } = options;
   
       // Build base query with manager and client joins
-      let dataQuery = knex('teams as t')
+      let dataQuery = createTenantScopedQuery(knex, {
+        table: 'teams as t',
+        tenant: context.tenant,
+      }).builder
         .leftJoin('users as manager', function() {
           this.on('t.manager_id', '=', 'manager.user_id')
               .andOn('t.tenant', '=', 'manager.tenant');
-        })
-        .where('t.tenant', context.tenant);
+        });
   
-      let countQuery = knex('teams as t')
-        .where('t.tenant', context.tenant);
+      let countQuery = createTenantScopedQuery(knex, {
+        table: 'teams as t',
+        tenant: context.tenant,
+      }).builder;
   
       // Apply filters
       dataQuery = this.applyTeamFilters(dataQuery, filters, knex, true);  // has manager join
@@ -181,8 +185,11 @@ export class TeamService extends BaseService<ITeam> {
       // Enhance teams with members and HATEOAS links
       const enhancedTeams = await Promise.all(
         teams.map(async (team: any) => {
-          const memberIds = await knex('team_members')
-            .where({ 'team_members.team_id': team.team_id, 'team_members.tenant': team.tenant })
+          const memberIds = await createTenantScopedQuery(knex, {
+            table: 'team_members',
+            tenant: context.tenant,
+          }).builder
+            .where('team_members.team_id', team.team_id)
             .join('users', function() {
               this.on('team_members.user_id', '=', 'users.user_id')
                   .andOn('team_members.tenant', '=', 'users.tenant');
@@ -191,9 +198,11 @@ export class TeamService extends BaseService<ITeam> {
             .pluck('team_members.user_id');
           // Get user details for members
           const members = memberIds.length > 0 
-            ? await knex('users')
+            ? await createTenantScopedQuery(knex, {
+                table: 'users',
+                tenant: context.tenant,
+              }).builder
                 .whereIn('user_id', memberIds)
-                .where('tenant', team.tenant)
                 .select('user_id', 'username', 'email', 'first_name', 'last_name')
             : [];
           
@@ -245,7 +254,10 @@ export class TeamService extends BaseService<ITeam> {
   async getById(id: string, context: ServiceContext, options: TeamServiceOptions = {}): Promise<ITeam | null> {
       const { knex } = await this.getKnex();
   
-      const team = await knex('teams as t')
+      const team = await createTenantScopedQuery(knex, {
+        table: 'teams as t',
+        tenant: context.tenant,
+      }).builder
         .leftJoin('users as manager', function() {
           this.on('t.manager_id', '=', 'manager.user_id')
               .andOn('t.tenant', '=', 'manager.tenant');
@@ -255,7 +267,7 @@ export class TeamService extends BaseService<ITeam> {
           knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
           'manager.email as manager_email'
         )
-        .where({ 't.team_id': id, 't.tenant': context.tenant })
+        .where('t.team_id', id)
         .first();
   
       if (!team) {
@@ -263,8 +275,11 @@ export class TeamService extends BaseService<ITeam> {
       }
   
       // Get team members
-      const memberIds = await knex('team_members')
-        .where({ 'team_members.team_id': id, 'team_members.tenant': team.tenant })
+      const memberIds = await createTenantScopedQuery(knex, {
+        table: 'team_members',
+        tenant: context.tenant,
+      }).builder
+        .where('team_members.team_id', id)
         .join('users', function() {
           this.on('team_members.user_id', '=', 'users.user_id')
               .andOn('team_members.tenant', '=', 'users.tenant');
@@ -273,9 +288,11 @@ export class TeamService extends BaseService<ITeam> {
         .pluck('team_members.user_id');
       // Get user details for members
       const members = memberIds.length > 0 
-        ? await knex('users')
+        ? await createTenantScopedQuery(knex, {
+            table: 'users',
+            tenant: context.tenant,
+          }).builder
             .whereIn('user_id', memberIds)
-            .where('tenant', context.tenant)
             .select('user_id', 'username', 'email', 'first_name', 'last_name')
         : [];
   
@@ -287,8 +304,11 @@ export class TeamService extends BaseService<ITeam> {
       // Add manager details if requested
       if (options.includeManager && team.manager_id) {
         try {
-          const manager = await knex('users')
-            .where({ user_id: team.manager_id, tenant: team.tenant })
+          const manager = await createTenantScopedQuery(knex, {
+            table: 'users',
+            tenant: context.tenant,
+          }).builder
+            .where('user_id', team.manager_id)
             .select('user_id', 'username', 'email', 'first_name', 'last_name')
             .first();
           enhancedTeam.manager = manager;
