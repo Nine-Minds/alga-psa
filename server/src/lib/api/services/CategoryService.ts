@@ -5,7 +5,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, createTenantScopedQuery } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -93,8 +93,10 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let query = trx('service_categories')
-        .where('tenant', context.tenant);
+      let query = createTenantScopedQuery(trx, {
+        table: 'service_categories',
+        tenant: context.tenant,
+      }).builder;
 
       // Apply filters
       if (filters.search) {
@@ -142,9 +144,11 @@ export class CategoryService extends BaseService {
    */
   async getServiceCategoryById(id: string, context: ServiceContext): Promise<ServiceCategoryResponse | null> {
     const { knex } = await this.getKnex();
-    const category = await knex('service_categories')
+    const category = await createTenantScopedQuery(knex, {
+      table: 'service_categories',
+      tenant: context.tenant,
+    }).builder
       .where('category_id', id)
-      .where('tenant', context.tenant)
       .first();
     return category as ServiceCategoryResponse | null;
   }
@@ -209,9 +213,11 @@ export class CategoryService extends BaseService {
         updateData.is_active = data.is_active;
       }
 
-      const [updated] = await trx('service_categories')
+      const [updated] = await createTenantScopedQuery(trx, {
+        table: 'service_categories',
+        tenant: context.tenant,
+      }).builder
         .where('category_id', id)
-        .where('tenant', context.tenant)
         .update(updateData)
         .returning('*');
 
@@ -231,9 +237,11 @@ export class CategoryService extends BaseService {
 
     return withTransaction(knex, async (trx) => {
       // Check if category is in use
-      const usageCount = await trx('service_items')
+      const usageCount = await createTenantScopedQuery(trx, {
+        table: 'service_items',
+        tenant: context.tenant,
+      }).builder
         .where('category_id', id)
-        .where('tenant', context.tenant)
         .count('* as count')
         .first();
 
@@ -242,13 +250,18 @@ export class CategoryService extends BaseService {
       }
 
       // Clear category_id from service_request_definitions (replaces ON DELETE SET NULL)
-      await trx('service_request_definitions')
-        .where({ tenant: context.tenant, category_id: id })
+      await createTenantScopedQuery(trx, {
+        table: 'service_request_definitions',
+        tenant: context.tenant,
+      }).builder
+        .where('category_id', id)
         .update({ category_id: null, category_name_snapshot: null });
 
-      const deleted = await trx('service_categories')
+      const deleted = await createTenantScopedQuery(trx, {
+        table: 'service_categories',
+        tenant: context.tenant,
+      }).builder
         .where('category_id', id)
-        .where('tenant', context.tenant)
         .del();
 
       if (!deleted) {
@@ -271,8 +284,7 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let query = trx('categories')
-        .where('tenant', context.tenant);
+      let query = this.buildTenantScopedQuery(trx, context);
 
       // Apply board filter if provided
       if (filters.board_id) {
@@ -331,9 +343,8 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const category = await trx('categories')
+      const category = await this.buildTenantScopedQuery(trx, context)
         .where('category_id', id)
-        .where('tenant', context.tenant)
         .first();
 
       if (!category) {
@@ -358,9 +369,8 @@ export class CategoryService extends BaseService {
     return withTransaction(knex, async (trx) => {
       // Validate parent category if provided
       if (data.parent_category) {
-        const parent = await trx('categories')
+        const parent = await this.buildTenantScopedQuery(trx, context)
           .where('category_id', data.parent_category)
-          .where('tenant', context.tenant)
           .first();
 
         if (!parent) {
@@ -371,6 +381,7 @@ export class CategoryService extends BaseService {
         const wouldCreateCircular = await this.checkCircularHierarchy(
           data.parent_category,
           null, // No existing ID since this is a new category
+          context.tenant,
           trx
         );
 
@@ -381,8 +392,7 @@ export class CategoryService extends BaseService {
 
       // display_order is NOT NULL with no default; append after the current max
       // within the same board scope.
-      const maxOrder = await trx('categories')
-        .where('tenant', context.tenant)
+      const maxOrder = await this.buildTenantScopedQuery(trx, context)
         .modify((q) => {
           if (data.board_id) {
             q.where('board_id', data.board_id);
@@ -429,9 +439,8 @@ export class CategoryService extends BaseService {
       // Validate parent category change if provided
       if (data.parent_category !== undefined) {
         if (data.parent_category) {
-          const parent = await trx('categories')
+          const parent = await this.buildTenantScopedQuery(trx, context)
             .where('category_id', data.parent_category)
-            .where('tenant', context.tenant)
             .first();
 
           if (!parent) {
@@ -442,6 +451,7 @@ export class CategoryService extends BaseService {
           const wouldCreateCircular = await this.checkCircularHierarchy(
             data.parent_category,
             id,
+            context.tenant,
             trx
           );
 
@@ -464,9 +474,8 @@ export class CategoryService extends BaseService {
       }
 
       if (Object.keys(updateData).length === 0) {
-        const existing = await trx('categories')
+        const existing = await this.buildTenantScopedQuery(trx, context)
           .where('category_id', id)
-          .where('tenant', context.tenant)
           .first();
         if (!existing) {
           throw new Error('Ticket category not found');
@@ -475,9 +484,8 @@ export class CategoryService extends BaseService {
         return enrichedExisting as TicketCategoryResponse;
       }
 
-      const [updated] = await trx('categories')
+      const [updated] = await this.buildTenantScopedQuery(trx, context)
         .where('category_id', id)
-        .where('tenant', context.tenant)
         .update(updateData)
         .returning('*');
 
@@ -499,9 +507,8 @@ export class CategoryService extends BaseService {
 
     return withTransaction(knex, async (trx) => {
       // Check if category has children
-      const childrenCount = await trx('categories')
+      const childrenCount = await this.buildTenantScopedQuery(trx, context)
         .where('parent_category', id)
-        .where('tenant', context.tenant)
         .count('* as count')
         .first();
 
@@ -510,9 +517,11 @@ export class CategoryService extends BaseService {
       }
 
       // Check if category is in use by tickets
-      const usageCount = await trx('tickets')
+      const usageCount = await createTenantScopedQuery(trx, {
+        table: 'tickets',
+        tenant: context.tenant,
+      }).builder
         .where('category_id', id)
-        .where('tenant', context.tenant)
         .count('* as count')
         .first();
 
@@ -520,9 +529,8 @@ export class CategoryService extends BaseService {
         throw new Error('Cannot delete category that is in use by tickets');
       }
 
-      const deleted = await trx('categories')
+      const deleted = await this.buildTenantScopedQuery(trx, context)
         .where('category_id', id)
-        .where('tenant', context.tenant)
         .del();
 
       if (!deleted) {
@@ -541,8 +549,7 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      let query = trx('categories')
-        .where('tenant', context.tenant);
+      let query = this.buildTenantScopedQuery(trx, context);
 
       if (boardId) {
         query = query.where('board_id', boardId);
@@ -571,9 +578,8 @@ export class CategoryService extends BaseService {
     return withTransaction(knex, async (trx) => {
       // Validate new parent if provided
       if (newParentId) {
-        const parent = await trx('categories')
+        const parent = await this.buildTenantScopedQuery(trx, context)
           .where('category_id', newParentId)
-          .where('tenant', context.tenant)
           .first();
 
         if (!parent) {
@@ -584,6 +590,7 @@ export class CategoryService extends BaseService {
         const wouldCreateCircular = await this.checkCircularHierarchy(
           newParentId,
           categoryId,
+          context.tenant,
           trx
         );
 
@@ -592,9 +599,8 @@ export class CategoryService extends BaseService {
         }
       }
 
-      const [updated] = await trx('categories')
+      const [updated] = await this.buildTenantScopedQuery(trx, context)
         .where('category_id', categoryId)
-        .where('tenant', context.tenant)
         .update({
           parent_category: newParentId
         })
@@ -628,8 +634,10 @@ export class CategoryService extends BaseService {
       const categoryType = filters.category_type || 'ticket';
       const tableName = categoryType === 'service' ? 'service_categories' : 'categories';
       
-      let query = trx(tableName)
-        .where('tenant', context.tenant);
+      let query = createTenantScopedQuery(trx, {
+        table: tableName,
+        tenant: context.tenant,
+      }).builder;
 
       // Apply search (only service_categories has a description column)
       if (searchTerm) {
@@ -697,8 +705,10 @@ export class CategoryService extends BaseService {
       const activeCountExpr = categoryType === 'service'
         ? 'COUNT(CASE WHEN is_active = true THEN 1 END) as active_categories'
         : 'COUNT(*) as active_categories';
-      const categoryStats = await trx(tableName)
-        .where('tenant', context.tenant)
+      const categoryStats = await createTenantScopedQuery(trx, {
+        table: tableName,
+        tenant: context.tenant,
+      }).builder
         .select(
           trx.raw('COUNT(*) as total_categories'),
           trx.raw(activeCountExpr)
@@ -708,12 +718,10 @@ export class CategoryService extends BaseService {
       // Get hierarchy stats for ticket categories
       let hierarchyStats = { categories_with_children: 0, average_depth: 0, max_depth: 0 };
       if (categoryType === 'ticket') {
-        const categories = await trx('categories')
-          .where('tenant', context.tenant)
+        const categories = await this.buildTenantScopedQuery(trx, context)
           .select('category_id', 'parent_category');
 
-        const categoriesWithChildren = await trx('categories')
-          .where('tenant', context.tenant)
+        const categoriesWithChildren = await this.buildTenantScopedQuery(trx, context)
           .whereNotNull('parent_category')
           .countDistinct('parent_category as count')
           .first();
@@ -725,12 +733,14 @@ export class CategoryService extends BaseService {
       }
 
       // Get usage statistics
-      const usageStats = await trx(`${tableName} as c`)
+      const usageStats = await createTenantScopedQuery(trx, {
+        table: `${tableName} as c`,
+        tenant: context.tenant,
+      }).builder
         .leftJoin(`${usageTable} as u`, function() {
           this.on('c.category_id', '=', 'u.category_id')
               .andOn('c.tenant', '=', 'u.tenant');
         })
-        .where('c.tenant', context.tenant)
         .groupBy('c.category_id', 'c.category_name')
         .select(
           'c.category_id',
@@ -795,14 +805,16 @@ export class CategoryService extends BaseService {
       const enrichedCategory = { ...category };
 
       // Add depth and path information
-      const depthAndPath = await this.calculateCategoryDepthAndPath(category.category_id, trx);
+      const depthAndPath = await this.calculateCategoryDepthAndPath(category.category_id, category.tenant, trx);
       enrichedCategory.depth = depthAndPath.depth;
       enrichedCategory.path = depthAndPath.path;
 
       // Add children count
-      const childrenCount = await trx('categories')
+      const childrenCount = await createTenantScopedQuery(trx, {
+        table: 'categories',
+        tenant: category.tenant,
+      }).builder
         .where('parent_category', category.category_id)
-        .where('tenant', category.tenant)
         .count('* as count')
         .first();
 
@@ -859,6 +871,7 @@ export class CategoryService extends BaseService {
   private async checkCircularHierarchy(
     newParentId: string,
     categoryId: string | null,
+    tenant: string,
     trx: Knex.Transaction
   ): Promise<boolean> {
     if (!categoryId || newParentId === categoryId) {
@@ -875,7 +888,10 @@ export class CategoryService extends BaseService {
 
       visited.add(currentParentId);
 
-      const parent = await trx('categories')
+      const parent = await createTenantScopedQuery(trx, {
+        table: 'categories',
+        tenant,
+      }).builder
         .where('category_id', currentParentId)
         .select('parent_category')
         .first();
@@ -891,6 +907,7 @@ export class CategoryService extends BaseService {
    */
   private async calculateCategoryDepthAndPath(
     categoryId: string,
+    tenant: string,
     trx: Knex.Transaction
   ): Promise<{ depth: number; path: string }> {
     const path: string[] = [];
@@ -898,7 +915,10 @@ export class CategoryService extends BaseService {
     let depth = 0;
 
     while (currentId) {
-      const category = await trx('categories')
+      const category = await createTenantScopedQuery(trx, {
+        table: 'categories',
+        tenant,
+      }).builder
         .where('category_id', currentId)
         .select('category_name', 'parent_category')
         .first();
