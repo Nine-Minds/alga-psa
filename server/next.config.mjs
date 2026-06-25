@@ -236,6 +236,13 @@ const nextConfig = {
       '@alga-psa/jobs/handlers': '../packages/jobs/src/lib/handlers',
       '@alga-psa/jobs/handler-utils': '../packages/jobs/src/lib/handler-utils',
       '@alga-psa/jobs/runners': '../packages/jobs/src/lib/jobs/runners',
+      // Trailing-slash prefixes so deeper subpaths resolve too: the exact keys
+      // above only match the bare specifier, but consumers import e.g.
+      // @alga-psa/jobs/handlers/autoCloseTicketsHandler. These lib/* categories
+      // don't mirror src, so a single '@alga-psa/jobs/' prefix can't cover them.
+      '@alga-psa/jobs/handlers/': '../packages/jobs/src/lib/handlers/',
+      '@alga-psa/jobs/handler-utils/': '../packages/jobs/src/lib/handler-utils/',
+      '@alga-psa/jobs/runners/': '../packages/jobs/src/lib/jobs/runners/',
       '@alga-psa/search': '../packages/search/src',
       '@alga-psa/search/': '../packages/search/src/',
       '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
