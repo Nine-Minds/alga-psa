@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, createTenantScopedQuery } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { Knex } from 'knex';
 import { isAxiosUnauthorized, TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
@@ -21,6 +21,10 @@ const TACTICAL_KNOX_USERNAME_SECRET = 'tacticalrmm_username';
 const TACTICAL_KNOX_PASSWORD_SECRET = 'tacticalrmm_password';
 const TACTICAL_KNOX_TOKEN_SECRET = 'tacticalrmm_knox_token';
 const TACTICAL_WEBHOOK_SECRET = 'tacticalrmm_webhook_secret';
+
+function tenantScopedTable(conn: Knex, table: string, tenant: string): Knex.QueryBuilder {
+  return createTenantScopedQuery(conn, { table, tenant }).builder;
+}
 
 async function publishRmmSyncEvent(args: {
   eventType: 'RMM_SYNC_STARTED' | 'RMM_SYNC_COMPLETED' | 'RMM_SYNC_FAILED';
@@ -197,8 +201,8 @@ export const getTacticalRmmSettings = withAuth(async (user, { tenant }): Promise
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', PROVIDER)
       .first(['instance_url', 'is_active', 'connected_at', 'sync_error', 'settings']);
 
     const secretProvider = await getSecretProviderInstance();
@@ -261,8 +265,8 @@ export const getTacticalRmmConnectionSummary = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', PROVIDER)
       .first([
         'integration_id',
         'instance_url',
@@ -302,21 +306,21 @@ export const getTacticalRmmConnectionSummary = withAuth(async (
       activeAlertsRow,
       statusRows,
     ] = await Promise.all([
-      knex('rmm_organization_mappings')
-        .where({ tenant, integration_id: integrationId })
+      tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
+        .where('integration_id', integrationId)
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('assets')
-        .where({ tenant, rmm_provider: PROVIDER })
+      tenantScopedTable(knex, 'assets', tenant)
+        .where('rmm_provider', PROVIDER)
         .whereNotNull('rmm_device_id')
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('rmm_alerts')
-        .where({ tenant, integration_id: integrationId, status: 'active' })
+      tenantScopedTable(knex, 'rmm_alerts', tenant)
+        .where({ integration_id: integrationId, status: 'active' })
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('assets')
-        .where({ tenant, rmm_provider: PROVIDER })
+      tenantScopedTable(knex, 'assets', tenant)
+        .where('rmm_provider', PROVIDER)
         .select('agent_status')
         .count<{ agent_status: string | null; count: string }[]>('* as count')
         .groupBy('agent_status'),
@@ -431,8 +435,8 @@ export const disconnectTacticalRmmIntegration = withAuth(async (
     ]);
 
     const { knex } = await createTenantKnex();
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', PROVIDER)
       .update({ is_active: false, connected_at: null, sync_error: null });
 
     return { success: true };
@@ -452,8 +456,8 @@ export const testTacticalRmmConnection = withAuth(async (
   try {
     const secretProvider = await getSecretProviderInstance();
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', PROVIDER)
       .first(['instance_url', 'settings']);
 
     const authMode = (integration?.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
@@ -533,8 +537,8 @@ export const testTacticalRmmConnection = withAuth(async (
       }
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', PROVIDER)
       .update({ is_active: true, connected_at: knex.fn.now(), sync_error: null });
 
     return { success: true };
@@ -565,8 +569,8 @@ export const syncTacticalRmmOrganizations = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', PROVIDER)
       .first(['integration_id', 'instance_url', 'settings']);
 
     if (!integration?.integration_id) {
@@ -593,8 +597,8 @@ export const syncTacticalRmmOrganizations = withAuth(async (
 
     const remoteClients = await client.listAllBeta<any>({ path: '/beta/v1/client/' });
 
-    const existingRows = await knex('rmm_organization_mappings')
-      .where({ tenant, integration_id: integration.integration_id })
+    const existingRows = await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
+      .where('integration_id', integration.integration_id)
       .select('external_organization_id');
 
     const existing = new Set(existingRows.map((r: any) => String(r.external_organization_id)));
@@ -635,8 +639,8 @@ export const syncTacticalRmmOrganizations = withAuth(async (
         });
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', PROVIDER)
       .update({ last_sync_at: knex.fn.now(), sync_error: errors.length ? errors.slice(0, 5).join('; ') : null });
 
     await publishRmmSyncEvent({
