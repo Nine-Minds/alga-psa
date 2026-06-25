@@ -162,4 +162,29 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).not.toContain('tenant: tenant,');
     expect(section).not.toContain('.where({ tenant, master_ticket_id: id })');
   });
+
+  it('uses structural tenant scoping for optimized comment mirroring and bundle child roots', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const commentStart = source.indexOf('export const addTicketCommentWithCache');
+    const commentEnd = source.indexOf('export async function addTicketCommentWithCacheForCurrentUser', commentStart);
+    const bundleStart = source.indexOf('export const fetchBundleChildrenForMaster');
+    const bundleEnd = source.indexOf('export const getTicketsForListWithCursor', bundleStart);
+
+    expect(commentStart).toBeGreaterThanOrEqual(0);
+    expect(commentEnd).toBeGreaterThan(commentStart);
+    expect(bundleStart).toBeGreaterThanOrEqual(0);
+    expect(bundleEnd).toBeGreaterThan(bundleStart);
+
+    const commentSection = source.slice(commentStart, commentEnd);
+    const bundleSection = source.slice(bundleStart, bundleEnd);
+
+    expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    expect(commentSection).toContain("tenantScopedTable(trx, 'tickets', tenant)");
+    expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)");
+    expect(commentSection).not.toContain('.where({ tenant, master_ticket_id: ticketId })');
+    expect(commentSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
+
+    expect(bundleSection).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
+    expect(bundleSection).not.toContain("'t.tenant': tenant");
+  });
 });

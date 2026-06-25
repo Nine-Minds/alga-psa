@@ -2996,20 +2996,19 @@ export const addTicketCommentWithCache = withAuth(async (
 
     // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
     if (!isInternal) {
-      const bundleSettings = await trx('ticket_bundle_settings')
-        .where({ tenant, master_ticket_id: ticketId })
+      const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: ticketId })
         .first();
 
       if (bundleSettings?.mode === 'sync_updates') {
-        const children = await trx('tickets')
+        const children = await tenantScopedTable(trx, 'tickets', tenant)
           .select('ticket_id')
-          .where({ tenant, master_ticket_id: ticketId });
+          .where({ master_ticket_id: ticketId });
 
         const now = new Date().toISOString();
         for (const child of children) {
-          const existingMirror = await trx('ticket_bundle_mirrors')
+          const existingMirror = await tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)
             .where({
-              tenant,
               source_comment_id: newComment.comment_id,
               child_ticket_id: child.ticket_id,
             })
@@ -3280,7 +3279,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
       user as IUserWithRoles
     );
 
-    const rows = await trx('tickets as t')
+    const rows = await tenantScopedTable(trx, 'tickets as t', tenant)
       .leftJoin('tickets as mt', function () {
         this.on('t.master_ticket_id', 'mt.ticket_id')
           .andOn('t.tenant', 'mt.tenant');
@@ -3331,7 +3330,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         'tm.team_name as assigned_team_name',
         'mt.ticket_number as bundle_master_ticket_number'
       )
-      .where({ 't.tenant': tenant, 't.master_ticket_id': masterTicketId })
+      .where({ 't.master_ticket_id': masterTicketId })
       .orderBy('t.updated_at', 'desc');
 
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
