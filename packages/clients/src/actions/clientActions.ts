@@ -1104,8 +1104,8 @@ export const validateClientDeletion = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('clients')
-      .where({ client_id: clientId, tenant })
+    return await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: clientId })
       .first();
   });
 
@@ -1120,10 +1120,9 @@ export const validateClientDeletion = withAuth(async (
   }
 
   const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const tenantClient = await trx('tenant_companies')
+    const tenantClient = await tenantScopedTable(trx, 'tenant_companies', tenant)
       .where({
         client_id: clientId,
-        tenant,
         is_default: true
       })
       .first();
@@ -1189,8 +1188,8 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     const { knex: db } = await createTenantKnex();
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
+      return await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
     });
 
@@ -1206,10 +1205,9 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     }
 
     const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantClient = await trx('tenant_companies')
+      const tenantClient = await tenantScopedTable(trx, 'tenant_companies', tenant)
         .where({
           client_id: clientId,
-          tenant,
           is_default: true
         })
         .first();
@@ -1230,40 +1228,40 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     const result = await deleteEntityWithValidation('client', clientId, db, tenant, async (trx, tenantId) => {
       await deleteEntityTags(trx, clientId, 'client');
 
-      const deletedTaxSettings = await trx('client_tax_settings')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedTaxSettings = await tenantScopedTable(trx, 'client_tax_settings', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedTaxSettings > 0) {
         console.log(`Deleted ${deletedTaxSettings} client tax settings records`);
       }
 
-      const deletedTaxRates = await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedTaxRates = await tenantScopedTable(trx, 'client_tax_rates', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedTaxRates > 0) {
         console.log(`Deleted ${deletedTaxRates} client tax rate records`);
       }
 
-      const deletedContracts = await trx('client_contracts')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedContracts = await tenantScopedTable(trx, 'client_contracts', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedContracts > 0) {
         console.log(`Deleted ${deletedContracts} client contract records`);
       }
 
-      const deletedBillingCycles = await trx('client_billing_cycles')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedBillingCycles = await tenantScopedTable(trx, 'client_billing_cycles', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedBillingCycles > 0) {
         console.log(`Deleted ${deletedBillingCycles} client billing cycle records`);
       }
 
-      const deletedBillingSettings = await trx('client_billing_settings')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedBillingSettings = await tenantScopedTable(trx, 'client_billing_settings', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedBillingSettings > 0) {
@@ -1271,8 +1269,8 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       }
 
       if (isEnterprise) {
-        const deletedPaymentCustomers = await trx('client_payment_customers')
-          .where({ client_id: clientId, tenant: tenantId })
+        const deletedPaymentCustomers = await tenantScopedTable(trx, 'client_payment_customers', tenantId)
+          .where({ client_id: clientId })
           .delete();
 
         if (deletedPaymentCustomers > 0) {
@@ -1280,39 +1278,39 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
         }
       }
 
-      const deletedLocations = await trx('client_locations')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedLocations = await tenantScopedTable(trx, 'client_locations', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedLocations > 0) {
         console.log(`Deleted ${deletedLocations} client location records`);
       }
 
-      const clientRecord = await trx('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const clientRecord = await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ client_id: clientId })
         .select('notes_document_id')
         .first();
 
       if (clientRecord?.notes_document_id) {
         console.log(`Cleaning up notes document: ${clientRecord.notes_document_id}`);
 
-        await trx('document_block_content')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_block_content', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
 
-        await trx('document_associations')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_associations', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
 
-        await trx('documents')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'documents', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
       }
 
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
 
-      const deleted = await trx('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deleted = await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (!deleted || deleted === 0) {

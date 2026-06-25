@@ -61,4 +61,34 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(billingRangeSection).not.toContain(".where('tm.tenant', tenant)");
     expect(billingRangeSection).not.toContain(".where('cbc.tenant', tenant)");
   });
+
+  it('uses structural tenant scoping for client deletion roots', () => {
+    const validateDeleteSection = sectionBetween('export const validateClientDeletion', 'function tailorClientDeleteAlternatives');
+    const deleteSection = sectionBetween('export const deleteClient', 'export const exportClientsToCSV');
+
+    expect(validateDeleteSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
+    expect(validateDeleteSection).toContain("tenantScopedTable(trx, 'tenant_companies', tenant)");
+    expect(validateDeleteSection).not.toContain("trx('clients')");
+    expect(validateDeleteSection).not.toContain("trx('tenant_companies')");
+    expect(validateDeleteSection).not.toContain('.where({ client_id: clientId, tenant })');
+    expect(validateDeleteSection).not.toContain('tenant,\n        is_default: true');
+
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'tenant_companies', tenant)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'client_tax_settings', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'client_tax_rates', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'client_contracts', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'client_billing_cycles', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'client_billing_settings', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'client_payment_customers', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'client_locations', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'document_block_content', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'document_associations', tenantId)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'documents', tenantId)");
+    expect(deleteSection).not.toContain(".where({ client_id: clientId, tenant })");
+    expect(deleteSection).not.toContain('tenant,\n          is_default: true');
+    expect(deleteSection).not.toContain('tenant: tenantId');
+    expect(deleteSection).not.toContain("trx('client_tax_settings')");
+    expect(deleteSection).not.toContain("trx('document_block_content')");
+  });
 });
