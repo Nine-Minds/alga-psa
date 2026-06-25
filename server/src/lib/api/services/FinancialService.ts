@@ -1398,15 +1398,16 @@ export class FinancialService extends BaseService<ITransaction> {
       await this.validatePermissions('read', 'financial_report', context);
     }
     
-    const { knex } = await this.getKnex();
+    const { knex, tenant: defaultTenant } = await this.getKnex();
+    const tenant = context?.tenant || defaultTenant;
     const reportDate = asOfDate || new Date().toISOString();
     
     // Get current credit balance
-    const client = await knex('clients')
-      .where({
-        client_id: clientId,
-        tenant: context?.tenant || await this.getKnex().then(({tenant}) => tenant)
-      })
+    const client = await createTenantScopedQuery(knex, {
+      table: 'clients',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
       .first();
 
     if (!client) {
@@ -1415,12 +1416,12 @@ export class FinancialService extends BaseService<ITransaction> {
 
     // Get available (non-expired) credits
     const now = new Date().toISOString();
-    const availableCredits = await knex('credit_tracking')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        is_expired: false
-      })
+    const availableCredits = await createTenantScopedQuery(knex, {
+      table: 'credit_tracking',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
+      .where('is_expired', false)
       .where(function() {
         this.whereNull('expiration_date')
             .orWhere('expiration_date', '>', now);
@@ -1428,39 +1429,39 @@ export class FinancialService extends BaseService<ITransaction> {
       .sum('remaining_amount as total');
 
     // Get expired credits
-    const expiredCredits = await knex('credit_tracking')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        is_expired: true
-      })
+    const expiredCredits = await createTenantScopedQuery(knex, {
+      table: 'credit_tracking',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
+      .where('is_expired', true)
       .sum('amount as total');
 
     // Get pending invoices (balance due is derived: total − credit applied)
-    const pendingInvoices = (await knex('invoices')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        status: 'sent'
-      })
+    const pendingInvoices = (await createTenantScopedQuery(knex, {
+      table: 'invoices',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
+      .where('status', 'sent')
       .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get overdue invoices
-    const overdueInvoices = (await knex('invoices')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        status: 'overdue'
-      })
+    const overdueInvoices = (await createTenantScopedQuery(knex, {
+      table: 'invoices',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
+      .where('status', 'overdue')
       .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get last payment
-    const lastPayment = await knex('transactions')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        type: 'payment'
-      })
+    const lastPayment = await createTenantScopedQuery(knex, {
+      table: 'transactions',
+      tenant,
+    }).builder
+      .where('client_id', clientId)
+      .where('type', 'payment')
       .orderBy('created_at', 'desc')
       .first();
 
