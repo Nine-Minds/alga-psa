@@ -2,6 +2,7 @@ import {
   deletePortalDomain,
   upsertPortalDomain,
 } from '@/models/PortalDomainModel';
+import { clearPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 
 import type {
   PortalDomainProvisioner,
@@ -79,9 +80,11 @@ export const directProvisioner: PortalDomainProvisioner = {
   },
 
   async disable(input: ReconcileInput): Promise<void> {
-    const { knex, tenant } = input;
+    const { knex, tenant, existing } = input;
     // Delete the row outright — there are no K8s/cert resources to tear down, and
     // outstanding one-time-tokens cascade away (portal_domain_session_otts FK).
     await deletePortalDomain(knex, tenant);
+    // Clear the last-seen marker so re-adding the domain starts from a clean slate.
+    await clearPortalDomainSeen(existing.domain);
   },
 };

@@ -36,3 +36,36 @@ export function resolveRequestHost(
 
   return { hostname: rawHost.split(':')[0], hostHeader: rawHost };
 }
+
+/**
+ * Best-effort detection of a reverse proxy that rewrites `Host` to the canonical
+ * app host while still passing the original host in `X-Forwarded-Host`. We can
+ * recover from this (resolveRequestHost prefers XFH), but it's worth surfacing: if
+ * the proxy ever stops sending XFH the vanity domain silently breaks. Returns the
+ * forwarded host when the tell-tale fires, otherwise null.
+ *
+ * Cannot detect a proxy that rewrites `Host` and sends *no* XFH — that information
+ * is simply lost.
+ *
+ * Edge-safe: pure header reads, no I/O.
+ */
+export function detectForwardedHostRewrite(
+  request: { headers: { get(name: string): string | null } },
+  caps: DeploymentCapabilities,
+  canonicalHostname: string | null
+): { forwardedHost: string } | null {
+  if (!caps.trustForwardedHost || !canonicalHostname) {
+    return null;
+  }
+  const xfh = request.headers.get('x-forwarded-host');
+  if (!xfh) {
+    return null;
+  }
+  const forwardedHost = xfh.split(',')[0].trim().split(':')[0];
+  const rawHost = (request.headers.get('host') || '').split(':')[0];
+
+  if (forwardedHost && forwardedHost !== rawHost && rawHost === canonicalHostname) {
+    return { forwardedHost };
+  }
+  return null;
+}

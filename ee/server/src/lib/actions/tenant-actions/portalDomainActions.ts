@@ -18,8 +18,13 @@ import type {
 } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
 import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
 import { getPortalDomainProvisioner } from '@ee/lib/portal-domains/provisioner';
+import { getPortalDomainLastSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
 import { analytics } from '@/lib/analytics/posthog';
+
+// Grace period before an active appliance domain with no observed traffic is
+// flagged as "never seen on its Host" — long enough for DNS/proxy to be wired up.
+const NEVER_SEEN_GRACE_MS = 10 * 60 * 1000;
 
 const REQUIRED_RESOURCE = 'settings';
 const READ_ACTION = 'read';
@@ -113,10 +118,28 @@ function validateRequestedDomain(rawDomain: string, canonicalHost: string): stri
   return normalized;
 }
 
+async function computeNeverSeenOnHost(record: PortalDomain | null): Promise<boolean> {
+  // Appliance ("direct") only, and only once an active domain has had time to be wired up.
+  if (resolveDeploymentCapabilities().portalDomain.provisioner !== 'direct') {
+    return false;
+  }
+  if (!record || record.status !== 'active' || !record.domain) {
+    return false;
+  }
+  const activatedAt = record.createdAt ? new Date(record.createdAt).getTime() : Date.now();
+  if (Number.isFinite(activatedAt) && Date.now() - activatedAt < NEVER_SEEN_GRACE_MS) {
+    return false;
+  }
+  const lastSeen = await getPortalDomainLastSeen(record.domain);
+  return lastSeen === null;
+}
+
 async function fetchStatus(knex: Knex, tenant: string): Promise<PortalDomainStatusResponse> {
   const canonicalHost = computeCanonicalHost(tenant);
   const record = await getPortalDomain(knex, tenant);
-  return createStatusResponse(record, canonicalHost);
+  const response = createStatusResponse(record, canonicalHost);
+  response.neverSeenOnHost = await computeNeverSeenOnHost(record);
+  return response;
 }
 
 export const getPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {

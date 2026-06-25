@@ -120,6 +120,37 @@ feature is multi-tenant + Temporal/Istio/cert-manager; the appliance is single-M
 - (2026-06-25) NOT YET RUN / cannot run here: DB-backed action tests (T003/T004 full), E2E login (T008),
   appliance smoke. tsc full typecheck not run (heavy project refs) — relied on vitest transpile + targeted tests.
 
+- (2026-06-25) SLICE 2 COMPLETE (F023-F027). Files:
+  - `server/src/lib/portal-domains/portalDomainSeen.ts` (record/get/clear last-seen in Redis;
+    best-effort; connect+quit per call since getRedisClient returns a fresh connected client).
+  - `server/src/app/auth/client-portal/signin/page.tsx` (records last-seen for the `portalDomain`
+    param — fire-and-forget; reaching this page proves the vanity Host was forwarded).
+  - `ee/server/src/lib/actions/.../portalDomainActions.ts` (computeNeverSeenOnHost: direct + active +
+    older than 10-min grace + no last-seen -> sets `neverSeenOnHost`).
+  - `ee/server/.../directProvisioner.ts` disable clears last-seen.
+  - `server/src/lib/deployment/requestHost.ts` `detectForwardedHostRewrite` + `server/src/middleware.ts`
+    throttled `maybeWarnForwardedHostRewrite` (edge-safe heuristic: trust on + XFH present + XFH!=Host +
+    Host==canonical). NOTE: F027 deviates from the literal "XFH names an active domain" (edge can't query
+    Redis/DB for the active set) — uses the canonical-collapse heuristic instead. Documented in slice-1 notes.
+  - UI ⚠ was already added in slice 1 (showNeverSeenWarning Alert + appliance.neverSeenWarning i18n).
+
+## Test status (final)
+
+- PASSING unit (28 assertions, 5 files): deploymentProfile (T001), portalDomainProvisioner
+  (T002 + unit-level T003/T004/T005/T006), resolveRequestHost (T007), forwardedHostRewrite (T011),
+  portalDomainSeen (mechanism behind T010).
+- WRITTEN BUT BLOCKED ON ENV: `src/test/integration/actions/portalDomainApplianceActions.integration.test.ts`
+  (T003/T004, DB-backed via TestContext). Compiles + imports + runs the harness; FAILS only at DB auth
+  — the sandbox postgres on :5432 does NOT match `.env.localtest` creds ("password authentication failed
+  for user postgres"). Environment limitation, not a code defect. Run in CI / a provisioned dev DB:
+  `set -a; . ./.env.localtest; set +a; cd server && npx vitest run src/test/integration/actions/portalDomainApplianceActions.integration.test.ts`
+- NOT WRITTEN (need infra/manual): T008 (E2E vanity login — full app+browser), T009 (UI render — needs
+  jsdom/RTL; logic is simple conditional rendering, low risk), T010 full action+redis path (mechanism is
+  unit-tested; action wiring needs DB+redis).
+- tsc full typecheck NOT run (heavy project refs); relied on vitest transpile + targeted unit tests.
+
 ## Open Questions
 
-- "Active but never seen" ⚠ threshold (active > N minutes). Default chosen at F025: 10 minutes.
+- "Active but never seen" ⚠ threshold: chosen 10 minutes (NEVER_SEEN_GRACE_MS in the action).
+- PROXY_SETUP_DOC_URL placeholder needs the real published docs URL.
+- Other-locale translations (de/fr/es/...) for the `clientPortal.domain.appliance.*` keys — only `en` added.
