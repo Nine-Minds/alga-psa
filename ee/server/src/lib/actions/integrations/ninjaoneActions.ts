@@ -1093,8 +1093,8 @@ export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { te
     const { knex } = await createTenantKnex();
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -1152,8 +1152,8 @@ export const triggerSoftwareInventorySync = withAdvancedAssetsAccess(async (user
     const { knex } = await createTenantKnex();
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await tenantScopedTable(knex, 'rmm_integrations', tenant)
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {

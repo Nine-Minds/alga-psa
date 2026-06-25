@@ -63,4 +63,12 @@ describe('NinjaOne action tenant-scoped query contract', () => {
     expect(section).toContain(".where('alert_id', alertId)");
     expectNoDirectTenantRoot(section);
   });
+
+  it('uses structural tenant scoping for patch and software sync trigger roots', () => {
+    const section = sectionBetween('export const triggerPatchStatusSync', 'export const searchSoftware');
+
+    expect(section).toContain("tenantScopedTable(knex, 'rmm_integrations', tenant)");
+    expect(section).toContain(".where('provider', 'ninjaone')");
+    expectNoDirectTenantRoot(section);
+  });
 });
