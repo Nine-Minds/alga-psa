@@ -954,7 +954,10 @@ export class TeamService extends BaseService<ITeam> {
     const { knex } = await this.getKnex();
 
     // Get all teams with their basic info
-    const teams = await knex('teams as t')
+    const teams = await createTenantScopedQuery(knex, {
+      table: 'teams as t',
+      tenant: context.tenant,
+    }).builder
       .leftJoin('users as m', function() {
         this.on('t.manager_id', '=', 'm.user_id')
             .andOn('t.tenant', '=', 'm.tenant');
@@ -963,7 +966,6 @@ export class TeamService extends BaseService<ITeam> {
         this.on('t.team_id', '=', 'th.child_team_id')
             .andOn('t.tenant', '=', 'th.tenant');
       })
-      .where('t.tenant', context.tenant)
       .select(
         't.team_id',
         't.team_name',
@@ -1027,8 +1029,14 @@ export class TeamService extends BaseService<ITeam> {
     return withTransaction(knex, async (trx) => {
       // Validate both teams exist
       const [parentTeam, childTeam] = await Promise.all([
-        trx('teams').where({ team_id: parentTeamId, tenant: context.tenant }).first(),
-        trx('teams').where({ team_id: childTeamId, tenant: context.tenant }).first()
+        createTenantScopedQuery(trx, {
+          table: 'teams',
+          tenant: context.tenant,
+        }).builder.where('team_id', parentTeamId).first(),
+        createTenantScopedQuery(trx, {
+          table: 'teams',
+          tenant: context.tenant,
+        }).builder.where('team_id', childTeamId).first()
       ]);
 
       if (!parentTeam || !childTeam) {
@@ -1068,8 +1076,11 @@ export class TeamService extends BaseService<ITeam> {
   async removeTeamHierarchy(childTeamId: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    await knex('team_hierarchy')
-      .where({ child_team_id: childTeamId, tenant: context.tenant })
+    await createTenantScopedQuery(knex, {
+      table: 'team_hierarchy',
+      tenant: context.tenant,
+    }).builder
+      .where('child_team_id', childTeamId)
       .del();
 
     // Publish hierarchy removed event
