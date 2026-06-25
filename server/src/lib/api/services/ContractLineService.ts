@@ -932,11 +932,13 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { page = 1, limit = 25, filters = {} as any, sort, order } = options;
 
     const buildQuery = () => {
-      let q = knex('contract_lines as cl')
+      let q = createTenantScopedQuery(knex, {
+        table: 'contract_lines as cl',
+        tenant: context.tenant,
+      }).builder
         .join('client_contracts as cc', function joinClientContracts(this: any) {
           this.on('cl.contract_id', '=', 'cc.contract_id').andOn('cl.tenant', '=', 'cc.tenant');
-        })
-        .where('cl.tenant', context.tenant);
+        });
 
       if (filters.client_id) q = q.where('cc.client_id', filters.client_id);
       if (filters.contract_line_id) q = q.where('cl.contract_line_id', filters.contract_line_id);
@@ -995,9 +997,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       let templateContractId: string | null = null;
 
       if (data.client_contract_id) {
-        const clientContract = await trx('client_contracts')
+        const clientContract = await createTenantScopedQuery(trx, {
+          table: 'client_contracts',
+          tenant: context.tenant,
+        }).builder
           .where('client_contract_id', data.client_contract_id)
-          .where('tenant', context.tenant)
           .first('template_contract_id', 'contract_id');
 
         if (clientContract) {
@@ -1099,13 +1103,15 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const assignment = await trx('contract_lines as cl')
+      const assignment = await createTenantScopedQuery(trx, {
+        table: 'contract_lines as cl',
+        tenant: context.tenant,
+      }).builder
         .join('contracts as c', function joinContracts() {
           this.on('cl.contract_id', '=', 'c.contract_id')
             .andOn('cl.tenant', '=', 'c.tenant');
         })
         .where('cl.contract_line_id', clientContractLineId)
-        .where('cl.tenant', context.tenant)
         .select('c.owner_client_id as client_id')
         .first();
 
@@ -1120,9 +1126,11 @@ export class ContractLineService extends BaseService<IContractLine> {
         is_active: false
       }, context);
 
-      await trx('contract_lines')
+      await createTenantScopedQuery(trx, {
+        table: 'contract_lines',
+        tenant: context.tenant,
+      }).builder
         .where('contract_line_id', clientContractLineId)
-        .where('tenant', context.tenant)
         .update(updateData);
     });
   }
