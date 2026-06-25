@@ -2276,9 +2276,8 @@ export const getTaskWithDetails = withAuth(async (
             // Example of proper tenant handling in JOINs:
             // Each JOIN includes an andOn clause to match tenants across tables,
             // ensuring data isolation between tenants even in complex queries
-            const task = await trx('project_tasks')
+            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('project_tasks.task_id', taskId)
-                .andWhere('project_tasks.tenant', tenant)
                 .leftJoin('project_phases', function() { // Changed to leftJoin
                     this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
                         .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
@@ -2346,8 +2345,8 @@ export const reorderTask = withAuth(async (
         await checkPermission(user, 'project', 'update', trx);
 
         // Get the task being moved
-        const task = await trx('project_tasks')
-            .where({ task_id: taskId, tenant })
+        const task = await tenantScopedTable(trx, 'project_tasks', tenant)
+            .where({ task_id: taskId })
             .select('phase_id', 'project_status_mapping_id')
             .first();
 
@@ -2365,16 +2364,16 @@ export const reorderTask = withAuth(async (
         let afterKey: string | null = null;
 
         if (beforeTaskId) {
-            const beforeTask = await trx('project_tasks')
-                .where({ task_id: beforeTaskId, tenant })
+            const beforeTask = await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: beforeTaskId })
                 .select('order_key')
                 .first();
             beforeKey = beforeTask?.order_key || null;
         }
 
         if (afterTaskId) {
-            const afterTask = await trx('project_tasks')
-                .where({ task_id: afterTaskId, tenant })
+            const afterTask = await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: afterTaskId })
                 .select('order_key')
                 .first();
             afterKey = afterTask?.order_key || null;
@@ -2383,8 +2382,8 @@ export const reorderTask = withAuth(async (
         try {
             const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
 
-            await trx('project_tasks')
-                .where({ task_id: taskId, tenant })
+            await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: taskId })
                 .update({
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
@@ -2428,10 +2427,9 @@ export const reorderTasksInStatus = withAuth(async (
                 ));
             }
 
-            const taskRecords = await trx('project_tasks')
+            const taskRecords = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .whereIn('task_id', tasks.map((t): string => t.taskId))
-                .andWhere('tenant', tenant)
-                .select('task_id', 'phase_id');
+                .select('task_id', 'phase_id') as Array<{ task_id: string; phase_id: string }>;
 
             if (taskRecords.length !== tasks.length) {
                 throw new Error('Some tasks not found');
@@ -2443,9 +2441,8 @@ export const reorderTasksInStatus = withAuth(async (
             }
 
             await Promise.all(tasks.map(({taskId, newWbsCode}): Promise<number> =>
-                trx('project_tasks')
+                tenantScopedTable(trx, 'project_tasks', tenant)
                     .where('task_id', taskId)
-                    .andWhere('tenant', tenant)
                     .update({
                         wbs_code: newWbsCode,
                         updated_at: trx.fn.now()
