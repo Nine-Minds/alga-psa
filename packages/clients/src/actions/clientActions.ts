@@ -719,7 +719,7 @@ function applyClientListIndexedSearchFilter(
 }
 
 function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
-  return trx('client_locations')
+  return tenantScopedTable(trx, 'client_locations', tenant)
     .select(
       'tenant',
       'client_id',
@@ -740,7 +740,7 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
         ) as rn
       `)
     )
-    .where({ tenant, is_default: true })
+    .where({ is_default: true })
     .as('cl');
 }
 
@@ -775,7 +775,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     // Use a transaction to get paginated client data
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build the base query with client_locations join
-      let baseQuery = trx('clients as c')
+      let baseQuery = tenantScopedTable(trx, 'clients as c', tenant)
         .leftJoin('users as u', function() {
           this.on('c.account_manager_id', '=', 'u.user_id')
               .andOn('c.tenant', '=', 'u.tenant');
@@ -784,8 +784,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
               .andOn('cl.rn', '=', trx.raw('1'));
-        })
-        .where({ 'c.tenant': tenant });
+        });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -804,17 +803,15 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
 
       // Apply tag filter using new tag structure
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
+          .select('tm.tagged_id')
+          .join('tag_definitions as td', function() {
+            this.on('tm.tenant', '=', 'td.tenant')
+                .andOn('tm.tag_id', '=', 'td.tag_id');
+          })
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
       }
 
       // Get total count
@@ -881,20 +878,20 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     });
 
     // Process clients to add logoUrl if requested
-    let clientsWithLogos = result.clients;
+    let clientsWithLogos = result.clients as IClientWithLocation[];
 
     if (loadLogos && clientsWithLogos.length > 0) {
-      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const clientIds = clientsWithLogos.map((c: IClientWithLocation) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: logoUrlsMap.get(client.client_id) || null,
       }));
     } else {
       // If not loading logos, ensure logoUrl is null
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: null,
@@ -948,7 +945,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const offset = (page - 1) * pageSize;
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      let baseQuery = trx('clients as c')
+      let baseQuery = tenantScopedTable(trx, 'clients as c', tenant)
         .leftJoin('users as u', function() {
           this.on('c.account_manager_id', '=', 'u.user_id')
               .andOn('c.tenant', '=', 'u.tenant');
@@ -957,8 +954,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
               .andOn('cl.rn', '=', trx.raw('1'));
-        })
-        .where({ 'c.tenant': tenant });
+        });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -975,37 +971,34 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
       }
 
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
+          .select('tm.tagged_id')
+          .join('tag_definitions as td', function() {
+            this.on('tm.tenant', '=', 'td.tenant')
+                .andOn('tm.tag_id', '=', 'td.tag_id');
+          })
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
       }
 
       if (dateRange?.from || dateRange?.to) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('cbc.client_id')
-            .from('client_billing_cycles as cbc')
-            .where('cbc.tenant', tenant);
+        const billingCycleSubquery = tenantScopedTable(trx, 'client_billing_cycles as cbc', tenant)
+          .select('cbc.client_id');
 
-          if (dateRange?.from) {
-            const rangeFrom = dateRange.from;
-            this.andWhere(function() {
-              this.whereNull('cbc.period_end_date')
-                .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
-            });
-          }
+        if (dateRange?.from) {
+          const rangeFrom = dateRange.from;
+          billingCycleSubquery.andWhere(function() {
+            this.whereNull('cbc.period_end_date')
+              .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
+          });
+        }
 
-          if (dateRange?.to) {
-            this.andWhere('cbc.period_start_date', '<=', dateRange.to);
-          }
-        });
+        if (dateRange?.to) {
+          billingCycleSubquery.andWhere('cbc.period_start_date', '<=', dateRange.to);
+        }
+
+        baseQuery = baseQuery.whereIn('c.client_id', billingCycleSubquery);
       }
 
       const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
@@ -1061,19 +1054,19 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
       return { clients, totalCount };
     });
 
-    let clientsWithLogos = result.clients;
+    let clientsWithLogos = result.clients as IClientWithLocation[];
 
     if (loadLogos && clientsWithLogos.length > 0) {
-      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const clientIds = clientsWithLogos.map((c: IClientWithLocation) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: logoUrlsMap.get(client.client_id) || null,
       }));
     } else {
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: null,

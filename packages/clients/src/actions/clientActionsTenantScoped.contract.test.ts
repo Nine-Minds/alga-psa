@@ -38,4 +38,27 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(createSection).not.toContain("knex('default_billing_settings')");
     expect(createSection).not.toContain(".where({ tenant })");
   });
+
+  it('uses structural tenant scoping for paginated client list roots', () => {
+    const defaultLocationSection = sectionBetween('function buildDefaultClientLocationSubquery', 'export const getAllClientsPaginated');
+    const paginatedSection = sectionBetween('export const getAllClientsPaginated', 'export const getClientsWithBillingCycleRangePaginated');
+    const billingRangeSection = sectionBetween('export const getClientsWithBillingCycleRangePaginated', 'export const validateClientDeletion');
+
+    expect(defaultLocationSection).toContain("tenantScopedTable(trx, 'client_locations', tenant)");
+    expect(defaultLocationSection).not.toContain('.where({ tenant, is_default: true })');
+
+    expect(paginatedSection).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
+    expect(paginatedSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
+    expect(paginatedSection).not.toContain("trx('clients as c')");
+    expect(paginatedSection).not.toContain(".where({ 'c.tenant': tenant })");
+    expect(paginatedSection).not.toContain(".where('tm.tenant', tenant)");
+
+    expect(billingRangeSection).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
+    expect(billingRangeSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
+    expect(billingRangeSection).toContain("tenantScopedTable(trx, 'client_billing_cycles as cbc', tenant)");
+    expect(billingRangeSection).not.toContain("trx('clients as c')");
+    expect(billingRangeSection).not.toContain(".where({ 'c.tenant': tenant })");
+    expect(billingRangeSection).not.toContain(".where('tm.tenant', tenant)");
+    expect(billingRangeSection).not.toContain(".where('cbc.tenant', tenant)");
+  });
 });
