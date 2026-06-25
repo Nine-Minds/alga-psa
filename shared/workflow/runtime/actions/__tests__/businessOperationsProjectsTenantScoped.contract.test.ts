@@ -51,6 +51,10 @@ const deleteSection = source.slice(
   source.indexOf("id: 'projects.delete_task'"),
   source.indexOf("id: 'projects.link_ticket_to_task'")
 );
+const linkTicketSection = source.slice(
+  source.indexOf("id: 'projects.link_ticket_to_task'"),
+  source.indexOf("id: 'projects.add_tag'")
+);
 
 describe('project workflow business operations tenant-scoped query contract', () => {
   it('uses structural tenant scoping for shared project helper roots', () => {
@@ -176,5 +180,13 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(deleteSection).not.toContain("tx.trx('project_tasks')");
     expect(deleteSection).not.toContain("tx.trx('project_phases')");
     expect(deleteSection).not.toContain("tx.trx('projects')");
+  });
+
+  it('uses structural tenant scoping for link-ticket roots', () => {
+    expect(linkTicketSection).toContain("tenantScopedTable(tx, 'project_ticket_links')");
+    expect(linkTicketSection).toContain("tenantScopedTable(tx, 'ticket_entity_links')");
+    expect(linkTicketSection).not.toContain(".where({ tenant: tx.tenantId");
+    expect(linkTicketSection).not.toContain("tx.trx('project_ticket_links').where");
+    expect(linkTicketSection).not.toContain("tx.trx('ticket_entity_links').where");
   });
 });

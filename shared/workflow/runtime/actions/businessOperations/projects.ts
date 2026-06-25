@@ -3004,8 +3004,8 @@ export function registerProjectActions(): void {
         }
 
         const nowIso = new Date().toISOString();
-        const existingProjectLink = await tx.trx('project_ticket_links')
-          .where({ tenant: tx.tenantId, task_id: input.task_id, ticket_id: input.ticket_id })
+        const existingProjectLink = await tenantScopedTable(tx, 'project_ticket_links')
+          .where({ task_id: input.task_id, ticket_id: input.ticket_id })
           .first();
 
         let projectTicketLinkCreated = false;
@@ -3029,16 +3029,15 @@ export function registerProjectActions(): void {
             : null;
           const resolvedProjectLink = insertedProjectLinkId
             ? { link_id: insertedProjectLinkId }
-            : await tx.trx('project_ticket_links')
-                .where({ tenant: tx.tenantId, task_id: input.task_id, ticket_id: input.ticket_id })
+            : await tenantScopedTable(tx, 'project_ticket_links')
+                .where({ task_id: input.task_id, ticket_id: input.ticket_id })
                 .first('link_id');
           projectTicketLinkId = parseNullableUuid(resolvedProjectLink?.link_id) ?? null;
           projectTicketLinkCreated = Boolean(insertedProjectLinkId);
         }
 
-        const existingEntityLink = await tx.trx('ticket_entity_links')
+        const existingEntityLink = await tenantScopedTable(tx, 'ticket_entity_links')
           .where({
-            tenant: tx.tenantId,
             ticket_id: input.ticket_id,
             entity_type: 'project_task',
             entity_id: input.task_id,
@@ -3068,9 +3067,8 @@ export function registerProjectActions(): void {
             : null;
           const resolvedEntityLink = insertedEntityLinkId
             ? { link_id: insertedEntityLinkId }
-            : await tx.trx('ticket_entity_links')
+            : await tenantScopedTable(tx, 'ticket_entity_links')
                 .where({
-                  tenant: tx.tenantId,
                   ticket_id: input.ticket_id,
                   entity_type: 'project_task',
                   entity_id: input.task_id,
