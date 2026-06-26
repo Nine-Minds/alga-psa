@@ -80,3 +80,15 @@ Working memory for the inventory-module build. Append continuously.
 - **32/45 Pareto tests GREEN locally** (9 vitest files, run against the real `server` DB in rolled-back transactions): ledger receipt/consume/reconcile, serialized on-hand exclusion, transfers/loaners/restock/RMA movement flows, serial+MAC+default-location constraints, allocation math, COGS, drop-ship no-on-hand, invoice idempotency (LEAST guard), location scope, RMA advance-replacement states, dead-units-owed, search, inventory value, low-stock, PO-number uniqueness, kit explosion, moving-average + delete-guard scan, contract-no-consume.
 - **13 remaining tests need the CI session harness** (action-layer `withAuth` orchestration; vitest has no session locally): T001 migration round-trip, T006 adjust-reason guard, T015/T016 asset ABAC linkage, T017 PO-receive status, T019 vendor backfill, T021/T022 kit fulfillment, T033 drop-ship serialized capture, T034 on-fulfillment invoicing, T038/T039 permission gating, T042 (V1.5 count screen). These run via `vitest src/test/integration` in CI (which recreates test_database — a path blocked locally by the credential guardrail).
 - **Live-verified**: migrations applied to the real `server` DB; full UI nav + Stock Locations create/persist proven via algadev browser smoke test.
+
+
+## Live algadev smoke test — action layer verified through the real app
+Driving the running dev app (port 3345, real session) against the real `server` DB verified the withAuth action layer that vitest can't (no session):
+- **stockLocationActions** create/list/persist (earlier smoke test).
+- **vendorActions.createVendor** -> persisted.
+- **purchaseOrderActions.createPurchaseOrder** + lines + **PO numbering** (PO00001/PO00002 via generate_next_number, prefix PO, padding 5 — patterned after invoices/tickets).
+- **submitPurchaseOrder** draft->open.
+- **receivePoLine** — **T017 fully verified live**: received 4/10 -> status `partially_received`, on_hand 4, +1 receipt movement; received 6 more -> status `received`, qty_received 10/10, on_hand 10. (Controlled-input note: the receive qty needs a React-aware value setter in automation; plain typing didn't register.)
+- **F031 inventory panel** confirmed functional: checking "Track inventory" reveals serialized/kit/creates-asset/reorder fields (the earlier non-expand was a double-click toggling it shut, not a bug). Product create via the form additionally needs a service-type selection (billing-form requirement).
+- **Permissions**: server log confirms the MSP admin holds inventory/vendor/purchase_order/sales_order/stock_transfer/stock_location CRUD (the migration grant). 
+All smoke-test seed/test data cleaned up afterward. T017 marked verified-via-smoke-test (the action behavior is confirmed; an automated vitest equivalent still needs the CI session harness).

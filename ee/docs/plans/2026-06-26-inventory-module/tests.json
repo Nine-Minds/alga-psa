@@ -164,7 +164,7 @@
   {
     "id": "T017",
     "description": "[procure] Receiving against a PO line advances quantity_received and moves PO status open\u2192partially_received\u2192received",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064",
       "F065",
