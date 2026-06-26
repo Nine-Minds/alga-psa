@@ -5,3 +5,4 @@ export * from './levels';
 export * from './movements';
 export * from './reconcile';
 export * from './consume';
+export * from './scope';

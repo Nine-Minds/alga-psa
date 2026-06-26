@@ -5,7 +5,7 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockLevel, IStockMovement, IStockUnit, IProductInventorySettings } from '@alga-psa/types';
-import { recordStockMovement, availableQuantity, ensureStockLevel } from '../lib';
+import { recordStockMovement, availableQuantity, ensureStockLevel, assertLocationWritable } from '../lib';
 
 /**
  * Ad-hoc stock ledger actions (design §6.A, §6.D): manual receipts with no PO,
@@ -241,6 +241,8 @@ export const adjustStock = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      // Location-scoped write enforcement: a tech can't adjust another tech's van.
+      await assertLocationWritable(trx, tenant, (user as any)?.user_id, locationId);
       const settings = await loadTrackedSettings(trx, tenant, serviceId);
       await ensureStockLevel(trx, tenant, serviceId, locationId);
       const movements: IStockMovement[] = [];

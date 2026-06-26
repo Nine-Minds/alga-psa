@@ -728,7 +728,7 @@
   {
     "id": "F091",
     "description": "[P4] Invoicing on-fulfillment: emit billable charge into existing invoice-generation engine on fulfill",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7"
     ]
@@ -736,7 +736,7 @@
   {
     "id": "F092",
     "description": "[P4] Invoicing manual: 'Generate invoice' from selected SO lines on demand",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7"
     ]
@@ -744,7 +744,7 @@
   {
     "id": "F093",
     "description": "[P4] quantity_invoiced shared ledger guard (\u2264 ordered; invoice_item\u2194so_line link; no double-bill across both paths)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7",
       "11"
@@ -753,7 +753,7 @@
   {
     "id": "F094",
     "description": "[P4] Partial ship \u2192 partial invoice correctness (counters advance independently)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7"
     ]
@@ -1126,7 +1126,7 @@
   {
     "id": "F140",
     "description": "[P7] Location-scoped write/adjust enforcement (tech\u2192own van+home; manager/admin\u2192all)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -1232,7 +1232,7 @@
   {
     "id": "F153",
     "description": "[P7] Currency handling on SO invoicing (line currency flows to invoice)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "13"
     ]
