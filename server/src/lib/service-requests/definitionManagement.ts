@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   archiveServiceRequestDefinition,
   createDraftFromLatestPublishedVersion,
@@ -156,8 +157,7 @@ export async function listServiceRequestDefinitionsForManagement(
   knex: Knex,
   tenant: string
 ): Promise<ServiceRequestDefinitionManagementRow[]> {
-  return (await knex('service_request_definitions')
-    .where({ tenant })
+  return (await tenantDb(knex, tenant).table('service_request_definitions')
     .orderBy([
       { column: 'sort_order', order: 'asc' },
       { column: 'updated_at', order: 'desc' },
@@ -224,7 +224,7 @@ export async function createBlankServiceRequestDefinition({
   name = 'Untitled Service Request',
   createdBy = null,
 }: CreateBlankDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
-  const [created] = (await knex('service_request_definitions')
+  const [created] = (await tenantDb(knex, tenant).table('service_request_definitions')
     .insert({
       tenant,
       name,
@@ -279,7 +279,7 @@ export async function createServiceRequestDefinitionFromTemplate({
   const template = findTemplateDefinition(templateProviderKey, templateId);
   const draft = template.buildDraft();
 
-  const [created] = (await knex('service_request_definitions')
+  const [created] = (await tenantDb(knex, tenant).table('service_request_definitions')
     .insert({
       tenant,
       name: draft.metadata.name,
@@ -323,15 +323,16 @@ export async function duplicateServiceRequestDefinition({
   sourceDefinitionId,
   createdBy = null,
 }: DuplicateDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
-  const source = (await knex('service_request_definitions')
-    .where({ tenant, definition_id: sourceDefinitionId })
+  const db = tenantDb(knex, tenant);
+  const source = (await db.table('service_request_definitions')
+    .where({ definition_id: sourceDefinitionId })
     .first()) as ServiceRequestDefinitionSourceRow | undefined;
 
   if (!source) {
     throw new Error('Source service request definition not found');
   }
 
-  const [created] = (await knex('service_request_definitions')
+  const [created] = (await db.table('service_request_definitions')
     .insert({
       tenant,
       name: `${source.name} (Copy)`,
@@ -379,8 +380,9 @@ export async function saveServiceRequestDefinitionDraft({
   updates,
 }: SaveDraftDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
   const saved = await knex.transaction(async (trx) => {
-    const existing = (await trx('service_request_definitions')
-      .where({ tenant, definition_id: definitionId })
+    const db = tenantDb(trx, tenant);
+    const existing = (await db.table('service_request_definitions')
+      .where({ definition_id: definitionId })
       .first()) as ServiceRequestDefinitionSourceRow | undefined;
 
     if (!existing) {
@@ -388,8 +390,8 @@ export async function saveServiceRequestDefinitionDraft({
     }
 
     if (existing.lifecycle_state === 'published') {
-      const latestVersion = (await trx('service_request_definition_versions')
-        .where({ tenant, definition_id: definitionId })
+      const latestVersion = (await db.table('service_request_definition_versions')
+        .where({ definition_id: definitionId })
         .orderBy('version_number', 'desc')
         .first(
           'name',
@@ -412,8 +414,8 @@ export async function saveServiceRequestDefinitionDraft({
       if (latestVersion && definitionMatchesPublishedVersion(existing, latestVersion)) {
         await createDraftFromLatestPublishedVersion(trx, tenant, definitionId, updatedBy);
       } else {
-        await trx('service_request_definitions')
-          .where({ tenant, definition_id: definitionId })
+        await db.table('service_request_definitions')
+          .where({ definition_id: definitionId })
           .update({
             lifecycle_state: 'draft',
             updated_by: updatedBy,
@@ -422,8 +424,8 @@ export async function saveServiceRequestDefinitionDraft({
       }
     }
 
-    const [saved] = (await trx('service_request_definitions')
-      .where({ tenant, definition_id: definitionId })
+    const [saved] = (await db.table('service_request_definitions')
+      .where({ definition_id: definitionId })
       .update({
         ...updates,
         lifecycle_state: 'draft',
@@ -460,8 +462,7 @@ export async function searchServiceCatalogForLinking(
     return [];
   }
 
-  return (await knex('service_catalog')
-    .where({ tenant })
+  return (await tenantDb(knex, tenant).table('service_catalog')
     .andWhereILike('service_name', `%${trimmed}%`)
     .orderBy('service_name', 'asc')
     .limit(limit)
@@ -490,8 +491,8 @@ export async function setLinkedServiceForServiceRequestDefinitionDraft(input: {
     });
   }
 
-  const service = await knex('service_catalog')
-    .where({ tenant, service_id: linkedServiceId })
+  const service = await tenantDb(knex, tenant).table('service_catalog')
+    .where({ service_id: linkedServiceId })
     .select('service_name')
     .first<{ service_name: string }>();
 
@@ -555,8 +556,9 @@ export async function deleteServiceRequestDefinitionFromManagement(
   definitionId: string,
   deletedBy?: string | null
 ): Promise<boolean> {
-  const existing = await knex('service_request_definitions')
-    .where({ tenant, definition_id: definitionId })
+  const db = tenantDb(knex, tenant);
+  const existing = await db.table('service_request_definitions')
+    .where({ definition_id: definitionId })
     .select('lifecycle_state')
     .first<{ lifecycle_state: string }>();
 
@@ -564,8 +566,8 @@ export async function deleteServiceRequestDefinitionFromManagement(
     return false;
   }
 
-  const deleted = await knex('service_request_definitions')
-    .where({ tenant, definition_id: definitionId })
+  const deleted = await db.table('service_request_definitions')
+    .where({ definition_id: definitionId })
     .delete();
 
   if (deleted > 0) {

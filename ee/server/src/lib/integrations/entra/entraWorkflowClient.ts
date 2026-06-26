@@ -5,6 +5,7 @@ import type {
   EntraTenantSyncWorkflowInput,
 } from '../../../../../temporal-workflows/src/types/entra-sync';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
@@ -266,9 +267,8 @@ export async function getEntraSyncRunProgress(
     }
 
     const tenantRows = runRow?.run_id
-      ? await knex('entra_sync_run_tenants')
+      ? await tenantDb(knex, tenantId).table('entra_sync_run_tenants')
           .where({
-            tenant: tenantId,
             run_id: runRow.run_id,
           })
           .orderBy('created_at', 'asc')

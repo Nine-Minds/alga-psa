@@ -1,4 +1,4 @@
-import { getAdminConnection, getTenantIdBySlug } from '@alga-psa/db';
+import { getAdminConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
 import { ADD_ONS } from '@alga-psa/types';
 import {
   TEAMS_CAPABILITIES,
@@ -96,8 +96,12 @@ export async function resolveTeamsTenantContext(
   const explicitTenantId = await resolveTenantId(normalizeOptionalString(input.explicitTenantId));
   const microsoftTenantId = normalizeOptionalString(input.microsoftTenantId);
   const db = await getAdminConnection();
+  const discoveryDb = tenantDb(db, explicitTenantId ?? 'teams-tenant-context-discovery');
 
-  let rowsQuery = db<TeamsTenantContextRow>('teams_integrations as teams')
+  let rowsQuery = discoveryDb.unscoped<TeamsTenantContextRow>(
+    'teams_integrations as teams',
+    'Teams tenant context discovery resolves the PSA tenant before tenant-scoped facade construction'
+  )
     .join('microsoft_profiles as profiles', function joinSelectedProfile() {
       this.on('teams.tenant', '=', 'profiles.tenant').andOn('teams.selected_profile_id', '=', 'profiles.profile_id');
     })

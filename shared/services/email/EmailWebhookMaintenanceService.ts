@@ -1,7 +1,10 @@
 import { getAdminConnection } from '../../db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { EmailProviderConfig } from '../../interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import logger from '../../core/logger';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface RenewalOptions {
   tenantId?: string;
@@ -68,8 +71,23 @@ export class EmailWebhookMaintenanceService {
     const now = new Date();
     const threshold = new Date(now.getTime() + lookAheadMinutes * 60000);
 
-    let query = knex('email_providers as ep')
-      .join('microsoft_email_provider_config as mpc', 'ep.id', 'mpc.email_provider_id')
+    const providerRoot = tenantId
+      ? tenantDb(knex, tenantId).table('email_providers as ep')
+      : tenantDb(knex, PROVIDER_TENANT_DISCOVERY).unscoped(
+          'email_providers as ep',
+          'cross-tenant Microsoft email webhook renewal candidate discovery'
+        );
+
+    let query = providerRoot;
+    if (tenantId) {
+      tenantDb(knex, tenantId).tenantJoin(query, 'microsoft_email_provider_config as mpc', 'ep.id', 'mpc.email_provider_id');
+    } else {
+      query = query.join('microsoft_email_provider_config as mpc', function() {
+        this.on('ep.id', '=', 'mpc.email_provider_id')
+          .andOn('ep.tenant', '=', 'mpc.tenant');
+      });
+    }
+    query = query
       .where('ep.provider_type', 'microsoft')
       .andWhere('ep.is_active', true);
 

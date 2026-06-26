@@ -19,6 +19,7 @@ import { TIER_FEATURES } from '@alga-psa/types';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { createAsset, deleteAsset } from '@alga-psa/assets/actions/assetActions';
 import { listAssetTypes } from '@alga-psa/assets/lib/assetTypeRegistry';
@@ -185,8 +186,7 @@ async function findSerialConflict(
   if (!serial) {
     return null;
   }
-  const existing = await knex('assets')
-    .where({ tenant })
+  const existing = await tenantDb(knex, tenant).table('assets')
     .whereRaw('lower(trim(serial_number)) = ?', [serial.toLowerCase()])
     .first('asset_id', 'name', 'client_id');
   return existing ?? null;
@@ -401,8 +401,8 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
       });
       const mappedHuduAssetIds = new Set(mappingRows.map((m) => m.external_entity_id));
 
-      const algaAssets: AlgaMatcherAsset[] = await knex('assets')
-        .where({ tenant, client_id: input.clientId })
+      const algaAssets: AlgaMatcherAsset[] = await tenantDb(knex, tenant).table('assets')
+        .where({ client_id: input.clientId })
         .select('asset_id', 'name as asset_name', 'serial_number');
       const suggestions = suggestHuduAssetMappings(
         huduAssets,

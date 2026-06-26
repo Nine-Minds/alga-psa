@@ -5,6 +5,8 @@ import logger from '@alga-psa/core/logger';
 import { CalendarProviderService } from './CalendarProviderService';
 import { getAnalytics } from '@alga-psa/analytics';
 
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
+
 // PostHog analytics (EE only)
 let analytics: any = null;
 if (process.env.EDITION === 'enterprise') {
@@ -76,7 +78,14 @@ export class CalendarWebhookMaintenanceService {
     const now = new Date();
     const threshold = new Date(now.getTime() + lookAheadMinutes * 60000);
 
-    let query = knex('calendar_providers as cp')
+    const providerRoot = tenantId
+      ? tenantDb(knex, tenantId).table('calendar_providers as cp')
+      : tenantDb(knex, PROVIDER_TENANT_DISCOVERY).unscoped(
+          'calendar_providers as cp',
+          'cross-tenant Microsoft calendar webhook renewal candidate discovery'
+        );
+
+    let query = providerRoot
       .join('microsoft_calendar_provider_config as mcp', function() {
         this.on('cp.id', '=', 'mcp.calendar_provider_id')
           .andOn('cp.tenant', '=', 'mcp.tenant');

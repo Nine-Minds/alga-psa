@@ -1,6 +1,6 @@
 "use server";
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { z } from 'zod';
 
@@ -520,8 +520,8 @@ const getProjectStatusesForSurveys = withAuth(async (user, { tenant }): Promise<
       return [];
     }
 
-    return (await trx('statuses')
-      .where({ tenant, status_type: 'project' })
+    return (await tenantDb(trx, tenant).table('statuses')
+      .where({ status_type: 'project' })
       .orderBy('order_number', 'asc')
       .orderBy('name', 'asc')) as unknown as IStatus[];
   });

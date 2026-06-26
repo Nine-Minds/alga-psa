@@ -3,6 +3,8 @@ import { CalendarWebhookProcessor } from '../../services/calendar/CalendarWebhoo
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
+
 const processor = new CalendarWebhookProcessor();
 
 interface ValidationToken {
@@ -138,10 +140,15 @@ export async function POST(request: NextRequest) {
 
             // Find providers by subscription IDs
             const providers = await knex('microsoft_calendar_provider_config as mcp')
-              .join('calendar_providers as cp', function() {
-                this.on('mcp.calendar_provider_id', '=', 'cp.id')
-                  .andOn('mcp.tenant', '=', 'cp.tenant');
-              })
+              .join(
+                tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+                  .unscoped('calendar_providers', 'tenant discovery for Microsoft calendar webhook health update')
+                  .as('cp'),
+                function() {
+                  this.on('mcp.calendar_provider_id', '=', 'cp.id')
+                    .andOn('mcp.tenant', '=', 'cp.tenant');
+                }
+              )
               .whereIn('mcp.webhook_subscription_id', Array.from(subscriptionIds))
               .select('cp.id as provider_id', 'cp.tenant');
 

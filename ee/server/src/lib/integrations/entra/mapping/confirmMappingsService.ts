@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 export interface ConfirmEntraMappingInput {
   managedTenantId: string;
@@ -38,6 +39,7 @@ export async function confirmEntraMappings(
     let confirmedMappings = 0;
 
     await knex.transaction(async (trx) => {
+      const db = tenantDb(trx, params.tenant);
       for (const mapping of params.mappings) {
         const managedTenantId = String(mapping.managedTenantId || '').trim();
         if (!managedTenantId) {
@@ -60,9 +62,8 @@ export async function confirmEntraMappings(
           continue;
         }
 
-        const existingActive = await trx('entra_client_tenant_mappings')
+        const existingActive = await db.table('entra_client_tenant_mappings')
           .where({
-            tenant: params.tenant,
             managed_tenant_id: managedTenantId,
             is_active: true,
           })
@@ -73,7 +74,7 @@ export async function confirmEntraMappings(
           String(existingActive.client_id || '') === String(clientId || '') &&
           existingActive.mapping_state === mappingState
         ) {
-          await trx('entra_client_tenant_mappings')
+          await db.table('entra_client_tenant_mappings')
             .where({ mapping_id: existingActive.mapping_id })
             .update({
               confidence_score: confidenceScore,
@@ -82,9 +83,8 @@ export async function confirmEntraMappings(
               updated_at: now,
             });
         } else {
-          await trx('entra_client_tenant_mappings')
+          await db.table('entra_client_tenant_mappings')
             .where({
-              tenant: params.tenant,
               managed_tenant_id: managedTenantId,
               is_active: true,
             })
@@ -93,7 +93,7 @@ export async function confirmEntraMappings(
               updated_at: now,
             });
 
-          await trx('entra_client_tenant_mappings').insert({
+          await db.table('entra_client_tenant_mappings').insert({
             tenant: params.tenant,
             managed_tenant_id: managedTenantId,
             client_id: clientId,
@@ -108,9 +108,8 @@ export async function confirmEntraMappings(
         }
 
         if (mappingState === 'mapped' && clientId) {
-          await trx('clients')
+          await db.table('clients')
             .where({
-              tenant: params.tenant,
               client_id: clientId,
             })
             .update({

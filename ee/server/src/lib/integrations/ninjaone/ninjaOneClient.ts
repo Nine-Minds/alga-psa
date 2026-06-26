@@ -8,7 +8,7 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildIntegrationTokenExpiringPayload,
@@ -1126,8 +1126,8 @@ async function resolveNinjaOneWorkflowContext(
   if (!integrationId) {
     try {
       const { knex } = await createTenantKnex(tenantId);
-      const row = (await knex('rmm_integrations')
-        .where({ tenant: tenantId, provider: 'ninjaone' })
+      const row = (await tenantDb(knex, tenantId).table('rmm_integrations')
+        .where({ provider: 'ninjaone' })
         .select('integration_id')
         .first()) as { integration_id: string } | undefined;
       integrationId = row?.integration_id;

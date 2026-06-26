@@ -13,6 +13,8 @@ import { runWithTenant, createTenantKnex } from '../../lib/db';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
+
 export class CalendarWebhookProcessor {
   private syncService: CalendarSyncService;
   private providerService: CalendarProviderService;
@@ -551,10 +553,15 @@ export class CalendarWebhookProcessor {
     try {
       const knex = await getAdminConnection();
       const row = await knex('google_calendar_provider_config as gc')
-        .join('calendar_providers as cp', function() {
-          this.on('gc.calendar_provider_id', '=', 'cp.id')
-            .andOn('gc.tenant', '=', 'cp.tenant');
-        })
+        .join(
+          tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+            .unscoped('calendar_providers', 'tenant discovery from Google calendar Pub/Sub subscription')
+            .as('cp'),
+          function() {
+            this.on('gc.calendar_provider_id', '=', 'cp.id')
+              .andOn('gc.tenant', '=', 'cp.tenant');
+          }
+        )
         .where('gc.pubsub_subscription_name', subscriptionName)
         .andWhere('cp.is_active', true)
         .first({
@@ -577,10 +584,15 @@ export class CalendarWebhookProcessor {
     try {
       const knex = await getAdminConnection();
       const row = await knex('google_calendar_provider_config as gc')
-        .join('calendar_providers as cp', function() {
-          this.on('gc.calendar_provider_id', '=', 'cp.id')
-            .andOn('gc.tenant', '=', 'cp.tenant');
-        })
+        .join(
+          tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+            .unscoped('calendar_providers', 'tenant discovery from Google calendar channel webhook')
+            .as('cp'),
+          function() {
+            this.on('gc.calendar_provider_id', '=', 'cp.id')
+              .andOn('gc.tenant', '=', 'cp.tenant');
+          }
+        )
         .where('gc.webhook_subscription_id', channelId)
         .andWhere('cp.is_active', true)
         .first({
@@ -606,10 +618,15 @@ export class CalendarWebhookProcessor {
     try {
       const knex = await getAdminConnection();
       const row = await knex('microsoft_calendar_provider_config as mc')
-        .join('calendar_providers as cp', function() {
-          this.on('mc.calendar_provider_id', '=', 'cp.id')
-            .andOn('mc.tenant', '=', 'cp.tenant');
-        })
+        .join(
+          tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+            .unscoped('calendar_providers', 'tenant discovery from Microsoft calendar subscription')
+            .as('cp'),
+          function() {
+            this.on('mc.calendar_provider_id', '=', 'cp.id')
+              .andOn('mc.tenant', '=', 'cp.tenant');
+          }
+        )
         .where('mc.webhook_subscription_id', subscriptionId)
         .andWhere('cp.is_active', true)
         .first({

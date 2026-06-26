@@ -20,6 +20,7 @@ import { TIER_FEATURES } from '@alga-psa/types';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getHuduCompanyAssets } from './huduDataActions';
 import type { HuduCompanyFetchOptions, HuduLinkedItem } from './huduDataActions';
@@ -117,8 +118,8 @@ function toErrorMessage(error: unknown): string {
 }
 
 async function listMatchableAssets(knex: Knex, tenant: string, clientId: string): Promise<AlgaMatcherAsset[]> {
-  return knex('assets')
-    .where({ tenant, client_id: clientId })
+  return tenantDb(knex, tenant).table('assets')
+    .where({ client_id: clientId })
     .select('asset_id', 'name as asset_name', 'serial_number');
 }
 

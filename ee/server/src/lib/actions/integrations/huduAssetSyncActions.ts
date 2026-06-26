@@ -23,6 +23,7 @@ import { updateAsset } from '@alga-psa/assets/actions/assetActions';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getHuduCompanyAssets } from './huduDataActions';
 import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
@@ -97,8 +98,7 @@ async function listMappedAssets(
   if (assetIds.length === 0) {
     return [];
   }
-  return knex('assets')
-    .where({ tenant })
+  return tenantDb(knex, tenant).table('assets')
     .whereIn('asset_id', assetIds)
     .select('asset_id', 'name', 'serial_number', 'attributes', 'rmm_provider');
 }

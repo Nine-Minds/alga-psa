@@ -550,19 +550,20 @@ export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (u
     }
 
     // Get mappings with company names
-    const mappings = await db.table('rmm_organization_mappings as rom')
-      .leftJoin('clients as c', function() {
-        this.on('rom.tenant', '=', 'c.tenant')
-          .andOn('rom.client_id', '=', 'c.client_id');
-      })
+    const mappingsQuery = db.table('rmm_organization_mappings as rom');
+    db.tenantJoin(mappingsQuery, 'clients as c', 'c.client_id', 'rom.client_id', { type: 'left' });
+    type OrganizationMappingRow = Omit<RmmOrganizationMapping, 'metadata'> & {
+      metadata?: string | Record<string, unknown> | null;
+    };
+    const mappings = (await mappingsQuery
       .where('rom.integration_id', integration.integration_id)
       .select(
         'rom.*',
         'c.client_name as company_name'
       )
-      .orderBy('rom.external_organization_name');
+      .orderBy('rom.external_organization_name')) as unknown as OrganizationMappingRow[];
 
-    return mappings.map(m => ({
+    return mappings.map((m): RmmOrganizationMapping => ({
       ...m,
       metadata: typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata || {},
     }));

@@ -1,4 +1,4 @@
-import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
+import { createTenantKnex, getUserWithRoles, tenantDb } from '@alga-psa/db';
 import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -438,10 +438,13 @@ async function buildMessageExtensionMyWorkLink(tenantId: string): Promise<string
 
 async function loadCreateTicketFormOptions(tenantId: string): Promise<TeamsCreateTicketFormOptions> {
   const { knex } = await createTenantKnex(tenantId);
+  const db = tenantDb(knex, tenantId);
+  const contactsQuery = db.table('contacts as c');
+  db.tenantJoin(contactsQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
 
   const [boards, statuses, clients, contacts] = await Promise.all([
-    (await knex('boards')
-      .where({ tenant: tenantId, is_inactive: false })
+    (await db.table('boards')
+      .where({ is_inactive: false })
       .select('board_id', 'board_name', 'default_priority_id', 'is_default')
       .orderBy('is_default', 'desc')
       .orderBy('display_order', 'asc')
@@ -452,22 +455,18 @@ async function loadCreateTicketFormOptions(tenantId: string): Promise<TeamsCreat
       default_priority_id?: string | null;
       is_default?: boolean | null;
     }>,
-    (await knex('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket', is_closed: false })
+    (await db.table('statuses')
+      .where({ status_type: 'ticket', is_closed: false })
       .select('status_id', 'name', 'is_default')
       .orderBy('is_default', 'desc')
       .orderBy('name', 'asc')
       .limit(25)) as Array<{ status_id?: string | null; name?: string | null; is_default?: boolean | null }>,
-    (await knex('clients')
-      .where({ tenant: tenantId, is_inactive: false })
+    (await db.table('clients')
+      .where({ is_inactive: false })
       .select('client_id', 'client_name')
       .orderBy('client_name', 'asc')
       .limit(25)) as Array<{ client_id?: string | null; client_name?: string | null }>,
-    (await knex('contacts as c')
-      .leftJoin('clients as comp', function joinClients() {
-        this.on('c.client_id', '=', 'comp.client_id').andOn('c.tenant', '=', 'comp.tenant');
-      })
-      .where('c.tenant', tenantId)
+    (await contactsQuery
       .where('c.is_inactive', false)
       .select('c.contact_name_id', 'c.full_name', 'c.client_id', 'comp.client_name')
       .orderBy('c.full_name', 'asc')
@@ -927,11 +926,11 @@ async function searchTaskHits(params: {
   }
 
   const { knex } = await createTenantKnex(params.tenantId);
-  const rows = (await knex('project_tasks as pt')
-    .join('projects as p', function joinProjects() {
-      this.on('pt.project_id', '=', 'p.project_id').andOn('pt.tenant', '=', 'p.tenant');
-    })
-    .where('pt.tenant', params.tenantId)
+  const db = tenantDb(knex, params.tenantId);
+  const taskQuery = db.table('project_tasks as pt');
+  db.tenantJoin(taskQuery, 'projects as p', 'pt.project_id', 'p.project_id');
+
+  const rows = (await taskQuery
     .where((builder) => {
       builder
         .whereILike('pt.task_name', `%${params.query}%`)

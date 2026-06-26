@@ -9,6 +9,8 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import { getSecret } from '../../utils/getSecret';
 
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
+
 export interface CreateCalendarProviderData {
   tenant: string;
   userId: string; // The user who owns this calendar sync
@@ -141,8 +143,7 @@ export class CalendarProviderService {
   async getProviders(filters: GetCalendarProvidersFilter): Promise<CalendarProviderConfig[]> {
     try {
       const db = await this.getDb();
-      let query = db('calendar_providers')
-        .where('tenant', filters.tenant)
+      let query = tenantDb(db, filters.tenant).table('calendar_providers')
         .orderBy('created_at', 'desc');
 
       if (filters.userId) {
@@ -191,13 +192,15 @@ export class CalendarProviderService {
   ): Promise<CalendarProviderConfig | null> {
     try {
       const db = await this.getDb();
-      const provider = await db('calendar_providers')
+      const providerQuery = tenant
+        ? tenantDb(db, tenant).table('calendar_providers')
+        : tenantDb(db, PROVIDER_TENANT_DISCOVERY).unscoped(
+            'calendar_providers',
+            'tenant discovery for calendar provider lookup'
+          );
+
+      const provider = await providerQuery
         .where('id', providerId)
-        .modify((builder) => {
-          if (tenant) {
-            builder.andWhere('tenant', tenant);
-          }
-        })
         .first();
 
       if (!provider) {
@@ -228,7 +231,7 @@ export class CalendarProviderService {
       const db = await this.getDb();
       
       // Create main provider record
-      const [provider] = await db('calendar_providers')
+      const [provider] = await tenantDb(db, data.tenant).table('calendar_providers')
         .insert({
           id: db.raw('gen_random_uuid()'),
           tenant: data.tenant,
@@ -333,9 +336,8 @@ export class CalendarProviderService {
       }
 
       // Update main provider record
-      await db('calendar_providers')
+      await tenantDb(db, tenant).table('calendar_providers')
         .where('id', providerId)
-        .andWhere('tenant', tenant)
         .update(mainUpdateData);
 
       // Update vendor-specific configuration if provided
@@ -415,7 +417,17 @@ export class CalendarProviderService {
         updateData.last_sync_at = status.lastSyncAt;
       }
 
-      await db('calendar_providers')
+      const tenantRow = await tenantDb(db, PROVIDER_TENANT_DISCOVERY)
+        .unscoped('calendar_providers', 'tenant discovery for calendar provider status update')
+        .select('tenant')
+        .where('id', providerId)
+        .first();
+
+      if (!tenantRow) {
+        throw new Error('Provider not found');
+      }
+
+      await tenantDb(db, tenantRow.tenant).table('calendar_providers')
         .where('id', providerId)
         .update(updateData);
 
@@ -434,9 +446,8 @@ export class CalendarProviderService {
       const db = await this.getDb();
       
       // Get provider info to determine type for cleanup
-      const provider = await db('calendar_providers')
+      const provider = await tenantDb(db, tenant).table('calendar_providers')
         .where('id', providerId)
-        .andWhere('tenant', tenant)
         .first();
 
       if (!provider) {
@@ -463,9 +474,8 @@ export class CalendarProviderService {
         .del();
 
       // Delete main provider record
-      const deleted = await db('calendar_providers')
+      const deleted = await tenantDb(db, tenant).table('calendar_providers')
         .where('id', providerId)
-        .andWhere('tenant', tenant)
         .del();
 
       if (deleted === 0) {

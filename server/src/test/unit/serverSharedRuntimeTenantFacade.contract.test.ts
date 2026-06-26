@@ -36,6 +36,51 @@ describe('server/shared runtime tenant facade roots', () => {
     }
   });
 
+  it('routes service request management, portal, and submission roots through tenantDb', () => {
+    const metadata = read('packages/db/src/lib/tenantTableMetadata.ts');
+    for (const table of [
+      'service_request_definition_versions',
+      'service_request_submission_attachments',
+      'service_request_submissions',
+    ]) {
+      expect(metadata).toContain(`${table}: { scope: 'tenant' }`);
+    }
+
+    const files = [
+      'server/src/lib/service-requests/basicFormBuilder.ts',
+      'server/src/lib/service-requests/definitionEditor.ts',
+      'server/src/lib/service-requests/definitionManagement.ts',
+      'server/src/lib/service-requests/definitionValidation.ts',
+      'server/src/lib/service-requests/portalCatalog.ts',
+      'server/src/lib/service-requests/portalDetail.ts',
+      'server/src/lib/service-requests/submissionHistory.ts',
+      'server/src/lib/service-requests/submissionService.ts',
+      'server/src/lib/service-requests/providers/builtins/ticketOnlyExecutionProvider.ts',
+    ];
+    const directServiceRequestRoot = directRootPattern([
+      'service_request_definitions',
+      'service_request_definition_versions',
+      'service_request_submissions',
+      'service_request_submission_attachments',
+      'service_categories',
+      'service_catalog',
+      'external_files',
+      'boards',
+      'priorities',
+      'users',
+      'clients',
+      'contacts',
+      'tickets',
+    ]);
+
+    for (const file of files) {
+      const source = read(file);
+
+      expect(source, file).toContain("tenantDb");
+      expect(source, file).not.toMatch(directServiceRequestRoot);
+    }
+  });
+
   it('routes notification and SLA tenant roots through tenantDb', () => {
     const sendEventEmail = read('server/src/lib/notifications/sendEventEmail.ts');
     expect(sendEventEmail).toContain("tenantDb(knex, tenantId).table('email_reply_tokens')");

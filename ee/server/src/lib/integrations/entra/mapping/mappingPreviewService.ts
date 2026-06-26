@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { mapEntraManagedTenantRow } from '../entraRowMappers';
 import {
   extractDomainFromEmailOrUrl,
@@ -119,19 +120,16 @@ export async function buildEntraMappingPreview(
 ): Promise<EntraMappingPreviewResult> {
   const { managedTenants, clients, inboundDomains } = await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
-
-
+    const db = tenantDb(knex, tenant);
 
     const [managedTenantRows, clientRows, inboundDomainRows] = await Promise.all([
       knex('entra_managed_tenants')
         .where({ tenant })
         .orderByRaw('coalesce(display_name, entra_tenant_id) asc')
         .select('*'),
-      knex('clients')
-        .where({ tenant })
+      db.table('clients')
         .select('client_id', 'client_name', 'url', 'properties', 'billing_email'),
-      knex('client_inbound_email_domains')
-        .where({ tenant })
+      db.table('client_inbound_email_domains')
         .select('client_id', 'domain'),
     ]);
 

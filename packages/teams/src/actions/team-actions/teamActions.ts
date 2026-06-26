@@ -2,8 +2,7 @@
 
 import Team from '../../models/team';
 import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
@@ -18,19 +17,16 @@ async function getUsersWithRoles(
   }
 
   const userIds = members.map((member) => member.user_id);
-  const users = await trx<IUser>('users')
+  const db = tenantDb(trx, tenant);
+  const users = await db.table<IUser>('users')
     .select('*')
-    .whereIn('user_id', userIds)
-    .where('tenant', tenant);
+    .whereIn('user_id', userIds);
 
-  const roles = await trx<IRole>('roles')
-    .join('user_roles', function () {
-      this.on('roles.role_id', '=', 'user_roles.role_id')
-        .andOn('roles.tenant', '=', 'user_roles.tenant');
-    })
+  const rolesQuery = db.table<IRole>('roles');
+  db.tenantJoin(rolesQuery, 'user_roles', 'roles.role_id', 'user_roles.role_id');
+
+  const roles = await rolesQuery
     .whereIn('user_roles.user_id', userIds)
-    .where('user_roles.tenant', tenant)
-    .where('roles.tenant', tenant)
     .select('roles.*', 'user_roles.user_id as user_id');
 
   const rolesByUser = new Map<string, IRole[]>();
@@ -285,22 +281,24 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Assign manager if changed
       if (changes.managerId) {
         await Team.update(trx, tenant, teamId, { manager_id: changes.managerId });
 
         // Demote any existing leads to 'member'
-        await trx('team_members')
-          .where({ team_id: teamId, tenant, role: 'lead' })
+        await db.table('team_members')
+          .where({ team_id: teamId, role: 'lead' })
           .update({ role: 'member' });
 
         // Add or promote the new manager
-        const existingMember = await trx('team_members')
-          .where({ team_id: teamId, user_id: changes.managerId, tenant })
+        const existingMember = await db.table('team_members')
+          .where({ team_id: teamId, user_id: changes.managerId })
           .first();
         if (existingMember) {
-          await trx('team_members')
-            .where({ team_id: teamId, user_id: changes.managerId, tenant })
+          await db.table('team_members')
+            .where({ team_id: teamId, user_id: changes.managerId })
             .update({ role: 'lead' });
         } else {
           await Team.addMember(trx, tenant, teamId, changes.managerId, 'lead');
@@ -320,17 +318,17 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
           throw new Error('Cannot remove the team lead. Please assign a new team lead first.');
         }
 
-        await trx('team_members')
-          .where({ team_id: teamId, tenant })
+        await db.table('team_members')
+          .where({ team_id: teamId })
           .whereIn('user_id', changes.removeUserIds)
           .del();
       }
 
       // Batch add members (with inactive user validation)
       if (changes.addUserIds.length > 0) {
-        const activeUsers = await trx('users')
+        const activeUsers = await db.table('users')
           .select('user_id')
-          .where({ tenant, is_inactive: false })
+          .where({ is_inactive: false })
           .whereIn('user_id', changes.addUserIds);
 
         const activeUserIds = new Set(activeUsers.map((u: { user_id: string }) => u.user_id));
@@ -339,7 +337,7 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
           throw new Error('Cannot add inactive users to team');
         }
 
-        await trx('team_members').insert(
+        await db.table('team_members').insert(
           changes.addUserIds.map(userId => ({
             team_id: teamId,
             user_id: userId,
@@ -367,21 +365,23 @@ export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: str
   try {
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Update team manager
       await Team.update(trx, tenant, teamId, { manager_id: userId });
 
       // Demote any existing leads to 'member'
-      await trx('team_members')
-        .where({ team_id: teamId, tenant, role: 'lead' })
+      await db.table('team_members')
+        .where({ team_id: teamId, role: 'lead' })
         .update({ role: 'member' });
 
       // Add or promote the new manager
-      const existingMember = await trx('team_members')
-        .where({ team_id: teamId, user_id: userId, tenant })
+      const existingMember = await db.table('team_members')
+        .where({ team_id: teamId, user_id: userId })
         .first();
       if (existingMember) {
-        await trx('team_members')
-          .where({ team_id: teamId, user_id: userId, tenant })
+        await db.table('team_members')
+          .where({ team_id: teamId, user_id: userId })
           .update({ role: 'lead' });
       } else {
         await Team.addMember(trx, tenant, teamId, userId, 'lead');

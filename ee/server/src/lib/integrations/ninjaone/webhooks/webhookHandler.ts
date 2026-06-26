@@ -8,7 +8,7 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
 import { createTenantKnex } from '@/lib/db';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@shared/events/publisher';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -120,9 +120,14 @@ export async function findIntegrationForWebhook(
   mapping: RmmOrganizationMapping;
 } | null> {
   const { knex } = await createTenantKnex();
+  const discoveryDb = tenantDb(knex, 'pre-tenant-discovery');
 
   // Find the organization mapping to get tenant and integration
-  const result = await knex('rmm_organization_mappings as rom')
+  const result = await discoveryDb
+    .unscoped(
+      'rmm_organization_mappings as rom',
+      'NinjaOne webhook organization lookup derives tenant before tenant facade can be constructed'
+    )
     .join('rmm_integrations as ri', function() {
       this.on('rom.integration_id', '=', 'ri.integration_id')
         .andOn('rom.tenant', '=', 'ri.tenant');
@@ -481,12 +486,12 @@ async function handleDeviceStatusEvent(
 
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
     const now = new Date().toISOString();
 
     // Find the asset by device ID
-    const assetMapping = await knex('tenant_external_entity_mappings')
+    const assetMapping = await db.table('tenant_external_entity_mappings')
       .where({
-        tenant: tenantId,
         integration_type: 'ninjaone',
         alga_entity_type: 'asset',
         external_entity_id: String(payload.deviceId),
@@ -518,19 +523,19 @@ async function handleDeviceStatusEvent(
 
     if (activityType === 'SYSTEM_REBOOTED') {
       // Also update the extension table for last_reboot_at
-      const asset = await knex('assets')
-        .where({ tenant: tenantId, asset_id: assetMapping.alga_entity_id })
+      const asset = await db.table('assets')
+        .where({ asset_id: assetMapping.alga_entity_id })
         .first();
 
       if (asset && (asset.asset_type === 'workstation' || asset.asset_type === 'server')) {
-        await knex(`${asset.asset_type}_assets`)
-          .where({ tenant: tenantId, asset_id: assetMapping.alga_entity_id })
+        await db.table(`${asset.asset_type}_assets`)
+          .where({ asset_id: assetMapping.alga_entity_id })
           .update({ last_reboot_at: now });
       }
     }
 
-    await knex('assets')
-      .where({ tenant: tenantId, asset_id: assetMapping.alga_entity_id })
+    await db.table('assets')
+      .where({ asset_id: assetMapping.alga_entity_id })
       .update(updateData);
 
     // Emit online event if coming back online
@@ -652,12 +657,12 @@ async function handleDeviceDeleted(
   deviceId: number
 ): Promise<void> {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenantId);
   const now = new Date().toISOString();
 
   // Find the asset mapping
-  const mapping = await knex('tenant_external_entity_mappings')
+  const mapping = await db.table('tenant_external_entity_mappings')
     .where({
-      tenant: tenantId,
       integration_type: 'ninjaone',
       alga_entity_type: 'asset',
       external_entity_id: String(deviceId),
@@ -666,9 +671,10 @@ async function handleDeviceDeleted(
 
   if (mapping) {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const trxDb = tenantDb(trx, tenantId);
       // Mark asset as inactive
-      await trx('assets')
-        .where({ tenant: tenantId, asset_id: mapping.alga_entity_id })
+      await trxDb.table('assets')
+        .where({ asset_id: mapping.alga_entity_id })
         .update({
           status: 'inactive',
           agent_status: 'offline',
@@ -676,9 +682,8 @@ async function handleDeviceDeleted(
         });
 
       // Update mapping
-      await trx('tenant_external_entity_mappings')
+      await trxDb.table('tenant_external_entity_mappings')
         .where({
-          tenant: tenantId,
           id: mapping.id,
         })
         .update({
@@ -688,7 +693,7 @@ async function handleDeviceDeleted(
         });
 
       // Create history record
-      await trx('asset_history').insert({
+      await trxDb.table('asset_history').insert({
         tenant: tenantId,
         asset_id: mapping.alga_entity_id,
         changed_by: null,
