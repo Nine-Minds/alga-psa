@@ -4,6 +4,7 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 
@@ -31,11 +32,11 @@ export async function updateTenantLicenseCount(
 
   try {
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, input.tenantId);
       // Check for idempotency if event ID is provided
       if (input.eventId) {
-        const existing = await trx('tenants')
+        const existing = await db.table('tenants')
           .where({
-            tenant: input.tenantId,
             stripe_event_id: input.eventId
           })
           .first();
@@ -50,8 +51,7 @@ export async function updateTenantLicenseCount(
       }
 
       // Update the tenant's license count
-      const result = await trx('tenants')
-        .where({ tenant: input.tenantId })
+      const result = await db.table('tenants')
         .update({
           licensed_user_count: input.licenseCount,
           last_license_update: trx.fn.now(),
@@ -93,10 +93,10 @@ export async function getTenantLicenseUsage(tenantId: string): Promise<{
 
   try {
     const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenantId);
     
     // Get the tenant's license limit
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const tenant = await db.table('tenants')
       .first('licensed_user_count');
     
     if (!tenant) {
@@ -104,9 +104,8 @@ export async function getTenantLicenseUsage(tenantId: string): Promise<{
     }
     
     // Count active MSP (internal) users
-    const usedResult = await knex('users')
+    const usedResult = await db.table('users')
       .where({ 
-        tenant: tenantId,
         user_type: 'internal',
         is_inactive: false 
       })

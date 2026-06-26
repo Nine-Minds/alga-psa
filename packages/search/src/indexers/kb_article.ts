@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote, truncateForIndex } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -39,10 +39,10 @@ function toSearchDoc(tenant: string, row: KbArticleSearchRow): SearchDoc {
 }
 
 function baseKbArticleQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<KbArticleSearchRow>(knex, 'kb_articles as ka', 'ka', tenant)
-    .join('documents as d', function() {
-      this.on('d.tenant', 'ka.tenant').andOn('d.document_id', 'ka.document_id');
-    })
+  const query = createTenantScopedIndexerQuery<KbArticleSearchRow>(knex, 'kb_articles as ka', 'ka', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'documents as d', 'd.document_id', 'ka.document_id');
+
+  return query
     .select(
       'ka.article_id',
       'ka.document_id',

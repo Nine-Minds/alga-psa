@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface ProjectPhaseSearchRow {
@@ -39,10 +39,10 @@ function toSearchDoc(tenant: string, row: ProjectPhaseSearchRow): SearchDoc {
 }
 
 function baseProjectPhaseQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<ProjectPhaseSearchRow>(knex, 'project_phases as ph', 'ph', tenant)
-    .join('projects as p', function() {
-      this.on('p.tenant', 'ph.tenant').andOn('p.project_id', 'ph.project_id');
-    })
+  const query = createTenantScopedIndexerQuery<ProjectPhaseSearchRow>(knex, 'project_phases as ph', 'ph', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'projects as p', 'p.project_id', 'ph.project_id');
+
+  return query
     .select(
       'ph.phase_id',
       'ph.project_id',

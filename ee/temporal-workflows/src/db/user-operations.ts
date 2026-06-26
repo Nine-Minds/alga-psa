@@ -27,7 +27,10 @@ export async function createAdminUserInDB(
       const db = tenantDb(trx, input.tenantId);
       // Check if an internal user with this email already exists in ANY tenant
       // This prevents duplicate MSP users across tenants which causes SSO issues
-      const existingInternalUser = await trx('users')
+      const existingInternalUser = await db.unscoped(
+        'users',
+        'global internal-user email uniqueness check during tenant admin bootstrap'
+      )
         .select('user_id', 'tenant')
         .where({ email: input.email.toLowerCase(), user_type: 'internal' })
         .first();

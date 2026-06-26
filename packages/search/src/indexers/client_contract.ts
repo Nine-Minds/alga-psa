@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface ClientContractSearchRow {
@@ -56,13 +56,11 @@ function toSearchDoc(tenant: string, row: ClientContractSearchRow): SearchDoc {
 }
 
 function baseClientContractQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<ClientContractSearchRow>(knex, 'client_contracts as cc', 'cc', tenant)
-    .join('clients as cl', function() {
-      this.on('cl.tenant', 'cc.tenant').andOn('cl.client_id', 'cc.client_id');
-    })
-    .join('contracts as c', function() {
-      this.on('c.tenant', 'cc.tenant').andOn('c.contract_id', 'cc.contract_id');
-    })
+  const query = createTenantScopedIndexerQuery<ClientContractSearchRow>(knex, 'client_contracts as cc', 'cc', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'clients as cl', 'cl.client_id', 'cc.client_id');
+  tenantJoinIndexerTable(knex, tenant, query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+
+  return query
     .select(
       'cc.client_contract_id',
       'cc.client_id',

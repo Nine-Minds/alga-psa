@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface InvoiceItemSearchRow {
@@ -37,10 +37,10 @@ function toSearchDoc(tenant: string, row: InvoiceItemSearchRow): SearchDoc {
 }
 
 function baseInvoiceItemQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<InvoiceItemSearchRow>(knex, 'invoice_items as ii', 'ii', tenant)
-    .join('invoices as i', function() {
-      this.on('i.tenant', 'ii.tenant').andOn('i.invoice_id', 'ii.invoice_id');
-    })
+  const query = createTenantScopedIndexerQuery<InvoiceItemSearchRow>(knex, 'invoice_items as ii', 'ii', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'invoices as i', 'i.invoice_id', 'ii.invoice_id');
+
+  return query
     .select(
       'ii.item_id',
       'ii.invoice_id',

@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import type { ITenant } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { tenantDb } from '../lib/tenantDb';
 
 export const Tenant = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITenant[]> => {
@@ -107,7 +108,10 @@ export async function getTenantDefaultStatuses(
   tenantId: string
 ): Promise<DefaultStatus[]> {
   try {
-    const result = await knexOrTrx('tenant_settings').where({ tenant: tenantId }).select('default_project_statuses').first();
+    const result = await tenantDb(knexOrTrx, tenantId)
+      .table('tenant_settings')
+      .select('default_project_statuses')
+      .first();
 
     if (result && (result as any).default_project_statuses) {
       return JSON.parse((result as any).default_project_statuses);
@@ -127,4 +131,3 @@ export async function getTenantDefaultStatuses(
 }
 
 export default Tenant;
-

@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote, flattenMarkdown } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -58,10 +58,10 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
 }
 
 function baseTicketCommentQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<TicketCommentSearchRow>(knex, 'comments as c', 'c', tenant)
-    .join('tickets as t', function() {
-      this.on('t.tenant', 'c.tenant').andOn('t.ticket_id', 'c.ticket_id');
-    })
+  const query = createTenantScopedIndexerQuery<TicketCommentSearchRow>(knex, 'comments as c', 'c', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'tickets as t', 't.ticket_id', 'c.ticket_id');
+
+  return query
     .select(
       'c.comment_id',
       'c.ticket_id',

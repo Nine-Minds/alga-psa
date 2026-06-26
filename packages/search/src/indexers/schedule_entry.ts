@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface ScheduleEntrySearchRow {
@@ -43,10 +43,10 @@ function toSearchDoc(tenant: string, row: ScheduleEntrySearchRow): SearchDoc {
 }
 
 function baseScheduleEntryQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<ScheduleEntrySearchRow>(knex, 'schedule_entries as se', 'se', tenant)
-    .leftJoin('schedule_entry_assignees as sea', function() {
-      this.on('sea.tenant', 'se.tenant').andOn('sea.entry_id', 'se.entry_id');
-    })
+  const query = createTenantScopedIndexerQuery<ScheduleEntrySearchRow>(knex, 'schedule_entries as se', 'se', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'schedule_entry_assignees as sea', 'sea.entry_id', 'se.entry_id', { type: 'left' });
+
+  return query
     .select(
       'se.entry_id',
       'se.title',

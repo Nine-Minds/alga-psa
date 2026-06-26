@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote, truncateForIndex } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -53,13 +53,11 @@ function toSearchDoc(tenant: string, row: DocumentSearchRow): SearchDoc {
 }
 
 function baseDocumentQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<DocumentSearchRow>(knex, 'documents as d', 'd', tenant)
-    .leftJoin('document_block_content as dbc', function () {
-      this.on('dbc.tenant', 'd.tenant').andOn('dbc.document_id', 'd.document_id');
-    })
-    .leftJoin('document_content as dc', function () {
-      this.on('dc.tenant', 'd.tenant').andOn('dc.document_id', 'd.document_id');
-    })
+  const query = createTenantScopedIndexerQuery<DocumentSearchRow>(knex, 'documents as d', 'd', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'document_block_content as dbc', 'dbc.document_id', 'd.document_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'document_content as dc', 'dc.document_id', 'd.document_id', { type: 'left' });
+
+  return query
     .select(
       'd.document_id',
       'd.document_name',

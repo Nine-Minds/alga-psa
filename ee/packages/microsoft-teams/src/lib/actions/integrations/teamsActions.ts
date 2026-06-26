@@ -301,7 +301,7 @@ async function ensureOnlineMeetingInteractionType(
 ): Promise<void> {
   try {
     const db = tenantDb(knex, tenant);
-    const systemType = await knex('system_interaction_types')
+    const systemType = await db.table('system_interaction_types')
       .where({ type_name: 'Online Meeting' })
       .first('type_id', 'icon');
     if (!systemType) {

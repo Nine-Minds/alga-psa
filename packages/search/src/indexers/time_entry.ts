@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface TimeEntrySearchRow {
@@ -88,19 +88,13 @@ function toSearchDoc(tenant: string, row: TimeEntrySearchRow): SearchDoc {
 }
 
 function baseTimeEntryQuery(knex: Knex, tenant: string) {
-  return createTenantScopedIndexerQuery<TimeEntrySearchRow>(knex, 'time_entries as te', 'te', tenant)
-    .leftJoin('tickets as t', function() {
-      this.on('t.tenant', 'te.tenant').andOn('t.ticket_id', 'te.work_item_id');
-    })
-    .leftJoin('project_tasks as pt', function() {
-      this.on('pt.tenant', 'te.tenant').andOn('pt.task_id', 'te.work_item_id');
-    })
-    .leftJoin('project_phases as pp', function() {
-      this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
-    })
-    .leftJoin('interactions as i', function() {
-      this.on('i.tenant', 'te.tenant').andOn('i.interaction_id', 'te.work_item_id');
-    })
+  const query = createTenantScopedIndexerQuery<TimeEntrySearchRow>(knex, 'time_entries as te', 'te', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'tickets as t', 't.ticket_id', 'te.work_item_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'project_tasks as pt', 'pt.task_id', 'te.work_item_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'interactions as i', 'i.interaction_id', 'te.work_item_id', { type: 'left' });
+
+  return query
     .select(
       'te.entry_id',
       'te.user_id',
