@@ -1,6 +1,12 @@
 const { randomUUID } = require('node:crypto');
 
-const { buildBasePayloadForEvent, pickOne, pickUser } = require('./notification-fixture.cjs');
+const { buildBasePayloadForEvent, pickUser } = require('./notification-fixture.cjs');
+const {
+  deleteTenantRows,
+  pickTenantOne,
+  selectTenantRows,
+  updateTenantRows
+} = require('./tenant-sql.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
@@ -94,49 +100,83 @@ async function cleanupProject(ctx, { tenantId, apiKey, projectId }) {
 
   if (projectDeleted) return;
 
-  const phaseIds = await ctx.db.query(`select phase_id from project_phases where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  const phaseIds = await selectTenantRows(ctx, {
+    table: 'project_phases',
+    columns: 'phase_id',
+    tenantId,
+    where: 'project_id = $2',
+    params: [projectId]
+  });
   const phaseIdList = phaseIds.map((r) => r.phase_id);
 
   if (phaseIdList.length) {
-    const taskIds = await ctx.db.query(`select task_id from project_tasks where tenant = $1 and phase_id = any($2::uuid[])`, [
+    const taskIds = await selectTenantRows(ctx, {
+      table: 'project_tasks',
+      columns: 'task_id',
       tenantId,
-      phaseIdList
-    ]);
+      where: 'phase_id = any($2::uuid[])',
+      params: [phaseIdList]
+    });
     const taskIdList = taskIds.map((r) => r.task_id);
 
     if (taskIdList.length) {
-      await ctx.dbWrite.query(`delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
-      await ctx.dbWrite.query(`delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+      await deleteTenantRows(ctx, {
+        table: 'task_checklist_items',
+        tenantId,
+        where: 'task_id = any($2::uuid[])',
+        params: [taskIdList]
+      });
+      await deleteTenantRows(ctx, {
+        table: 'project_tasks',
+        tenantId,
+        where: 'task_id = any($2::uuid[])',
+        params: [taskIdList]
+      });
     }
 
-    await ctx.dbWrite.query(`delete from project_phases where tenant = $1 and phase_id = any($2::uuid[])`, [tenantId, phaseIdList]);
+    await deleteTenantRows(ctx, {
+      table: 'project_phases',
+      tenantId,
+      where: 'phase_id = any($2::uuid[])',
+      params: [phaseIdList]
+    });
   }
 
-  await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-  await ctx.dbWrite.query(`delete from project_status_mappings where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-  await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  await deleteTenantRows(ctx, { table: 'project_ticket_links', tenantId, where: 'project_id = $2', params: [projectId] });
+  await deleteTenantRows(ctx, { table: 'project_status_mappings', tenantId, where: 'project_id = $2', params: [projectId] });
+  await deleteTenantRows(ctx, { table: 'projects', tenantId, where: 'project_id = $2', params: [projectId] });
 }
 
 async function createTicket(ctx, { tenantId, apiKey }) {
-  const client = await pickOne(ctx, {
+  const client = await pickTenantOne(ctx, {
     label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'clients',
+    columns: 'client_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
-  const board = await pickOne(ctx, {
+  const board = await pickTenantOne(ctx, {
     label: 'a ticket board',
-    sql: `select board_id from boards where tenant = $1 order by is_default desc, display_order asc limit 1`,
-    params: [tenantId]
+    table: 'boards',
+    columns: 'board_id',
+    tenantId,
+    orderBy: 'is_default desc, display_order asc'
   });
-  const status = await pickOne(ctx, {
+  const status = await pickTenantOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and board_id = $2 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
-    params: [tenantId, board.board_id]
+    table: 'statuses',
+    columns: 'status_id',
+    tenantId,
+    where: ['board_id = $2', "status_type = 'ticket'"],
+    params: [board.board_id],
+    orderBy: 'is_default desc, order_number asc'
   });
-  const priority = await pickOne(ctx, {
+  const priority = await pickTenantOne(ctx, {
     label: 'a ticket priority',
-    sql: `select priority_id from priorities where tenant = $1 order by order_number asc limit 1`,
-    params: [tenantId]
+    table: 'priorities',
+    columns: 'priority_id',
+    tenantId,
+    orderBy: 'order_number asc'
   });
 
   const title = `Fixture ticket ${randomUUID()}`;
@@ -169,81 +209,104 @@ async function cleanupTicket(ctx, { tenantId, apiKey, ticketId }) {
     // Ticket deletion is blocked when comments reference the ticket; clean up those rows first.
   }
 
-  await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
-  await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+  await deleteTenantRows(ctx, { table: 'comments', tenantId, where: 'ticket_id = $2', params: [ticketId] });
+  await deleteTenantRows(ctx, { table: 'tickets', tenantId, where: 'ticket_id = $2', params: [ticketId] });
 }
 
 async function cleanupTicketCommentsByMarker(ctx, { tenantId, ticketId, marker }) {
   const noteLike = `%${marker}%`;
-  await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2 and note like $3`, [tenantId, ticketId, noteLike]);
+  await deleteTenantRows(ctx, {
+    table: 'comments',
+    tenantId,
+    where: ['ticket_id = $2', 'note like $3'],
+    params: [ticketId, noteLike]
+  });
 }
 
 async function cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker }) {
   const titleLike = `%${marker}%`;
-  const taskIds = await ctx.db.query(
-    `
-      select t.task_id
-      from project_tasks t
-      join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant
-      where p.tenant = $1
-        and p.project_id = $2
-        and t.task_name like $3
-    `,
-    [tenantId, projectId, titleLike]
-  );
+  const taskIds = await selectTenantRows(ctx, {
+    columns: 't.task_id',
+    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    tenantAlias: 'p',
+    tenantId,
+    where: ['p.project_id = $2', 't.task_name like $3'],
+    params: [projectId, titleLike]
+  });
 
   const taskIdList = taskIds.map((r) => r.task_id);
   if (!taskIdList.length) return;
 
-  await ctx.dbWrite.query(`delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
-  await ctx.dbWrite.query(`delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`, [tenantId, taskIdList]);
+  await deleteTenantRows(ctx, {
+    table: 'task_checklist_items',
+    tenantId,
+    where: 'task_id = any($2::uuid[])',
+    params: [taskIdList]
+  });
+  await deleteTenantRows(ctx, {
+    table: 'project_tasks',
+    tenantId,
+    where: 'task_id = any($2::uuid[])',
+    params: [taskIdList]
+  });
 }
 
 async function getOrCreateTicketId(ctx, { tenantId, apiKey }) {
-  const rows = await ctx.db.query(`select ticket_id from tickets where tenant = $1 order by entered_at desc limit 1`, [tenantId]);
+  const rows = await selectTenantRows(ctx, {
+    table: 'tickets',
+    columns: 'ticket_id',
+    tenantId,
+    orderBy: 'entered_at desc',
+    limit: 1
+  });
   if (rows.length) return rows[0].ticket_id;
   if (!apiKey) throw new Error('No tickets exist; missing API key for fallback ticket creation.');
   return createTicket(ctx, { tenantId, apiKey });
 }
 
 async function getOrCreateProjectId(ctx, { tenantId, apiKey }) {
-  const phaseRows = await ctx.db.query(`select project_id from project_phases where tenant = $1 limit 1`, [tenantId]);
+  const phaseRows = await selectTenantRows(ctx, {
+    table: 'project_phases',
+    columns: 'project_id',
+    tenantId,
+    limit: 1
+  });
   if (phaseRows.length) return phaseRows[0].project_id;
   if (!apiKey) throw new Error('No projects exist; missing API key for fallback project creation.');
 
-  const client = await pickOne(ctx, {
+  const client = await pickTenantOne(ctx, {
     label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'clients',
+    columns: 'client_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
   return createProject(ctx, { tenantId, apiKey, clientId: client.client_id });
 }
 
 async function listTicketComments(ctx, { tenantId, ticketId, limit = 50 }) {
-  return ctx.db.query(
-    `
-      select comment_id, note, is_internal, metadata, created_at
-      from comments
-      where tenant = $1 and ticket_id = $2
-      order by created_at desc
-      limit ${Number(limit) || 50}
-    `,
-    [tenantId, ticketId]
-  );
+  return selectTenantRows(ctx, {
+    table: 'comments',
+    columns: 'comment_id, note, is_internal, metadata, created_at',
+    tenantId,
+    where: 'ticket_id = $2',
+    params: [ticketId],
+    orderBy: 'created_at desc',
+    limit: Number(limit) || 50
+  });
 }
 
 async function listProjectTasks(ctx, { tenantId, projectId, limit = 50 }) {
-  return ctx.db.query(
-    `
-      select t.task_id, t.task_name, t.created_at
-      from project_tasks t
-      join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant
-      where p.tenant = $1 and p.project_id = $2
-      order by t.created_at desc
-      limit ${Number(limit) || 50}
-    `,
-    [tenantId, projectId]
-  );
+  return selectTenantRows(ctx, {
+    columns: 't.task_id, t.task_name, t.created_at',
+    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    tenantAlias: 'p',
+    tenantId,
+    where: 'p.project_id = $2',
+    params: [projectId],
+    orderBy: 't.created_at desc',
+    limit: Number(limit) || 50
+  });
 }
 
 async function triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload }) {
@@ -263,32 +326,33 @@ function sleep(ms) {
 }
 
 async function getLatestFixtureRun({ ctx, workflowId, tenantId, startedAfter, fixtureNotifyUserId, fixtureDedupeKey }) {
-  const rows = await ctx.db.query(
-    `
-      select
-        run_id,
-        workflow_id,
-        workflow_version,
-        tenant,
-        status,
-        event_type,
-        source_payload_schema_ref,
-        trigger_mapping_applied,
-        started_at,
-        completed_at,
-        updated_at,
-        error_json
-      from workflow_runs
-      where workflow_id = $1
-        and tenant = $2
-        and started_at >= $3
-        and input_json->>'fixtureNotifyUserId' = $4
-        and ($5::text is null or input_json->>'fixtureDedupeKey' = $5)
-      order by started_at desc
-      limit 1
+  const rows = await selectTenantRows(ctx, {
+    table: 'workflow_runs',
+    columns: `
+      run_id,
+      workflow_id,
+      workflow_version,
+      tenant,
+      status,
+      event_type,
+      source_payload_schema_ref,
+      trigger_mapping_applied,
+      started_at,
+      completed_at,
+      updated_at,
+      error_json
     `,
-    [workflowId, tenantId, startedAfter, fixtureNotifyUserId, fixtureDedupeKey ?? null]
-  );
+    tenantId,
+    where: [
+      'workflow_id = $2',
+      'started_at >= $3',
+      "input_json->>'fixtureNotifyUserId' = $4",
+      "($5::text is null or input_json->>'fixtureDedupeKey' = $5)"
+    ],
+    params: [workflowId, startedAfter, fixtureNotifyUserId, fixtureDedupeKey ?? null],
+    orderBy: 'started_at desc',
+    limit: 1
+  });
   return rows[0] ?? null;
 }
 
@@ -323,18 +387,37 @@ async function waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId, fixtu
 
 async function withWorkflowPaused(ctx, workflowId, fn) {
   const tenantId = ctx.config.tenantId;
-  const rows = await ctx.db.query(`select is_paused from workflow_definitions where workflow_id = $1 and tenant = $2`, [workflowId, tenantId]);
+  const rows = await selectTenantRows(ctx, {
+    table: 'workflow_definitions',
+    columns: 'is_paused',
+    tenantId,
+    where: 'workflow_id = $2',
+    params: [workflowId],
+    limit: 1
+  });
   const wasPaused = rows[0]?.is_paused ?? false;
 
   if (!wasPaused) {
-    await ctx.dbWrite.query(`update workflow_definitions set is_paused = true where workflow_id = $1 and tenant = $2`, [workflowId, tenantId]);
+    await updateTenantRows(ctx, {
+      table: 'workflow_definitions',
+      set: 'is_paused = true',
+      tenantId,
+      where: 'workflow_id = $2',
+      params: [workflowId]
+    });
   }
 
   try {
     return await fn();
   } finally {
     if (!wasPaused) {
-      await ctx.dbWrite.query(`update workflow_definitions set is_paused = false where workflow_id = $1 and tenant = $2`, [workflowId, tenantId]);
+      await updateTenantRows(ctx, {
+        table: 'workflow_definitions',
+        set: 'is_paused = false',
+        tenantId,
+        where: 'workflow_id = $2',
+        params: [workflowId]
+      });
     }
   }
 }
@@ -842,7 +925,13 @@ async function getExportedDraftDefinition(ctx, { workflowId }) {
 }
 
 async function getNextPublishVersion(ctx, { workflowId }) {
-  const rows = await ctx.db.query(`select max(version) as max_version from workflow_definition_versions where workflow_id = $1`, [workflowId]);
+  const rows = await selectTenantRows(ctx, {
+    table: 'workflow_definition_versions',
+    columns: 'max(version) as max_version',
+    tenantId: ctx.config.tenantId,
+    where: 'workflow_id = $2',
+    params: [workflowId]
+  });
   const max = rows[0]?.max_version ?? null;
   const n = max === null || max === undefined ? 0 : Number(max);
   return Number.isFinite(n) && n > 0 ? n + 1 : 1;

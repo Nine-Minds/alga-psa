@@ -15,7 +15,7 @@ export async function fetchWorkflowVersion(
 
   try {
     // Get workflow and version info
-    const workflowQuery = db.table('workflows as w')
+    const workflowQuery = db.unscoped('workflows as w', legacyWorkflowLookupReason)
       .select(
         'w.id',
         'w.created_at as workflow_created_at',

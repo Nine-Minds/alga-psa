@@ -313,6 +313,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   standard_boards: { scope: 'global' },
   standard_categories: { scope: 'global' },
   standard_priorities: { scope: 'global' },
+  standard_service_categories: { scope: 'global' },
+  standard_service_types: { scope: 'global' },
   standard_statuses: { scope: 'global' },
   standard_task_types: { scope: 'global' },
   statuses: { scope: 'tenant' },

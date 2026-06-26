@@ -260,7 +260,9 @@ export abstract class BaseService<T = any> {
 
     return withTransaction(knex, async (trx) => {
       const auditedData = this.addCreateAuditFields(data, context);
-      const [result] = await trx(this.tableName).insert(auditedData).returning('*');
+      const [result] = await this.buildTenantScopedQuery(trx, context)
+        .insert(auditedData)
+        .returning('*');
       return result as T;
     });
   }
@@ -332,7 +334,9 @@ export abstract class BaseService<T = any> {
 
     return withTransaction(knex, async (trx) => {
       const auditedData = data.map(item => this.addCreateAuditFields(item, context));
-      const results = await trx(this.tableName).insert(auditedData).returning('*');
+      const results = await this.buildTenantScopedQuery(trx, context)
+        .insert(auditedData)
+        .returning('*');
       return results as T[];
     });
   }

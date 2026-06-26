@@ -802,7 +802,7 @@ export abstract class BaseEmailService {
         },
       };
 
-      await knex(BaseEmailService.EMAIL_LOG_TABLE).insert({
+      await tenantScopedTable(knex, BaseEmailService.EMAIL_LOG_TABLE, params.tenantId).insert({
         tenant: params.tenantId,
         message_id: params.providerResult.messageId ?? null,
         provider_message_id: providerMessageId,

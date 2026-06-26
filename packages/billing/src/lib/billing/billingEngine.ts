@@ -320,7 +320,6 @@ export class BillingEngine {
     const client = await db.table("clients")
       .where({
         client_id: clientId,
-        tenant: this.tenant,
       })
       .first();
     if (!client) {
@@ -4801,10 +4800,12 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const adjustments = await db.table<any>("adjustments").where({
-      client_id: clientId,
-      tenant: client.tenant,
-    });
+    const adjustments = await db
+      .unscoped<any>("adjustments", "legacy adjustments table is not schema-backed; scoped manually by validated client tenant")
+      .where({
+        client_id: clientId,
+        tenant: client.tenant,
+      });
     return Array.isArray(adjustments) ? (adjustments as IAdjustment[]) : [];
   }
 

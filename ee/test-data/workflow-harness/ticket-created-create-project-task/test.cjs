@@ -1,13 +1,9 @@
 const { randomUUID } = require('node:crypto');
 
+const { deleteTenantRows, pickTenantOne, selectTenantRows } = require('../_lib/tenant-sql.cjs');
+
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
-}
-
-async function pickOne(ctx, { label, sql, params }) {
-  const rows = await ctx.db.query(sql, params);
-  if (!rows.length) throw new Error(`Fixture requires ${label} in DB (tenant=${ctx.config.tenantId}).`);
-  return rows[0];
 }
 
 async function deleteTicketWithDbFallback(ctx, { tenantId, ticketId, apiKey }) {
@@ -21,9 +17,9 @@ async function deleteTicketWithDbFallback(ctx, { tenantId, ticketId, apiKey }) {
     // Fall back to DB cleanup for common FK constraints (e.g. project_ticket_links, comments).
   }
 
-  await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
-  await ctx.dbWrite.query(`delete from comments where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
-  await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+  await deleteTenantRows(ctx, { table: 'project_ticket_links', tenantId, where: 'ticket_id = $2', params: [ticketId] });
+  await deleteTenantRows(ctx, { table: 'comments', tenantId, where: 'ticket_id = $2', params: [ticketId] });
+  await deleteTenantRows(ctx, { table: 'tickets', tenantId, where: 'ticket_id = $2', params: [ticketId] });
 }
 
 async function deleteProjectWithDbFallback(ctx, { tenantId, projectId, apiKey }) {
@@ -38,7 +34,7 @@ async function deleteProjectWithDbFallback(ctx, { tenantId, projectId, apiKey })
   }
 
   // Remove any ticket links first (FKs to tickets/projects/tasks/phases).
-  await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  await deleteTenantRows(ctx, { table: 'project_ticket_links', tenantId, where: 'project_id = $2', params: [projectId] });
 
   // Remove task dependencies for tasks under this project.
   await ctx.dbWrite.query(
@@ -70,9 +66,9 @@ async function deleteProjectWithDbFallback(ctx, { tenantId, projectId, apiKey })
     [tenantId, projectId]
   );
 
-  await ctx.dbWrite.query(`delete from project_materials where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-  await ctx.dbWrite.query(`delete from project_phases where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-  await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+  await deleteTenantRows(ctx, { table: 'project_materials', tenantId, where: 'project_id = $2', params: [projectId] });
+  await deleteTenantRows(ctx, { table: 'project_phases', tenantId, where: 'project_id = $2', params: [projectId] });
+  await deleteTenantRows(ctx, { table: 'projects', tenantId, where: 'project_id = $2', params: [projectId] });
 }
 
 module.exports = async function run(ctx) {
@@ -84,25 +80,35 @@ module.exports = async function run(ctx) {
   const tenantId = ctx.config.tenantId;
   const marker = '[fixture ticket-created-create-project-task]';
 
-  const client = await pickOne(ctx, {
+  const client = await pickTenantOne(ctx, {
     label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'clients',
+    columns: 'client_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
-  const board = await pickOne(ctx, {
+  const board = await pickTenantOne(ctx, {
     label: 'a ticket board',
-    sql: `select board_id from boards where tenant = $1 order by is_default desc, display_order asc limit 1`,
-    params: [tenantId]
+    table: 'boards',
+    columns: 'board_id',
+    tenantId,
+    orderBy: 'is_default desc, display_order asc'
   });
-  const status = await pickOne(ctx, {
+  const status = await pickTenantOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and board_id = $2 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
-    params: [tenantId, board.board_id]
+    table: 'statuses',
+    columns: 'status_id',
+    tenantId,
+    where: ['board_id = $2', "status_type = 'ticket'"],
+    params: [board.board_id],
+    orderBy: 'is_default desc, order_number asc'
   });
-  const priority = await pickOne(ctx, {
+  const priority = await pickTenantOne(ctx, {
     label: 'a ticket priority',
-    sql: `select priority_id from priorities where tenant = $1 order by order_number asc limit 1`,
-    params: [tenantId]
+    table: 'priorities',
+    columns: 'priority_id',
+    tenantId,
+    orderBy: 'order_number asc'
   });
 
   const projectName = `Fixture onboarding project ${randomUUID()}`;
@@ -152,17 +158,16 @@ module.exports = async function run(ctx) {
     throw new Error(`Expected run SUCCEEDED, got ${runRow.status}. Steps: ${JSON.stringify(ctx.summarizeSteps(steps))}`);
   }
 
-  const tasks = await ctx.db.query(
-    `
-      select t.task_id, t.task_name
-      from project_tasks t
-      join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant
-      where p.tenant = $1 and p.project_id = $2
-      order by t.created_at desc
-      limit 25
-    `,
-    [tenantId, projectId]
-  );
+  const tasks = await selectTenantRows(ctx, {
+    columns: 't.task_id, t.task_name',
+    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    tenantAlias: 'p',
+    tenantId,
+    where: 'p.project_id = $2',
+    params: [projectId],
+    orderBy: 't.created_at desc',
+    limit: 25
+  });
 
   const found = tasks.find((t) => typeof t.task_name === 'string' && t.task_name.includes(marker) && t.task_name.includes(ticketId));
   if (!found) {

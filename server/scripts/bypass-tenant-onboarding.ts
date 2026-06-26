@@ -75,12 +75,13 @@ async function main() {
   try {
     console.log('🔍 Checking tenant_settings table...\n');
 
-    // Single-tenant mode uses the tenant facade. All-tenant mode intentionally remains
-    // a direct admin query because it updates every tenant_settings row.
+    // Single-tenant mode uses the tenant facade. All-tenant mode intentionally updates
+    // every tenant_settings row and is kept as an explicit unscoped admin boundary.
+    const allTenantSettingsDb = tenantDb(db, '__bypass_onboarding_all_tenants__');
     const tenantSettingsTable = () =>
       args.tenant
         ? tenantDb(db, args.tenant).table('tenant_settings')
-        : db('tenant_settings');
+        : allTenantSettingsDb.unscoped('tenant_settings', 'bypass onboarding all tenants admin script');
 
     if (args.tenant) {
       console.log(`📋 Targeting specific tenant: ${args.tenant}`);

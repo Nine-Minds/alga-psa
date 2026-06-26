@@ -18,8 +18,8 @@ class TestService extends BaseService<Record<string, unknown>> {
 describe('BaseService tenant-scoped queries', () => {
   it('builds the root query through the tenant-scoped query primitive', () => {
     const service = new TestService({
-      tableName: 'widgets',
-      primaryKey: 'widget_id',
+      tableName: 'extensions',
+      primaryKey: 'extension_id',
       tenantColumn: 'tenant_id',
       softDelete: true,
     });
@@ -30,7 +30,7 @@ describe('BaseService tenant-scoped queries', () => {
     });
 
     expect(query.toString()).toBe(
-      `select * from "widgets" where "widgets"."tenant_id" = 'tenant-1' and "deleted_at" is null`
+      `select * from "extensions" where "extensions"."tenant_id" = 'tenant-1' and "deleted_at" is null`
     );
   });
 });

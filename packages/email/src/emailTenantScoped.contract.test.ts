@@ -26,4 +26,13 @@ describe('email tenant-scoped query contract', () => {
       expect(source).not.toContain("knex('tenant_email_settings')");
     }
   });
+
+  it('routes email_sending_logs inserts through the tenant facade', () => {
+    const source = readFileSync(resolve(__dirname, 'BaseEmailService.ts'), 'utf8');
+
+    expect(source).toMatch(
+      /tenantScopedTable\(knex,\s*BaseEmailService\.EMAIL_LOG_TABLE,\s*params\.tenantId\)\.insert\(\{/
+    );
+    expect(source).not.toContain('knex(BaseEmailService.EMAIL_LOG_TABLE).insert');
+  });
 });

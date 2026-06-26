@@ -9,6 +9,8 @@ import type { PortalDomainRecord } from './PortalDomainModel';
 
 const TABLE_NAME = 'portal_domain_session_otts';
 const PORTAL_DOMAINS_TABLE = 'portal_domains';
+const PORTAL_DOMAIN_OTT_PRUNE_TENANT = '__portal_domain_ott_prune__';
+const PORTAL_DOMAIN_OTT_PRUNE_REASON = 'portal domain session OTT prune scans expired records across tenants';
 const DEFAULT_TTL_SECONDS = 90;
 const ISSUE_EVENT = 'portal_domain.ott_issued';
 const CONSUME_EVENT = 'portal_domain.ott_consumed';
@@ -212,7 +214,7 @@ export async function issuePortalDomainOtt(params: IssuePortalDomainOttParams): 
     userSnapshot,
   };
 
-  const [row] = await knex<PortalDomainSessionOttRow>(TABLE_NAME)
+  const [row] = await tenantDb(knex, tenant).table<PortalDomainSessionOttRow>(TABLE_NAME)
     .insert({
       tenant,
       portal_domain_id: portalDomainId,
@@ -317,7 +319,8 @@ export async function pruneExpiredPortalDomainOtts(options: PruneOttOptions = {}
   const createOttQuery = (): Knex.QueryBuilder<PortalDomainSessionOttRow, any> => (
     options.tenant
       ? tenantDb(knex, options.tenant).table<PortalDomainSessionOttRow>(TABLE_NAME)
-      : knex<PortalDomainSessionOttRow>(TABLE_NAME)
+      : tenantDb(knex, PORTAL_DOMAIN_OTT_PRUNE_TENANT)
+        .unscoped<PortalDomainSessionOttRow>(TABLE_NAME, PORTAL_DOMAIN_OTT_PRUNE_REASON)
   ) as Knex.QueryBuilder<PortalDomainSessionOttRow, any>;
 
   const expiredQuery = createOttQuery().where('expires_at', '<', cutoff);
