@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -61,6 +61,14 @@ const DEFAULT_CLOSE_RULES: Omit<IBoardCloseRules, 'board_id'> = {
   is_enabled: true,
 };
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 function parseRequiredFields(value: unknown): CloseRuleRequiredField[] {
   const raw = typeof value === 'string' ? JSON.parse(value) : value;
   if (!Array.isArray(raw)) return [];
@@ -84,8 +92,8 @@ function validateRequiredFields(fields: string[]): CloseRuleRequiredField[] {
 export const getBoardCloseRules = withAuth(
   async (_user, { tenant }, boardId: string): Promise<IBoardCloseRules> => {
     const { knex: db } = await createTenantKnex();
-    const row = await db('board_close_rules')
-      .where({ tenant, board_id: boardId })
+    const row = await tenantScopedTable(db, 'board_close_rules', tenant)
+      .where({ board_id: boardId })
       .first();
 
     if (!row) {
@@ -114,7 +122,7 @@ export const upsertBoardCloseRules = withAuth(
     const { knex: db } = await createTenantKnex();
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const board = await trx('boards').where({ tenant, board_id: boardId }).first();
+      const board = await tenantScopedTable(trx, 'boards', tenant).where({ board_id: boardId }).first();
       if (!board) {
         throw new Error('Board not found');
       }
@@ -131,7 +139,7 @@ export const upsertBoardCloseRules = withAuth(
         updated_at: new Date().toISOString(),
       };
 
-      const [row] = await trx('board_close_rules')
+      const [row] = await tenantScopedTable(trx, 'board_close_rules', tenant)
         .insert({ tenant, board_id: boardId, ...values })
         .onConflict(['tenant', 'board_id'])
         .merge(values)
@@ -169,8 +177,12 @@ async function validateAutoCloseRule(
   }
 
   const [triggerStatus, closeStatus] = await Promise.all([
-    trx('statuses').where({ tenant, status_id: input.trigger_status_id, board_id: boardId }).first(),
-    trx('statuses').where({ tenant, status_id: input.close_to_status_id, board_id: boardId }).first(),
+    tenantScopedTable(trx, 'statuses', tenant)
+      .where({ status_id: input.trigger_status_id, board_id: boardId })
+      .first(),
+    tenantScopedTable(trx, 'statuses', tenant)
+      .where({ status_id: input.close_to_status_id, board_id: boardId })
+      .first(),
   ]);
 
   if (!triggerStatus) {
@@ -186,8 +198,8 @@ async function validateAutoCloseRule(
     throw new Error('Target status must be a closed status');
   }
 
-  const duplicate = await trx('board_auto_close_rules')
-    .where({ tenant, board_id: boardId, trigger_status_id: input.trigger_status_id })
+  const duplicate = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
+    .where({ board_id: boardId, trigger_status_id: input.trigger_status_id })
     .modify((qb) => {
       if (excludeRuleId) qb.whereNot('rule_id', excludeRuleId);
     })
@@ -200,8 +212,8 @@ async function validateAutoCloseRule(
 export const getBoardAutoCloseRules = withAuth(
   async (_user, { tenant }, boardId: string): Promise<IBoardAutoCloseRule[]> => {
     const { knex: db } = await createTenantKnex();
-    return db('board_auto_close_rules')
-      .where({ tenant, board_id: boardId })
+    return tenantScopedTable(db, 'board_auto_close_rules', tenant)
+      .where({ board_id: boardId })
       .orderBy('created_at', 'asc')
       .select(
         'rule_id',
@@ -223,14 +235,14 @@ export const createBoardAutoCloseRule = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const board = await trx('boards').where({ tenant, board_id: boardId }).first();
+      const board = await tenantScopedTable(trx, 'boards', tenant).where({ board_id: boardId }).first();
       if (!board) {
         throw new Error('Board not found');
       }
 
       await validateAutoCloseRule(trx, tenant, boardId, input);
 
-      const [row] = await trx('board_auto_close_rules')
+      const [row] = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
         .insert({
           tenant,
           board_id: boardId,
@@ -254,8 +266,8 @@ export const updateBoardAutoCloseRule = withAuth(
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const existing = await trx('board_auto_close_rules')
-        .where({ tenant, rule_id: ruleId })
+      const existing = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
+        .where({ rule_id: ruleId })
         .first();
       if (!existing) {
         throw new Error('Auto-close rule not found');
@@ -263,8 +275,8 @@ export const updateBoardAutoCloseRule = withAuth(
 
       await validateAutoCloseRule(trx, tenant, existing.board_id, input, ruleId);
 
-      const [row] = await trx('board_auto_close_rules')
-        .where({ tenant, rule_id: ruleId })
+      const [row] = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
+        .where({ rule_id: ruleId })
         .update({
           trigger_status_id: input.trigger_status_id,
           inactivity_days: input.inactivity_days,
@@ -286,7 +298,7 @@ export const deleteBoardAutoCloseRule = withAuth(
     }
 
     const { knex: db } = await createTenantKnex();
-    await db('board_auto_close_rules').where({ tenant, rule_id: ruleId }).del();
+    await tenantScopedTable(db, 'board_auto_close_rules', tenant).where({ rule_id: ruleId }).del();
   }
 );
 
@@ -309,15 +321,15 @@ export const checkTicketClosure = withAuth(
   async (user, { tenant }, ticketId: string, targetStatusId: string): Promise<TicketClosureCheckResult> => {
     const { knex: db } = await createTenantKnex();
 
-    const ticket = await db('tickets').where({ tenant, ticket_id: ticketId }).first();
+    const ticket = await tenantScopedTable(db, 'tickets', tenant).where({ ticket_id: ticketId }).first();
     if (!ticket) {
       throw new Error('Ticket not found');
     }
 
     const [targetStatus, currentStatus] = await Promise.all([
-      db('statuses').where({ tenant, status_id: targetStatusId }).first(),
+      tenantScopedTable(db, 'statuses', tenant).where({ status_id: targetStatusId }).first(),
       ticket.status_id
-        ? db('statuses').where({ tenant, status_id: ticket.status_id }).first()
+        ? tenantScopedTable(db, 'statuses', tenant).where({ status_id: ticket.status_id }).first()
         : Promise.resolve(null),
     ]);
 
@@ -351,8 +363,8 @@ export interface ITicketAutoCloseState {
 export const getTicketAutoCloseState = withAuth(
   async (_user, { tenant }, ticketId: string): Promise<ITicketAutoCloseState | null> => {
     const { knex: db } = await createTenantKnex();
-    const row = await db('ticket_auto_close_state')
-      .where({ tenant, ticket_id: ticketId })
+    const row = await tenantScopedTable(db, 'ticket_auto_close_state', tenant)
+      .where({ ticket_id: ticketId })
       .first('scheduled_close_at', 'warning_sent_at');
     if (!row) return null;
     return {

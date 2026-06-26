@@ -36,6 +36,6 @@ export async function getAllClients(
     query.andWhere({ is_inactive: false });
   }
 
-  const rows = await query;
+  const rows = await query as Array<Record<string, any>>;
   return rows.map((c) => ({ ...c, properties: (c as any).properties ?? {} } as IClient));
 }

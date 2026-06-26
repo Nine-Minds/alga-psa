@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -30,10 +31,36 @@ export interface ChecklistApplyAuditContext {
   source: TicketActivitySource | string;
 }
 
+interface ChecklistTemplateRow {
+  name: string;
+}
+
+interface ChecklistTemplateItemRow {
+  item_name: string;
+  description: string | null;
+  is_required: boolean;
+}
+
+interface ChecklistTemplateApplyRuleRow {
+  template_id: string;
+  board_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  priority_id: string | null;
+}
+
 export const SYSTEM_CHECKLIST_AUDIT_CONTEXT: ChecklistApplyAuditContext = {
   actor: { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM },
   source: TICKET_ACTIVITY_SOURCE.SYSTEM,
 };
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 export async function applyChecklistTemplateToTicket(
   trx: Knex.Transaction,
@@ -43,35 +70,35 @@ export async function applyChecklistTemplateToTicket(
   source: 'template' | 'workflow',
   auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT
 ): Promise<ApplyChecklistTemplateResult> {
-  const template = await trx('checklist_templates')
-    .where({ tenant, template_id: templateId })
-    .first();
+  const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
+    .where({ template_id: templateId })
+    .first() as ChecklistTemplateRow | undefined;
   if (!template) {
     throw new Error('Checklist template not found');
   }
 
   // Idempotency: a template never applies twice to the same ticket.
-  const alreadyApplied = await trx('ticket_checklist_items')
-    .where({ tenant, ticket_id: ticketId, template_id: templateId })
+  const alreadyApplied = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+    .where({ ticket_id: ticketId, template_id: templateId })
     .first();
   if (alreadyApplied) {
     return { applied: false, itemsAdded: 0 };
   }
 
-  const templateItems = await trx('checklist_template_items')
-    .where({ tenant, template_id: templateId })
-    .orderBy('order_number', 'asc');
+  const templateItems = await tenantScopedTable(trx, 'checklist_template_items', tenant)
+    .where({ template_id: templateId })
+    .orderBy('order_number', 'asc') as ChecklistTemplateItemRow[];
   if (!templateItems.length) {
     return { applied: false, itemsAdded: 0 };
   }
 
-  const maxOrder = await trx('ticket_checklist_items')
-    .where({ tenant, ticket_id: ticketId })
+  const maxOrder = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+    .where({ ticket_id: ticketId })
     .max('order_number as max')
     .first();
   const baseOrder = (Number(maxOrder?.max ?? -1)) + 1;
 
-  await trx('ticket_checklist_items').insert(
+  await tenantScopedTable(trx, 'ticket_checklist_items', tenant).insert(
     templateItems.map((item, index) => ({
       tenant,
       ticket_id: ticketId,
@@ -119,12 +146,15 @@ export async function applyMatchingChecklistTemplates(
   },
   auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT
 ): Promise<number> {
-  const rules = await trx('checklist_template_apply_rules as r')
-    .join('checklist_templates as t', function joinTemplates() {
-      this.on('t.template_id', 'r.template_id').andOn('t.tenant', 'r.tenant');
-    })
-    .where({ 'r.tenant': tenant, 'r.is_enabled': true, 't.is_active': true })
-    .select('r.*');
+  const rules = await tenantDb(trx, tenant)
+    .tenantJoin(
+      tenantScopedTable(trx, 'checklist_template_apply_rules as r', tenant),
+      'checklist_templates as t',
+      't.template_id',
+      'r.template_id'
+    )
+    .where({ 'r.is_enabled': true, 't.is_active': true })
+    .select('r.*') as ChecklistTemplateApplyRuleRow[];
 
   const matching = rules.filter(
     (rule) =>
