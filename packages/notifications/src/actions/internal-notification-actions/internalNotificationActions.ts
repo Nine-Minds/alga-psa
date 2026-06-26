@@ -56,18 +56,13 @@ async function getUserLocale(
   tenant: string,
   userId: string
 ): Promise<string> {
-  const user = await tenantScopedTable(trx, 'users as u', tenant)
+  const db = tenantDb(trx, tenant);
+  const userQuery = db.table('users as u')
     .select('u.user_type', 'u.contact_id', 'c.properties')
-    .leftJoin('contacts as con', function() {
-      this.on('u.contact_id', 'con.contact_name_id')
-          .andOn('u.tenant', 'con.tenant');
-    })
-    .leftJoin('clients as c', function() {
-      this.on('con.client_id', 'c.client_id')
-          .andOn('con.tenant', 'c.tenant');
-    })
-    .where('u.user_id', userId)
-    .first();
+    .where('u.user_id', userId);
+  db.tenantJoin(userQuery, 'contacts as con', 'u.contact_id', 'con.contact_name_id', { type: 'left' });
+  db.tenantJoin(userQuery, 'clients as c', 'con.client_id', 'c.client_id', { type: 'left' });
+  const user = (await userQuery.first()) as any;
 
   // 1. User's language preference (applies to both internal and client users)
   const userPreference = await tenantScopedTable(trx, 'user_preferences', tenant)

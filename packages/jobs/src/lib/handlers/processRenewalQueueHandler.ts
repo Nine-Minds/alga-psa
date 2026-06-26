@@ -314,16 +314,12 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     'dbs.renewal_ticket_assignee_id as tenant_renewal_ticket_assignee_id',
   ];
 
-  const contractQuery = tenantScopedTable(knex, 'client_contracts as cc', tenantId)
-    .join('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('clients as cl', function joinClients() {
-      this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-    })
-    .leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
-      this.on('cc.tenant', '=', 'dbs.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const contractQuery = db.table('client_contracts as cc');
+  db.tenantJoin(contractQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+  db.tenantJoin(contractQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+  db.tenantJoin(contractQuery, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
+  contractQuery
     .where({
       'cc.is_active': true,
       'c.status': 'active',

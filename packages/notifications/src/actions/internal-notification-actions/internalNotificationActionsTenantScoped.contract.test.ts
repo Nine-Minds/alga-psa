@@ -8,7 +8,10 @@ describe('internal notification actions tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tenant-owned internal notification roots', () => {
     expect(source).toContain('function tenantScopedTable');
     expect(source).toContain('tenantDb(conn, tenant).table(table)');
-    expect(source).toContain("tenantScopedTable(trx, 'users as u', tenant)");
+    expect(source).toContain('const db = tenantDb(trx, tenant);');
+    expect(source).toContain("const userQuery = db.table('users as u')");
+    expect(source).toContain("db.tenantJoin(userQuery, 'contacts as con'");
+    expect(source).toContain("db.tenantJoin(userQuery, 'clients as c'");
     expect(source).toContain("tenantScopedTable(trx, 'internal_notifications'");
     expect(source).toContain("tenantScopedTable(trx, 'user_internal_notification_preferences'");
     expect(source).toContain("tenantScopedTable(trx, 'tenant_internal_notification_category_settings'");

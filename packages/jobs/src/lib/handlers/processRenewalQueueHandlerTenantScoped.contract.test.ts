@@ -8,7 +8,11 @@ describe('process renewal queue handler tenant-scoped query contract', () => {
   it('uses structural tenant scoping for renewal read and update roots', () => {
     expect(source).toContain('tenantDb(conn, tenant).table(table)');
     expect(source).not.toContain('createTenantScopedQuery');
-    expect(source).toContain("tenantScopedTable(knex, 'client_contracts as cc', tenantId)");
+    expect(source).toContain('const db = tenantDb(knex, tenantId);');
+    expect(source).toContain("const contractQuery = db.table('client_contracts as cc')");
+    expect(source).toContain("db.tenantJoin(contractQuery, 'contracts as c'");
+    expect(source).toContain("db.tenantJoin(contractQuery, 'clients as cl'");
+    expect(source).toContain("db.tenantJoin(contractQuery, 'default_billing_settings as dbs'");
     expect(source).toContain("tenantScopedTable(knex, 'workflow_runs', tenantId)");
     expect(source).toContain("tenantScopedTable(knex, 'tickets', tenantId)");
     expect(source).toContain("tenantScopedTable(knex, 'client_contracts', tenantId)");

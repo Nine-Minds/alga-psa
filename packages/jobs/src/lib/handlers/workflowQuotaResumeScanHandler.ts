@@ -38,14 +38,14 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
   while (true) {
     const resumptions = await knex.transaction(async (trx) => {
       const nowIso = new Date().toISOString();
-      const candidates = await tenantDb(trx, '__workflow_quota_resume_scan__')
+      const db = tenantDb(trx, '__workflow_quota_resume_scan__');
+      const candidatesQuery = db
         .unscoped<QuotaWaitCandidate>(
           'workflow_run_waits as w',
           'workflow quota resume scanner intentionally discovers waiting quota runs across tenants'
-        )
-        .join('workflow_runs as r', function () {
-          this.on('r.run_id', 'w.run_id').andOn('r.tenant', 'w.tenant');
-        })
+        );
+      db.tenantJoin(candidatesQuery, 'workflow_runs as r', 'r.run_id', 'w.run_id');
+      candidatesQuery
         .where('w.wait_type', 'quota')
         .where('w.status', 'WAITING')
         .where('r.status', 'WAITING')
@@ -55,6 +55,7 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
         .skipLocked()
         .limit(batchSize)
         .select('w.wait_id', 'w.run_id', 'w.step_path', 'r.tenant', 'r.node_path');
+      const candidates = await candidatesQuery;
 
       if (candidates.length === 0) {
         return [] as QuotaWaitCandidate[];

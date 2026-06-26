@@ -16,6 +16,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   accounting_export_lines: { scope: 'tenant' },
   accounting_sync_cycles: { scope: 'tenant' },
   accounting_sync_operations: { scope: 'tenant' },
+  asset_types: { scope: 'tenant' },
   asset_type_registry: { scope: 'tenant' },
   apple_iap_subscriptions: { scope: 'tenant' },
   // Reference table for tenantless Apple sign-in discovery, but tenant-known operations must scope by tenant.
@@ -314,6 +315,10 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   stripe_products: { scope: 'tenant' },
   stripe_subscriptions: { scope: 'tenant' },
   stripe_webhook_events: { scope: 'tenant' },
+  survey_invitations: { scope: 'tenant' },
+  survey_responses: { scope: 'tenant' },
+  survey_templates: { scope: 'tenant' },
+  survey_triggers: { scope: 'tenant' },
   system_email_templates: { scope: 'global' },
   system_event_catalog: { scope: 'global' },
   system_interaction_types: { scope: 'global' },

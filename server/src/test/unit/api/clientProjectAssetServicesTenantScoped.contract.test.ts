@@ -32,10 +32,13 @@ describe('client, project, and asset API services tenant-scoped query contract',
     const projectSource = readService('project');
     const assetSource = readService('asset');
 
-    expect(clientSource).toContain("scopedTable<IClient>(trx, context.tenant, 'clients as c')");
+    expect(clientSource).toContain("let dataQuery = db.table('clients as c')");
+    expect(clientSource).toContain("db.tenantJoin(dataQuery, 'users as u'");
+    expect(clientSource).toContain("db.tenantJoin(dataQuery, 'client_locations as cl'");
     expect(clientSource).toContain('deleteFromTenantTableIfExists');
 
-    expect(projectSource).toContain("scopedTable<IProjectStatusMapping>(knex, context.tenant, 'project_status_mappings as psm')");
+    expect(projectSource).toContain("db.table<IProjectStatusMapping>('project_status_mappings as psm')");
+    expect(projectSource).toContain("db.tenantJoin(query, 'statuses as s'");
     expect(projectSource).toContain("db.tenantJoin(query, 'project_phases'");
 
     expect(assetSource).toContain("db.tenantJoin(query, 'tickets as t'");

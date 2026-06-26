@@ -89,17 +89,17 @@ export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Pr
   const knex = await getConnection(tenant);
 
   // Get all active sessions with user information
-  const sessionsWithUsers = await tenantDb(knex, tenant).table('sessions')
+  const db = tenantDb(knex, tenant);
+  const sessionsQuery = db.table('sessions')
     .select(
       'sessions.*',
       knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
       'users.email as user_email',
       'users.user_type as user_type'
-    )
-    .leftJoin('users', function() {
-      this.on('sessions.user_id', '=', 'users.user_id')
-        .andOn('sessions.tenant', '=', 'users.tenant');
-    })
+    );
+  db.tenantJoin(sessionsQuery, 'users', 'sessions.user_id', 'users.user_id', { type: 'left' });
+
+  const sessionsWithUsers = await sessionsQuery
     .whereNull('sessions.revoked_at')
     .where('sessions.expires_at', '>', knex.fn.now())
     .orderBy('sessions.last_activity_at', 'desc');

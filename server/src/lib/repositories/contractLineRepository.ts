@@ -99,10 +99,13 @@ export async function fetchDetailedContractLines(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const rows = await tenantScopedTable(knex, tenant, 'contract_template_lines as lines')
-      .leftJoin('contract_template_line_fixed_config as fixed', function joinTemplateFixed() {
-        this.on('fixed.template_line_id', '=', 'lines.template_line_id').andOn('fixed.tenant', '=', 'lines.tenant');
-      })
+    const db = tenantDb(knex, tenant);
+    const query = db.table('contract_template_lines as lines');
+    db.tenantJoin(query, 'contract_template_line_fixed_config as fixed', 'fixed.template_line_id', 'lines.template_line_id', {
+      type: 'left',
+    });
+
+    const rows = await query
       .where('lines.template_id', contractId)
       .select([
         'lines.tenant',

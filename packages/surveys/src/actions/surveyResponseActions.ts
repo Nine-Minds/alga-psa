@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { z } from 'zod';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
@@ -176,13 +176,18 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
           responded_at: trx.fn.now(),
         });
 
-      const ticketRow = await trx<TicketRow>(`${TICKETS_TABLE} as t`)
-        .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-          this.on('t.client_id', '=', 'c.client_id').andOn('t.tenant', '=', 'c.tenant');
-        })
-        .leftJoin(`${CONTACTS_TABLE} as co`, function joinContacts() {
-          this.on('t.contact_name_id', '=', 'co.contact_name_id').andOn('t.tenant', '=', 'co.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const ticketQuery = db.table<TicketRow>(`${TICKETS_TABLE} as t`);
+      db.tenantJoin(ticketQuery, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
+        type: 'left',
+        rootTenantColumn: 't.tenant',
+      });
+      db.tenantJoin(ticketQuery, `${CONTACTS_TABLE} as co`, 't.contact_name_id', 'co.contact_name_id', {
+        type: 'left',
+        rootTenantColumn: 't.tenant',
+      });
+
+      const ticketRow = await ticketQuery
         .select(
           't.ticket_id',
           't.ticket_number',
@@ -192,7 +197,7 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
           'c.client_name',
           'co.full_name as contact_name'
         )
-        .where({ 't.tenant': tenant, 't.ticket_id': invitation.ticketId })
+        .where('t.ticket_id', invitation.ticketId)
         .first();
 
       return { response: responseRow, ticket: ticketRow ?? null };

@@ -776,11 +776,10 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     // Use a transaction to get paginated client data
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build the base query with client_locations join
-      let baseQuery = tenantScopedTable(trx, 'clients as c', tenant)
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
+      scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      baseQuery = baseQuery
         .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
@@ -804,12 +803,10 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
 
       // Apply tag filter using new tag structure
       if (selectedTags && selectedTags.length > 0) {
-        const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-          .select('tm.tagged_id')
-          .join('tag_definitions as td', function() {
-            this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-          })
+        const tagSubquery = scopedDb.table('tag_mappings as tm')
+          .select('tm.tagged_id');
+        scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagSubquery
           .where('tm.tagged_type', 'client')
           .whereIn('td.tag_text', selectedTags);
         baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
@@ -820,11 +817,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
       // Get paginated clients with location data and default flag
-      let clientsQuery = baseQuery
-        .leftJoin('tenant_companies as tc', function() {
-          this.on('c.client_id', '=', 'tc.client_id')
-              .andOn('c.tenant', '=', 'tc.tenant');
-        })
+      let clientsQuery = scopedDb
+        .tenantJoin(baseQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' })
         .select(
           'c.*',
           'tc.is_default',
@@ -946,11 +940,10 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const offset = (page - 1) * pageSize;
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      let baseQuery = tenantScopedTable(trx, 'clients as c', tenant)
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
+      scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      baseQuery = baseQuery
         .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
@@ -972,12 +965,10 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
       }
 
       if (selectedTags && selectedTags.length > 0) {
-        const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-          .select('tm.tagged_id')
-          .join('tag_definitions as td', function() {
-            this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-          })
+        const tagSubquery = scopedDb.table('tag_mappings as tm')
+          .select('tm.tagged_id');
+        scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagSubquery
           .where('tm.tagged_type', 'client')
           .whereIn('td.tag_text', selectedTags);
         baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
@@ -1005,11 +996,8 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
       const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
-      let clientsQuery = baseQuery
-        .leftJoin('tenant_companies as tc', function() {
-          this.on('c.client_id', '=', 'tc.client_id')
-              .andOn('c.tenant', '=', 'tc.tenant');
-        })
+      let clientsQuery = scopedDb
+        .tenantJoin(baseQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' })
         .select(
           'c.*',
           'tc.is_default',

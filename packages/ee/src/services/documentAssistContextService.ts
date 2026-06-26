@@ -126,10 +126,8 @@ async function resolveAsset(knex: Knex, entityId: string, tenant: string): Promi
   const db = tenantDb(knex, tenant);
   const assetQuery = db.table('assets as a')
     .select('a.name', 'a.asset_tag', 'a.serial_number', 'a.status', 'a.location', 'at.type_name', 'cl.client_name')
-    .leftJoin('asset_types as at', function () {
-      this.on('a.type_id', 'at.type_id').andOn('a.tenant', 'at.tenant');
-    })
     .where('a.asset_id', entityId);
+  db.tenantJoin(assetQuery, 'asset_types as at', 'a.type_id', 'at.type_id', { type: 'left' });
   db.tenantJoin(assetQuery, 'clients as cl', 'a.client_id', 'cl.client_id', { type: 'left' });
   const asset = await assetQuery.first();
 

@@ -111,10 +111,11 @@ export const getInvoicesPendingExternalTax = withAuth(async (
       'i.tax_source': 'pending_external'
     });
   facade.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id');
-  query.leftJoin('tenant_external_entity_mappings as m', function() {
-    this.on('i.invoice_id', '=', 'm.alga_entity_id')
-      .andOn('i.tenant', '=', 'm.tenant')
-      .andOnVal('m.alga_entity_type', '=', 'invoice');
+  facade.tenantJoin(query, 'tenant_external_entity_mappings as m', 'i.invoice_id', 'm.alga_entity_id', {
+    type: 'left',
+    on: (join) => {
+      join.andOnVal('m.alga_entity_type', '=', 'invoice');
+    },
   });
 
   const invoices = await query

@@ -43,7 +43,8 @@ describe('contract line repositories tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_templates')");
     expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_template_lines')");
     expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_lines')");
-    expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_template_lines as lines')");
+    expect(section).toContain("const query = db.table('contract_template_lines as lines')");
+    expect(section).toContain("db.tenantJoin(query, 'contract_template_line_fixed_config as fixed'");
     expect(section).toContain("tenantScopedTable(knex, tenant, 'contract_lines as cl')");
 
     expect(section).not.toMatch(/\.where\(\{\s*tenant[,}]/);

@@ -171,23 +171,22 @@ export class ClientService extends BaseService<IClient> {
     return withTransaction(knex, async (trx) => {
       const db = tenantDb(trx, context.tenant);
       // Build base query with account manager and location joins
-      let dataQuery = db.table('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        });
+      let dataQuery = db.table('clients as c');
+      db.tenantJoin(dataQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      db.tenantJoin(dataQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        on(join) {
+          join.andOn('cl.is_default', '=', trx.raw('true'));
+        },
+      });
 
-      let countQuery = db.table('clients as c')
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        });
+      let countQuery = db.table('clients as c');
+      db.tenantJoin(countQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        on(join) {
+          join.andOn('cl.is_default', '=', trx.raw('true'));
+        },
+      });
 
       // Apply filters
       dataQuery = this.applyClientFilters(dataQuery, filters);
@@ -236,11 +235,11 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const client = await scopedTable<IClient>(trx, context.tenant, 'clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
+      const db = tenantDb(trx, context.tenant);
+      const clientQuery = db.table<IClient>('clients as c');
+      db.tenantJoin(clientQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+
+      const client = await clientQuery
         .select(
           'c.*',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)

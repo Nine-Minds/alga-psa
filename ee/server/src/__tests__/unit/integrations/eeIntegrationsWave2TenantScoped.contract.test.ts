@@ -77,7 +77,8 @@ describe('EE integrations wave 2 tenant facade contract', () => {
     const combined = `${tenantOps}\n${userOps}`;
 
     expect(combined).toContain("import { tenantDb } from '@alga-psa/db';");
-    expect(userOps).toContain("const existingInternalUser = await trx('users')");
+    expect(userOps).toContain('const existingInternalUser = await db.unscoped(');
+    expect(userOps).toContain('global internal-user email uniqueness check during tenant admin bootstrap');
     expect(tenantOps).toContain("const existing = await knex('stripe_subscriptions')");
     expect(tenantOps).toContain("const tenantResult = await trx('tenants')");
     expect(tenantOps).toContain("tenantDb(trx, input.tenantId).table('stripe_subscriptions')");

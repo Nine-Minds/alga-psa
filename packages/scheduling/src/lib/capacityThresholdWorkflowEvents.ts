@@ -53,12 +53,11 @@ async function getTeamMembershipForUsers(
 }
 
 async function getTeamDailyCapacityLimitHours(db: Knex, tenant: string, teamId: string): Promise<number> {
+  const facade = tenantDb(db, tenant);
   const capacityQuery = tenantScopedTable(db, 'team_members as tm', tenant)
-    .leftJoin('resources as r', function () {
-      this.on('r.user_id', '=', 'tm.user_id').andOn('r.tenant', '=', 'tm.tenant');
-    })
     .where({ 'tm.team_id': teamId, 'u.is_inactive': false });
-  tenantDb(db, tenant).tenantJoin(capacityQuery, 'users as u', 'tm.user_id', 'u.user_id');
+  facade.tenantJoin(capacityQuery, 'resources as r', 'r.user_id', 'tm.user_id', { type: 'left' });
+  facade.tenantJoin(capacityQuery, 'users as u', 'tm.user_id', 'u.user_id');
   const row = await capacityQuery
     .sum({ capacityLimit: db.raw('COALESCE(r.max_daily_capacity, 0)') })
     .first();

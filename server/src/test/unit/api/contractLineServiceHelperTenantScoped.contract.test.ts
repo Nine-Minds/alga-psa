@@ -29,7 +29,8 @@ describe('contract line service helper tenant-scoped query contract', () => {
     expect(helperSection).toContain(".table('invoices')");
     expect(helperSection).toContain(".table('bucket_usage')");
     expect(helperSection).toContain(".table('service_catalog')");
-    expect(helperSection).toContain(".andOn('cl.tenant', '=', 'cc.tenant')");
+    expect(helperSection).toContain(".tenantJoin(q, 'clients as cl'");
+    expect(helperSection).not.toContain(".andOn('cl.tenant', '=', 'cc.tenant')");
 
     expect(helperSection).not.toMatch(/knex\('contract_lines as clx'\)\s*\./);
     expect(helperSection).not.toMatch(/trx\('contract_line_service_configuration'\)\s*\.(?:where|first|update|delete)/);

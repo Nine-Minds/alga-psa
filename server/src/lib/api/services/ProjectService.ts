@@ -81,10 +81,11 @@ async function resolveProjectStatusInfo(
   tenant: string,
   projectStatusMappingId: string
 ): Promise<{ status: string; isClosed: boolean }> {
-  const row = await scopedTable(trx, tenant, 'project_status_mappings as psm')
-    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
+  const db = tenantDb(trx, tenant);
+  const query = db.table('project_status_mappings as psm');
+  db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+
+  const row = await query
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
@@ -207,20 +208,23 @@ export class ProjectService extends BaseService<IProject> {
   async getById(id: string, context: ServiceContext): Promise<IProject | null> {
       const { knex } = await this.getKnex();
       const tableName = this.tableName;
-      
-      const project = await scopedTable<IProject>(knex, context.tenant, tableName)
-        .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-          this.on(`${tableName}.client_id`, '=', 'clients.client_id')
-            .andOn(`${tableName}.tenant`, '=', 'clients.tenant');
-        })
-        .leftJoin('contacts', function joinContacts(this: Knex.JoinClause) {
-          this.on(`${tableName}.contact_name_id`, '=', 'contacts.contact_name_id')
-            .andOn(`${tableName}.tenant`, '=', 'contacts.tenant');
-        })
-        .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
-          this.on(`${tableName}.assigned_to`, '=', 'users.user_id')
-            .andOn(`${tableName}.tenant`, '=', 'users.tenant');
-        })
+
+      const db = tenantDb(knex, context.tenant);
+      const projectQuery = db.table<IProject>(tableName);
+      db.tenantJoin(projectQuery, 'clients', `${tableName}.client_id`, 'clients.client_id', {
+        type: 'left',
+        rootTenantColumn: `${tableName}.tenant`,
+      });
+      db.tenantJoin(projectQuery, 'contacts', `${tableName}.contact_name_id`, 'contacts.contact_name_id', {
+        type: 'left',
+        rootTenantColumn: `${tableName}.tenant`,
+      });
+      db.tenantJoin(projectQuery, 'users', `${tableName}.assigned_to`, 'users.user_id', {
+        type: 'left',
+        rootTenantColumn: `${tableName}.tenant`,
+      });
+
+      const project = await projectQuery
         .where({
           [`${tableName}.${this.primaryKey}`]: id
         })
@@ -1275,11 +1279,12 @@ export class ProjectService extends BaseService<IProject> {
       throw new NotFoundError('Project not found');
     }
 
-    return scopedTable<IProjectStatusMapping>(knex, context.tenant, 'project_status_mappings as psm')
-      .where({ 'psm.project_id': projectId })
-      .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-        this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-      })
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table<IProjectStatusMapping>('project_status_mappings as psm')
+      .where({ 'psm.project_id': projectId });
+    db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+
+    query
       .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
         this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
       })
@@ -1288,8 +1293,9 @@ export class ProjectService extends BaseService<IProject> {
         knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
         knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
         knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
-      )
-      .orderBy('psm.display_order');
+      );
+
+    return query.orderBy('psm.display_order');
   }
 
   async getProjectTickets(projectId: string, pagination: any, context: ServiceContext): Promise<{data: any[], total: number}> {

@@ -27,15 +27,13 @@ interface RegistrationRoleRow {
 export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; clientId?: string; tenant?: string }> {
   try {
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      return await tenantDb(trx, REGISTRATION_TENANT_DISCOVERY)
+      const db = tenantDb(trx, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = db
         .unscoped('contacts', 'tenant discovery for contact email verification')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'contacts.client_id')
-              .andOn('clients.tenant', '=', 'contacts.tenant');
-        })
         .where({ 'contacts.email': email.toLowerCase() })
-        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant')
-        .first();
+        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant');
+      db.tenantJoin(contactQuery, 'clients', 'clients.client_id', 'contacts.client_id');
+      return (await contactQuery.first()) as any;
     });
 
     if (!contact) {
@@ -77,15 +75,13 @@ export async function initiateRegistration(
     }
 
     if (contactVerification.exists) {
-      const contact = await tenantDb(adminDb, REGISTRATION_TENANT_DISCOVERY)
+      const db = tenantDb(adminDb, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = db
         .unscoped('contacts', 'tenant discovery for contact-based registration')
-        .join('clients', function() {
-          this.on('contacts.client_id', '=', 'clients.client_id')
-              .andOn('contacts.tenant', '=', 'clients.tenant');
-        })
         .where('contacts.email', email)
-        .select('clients.client_id', 'clients.tenant')
-        .first();
+        .select('clients.client_id', 'clients.tenant');
+      db.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id');
+      const contact = (await contactQuery.first()) as any;
 
       if (!contact?.tenant) {
         return { success: false, error: "Contact client not found" };
@@ -120,15 +116,13 @@ async function registerContactUser(
 
   try {
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
-      const contact = await tenantDb(trx, REGISTRATION_TENANT_DISCOVERY)
+      const db = tenantDb(trx, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = db
         .unscoped('contacts', 'tenant discovery for contact-based registration')
-        .join('clients', function() {
-          this.on('contacts.client_id', '=', 'clients.client_id')
-              .andOn('contacts.tenant', '=', 'clients.tenant');
-        })
         .where({ 'contacts.email': email })
-        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.full_name', 'clients.tenant')
-        .first();
+        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.full_name', 'clients.tenant');
+      db.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id');
+      const contact = (await contactQuery.first()) as any;
 
       if (!contact) {
         return { success: false, error: 'Contact not found' };

@@ -123,15 +123,14 @@ export async function findIntegrationForWebhook(
   const discoveryDb = tenantDb(knex, 'pre-tenant-discovery');
 
   // Find the organization mapping to get tenant and integration
-  const result = await discoveryDb
+  const lookupQuery = discoveryDb
     .unscoped(
       'rmm_organization_mappings as rom',
       'NinjaOne webhook organization lookup derives tenant before tenant facade can be constructed'
-    )
-    .join('rmm_integrations as ri', function() {
-      this.on('rom.integration_id', '=', 'ri.integration_id')
-        .andOn('rom.tenant', '=', 'ri.tenant');
-    })
+    );
+  discoveryDb.tenantJoin(lookupQuery, 'rmm_integrations as ri', 'rom.integration_id', 'ri.integration_id');
+
+  const result = await lookupQuery
     .where('rom.external_organization_id', String(organizationId))
     .where('ri.provider', 'ninjaone')
     .where('ri.is_active', true)

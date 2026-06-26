@@ -333,16 +333,16 @@ export const getContactsEligibleForInvitation = withAuth(async (
 
   try {
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = tenantScopedTable(trx, 'contacts as c', tenant)
-        .leftJoin('users as u', function(this: Knex.JoinClause) {
-          this.on('u.contact_id', 'c.contact_name_id')
-            .andOn('u.tenant', 'c.tenant')
-            .andOn(trx.raw('u.user_type = ?', ['client']));
-        })
-        .leftJoin('clients as comp', function(this: Knex.JoinClause) {
-          this.on('c.client_id', 'comp.client_id')
-            .andOn('comp.tenant', 'c.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const q = scopedDb.table('contacts as c');
+      scopedDb.tenantJoin(q, 'users as u', 'u.contact_id', 'c.contact_name_id', {
+        type: 'left',
+        on(join) {
+          join.andOn(trx.raw('u.user_type = ?', ['client']));
+        },
+      });
+      scopedDb.tenantJoin(q, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+      q
         .whereNull('u.user_id')
         .modify((qb: Knex.QueryBuilder) => {
           if (clientId) qb.andWhere('c.client_id', clientId);
@@ -1479,15 +1479,14 @@ export const getUserByContactId = withAuth(async (
         return null;
       }
 
-      const roles = await tenantScopedTable(trx, 'user_roles', tenant)
+      const scopedDb = tenantDb(trx, tenant);
+      const rolesQuery = scopedDb.table('user_roles')
         .select('roles.role_id', 'roles.role_name')
-        .join('roles', function(this: Knex.JoinClause) {
-          this.on('user_roles.role_id', 'roles.role_id')
-            .andOn('roles.tenant', trx.raw('?', [tenant]));
-        })
         .where({
           'user_roles.user_id': foundUser.user_id
         });
+      scopedDb.tenantJoin(rolesQuery, 'roles', 'user_roles.role_id', 'roles.role_id');
+      const roles = await rolesQuery;
 
       return {
         ...foundUser,

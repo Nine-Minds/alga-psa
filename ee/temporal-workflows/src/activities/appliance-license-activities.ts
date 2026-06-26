@@ -7,6 +7,7 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { emailService } from '../services/email-service';
 import { v4 as uuidv4 } from 'uuid';
@@ -75,6 +76,11 @@ export interface UpsertLicenseContractResult {
   clientContractId: string;
 }
 
+interface ExistingLicenseContractRow {
+  client_contract_id: string;
+  contract_id: string;
+}
+
 export interface StoreLicenseDocumentInput {
   tenant: string;
   clientId: string;
@@ -141,19 +147,17 @@ export async function upsertLicenseContract(
   log.info('upsertLicenseContract', { clientId: input.clientId, tier: input.tier });
 
   const knex = await getAdminConnection();
+  const db = tenantDb(knex, input.tenant);
 
   // Check for existing contract for this subscription
-  const existing = await knex('client_contracts')
-    .join('contracts', function () {
-      this.on('client_contracts.contract_id', 'contracts.contract_id')
-        .andOn('client_contracts.tenant', 'contracts.tenant');
-    })
-    .where({
-      'client_contracts.client_id': input.clientId,
-      'client_contracts.tenant': input.tenant,
-    })
-    .whereRaw("contracts.contract_description LIKE ?", [`%stripe_sub:${input.stripeSubId}%`])
-    .first('client_contracts.client_contract_id as client_contract_id', 'contracts.contract_id as contract_id');
+  const existingQuery = db.table('client_contracts')
+    .where({ 'client_contracts.client_id': input.clientId })
+    .whereRaw("contracts.contract_description LIKE ?", [`%stripe_sub:${input.stripeSubId}%`]);
+  db.tenantJoin(existingQuery, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
+  const existing = await existingQuery.first(
+    'client_contracts.client_contract_id as client_contract_id',
+    'contracts.contract_id as contract_id',
+  ) as ExistingLicenseContractRow | undefined;
 
   const startDate = new Date();
   const endDate = new Date(input.exp * 1000);

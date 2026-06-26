@@ -139,22 +139,18 @@ export async function POST(request: NextRequest) {
             const now = new Date().toISOString();
 
             // Find providers by subscription IDs
-            const providers = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-              .unscoped(
-                'microsoft_calendar_provider_config as mcp',
-                'tenant discovery from Microsoft calendar webhook provider config'
-              )
-              .join(
-                tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-                  .unscoped('calendar_providers', 'tenant discovery for Microsoft calendar webhook health update')
-                  .as('cp'),
-                function() {
-                  this.on('mcp.calendar_provider_id', '=', 'cp.id')
-                    .andOn('mcp.tenant', '=', 'cp.tenant');
-                }
-              )
+            const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+            const providersQuery = discoveryDb.unscoped(
+              'microsoft_calendar_provider_config as mcp',
+              'tenant discovery from Microsoft calendar webhook provider config'
+            );
+            discoveryDb.tenantJoin(providersQuery, 'calendar_providers as cp', 'mcp.calendar_provider_id', 'cp.id', {
+              rootTenantColumn: 'mcp.tenant',
+            });
+
+            const providers = await providersQuery
               .whereIn('mcp.webhook_subscription_id', Array.from(subscriptionIds))
-              .select('cp.id as provider_id', 'cp.tenant');
+              .select('cp.id as provider_id', 'cp.tenant') as Array<{ provider_id: string; tenant: string }>;
 
             // Update health table for each provider
             for (const provider of providers) {

@@ -48,14 +48,22 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(defaultLocationSection).toContain("tenantScopedTable(trx, 'client_locations', tenant)");
     expect(defaultLocationSection).not.toContain('.where({ tenant, is_default: true })');
 
-    expect(paginatedSection).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
-    expect(paginatedSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
+    expect(paginatedSection).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(paginatedSection).toContain("let baseQuery = scopedDb.table('clients as c')");
+    expect(paginatedSection).toContain("scopedDb.tenantJoin(baseQuery, 'users as u'");
+    expect(paginatedSection).toContain("scopedDb.table('tag_mappings as tm')");
+    expect(paginatedSection).toContain("scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td'");
+    expect(paginatedSection).toContain("tenantJoin(baseQuery, 'tenant_companies as tc'");
     expect(paginatedSection).not.toContain("trx('clients as c')");
     expect(paginatedSection).not.toContain(".where({ 'c.tenant': tenant })");
     expect(paginatedSection).not.toContain(".where('tm.tenant', tenant)");
 
-    expect(billingRangeSection).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
-    expect(billingRangeSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
+    expect(billingRangeSection).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(billingRangeSection).toContain("let baseQuery = scopedDb.table('clients as c')");
+    expect(billingRangeSection).toContain("scopedDb.tenantJoin(baseQuery, 'users as u'");
+    expect(billingRangeSection).toContain("scopedDb.table('tag_mappings as tm')");
+    expect(billingRangeSection).toContain("scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td'");
+    expect(billingRangeSection).toContain("tenantJoin(baseQuery, 'tenant_companies as tc'");
     expect(billingRangeSection).toContain("tenantScopedTable(trx, 'client_billing_cycles as cbc', tenant)");
     expect(billingRangeSection).not.toContain("trx('clients as c')");
     expect(billingRangeSection).not.toContain(".where({ 'c.tenant': tenant })");

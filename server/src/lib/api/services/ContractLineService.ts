@@ -1599,10 +1599,17 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Apply specific contract line filters
     if (filters.has_services !== undefined) {
-      const serviceConfigurationProbe = tenantDb(knex, context.tenant).table('contract_line_service_configuration as psc')
+      const scopedDb = tenantDb(knex, context.tenant);
+      const serviceConfigurationProbe = scopedDb.table('contract_lines as service_probe_cl')
         .select(1)
-        .whereRaw('psc.contract_line_id = cl.contract_line_id')
-        .whereRaw('psc.tenant = cl.tenant');
+        .whereColumn('service_probe_cl.contract_line_id', 'cl.contract_line_id')
+        .modify((q) => scopedDb.tenantJoin(
+          q,
+          'contract_line_service_configuration as psc',
+          'service_probe_cl.contract_line_id',
+          'psc.contract_line_id',
+          { rootTenantColumn: 'cl.tenant' },
+        ));
 
       if (filters.has_services) {
         query = query.whereExists(serviceConfigurationProbe);

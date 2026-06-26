@@ -127,20 +127,15 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
         await withTransaction(knex, async (trx) => {
           // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
           const discoveryDb = tenantDb(trx, PROVIDER_TENANT_DISCOVERY);
-          const row = await discoveryDb
-            .unscoped(
-              'microsoft_email_provider_config as mc',
-              'tenant discovery from Microsoft email webhook subscription'
-            )
-            .join(
-              discoveryDb
-                .unscoped('email_providers', 'tenant discovery from Microsoft email webhook subscription')
-                .as('ep'),
-              function() {
-                this.on('mc.email_provider_id', '=', 'ep.id')
-                  .andOn('mc.tenant', '=', 'ep.tenant');
-              }
-            )
+          const providerQuery = discoveryDb.unscoped(
+            'microsoft_email_provider_config as mc',
+            'tenant discovery from Microsoft email webhook subscription'
+          );
+          discoveryDb.tenantJoin(providerQuery, 'email_providers as ep', 'mc.email_provider_id', 'ep.id', {
+            rootTenantColumn: 'mc.tenant',
+          });
+
+          const row: any = await providerQuery
             .where('mc.webhook_subscription_id', providerId)
             .andWhere('ep.provider_type', 'microsoft')
             .first(

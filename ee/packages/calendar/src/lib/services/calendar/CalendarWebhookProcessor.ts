@@ -551,20 +551,17 @@ export class CalendarWebhookProcessor {
   private async getProviderByGoogleSubscription(subscriptionName: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-        .unscoped(
-          'google_calendar_provider_config as gc',
-          'tenant discovery from Google calendar Pub/Sub provider config'
-        )
-        .join(
-          tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-            .unscoped('calendar_providers', 'tenant discovery from Google calendar Pub/Sub subscription')
-            .as('cp'),
-          function() {
-            this.on('gc.calendar_provider_id', '=', 'cp.id')
-              .andOn('gc.tenant', '=', 'cp.tenant');
-          }
-        )
+      const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+      const query = discoveryDb.unscoped(
+        'google_calendar_provider_config as gc',
+        'tenant discovery from Google calendar Pub/Sub provider config'
+      );
+
+      discoveryDb.tenantJoin(query, 'calendar_providers as cp', 'gc.calendar_provider_id', 'cp.id', {
+        rootTenantColumn: 'gc.tenant',
+      });
+
+      const row = await query
         .where('gc.pubsub_subscription_name', subscriptionName)
         .andWhere('cp.is_active', true)
         .first({
@@ -586,20 +583,17 @@ export class CalendarWebhookProcessor {
   private async getProviderByGoogleChannelId(channelId: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-        .unscoped(
-          'google_calendar_provider_config as gc',
-          'tenant discovery from Google calendar channel provider config'
-        )
-        .join(
-          tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-            .unscoped('calendar_providers', 'tenant discovery from Google calendar channel webhook')
-            .as('cp'),
-          function() {
-            this.on('gc.calendar_provider_id', '=', 'cp.id')
-              .andOn('gc.tenant', '=', 'cp.tenant');
-          }
-        )
+      const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+      const query = discoveryDb.unscoped(
+        'google_calendar_provider_config as gc',
+        'tenant discovery from Google calendar channel provider config'
+      );
+
+      discoveryDb.tenantJoin(query, 'calendar_providers as cp', 'gc.calendar_provider_id', 'cp.id', {
+        rootTenantColumn: 'gc.tenant',
+      });
+
+      const row = await query
         .where('gc.webhook_subscription_id', channelId)
         .andWhere('cp.is_active', true)
         .first({
@@ -624,20 +618,17 @@ export class CalendarWebhookProcessor {
   private async getProviderByMicrosoftSubscription(subscriptionId: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-        .unscoped(
-          'microsoft_calendar_provider_config as mc',
-          'tenant discovery from Microsoft calendar provider config'
-        )
-        .join(
-          tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-            .unscoped('calendar_providers', 'tenant discovery from Microsoft calendar subscription')
-            .as('cp'),
-          function() {
-            this.on('mc.calendar_provider_id', '=', 'cp.id')
-              .andOn('mc.tenant', '=', 'cp.tenant');
-          }
-        )
+      const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+      const query = discoveryDb.unscoped(
+        'microsoft_calendar_provider_config as mc',
+        'tenant discovery from Microsoft calendar provider config'
+      );
+
+      discoveryDb.tenantJoin(query, 'calendar_providers as cp', 'mc.calendar_provider_id', 'cp.id', {
+        rootTenantColumn: 'mc.tenant',
+      });
+
+      const row = await query
         .where('mc.webhook_subscription_id', subscriptionId)
         .andWhere('cp.is_active', true)
         .first({

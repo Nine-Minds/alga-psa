@@ -48,7 +48,10 @@ describe('contactActions tenant-scoped query contract', () => {
     const updateSection = sectionBetween('export const updateContact', 'export const updateContactsForClient');
     const updateClientContactsSection = sectionBetween('export const updateContactsForClient', 'export async function exportContactsToCSV');
 
-    expect(invitationSection).toContain("tenantScopedTable(trx, 'contacts as c', tenant)");
+    expect(invitationSection).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(invitationSection).toContain("const q = scopedDb.table('contacts as c')");
+    expect(invitationSection).toContain("scopedDb.tenantJoin(q, 'users as u'");
+    expect(invitationSection).toContain("scopedDb.tenantJoin(q, 'clients as comp'");
     expect(invitationSection).not.toContain("trx('contacts as c')");
     expect(invitationSection).not.toContain(".where('c.tenant', tenant)");
 
@@ -112,7 +115,9 @@ describe('contactActions tenant-scoped query contract', () => {
 
     expect(portalUserSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
     expect(portalUserSection).toContain("tenantScopedTable(trx, 'users', tenant)");
-    expect(portalUserSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
+    expect(portalUserSection).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(portalUserSection).toContain("const rolesQuery = scopedDb.table('user_roles')");
+    expect(portalUserSection).toContain("scopedDb.tenantJoin(rolesQuery, 'roles'");
     expect(portalUserSection).not.toContain(".where({ contact_name_id: contactId, tenant })");
     expect(portalUserSection).not.toContain('tenant: tenant, user_type');
     expect(portalUserSection).not.toContain("'user_roles.tenant': tenant");

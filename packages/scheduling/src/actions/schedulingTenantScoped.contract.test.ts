@@ -32,10 +32,12 @@ describe('scheduling tenant-scoped query contract', () => {
     expect(capacityThresholdSource).toContain("tenantScopedTable(db, 'team_members', tenant)");
     expect(capacityThresholdSource).toContain("tenantScopedTable(db, 'team_members as tm', tenant)");
     expect(capacityThresholdSource).toContain("tenantScopedTable(db, 'schedule_entry_assignees as sea', tenant)");
-    expect(capacityThresholdSource).toContain("tenantDb(db, tenant).tenantJoin(capacityQuery, 'users as u'");
+    expect(capacityThresholdSource).toContain('const facade = tenantDb(db, tenant);');
+    expect(capacityThresholdSource).toContain("facade.tenantJoin(capacityQuery, 'resources as r'");
+    expect(capacityThresholdSource).toContain("facade.tenantJoin(capacityQuery, 'users as u'");
     expect(capacityThresholdSource).toContain("facade.tenantJoin(bookedQuery, 'schedule_entries as se'");
     expect(capacityThresholdSource).toContain("facade.tenantJoin(bookedQuery, 'team_members as tm'");
-    expect(capacityThresholdSource).toContain(".leftJoin('resources as r'");
+    expect(capacityThresholdSource).not.toContain(".leftJoin('resources as r'");
   });
 
   it('uses tenantDb roots and tenant joins for time sheet operations', () => {

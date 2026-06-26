@@ -49,13 +49,13 @@ function applyEmailSearchClause(
   contactAlias = 'c'
 ): void {
   const normalizedEmail = normalizeEmailForSearch(value);
+  const scopedDb = tenantDb(knex, tenant);
   query.where(function emailSearch() {
     this.whereILike(`${contactAlias}.email`, `%${value}%`)
       .orWhereExists(
-        tenantDb(knex, tenant).subquery('contact_additional_email_addresses as caea')
+        scopedDb.subquery('contact_additional_email_addresses as caea')
           .select(knex.raw('1'))
-          .whereRaw(`caea.tenant = ${contactAlias}.tenant`)
-          .andWhereRaw(`caea.contact_name_id = ${contactAlias}.contact_name_id`)
+          .whereRaw(`caea.contact_name_id = ${contactAlias}.contact_name_id`)
           .andWhere(function matchAdditionalEmail() {
             this.whereILike('caea.email_address', `%${value}%`);
             if (normalizedEmail) {
@@ -417,10 +417,9 @@ export class ContactService extends BaseService<IContact> {
           const normalizedDigits = normalizePhoneForSearch(searchData.query);
           subQuery[method](function phoneSearch() {
             this.whereExists(
-              tenantDb(knex, context.tenant).subquery('contact_phone_numbers as cpn')
+              scopedDb.subquery('contact_phone_numbers as cpn')
                 .select(knex.raw('1'))
-                .whereRaw('cpn.tenant = c.tenant')
-                .andWhereRaw('cpn.contact_name_id = c.contact_name_id')
+                .whereRaw('cpn.contact_name_id = c.contact_name_id')
                 .andWhere(function matchPhone() {
                   this.whereILike('cpn.phone_number', `%${searchData.query}%`);
                   if (normalizedDigits) {
@@ -559,6 +558,7 @@ export class ContactService extends BaseService<IContact> {
   }
 
   private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
+    const scopedDb = tenantDb(knex, tenant);
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -575,10 +575,9 @@ export class ContactService extends BaseService<IContact> {
           const normalizedDigits = normalizePhoneForSearch(String(value));
           query.where((subQuery) => {
             subQuery.whereExists(
-              tenantDb(knex, tenant).subquery('contact_phone_numbers as cpn_filter')
+              scopedDb.subquery('contact_phone_numbers as cpn_filter')
                 .select(knex.raw('1'))
-                .whereRaw('cpn_filter.tenant = c.tenant')
-                .andWhereRaw('cpn_filter.contact_name_id = c.contact_name_id')
+                .whereRaw('cpn_filter.contact_name_id = c.contact_name_id')
                 .andWhere(function matchPhone() {
                   this.whereILike('cpn_filter.phone_number', `%${value}%`);
                   if (normalizedDigits) {
@@ -619,10 +618,9 @@ export class ContactService extends BaseService<IContact> {
               .orWhereILike('c.role', `%${value}%`)
               .orWhereILike('comp.client_name', `%${value}%`)
               .orWhereExists(
-                tenantDb(knex, tenant).subquery('contact_phone_numbers as cpn_search')
+                scopedDb.subquery('contact_phone_numbers as cpn_search')
                   .select(knex.raw('1'))
-                  .whereRaw('cpn_search.tenant = c.tenant')
-                  .andWhereRaw('cpn_search.contact_name_id = c.contact_name_id')
+                  .whereRaw('cpn_search.contact_name_id = c.contact_name_id')
                   .andWhere(function matchPhone() {
                     this.whereILike('cpn_search.phone_number', `%${value}%`);
                     if (normalizedDigits) {

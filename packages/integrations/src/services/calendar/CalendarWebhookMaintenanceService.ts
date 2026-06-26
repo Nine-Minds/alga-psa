@@ -95,17 +95,12 @@ export class CalendarWebhookMaintenanceService {
         { rootTenantColumn: 'cp.tenant' }
       );
     } else {
-      query = query.join(
-        tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
-          .unscoped(
-            'microsoft_calendar_provider_config',
-            'cross-tenant Microsoft calendar webhook renewal config discovery'
-          )
-          .as('mcp'),
-        function() {
-          this.on('cp.id', '=', 'mcp.calendar_provider_id')
-            .andOn('cp.tenant', '=', 'mcp.tenant');
-        }
+      query = tenantDb(knex, PROVIDER_TENANT_DISCOVERY).tenantJoin(
+        query,
+        'microsoft_calendar_provider_config as mcp',
+        'cp.id',
+        'mcp.calendar_provider_id',
+        { rootTenantColumn: 'cp.tenant' }
       );
     }
 

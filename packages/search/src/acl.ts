@@ -298,9 +298,9 @@ registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
   if (user.tenant) {
     tenantDb(knex, user.tenant).tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
   } else {
-    query.join('project_phases as pp', function() {
-      this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
-    });
+    query
+      .join('project_phases as pp', 'pp.phase_id', 'pt.phase_id')
+      .where('pp.tenant', knex.ref('pt.tenant'));
   }
   const task = await query;
   if (!task) return false;
@@ -319,12 +319,10 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
     db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
   } else {
     query
-      .join('project_tasks as pt', function() {
-        this.on('pt.task_id', 'ptc.task_id').andOn('pt.tenant', 'ptc.tenant');
-      })
-      .join('project_phases as pp', function() {
-        this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
-      });
+      .join('project_tasks as pt', 'pt.task_id', 'ptc.task_id')
+      .join('project_phases as pp', 'pp.phase_id', 'pt.phase_id')
+      .where('pt.tenant', knex.ref('ptc.tenant'))
+      .where('pp.tenant', knex.ref('pt.tenant'));
   }
   const comment = await query;
   if (!comment) return false;

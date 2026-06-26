@@ -578,9 +578,7 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
       tenantScopedTable(knex, tenant, 'teams').orderBy('team_name', 'asc').select<{ team_id: string; team_name: string }[]>('team_id', 'team_name'),
       tenantScopedTable(knex, tenant, 'users').orderBy('username', 'asc').select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email'),
       tenantScopedTable(knex, tenant, 'api_keys as ak')
-        .leftJoin('users as u', function () {
-          this.on('u.user_id', '=', 'ak.user_id').andOn('u.tenant', '=', 'ak.tenant');
-        })
+        .modify((query) => tenantDb(knex, tenant).tenantJoin(query, 'users as u', 'u.user_id', 'ak.user_id', { type: 'left' }))
         .where('ak.active', true)
         .andWhere(function () {
           this.whereNull('ak.expires_at').orWhere('ak.expires_at', '>', knex.fn.now());
@@ -948,10 +946,10 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
-    const principal = await tenantScopedTable(knex, tenant, 'users as u')
-      .leftJoin('contacts as c', function joinPrincipalContact() {
-        this.on('c.tenant', '=', 'u.tenant').andOn('c.contact_name_id', '=', 'u.contact_id');
-      })
+    const principalQuery = tenantScopedTable(knex, tenant, 'users as u');
+    tenantDb(knex, tenant).tenantJoin(principalQuery, 'contacts as c', 'c.contact_name_id', 'u.contact_id', { type: 'left' });
+
+    const principal = await principalQuery
       .where('u.user_id', input.principalUserId)
       .first<{ user_id: string; user_type: 'internal' | 'client'; client_id: string | null }>(
         'u.user_id as user_id',

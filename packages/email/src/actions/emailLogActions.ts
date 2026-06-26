@@ -149,12 +149,14 @@ export const getEmailLogs = withAuth(
     const offset = (page - 1) * pageSize;
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      let baseQuery = tenantDb(trx, tenant).table('email_sending_logs as esl')
-        .leftJoin('tickets as t', function () {
-          this.on('esl.entity_id', '=', 't.ticket_id')
-            .andOn('t.tenant', '=', 'esl.tenant')
-            .andOn('esl.entity_type', '=', trx.raw('?', ['ticket']));
-        });
+      const db = tenantDb(trx, tenant);
+      let baseQuery = db.table('email_sending_logs as esl');
+      db.tenantJoin(baseQuery, 'tickets as t', 'esl.entity_id', 't.ticket_id', {
+        type: 'left',
+        on(join) {
+          join.andOn('esl.entity_type', '=', trx.raw('?', ['ticket']));
+        },
+      });
 
       if (filters.status) {
         baseQuery = baseQuery.where('esl.status', filters.status);
