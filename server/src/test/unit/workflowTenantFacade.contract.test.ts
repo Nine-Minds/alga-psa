@@ -159,4 +159,40 @@ describe('workflow tenant facade roots', () => {
     expect(metadataSource).toContain("tenant_secrets: { scope: 'tenant' }");
     expect(metadataSource).toContain("tenant_secrets_audit_log: { scope: 'tenant' }");
   });
+
+  it('routes workflow task/form action roots through the workflow tenant facade', () => {
+    const files = [
+      'ee/packages/workflows/src/actions/workflow-actions/taskInboxActions.ts',
+      'ee/packages/workflows/src/actions/workflow-actions/formRegistryActions.ts',
+    ];
+
+    const directRootPattern =
+      /\b(?:trx|knex)\s*(?:<[^>]+>)?\s*\(\s*['`](?:workflow_task_definitions|workflow_tasks|workflow_form_definitions|workflow_form_schemas)['`]/;
+
+    for (const file of files) {
+      const source = read(file);
+
+      expect(source, file).toContain('workflowTenantTable');
+      expect(source, file).not.toMatch(directRootPattern);
+      expect(source, file).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+    }
+  });
+
+  it('routes shared email workflow tenant roots through tenantDb', () => {
+    const source = read('shared/workflow/actions/emailWorkflowActions.ts');
+
+    const directRootPattern =
+      /\btrx\s*(?:<[^>]+>)?\s*\(\s*['`](?:boards|client_inbound_email_domains|clients|contact_additional_email_addresses|contacts|document_associations|documents|email_client_associations|email_providers|email_reply_tokens|inbound_ticket_defaults|statuses|tenant_settings|tickets|users)['`]/;
+
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db'");
+    expect(source).toContain("db.subquery('contact_additional_email_addresses as caea')");
+    expect(source).toContain("db.tenantJoin(query, 'statuses as s'");
+    expect(source).not.toMatch(directRootPattern);
+    expect(source).not.toMatch(/\.from\(\s*['`](?:contact_additional_email_addresses)['`]/);
+    expect(source).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+
+    const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
+    expect(metadataSource).toContain("client_inbound_email_domains: { scope: 'tenant' }");
+    expect(metadataSource).toContain("email_client_associations: { scope: 'tenant' }");
+  });
 });

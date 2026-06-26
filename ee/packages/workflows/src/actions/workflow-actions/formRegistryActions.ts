@@ -15,6 +15,7 @@ import {
 } from '@alga-psa/workflows/persistence';
 import { createTag, findTagsByEntityId, findAllTagsByType, deleteTag } from '@alga-psa/tags/actions';
 import type { ITag } from '@alga-psa/types';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 /**
  * Register a new form
@@ -137,7 +138,7 @@ export const getFormAction = withAuth(async (
 
     // Look up the task definition to get the actual form_id and form_type
     const taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('workflow_task_definitions')
+      return await workflowTenantTable(trx, tenant, 'workflow_task_definitions')
         .select('form_id', 'form_type')
         .where({ task_definition_id: formId })
         .first();

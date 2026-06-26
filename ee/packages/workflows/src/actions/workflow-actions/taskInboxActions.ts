@@ -15,6 +15,7 @@ import {
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from "next/cache";
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 //TODO: we need to fix withTransaction to work with passed knex instances
 
@@ -54,10 +55,9 @@ export const submitTaskForm = withAuth(async (user, { tenant }, params: TaskSubm
         if (!task.tenant_task_definition_id) {
           throw new Error(`Tenant task ${taskId} is missing tenant_task_definition_id.`);
         }
-        taskDefinition = await trx('workflow_task_definitions')
+        taskDefinition = await workflowTenantTable(trx, tenant, 'workflow_task_definitions')
           .where({
-            task_definition_id: task.tenant_task_definition_id,
-            tenant
+            task_definition_id: task.tenant_task_definition_id
           })
           .first();
       }
@@ -267,10 +267,9 @@ export const getTaskDetails = withAuth(async (_user, { tenant }, taskId: string)
         throw new Error(`Tenant task ${taskId} is missing tenant_task_definition_id.`);
       }
       taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('workflow_task_definitions')
+        return await workflowTenantTable(trx, tenant, 'workflow_task_definitions')
           .where({
-            task_definition_id: task.tenant_task_definition_id,
-            tenant
+            task_definition_id: task.tenant_task_definition_id
           })
           .first();
       });
@@ -544,9 +543,8 @@ export const hideTask = withAuth(async (user, { tenant }, taskId: string): Promi
     // Use transaction to update task and add history
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update task to mark as hidden
-      await trx('workflow_tasks')
+      await workflowTenantTable(trx, tenant, 'workflow_tasks')
         .where('task_id', taskId)
-        .where('tenant', tenant)
         .update({
           is_hidden: true,
           hidden_at: new Date(),
@@ -594,9 +592,8 @@ export const unhideTask = withAuth(async (user, { tenant }, taskId: string): Pro
     // Use transaction to update task and add history
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update task to mark as not hidden
-      await trx('workflow_tasks')
+      await workflowTenantTable(trx, tenant, 'workflow_tasks')
         .where('task_id', taskId)
-        .where('tenant', tenant)
         .update({
           is_hidden: false,
           hidden_at: null,
