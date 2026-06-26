@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
 import type {
@@ -29,6 +30,7 @@ const DEFAULT_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const DEFAULT_MAX_TOTAL_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const DEFAULT_MAX_ATTACHMENT_COUNT = 25;
 const DEFAULT_MAX_RAW_MIME_BYTES = 25 * 1024 * 1024;
+const IMAP_PROVIDER_DISCOVERY = 'imap-provider-discovery';
 
 interface IngressCapConfig {
   maxAttachmentBytes: number;
@@ -473,8 +475,8 @@ class ImapFolderListener {
       }
     };
 
-    await db('imap_email_provider_config')
-      .where({ email_provider_id: this.provider.id, tenant: this.provider.tenant })
+    await tenantDb(db, this.provider.tenant).table('imap_email_provider_config')
+      .where({ email_provider_id: this.provider.id })
       .update({
         folder_state: nextState,
         uid_validity: update.uid_validity || this.provider.uid_validity,
@@ -491,15 +493,16 @@ class ImapFolderListener {
     const prevStatus = this.provider.status;
     const prevError = this.provider.error_message;
     const db = await getAdminConnection();
-    await db('email_providers')
-      .where({ id: this.provider.id, tenant: this.provider.tenant })
+    const scopedDb = tenantDb(db, this.provider.tenant);
+    await scopedDb.table('email_providers')
+      .where({ id: this.provider.id })
       .update({
         status,
         error_message: errorMessage || null,
         updated_at: db.fn.now(),
       });
-    await db('imap_email_provider_config')
-      .where({ email_provider_id: this.provider.id, tenant: this.provider.tenant })
+    await scopedDb.table('imap_email_provider_config')
+      .where({ email_provider_id: this.provider.id })
       .update({
         last_error: errorMessage || null,
         updated_at: db.fn.now(),
@@ -523,8 +526,8 @@ class ImapFolderListener {
 
   private async updateLastSyncAt() {
     const db = await getAdminConnection();
-    await db('email_providers')
-      .where({ id: this.provider.id, tenant: this.provider.tenant })
+    await tenantDb(db, this.provider.tenant).table('email_providers')
+      .where({ id: this.provider.id })
       .update({
         last_sync_at: db.fn.now(),
         updated_at: db.fn.now(),
@@ -648,8 +651,8 @@ class ImapFolderListener {
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
     const db = await getAdminConnection();
-    await db('imap_email_provider_config')
-      .where({ email_provider_id: this.provider.id, tenant: this.provider.tenant })
+    await tenantDb(db, this.provider.tenant).table('imap_email_provider_config')
+      .where({ email_provider_id: this.provider.id })
       .update({
         access_token: accessToken,
         token_expires_at: expiresAt,
@@ -948,8 +951,8 @@ class ImapFolderListener {
 
   private async recordLastProcessedMessageId(messageId: string) {
     const db = await getAdminConnection();
-    await db('imap_email_provider_config')
-      .where({ email_provider_id: this.provider.id, tenant: this.provider.tenant })
+    await tenantDb(db, this.provider.tenant).table('imap_email_provider_config')
+      .where({ email_provider_id: this.provider.id })
       .update({
         last_processed_message_id: messageId,
         updated_at: db.fn.now(),
@@ -960,8 +963,8 @@ class ImapFolderListener {
     const db = await getAdminConnection();
     const tableExists = await db.schema.hasTable('email_processed_messages');
     if (!tableExists) return false;
-    const existing = await db('email_processed_messages')
-      .where({ message_id: messageId, provider_id: this.provider.id, tenant: this.provider.tenant })
+    const existing = await tenantDb(db, this.provider.tenant).table('email_processed_messages')
+      .where({ message_id: messageId, provider_id: this.provider.id })
       .first();
     return !!existing;
   }
@@ -1168,8 +1171,8 @@ class ImapFolderListener {
 
   private async persistServerCapabilities(capabilities: string[]) {
     const db = await getAdminConnection();
-    await db('imap_email_provider_config')
-      .where({ email_provider_id: this.provider.id, tenant: this.provider.tenant })
+    await tenantDb(db, this.provider.tenant).table('imap_email_provider_config')
+      .where({ email_provider_id: this.provider.id })
       .update({
         server_capabilities: capabilities,
         updated_at: db.fn.now(),
@@ -1316,7 +1319,11 @@ export class EmailService {
   private async refreshProviders() {
     stateLog('refresh_start', { instanceId: this.instanceId, currentWorkers: this.workers.size });
     const db = await getAdminConnection();
-    const rows = await db('email_providers as ep')
+    const providerRoot = tenantDb(db, IMAP_PROVIDER_DISCOVERY).unscoped(
+      'email_providers as ep',
+      'cross-tenant IMAP provider refresh discovery'
+    );
+    const rows = await providerRoot
       .join('imap_email_provider_config as ic', function (this: any) {
         this.on('ep.id', '=', 'ic.email_provider_id')
           .andOn('ep.tenant', '=', 'ic.tenant');
@@ -1467,8 +1474,8 @@ export class EmailService {
     const db = await getAdminConnection();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + Number(process.env.IMAP_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS));
-    const updated = await db('imap_email_provider_config')
-      .where({ email_provider_id: providerId, tenant })
+    const updated = await tenantDb(db, tenant).table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
       .andWhere(function (this: any) {
         this.whereNull('lease_expires_at').orWhere('lease_expires_at', '<', now.toISOString());
       })
@@ -1490,8 +1497,8 @@ export class EmailService {
   private async renewLease(providerId: string, tenant: string): Promise<boolean> {
     const db = await getAdminConnection();
     const expiresAt = new Date(Date.now() + Number(process.env.IMAP_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS));
-    const updated = await db('imap_email_provider_config')
-      .where({ email_provider_id: providerId, tenant, lease_owner: this.instanceId })
+    const updated = await tenantDb(db, tenant).table('imap_email_provider_config')
+      .where({ email_provider_id: providerId, lease_owner: this.instanceId })
       .update({
         lease_expires_at: expiresAt.toISOString(),
         updated_at: db.fn.now(),
@@ -1505,7 +1512,10 @@ export class EmailService {
 
   private async releaseLeases() {
     const db = await getAdminConnection();
-    const updated = await db('imap_email_provider_config')
+    const updated = await tenantDb(db, IMAP_PROVIDER_DISCOVERY).unscoped(
+      'imap_email_provider_config',
+      'cross-tenant IMAP lease release for worker instance shutdown'
+    )
       .where({ lease_owner: this.instanceId })
       .update({
         lease_owner: null,

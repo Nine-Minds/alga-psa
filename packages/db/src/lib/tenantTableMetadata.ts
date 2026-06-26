@@ -123,6 +123,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   email_processed_attachments: { scope: 'tenant' },
   email_processed_messages: { scope: 'tenant' },
   email_provider_configs: { scope: 'tenant' },
+  email_provider_health: { scope: 'tenant' },
   email_providers: { scope: 'tenant' },
   email_reply_tokens: { scope: 'tenant' },
   email_sending_logs: { scope: 'tenant' },

@@ -1,5 +1,6 @@
 import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { ADD_ONS } from '@alga-psa/types';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
@@ -32,6 +33,7 @@ const logger = createLogger({
 const EMAIL_WORKFLOW_TASK_QUEUE = 'email-domain-workflows';
 const ENTRA_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
 const ENTRA_SCHEDULE_ID_PREFIX = 'entra-all-tenants-sync-schedule';
+const ENTRA_SCHEDULE_DISCOVERY_TENANT = '__entra_schedule_config_discovery__';
 // Note: RMM alert reconciliation and Huntress incident polling are NOT set up
 // here. They run as per-integration recurring jobs on the job-runner
 // abstraction (Temporal Schedules in EE via TemporalJobRunner), converged by
@@ -88,7 +90,11 @@ function parseSettings(value: unknown): Record<string, unknown> {
 
 async function loadNinjaOneBackfillCandidates(): Promise<NinjaOneBackfillRow[]> {
   const knex = await getAdminConnection();
-  const rows = await knex('rmm_integrations')
+  const rows = await tenantDb(knex, '__ninjaone_backfill_integration_discovery__')
+    .unscoped(
+      'rmm_integrations',
+      'NinjaOne proactive refresh backfill enumerates active integrations before tenant context is known'
+    )
     .where({ provider: 'ninjaone', is_active: true })
     .select([
       'tenant as tenantId',
@@ -203,15 +209,29 @@ async function deleteScheduleIfExists(client: Client, scheduleId: string): Promi
 
 async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
   const knex = await getAdminConnection();
-  const rows = await knex('entra_sync_settings as s')
-    .leftJoin('entra_partner_connections as c', function joinConnection() {
-      this.on('s.tenant', '=', 'c.tenant').andOn(knex.raw('c.is_active = true'));
-    })
-    .leftJoin('tenant_addons as a', function joinEnterpriseAddOn() {
-      this.on('s.tenant', '=', 'a.tenant')
+  const db = tenantDb(knex, ENTRA_SCHEDULE_DISCOVERY_TENANT);
+  const query = db
+    .unscoped(
+      'entra_sync_settings as s',
+      'Temporal schedule setup enumerates Entra sync settings across tenants'
+    );
+
+  db.tenantJoin(query, 'entra_partner_connections as c', 's.tenant', 'c.tenant', {
+    type: 'left',
+    on: (join) => {
+      join.andOn(knex.raw('c.is_active = true'));
+    },
+  });
+  db.tenantJoin(query, 'tenant_addons as a', 's.tenant', 'a.tenant', {
+    type: 'left',
+    on: (join) => {
+      join
         .andOn(knex.raw('a.addon_key = ?', [ADD_ONS.ENTERPRISE]))
         .andOn(knex.raw('(a.expires_at IS NULL OR a.expires_at > now())'));
-    })
+    },
+  });
+
+  const rows = await query
     .select([
       's.tenant as tenantId',
       's.sync_enabled as syncEnabled',

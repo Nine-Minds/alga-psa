@@ -10,10 +10,8 @@ import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 
-import {
-  enrichInvoiceViewModelWithLocations,
-  mapDbInvoiceToWasmViewModel,
-} from '../lib/adapters/invoiceAdapters';
+import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
+import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';

@@ -599,8 +599,10 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
     return null;
   }
 
-  const { mapDbInvoiceToWasmViewModel, enrichInvoiceViewModelWithLocations } =
+  const { mapDbInvoiceToWasmViewModel } =
     await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
+  const { enrichInvoiceViewModelWithLocations } =
+    await import('@alga-psa/billing/lib/adapters/invoiceAdapters.server');
 
   const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
   if (!viewModel) {

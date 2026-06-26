@@ -100,10 +100,6 @@ export class EmailWebhookMaintenanceService {
       });
     }
 
-    if (tenantId) {
-      query = query.andWhere('ep.tenant', tenantId);
-    }
-
     if (providerId) {
       query = query.andWhere('ep.id', providerId);
     }
@@ -260,15 +256,16 @@ export class EmailWebhookMaintenanceService {
   }): Promise<void> {
     try {
       const knex = await getAdminConnection();
+      const scopedDb = tenantDb(knex, tenant);
       const now = new Date().toISOString();
       
       // Check if health row exists, if not create it
-      const existing = await knex('email_provider_health')
+      const existing = await scopedDb.table('email_provider_health')
         .where('provider_id', providerId)
         .first();
 
       if (existing) {
-        await knex('email_provider_health')
+        await scopedDb.table('email_provider_health')
           .where('provider_id', providerId)
           .update({
             ...status,
@@ -276,7 +273,7 @@ export class EmailWebhookMaintenanceService {
             updated_at: now
           });
       } else {
-        await knex('email_provider_health')
+        await scopedDb.table('email_provider_health')
           .insert({
             provider_id: providerId,
             tenant: tenant, // Fixed: column name is 'tenant', not 'tenant_id'

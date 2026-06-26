@@ -651,7 +651,7 @@ export const QuoteItem = {
     const items = await tenantScopedTable(knexOrTrx, tenant, 'quote_items')
       .where({ quote_id: quoteId })
       .orderBy('display_order', 'asc')
-      .orderBy('created_at', 'asc');
+      .orderBy('created_at', 'asc') as Record<string, unknown>[];
 
     return items.map((item) => normalizeQuoteItem(item));
   },
