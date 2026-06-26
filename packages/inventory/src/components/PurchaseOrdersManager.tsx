@@ -26,8 +26,24 @@ import {
   receivePoLine,
   listStockLocations,
   listVendors,
+  listInventoryProducts,
   type PurchaseOrderListRow,
 } from '../actions';
+
+/** Closed currency set — the create form picks from these instead of free-typing a code. */
+const CURRENCY_OPTIONS = [
+  { value: 'USD', label: 'USD — US Dollar' },
+  { value: 'CAD', label: 'CAD — Canadian Dollar' },
+  { value: 'EUR', label: 'EUR — Euro' },
+  { value: 'GBP', label: 'GBP — British Pound' },
+];
+
+type ProductOption = {
+  service_id: string;
+  service_name?: string | null;
+  sku?: string | null;
+  is_serialized?: boolean;
+};
 
 interface LineForm {
   service_id: string;
@@ -38,12 +54,18 @@ interface LineForm {
 interface FormState {
   vendor_id: string;
   currency_code: string;
+  expected_date: string; // yyyy-mm-dd from the date input; '' = none
   lines: LineForm[];
 }
 
 const emptyLine = (): LineForm => ({ service_id: '', quantity_ordered: '1', unit_cost: '0' });
 
-const emptyForm = (): FormState => ({ vendor_id: '', currency_code: 'USD', lines: [emptyLine()] });
+const emptyForm = (): FormState => ({
+  vendor_id: '',
+  currency_code: 'USD',
+  expected_date: '',
+  lines: [emptyLine()],
+});
 
 /** Per-line receive form keyed by po_line_id. */
 interface ReceiveLineForm {
@@ -112,6 +134,7 @@ const OUTSTANDING_STATUSES = new Set(['open', 'partially_received']);
 export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrderListRow[] }) {
   const [pos, setPos] = useState<PurchaseOrderListRow[]>(initialPos || []);
   const [vendors, setVendors] = useState<IVendor[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
@@ -145,14 +168,34 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
     }
   }, []);
 
+  const loadProducts = useCallback(async () => {
+    try {
+      setProducts((await listInventoryProducts()) as ProductOption[]);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to load products');
+    }
+  }, []);
+
   useEffect(() => {
     void loadVendors();
-  }, [loadVendors]);
+    void loadProducts();
+  }, [loadVendors, loadProducts]);
 
   const vendorName = useCallback(
     (vendorId: string) => vendors.find((v) => v.vendor_id === vendorId)?.vendor_name || vendorId,
     [vendors],
   );
+
+  const productName = useCallback(
+    (serviceId: string) => products.find((p) => p.service_id === serviceId)?.service_name || serviceId,
+    [products],
+  );
+
+  const productOptions = products.map((p) => ({
+    value: p.service_id,
+    label: `${p.service_name || 'Unnamed product'}${p.sku ? ` — ${p.sku}` : ''}`,
+  }));
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -177,7 +220,7 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
       return;
     }
     if (!form.currency_code.trim()) {
-      toast.error('Currency code is required');
+      toast.error('Currency is required');
       return;
     }
     const lines = form.lines
@@ -199,6 +242,7 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
       await createPurchaseOrder({
         vendor_id: form.vendor_id,
         currency_code: form.currency_code.trim(),
+        expected_date: form.expected_date || null,
         lines,
       });
       toast.success('Purchase order created');
@@ -511,7 +555,7 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title="Create Purchase Order"
+        title="Add Purchase Order"
         id="purchase-order-dialog"
       >
         <div className="space-y-4 p-1">
@@ -525,45 +569,68 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
             options={vendors.map((v) => ({ value: v.vendor_id, label: v.vendor_name }))}
           />
 
-          <Input
-            id="purchase-order-currency"
-            label="Currency code"
-            required
-            value={form.currency_code}
-            onChange={(e) => setForm({ ...form, currency_code: e.target.value.toUpperCase() })}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <CustomSelect
+              id="purchase-order-currency"
+              label="Currency"
+              required
+              value={form.currency_code}
+              onValueChange={(value) => setForm({ ...form, currency_code: value })}
+              options={CURRENCY_OPTIONS}
+            />
+            <Input
+              id="purchase-order-expected-date"
+              label="Expected date"
+              type="date"
+              value={form.expected_date}
+              onChange={(e) => setForm({ ...form, expected_date: e.target.value })}
+            />
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">Lines</label>
+              <label className="block text-sm font-medium">Items</label>
               <Button id="purchase-order-add-line" variant="outline" size="sm" onClick={addLine}>
-                Add Line
+                Add item
               </Button>
             </div>
+            {/* Column headers once, so each line row carries inputs only — not a hand-rolled
+                label per field repeated down the list. */}
+            <div className="flex gap-2 items-center text-xs font-medium text-gray-600">
+              <div className="flex-1">Product</div>
+              <div className="w-24 text-right">Qty</div>
+              <div className="w-32 text-right">Unit cost ($)</div>
+              <div className="w-20" />
+            </div>
             {form.lines.map((line, idx) => (
-              <div key={idx} className="flex gap-2 items-end" id={`purchase-order-line-${idx}`}>
+              <div key={idx} className="flex gap-2 items-center" id={`purchase-order-line-${idx}`}>
                 <div className="flex-1">
-                  <label className="block text-xs mb-1">Service ID</label>
-                  <Input
+                  <CustomSelect
                     id={`purchase-order-line-service-${idx}`}
+                    placeholder="Select a product…"
                     value={line.service_id}
-                    onChange={(e) => updateLine(idx, { service_id: e.target.value })}
+                    onValueChange={(value) => updateLine(idx, { service_id: value })}
+                    options={productOptions}
                   />
                 </div>
-                <div className="w-20">
-                  <label className="block text-xs mb-1">Qty</label>
+                <div className="w-24">
                   <Input
                     id={`purchase-order-line-qty-${idx}`}
                     type="number"
+                    min="1"
+                    step="1"
+                    className="text-right tabular-nums"
                     value={line.quantity_ordered}
                     onChange={(e) => updateLine(idx, { quantity_ordered: e.target.value })}
                   />
                 </div>
-                <div className="w-28">
-                  <label className="block text-xs mb-1">Unit Cost ($)</label>
+                <div className="w-32">
                   <Input
                     id={`purchase-order-line-cost-${idx}`}
                     type="number"
+                    min="0"
+                    step="0.01"
+                    className="text-right tabular-nums"
                     value={line.unit_cost}
                     onChange={(e) => updateLine(idx, { unit_cost: e.target.value })}
                   />
