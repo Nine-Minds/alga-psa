@@ -12,13 +12,14 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { Package, Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
+import type { IProjectMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import {
   listProjectMaterials,
   searchServiceCatalogForPicker,
   addProjectMaterial,
   getServicePrices,
   deleteProjectMaterial,
+  listAvailableStockUnitsForMaterial,
 } from '../actions/materialCatalogActions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +50,8 @@ export default function ProjectMaterialsDrawer({
   const [description, setDescription] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [availableUnits, setAvailableUnits] = useState<IStockUnit[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
 
   const loadMaterials = useCallback(async () => {
     if (!projectId) return;
@@ -117,6 +120,25 @@ export default function ProjectMaterialsDrawer({
     loadPrices();
   }, [selectedProductId]);
 
+  // Load available serialized stock units when a product is selected
+  useEffect(() => {
+    if (!selectedProductId) {
+      setAvailableUnits([]);
+      setSelectedUnitId('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const units = await listAvailableStockUnitsForMaterial(selectedProductId);
+        if (!cancelled) { setAvailableUnits(units); setSelectedUnitId(''); }
+      } catch {
+        if (!cancelled) setAvailableUnits([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedProductId]);
+
   const calculateTotal = (material: IProjectMaterial) => material.quantity * material.rate;
 
   const unbilledByCurrency = materials
@@ -138,6 +160,8 @@ export default function ProjectMaterialsDrawer({
     setSelectedCurrency('');
     setQuantity(1);
     setDescription('');
+    setAvailableUnits([]);
+    setSelectedUnitId('');
   };
 
   const handleAddMaterial = async () => {
@@ -156,6 +180,11 @@ export default function ProjectMaterialsDrawer({
       return;
     }
 
+    if (availableUnits.length > 0 && !selectedUnitId) {
+      toast.error(materialsT('unitRequiredError', 'Please select a serial/unit to deliver'));
+      return;
+    }
+
     setIsAdding(true);
     try {
       await addProjectMaterial({
@@ -166,6 +195,7 @@ export default function ProjectMaterialsDrawer({
         rate: selectedPrice.rate,
         currency_code: selectedPrice.currency_code,
         description: description.trim() || null,
+        unit_id: selectedUnitId || null,
       });
 
       toast.success(materialsT('addedSuccess', 'Material added'));
@@ -301,6 +331,22 @@ export default function ProjectMaterialsDrawer({
                 </div>
               </div>
             </div>
+
+            {availableUnits.length > 0 && (
+              <div className="space-y-2">
+                <Label>{materialsT('serialUnit', 'Serial / MAC (serialized product)')}</Label>
+                <CustomSelect
+                  id={`${id}-unit-select`}
+                  options={availableUnits.map((u) => ({
+                    value: u.unit_id,
+                    label: u.mac_address ? `${u.serial_number} — ${u.mac_address}` : u.serial_number,
+                  }))}
+                  value={selectedUnitId}
+                  onValueChange={setSelectedUnitId}
+                  placeholder={materialsT('selectUnit', 'Select a unit to deliver...')}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="project-materials-description">{materialsT('descriptionOptional', 'Description (optional)')}</Label>

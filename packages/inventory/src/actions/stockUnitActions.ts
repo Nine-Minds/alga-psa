@@ -12,6 +12,23 @@ async function requireInvRead(user: any): Promise<void> {
   }
 }
 
+/**
+ * In-stock serialized units available to pick for a product (serial + MAC),
+ * used by the ticket/project material dialogs to choose which unit to deliver.
+ * Returns [] for non-serialized products (they have no unit rows).
+ */
+export const listAvailableStockUnits = withAuth(
+  async (user, { tenant }, serviceId: string): Promise<IStockUnit[]> => {
+    await requireInvRead(user);
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return (await trx('stock_units')
+        .where({ tenant, service_id: serviceId, status: 'in_stock' })
+        .orderBy('received_at', 'asc')) as IStockUnit[];
+    });
+  },
+);
+
 /** Escape LIKE wildcards in a user-supplied search term so they match literally. */
 function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (ch) => `\\${ch}`);

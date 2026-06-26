@@ -1,9 +1,11 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import type { IProjectMaterial, IService, IServicePrice } from '@alga-psa/types';
+import type { IProjectMaterial, IService, IServicePrice, IStockUnit } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { recordStockConsumption, reverseStockConsumption } from '@alga-psa/inventory/lib';
 
 export interface CatalogPickerSearchOptions {
   search?: string;
@@ -128,6 +130,7 @@ export const addProjectMaterial = withAuth(async (
     rate: number;
     currency_code: string;
     description?: string | null;
+    unit_id?: string | null; // serialized: the picked stock unit to deliver
   }
 ): Promise<IProjectMaterial> => {
   const { knex: db } = await createTenantKnex();
@@ -147,7 +150,33 @@ export const addProjectMaterial = withAuth(async (
       })
       .returning('*');
 
+    // Inventory: decrement stock for track_stock products (serialized delivers the picked unit). No-op otherwise.
+    await recordStockConsumption(trx, tenant, {
+      service_id: row.service_id,
+      quantity: row.quantity,
+      source_doc_type: 'project_material',
+      source_doc_id: row.project_material_id,
+      performed_by: (_user as any)?.user_id ?? null,
+      unit_id: input.unit_id ?? null,
+      client_id: input.client_id,
+    });
+
     return row as IProjectMaterial;
+  });
+});
+
+/** In-stock serialized units available to pick when adding a serialized product as a material. */
+export const listAvailableStockUnitsForMaterial = withAuth(async (
+  user,
+  { tenant },
+  serviceId: string
+): Promise<IStockUnit[]> => {
+  if (!(await hasPermission(user, 'inventory', 'read'))) return [];
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return (await trx('stock_units')
+      .where({ tenant, service_id: serviceId, status: 'in_stock' })
+      .orderBy('received_at', 'asc')) as IStockUnit[];
   });
 });
 
@@ -161,7 +190,7 @@ export const deleteProjectMaterial = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const row = await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId })
-      .select('is_billed')
+      .select('is_billed', 'service_id', 'quantity')
       .first();
 
     if (!row) {
@@ -171,6 +200,15 @@ export const deleteProjectMaterial = withAuth(async (
     if (row.is_billed) {
       throw new Error('Cannot delete a billed material.');
     }
+
+    // Inventory: restore stock consumed when this (unbilled) material was added.
+    await reverseStockConsumption(trx, tenant, {
+      service_id: row.service_id,
+      quantity: row.quantity,
+      source_doc_type: 'project_material',
+      source_doc_id: projectMaterialId,
+      performed_by: (_user as any)?.user_id ?? null,
+    });
 
     await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId })

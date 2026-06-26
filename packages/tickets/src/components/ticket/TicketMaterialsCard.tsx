@@ -14,7 +14,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ContentCard } from '@alga-psa/ui/components';
 import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { ITicketMaterial, IServicePrice } from '@alga-psa/types';
+import type { ITicketMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   listTicketMaterials,
@@ -22,6 +22,7 @@ import {
   deleteTicketMaterial,
   searchServiceCatalogForPicker,
   getServicePrices,
+  listAvailableStockUnitsForMaterial,
 } from '../../actions/materialCatalogActions';
 
 interface TicketMaterialsCardProps {
@@ -50,6 +51,9 @@ export default function TicketMaterialsCard({
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  // Serialized stock unit picker (only shown when the product has in-stock units)
+  const [availableUnits, setAvailableUnits] = useState<IStockUnit[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
 
   // Load materials
   const loadMaterials = useCallback(async () => {
@@ -122,6 +126,28 @@ export default function TicketMaterialsCard({
     loadPrices();
   }, [selectedProductId]);
 
+  // Load available serialized stock units when a product is selected
+  useEffect(() => {
+    if (!selectedProductId) {
+      setAvailableUnits([]);
+      setSelectedUnitId('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const units = await listAvailableStockUnitsForMaterial(selectedProductId);
+        if (!cancelled) {
+          setAvailableUnits(units);
+          setSelectedUnitId('');
+        }
+      } catch {
+        if (!cancelled) setAvailableUnits([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedProductId]);
+
   // Get selected price details
   const selectedPrice = productPrices.find(p => p.currency_code === selectedCurrency);
 
@@ -142,6 +168,11 @@ export default function TicketMaterialsCard({
       return;
     }
 
+    if (availableUnits.length > 0 && !selectedUnitId) {
+      toast.error(t('validation.materials.unitRequired', 'Please select a serial/unit to deliver'));
+      return;
+    }
+
     setIsAdding(true);
     try {
       await addTicketMaterial({
@@ -152,6 +183,7 @@ export default function TicketMaterialsCard({
         rate: selectedPrice.rate,
         currency_code: selectedPrice.currency_code,
         description: description.trim() || null,
+        unit_id: selectedUnitId || null,
       });
 
       toast.success(t('materials.addSuccess', 'Material added'));
@@ -162,6 +194,8 @@ export default function TicketMaterialsCard({
       setSelectedCurrency('');
       setQuantity(1);
       setDescription('');
+      setAvailableUnits([]);
+      setSelectedUnitId('');
       await loadMaterials();
     } catch (error) {
       handleError(error, t('errors.addMaterial', 'Failed to add material'));
@@ -297,6 +331,22 @@ export default function TicketMaterialsCard({
                 </div>
               </div>
             </div>
+
+            {availableUnits.length > 0 && (
+              <div className="space-y-2">
+                <Label>{t('materials.serialUnit', 'Serial / MAC (serialized product)')}</Label>
+                <CustomSelect
+                  id={`${id}-unit-select`}
+                  options={availableUnits.map((u) => ({
+                    value: u.unit_id,
+                    label: u.mac_address ? `${u.serial_number} — ${u.mac_address}` : u.serial_number,
+                  }))}
+                  value={selectedUnitId}
+                  onValueChange={setSelectedUnitId}
+                  placeholder={t('materials.selectUnit', 'Select a unit to deliver...')}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor={`${id}-description`}>

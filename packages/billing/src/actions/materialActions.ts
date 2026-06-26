@@ -37,6 +37,7 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
   rate: number; // cents
   currency_code: string;
   description?: string | null;
+  unit_id?: string | null; // serialized: the picked stock unit to deliver
 }): Promise<ITicketMaterial> => {
   if (!await hasPermission(user, 'billing', 'create')) {
     throw new Error('Permission denied: billing create required');
@@ -63,6 +64,8 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
       source_doc_type: 'ticket_material',
       source_doc_id: row.ticket_material_id,
       performed_by: (user as any)?.user_id ?? null,
+      unit_id: input.unit_id ?? null,
+      client_id: input.client_id,
     });
     return row as ITicketMaterial;
   });
@@ -128,6 +131,7 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
   rate: number; // cents
   currency_code: string;
   description?: string | null;
+  unit_id?: string | null; // serialized: the picked stock unit to deliver
 }): Promise<IProjectMaterial> => {
   if (!await hasPermission(user, 'billing', 'create')) {
     throw new Error('Permission denied: billing create required');
@@ -154,6 +158,8 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
       source_doc_type: 'project_material',
       source_doc_id: row.project_material_id,
       performed_by: (user as any)?.user_id ?? null,
+      unit_id: input.unit_id ?? null,
+      client_id: input.client_id,
     });
     return row as IProjectMaterial;
   });

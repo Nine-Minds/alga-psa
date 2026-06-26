@@ -712,7 +712,7 @@
   {
     "id": "F089",
     "description": "[P4] Serial/MAC picker in ticket/project material dialog for serialized products",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
