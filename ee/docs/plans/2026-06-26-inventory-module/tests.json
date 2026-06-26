@@ -1,47 +1,421 @@
 [
-  { "id": "T001", "description": "[schema] All inventory migrations apply up() and roll back down() cleanly on the migrated schema (round-trip), tables/indexes/constraints present then gone", "implemented": false, "featureIds": ["F003","F004","F005","F007","F008","F009","F010","F011","F012","F013","F014","F015","F018"] },
-  { "id": "T002", "description": "[schema] Constraints enforced at DB: duplicate serial within (tenant,service_id) rejected; duplicate MAC across DIFFERENT products in same tenant rejected (tenant-wide MAC uniqueness)", "implemented": false, "featureIds": ["F008","F052","F053"] },
-  { "id": "T003", "description": "[schema] Seed creates exactly one default stock_location per tenant; a second is_default insert is rejected", "implemented": false, "featureIds": ["F016","F022"] },
-  { "id": "T004", "description": "[ledger] Receipt increments on_hand and writes an immutable movement; replaying stock_movements via the reconciliation utility reproduces stock_levels exactly", "implemented": false, "featureIds": ["F019","F020","F041","F042","F064","F065"] },
-  { "id": "T005", "description": "[ledger] Moving-average cost is correct across two receipts at different unit costs", "implemented": false, "featureIds": ["F043"] },
-  { "id": "T006", "description": "[ledger] Adjust requires a reason (missing reason rejected); a negative adjust soft-warns but still applies and reconciles", "implemented": false, "featureIds": ["F044","F045","F051"] },
-  { "id": "T007", "description": "[ledger] Serialized on_hand counts only in_stock units — units in in_transit/on_loan/returned/in_rma/delivered/retired are excluded from on-hand and available", "implemented": false, "featureIds": ["F048","F112"] },
-  { "id": "T008", "description": "[ledger] No update/delete path exists for stock_movements; reconciliation after a sequence of mixed movements matches the running cache", "implemented": false, "featureIds": ["F050","F020"] },
-  { "id": "T009", "description": "[alloc] Soft allocation on SO confirm reduces available but not on_hand; cancelling the SO releases reserved/held and returns units to in_stock", "implemented": false, "featureIds": ["F076","F078","F047"] },
-  { "id": "T010", "description": "[alloc] Hard-hold: a unit/qty hard-held by SO-A cannot be poached by a material consume or SO-B fulfill (guard fires); soft allocation does not block", "implemented": false, "featureIds": ["F077","F084"] },
-  { "id": "T011", "description": "[consume] Fulfilling a serialized SO line sets the picked unit→delivered, decrements on_hand, and captures COGS = unit_cost on the movement", "implemented": false, "featureIds": ["F080","F081","F082","F083"] },
-  { "id": "T012", "description": "[consume] Non-serialized consume captures COGS = average_cost and releases the matching reservation", "implemented": false, "featureIds": ["F082","F083"] },
-  { "id": "T013", "description": "[consume] Consuming more than available soft-warns but does NOT block; the movement is still written and on_hand goes negative as surfaced", "implemented": false, "featureIds": ["F051"] },
-  { "id": "T014", "description": "[materials] Adding a ticket material for a track_stock product decrements stock once; deleting the (unbilled) material reverses it; a retried add does not double-decrement (idempotent)", "implemented": false, "featureIds": ["F087","F090","F152"] },
-  { "id": "T015", "description": "[assets] Serialized delivery with creates_asset_on_delivery=true creates an asset carrying serial/MAC/warranty with bidirectional link; with false, no asset is created", "implemented": false, "featureIds": ["F085","F086"] },
-  { "id": "T016", "description": "[assets] Delivery asset creation goes through the assets ABAC createAsset path (permission enforced), not a raw insert", "implemented": false, "featureIds": ["F085"] },
-  { "id": "T017", "description": "[procure] Receiving against a PO line advances quantity_received and moves PO status open→partially_received→received", "implemented": false, "featureIds": ["F064","F065","F066"] },
-  { "id": "T018", "description": "[procure] Over-receipt is allowed with a warning; PO number is unique per tenant", "implemented": false, "featureIds": ["F067","F072"] },
-  { "id": "T019", "description": "[procure] Vendor backfill migration maps distinct freeform service_catalog.vendor strings to vendors rows and sets preferred_vendor_id", "implemented": false, "featureIds": ["F006"] },
-  { "id": "T020", "description": "[kit] Adding a kit to an SO explodes into a parent line + component lines (parent_so_line_id) with correct per-component quantities", "implemented": false, "featureIds": ["F103"] },
-  { "id": "T021", "description": "[kit] Fulfilling an exploded kit decrements each STOCKED component; a non-stocked component (license) rides through without a stock decrement", "implemented": false, "featureIds": ["F104","F105"] },
-  { "id": "T022", "description": "[kit] Editing the kit parent line qty scales component quantities; a kit-containing-a-kit definition is rejected (single-level guard)", "implemented": false, "featureIds": ["F106","F102"] },
-  { "id": "T023", "description": "[transfer] Dispatch decrements source on_hand and sets units→in_transit; destination available is unchanged until receive", "implemented": false, "featureIds": ["F109","F112"] },
-  { "id": "T024", "description": "[transfer] Receive increments destination on_hand and sets units→in_stock at destination; cancel-before-receive returns stock to source", "implemented": false, "featureIds": ["F110","F111"] },
-  { "id": "T025", "description": "[loaner] Loan out sets unit→on_loan (excluded from on_hand, no COGS, no invoice); loan return restores it to in_stock", "implemented": false, "featureIds": ["F114","F115"] },
-  { "id": "T026", "description": "[restock] Restock return puts a unit/qty back to SELLABLE on_hand (distinct from the defective/RMA path); optional restocking fee recorded", "implemented": false, "featureIds": ["F117","F118"] },
-  { "id": "T027", "description": "[rma] Standard RMA: delivered→returned (NOT sellable, on_hand unchanged)→sent_to_vendor→replacement sets replacement_unit_id→replaced→closed", "implemented": false, "featureIds": ["F119","F120","F121","F122"] },
-  { "id": "T028", "description": "[rma] Standard RMA resolutions: repair (in_rma→in_stock), credit (→retired,credited), scrap (retired,closed) reach correct terminal states", "implemented": false, "featureIds": ["F123"] },
-  { "id": "T029", "description": "[rma-advance] Advance RMA: replacement received→in_stock→deployed relinks the SAME asset, updates its serial/MAC, and clears the old unit's asset_id", "implemented": false, "featureIds": ["F124","F125","F126","F132"] },
-  { "id": "T030", "description": "[rma-advance] Advance RMA: dead_unit_owed sets dead_unit_due_date; returning the dead unit closes the case; missing the deadline transitions to charged→closed", "implemented": false, "featureIds": ["F127","F128","F129"] },
-  { "id": "T031", "description": "[rma-advance] Dead-units-owed aging report lists owed units sorted by days remaining", "implemented": false, "featureIds": ["F131"] },
-  { "id": "T032", "description": "[dropship] Drop-ship SO line creates an is_drop_ship PO to the client; combined receipt+delivery creates a delivered unit + asset + invoice with NO on_hand change at any location", "implemented": false, "featureIds": ["F137","F138"] },
-  { "id": "T033", "description": "[dropship] Drop-ship serialized captures serial/MAC/warranty at confirm and links the asset", "implemented": false, "featureIds": ["F139"] },
-  { "id": "T034", "description": "[invoice] On-fulfillment invoicing emits a charge into the existing invoice engine; partial fulfillment yields a partial invoice with counters advancing independently", "implemented": false, "featureIds": ["F091","F094"] },
-  { "id": "T035", "description": "[invoice] Manual 'Generate invoice' plus on-fulfillment cannot double-bill the same quantity (shared quantity_invoiced guard; invoice_item↔so_line link)", "implemented": false, "featureIds": ["F092","F093"] },
-  { "id": "T036", "description": "[invoice] quantity_invoiced can never exceed quantity_ordered across mixed manual+on-fulfillment triggers", "implemented": false, "featureIds": ["F093"] },
-  { "id": "T037", "description": "[perm] Location scoping: a tech can adjust own van/home location but is blocked adjusting another metro's stock; a manager/admin is allowed", "implemented": false, "featureIds": ["F140"] },
-  { "id": "T038", "description": "[perm] Inventory actions enforce their resource permissions; the client portal has no access to any inventory surface", "implemented": false, "featureIds": ["F141","F155"] },
-  { "id": "T039", "description": "[perm] A stock side-effect triggered from a billing flow succeeds under billing:create without a separate inventory grant (no double-gate)", "implemented": false, "featureIds": ["F142"] },
-  { "id": "T040", "description": "[search] Units are findable by both serial AND MAC; advisory lookup by a serial/MAC list returns matching in-stock AND deployed units", "implemented": false, "featureIds": ["F038","F039","F055"] },
-  { "id": "T041", "description": "[reorder] Low-stock fires when available ≤ per-location reorder override; the alert is routed only to that location's manager_user_id", "implemented": false, "featureIds": ["F133","F134"] },
-  { "id": "T042", "description": "[reorder] Create-PO-from-low-stock produces draft POs grouped by preferred_vendor with suggested quantities", "implemented": false, "featureIds": ["F136"] },
-  { "id": "T043", "description": "[report] Inventory value = Σ(on_hand × cost) reconciles after a receipt+consume sequence; margin = sell − COGS computes correctly", "implemented": false, "featureIds": ["F143","F144"] },
-  { "id": "T044", "description": "[guard] Product delete is blocked when stock units/levels/movements exist for that product", "implemented": false, "featureIds": ["F151"] },
-  { "id": "T045", "description": "[contract] Running a recurring contract billing cycle for a stocked product creates NO stock movements (stock is event-driven only)", "implemented": false, "featureIds": ["F098"] }
+  {
+    "id": "T001",
+    "description": "[schema] All inventory migrations apply up() and roll back down() cleanly on the migrated schema (round-trip), tables/indexes/constraints present then gone",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F005",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011",
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F018"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "[schema] Constraints enforced at DB: duplicate serial within (tenant,service_id) rejected; duplicate MAC across DIFFERENT products in same tenant rejected (tenant-wide MAC uniqueness)",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F052",
+      "F053"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "[schema] Seed creates exactly one default stock_location per tenant; a second is_default insert is rejected",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F022"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "[ledger] Receipt increments on_hand and writes an immutable movement; replaying stock_movements via the reconciliation utility reproduces stock_levels exactly",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F041",
+      "F042",
+      "F064",
+      "F065"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "[ledger] Moving-average cost is correct across two receipts at different unit costs",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "[ledger] Adjust requires a reason (missing reason rejected); a negative adjust soft-warns but still applies and reconciles",
+    "implemented": false,
+    "featureIds": [
+      "F044",
+      "F045",
+      "F051"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "[ledger] Serialized on_hand counts only in_stock units \u2014 units in in_transit/on_loan/returned/in_rma/delivered/retired are excluded from on-hand and available",
+    "implemented": true,
+    "featureIds": [
+      "F048",
+      "F112"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "[ledger] No update/delete path exists for stock_movements; reconciliation after a sequence of mixed movements matches the running cache",
+    "implemented": true,
+    "featureIds": [
+      "F050",
+      "F020"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "[alloc] Soft allocation on SO confirm reduces available but not on_hand; cancelling the SO releases reserved/held and returns units to in_stock",
+    "implemented": false,
+    "featureIds": [
+      "F076",
+      "F078",
+      "F047"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "[alloc] Hard-hold: a unit/qty hard-held by SO-A cannot be poached by a material consume or SO-B fulfill (guard fires); soft allocation does not block",
+    "implemented": false,
+    "featureIds": [
+      "F077",
+      "F084"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "[consume] Fulfilling a serialized SO line sets the picked unit\u2192delivered, decrements on_hand, and captures COGS = unit_cost on the movement",
+    "implemented": false,
+    "featureIds": [
+      "F080",
+      "F081",
+      "F082",
+      "F083"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "[consume] Non-serialized consume captures COGS = average_cost and releases the matching reservation",
+    "implemented": true,
+    "featureIds": [
+      "F082",
+      "F083"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "[consume] Consuming more than available soft-warns but does NOT block; the movement is still written and on_hand goes negative as surfaced",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "[materials] Adding a ticket material for a track_stock product decrements stock once; deleting the (unbilled) material reverses it; a retried add does not double-decrement (idempotent)",
+    "implemented": true,
+    "featureIds": [
+      "F087",
+      "F090",
+      "F152"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "[assets] Serialized delivery with creates_asset_on_delivery=true creates an asset carrying serial/MAC/warranty with bidirectional link; with false, no asset is created",
+    "implemented": false,
+    "featureIds": [
+      "F085",
+      "F086"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "[assets] Delivery asset creation goes through the assets ABAC createAsset path (permission enforced), not a raw insert",
+    "implemented": false,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "[procure] Receiving against a PO line advances quantity_received and moves PO status open\u2192partially_received\u2192received",
+    "implemented": false,
+    "featureIds": [
+      "F064",
+      "F065",
+      "F066"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "[procure] Over-receipt is allowed with a warning; PO number is unique per tenant",
+    "implemented": false,
+    "featureIds": [
+      "F067",
+      "F072"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "[procure] Vendor backfill migration maps distinct freeform service_catalog.vendor strings to vendors rows and sets preferred_vendor_id",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "[kit] Adding a kit to an SO explodes into a parent line + component lines (parent_so_line_id) with correct per-component quantities",
+    "implemented": false,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "[kit] Fulfilling an exploded kit decrements each STOCKED component; a non-stocked component (license) rides through without a stock decrement",
+    "implemented": false,
+    "featureIds": [
+      "F104",
+      "F105"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "[kit] Editing the kit parent line qty scales component quantities; a kit-containing-a-kit definition is rejected (single-level guard)",
+    "implemented": false,
+    "featureIds": [
+      "F106",
+      "F102"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "[transfer] Dispatch decrements source on_hand and sets units\u2192in_transit; destination available is unchanged until receive",
+    "implemented": false,
+    "featureIds": [
+      "F109",
+      "F112"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "[transfer] Receive increments destination on_hand and sets units\u2192in_stock at destination; cancel-before-receive returns stock to source",
+    "implemented": false,
+    "featureIds": [
+      "F110",
+      "F111"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "[loaner] Loan out sets unit\u2192on_loan (excluded from on_hand, no COGS, no invoice); loan return restores it to in_stock",
+    "implemented": false,
+    "featureIds": [
+      "F114",
+      "F115"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "[restock] Restock return puts a unit/qty back to SELLABLE on_hand (distinct from the defective/RMA path); optional restocking fee recorded",
+    "implemented": false,
+    "featureIds": [
+      "F117",
+      "F118"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "[rma] Standard RMA: delivered\u2192returned (NOT sellable, on_hand unchanged)\u2192sent_to_vendor\u2192replacement sets replacement_unit_id\u2192replaced\u2192closed",
+    "implemented": false,
+    "featureIds": [
+      "F119",
+      "F120",
+      "F121",
+      "F122"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "[rma] Standard RMA resolutions: repair (in_rma\u2192in_stock), credit (\u2192retired,credited), scrap (retired,closed) reach correct terminal states",
+    "implemented": false,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "[rma-advance] Advance RMA: replacement received\u2192in_stock\u2192deployed relinks the SAME asset, updates its serial/MAC, and clears the old unit's asset_id",
+    "implemented": false,
+    "featureIds": [
+      "F124",
+      "F125",
+      "F126",
+      "F132"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "[rma-advance] Advance RMA: dead_unit_owed sets dead_unit_due_date; returning the dead unit closes the case; missing the deadline transitions to charged\u2192closed",
+    "implemented": false,
+    "featureIds": [
+      "F127",
+      "F128",
+      "F129"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "[rma-advance] Dead-units-owed aging report lists owed units sorted by days remaining",
+    "implemented": false,
+    "featureIds": [
+      "F131"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "[dropship] Drop-ship SO line creates an is_drop_ship PO to the client; combined receipt+delivery creates a delivered unit + asset + invoice with NO on_hand change at any location",
+    "implemented": false,
+    "featureIds": [
+      "F137",
+      "F138"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "[dropship] Drop-ship serialized captures serial/MAC/warranty at confirm and links the asset",
+    "implemented": false,
+    "featureIds": [
+      "F139"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "[invoice] On-fulfillment invoicing emits a charge into the existing invoice engine; partial fulfillment yields a partial invoice with counters advancing independently",
+    "implemented": false,
+    "featureIds": [
+      "F091",
+      "F094"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "[invoice] Manual 'Generate invoice' plus on-fulfillment cannot double-bill the same quantity (shared quantity_invoiced guard; invoice_item\u2194so_line link)",
+    "implemented": false,
+    "featureIds": [
+      "F092",
+      "F093"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "[invoice] quantity_invoiced can never exceed quantity_ordered across mixed manual+on-fulfillment triggers",
+    "implemented": false,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "[perm] Location scoping: a tech can adjust own van/home location but is blocked adjusting another metro's stock; a manager/admin is allowed",
+    "implemented": false,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "[perm] Inventory actions enforce their resource permissions; the client portal has no access to any inventory surface",
+    "implemented": false,
+    "featureIds": [
+      "F141",
+      "F155"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "[perm] A stock side-effect triggered from a billing flow succeeds under billing:create without a separate inventory grant (no double-gate)",
+    "implemented": false,
+    "featureIds": [
+      "F142"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "[search] Units are findable by both serial AND MAC; advisory lookup by a serial/MAC list returns matching in-stock AND deployed units",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F039",
+      "F055"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "[reorder] Low-stock fires when available \u2264 per-location reorder override; the alert is routed only to that location's manager_user_id",
+    "implemented": false,
+    "featureIds": [
+      "F133",
+      "F134"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "[reorder] Create-PO-from-low-stock produces draft POs grouped by preferred_vendor with suggested quantities",
+    "implemented": false,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "[report] Inventory value = \u03a3(on_hand \u00d7 cost) reconciles after a receipt+consume sequence; margin = sell \u2212 COGS computes correctly",
+    "implemented": false,
+    "featureIds": [
+      "F143",
+      "F144"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "[guard] Product delete is blocked when stock units/levels/movements exist for that product",
+    "implemented": false,
+    "featureIds": [
+      "F151"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "[contract] Running a recurring contract billing cycle for a stocked product creates NO stock movements (stock is event-driven only)",
+    "implemented": false,
+    "featureIds": [
+      "F098"
+    ]
+  }
 ]
