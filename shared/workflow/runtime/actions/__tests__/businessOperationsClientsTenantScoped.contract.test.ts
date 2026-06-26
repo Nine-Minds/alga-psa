@@ -102,9 +102,23 @@ describe('client workflow business operations tenant-scoped query contract', () 
     expect(ticketInteractionSection).toContain("tenantScopedTable(tx, 'contacts')");
     expect(ticketInteractionSection).toContain("tenantScopedTable(tx, 'client_locations')");
     expect(ticketInteractionSection).toContain("tenantScopedTable(tx, 'tickets')");
+    expect(ticketInteractionSection).toContain("tenantScopedTable(tx, 'interactions')");
     expect(ticketInteractionSection).not.toContain("tx.trx('contacts').where");
     expect(ticketInteractionSection).not.toContain("tx.trx('client_locations').where");
     expect(ticketInteractionSection).not.toContain("tx.trx('tickets').where");
     expect(ticketInteractionSection).not.toContain(".where({ tenant: tx.tenantId");
+  });
+
+  it('routes remaining client insert roots through tenantDb', () => {
+    const directRootPattern =
+      /\b(?:tx\.trx|trx)\s*(?:<[^>]+>)?\(\s*['`](?:client_locations|clients|document_associations|document_block_content|documents|entra_client_tenant_mappings|interactions|tag_definitions|tag_mappings)['`]/;
+
+    expect(source).toMatch(/tenantScopedTable\(tx, 'client_locations'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'clients'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'documents'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'document_block_content'\)[\s\S]{0,80}\.insert/);
+    expect(source).toContain("tenantScopedTable(tx, 'document_associations')");
+    expect(source).toContain("tenantScopedTableForTenant(trx, tenantId, 'entra_client_tenant_mappings').insert");
+    expect(source).not.toMatch(directRootPattern);
   });
 });

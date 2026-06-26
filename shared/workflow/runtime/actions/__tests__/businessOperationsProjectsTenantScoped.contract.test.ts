@@ -191,4 +191,17 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(linkTicketSection).not.toContain("tx.trx('project_ticket_links').where");
     expect(linkTicketSection).not.toContain("tx.trx('ticket_entity_links').where");
   });
+
+  it('routes remaining project insert roots through tenantDb', () => {
+    const directRootPattern =
+      /\btx\.trx\s*(?:<[^>]+>)?\(\s*['`](?:project_status_mappings|project_tasks|project_ticket_links|tag_definitions|tag_mappings|task_checklist_items|task_resources|ticket_entity_links)['`]/;
+
+    expect(source).toMatch(/tenantScopedTable\(tx, 'project_status_mappings'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'project_tasks'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'project_ticket_links'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'task_checklist_items'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'task_resources'\)[\s\S]{0,80}\.insert/);
+    expect(source).toMatch(/tenantScopedTable\(tx, 'ticket_entity_links'\)[\s\S]{0,80}\.insert/);
+    expect(source).not.toMatch(directRootPattern);
+  });
 });

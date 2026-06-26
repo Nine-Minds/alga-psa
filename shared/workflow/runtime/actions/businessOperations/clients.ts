@@ -416,7 +416,7 @@ async function upsertDefaultClientLocation(
     );
 
     if (Object.keys(insertRow).length > 0) {
-      await tx.trx('client_locations').insert(insertRow);
+      await tenantScopedTable(tx, 'client_locations').insert(insertRow);
     }
     return;
   }
@@ -471,7 +471,7 @@ async function ensureClientTagMappings(
       ])
     );
 
-    await tx.trx('tag_definitions')
+    await tenantScopedTable(tx, 'tag_definitions')
       .insert(definitionRow)
       .onConflict(['tenant', 'tag_text', 'tagged_type'])
       .ignore();
@@ -502,7 +502,7 @@ async function ensureClientTagMappings(
       new Set(['tenant', 'mapping_id', 'tag_id', 'tagged_id', 'tagged_type', 'created_by', 'created_at'])
     );
 
-    const insertedMappings = await tx.trx('tag_mappings')
+    const insertedMappings = await tenantScopedTable(tx, 'tag_mappings')
       .insert(mappingRow)
       .onConflict(['tenant', 'tag_id', 'tagged_id'])
       .ignore()
@@ -746,7 +746,7 @@ async function cleanupEntraReferencesBeforeClientDelete(
         updated_at: now,
       }));
 
-      await trx('entra_client_tenant_mappings').insert(unmappedRows);
+      await tenantScopedTableForTenant(trx, tenantId, 'entra_client_tenant_mappings').insert(unmappedRows);
     }
 
     await tenantScopedTableForTenant(trx, tenantId, 'entra_client_tenant_mappings')
@@ -820,7 +820,7 @@ async function appendClientNoteBlock(
         .where('document_id', client.notes_document_id)
         .update({ block_data: JSON.stringify(nextBlocks), updated_at: nowIso });
     } else {
-      await tx.trx('document_block_content').insert({
+      await tenantScopedTable(tx, 'document_block_content').insert({
         content_id: uuidv4(),
         tenant: tx.tenantId,
         document_id: client.notes_document_id,
@@ -864,9 +864,9 @@ async function appendClientNoteBlock(
     documentInsert.shared_type_id = null;
   }
 
-  await tx.trx('documents').insert(documentInsert);
+  await tenantScopedTable(tx, 'documents').insert(documentInsert);
 
-  await tx.trx('document_block_content').insert({
+  await tenantScopedTable(tx, 'document_block_content').insert({
     content_id: uuidv4(),
     tenant: tx.tenantId,
     document_id: documentId,
@@ -875,7 +875,7 @@ async function appendClientNoteBlock(
     updated_at: nowIso,
   });
 
-  await tx.trx('document_associations')
+  await tenantScopedTable(tx, 'document_associations')
     .insert({
       association_id: uuidv4(),
       tenant: tx.tenantId,
@@ -1192,7 +1192,7 @@ export function registerClientActions(): void {
           new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'tenant', 'client_id', 'created_at', 'updated_at'])
         );
         try {
-          await tx.trx('clients').insert(createRow);
+          await tenantScopedTable(tx, 'clients').insert(createRow);
         } catch (error) {
           rethrowAsStandardError(ctx, error);
         }
@@ -1643,7 +1643,7 @@ export function registerClientActions(): void {
         );
 
         try {
-          await tx.trx('clients').insert(duplicateRow);
+          await tenantScopedTable(tx, 'clients').insert(duplicateRow);
         } catch (error) {
           rethrowAsStandardError(ctx, error);
         }
@@ -1701,7 +1701,7 @@ export function registerClientActions(): void {
               )
             );
 
-            await tx.trx('client_locations').insert(inserts);
+            await tenantScopedTable(tx, 'client_locations').insert(inserts);
             copiedLocations = inserts.length;
           }
         }
@@ -2100,7 +2100,7 @@ export function registerClientActions(): void {
 
         let created: any;
         try {
-          [created] = await tx.trx('interactions').insert(insertRow).returning('*');
+          [created] = await tenantScopedTable(tx, 'interactions').insert(insertRow).returning('*');
         } catch (error) {
           rethrowAsStandardError(ctx, error);
         }

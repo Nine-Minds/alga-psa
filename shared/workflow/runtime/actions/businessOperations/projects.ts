@@ -656,7 +656,7 @@ async function ensureProjectDefaultStatusMappings(
     .orderBy('display_order', 'asc');
 
   for (const status of standardStatuses) {
-    await tx.trx('project_status_mappings').insert({
+    await tenantScopedTable(tx, 'project_status_mappings').insert({
       tenant: tx.tenantId,
       project_status_mapping_id: uuidv4(),
       project_id: projectId,
@@ -859,7 +859,7 @@ async function reconcileTaskAdditionalUsers(
 
   if (additionalUserIds.length === 0) return;
 
-  await tx.trx('task_resources').insert(
+  await tenantScopedTable(tx, 'task_resources').insert(
     additionalUserIds.map((userId) => ({
       tenant: tx.tenantId,
       task_id: taskId,
@@ -988,7 +988,7 @@ async function ensureTagMappings(
       new Set(['tenant', 'tag_id', 'tag_text', 'tagged_type', 'background_color', 'text_color', 'created_at'])
     );
 
-    await tx.trx('tag_definitions')
+    await tenantScopedTable(tx, 'tag_definitions')
       .insert(definitionRow)
       .onConflict(['tenant', 'tag_text', 'tagged_type'])
       .ignore();
@@ -1015,7 +1015,7 @@ async function ensureTagMappings(
       new Set(['tenant', 'mapping_id', 'tag_id', 'tagged_id', 'tagged_type', 'created_by', 'created_at'])
     );
 
-    const insertedMappings = await tx.trx('tag_mappings')
+    const insertedMappings = await tenantScopedTable(tx, 'tag_mappings')
       .insert(mappingRow)
       .onConflict(['tenant', 'tag_id', 'tagged_id'])
       .ignore()
@@ -1334,10 +1334,10 @@ export function registerProjectActions(): void {
       if (taskColumns.has('project_status_mapping_id')) taskPayload.project_status_mapping_id = projectStatusMappingId;
       if (taskColumns.has('priority_id')) taskPayload.priority_id = input.priority_id ?? null;
 
-      await tx.trx('project_tasks').insert(taskPayload);
+      await tenantScopedTable(tx, 'project_tasks').insert(taskPayload);
 
       if (input.link_ticket_id) {
-        await tx.trx('project_ticket_links').insert({
+        await tenantScopedTable(tx, 'project_ticket_links').insert({
           tenant: tx.tenantId,
           link_id: uuidv4(),
           project_id: input.project_id,
@@ -1347,7 +1347,7 @@ export function registerProjectActions(): void {
           created_at: nowIso
         }).catch(() => undefined);
 
-        await tx.trx('ticket_entity_links').insert({
+        await tenantScopedTable(tx, 'ticket_entity_links').insert({
           tenant: tx.tenantId,
           link_id: uuidv4(),
           ticket_id: input.link_ticket_id,
@@ -2479,7 +2479,7 @@ export function registerProjectActions(): void {
         if (taskColumns.has('wbs_code')) copiedTaskRow.wbs_code = wbsCode;
         if (taskColumns.has('order_key') && orderKey) copiedTaskRow.order_key = orderKey;
 
-        await tx.trx('project_tasks').insert(copiedTaskRow);
+        await tenantScopedTable(tx, 'project_tasks').insert(copiedTaskRow);
 
         let copiedChecklistCount = 0;
         if (input.copy_checklist) {
@@ -2500,7 +2500,7 @@ export function registerProjectActions(): void {
                 if (checklistColumns.has('updated_at')) item.updated_at = nowIso;
                 return item;
               });
-              await tx.trx('task_checklist_items').insert(checklistInserts);
+              await tenantScopedTable(tx, 'task_checklist_items').insert(checklistInserts);
               copiedChecklistCount = checklistInserts.length;
             }
           }
@@ -2523,7 +2523,7 @@ export function registerProjectActions(): void {
                 assigned_to: assignedTo ?? parseNullableUuid(row.assigned_to) ?? String(row.additional_user_id),
                 assigned_at: resourceColumns.has('assigned_at') ? nowIso : row.assigned_at,
               }));
-              await tx.trx('task_resources').insert(inserts);
+              await tenantScopedTable(tx, 'task_resources').insert(inserts);
               copiedAdditionalAssigneeCount = inserts.length;
             }
           }
@@ -2561,8 +2561,8 @@ export function registerProjectActions(): void {
                 }));
               for (const link of inserts) {
                 const ticketId = String((link as Record<string, unknown>).ticket_id);
-                await tx.trx('project_ticket_links').insert(link).catch(() => undefined);
-                await tx.trx('ticket_entity_links').insert({
+                await tenantScopedTable(tx, 'project_ticket_links').insert(link).catch(() => undefined);
+                await tenantScopedTable(tx, 'ticket_entity_links').insert({
                   tenant: tx.tenantId,
                   link_id: uuidv4(),
                   ticket_id: ticketId,
@@ -3012,7 +3012,7 @@ export function registerProjectActions(): void {
         let projectTicketLinkCreated = false;
         let projectTicketLinkId = parseNullableUuid(existingProjectLink?.link_id) ?? null;
         if (!existingProjectLink) {
-          const insertedProjectLinks = await tx.trx('project_ticket_links')
+          const insertedProjectLinks = await tenantScopedTable(tx, 'project_ticket_links')
             .insert({
               tenant: tx.tenantId,
               link_id: uuidv4(),
@@ -3049,7 +3049,7 @@ export function registerProjectActions(): void {
         let ticketEntityLinkCreated = false;
         let ticketEntityLinkId = parseNullableUuid(existingEntityLink?.link_id) ?? null;
         if (!existingEntityLink) {
-          const insertedEntityLinks = await tx.trx('ticket_entity_links')
+          const insertedEntityLinks = await tenantScopedTable(tx, 'ticket_entity_links')
             .insert({
               tenant: tx.tenantId,
               link_id: uuidv4(),
