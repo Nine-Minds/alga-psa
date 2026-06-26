@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { z } from 'zod';
 import {
   rmmAlertRuleConditionsSchema,
@@ -66,8 +66,8 @@ export const listRmmAlertRules = withAuth(
       return { success: false, error: 'Permission denied' };
     }
     const { knex } = await createTenantKnex();
-    const rules = await knex('rmm_alert_rules')
-      .where({ tenant, integration_id: input.integrationId })
+    const rules = await tenantDb(knex, tenant).table('rmm_alert_rules')
+      .where({ integration_id: input.integrationId })
       .orderBy('priority_order', 'asc');
     return { success: true, data: rules as RmmAlertRuleRow[] };
   }
@@ -83,20 +83,21 @@ export const createRmmAlertRule = withAuth(
       return { success: false, error: zodErrorMessage(parsed.error) };
     }
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, integration_id: parsed.data.integrationId })
+    const integration = await db.table('rmm_integrations')
+      .where({ integration_id: parsed.data.integrationId })
       .first('integration_id');
     if (!integration) {
       return { success: false, error: 'Integration not found' };
     }
 
-    const maxOrder = await knex('rmm_alert_rules')
-      .where({ tenant, integration_id: parsed.data.integrationId })
+    const maxOrder = await db.table('rmm_alert_rules')
+      .where({ integration_id: parsed.data.integrationId })
       .max('priority_order as max_order')
       .first();
 
-    const [rule] = await knex('rmm_alert_rules')
+    const [rule] = await db.table('rmm_alert_rules')
       .insert({
         tenant,
         integration_id: parsed.data.integrationId,
@@ -137,8 +138,8 @@ export const updateRmmAlertRule = withAuth(
     }
 
     const { knex } = await createTenantKnex();
-    const [rule] = await knex('rmm_alert_rules')
-      .where({ tenant, rule_id: input.ruleId })
+    const [rule] = await tenantDb(knex, tenant).table('rmm_alert_rules')
+      .where({ rule_id: input.ruleId })
       .update(update)
       .returning('*');
     if (!rule) {
@@ -154,7 +155,9 @@ export const deleteRmmAlertRule = withAuth(
       return { success: false, error: 'Permission denied' };
     }
     const { knex } = await createTenantKnex();
-    const deleted = await knex('rmm_alert_rules').where({ tenant, rule_id: input.ruleId }).delete();
+    const deleted = await tenantDb(knex, tenant).table('rmm_alert_rules')
+      .where({ rule_id: input.ruleId })
+      .delete();
     if (!deleted) {
       return { success: false, error: 'Rule not found' };
     }
@@ -173,9 +176,11 @@ export const reorderRmmAlertRules = withAuth(
     }
     const { knex } = await createTenantKnex();
     await knex.transaction(async (trx) => {
+      const ruleTable = tenantDb(trx, tenant).table('rmm_alert_rules');
       for (let index = 0; index < input.orderedRuleIds.length; index += 1) {
-        await trx('rmm_alert_rules')
-          .where({ tenant, integration_id: input.integrationId, rule_id: input.orderedRuleIds[index] })
+        await ruleTable
+          .clone()
+          .where({ integration_id: input.integrationId, rule_id: input.orderedRuleIds[index] })
           .update({ priority_order: index });
       }
     });
@@ -197,7 +202,7 @@ export const listRmmMaintenanceWindows = withAuth(
       return { success: false, error: 'Permission denied' };
     }
     const { knex } = await createTenantKnex();
-    let query = knex('rmm_maintenance_windows').where({ tenant }).orderBy('created_at', 'desc');
+    let query = tenantDb(knex, tenant).table('rmm_maintenance_windows').orderBy('created_at', 'desc');
     if (input?.integrationId) {
       // A window scoped to another integration never affects this one; global
       // (integration-null) windows always show.
@@ -224,7 +229,7 @@ export const createRmmMaintenanceWindow = withAuth(
       return { success: false, error: zodErrorMessage(parsed.error) };
     }
     const { knex } = await createTenantKnex();
-    const [window] = await knex('rmm_maintenance_windows')
+    const [window] = await tenantDb(knex, tenant).table('rmm_maintenance_windows')
       .insert({
         tenant,
         name: parsed.data.name,
@@ -255,8 +260,8 @@ export const updateRmmMaintenanceWindow = withAuth(
       return { success: false, error: zodErrorMessage(parsed.error) };
     }
     const { knex } = await createTenantKnex();
-    const [window] = await knex('rmm_maintenance_windows')
-      .where({ tenant, window_id: input.windowId })
+    const [window] = await tenantDb(knex, tenant).table('rmm_maintenance_windows')
+      .where({ window_id: input.windowId })
       .update({
         name: parsed.data.name,
         integration_id: parsed.data.integrationId ?? null,
@@ -293,20 +298,21 @@ export const getRmmAlertRuleFormOptions = withAuth(
       return { success: false, error: 'Permission denied' };
     }
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const [boards, priorities, closedStatuses, users, organizations] = await Promise.all([
-      knex('boards').where({ tenant }).select('board_id', 'board_name').orderBy('board_name'),
-      knex('priorities').where({ tenant }).select('priority_id', 'priority_name').orderBy('priority_name'),
-      knex('statuses')
-        .where({ tenant, status_type: 'ticket', is_closed: true })
+      db.table('boards').select('board_id', 'board_name').orderBy('board_name'),
+      db.table('priorities').select('priority_id', 'priority_name').orderBy('priority_name'),
+      db.table('statuses')
+        .where({ status_type: 'ticket', is_closed: true })
         .select('status_id', 'name', 'board_id')
         .orderBy('order_number'),
-      knex('users')
-        .where({ tenant, user_type: 'internal' })
+      db.table('users')
+        .where({ user_type: 'internal' })
         .andWhere((qb) => qb.where('is_inactive', false).orWhereNull('is_inactive'))
         .select('user_id', 'first_name', 'last_name', 'email')
         .orderBy('first_name'),
-      knex('rmm_organization_mappings')
-        .where({ tenant, integration_id: input.integrationId })
+      db.table('rmm_organization_mappings')
+        .where({ integration_id: input.integrationId })
         .select('external_organization_id', 'external_organization_name')
         .orderBy('external_organization_name'),
     ]);
@@ -326,8 +332,8 @@ export const getRmmAlertPollingSettings = withAuth(
       return { success: false, error: 'Permission denied' };
     }
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, integration_id: input.integrationId })
+    const integration = await tenantDb(knex, tenant).table('rmm_integrations')
+      .where({ integration_id: input.integrationId })
       .first('settings');
     if (!integration) {
       return { success: false, error: 'Integration not found' };
@@ -360,8 +366,8 @@ export const updateRmmAlertPollingSettings = withAuth(
       return { success: false, error: 'Poll interval must be between 5 and 60 minutes' };
     }
     const { knex } = await createTenantKnex();
-    const updated = await knex('rmm_integrations')
-      .where({ tenant, integration_id: input.integrationId })
+    const updated = await tenantDb(knex, tenant).table('rmm_integrations')
+      .where({ integration_id: input.integrationId })
       .update({
         // jsonb_set cannot create the intermediate alertPolling object, so
         // merge into it explicitly (first save would otherwise be a no-op).
@@ -397,7 +403,9 @@ export const deleteRmmMaintenanceWindow = withAuth(
       return { success: false, error: 'Permission denied' };
     }
     const { knex } = await createTenantKnex();
-    const deleted = await knex('rmm_maintenance_windows').where({ tenant, window_id: input.windowId }).delete();
+    const deleted = await tenantDb(knex, tenant).table('rmm_maintenance_windows')
+      .where({ window_id: input.windowId })
+      .delete();
     if (!deleted) {
       return { success: false, error: 'Window not found' };
     }
@@ -416,8 +424,8 @@ export const getRmmIntegrationIdByProvider = withAuth(
       return { success: false, error: 'Permission denied' };
     }
     const { knex } = await createTenantKnex();
-    const row = await knex('rmm_integrations')
-      .where({ tenant, provider: input.provider })
+    const row = await tenantDb(knex, tenant).table('rmm_integrations')
+      .where({ provider: input.provider })
       .first('integration_id');
     return { success: true, data: { integrationId: row?.integration_id ?? null } };
   }

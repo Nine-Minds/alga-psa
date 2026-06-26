@@ -53,6 +53,11 @@ type ContractLineCandidate = {
   } | null;
 };
 
+type DefaultContractLineRow = {
+  client_contract_line_id: string;
+  bucket_config_id?: string | null;
+};
+
 type BucketUsagePeriod = {
   periodStart: string;
   periodEnd: string;
@@ -615,7 +620,7 @@ async function determineDefaultContractLineForWorkflow(params: {
     .select(
       'contract_lines.contract_line_id as client_contract_line_id',
       'bucket_config.config_id as bucket_config_id'
-    );
+    ) as DefaultContractLineRow[];
 
   const candidates: ContractLineCandidate[] = rows.map((row) => ({
     client_contract_line_id: String(row.client_contract_line_id),

@@ -379,7 +379,7 @@ async function ensureMicrosoftConsumerBindingMigration(
     updated_at: new Date(),
   };
 
-  await db('microsoft_profile_consumer_bindings').insert(binding);
+  await tenantScopedTable(db, 'microsoft_profile_consumer_bindings', tenant).insert(binding);
   return binding;
 }
 

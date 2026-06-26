@@ -13,7 +13,14 @@ describe('low-risk billing tenant-scoped query contract', () => {
     const metadata = readSource('packages/db/src/lib/tenantTableMetadata.ts');
 
     for (const table of [
+      'client_billing_settings',
+      'clients',
+      'contract_line_service_configuration',
       'contract_line_presets',
+      'contract_lines',
+      'contract_pricing_schedules',
+      'contracts',
+      'invoices',
       'quote_document_templates',
       'service_rate_tiers',
       'user_type_rates',
@@ -29,6 +36,10 @@ describe('low-risk billing tenant-scoped query contract', () => {
     const usage = readSource('packages/billing/src/actions/usageActions.ts');
     const taxSource = readSource('packages/billing/src/actions/taxSourceActions.ts');
     const invoiceJob = readSource('packages/billing/src/actions/invoiceJobActions.ts');
+    const contractPricingSchedules = readSource('packages/billing/src/actions/contractPricingScheduleActions.ts');
+    const contractLineServiceConfiguration = readSource('packages/billing/src/actions/contractLineServiceConfigurationActions.ts');
+    const inbound = readSource('packages/billing/src/actions/inboundActions.ts');
+    const billingSchedule = readSource('packages/billing/src/actions/billingScheduleActions.ts');
 
     expect(billingCurrency).toContain('const db = tenantDb(knex, tenant);');
     expect(billingCurrency).toContain("db.tenantJoin(currenciesQuery, 'contracts as c'");
@@ -54,6 +65,20 @@ describe('low-risk billing tenant-scoped query contract', () => {
 
     const serviceActions = readSource('packages/billing/src/actions/serviceActions.ts');
     expect(serviceActions).toContain("tenantDb(trx, tenant).table('service_rate_tiers')");
+
+    expect(contractPricingSchedules).toContain("tenantDb(knex, tenant).table('contracts')");
+    expect(contractPricingSchedules).toContain("db.table<IContractPricingSchedule>('contract_pricing_schedules')");
+
+    expect(contractLineServiceConfiguration).toContain("db.table('contract_lines as cl')");
+    expect(contractLineServiceConfiguration).toContain("db.table('contract_line_service_configuration as cfg')");
+    expect(contractLineServiceConfiguration).toContain("db.tenantJoin(query, 'contracts as c'");
+
+    expect(inbound).toContain('const db = tenantDb(trx, tenant);');
+    expect(inbound).toContain("db.table('invoices')");
+
+    expect(billingSchedule).toContain("db.table('clients as c')");
+    expect(billingSchedule).toContain("db.tenantJoin(query, 'client_billing_settings as s'");
+    expect(billingSchedule).toContain("tenantDb(trx, tenant).table('client_billing_settings')");
   });
 
   it('uses tenantDb for small billing model roots', () => {

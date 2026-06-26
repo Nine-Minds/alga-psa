@@ -11,6 +11,7 @@ import {
   rmmAlertRuleActionsSchema,
   type RmmAlertOutboundAdapter,
 } from '@alga-psa/shared/rmm/alerts';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../../db/db';
 import { getEventBus } from '../index';
 
@@ -40,12 +41,9 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
 
   try {
     const knex = await getConnection(tenantId);
+    const db = tenantDb(knex, tenantId);
 
-    const alerts = await knex('rmm_alerts as a')
-      .join('rmm_integrations as i', function joinIntegrations() {
-        this.on('i.tenant', 'a.tenant').andOn('i.integration_id', 'a.integration_id');
-      })
-      .where('a.tenant', tenantId)
+    const alertsQuery = db.table('rmm_alerts as a')
       .andWhere('a.ticket_id', ticketId)
       .whereIn('a.status', ['active', 'acknowledged'])
       .select(
@@ -55,6 +53,8 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
         'a.matched_rule_id',
         'i.provider'
       );
+    db.tenantJoin(alertsQuery, 'rmm_integrations as i', 'i.integration_id', 'a.integration_id');
+    const alerts = await alertsQuery;
     if (alerts.length === 0) return;
 
     for (const alert of alerts) {
@@ -71,8 +71,8 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
           integrationId: alert.integration_id,
           externalAlertId: alert.external_alert_id,
         });
-        await knex('rmm_alerts')
-          .where({ tenant: tenantId, alert_id: alert.alert_id })
+        await db.table('rmm_alerts')
+          .where({ alert_id: alert.alert_id })
           .update({ status: 'resolved', resolved_at: now, updated_at: now });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -82,8 +82,8 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
           provider: alert.provider,
           error: message,
         });
-        await knex('rmm_alerts')
-          .where({ tenant: tenantId, alert_id: alert.alert_id })
+        await db.table('rmm_alerts')
+          .where({ alert_id: alert.alert_id })
           .update({
             metadata: knex.raw('metadata || ?::jsonb', [
               JSON.stringify({ outbound_reset_error: message, outbound_reset_failed_at: now }),
@@ -108,8 +108,8 @@ async function resetEnabledForAlert(
   matchedRuleId: string | null
 ): Promise<boolean> {
   if (!matchedRuleId) return true;
-  const rule = await knex('rmm_alert_rules')
-    .where({ tenant: tenantId, rule_id: matchedRuleId })
+  const rule = await tenantDb(knex, tenantId).table('rmm_alert_rules')
+    .where({ rule_id: matchedRuleId })
     .first('actions');
   if (!rule) return true;
   const parsed = rmmAlertRuleActionsSchema.safeParse(
