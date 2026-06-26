@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "[P0] Scaffold packages/inventory package (actions/components/index) wired into the monorepo build and TS project refs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "15"
     ]
@@ -147,7 +147,7 @@
   {
     "id": "F019",
     "description": "[P0] Movement primitive service: write a stock_movement and update stock_levels/unit-status atomically within withTransaction (single chokepoint all flows use)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5",
       "6"
@@ -156,7 +156,7 @@
   {
     "id": "F020",
     "description": "[P0] Reconciliation utility: recompute stock_levels and serialized on-hand by replaying stock_movements (for repair + tests)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11"
     ]
