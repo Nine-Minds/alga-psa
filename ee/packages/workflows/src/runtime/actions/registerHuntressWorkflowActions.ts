@@ -7,6 +7,7 @@ import {
 } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadHuntressRuntimeSupport = () => import('./huntressWorkflowRuntimeSupport');
 
@@ -68,8 +69,8 @@ async function requireHuntressIntegration(ctx: ActionContext): Promise<{
   const { integrationId, instanceUrl } = await withTenantTransaction(ctx, async (tx) => {
     await requirePermission(ctx, tx, { resource: 'settings', action: 'update' });
 
-    const integration = await tx.trx('rmm_integrations')
-      .where({ tenant: tenantId, provider: PROVIDER, is_active: true })
+    const integration = await workflowTenantTable(tx.trx, tenantId, 'rmm_integrations')
+      .where({ provider: PROVIDER, is_active: true })
       .whereNotNull('connected_at')
       .first();
     if (!integration) {

@@ -13,6 +13,7 @@ import {
   type WorkflowScheduleJobResult as ScheduleJobResult
 } from './jobRunnerProvider';
 import { computeNextFireAtForSchedule } from './computeNextFireAt';
+import { workflowTenantTable } from './workflowTenantDb';
 
 export const WORKFLOW_ONE_TIME_TRIGGER_JOB = 'workflow-time-trigger-once';
 export const WORKFLOW_RECURRING_TRIGGER_JOB = 'workflow-time-trigger-recurring';
@@ -45,6 +46,12 @@ type WorkflowScheduleJobData = {
   tenantId: string;
   workflowId: string;
   scheduleId: string;
+};
+
+type WorkflowScheduleJobRunnerRow = {
+  job_id: string;
+  runner_type: string | null;
+  interval: string | null;
 };
 
 export const buildWorkflowScheduleSingletonKey = (workflowId: string, scheduleId: string): string =>
@@ -253,9 +260,11 @@ export async function reconcileWorkflowScheduleRegistration(
   if (!isRecurring) return 'skipped';
 
   if (existing.job_id) {
-    const job = await knex('jobs')
-      .where({ job_id: existing.job_id, tenant: existing.tenant })
-      .first('runner_type', knex.raw(`metadata->>'interval' as interval`));
+    const job = await workflowTenantTable<WorkflowScheduleJobRunnerRow>(knex, existing.tenant, 'jobs')
+      .where('job_id', existing.job_id)
+      .select('runner_type')
+      .select(knex.raw(`metadata->>'interval' as interval`))
+      .first() as WorkflowScheduleJobRunnerRow | undefined;
     if (job?.runner_type === runnerType && job.interval === existing.cron) {
       return 'converged';
     }

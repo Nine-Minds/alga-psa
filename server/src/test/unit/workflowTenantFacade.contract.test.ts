@@ -75,4 +75,36 @@ describe('workflow tenant facade roots', () => {
       expect(metadataSource).toContain(entry);
     }
   });
+
+  it('routes workflow integration and scheduling roots through the workflow tenant facade', () => {
+    const helperSource = read('ee/packages/workflows/src/lib/workflowTenantDb.ts');
+    expect(helperSource).toContain("import { tenantDb } from '@alga-psa/db'");
+    expect(helperSource).toContain('tenantDb(conn, tenantId).table<Row>(table)');
+
+    const files = [
+      'ee/packages/workflows/src/runtime/integrationModules.ts',
+      'ee/packages/workflows/src/runtime/actions/registerTeamsWorkflowActions.ts',
+      'ee/packages/workflows/src/runtime/actions/registerTacticalRmmWorkflowActions.ts',
+      'ee/packages/workflows/src/runtime/actions/registerHuntressWorkflowActions.ts',
+      'ee/packages/workflows/src/runtime/actions/registerNinjaOneWorkflowActions.ts',
+      'ee/packages/workflows/src/runtime/actions/registerLevelIoWorkflowActions.ts',
+      'ee/packages/workflows/src/lib/workflowBusinessDayScheduling.ts',
+      'ee/packages/workflows/src/lib/workflowRunLauncher.ts',
+      'ee/packages/workflows/src/lib/workflowScheduleLifecycle.ts',
+    ];
+
+    const directRootPattern =
+      /\b(?:knex|tx\.trx)\s*(?:<[^>]+>)?\s*\(\s*['`](?:assets|business_hours_entries|business_hours_schedules|holidays|jobs|microsoft_profiles|rmm_alerts|rmm_integrations|teams_conversation_references|teams_integrations|tenant_addons|user_auth_accounts|workflow_runs)['`]\s*\)/;
+
+    for (const file of files) {
+      const source = read(file);
+
+      expect(source, file).toMatch(/workflowTenantTable(?:<[^>]+>)?\(/);
+      expect(source, file).not.toMatch(directRootPattern);
+      expect(source, file).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+    }
+
+    const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
+    expect(metadataSource).toContain("teams_conversation_references: { scope: 'tenant' }");
+  });
 });

@@ -310,7 +310,9 @@ export default class FormDefinitionModel {
       .whereNotNull('category')
       .distinct('category');
     
-    return results.map(r => r.category);
+    return results
+      .map((result) => result.category)
+      .filter((category): category is string => typeof category === 'string');
   }
 
   /**

@@ -208,6 +208,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   team_members: { scope: 'tenant' },
   teams: { scope: 'tenant' },
   team_hierarchy: { scope: 'tenant' },
+  teams_conversation_references: { scope: 'tenant' },
   teams_integrations: { scope: 'tenant' },
   team_permissions: { scope: 'tenant' },
   tenants: { scope: 'tenant' },
