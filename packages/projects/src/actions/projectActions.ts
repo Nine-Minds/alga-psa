@@ -79,8 +79,10 @@ const extendedUpdateProjectSchema = updateProjectSchema.extend({
   contact_name_id: data.contact_name_id || null
 }));
 
+type DbConnection = Knex | Knex.Transaction;
+
 function tenantScopedTable(
-  conn: Knex | Knex.Transaction,
+  conn: DbConnection,
   table: string,
   tenant: string,
 ): Knex.QueryBuilder {
@@ -88,19 +90,52 @@ function tenantScopedTable(
 }
 
 function tenantScopedDerivedTableSql(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
+  facade: ReturnType<typeof tenantDb>,
   tableName: string,
   alias: string,
-): { sql: string; bindings: Knex.RawBinding[] } {
-  const scoped = tenantDb(conn, tenant)
-    .table(tableName)
+): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
+  const subquery = facade
+    .subquery(tableName)
     .select('*')
-    .toSQL();
+    .as(alias);
+  const scoped = subquery.toSQL();
 
   return {
+    subquery,
     sql: `(${scoped.sql}) ${alias}`,
     bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: DbConnection,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant join subquery SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
   };
 }
 
@@ -381,9 +416,37 @@ export const searchProjectListIds = withAuth(async (
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
-    const projectTasks = tenantScopedDerivedTableSql(trx, tenant, 'project_tasks', 'pt');
-    const projectPhases = tenantScopedDerivedTableSql(trx, tenant, 'project_phases', 'ph');
+    const scopedDb = tenantDb(trx, tenant);
+    const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
+    const projectTasks = tenantScopedDerivedTableSql(scopedDb, 'project_tasks', 'pt');
+    const projectPhases = tenantScopedDerivedTableSql(scopedDb, 'project_phases', 'ph');
+    const projectTaskCommentJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      projectTasks.subquery,
+      trx.raw('??::text', ['pt.task_id']),
+      'si.parent_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'si.tenant',
+        joinedTenantColumn: 'pt.tenant',
+        on: (join) => {
+          join.andOn('si.object_type', '=', trx.raw("'project_task_comment'"));
+        },
+      }
+    );
+    const projectPhaseJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      projectPhases.subquery,
+      'ph.phase_id',
+      'pt.phase_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'pt.tenant',
+        joinedTenantColumn: 'ph.tenant',
+      }
+    );
     const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
       `
         WITH q AS (
@@ -402,13 +465,8 @@ export const searchProjectListIds = withAuth(async (
             END AS project_id
           FROM ${searchIndex.sql}
           CROSS JOIN q
-          LEFT JOIN ${projectTasks.sql}
-            ON si.object_type = 'project_task_comment'
-            AND pt.tenant = si.tenant
-            AND pt.task_id::text = si.parent_id
-          LEFT JOIN ${projectPhases.sql}
-            ON ph.tenant = pt.tenant
-            AND ph.phase_id = pt.phase_id
+          ${projectTaskCommentJoin.sql}
+          ${projectPhaseJoin.sql}
           WHERE si.object_type = ANY(?::text[])
             AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
@@ -443,8 +501,8 @@ export const searchProjectListIds = withAuth(async (
         rawSearch,
         identifier,
         ...searchIndex.bindings,
-        ...projectTasks.bindings,
-        ...projectPhases.bindings,
+        ...projectTaskCommentJoin.bindings,
+        ...projectPhaseJoin.bindings,
         [...PROJECT_LIST_SEARCH_TYPES],
         ['project:read'],
         user.user_id,

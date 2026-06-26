@@ -161,14 +161,26 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedDerivedTableSql(trx, tenant, 'tickets', 't2')");
     expect(section).toContain("tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'child')");
     expect(section).toContain("tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'tc')");
+    expect(section).toContain("const childSearchIndexTenantPredicate = tenantWhereColumnSql(trx, tenant, 'child.tenant', 'si.tenant')");
+    expect(section).toContain('ON ${childSearchIndexTenantPredicate.sql}');
+    expect(section).toContain('const searchMatchesJoin = tenantJoinSubquerySql(');
+    expect(section).toContain('trx.raw(unionSql, unionBindings)');
+    expect(section).toContain("rootTenantColumn: 't.tenant'");
+    expect(section).toContain("joinedTenantColumn: 'sm.tenant'");
+    expect(section).toContain('return baseQuery.joinRaw(searchMatchesJoin.sql');
     expect(section).toContain('...searchIndex.bindings');
     expect(section).toContain('...titleSearchTickets.bindings');
+    expect(section).toContain('...childSearchIndexTenantPredicate.bindings');
+    expect(section).toMatch(/legDBindings\.push\([\s\S]*\.\.\.childTickets\.bindings,[\s\S]*\.\.\.childSearchIndexTenantPredicate\.bindings,[\s\S]*\['ticket', 'ticket_comment'\]/);
+    expect(section).toMatch(/const unionBindings: Knex\.RawBinding\[\] = \[[\s\S]*\.\.\.legABindings,[\s\S]*\.\.\.legBBindings,[\s\S]*\.\.\.legDBindings,[\s\S]*\]/);
     expect(section).not.toContain('FROM app_search_index si');
     expect(section).not.toContain('WHERE si.tenant = ?::uuid');
     expect(section).not.toContain('FROM tickets t2');
     expect(section).not.toContain('WHERE t2.tenant = ?::uuid');
     expect(section).not.toContain('FROM tickets tc');
     expect(section).not.toContain('WHERE tc.tenant = ?::uuid');
+    expect(section).not.toContain('child.tenant = si.tenant');
+    expect(section).not.toContain('sm.tenant = t.tenant');
   });
 
   it('uses structural tenant scoping for ticket update transaction roots', () => {

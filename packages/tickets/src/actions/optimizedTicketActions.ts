@@ -1374,6 +1374,62 @@ function tenantScopedDerivedTableSql(
   };
 }
 
+function tenantWhereColumnSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  leftTenantColumn: string,
+  rightTenantColumn: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_where_fragment__').select(conn.raw('1'));
+
+  tenantDb(conn, tenant).tenantWhereColumn(fragmentSource, leftTenantColumn, rightTenantColumn);
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' where ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant where column SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: Knex | Knex.Transaction,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant join subquery SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
+
 function applyTicketListIndexedSearchFilter(
   trx: Knex.Transaction,
   baseQuery: Knex.QueryBuilder,
@@ -1468,6 +1524,7 @@ function applyTicketListIndexedSearchFilter(
     const bundledSearchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
     const childTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'child');
     const titleSearchChildTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'tc');
+    const childSearchIndexTenantPredicate = tenantWhereColumnSql(trx, tenant, 'child.tenant', 'si.tenant');
 
     legD = `
         UNION ALL
@@ -1481,7 +1538,7 @@ function applyTicketListIndexedSearchFilter(
             ?::text AS identifier
         ) q
         JOIN ${childTickets.sql}
-          ON child.tenant = si.tenant
+          ON ${childSearchIndexTenantPredicate.sql}
          AND child.master_ticket_id IS NOT NULL
          AND (
            (si.object_type = 'ticket' AND child.ticket_id::text = si.object_id)
@@ -1518,6 +1575,7 @@ function applyTicketListIndexedSearchFilter(
       rawSearch,
       identifier,
       ...childTickets.bindings,
+      ...childSearchIndexTenantPredicate.bindings,
       ['ticket', 'ticket_comment'],
       ['ticket:read'],
       user.user_id,
@@ -1531,21 +1589,33 @@ function applyTicketListIndexedSearchFilter(
   }
 
   const unionSql = `
-    INNER JOIN (
+    (
       SELECT DISTINCT ticket_id, tenant FROM (
         ${legA}
         UNION ALL
         ${legB}
         ${legD}
       ) u
-    ) as sm ON sm.ticket_id = t.ticket_id AND sm.tenant = t.tenant
+    ) as sm
   `;
-
-  return baseQuery.joinRaw(unionSql, [
+  const unionBindings: Knex.RawBinding[] = [
     ...legABindings,
     ...legBBindings,
     ...legDBindings,
-  ] as unknown as Knex.Value[]);
+  ];
+  const searchMatchesJoin = tenantJoinSubquerySql(
+    tenantDb(trx, tenant),
+    trx,
+    trx.raw(unionSql, unionBindings),
+    'sm.ticket_id',
+    't.ticket_id',
+    {
+      rootTenantColumn: 't.tenant',
+      joinedTenantColumn: 'sm.tenant',
+    }
+  );
+
+  return baseQuery.joinRaw(searchMatchesJoin.sql, searchMatchesJoin.bindings as unknown as Knex.Value[]);
 }
 
 /**

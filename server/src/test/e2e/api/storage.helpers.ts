@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import baseKnexConfig from '@/lib/db/knexfile';
 
@@ -124,13 +125,15 @@ export async function resetStorageTables(tenantId?: string): Promise<void> {
   const db = await createTestDbConnection();
   try {
     if (tenantId) {
-      await db('storage_records').where({ tenant: tenantId }).delete().catch(() => undefined);
-      await db('storage_schemas').where({ tenant: tenantId }).delete().catch(() => undefined);
-      await db('storage_usage').where({ tenant: tenantId }).delete().catch(() => undefined);
+      const scopedDb = tenantDb(db, tenantId);
+      await scopedDb.table('storage_records').delete().catch(() => undefined);
+      await scopedDb.table('storage_schemas').delete().catch(() => undefined);
+      await scopedDb.table('storage_usage').delete().catch(() => undefined);
     } else {
-      await db('storage_records').delete().catch(() => undefined);
-      await db('storage_schemas').delete().catch(() => undefined);
-      await db('storage_usage').delete().catch(() => undefined);
+      const maintenanceDb = tenantDb(db, '00000000-0000-0000-0000-000000000000');
+      await maintenanceDb.unscoped('storage_records', 'E2E storage helper all-tenant reset').delete().catch(() => undefined);
+      await maintenanceDb.unscoped('storage_schemas', 'E2E storage helper all-tenant reset').delete().catch(() => undefined);
+      await maintenanceDb.unscoped('storage_usage', 'E2E storage helper all-tenant reset').delete().catch(() => undefined);
     }
   } finally {
     await db.destroy();

@@ -30,20 +30,50 @@ import {
   ICategoryResolution,
 } from '@alga-psa/types';
 
+function tenantWhereColumnSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  leftTenantColumn: string,
+  rightTenantColumn: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_where_fragment__').select(conn.raw('1'));
+
+  tenantDb(conn, tenant).tenantWhereColumn(fragmentSource, leftTenantColumn, rightTenantColumn);
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' where ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant where column SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
+
 function tenantScopedTicketBatchUpdateScopeSql(
   conn: Knex | Knex.Transaction,
   tenant: string,
   ticketIds: string[]
-): { sql: string; bindings: Knex.RawBinding[] } {
+): {
+  sql: string;
+  bindings: Knex.RawBinding[];
+  targetTenantPredicate: { sql: string; bindings: Knex.RawBinding[] };
+} {
   const scoped = tenantDb(conn, tenant)
     .table('tickets')
     .select('ticket_id', 'tenant')
     .whereIn('ticket_id', ticketIds)
     .toSQL();
+  const targetTenantPredicate = tenantWhereColumnSql(conn, tenant, 'target.tenant', 'scoped_tickets.tenant');
 
   return {
     sql: `(${scoped.sql}) scoped_tickets`,
     bindings: scoped.bindings as Knex.RawBinding[],
+    targetTenantPredicate,
   };
 }
 
@@ -762,9 +792,9 @@ export const importTickets = withAuth(async (
           JOIN (VALUES ${values}) AS v(tid, entered_at)
             ON scoped_tickets.ticket_id = v.tid
           WHERE target.ticket_id = scoped_tickets.ticket_id
-            AND target.tenant = scoped_tickets.tenant
+            AND ${ticketScope.targetTenantPredicate.sql}
         `,
-        [...ticketScope.bindings, ...params]
+        [...ticketScope.bindings, ...params, ...ticketScope.targetTenantPredicate.bindings]
       );
     }
     for (let i = 0; i < closedUpdates.length; i += BATCH_SIZE) {
@@ -782,9 +812,9 @@ export const importTickets = withAuth(async (
           JOIN (VALUES ${values}) AS v(tid, closed_at, closed_by)
             ON scoped_tickets.ticket_id = v.tid
           WHERE target.ticket_id = scoped_tickets.ticket_id
-            AND target.tenant = scoped_tickets.tenant
+            AND ${ticketScope.targetTenantPredicate.sql}
         `,
-        [...ticketScope.bindings, ...params]
+        [...ticketScope.bindings, ...params, ...ticketScope.targetTenantPredicate.bindings]
       );
     }
 

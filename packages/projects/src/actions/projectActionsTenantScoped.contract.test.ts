@@ -42,12 +42,34 @@ describe('project actions tenant-scoped query contract', () => {
 
   it('uses facade-derived tables for project list indexed search joins', () => {
     const searchSection = sectionBetween('export const searchProjectListIds', 'export const getProjectsWithPhases');
+    const derivedTableHelper = sectionBetween('function tenantScopedDerivedTableSql', 'function tenantJoinSubquerySql');
 
-    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');");
-    expect(searchSection).toContain("const projectTasks = tenantScopedDerivedTableSql(trx, tenant, 'project_tasks', 'pt');");
-    expect(searchSection).toContain("const projectPhases = tenantScopedDerivedTableSql(trx, tenant, 'project_phases', 'ph');");
-    expect(searchSection).toContain('pt.tenant = si.tenant');
-    expect(searchSection).toContain('ph.tenant = pt.tenant');
+    expect(derivedTableHelper).toContain('.subquery(tableName)');
+    expect(derivedTableHelper).toContain('subquery,');
+    expect(derivedTableHelper).toContain('sql: `(${scoped.sql}) ${alias}`');
+    expect(source).toContain('function tenantJoinSubquerySql(');
+    expect(source).toContain('facade.tenantJoinSubquery(');
+    expect(searchSection).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');");
+    expect(searchSection).toContain("const projectTasks = tenantScopedDerivedTableSql(scopedDb, 'project_tasks', 'pt');");
+    expect(searchSection).toContain("const projectPhases = tenantScopedDerivedTableSql(scopedDb, 'project_phases', 'ph');");
+    expect(searchSection).toContain('const projectTaskCommentJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain('projectTasks.subquery');
+    expect(searchSection).toContain("rootTenantColumn: 'si.tenant'");
+    expect(searchSection).toContain("joinedTenantColumn: 'pt.tenant'");
+    expect(searchSection).toContain("join.andOn('si.object_type', '=', trx.raw(\"'project_task_comment'\"));");
+    expect(searchSection).toContain('const projectPhaseJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain('projectPhases.subquery');
+    expect(searchSection).toContain("rootTenantColumn: 'pt.tenant'");
+    expect(searchSection).toContain("joinedTenantColumn: 'ph.tenant'");
+    expect(searchSection).toContain('${projectTaskCommentJoin.sql}');
+    expect(searchSection).toContain('${projectPhaseJoin.sql}');
+    expect(searchSection).toContain('...projectTaskCommentJoin.bindings');
+    expect(searchSection).toContain('...projectPhaseJoin.bindings');
+    expect(searchSection).not.toContain('...projectTasks.bindings');
+    expect(searchSection).not.toContain('...projectPhases.bindings');
+    expect(searchSection).not.toContain('pt.tenant = si.tenant');
+    expect(searchSection).not.toContain('ph.tenant = pt.tenant');
     expect(searchSection).not.toContain('FROM app_search_index si');
     expect(searchSection).not.toContain('WHERE si.tenant = ?');
   });
