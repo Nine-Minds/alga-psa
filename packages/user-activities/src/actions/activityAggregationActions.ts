@@ -188,8 +188,23 @@ export const fetchUserActivities = withAuth(async (
   page: number = 1,
   pageSize: number = 10
 ): Promise<ActivityResponse> => {
-  const tenantId: string = tenant;
+  return fetchUserActivitiesForApi(user, tenant, filters, page, pageSize);
+});
 
+/**
+ * Core (identity-explicit) implementation of the unified activity fetch. Shared by the
+ * `withAuth` web wrapper above and the v1 REST API, which resolves the user from an API
+ * key and calls this directly under `runWithTenant`. Fans out to the per-type fetchers,
+ * applies cross-type filtering/sorting, and paginates. Ad-hoc entries are surfaced via
+ * fetchScheduleActivities regardless of the date window.
+ */
+export async function fetchUserActivitiesForApi(
+  user: any,
+  tenantId: string,
+  filters: ActivityFilters = {},
+  page: number = 1,
+  pageSize: number = 10
+): Promise<ActivityResponse> {
   // Determine whose activities to fetch (self, or another user if permitted).
   const { userId: effectiveUserId, viewingOther } =
     await resolveActivityTarget(user, tenantId, filters.targetUserId);
@@ -275,7 +290,7 @@ export const fetchUserActivities = withAuth(async (
   await cache.set(cacheKey, JSON.stringify(response), ttl, tags);
 
   return response;
-});
+}
 
 /**
  * Fetch ad-hoc schedule entries assigned to a user, independent of any date window.

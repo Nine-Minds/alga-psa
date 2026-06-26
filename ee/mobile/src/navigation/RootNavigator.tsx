@@ -13,6 +13,8 @@ import { AccountDeletionScreen } from "../screens/AccountDeletionScreen";
 import { MutedUsersScreen } from "../screens/MutedUsersScreen";
 import { ClientDetailScreen } from "../screens/ClientDetailScreen";
 import { ContactDetailScreen } from "../screens/ContactDetailScreen";
+import { ProjectTaskDetailScreen } from "../screens/ProjectTaskDetailScreen";
+import { WorkflowTaskDetailScreen } from "../screens/WorkflowTaskDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
@@ -27,6 +29,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tSettings } = useTranslation("settings");
   const { t: tClients } = useTranslation("clients");
   const { t: tContacts } = useTranslation("contacts");
+  const { t: tUserActivities } = useTranslation("userActivities");
   const backLabel = tCommon("back", "Back");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
@@ -102,6 +105,22 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={ContactDetailScreen}
             options={({ navigation, route }) => ({
               title: route.params.contactName ?? tContacts("detail.title", "Contact"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="ProjectTaskDetail"
+            component={ProjectTaskDetailScreen}
+            options={({ navigation }) => ({
+              title: tUserActivities("projectTask.title", "Task"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="WorkflowTaskDetail"
+            component={WorkflowTaskDetailScreen}
+            options={({ navigation }) => ({
+              title: tUserActivities("workflowTask.title", "Workflow task"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

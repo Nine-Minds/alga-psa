@@ -1,0 +1,107 @@
+{
+  "title": "Activities",
+  "list": {
+    "loading": "Loading your activities…",
+    "unableToLoad": "Unable to load activities",
+    "unableToLoadDescription": "We couldn't load your activities. Pull to refresh or try again.",
+    "empty": "Nothing here yet",
+    "emptyDescription": "You have no activities matching these filters.",
+    "noAccess": "No access",
+    "noAccessDescription": "Your account does not have permission to view activities.",
+    "signOut": "Sign out",
+    "addEntry": "New to-do"
+  },
+  "filters": {
+    "status": "Status",
+    "open": "Open",
+    "closed": "Closed",
+    "all": "All",
+    "types": "Types",
+    "searchPlaceholder": "Search activities",
+    "searchAccessibility": "Search activities"
+  },
+  "types": {
+    "ticket": "Ticket",
+    "projectTask": "Project task",
+    "schedule": "Schedule",
+    "timeEntry": "Time entry",
+    "workflowTask": "Workflow task",
+    "notification": "Notification",
+    "document": "Document",
+    "adHoc": "Ad-hoc"
+  },
+  "row": {
+    "accessibility": "{{type}}: {{title}}",
+    "assignedTo": "Assigned to {{name}}",
+    "noDate": "No date",
+    "due": "Due {{date}}"
+  },
+  "adHoc": {
+    "createTitle": "New to-do",
+    "editTitle": "Edit to-do",
+    "titleLabel": "Title",
+    "titlePlaceholder": "What needs doing?",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Optional notes",
+    "dateLabel": "Date (optional)",
+    "datePlaceholder": "No date",
+    "addTime": "Set a time",
+    "startLabel": "Start",
+    "endLabel": "End",
+    "invalidTimes": "End time must be after start time.",
+    "save": "Save",
+    "markDone": "Mark done",
+    "markNotDone": "Mark not done",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteTitle": "Delete to-do?",
+    "deleteMessage": "This personal to-do will be permanently removed.",
+    "deleteConfirm": "Delete"
+  },
+  "projectTask": {
+    "title": "Task",
+    "descriptionLabel": "Description",
+    "noDescription": "No description.",
+    "projectLabel": "Project / phase",
+    "statusLabel": "Status",
+    "dueDateLabel": "Due date",
+    "assignedLabel": "Assigned to",
+    "readOnly": "Project tasks are read-only on mobile."
+  },
+  "workflowTask": {
+    "title": "Workflow task",
+    "loading": "Loading task…",
+    "unableToLoad": "Unable to load this task.",
+    "descriptionLabel": "Description",
+    "noDescription": "No description.",
+    "dueDateLabel": "Due date",
+    "assignedRolesLabel": "Assigned roles",
+    "claim": "Claim task",
+    "claiming": "Claiming…",
+    "unclaim": "Release task",
+    "claimRequired": "Claim this task before completing it.",
+    "claimFailed": "Unable to claim this task.",
+    "formFieldsTitle": "Complete task",
+    "submit": "Submit",
+    "completing": "Submitting…",
+    "completed": "Task completed.",
+    "completeFailed": "Unable to complete this task.",
+    "completeWebTitle": "Finish in the web app",
+    "completeWebDescription": "This task uses a form that isn't supported on mobile yet. Open the web app to complete it.",
+    "completeInWeb": "Complete in web app",
+    "yes": "Yes",
+    "status": {
+      "pending": "Pending",
+      "claimed": "Claimed",
+      "completed": "Completed",
+      "canceled": "Canceled",
+      "expired": "Expired"
+    }
+  },
+  "errors": {
+    "noPermission": "You don't have permission to do that.",
+    "saveFailed": "Unable to save. Please try again.",
+    "doneFailed": "Unable to update. Please try again.",
+    "deleteFailed": "Unable to delete. Please try again."
+  }
+}
