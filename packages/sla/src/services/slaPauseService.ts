@@ -67,7 +67,7 @@ export async function pauseSla(
 
     // Get current ticket state
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select('sla_policy_id', 'sla_paused_at', 'status_id')
       .first();
 
@@ -89,7 +89,7 @@ export async function pauseSla(
 
     // Pause the SLA
     await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .update({
         sla_paused_at: now
       });
@@ -144,7 +144,7 @@ export async function resumeSla(
 
     // Get current ticket state (including due dates for shifting)
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select(
         'sla_policy_id', 'sla_paused_at', 'sla_total_pause_minutes', 'status_id',
         'sla_response_due_at', 'sla_response_at',
@@ -203,7 +203,7 @@ export async function resumeSla(
     }
 
     await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .update(updateData);
 
     // Log the resume event
@@ -265,14 +265,14 @@ export async function handleStatusChange(
 
     // Check if new status is configured to pause SLA
     const newStatusConfig = await scopedDb.table('status_sla_pause_config')
-      .where({ tenant, status_id: newStatusId })
+      .where({ status_id: newStatusId })
       .first();
 
     const newStatusPauses = newStatusConfig?.pauses_sla ?? false;
 
     // Check current pause state
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select('sla_paused_at', 'response_state')
       .first();
 
@@ -284,7 +284,6 @@ export async function handleStatusChange(
 
     // Get SLA settings to check if awaiting_client should also pause
     const slaSettings = await scopedDb.table('sla_settings')
-      .where({ tenant })
       .first();
 
     const pauseOnAwaitingClient = slaSettings?.pause_on_awaiting_client ?? true;
@@ -292,7 +291,6 @@ export async function handleStatusChange(
     // Check if response state tracking is enabled before considering awaiting_client
     const tenantSettingsRow = await scopedDb.table('tenant_settings')
       .select('ticket_display_settings')
-      .where({ tenant })
       .first();
     const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
     const isAwaitingClient = responseStateEnabled && ticket.response_state === 'awaiting_client';
@@ -358,7 +356,6 @@ export async function handleResponseStateChange(
 
     // Get SLA settings
     const slaSettings = await scopedDb.table('sla_settings')
-      .where({ tenant })
       .first();
 
     const pauseOnAwaitingClient = slaSettings?.pause_on_awaiting_client ?? true;
@@ -371,7 +368,6 @@ export async function handleResponseStateChange(
     // Check if response state tracking is enabled at tenant level
     const tenantSettingsRow = await scopedDb.table('tenant_settings')
       .select('ticket_display_settings')
-      .where({ tenant })
       .first();
     const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
     if (!responseStateEnabled) {
@@ -380,7 +376,7 @@ export async function handleResponseStateChange(
 
     // Get current ticket state
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select('sla_paused_at', 'status_id')
       .first();
 
@@ -394,7 +390,7 @@ export async function handleResponseStateChange(
 
     // Check if current status also pauses SLA
     const statusConfig = await scopedDb.table('status_sla_pause_config')
-      .where({ tenant, status_id: ticket.status_id })
+      .where({ status_id: ticket.status_id })
       .first();
 
     const statusPauses = statusConfig?.pauses_sla ?? false;
@@ -443,7 +439,7 @@ export async function shouldSlaBePaused(
 
   // Get the ticket's current state
   const ticket = await scopedDb.table('tickets')
-    .where({ tenant, ticket_id: ticketId })
+    .where({ ticket_id: ticketId })
     .select('status_id', 'response_state')
     .first();
 
@@ -453,7 +449,6 @@ export async function shouldSlaBePaused(
 
   // Get SLA settings
   let slaSettings = await scopedDb.table('sla_settings')
-    .where({ tenant })
     .first();
 
   // Use default settings if none exist
@@ -465,7 +460,6 @@ export async function shouldSlaBePaused(
   if (slaSettings.pause_on_awaiting_client && ticket.response_state === 'awaiting_client') {
     const tenantSettingsRow = await scopedDb.table('tenant_settings')
       .select('ticket_display_settings')
-      .where({ tenant })
       .first();
     const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
     if (responseStateEnabled) {
@@ -475,7 +469,7 @@ export async function shouldSlaBePaused(
 
   // Check 2: Status-based pause
   const statusPauseConfig = await scopedDb.table('status_sla_pause_config')
-    .where({ tenant, status_id: ticket.status_id })
+    .where({ status_id: ticket.status_id })
     .first();
 
   if (statusPauseConfig?.pauses_sla) {
@@ -510,7 +504,7 @@ export async function syncPauseState(
     const { paused, reason } = await shouldSlaBePaused(trx, tenant, ticketId);
 
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select('sla_paused_at')
       .first();
 
@@ -564,7 +558,7 @@ export async function getPauseStats(
   const scopedDb = tenantDb(trx, tenant);
 
   const ticket = await scopedDb.table('tickets')
-    .where({ tenant, ticket_id: ticketId })
+    .where({ ticket_id: ticketId })
     .select('sla_paused_at', 'sla_total_pause_minutes', 'response_state', 'status_id')
     .first();
 

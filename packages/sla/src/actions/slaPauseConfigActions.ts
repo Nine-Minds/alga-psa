@@ -26,7 +26,6 @@ async function getBoardOwnedTicketStatus(
   return tenantDb(trx, tenant).table('statuses')
     .select('status_id')
     .where({
-      tenant,
       status_id: statusId,
       status_type: 'ticket'
     })
@@ -63,7 +62,6 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
 
       // Try to get existing settings
       let settings = await scopedDb.table('sla_settings')
-        .where({ tenant })
         .first();
 
       // If no settings exist, create default settings
@@ -106,7 +104,6 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
 
       // Check if settings exist
       const existingSettings = await scopedDb.table('sla_settings')
-        .where({ tenant })
         .first();
 
       let result;
@@ -114,7 +111,6 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
       if (existingSettings) {
         // Update existing settings
         const [updated] = await scopedDb.table('sla_settings')
-          .where({ tenant })
           .update({
             pause_on_awaiting_client: settings.pause_on_awaiting_client ?? existingSettings.pause_on_awaiting_client,
             updated_at: trx.fn.now(),
@@ -165,7 +161,6 @@ export const getStatusSlaPauseConfigs = withAuth(async (_user, { tenant }): Prom
 
       const configs = await configsQuery
         .where({
-          'config.tenant': tenant,
           'status.status_type': 'ticket',
         })
         .whereNotNull('status.board_id')
@@ -199,7 +194,6 @@ export const getSlaPauseConfigForStatus = withAuth(async (_user, { tenant }, sta
 
       const config = await configQuery
         .where({
-          'config.tenant': tenant,
           'config.status_id': statusId,
           'status.status_type': 'ticket',
         })
@@ -244,7 +238,7 @@ export const setStatusSlaPauseConfig = withAuth(async (
 
       // Check if config exists for this status
       const existingConfig = await scopedDb.table('status_sla_pause_config')
-        .where({ tenant, status_id: statusId })
+        .where({ status_id: statusId })
         .first();
 
       let result;
@@ -252,7 +246,7 @@ export const setStatusSlaPauseConfig = withAuth(async (
       if (existingConfig) {
         // Update existing config
         const [updated] = await scopedDb.table('status_sla_pause_config')
-          .where({ tenant, status_id: statusId })
+          .where({ status_id: statusId })
           .update({
             pauses_sla: pausesSla,
           })
@@ -314,7 +308,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
       for (const config of configs) {
         // Check if config exists for this status
         const existingConfig = await scopedDb.table('status_sla_pause_config')
-          .where({ tenant, status_id: config.statusId })
+          .where({ status_id: config.statusId })
           .first();
 
         let result;
@@ -322,7 +316,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
         if (existingConfig) {
           // Update existing config
           const [updated] = await scopedDb.table('status_sla_pause_config')
-            .where({ tenant, status_id: config.statusId })
+            .where({ status_id: config.statusId })
             .update({
               pauses_sla: config.pausesSla,
             })
@@ -377,7 +371,6 @@ export const getBoardOwnedTicketStatusesForSlaPauseConfig = withAuth(async (
 
       const rows = await rowsQuery
         .where({
-          'status.tenant': tenant,
           'status.status_type': 'ticket',
         })
         .whereNotNull('status.board_id')
@@ -435,7 +428,7 @@ export const shouldSlaBePaused = withAuth(async (
 
       // Get the ticket's current state
       const ticket = await scopedDb.table('tickets')
-        .where({ tenant, ticket_id: ticketId })
+        .where({ ticket_id: ticketId })
         .select('status_id', 'response_state')
         .first();
 
@@ -445,7 +438,6 @@ export const shouldSlaBePaused = withAuth(async (
 
       // Get SLA settings
       let slaSettings = await scopedDb.table('sla_settings')
-        .where({ tenant })
         .first();
 
       // Use default settings if none exist
@@ -465,7 +457,7 @@ export const shouldSlaBePaused = withAuth(async (
 
       // Check 2: Status-based pause
       const statusPauseConfig = await scopedDb.table('status_sla_pause_config')
-        .where({ tenant, status_id: ticket.status_id })
+        .where({ status_id: ticket.status_id })
         .first();
 
       if (statusPauseConfig?.pauses_sla) {
@@ -497,7 +489,7 @@ export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, sta
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const deleted = await tenantDb(trx, tenant).table('status_sla_pause_config')
-        .where({ tenant, status_id: statusId })
+        .where({ status_id: statusId })
         .delete();
 
       return deleted > 0;
@@ -521,7 +513,6 @@ export const getResponseStateTrackingSetting = withAuth(async (_user, { tenant }
   const { knex: db } = await createTenantKnex();
   const row = await tenantDb(db, tenant).table('tenant_settings')
     .select('ticket_display_settings')
-    .where({ tenant })
     .first();
   return (row?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 });
@@ -536,7 +527,6 @@ export const updateResponseStateTrackingSetting = withAuth(async (_user, { tenan
 
   const existingRow = await scopedDb.table('tenant_settings')
     .select('ticket_display_settings', 'settings')
-    .where({ tenant })
     .first();
 
   const currentDisplay = (existingRow?.ticket_display_settings as any) || {};

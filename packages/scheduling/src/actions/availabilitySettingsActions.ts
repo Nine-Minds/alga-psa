@@ -70,7 +70,7 @@ export interface TeamsMeetingOrganizerVerification {
 async function tenantHasTeamsAddOn(db: any, tenant: string): Promise<boolean> {
   const scopedDb = tenantDb(db, tenant);
   const row = await scopedDb.table('tenant_addons')
-    .where({ tenant, addon_key: ADD_ONS.TEAMS })
+    .where({ addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', db.fn.now());
     })
@@ -100,7 +100,6 @@ export const getTeamsMeetingsTabState = withAuth(async (
     }
 
     const integration = await tenantDb(db, tenant).table('teams_integrations')
-      .where({ tenant })
       .select('install_status', 'default_meeting_organizer_upn')
       .first();
 
@@ -141,7 +140,6 @@ export const setDefaultMeetingOrganizer = withAuth(async (
 
     const scopedDb = tenantDb(db, tenant);
     const integration = await scopedDb.table('teams_integrations')
-      .where({ tenant })
       .select('tenant', 'install_status')
       .first();
 
@@ -151,7 +149,6 @@ export const setDefaultMeetingOrganizer = withAuth(async (
 
     const organizerUpn = (input.upn || '').trim() || null;
     await scopedDb.table('teams_integrations')
-      .where({ tenant })
       .update({
         default_meeting_organizer_upn: organizerUpn,
         updated_at: new Date(),
@@ -372,7 +369,6 @@ export const getAvailabilitySettings = withAuth(async (
     const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       let query = scopedDb.table('availability_settings')
-        .where({ tenant })
         .orderBy('created_at', 'desc');
 
       if (filters) {
@@ -560,7 +556,6 @@ export const getAvailabilityExceptions = withAuth(async (
     const exceptions = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       let query = scopedDb.table('availability_exceptions')
-        .where({ tenant })
         .orderBy('date', 'asc');
 
       if (userId) {

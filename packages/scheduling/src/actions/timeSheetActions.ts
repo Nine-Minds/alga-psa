@@ -189,7 +189,7 @@ export const addCommentToTimeSheet = withAuth(async (
 
     // Fetch the timesheet to check ownership
     const timeSheet = await scopedDb.table('time_sheets')
-      .where({ id: timeSheetId, tenant })
+      .where({ id: timeSheetId })
       .first();
 
     if (!timeSheet) {
@@ -373,7 +373,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
     }
 
     const timeSheet = await scopedDb.table('time_sheets')
-      .where({ id: timeSheetId, tenant })
+      .where({ id: timeSheetId })
       .select('user_id')
       .first();
 

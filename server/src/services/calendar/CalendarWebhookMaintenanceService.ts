@@ -120,10 +120,6 @@ export class CalendarWebhookMaintenanceService {
       });
     }
 
-    if (tenantId) {
-      query = query.andWhere('cp.tenant', tenantId);
-    }
-
     if (providerId) {
       query = query.andWhere('cp.id', providerId);
     }
@@ -388,7 +384,6 @@ export class CalendarWebhookMaintenanceService {
 
       await tenantDb(knex, tenant).table('calendar_providers')
         .where('id', providerId)
-        .andWhere('tenant', tenant)
         .update(updateData);
     } catch (error) {
       logger.warn(`Failed to update provider status for ${providerId}`, error);
@@ -427,7 +422,6 @@ export class CalendarWebhookMaintenanceService {
       // Check if health row exists, if not create it
       const existing = await tenantDb(knex, tenant).table('calendar_provider_health')
         .where('calendar_provider_id', providerId)
-        .andWhere('tenant', tenant)
         .first();
 
       const updateData: any = {
@@ -454,7 +448,6 @@ export class CalendarWebhookMaintenanceService {
       if (existing) {
         await tenantDb(knex, tenant).table('calendar_provider_health')
           .where('calendar_provider_id', providerId)
-          .andWhere('tenant', tenant)
           .update(updateData);
       } else {
         await tenantDb(knex, tenant).table('calendar_provider_health')
@@ -481,7 +474,6 @@ export class CalendarWebhookMaintenanceService {
       const knex = await getAdminConnection();
       const health = await tenantDb(knex, tenant).table('calendar_provider_health')
         .where('calendar_provider_id', providerId)
-        .andWhere('tenant', tenant)
         .first();
       return health || null;
     } catch (error) {

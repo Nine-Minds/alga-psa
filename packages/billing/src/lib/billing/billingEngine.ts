@@ -243,7 +243,7 @@ export class BillingEngine {
 
     const db = tenantDb(this.knex, this.tenant);
     const row = await db.table("client_locations")
-      .where({ tenant: this.tenant, location_id: locationId })
+      .where({ location_id: locationId })
       .select("region_code")
       .first();
 
@@ -276,7 +276,7 @@ export class BillingEngine {
       try {
         const db = tenantDb(this.knex, this.tenant);
         const taxRateInfo = await db.table("tax_rates")
-          .where({ tax_rate_id: service.tax_rate_id, tenant: this.tenant })
+          .where({ tax_rate_id: service.tax_rate_id })
           // TODO: Add validity checks if needed (e.g., is_active, date range matching billing period)
           .select("region_code")
           .first();
@@ -369,7 +369,7 @@ export class BillingEngine {
       await this.initKnex();
       const db = tenantDb(this.knex, this.tenant!);
       const client = await db.table<IClient>("clients")
-        .where({ client_id: clientId, tenant: this.tenant! })
+        .where({ client_id: clientId })
         .first();
 
       const billingPeriod: IBillingPeriod = {
@@ -442,7 +442,6 @@ export class BillingEngine {
 
     const db = tenantDb(this.knex, this.tenant);
     const dueRows = await db.table("recurring_service_periods")
-      .where({ tenant: this.tenant })
       .whereIn("obligation_id", eligibleLineIds)
       .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereIn(
@@ -469,7 +468,6 @@ export class BillingEngine {
 
     if (dueRows.length === 0) {
       const existingMaterializedRow = await db.table("recurring_service_periods")
-        .where({ tenant: this.tenant })
         .whereIn("obligation_id", eligibleLineIds)
         .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereNotIn("lifecycle_state", ["archived", "superseded"])
@@ -519,7 +517,7 @@ export class BillingEngine {
       }
       const db = tenantDb(this.knex, this.tenant);
       const client = await db.table<IClient>("clients")
-        .where({ client_id: clientId, tenant: this.tenant! })
+        .where({ client_id: clientId })
         .first();
       console.log(
         `Calculating billing for client ${client?.client_name} (${clientId}) using billingCycleId: ${billingCycleId}`,
@@ -530,7 +528,6 @@ export class BillingEngine {
         .where({
           billing_cycle_id: billingCycleId,
           client_id: clientId, // Ensure it matches the client
-          tenant: this.tenant,
         })
         .first();
 
@@ -995,7 +992,6 @@ export class BillingEngine {
 
     const rows = await eligibleLinesQuery
       .where({
-        "cc.tenant": this.tenant,
         "cc.client_id": input.clientId,
         "cc.is_active": true,
         "cls.service_id": input.serviceId,
@@ -4398,8 +4394,7 @@ export class BillingEngine {
     db.tenantJoin(existingChargeQuery, "contract_line_service_configuration as clsc", "iid.config_id", "clsc.config_id");
 
     const existing = await existingChargeQuery
-      .where("iid.tenant", this.tenant)
-      .andWhere("clsc.contract_line_id", clientContractLineId)
+      .where("clsc.contract_line_id", clientContractLineId)
       .andWhere("iid.service_period_start", servicePeriodStart)
       .andWhere("iid.service_period_end", servicePeriodEnd)
       .andWhere("iid.billing_timing", billingTiming)
@@ -4418,7 +4413,6 @@ export class BillingEngine {
     });
 
     const recurringLinkedCharge = await db.table("recurring_service_periods")
-      .where("tenant", this.tenant)
       .where("charge_family", "fixed")
       .where("due_position", billingTiming)
       .whereNotNull("invoice_id")

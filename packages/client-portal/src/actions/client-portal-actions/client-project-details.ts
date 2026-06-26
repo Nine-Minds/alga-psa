@@ -40,12 +40,12 @@ async function getProjectWithConfigInternal(
 
   // Get client_id from user's contact -> client relationship
   const contact = await tenantDb(knex, tenant).table('contacts')
-    .where({ contact_name_id: user.contact_id, tenant })
+    .where({ contact_name_id: user.contact_id })
     .first<any>();
   if (!contact?.client_id) return null;
 
   const project = await tenantDb(knex, tenant).table('projects')
-    .where({ project_id: projectId, tenant, client_id: contact.client_id, is_inactive: false })
+    .where({ project_id: projectId, client_id: contact.client_id, is_inactive: false })
     .first<any>();
   if (!project) return null;
 
@@ -66,7 +66,7 @@ export const getClientProjectPhases = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const phases = await tenantDb(knex, tenant).table('project_phases')
-    .where({ project_id: projectId, tenant })
+    .where({ project_id: projectId })
     .orderBy('order_key') as any[];
 
   // If show_phase_completion, calculate % per phase using a single aggregated query
@@ -81,7 +81,6 @@ export const getClientProjectPhases = withAuth(async (
 
     const phaseStats = await phaseStatsQuery
       .whereIn('pt.phase_id', phaseIds)
-      .andWhere('pt.tenant', tenant)
       .groupBy('pt.phase_id')
       .select(
         'pt.phase_id',
@@ -148,7 +147,7 @@ export const getClientProjectTasks = withAuth(async (
   scopedDb.tenantJoin(query, 'priorities as pri', 'pt.priority_id', 'pri.priority_id', { type: 'left' });
 
   query = query
-    .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
+    .where({ 'pp.project_id': projectId })
     // Only show tasks with visible status mappings
     .where('psm.is_visible', true)
     .select(selectColumns);
@@ -221,7 +220,6 @@ export const getClientProjectTasks = withAuth(async (
     // Get all checklist items for these tasks
     const checklistItems = await tenantDb(knex, tenant).table('task_checklist_items')
       .whereIn('task_id', taskIds)
-      .where('tenant', tenant)
       .select('task_id', 'item_name', 'completed')
       .orderBy('order_number') as Array<{ task_id: string; item_name: string; completed: boolean }>;
 
@@ -253,7 +251,6 @@ export const getClientProjectTasks = withAuth(async (
 
     const additionalResources = await additionalResourcesQuery
       .whereIn('tr.task_id', taskIds)
-      .where('tr.tenant', tenant)
       .select(
         'tr.task_id',
         'tr.additional_user_id',
@@ -282,7 +279,7 @@ export const getClientProjectTasks = withAuth(async (
   // Always fetch phases (needed for both list grouping and kanban phase selector)
   const phases = await tenantDb(knex, tenant).table('project_phases')
     .select('phase_id', 'phase_name', 'description', 'start_date', 'end_date')
-    .where({ project_id: projectId, tenant })
+    .where({ project_id: projectId })
     .orderBy('order_key') as any[];
 
   // Fetch dependencies if dependencies field is visible
@@ -292,8 +289,7 @@ export const getClientProjectTasks = withAuth(async (
 
     // Fetch dependencies where task is the successor (predecessors of task)
     const predecessorsQuery = tenantDb(knex, tenant).table('project_task_dependencies as ptd')
-      .whereIn('ptd.successor_task_id', taskIds)
-      .andWhere('ptd.tenant', tenant);
+      .whereIn('ptd.successor_task_id', taskIds);
     tenantDb(knex, tenant).tenantJoin(predecessorsQuery, 'project_tasks as pt', 'ptd.predecessor_task_id', 'pt.task_id', { type: 'left' });
 
     const predecessorsArray = await predecessorsQuery
@@ -313,8 +309,7 @@ export const getClientProjectTasks = withAuth(async (
 
     // Fetch dependencies where task is the predecessor (successors of task)
     const successorsQuery = tenantDb(knex, tenant).table('project_task_dependencies as ptd')
-      .whereIn('ptd.predecessor_task_id', taskIds)
-      .andWhere('ptd.tenant', tenant);
+      .whereIn('ptd.predecessor_task_id', taskIds);
     tenantDb(knex, tenant).tenantJoin(successorsQuery, 'project_tasks as pt', 'ptd.successor_task_id', 'pt.task_id', { type: 'left' });
 
     const successorsArray = await successorsQuery
@@ -431,7 +426,7 @@ export const getClientProjectStatuses = withAuth(async (
     scopedDb.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
     query
-      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant, 'psm.is_visible': true })
+      .where({ 'psm.project_id': projectId, 'psm.is_visible': true })
       .select(
         'psm.project_status_mapping_id',
         'psm.custom_name',
@@ -495,7 +490,7 @@ export const uploadClientTaskDocument = withAuth(async (
     return { success: false, error: 'User not associated with a contact' };
   }
   const contact = await tenantDb(knex, tenant).table('contacts')
-    .where({ contact_name_id: user.contact_id, tenant })
+    .where({ contact_name_id: user.contact_id })
     .first<any>();
   if (!contact?.client_id) {
     return { success: false, error: 'Client not found' };
@@ -508,7 +503,7 @@ export const uploadClientTaskDocument = withAuth(async (
   scopedDb.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
 
   const task = await taskQuery
-    .where({ 'pt.task_id': taskId, 'pt.tenant': tenant, 'p.client_id': contact.client_id })
+    .where({ 'pt.task_id': taskId, 'p.client_id': contact.client_id })
     .select('p.project_id', 'p.client_portal_config')
     .first<any>();
 
@@ -594,7 +589,7 @@ export const getClientTaskDocuments = withAuth(async (
     return { success: false, error: 'User not associated with a contact' };
   }
   const contact = await tenantDb(knex, tenant).table('contacts')
-    .where({ contact_name_id: user.contact_id, tenant })
+    .where({ contact_name_id: user.contact_id })
     .first<any>();
   if (!contact?.client_id) {
     return { success: false, error: 'Client not found' };
@@ -607,7 +602,7 @@ export const getClientTaskDocuments = withAuth(async (
   scopedDb.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
 
   const task = await taskQuery
-    .where({ 'pt.task_id': taskId, 'pt.tenant': tenant, 'p.client_id': contact.client_id })
+    .where({ 'pt.task_id': taskId, 'p.client_id': contact.client_id })
     .select('p.project_id', 'p.client_portal_config')
     .first<any>();
 
@@ -629,7 +624,6 @@ export const getClientTaskDocuments = withAuth(async (
     .where({
       'da.entity_type': 'project_task',
       'da.entity_id': taskId,
-      'd.tenant': tenant,
       'd.is_client_visible': true,
     })
     .select(

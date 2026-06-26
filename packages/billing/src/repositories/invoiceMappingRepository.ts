@@ -58,7 +58,6 @@ export class KnexInvoiceMappingRepository {
       )
       .where((builder) => {
         builder
-          .where('tenant', params.tenantId)
           .where('integration_type', params.adapterType)
           .where('alga_entity_type', 'invoice')
           .where('alga_entity_id', params.invoiceId);

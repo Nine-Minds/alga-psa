@@ -81,7 +81,6 @@ export class CalendarSyncService {
           // Update mapping
           await tenantDb(trx, tenant).table('calendar_event_mappings')
             .where('id', existingMapping.id)
-            .andWhere('tenant', tenant)
             .update({
               sync_status: 'synced',
               last_synced_at: new Date().toISOString(),
@@ -152,7 +151,6 @@ export class CalendarSyncService {
           if (mapping) {
             await tenantDb(knex, tenant).table('calendar_event_mappings')
               .where('id', mapping.id)
-              .andWhere('tenant', tenant)
               .update({
                 sync_status: 'error',
                 sync_error_message: error.message,
@@ -278,7 +276,6 @@ export class CalendarSyncService {
             // Update mapping to conflict status
             await tenantDb(trx, tenant).table('calendar_event_mappings')
               .where('id', existingMapping.id)
-              .andWhere('tenant', tenant)
               .update({
                 sync_status: 'conflict',
                 sync_error_message: 'Both Alga and external calendar have been modified',
@@ -360,7 +357,6 @@ export class CalendarSyncService {
           // Update mapping
           await tenantDb(trx, tenant).table('calendar_event_mappings')
             .where('id', existingMapping.id)
-            .andWhere('tenant', tenant)
             .update({
               sync_status: 'synced',
               last_synced_at: new Date().toISOString(),
@@ -675,7 +671,6 @@ export class CalendarSyncService {
         // Delete mapping
         await tenantDb(trx, tenant).table('calendar_event_mappings')
           .where('id', mapping.id)
-          .andWhere('tenant', tenant)
           .del();
 
         return { success: true };
@@ -719,7 +714,6 @@ export class CalendarSyncService {
     const mapping = await tenantDb(knex, tenant).table('calendar_event_mappings')
       .where('schedule_entry_id', entryId)
       .andWhere('calendar_provider_id', calendarProviderId)
-      .andWhere('tenant', tenant)
       .first();
 
     return mapping ? this.mapDbRowToMapping(mapping) : null;
@@ -737,7 +731,6 @@ export class CalendarSyncService {
     const mapping = await tenantDb(knex, tenant).table('calendar_event_mappings')
       .where('external_event_id', externalEventId)
       .andWhere('calendar_provider_id', calendarProviderId)
-      .andWhere('tenant', tenant)
       .first();
 
     return mapping ? this.mapDbRowToMapping(mapping) : null;
@@ -750,7 +743,6 @@ export class CalendarSyncService {
     const { knex } = await createTenantKnex();
     const mapping = await tenantDb(knex, tenant).table('calendar_event_mappings')
       .where('id', mappingId)
-      .andWhere('tenant', tenant)
       .first();
 
     return mapping ? this.mapDbRowToMapping(mapping) : null;

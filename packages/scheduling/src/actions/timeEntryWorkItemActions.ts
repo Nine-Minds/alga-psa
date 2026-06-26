@@ -35,7 +35,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
   const timeSheet = await scopedDb.table('time_sheets')
-    .where({ id: validatedParams.timeSheetId, tenant })
+    .where({ id: validatedParams.timeSheetId })
     .select('user_id')
     .first();
 

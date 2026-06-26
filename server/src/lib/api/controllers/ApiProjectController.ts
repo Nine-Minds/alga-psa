@@ -184,14 +184,12 @@ export class ApiProjectController extends ApiBaseController {
 
     const [statuses, clients] = await Promise.all([
       statusIds.length > 0
-        ? resolvedKnex('statuses')
-            .where({ tenant: apiRequest.context.tenant })
+        ? tenantDb(resolvedKnex, apiRequest.context.tenant).table('statuses')
             .whereIn('status_id', statusIds)
             .select('status_id', 'name')
         : Promise.resolve([]),
       clientIds.length > 0
-        ? resolvedKnex('clients')
-            .where({ tenant: apiRequest.context.tenant })
+        ? tenantDb(resolvedKnex, apiRequest.context.tenant).table('clients')
             .whereIn('client_id', clientIds)
             .select('client_id', 'client_name')
         : Promise.resolve([]),

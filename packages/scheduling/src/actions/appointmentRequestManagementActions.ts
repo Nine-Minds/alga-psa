@@ -105,7 +105,6 @@ async function loadOnlineMeetingArtifactsForAppointments(
     { rootTenantColumn: 'artifact.tenant' },
   );
   const rows = await artifactsQuery
-    .where('artifact.tenant', tenant)
     .whereIn('meeting.appointment_request_id', ids)
     .select(
       'meeting.appointment_request_id',

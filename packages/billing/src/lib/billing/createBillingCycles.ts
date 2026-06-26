@@ -315,7 +315,7 @@ async function loadClientAnchorSettings(
   }
 
   const settings = await tenantDb(knex, tenant).table<ClientBillingAnchorSettingsRow>('client_billing_settings')
-    .where({ tenant, client_id: client.client_id })
+    .where('client_id', client.client_id)
     .first()
     .select(
       'billing_cycle_anchor_day_of_month',

@@ -48,7 +48,7 @@ export async function createItilStandardSlaPolicy(
 
   // Check if ITIL Standard policy already exists
   const existingPolicy = await scopedDb.table('sla_policies')
-    .where({ tenant, policy_name: ITIL_POLICY_NAME })
+    .where({ policy_name: ITIL_POLICY_NAME })
     .first();
 
   if (existingPolicy) {
@@ -56,7 +56,7 @@ export async function createItilStandardSlaPolicy(
 
     // Get existing targets
     const targets = await scopedDb.table('sla_policy_targets')
-      .where({ tenant, sla_policy_id: existingPolicy.sla_policy_id })
+      .where({ sla_policy_id: existingPolicy.sla_policy_id })
       .select('*') as ISlaPolicyTarget[];
 
     return {
@@ -108,7 +108,7 @@ export async function createItilStandardSlaPolicy(
 
   // Get ITIL priorities from tenant's priorities table
   const itilPriorities = await scopedDb.table('priorities')
-    .where({ tenant, is_from_itil_standard: true, item_type: 'ticket' })
+    .where({ is_from_itil_standard: true, item_type: 'ticket' })
     .select('priority_id', 'itil_priority_level', 'priority_name')
     .orderBy('itil_priority_level', 'asc');
 
@@ -172,7 +172,7 @@ export async function assignSlaPolicyToBoard(
   policyId: string
 ): Promise<void> {
   await tenantDb(trx, tenant).table('boards')
-    .where({ tenant, board_id: boardId })
+    .where({ board_id: boardId })
     .update({
       sla_policy_id: policyId,
     });
@@ -200,7 +200,7 @@ export async function configureItilSlaForBoard(
 
   // Check if board already has an SLA policy assigned
   const board = await scopedDb.table('boards')
-    .where({ tenant, board_id: boardId })
+    .where({ board_id: boardId })
     .select('sla_policy_id')
     .first();
 

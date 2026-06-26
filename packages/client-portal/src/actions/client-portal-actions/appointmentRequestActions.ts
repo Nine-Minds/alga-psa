@@ -106,7 +106,6 @@ type OnlineMeetingRow = {
 async function areOnlineMeetingArtifactsVisibleInPortal(trx: Knex.Transaction, tenant: string): Promise<boolean> {
   try {
     const row = await tenantDb(trx, tenant).table('teams_integrations')
-      .where({ tenant })
       .first('expose_recordings_in_portal');
     return row?.expose_recordings_in_portal === true;
   } catch (error) {
@@ -138,7 +137,6 @@ async function loadVisibleOnlineMeetingArtifactsForAppointments(
   scopedDb.tenantJoin(artifactsQuery, 'online_meetings as meeting', 'artifact.meeting_id', 'meeting.meeting_id');
 
   const rows = await artifactsQuery
-    .where('meeting.tenant', tenant)
     .whereIn('meeting.appointment_request_id', ids)
     .select(
       'meeting.appointment_request_id',
@@ -175,12 +173,12 @@ async function getTenantSettings(tenant: string): Promise<TenantSettings> {
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx) => {
-    const settings = await tenantDb(trx, tenant).table('tenant_settings').where({ tenant }).first();
+    const settings = await tenantDb(trx, tenant).table('tenant_settings').first();
     const tenantSettings = settings?.settings || {};
 
     let tenantName = tenantSettings.branding?.clientName;
     if (!tenantName) {
-      const tenantRecord = await tenantDb(trx, tenant).table('tenants').where({ tenant }).select('client_name').first();
+      const tenantRecord = await tenantDb(trx, tenant).table('tenants').select('client_name').first();
       tenantName = tenantRecord?.client_name;
     }
     if (!tenantName) tenantName = 'Your Service Provider';
@@ -391,7 +389,6 @@ export const createAppointmentRequest = withAuth(async (
         const contractService = await contractServiceQuery
           .where({
             'cls.service_id': validatedData.service_id,
-            'cls.tenant': tenant,
             'cc.client_id': clientId
           })
           .where('cc.start_date', '<=', now)
@@ -656,7 +653,6 @@ export const createAppointmentRequest = withAuth(async (
       const staffUsers = notifyUserIds.size > 0
         ? await withTransaction(db, async (trx: Knex.Transaction) => {
             return await tenantDb(trx, tenant).table('users')
-              .where({ tenant })
               .whereIn('user_id', Array.from(notifyUserIds))
               .select('user_id', 'email', 'first_name', 'last_name', 'timezone');
           })
@@ -904,7 +900,7 @@ export const updateAppointmentRequest = withAuth(async (
 
       appointmentWorkflowUpdate = await withTransaction(db, async (trx: Knex.Transaction) => {
         const previousAssigneeRow = await tenantDb(trx, tenant).table('schedule_entry_assignees')
-          .where({ entry_id: existingScheduleEntryId, tenant })
+          .where({ entry_id: existingScheduleEntryId })
           .select('user_id')
           .first();
 
@@ -917,7 +913,6 @@ export const updateAppointmentRequest = withAuth(async (
         await tenantDb(trx, tenant).table('schedule_entries')
           .where({
             entry_id: existingScheduleEntryId,
-            tenant,
           })
           .update({
             title: `[Pending Request] ${service.service_name}`,
@@ -935,7 +930,6 @@ export const updateAppointmentRequest = withAuth(async (
           await tenantDb(trx, tenant).table('schedule_entry_assignees')
             .where({
               entry_id: existingScheduleEntryId,
-              tenant,
             })
             .delete();
 
@@ -950,7 +944,7 @@ export const updateAppointmentRequest = withAuth(async (
         }
 
         const newAssigneeRow = await tenantDb(trx, tenant).table('schedule_entry_assignees')
-          .where({ entry_id: existingScheduleEntryId, tenant })
+          .where({ entry_id: existingScheduleEntryId })
           .select('user_id')
           .first();
 
@@ -1100,7 +1094,6 @@ export const getMyAppointmentRequests = withAuth(async (
 
       query = query
         .where({
-          'ar.tenant': tenant,
           'ar.client_id': clientId
         })
         .select(
@@ -1210,7 +1203,6 @@ export const getAppointmentRequestDetails = withAuth(async (
       const row = await requestQuery
         .where({
           'ar.appointment_request_id': requestId,
-          'ar.tenant': tenant,
           'ar.client_id': clientId
         })
         .select(
@@ -1717,7 +1709,6 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
       scopedDb.tenantJoin(requestsQuery, 'tickets as t', 'ar.ticket_id', 't.ticket_id', { type: 'left' });
 
       return await requestsQuery
-        .where('ar.tenant', tenant)
         .where('ar.ticket_id', ticketId)
         .where('ar.client_id', clientId) // Ensure client can only see their own requests
         .select(
@@ -1842,7 +1833,6 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
     const technicians = allowedUserIds.length > 0
       ? await withTransaction(db, async (trx: Knex.Transaction) => {
           const users = await tenantDb(trx, tenant).table('users')
-            .where({ tenant })
             .whereIn('user_id', allowedUserIds)
             .select(
               'user_id',

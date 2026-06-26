@@ -30,12 +30,9 @@ import {
  */
 function applyFilters(
   query: Knex.QueryBuilder,
-  tenant: string,
   filters: ISlaReportingFilters,
   tableAlias: string = 't'
 ): Knex.QueryBuilder {
-  query.where(`${tableAlias}.tenant`, tenant);
-
   if (filters.dateFrom) {
     query.where(`${tableAlias}.entered_at`, '>=', filters.dateFrom);
   }
@@ -86,7 +83,7 @@ export const getSlaComplianceRate = withAuth(async (
           .orWhereNotNull('t.sla_resolution_met');
       });
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const tickets = await query.select(
       't.sla_response_met',
@@ -147,7 +144,7 @@ export const getAverageTimesMetrics = withAuth(async (
     let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id');
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const avgTimes = await query
       .select(
@@ -167,7 +164,7 @@ export const getAverageTimesMetrics = withAuth(async (
       },
     });
 
-    targetQuery = applyFilters(targetQuery, tenant, filters);
+    targetQuery = applyFilters(targetQuery, filters);
 
     const avgTargets = await targetQuery
       .select(
@@ -211,7 +208,7 @@ export const getBreachRateByPriority = withAuth(async (
       });
     scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id');
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -256,7 +253,7 @@ export const getBreachRateByTechnician = withAuth(async (
       });
     scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -301,7 +298,7 @@ export const getBreachRateByClient = withAuth(async (
       });
     scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id');
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -348,7 +345,6 @@ export const getSlaTrend = withAuth(async (
     let query = scopedDb.table<any>('tickets as t')
       .whereNotNull('t.sla_policy_id')
       .whereNotNull('t.closed_at')
-      .where('t.tenant', tenant)
       .where('t.closed_at', '>=', dateFrom);
 
     if (filters.dateTo) {
@@ -415,7 +411,7 @@ export const getRecentBreaches = withAuth(async (
     scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id');
     scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
 
-    query = applyFilters(query, tenant, filters);
+    query = applyFilters(query, filters);
 
     const results = await query
       .select(
@@ -472,7 +468,6 @@ export const getTicketsAtRisk = withAuth(async (
     scopedDb.tenantJoin(ticketsQuery, 'statuses as s', 't.status_id', 's.status_id');
 
     const tickets = await ticketsQuery
-      .where('t.tenant', tenant)
       .whereNotNull('t.sla_policy_id')
       .where('s.is_closed', false)
       .whereNull('t.sla_paused_at') // Not paused
@@ -597,7 +592,7 @@ export const getSlaOverview = withAuth(async (
       .where('s.is_closed', false);
     scopedDb.tenantJoin(activeQuery, 'statuses as s', 't.status_id', 's.status_id');
 
-    activeQuery = applyFilters(activeQuery, tenant, filters);
+    activeQuery = applyFilters(activeQuery, filters);
 
     const activeCounts = await activeQuery
       .select(

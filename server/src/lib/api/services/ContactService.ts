@@ -372,7 +372,6 @@ export class ContactService extends BaseService<IContact> {
 
       await tenantDb(trx, context.tenant).table('contacts')
         .where('contact_name_id', id)
-        .where('tenant', context.tenant)
         .delete();
 
       return before;

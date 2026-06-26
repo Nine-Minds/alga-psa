@@ -61,13 +61,11 @@ export class CalendarWebhookProcessor {
           const now = new Date().toISOString();
           const existing = await tenantDb(knex, provider.tenant).table('calendar_provider_health')
             .where('calendar_provider_id', provider.id)
-            .andWhere('tenant', provider.tenant)
             .first();
 
           if (existing) {
             await tenantDb(knex, provider.tenant).table('calendar_provider_health')
               .where('calendar_provider_id', provider.id)
-              .andWhere('tenant', provider.tenant)
               .update({
                 last_webhook_received_at: now,
                 updated_at: now
@@ -130,7 +128,6 @@ export class CalendarWebhookProcessor {
               const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
                 .where('external_event_id', change.id)
                 .andWhere('calendar_provider_id', provider.id)
-                .andWhere('tenant', provider.tenant)
                 .first();
 
               if (!mapping) {
@@ -236,13 +233,11 @@ export class CalendarWebhookProcessor {
           const now = new Date().toISOString();
           const existing = await tenantDb(knex, provider.tenant).table('calendar_provider_health')
             .where('calendar_provider_id', provider.id)
-            .andWhere('tenant', provider.tenant)
             .first();
 
           if (existing) {
             await tenantDb(knex, provider.tenant).table('calendar_provider_health')
               .where('calendar_provider_id', provider.id)
-              .andWhere('tenant', provider.tenant)
               .update({
                 last_webhook_received_at: now,
                 updated_at: now
@@ -302,7 +297,6 @@ export class CalendarWebhookProcessor {
               const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
                 .where('external_event_id', change.id)
                 .andWhere('calendar_provider_id', provider.id)
-                .andWhere('tenant', provider.tenant)
                 .first();
 
               if (!mapping) {
@@ -482,7 +476,6 @@ export class CalendarWebhookProcessor {
                 const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
                   .where('external_event_id', change.id)
                   .andWhere('calendar_provider_id', provider.id)
-                  .andWhere('tenant', provider.tenant)
                   .first();
 
                 if (!mapping) {

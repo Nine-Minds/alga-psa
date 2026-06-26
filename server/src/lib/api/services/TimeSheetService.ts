@@ -105,7 +105,6 @@ export class TimeSheetService extends BaseService<any> {
         if (filters.has_entries !== undefined) {
           const subquery = tenantDb(knex, context.tenant).table('time_entries')
             .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-            .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
             .select(knex.raw('1'));
           
           if (filters.has_entries) {
@@ -132,7 +131,6 @@ export class TimeSheetService extends BaseService<any> {
       // Add computed fields
       const timeEntrySubquery = tenantDb(knex, context.tenant).table('time_entries')
         .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-        .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
         .select([
           knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
           knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
@@ -233,7 +231,7 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
 
-        const [timeSheet] = await trx(this.tableName)
+        const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
           .insert(timeSheetData)
           .returning('*');
 

@@ -629,7 +629,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'exchange_rate_basis_points',
         'invoice_type'
       )
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
@@ -663,7 +662,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'is_discount',
         'tax_region'
       )
-      .where('tenant', tenantId)
       .whereIn('item_id', chargeIds);
 
     return new Map(rows.map((row) => [row.item_id, row]));
@@ -695,15 +693,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
     const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email', 'payment_terms')
-      .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));
 
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
 
     const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
-      .where('tenant', tenantId)
-      .andWhere('integration_type', this.type)
+      .where('integration_type', this.type)
       .whereIn('alga_entity_type', ['client'])
       .whereIn('alga_entity_id', Array.from(clientIds))
       .modify((qb) => {

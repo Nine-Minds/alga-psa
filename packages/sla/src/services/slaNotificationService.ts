@@ -137,7 +137,7 @@ export async function sendSlaNotification(
 
     // 5. Look up SLA policy name
     const policy = await scopedDb.table('sla_policies')
-      .where({ tenant: context.tenant, sla_policy_id: context.slaPolicyId })
+      .where({ sla_policy_id: context.slaPolicyId })
       .select('policy_name')
       .first();
 
@@ -250,7 +250,7 @@ export async function sendSlaResponseMetNotification(
 
     // Get ticket details for assignee
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select('assigned_to', 'board_id')
       .first();
 
@@ -319,7 +319,7 @@ export async function sendSlaResolutionMetNotification(
 
     // Get ticket details for assignee
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select('assigned_to', 'board_id')
       .first();
 
@@ -385,7 +385,7 @@ async function findMatchingThreshold(
 } | null> {
   // Find threshold that matches or is just below the current percentage
   const threshold = await tenantDb(trx, tenant).table('sla_notification_thresholds')
-    .where({ tenant, sla_policy_id: policyId })
+    .where({ sla_policy_id: policyId })
     .where('threshold_percent', '<=', thresholdPercent)
     .orderBy('threshold_percent', 'desc')
     .first();
@@ -425,7 +425,7 @@ async function getRecipients(
   // Get assignee
   if (threshold.notify_assignee && context.assigneeId) {
     const assignee = await scopedDb.table('users')
-      .where({ tenant, user_id: context.assigneeId })
+      .where({ user_id: context.assigneeId })
       .select('user_id', 'email', 'first_name', 'last_name')
       .first();
 
@@ -438,13 +438,13 @@ async function getRecipients(
   // Get board manager
   if (threshold.notify_board_manager && context.boardId) {
     const board = await scopedDb.table('boards')
-      .where({ tenant, board_id: context.boardId })
+      .where({ board_id: context.boardId })
       .select('manager_user_id')
       .first();
 
     if (board?.manager_user_id && !seenUserIds.has(board.manager_user_id)) {
       const manager = await scopedDb.table('users')
-        .where({ tenant, user_id: board.manager_user_id })
+        .where({ user_id: board.manager_user_id })
         .select('user_id', 'email', 'first_name', 'last_name')
         .first();
 
@@ -461,7 +461,6 @@ async function getRecipients(
     scopedDb.tenantJoin(escalationManagersQuery, 'users as u', 'em.manager_user_id', 'u.user_id');
 
     const escalationManagers = await escalationManagersQuery
-      .where('em.tenant', tenant)
       .where('em.board_id', context.boardId)
       .select(
         'u.user_id',
@@ -536,7 +535,8 @@ async function sendEmailNotification(
     const emailService = getEmailNotificationService();
 
     // Get the SLA notification subtype ID
-    const subtype = await tenantDb(trx, tenant).table('notification_subtypes')
+    const subtype = await tenantDb(trx, tenant)
+      .unscoped('notification_subtypes', 'global notification subtype catalog shared across tenants')
       .whereIn('name', [templateName, 'SLA Warning', 'SLA Breach'])
       .first();
 
@@ -613,7 +613,6 @@ export async function findCrossedThresholds(
   scopedDb.tenantJoin(thresholdsQuery, 'tickets as t', 't.sla_policy_id', 'snt.sla_policy_id');
 
   const thresholds = await thresholdsQuery
-    .where('t.tenant', tenant)
     .where('t.ticket_id', ticketId)
     .where('snt.threshold_percent', '>', lastNotifiedThreshold)
     .where('snt.threshold_percent', '<=', elapsedPercent)
@@ -645,7 +644,6 @@ export async function checkAndSendThresholdNotifications(
   scopedDb.tenantJoin(thresholdsQuery, 'tickets as t', 't.sla_policy_id', 'snt.sla_policy_id');
 
   const thresholds = await thresholdsQuery
-    .where('t.tenant', tenant)
     .where('t.ticket_id', ticketId)
     .where('snt.threshold_percent', '>', lastNotifiedThreshold)
     .where('snt.threshold_percent', '<=', elapsedPercent)
@@ -662,7 +660,6 @@ export async function checkAndSendThresholdNotifications(
   scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
 
   const ticket = await ticketQuery
-    .where('t.tenant', tenant)
     .where('t.ticket_id', ticketId)
     .select(
       't.ticket_id',

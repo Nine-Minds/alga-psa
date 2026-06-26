@@ -468,7 +468,6 @@ export class CalendarProviderService {
       // Delete calendar event mappings
       await tenantDb(db, provider.tenant).table('calendar_event_mappings')
         .where('calendar_provider_id', providerId)
-        .andWhere('tenant', provider.tenant)
         .del();
 
       // Delete main provider record

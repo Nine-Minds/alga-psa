@@ -74,7 +74,6 @@ export async function getTenantSettings(
     const scopedDb = tenantDb(trx, tenant) as any;
     // Get tenant settings from tenant_settings table
     const settings = await scopedDb.table('tenant_settings')
-      .where({ tenant })
       .first();
 
     // Extract settings from JSONB column or use defaults
@@ -89,7 +88,6 @@ export async function getTenantSettings(
     if (!tenantName) {
       // Try to get tenant name from tenants table
       const tenantRecord = await scopedDb.table('tenants')
-        .where({ tenant })
         .select('client_name')
         .first();
       tenantName = tenantRecord?.client_name;

@@ -78,8 +78,7 @@ async function ensureBoardsAreActiveInTenant(
   }
 
   const rows = await tenantDb(trx, tenant).table('boards')
-    .where({ tenant })
-    .andWhere('is_inactive', false)
+    .where('is_inactive', false)
     .whereIn('board_id', boardIds)
     .select('board_id');
 
@@ -102,13 +101,12 @@ async function ensureBoardsAreActiveOrAlreadyAssignedToGroup(
   }
 
   const activeRows = await tenantDb(trx, tenant).table('boards')
-    .where({ tenant })
-    .andWhere('is_inactive', false)
+    .where('is_inactive', false)
     .whereIn('board_id', boardIds)
     .select('board_id');
 
   const existingMembershipRows = await tenantDb(trx, tenant).table('client_portal_visibility_group_boards')
-    .where({ tenant, group_id: groupId })
+    .where({ group_id: groupId })
     .whereIn('board_id', boardIds)
     .select('board_id');
 
@@ -133,7 +131,6 @@ async function resolveManagementScope(
   if (user.user_type === 'client' && user.contact_id) {
     const actorContact = await tenantDb(trx, tenant).table('contacts')
       .where({
-        tenant,
         contact_name_id: user.contact_id
       })
       .select('client_id', 'is_client_admin')
@@ -148,7 +145,6 @@ async function resolveManagementScope(
     if (targetContactId) {
       const targetContact = await tenantDb(trx, tenant).table('contacts')
         .where({
-          tenant,
           contact_name_id: targetContactId
         })
         .select('client_id')
@@ -180,7 +176,6 @@ async function resolveManagementScope(
   if (targetContactId) {
     const targetContact = await tenantDb(trx, tenant).table('contacts')
       .where({
-        tenant,
         contact_name_id: targetContactId
       })
       .select('client_id')
@@ -217,7 +212,6 @@ export const getClientPortalVisibilityGroups = withAuth(async (
 
     const groups = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
       .where({
-        tenant,
         client_id: clientId
       })
       .select('group_id', 'client_id', 'name', 'description')
@@ -225,7 +219,6 @@ export const getClientPortalVisibilityGroups = withAuth(async (
 
     const boardCounts = groups.length
       ? await tenantDb(trx, tenant).table('client_portal_visibility_group_boards')
-        .where({ tenant })
         .whereIn('group_id', groups.map((group) => group.group_id))
         .select('group_id')
         .count('board_id as board_count')
@@ -234,7 +227,6 @@ export const getClientPortalVisibilityGroups = withAuth(async (
 
     const assignmentCounts = groups.length
       ? await tenantDb(trx, tenant).table('contacts')
-        .where({ tenant })
         .whereIn('portal_visibility_group_id', groups.map((group) => group.group_id))
         .select('portal_visibility_group_id')
         .count('contact_name_id as assigned_contact_count')
@@ -284,7 +276,6 @@ export const getClientPortalVisibilityGroup = withAuth(async (
 
     const group = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
       .where({
-        tenant,
         client_id: clientId,
         group_id: groupId
       })
@@ -300,19 +291,17 @@ export const getClientPortalVisibilityGroup = withAuth(async (
 
     const boardRows = await boardRowsQuery
       .where({
-        'cvgb.tenant': tenant,
         'cvgb.group_id': groupId
       })
       .select('boards.board_id', 'boards.board_name', 'boards.is_default') as VisibilityGroupBoard[];
 
     const boardCountRows = await tenantDb(trx, tenant).table('client_portal_visibility_group_boards')
-      .where({ tenant, group_id: groupId })
+      .where({ group_id: groupId })
       .count('* as board_count')
       .first();
 
     const assignmentCountRows = await tenantDb(trx, tenant).table('contacts')
       .where({
-        tenant,
         portal_visibility_group_id: groupId
       })
       .count('* as assigned_contact_count')
@@ -342,8 +331,7 @@ export const getClientPortalVisibilityGroupBoards = withAuth(async (
     await resolveManagementScope(trx, tenant, currentUser, targetClientId, targetContactId);
 
     return tenantDb(trx, tenant).table('boards')
-      .where({ tenant })
-      .andWhere('is_inactive', false)
+      .where('is_inactive', false)
       .select('board_id', 'board_name');
   });
 });
@@ -360,7 +348,6 @@ export const getClientPortalVisibilityContacts = withAuth(async (
 
     return tenantDb(trx, tenant).table('contacts')
       .where({
-        tenant,
         client_id: clientId
       })
       .select('contact_name_id', 'full_name', 'email', 'is_client_admin', 'portal_visibility_group_id')
@@ -435,7 +422,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
     await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
 
     const existing = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
-      .where({ tenant, group_id: groupId, client_id: clientId })
+      .where({ group_id: groupId, client_id: clientId })
       .first('group_id');
 
     if (!existing) {
@@ -443,7 +430,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
     }
 
     await tenantDb(trx, tenant).table('client_portal_visibility_groups')
-      .where({ tenant, group_id: groupId })
+      .where({ group_id: groupId })
       .update({
         name: payload.name,
         description: payload.description,
@@ -451,7 +438,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
       });
 
     await tenantDb(trx, tenant).table('client_portal_visibility_group_boards')
-      .where({ tenant, group_id: groupId })
+      .where({ group_id: groupId })
       .delete();
 
     if (boardIds.length > 0) {
@@ -479,7 +466,7 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
     const { clientId } = await resolveManagementScope(trx, tenant, currentUser);
 
     const existing = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
-      .where({ tenant, client_id: clientId, group_id: groupId })
+      .where({ client_id: clientId, group_id: groupId })
       .first();
 
     if (!existing) {
@@ -488,7 +475,6 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
 
     const assignedCount = await tenantDb(trx, tenant).table('contacts')
       .where({
-        tenant,
         client_id: clientId,
         portal_visibility_group_id: groupId
       })
@@ -500,11 +486,11 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
     }
 
     await tenantDb(trx, tenant).table('client_portal_visibility_group_boards')
-      .where({ tenant, group_id: groupId })
+      .where({ group_id: groupId })
       .delete();
 
     await tenantDb(trx, tenant).table('client_portal_visibility_groups')
-      .where({ tenant, group_id: groupId })
+      .where({ group_id: groupId })
       .delete();
 
     revalidatePath('/client-portal/client-settings?tab=visibility-groups');
@@ -523,7 +509,6 @@ export const assignClientPortalVisibilityGroupToContact = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const contact = await tenantDb(trx, tenant).table('contacts')
       .where({
-        tenant,
         contact_name_id: contactId
       })
       .first('client_id');
@@ -537,7 +522,6 @@ export const assignClientPortalVisibilityGroupToContact = withAuth(async (
     if (groupId) {
       const group = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
         .where({
-          tenant,
           group_id: groupId,
           client_id: clientId
         })
@@ -549,7 +533,7 @@ export const assignClientPortalVisibilityGroupToContact = withAuth(async (
     }
 
     await tenantDb(trx, tenant).table('contacts')
-      .where({ tenant, contact_name_id: contactId })
+      .where({ contact_name_id: contactId })
       .update({
         portal_visibility_group_id: groupId,
         updated_at: new Date().toISOString()

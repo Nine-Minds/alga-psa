@@ -156,13 +156,11 @@ export async function POST(request: NextRequest) {
             for (const provider of providers) {
               const existing = await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                 .where('calendar_provider_id', provider.provider_id)
-                .andWhere('tenant', provider.tenant)
                 .first();
 
               if (existing) {
                 await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                   .where('calendar_provider_id', provider.provider_id)
-                  .andWhere('tenant', provider.tenant)
                   .update({
                     last_webhook_received_at: now,
                     updated_at: now

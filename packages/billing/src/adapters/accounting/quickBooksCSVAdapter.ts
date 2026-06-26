@@ -465,7 +465,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const invoiceIds = Array.from(invoiceRefs.keys());
     const invoices = await tenantDb(knex, tenantId).table<InvoiceTaxSourceRow>('invoices')
       .select('invoice_id', 'tax_source')
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     const invoiceTaxSources = new Map(invoices.map((inv) =>
@@ -522,7 +521,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         'currency_code',
         'tax_source'
       )
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
@@ -556,7 +554,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         'is_discount',
         'tax_region'
       )
-      .where('tenant', tenantId)
       .whereIn('item_id', chargeIds);
 
     return new Map(rows.map((row) => [row.item_id, row]));
@@ -581,7 +578,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email', 'payment_terms')
-      .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));
 
     return new Map(clients.map((client) => [client.client_id, client]));

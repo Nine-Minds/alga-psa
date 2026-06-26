@@ -54,7 +54,6 @@ export async function cloneTemplateContractLine(
   const targetContractLineId = contractLineId;
 
   const templateLine = await tenantDb(trx, tenant).table('contract_template_lines')
-    .where('tenant', tenant)
     .where('template_line_id', templateContractLineId)
     .first();
 
@@ -78,7 +77,7 @@ export async function cloneTemplateContractLine(
   // Update the contract_line's custom_rate directly (no separate pricing table needed)
   if (appliedCustomRate !== null) {
     await tenantDb(trx, tenant).table('contract_lines')
-      .where({ tenant, contract_line_id: targetContractLineId })
+      .where({ contract_line_id: targetContractLineId })
       .update({
         custom_rate: appliedCustomRate,
         updated_at: trx.fn.now()
@@ -101,7 +100,6 @@ async function cloneServices(
   };
 
   const services = await tenantDb(trx, tenant).table('contract_template_line_services')
-    .where('tenant', tenant)
     .where('template_line_id', templateContractLineId)
     .select('service_id', 'quantity', 'custom_rate');
 
@@ -149,7 +147,6 @@ async function cloneServiceConfiguration(
   serviceId: string
 ) {
   const configurations = await tenantDb(trx, tenant).table('contract_template_line_service_configuration')
-    .where('tenant', tenant)
     .where('template_line_id', templateContractLineId)
     .where('service_id', serviceId)
     .select('config_id', 'configuration_type', 'custom_rate', 'quantity');
@@ -202,7 +199,6 @@ async function cloneBucketConfig(
   targetConfigId: string
 ) {
   const bucketConfig = await tenantDb(trx, tenant).table('contract_template_line_service_bucket_config')
-    .where('tenant', tenant)
     .where('config_id', sourceConfigId)
     .first('total_minutes', 'billing_period', 'overage_rate', 'allow_rollover');
 
@@ -231,7 +227,6 @@ async function cloneFixedConfig(
   targetConfigId: string
 ) {
   const fixedConfig = await tenantDb(trx, tenant).table('contract_template_line_service_fixed_config')
-    .where('tenant', tenant)
     .where('config_id', sourceConfigId)
     .first('base_rate');
 
@@ -264,7 +259,6 @@ async function cloneHourlyConfig(
   configuration: TemplateServiceConfigurationRow
 ) {
   const hourlyConfig = await tenantDb(trx, tenant).table('contract_template_line_service_hourly_config')
-    .where('tenant', tenant)
     .where('config_id', sourceConfigId)
     .first(
       'minimum_billable_time',
@@ -334,7 +328,6 @@ async function cloneUsageConfig(
   configuration: TemplateServiceConfigurationRow
 ) {
   const usageConfig = await tenantDb(trx, tenant).table('contract_template_line_service_usage_config')
-    .where('tenant', tenant)
     .where('config_id', sourceConfigId)
     .first('unit_of_measure', 'enable_tiered_pricing', 'minimum_usage', 'base_rate');
 
@@ -372,7 +365,6 @@ async function resolveTemplateCustomRate(
   type CustomRateRow = { custom_rate: number | string | null };
 
   const templateLine = await tenantDb(trx, tenant).table('contract_template_lines')
-    .where('tenant', tenant)
     .where('template_id', templateContractId)
     .where('template_line_id', templateContractLineId)
     .first('custom_rate');

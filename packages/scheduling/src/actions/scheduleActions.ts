@@ -53,7 +53,7 @@ async function getTicketIdForAppointmentRequest(
 ): Promise<string | undefined> {
   const row = await withTransaction(db, async (trx: Knex.Transaction) => {
     return await (tenantDb(trx, tenant) as any).table('appointment_requests')
-      .where({ tenant, appointment_request_id: appointmentRequestId })
+      .where({ appointment_request_id: appointmentRequestId })
       .select('ticket_id')
       .first();
   });
@@ -686,7 +686,6 @@ export const deleteScheduleEntry = withAuth(async (
           return await (tenantDb(trx, tenant) as any).table('online_meetings')
             .where({
               appointment_request_id: appointmentRequestRow.appointment_request_id,
-              tenant,
             })
             .first();
         })
@@ -696,7 +695,6 @@ export const deleteScheduleEntry = withAuth(async (
       const scopedDb = tenantDb(trx, tenantId) as any;
       // Clean up schedule conflicts referencing this entry
       await scopedDb.table('schedule_conflicts')
-        .where({ tenant: tenantId })
         .where(function(this: any) {
           this.where('entry_id_1', masterEntryId).orWhere('entry_id_2', masterEntryId);
         })

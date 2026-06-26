@@ -60,7 +60,7 @@ export async function escalateTicket(
 
     // 1. Get ticket details
     const ticket = await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .select(
         'ticket_id',
         'ticket_number',
@@ -86,7 +86,7 @@ export async function escalateTicket(
 
     // 2. Update ticket escalation fields
     await scopedDb.table('tickets')
-      .where({ tenant, ticket_id: ticketId })
+      .where({ ticket_id: ticketId })
       .update({
         escalated: true,
         escalation_level: newLevel,
@@ -189,7 +189,7 @@ export async function getEscalationManagerForTicket(
 
   // Get ticket's board
   const ticket = await scopedDb.table('tickets')
-    .where({ tenant, ticket_id: ticketId })
+    .where({ ticket_id: ticketId })
     .select('board_id')
     .first();
 
@@ -215,7 +215,7 @@ export async function checkEscalationNeeded(
 
   // Get ticket and its SLA policy target
   const ticket = await scopedDb.table('tickets')
-    .where({ tenant, ticket_id: ticketId })
+    .where({ ticket_id: ticketId })
     .select(
       'sla_policy_id',
       'priority_id',
@@ -230,7 +230,6 @@ export async function checkEscalationNeeded(
   // Get the SLA target for this priority
   const target = await scopedDb.table('sla_policy_targets')
     .where({
-      tenant,
       sla_policy_id: ticket.sla_policy_id,
       priority_id: ticket.priority_id
     })
@@ -278,7 +277,6 @@ async function getEscalationManagerInternal(
   scopedDb.tenantJoin(configQuery, 'users as u', 'em.manager_user_id', 'u.user_id', { type: 'left' });
 
   const config = await configQuery
-    .where('em.tenant', tenant)
     .where('em.board_id', boardId)
     .where('em.escalation_level', level)
     .select(
@@ -309,7 +307,6 @@ async function addEscalationManagerAsResource(
     // Check if this manager is already a resource on this ticket
     const existingResource = await scopedDb.table('ticket_resources')
       .where({
-        tenant,
         ticket_id: ticketId,
         additional_user_id: managerId
       })
@@ -319,7 +316,6 @@ async function addEscalationManagerAsResource(
       // Update the role to reflect new escalation level
       await scopedDb.table('ticket_resources')
         .where({
-          tenant,
           assignment_id: existingResource.assignment_id
         })
         .update({
@@ -405,14 +401,16 @@ async function sendEscalationEmailNotification(
     const emailService = getEmailNotificationService();
 
     // Get the SLA Escalation notification subtype ID
-    const subtype = await tenantDb(trx, tenant).table('notification_subtypes')
+    const subtype = await tenantDb(trx, tenant)
+      .unscoped('notification_subtypes', 'global notification subtype catalog shared across tenants')
       .where({ name: 'SLA Escalation' })
       .first();
 
     if (!subtype) {
       console.warn('SLA Escalation notification subtype not found, falling back to SLA Warning');
       // Try to fall back to SLA Warning subtype
-      const fallbackSubtype = await tenantDb(trx, tenant).table('notification_subtypes')
+      const fallbackSubtype = await tenantDb(trx, tenant)
+        .unscoped('notification_subtypes', 'global notification subtype catalog shared across tenants')
         .where({ name: 'SLA Warning' })
         .first();
 
@@ -430,7 +428,6 @@ async function sendEscalationEmailNotification(
     scopedDb.tenantJoin(ticketDetailsQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
 
     const ticketDetails = await ticketDetailsQuery
-      .where('t.tenant', tenant)
       .where('t.ticket_id', ticketId)
       .select(
         'c.client_name as client_name',
@@ -441,7 +438,7 @@ async function sendEscalationEmailNotification(
 
     // Get recipient name
     const recipient = await scopedDb.table('users')
-      .where({ tenant, user_id: userId })
+      .where({ user_id: userId })
       .select('first_name', 'last_name')
       .first();
 

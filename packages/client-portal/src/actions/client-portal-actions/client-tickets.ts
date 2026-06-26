@@ -76,7 +76,6 @@ async function resolveVisibleTicket(
     .select('t.*')
     .where({
       't.ticket_id': ticketId,
-      't.tenant': tenant,
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
@@ -181,7 +180,6 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         additionalAgentsSubquery.as('additional_agents')
       )
       .where({
-        't.tenant': tenant,
         't.client_id': visibility.clientId
       });
 
@@ -272,7 +270,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         )
         .where({
           't.ticket_id': ticketId,
-          't.tenant': tenant,
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
@@ -285,7 +282,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       documentsQuery.where({
         'da.entity_id': ticketId,
         'da.entity_type': 'ticket',
-        'd.tenant': tenant,
         'd.is_client_visible': true,
       });
 
@@ -325,7 +321,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       scopedDb.tenantJoin(linkedAssetsQuery, 'assets as a', 'aa.asset_id', 'a.asset_id');
       linkedAssetsQuery
         .where({
-          'aa.tenant': tenant,
           'aa.entity_id': ticketId,
           'aa.entity_type': 'ticket',
           'a.client_id': visibility.clientId,
@@ -350,8 +345,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         // Get conversations
         scopedDb.table('comments')
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          ticket_id: ticketId
         })
         .orderBy('created_at', 'asc'),
 
@@ -390,7 +384,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         try {
           // First, get the user's contact_id
           const userDbRecord = await tenantDb(db, tenant).table('users')
-            .where({ user_id: userRecord.user_id, tenant })
+            .where({ user_id: userRecord.user_id })
             .first();
 
           if (userDbRecord?.contact_id) {
@@ -432,7 +426,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       ? await tenantDb(db, tenant).table('contacts')
         .select('contact_name_id', 'full_name', 'email')
         .whereIn('contact_name_id', commentContactIds)
-        .andWhere({ tenant })
       : [];
 
     const contactMap = commentContacts.reduce((acc, contactRecord) => ({
@@ -773,7 +766,6 @@ export const updateTicketStatus = withAuth(async (
 
       const statusForBoard = await tenantDb(trx, tenant).table('statuses')
         .where({
-          tenant,
           status_id: newStatusId,
           status_type: 'ticket',
           board_id: ticket.board_id,
@@ -787,7 +779,7 @@ export const updateTicketStatus = withAuth(async (
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
       const oldStatus = await tenantDb(trx, tenant).table('statuses')
-        .where({ tenant, status_id: oldStatusId })
+        .where({ status_id: oldStatusId })
         .first('status_id', 'is_closed');
 
       const isClosing = !!statusForBoard.is_closed && !oldStatus?.is_closed;
@@ -1053,7 +1045,6 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
-          'd.tenant': tenant,
           'd.is_client_visible': true,
         }) as unknown as Promise<IDocument[]>;
     });
@@ -1234,7 +1225,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
 
       // Get the full ticket data for return
       const fullTicket = await tenantDb(trx, tenant).table('tickets')
-        .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
+        .where({ ticket_id: ticketResult.ticket_id })
         .first();
 
       if (!fullTicket) {

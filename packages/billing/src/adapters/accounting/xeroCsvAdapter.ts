@@ -473,7 +473,6 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'client_id',
         'currency_code'
       )
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
@@ -504,7 +503,6 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'tax_amount',
         'tax_region'
       )
-      .where('tenant', tenantId)
       .whereIn('item_id', chargeIds);
 
     return new Map(rows.map((row) => [row.item_id, row]));
@@ -536,7 +534,6 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
 
     const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email')
-      .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));
 
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));

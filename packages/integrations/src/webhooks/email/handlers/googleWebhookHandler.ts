@@ -136,7 +136,6 @@ export async function handleGoogleWebhook(request: NextRequest) {
           provider = await tenantDb(knex, cfg.tenant)
             .table('email_providers')
             .where('id', cfg.email_provider_id)
-            .andWhere('tenant', cfg.tenant)
             .andWhere('provider_type', 'google')
             .andWhere('is_active', true)
             .first();
@@ -170,7 +169,6 @@ export async function handleGoogleWebhook(request: NextRequest) {
     googleConfig = await tenantDb(knex, provider.tenant)
       .table('google_email_provider_config')
       .where('email_provider_id', provider.id)
-      .andWhere('tenant', provider.tenant)
       .first();
 
     if (!googleConfig) {

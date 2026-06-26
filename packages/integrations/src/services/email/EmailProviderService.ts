@@ -84,15 +84,15 @@ export class EmailProviderService {
         const providerDb = tenantDb(db, provider.tenant);
         if (provider.provider_type === 'google') {
           vendorConfig = await providerDb.table('google_email_provider_config')
-            .where({ email_provider_id: provider.id, tenant: provider.tenant })
+            .where('email_provider_id', provider.id)
             .first();
         } else if (provider.provider_type === 'microsoft') {
           vendorConfig = await providerDb.table('microsoft_email_provider_config')
-            .where({ email_provider_id: provider.id, tenant: provider.tenant })
+            .where('email_provider_id', provider.id)
             .first();
         } else if (provider.provider_type === 'imap') {
           vendorConfig = await providerDb.table('imap_email_provider_config')
-            .where({ email_provider_id: provider.id, tenant: provider.tenant })
+            .where('email_provider_id', provider.id)
             .first();
         }
         return this.mapCurrentDbRowToProvider(provider, vendorConfig);
@@ -124,11 +124,11 @@ export class EmailProviderService {
       let vendorConfig = null;
       if (provider.provider_type === 'google') {
         vendorConfig = await scopedDb.table('google_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
+          .where('email_provider_id', providerId)
           .first();
       } else if (provider.provider_type === 'microsoft') {
         vendorConfig = await scopedDb.table('microsoft_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
+          .where('email_provider_id', providerId)
           .first();
       } else if (provider.provider_type === 'imap') {
         vendorConfig = await scopedDb.table('imap_email_provider_config')
@@ -275,7 +275,7 @@ export class EmailProviderService {
           }
           
           await scopedDb.table('google_email_provider_config')
-            .where({ email_provider_id: providerId, tenant: existingProvider.tenant })
+            .where('email_provider_id', providerId)
             .update({
               ...updatePayload,
               updated_at: db.fn.now()
@@ -283,7 +283,7 @@ export class EmailProviderService {
         } else if (existingProvider.provider_type === 'microsoft') {
           // Update Microsoft-specific configuration
           await scopedDb.table('microsoft_email_provider_config')
-            .where({ email_provider_id: providerId, tenant: existingProvider.tenant })
+            .where('email_provider_id', providerId)
             .update({
               ...mergedConfig,
               updated_at: db.fn.now()
@@ -368,11 +368,11 @@ export class EmailProviderService {
       // Delete vendor-specific configuration first
       if (provider.provider_type === 'google') {
         await scopedDb.table('google_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
+          .where('email_provider_id', providerId)
           .del();
       } else if (provider.provider_type === 'microsoft') {
         await scopedDb.table('microsoft_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
+          .where('email_provider_id', providerId)
           .del();
       } else if (provider.provider_type === 'imap') {
         await scopedDb.table('imap_email_provider_config')
