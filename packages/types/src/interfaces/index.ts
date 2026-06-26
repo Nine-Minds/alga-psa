@@ -6,6 +6,7 @@ export * from './accountingExport.interfaces';
 export * from './accountingExportAdapter.interfaces';
 export * from './activity.interfaces';
 export * from './asset.interfaces';
+export * from './inventory.interfaces';
 export type {
   IUser,
   IRole,
