@@ -1357,6 +1357,23 @@ function buildTicketListSearchPrefixTsquery(raw: string): string | null {
   return tokens.map((token) => `${token}:*`).join(' & ');
 }
 
+function tenantScopedDerivedTableSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableName: string,
+  alias: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const scoped = tenantDb(conn, tenant)
+    .table(tableName)
+    .select('*')
+    .toSQL();
+
+  return {
+    sql: `(${scoped.sql}) ${alias}`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
 function applyTicketListIndexedSearchFilter(
   trx: Knex.Transaction,
   baseQuery: Knex.QueryBuilder,
@@ -1380,6 +1397,8 @@ function applyTicketListIndexedSearchFilter(
       : 'si.client_scope_id IS NULL';
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
   const ilikePattern = `%${rawSearch}%`;
+  const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
+  const titleSearchTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 't2');
 
   // Citus cannot push down an OR that mixes correlated EXISTS against two different
   // distributed tables (app_search_index vs tickets). Rewrite as UNION ALL of
@@ -1390,7 +1409,7 @@ function applyTicketListIndexedSearchFilter(
           CASE WHEN si.object_type = 'ticket_comment' THEN si.parent_id::uuid
                ELSE si.object_id::uuid END AS ticket_id,
           si.tenant
-        FROM app_search_index si
+        FROM ${searchIndex.sql}
         CROSS JOIN (
           SELECT
             websearch_to_tsquery('english', ?) AS tsq,
@@ -1398,8 +1417,7 @@ function applyTicketListIndexedSearchFilter(
             ?::text AS raw,
             ?::text AS identifier
         ) q
-        WHERE si.tenant = ?::uuid
-          AND si.object_type = ANY(?::text[])
+        WHERE si.object_type = ANY(?::text[])
           AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
           AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
           AND (si.is_internal_only = false OR ?::boolean = true)
@@ -1417,12 +1435,12 @@ function applyTicketListIndexedSearchFilter(
           )
   `;
   const legABindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
     rawSearch,
     prefixTsquery,
     prefixTsquery,
     rawSearch,
     identifier,
-    tenant,
     ['ticket', 'ticket_comment'],
     ['ticket:read'],
     user.user_id,
@@ -1433,21 +1451,28 @@ function applyTicketListIndexedSearchFilter(
 
   const legB = `
         SELECT t2.ticket_id, t2.tenant
-        FROM tickets t2
-        WHERE t2.tenant = ?::uuid
-          AND (t2.title ILIKE ? OR t2.ticket_number ILIKE ?)
+        FROM ${titleSearchTickets.sql}
+        WHERE (t2.title ILIKE ? OR t2.ticket_number ILIKE ?)
   `;
-  const legBBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern];
+  const legBBindings: Knex.RawBinding[] = [
+    ...titleSearchTickets.bindings,
+    ilikePattern,
+    ilikePattern,
+  ];
 
   // Leg A also surfaces bundled-child matches under the master when bundleView='bundled':
   // a search-index hit on a child ticket (or its comment) maps to the master ticket id.
   let legD = '';
   const legDBindings: Knex.RawBinding[] = [];
   if (includeBundledChildren) {
+    const bundledSearchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
+    const childTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'child');
+    const titleSearchChildTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'tc');
+
     legD = `
         UNION ALL
         SELECT child.master_ticket_id AS ticket_id, child.tenant
-        FROM app_search_index si
+        FROM ${bundledSearchIndex.sql}
         CROSS JOIN (
           SELECT
             websearch_to_tsquery('english', ?) AS tsq,
@@ -1455,15 +1480,14 @@ function applyTicketListIndexedSearchFilter(
             ?::text AS raw,
             ?::text AS identifier
         ) q
-        JOIN tickets child
+        JOIN ${childTickets.sql}
           ON child.tenant = si.tenant
          AND child.master_ticket_id IS NOT NULL
          AND (
            (si.object_type = 'ticket' AND child.ticket_id::text = si.object_id)
            OR (si.object_type = 'ticket_comment' AND child.ticket_id::text = si.parent_id)
          )
-        WHERE si.tenant = ?::uuid
-          AND si.object_type = ANY(?::text[])
+        WHERE si.object_type = ANY(?::text[])
           AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
           AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
           AND (si.is_internal_only = false OR ?::boolean = true)
@@ -1482,25 +1506,25 @@ function applyTicketListIndexedSearchFilter(
 
         UNION ALL
         SELECT tc.master_ticket_id AS ticket_id, tc.tenant
-        FROM tickets tc
-        WHERE tc.tenant = ?::uuid
-          AND tc.master_ticket_id IS NOT NULL
+        FROM ${titleSearchChildTickets.sql}
+        WHERE tc.master_ticket_id IS NOT NULL
           AND (tc.title ILIKE ? OR tc.ticket_number ILIKE ?)
     `;
     legDBindings.push(
+      ...bundledSearchIndex.bindings,
       rawSearch,
       prefixTsquery,
       prefixTsquery,
       rawSearch,
       identifier,
-      tenant,
+      ...childTickets.bindings,
       ['ticket', 'ticket_comment'],
       ['ticket:read'],
       user.user_id,
       isInternalUser,
       user.user_id,
       ...clientScopeBindings,
-      tenant,
+      ...titleSearchChildTickets.bindings,
       ilikePattern,
       ilikePattern,
     );

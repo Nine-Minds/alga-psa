@@ -87,6 +87,23 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+function tenantScopedDerivedTableSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableName: string,
+  alias: string,
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const scoped = tenantDb(conn, tenant)
+    .table(tableName)
+    .select('*')
+    .toSQL();
+
+  return {
+    sql: `(${scoped.sql}) ${alias}`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<ActionPermissionError | null> {
     try {
         const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
@@ -364,6 +381,9 @@ export const searchProjectListIds = withAuth(async (
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
+    const projectTasks = tenantScopedDerivedTableSql(trx, tenant, 'project_tasks', 'pt');
+    const projectPhases = tenantScopedDerivedTableSql(trx, tenant, 'project_phases', 'ph');
     const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
       `
         WITH q AS (
@@ -380,17 +400,16 @@ export const searchProjectListIds = withAuth(async (
               WHEN si.object_type IN ('project_phase', 'project_task') THEN si.parent_id
               WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
             END AS project_id
-          FROM app_search_index si
+          FROM ${searchIndex.sql}
           CROSS JOIN q
-          LEFT JOIN project_tasks pt
+          LEFT JOIN ${projectTasks.sql}
             ON si.object_type = 'project_task_comment'
             AND pt.tenant = si.tenant
             AND pt.task_id::text = si.parent_id
-          LEFT JOIN project_phases ph
+          LEFT JOIN ${projectPhases.sql}
             ON ph.tenant = pt.tenant
             AND ph.phase_id = pt.phase_id
-          WHERE si.tenant = ?::uuid
-            AND si.object_type = ANY(?::text[])
+          WHERE si.object_type = ANY(?::text[])
             AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND (si.is_internal_only = false OR ?::boolean = true)
@@ -423,7 +442,9 @@ export const searchProjectListIds = withAuth(async (
         prefixTsquery,
         rawSearch,
         identifier,
-        tenant,
+        ...searchIndex.bindings,
+        ...projectTasks.bindings,
+        ...projectPhases.bindings,
         [...PROJECT_LIST_SEARCH_TYPES],
         ['project:read'],
         user.user_id,

@@ -49,6 +49,23 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+function tenantScopedDerivedTableSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableName: string,
+  alias: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const scoped = tenantDb(conn, tenant)
+    .table(tableName)
+    .select('*')
+    .toSQL();
+
+  return {
+    sql: `(${scoped.sql}) ${alias}`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
@@ -559,6 +576,7 @@ function buildClientListSearchPrefixTsquery(raw: string): string | null {
 }
 
 function applyClientListIndexedSearchFilter(
+  trx: Knex.Transaction,
   baseQuery: Knex.QueryBuilder,
   tenant: string,
   user: { user_id: string; user_type?: string; clientId?: string | null },
@@ -580,6 +598,11 @@ function applyClientListIndexedSearchFilter(
       : 'si.client_scope_id IS NULL';
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
   const ilikePattern = `%${rawSearch}%`;
+  const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
+  const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'im');
+  const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'da');
+  const titleSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'clients', 'c2');
+  const locationSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'client_locations', 'cl_search');
 
   // Citus cannot push down an OR that mixes correlated EXISTS across multiple
   // distributed tables (app_search_index, interactions, document_associations,
@@ -625,59 +648,74 @@ function applyClientListIndexedSearchFilter(
 
   const legA = `
     SELECT si.object_id::uuid AS client_id, si.tenant
-    FROM app_search_index si
+    FROM ${searchIndex.sql}
     ${qCte}
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'client'
+    WHERE si.object_type = 'client'
       ${siFilters}
   `;
-  const legABindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+  const legABindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
+    ...qBindings,
+    ...siFilterBindings,
+  ];
 
   const legB = `
     SELECT im.client_id AS client_id, im.tenant
-    FROM app_search_index si
+    FROM ${searchIndex.sql}
     ${qCte}
-    JOIN interactions im
+    JOIN ${interactions.sql}
       ON im.tenant = si.tenant
      AND im.interaction_id::text = si.object_id
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'interaction'
+    WHERE si.object_type = 'interaction'
       ${siFilters}
   `;
-  const legBBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+  const legBBindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
+    ...qBindings,
+    ...interactions.bindings,
+    ...siFilterBindings,
+  ];
 
   const legC = `
     SELECT da.entity_id::uuid AS client_id, da.tenant
-    FROM app_search_index si
+    FROM ${searchIndex.sql}
     ${qCte}
-    JOIN document_associations da
+    JOIN ${documentAssociations.sql}
       ON da.tenant = si.tenant
      AND da.document_id::text = si.object_id
      AND da.entity_type = 'client'
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'document'
+    WHERE si.object_type = 'document'
       ${siFilters}
   `;
-  const legCBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+  const legCBindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
+    ...qBindings,
+    ...documentAssociations.bindings,
+    ...siFilterBindings,
+  ];
 
   const legD = `
     SELECT c2.client_id, c2.tenant
-    FROM clients c2
-    WHERE c2.tenant = ?::uuid
-      AND (
+    FROM ${titleSearchClients.sql}
+    WHERE (
         c2.client_name ILIKE ?
         OR c2.billing_email ILIKE ?
         OR c2.url ILIKE ?
         OR c2.notes ILIKE ?
       )
   `;
-  const legDBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern, ilikePattern, ilikePattern];
+  const legDBindings: Knex.RawBinding[] = [
+    ...titleSearchClients.bindings,
+    ilikePattern,
+    ilikePattern,
+    ilikePattern,
+    ilikePattern,
+  ];
 
   const legE = `
     SELECT cl_search.client_id, cl_search.tenant
-    FROM client_locations cl_search
-    WHERE cl_search.tenant = ?::uuid
-      AND (
+    FROM ${locationSearchClients.sql}
+    WHERE (
         cl_search.phone ILIKE ?
         OR cl_search.email ILIKE ?
         OR cl_search.address_line1 ILIKE ?
@@ -689,7 +727,7 @@ function applyClientListIndexedSearchFilter(
       )
   `;
   const legEBindings: Knex.RawBinding[] = [
-    tenant,
+    ...locationSearchClients.bindings,
     ilikePattern, ilikePattern, ilikePattern, ilikePattern,
     ilikePattern, ilikePattern, ilikePattern, ilikePattern,
   ];
@@ -797,7 +835,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       }
 
       // Apply filters
-      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
+      baseQuery = applyClientListIndexedSearchFilter(trx, baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
@@ -962,7 +1000,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
-      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
+      baseQuery = applyClientListIndexedSearchFilter(trx, baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);

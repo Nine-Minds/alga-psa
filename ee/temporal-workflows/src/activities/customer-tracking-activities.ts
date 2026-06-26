@@ -12,6 +12,8 @@ import { ContactModel } from '@alga-psa/shared/models/contactModel.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 
+const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = 'customer-tracking-management-tenant-discovery';
+
 /**
  * Get the management tenant ID for 'Nine Minds LLC'
  * @throws Error if management tenant doesn't exist
@@ -19,8 +21,8 @@ import { Knex } from 'knex';
 async function getManagementTenantIdInternal(knex: Knex): Promise<string> {
   const MANAGEMENT_TENANT_NAME = 'Nine Minds LLC';
   
-  // NOTE: tenants is a reference table
-  const tenant = await knex('tenants')
+  const tenant = await tenantDb(knex, MANAGEMENT_TENANT_DISCOVERY_CONTEXT)
+    .unscoped('tenants', 'customer tracking discovers management tenant before tenant context exists')
     .where('client_name', MANAGEMENT_TENANT_NAME)
     .first();
   

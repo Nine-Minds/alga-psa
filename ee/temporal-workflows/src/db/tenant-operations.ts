@@ -14,6 +14,8 @@ import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
 import { normalizeProductCode } from './product-bootstrap-resolver.js';
 
 const logger = () => Context.current().log;
+const TENANT_CREATION_SUBSCRIPTION_DISCOVERY_CONTEXT = 'tenant-creation-subscription-discovery';
+const TENANT_CREATION_BOOTSTRAP_CONTEXT = 'tenant-creation-bootstrap';
 
 export interface InsertStripeSubscriptionForTenantInput {
   tenantId: string;
@@ -110,7 +112,11 @@ export async function createTenantInDB(
     // policy for the case where the prior run has aged out of retention and the
     // subscription metadata stamp was never written.
     if (input.stripeSubscriptionId) {
-      const existing = await knex('stripe_subscriptions')
+      const existing = await tenantDb(knex, TENANT_CREATION_SUBSCRIPTION_DISCOVERY_CONTEXT)
+        .unscoped(
+          'stripe_subscriptions',
+          'tenant creation checks existing Stripe subscription before tenant context exists'
+        )
         .where('stripe_subscription_external_id', input.stripeSubscriptionId)
         .first('tenant');
       if (existing?.tenant) {
@@ -189,7 +195,8 @@ export async function createTenantInDB(
         }
       }
 
-      const tenantResult = await trx('tenants')
+      const tenantResult = await tenantDb(trx, TENANT_CREATION_BOOTSTRAP_CONTEXT)
+        .unscoped('tenants', 'tenant creation inserts tenant row before tenant context exists')
         .insert(tenantData)
         .returning('tenant');
 

@@ -35,6 +35,23 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
+function tenantScopedDerivedTableSql(
+  conn: DbConnection,
+  tenant: string,
+  tableName: string,
+  alias: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const scoped = tenantDb(conn, tenant)
+    .table(tableName)
+    .select('*')
+    .toSQL();
+
+  return {
+    sql: `(${scoped.sql}) ${alias}`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
 function isClientPortalUser(user: QueryActionUser): boolean {
   return user.user_type === 'client';
 }
@@ -404,6 +421,10 @@ export const searchContactListIds = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
+    const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'interaction_match');
+    const noteContacts = tenantScopedDerivedTableSql(trx, tenant, 'contacts', 'note_contact');
+    const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'document_contact_match');
     const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(
       `
         WITH q AS (
@@ -420,23 +441,22 @@ export const searchContactListIds = withAuth(async (
               WHEN si.object_type = 'interaction' THEN interaction_match.contact_name_id::text
               WHEN si.object_type = 'document' THEN coalesce(note_contact.contact_name_id::text, document_contact_match.entity_id::text)
             END AS contact_id
-          FROM app_search_index si
+          FROM ${searchIndex.sql}
           CROSS JOIN q
-          LEFT JOIN interactions interaction_match
+          LEFT JOIN ${interactions.sql}
             ON si.object_type = 'interaction'
             AND interaction_match.tenant = si.tenant
             AND interaction_match.interaction_id::text = si.object_id
-          LEFT JOIN contacts note_contact
+          LEFT JOIN ${noteContacts.sql}
             ON si.object_type = 'document'
             AND note_contact.tenant = si.tenant
             AND note_contact.notes_document_id::text = si.object_id
-          LEFT JOIN document_associations document_contact_match
+          LEFT JOIN ${documentAssociations.sql}
             ON si.object_type = 'document'
             AND document_contact_match.tenant = si.tenant
             AND document_contact_match.document_id::text = si.object_id
             AND document_contact_match.entity_type = 'contact'
-          WHERE si.tenant = ?::uuid
-            AND si.object_type = ANY(?::text[])
+          WHERE si.object_type = ANY(?::text[])
             AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND (si.is_internal_only = false OR ?::boolean = true)
@@ -468,7 +488,10 @@ export const searchContactListIds = withAuth(async (
         prefixTsquery,
         rawSearch,
         identifier,
-        tenant,
+        ...searchIndex.bindings,
+        ...interactions.bindings,
+        ...noteContacts.bindings,
+        ...documentAssociations.bindings,
         [...CONTACT_LIST_SEARCH_TYPES],
         permissions,
         user.user_id,

@@ -350,9 +350,13 @@ export class PlatformNotificationService {
     const knex = await getAdminConnection();
     const audienceDb = tenantDb(knex, PLATFORM_NOTIFICATION_ADMIN_TENANT);
 
-    let query = audienceDb
-      .unscoped('users as u', 'platform notification audience resolution spans eligible tenants')
-      .leftJoin('tenants as t', 'u.tenant', 't.tenant')
+    let query = audienceDb.tenantJoin(
+      audienceDb.unscoped('users as u', 'platform notification audience resolution spans eligible tenants'),
+      'tenants as t',
+      'u.tenant',
+      't.tenant',
+      { type: 'left', rootTenantColumn: 'u.tenant' }
+    )
       .select(
         'u.user_id',
         'u.tenant',
@@ -382,11 +386,13 @@ export class PlatformNotificationService {
     const userRolesMap: Map<string, string[]> = new Map();
 
     if (userIds.length > 0) {
-      const roleRows = await audienceDb
-        .unscoped('user_roles as ur', 'platform notification audience resolution spans user roles across tenants')
-        .join('roles as r', function () {
-          this.on('ur.tenant', '=', 'r.tenant').andOn('ur.role_id', '=', 'r.role_id');
-        })
+      const roleRows = await audienceDb.tenantJoin(
+        audienceDb.unscoped('user_roles as ur', 'platform notification audience resolution spans user roles across tenants'),
+        'roles as r',
+        'ur.role_id',
+        'r.role_id',
+        { rootTenantColumn: 'ur.tenant' }
+      )
         .whereIn('ur.user_id', userIds)
         .select('ur.user_id', 'r.role_name');
 
@@ -406,20 +412,33 @@ export class PlatformNotificationService {
         // Use LEFT JOINs so tenants with partial Stripe data (e.g. customer but no
         // subscription, or subscription but no matching price/product) still appear
         // with whatever data is available.
-        const subRows = await audienceDb
-          .unscoped('stripe_customers as sc', 'platform notification audience resolution spans subscription data across tenants')
-          .leftJoin('stripe_subscriptions as ss', function () {
-            this.on('sc.tenant', '=', 'ss.tenant')
-              .andOn('sc.stripe_customer_id', '=', 'ss.stripe_customer_id');
-          })
-          .leftJoin('stripe_prices as sp', function () {
-            this.on('ss.tenant', '=', 'sp.tenant')
-              .andOn('ss.stripe_price_id', '=', 'sp.stripe_price_id');
-          })
-          .leftJoin('stripe_products as sprod', function () {
-            this.on('sp.tenant', '=', 'sprod.tenant')
-              .andOn('sp.stripe_product_id', '=', 'sprod.stripe_product_id');
-          })
+        let subQuery = audienceDb.unscoped(
+          'stripe_customers as sc',
+          'platform notification audience resolution spans subscription data across tenants'
+        );
+        subQuery = audienceDb.tenantJoin(
+          subQuery,
+          'stripe_subscriptions as ss',
+          'sc.stripe_customer_id',
+          'ss.stripe_customer_id',
+          { type: 'left', rootTenantColumn: 'sc.tenant' }
+        );
+        subQuery = audienceDb.tenantJoin(
+          subQuery,
+          'stripe_prices as sp',
+          'ss.stripe_price_id',
+          'sp.stripe_price_id',
+          { type: 'left', rootTenantColumn: 'ss.tenant' }
+        );
+        subQuery = audienceDb.tenantJoin(
+          subQuery,
+          'stripe_products as sprod',
+          'sp.stripe_product_id',
+          'sprod.stripe_product_id',
+          { type: 'left', rootTenantColumn: 'sp.tenant' }
+        );
+
+        const subRows = await subQuery
           .whereIn('sc.tenant', tenantIds)
           .select(
             'sc.tenant',
@@ -430,7 +449,7 @@ export class PlatformNotificationService {
           .orderBy('ss.created_at', 'desc');
 
         // Keep the most relevant subscription per tenant (active > trialing > others, then newest)
-        for (const row of subRows) {
+        for (const row of subRows as Array<Record<string, unknown>>) {
           const status = row.subscription_status as string | null;
           const existing = tenantSubMap.get(row.tenant as string);
           if (!existing) {
@@ -505,9 +524,13 @@ export class PlatformNotificationService {
     const knex = await getAdminConnection();
     const reportingDb = tenantDb(knex, PLATFORM_NOTIFICATION_ADMIN_TENANT);
 
-    const rows = await reportingDb
-      .unscoped('platform_notification_recipients as r', 'platform notification stats aggregate recipients across tenants')
-      .leftJoin('tenants as t', 'r.tenant', 't.tenant')
+    const rows = await reportingDb.tenantJoin(
+      reportingDb.unscoped('platform_notification_recipients as r', 'platform notification stats aggregate recipients across tenants'),
+      'tenants as t',
+      'r.tenant',
+      't.tenant',
+      { type: 'left', rootTenantColumn: 'r.tenant' }
+    )
       .where('r.notification_id', notificationId)
       .whereNull('r.excluded_at')
       .select(

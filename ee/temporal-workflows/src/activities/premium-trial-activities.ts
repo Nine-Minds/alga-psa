@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
 
 const logger = () => Context.current().log;
+const PREMIUM_TRIAL_SWEEP_CONTEXT = 'premium-trial-expiry-sweep';
 
 export interface CheckExpiredPremiumTrialsResult {
   reverted: string[];
@@ -36,7 +37,8 @@ export async function checkExpiredPremiumTrialsActivity(): Promise<CheckExpiredP
   try {
     // Find subscriptions with an active (unconfirmed) premium trial that has expired.
     // premium_trial = 'true' means pending; 'confirmed' means the user already agreed.
-    const expiredTrials = await knex('stripe_subscriptions')
+    const expiredTrials = await tenantDb(knex, PREMIUM_TRIAL_SWEEP_CONTEXT)
+      .unscoped('stripe_subscriptions', 'premium trial expiry sweep scans subscriptions across tenants')
       .whereIn('status', ['active', 'trialing'])
       .whereRaw("metadata->>'premium_trial' = 'true'")
       .whereRaw("(metadata->>'premium_trial_end')::timestamptz < now()")

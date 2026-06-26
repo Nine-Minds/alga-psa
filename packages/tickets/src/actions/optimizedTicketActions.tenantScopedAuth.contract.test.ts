@@ -147,6 +147,30 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(optionsSection).not.toContain(".where({ 'c.tenant': tenant })");
   });
 
+  it('uses tenant facade-derived tables for ticket list indexed search roots', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('function applyTicketListIndexedSearchFilter');
+    const end = source.indexOf('function applyTicketListSort', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const section = source.slice(start, end);
+
+    expect(section).toContain("tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si')");
+    expect(section).toContain("tenantScopedDerivedTableSql(trx, tenant, 'tickets', 't2')");
+    expect(section).toContain("tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'child')");
+    expect(section).toContain("tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'tc')");
+    expect(section).toContain('...searchIndex.bindings');
+    expect(section).toContain('...titleSearchTickets.bindings');
+    expect(section).not.toContain('FROM app_search_index si');
+    expect(section).not.toContain('WHERE si.tenant = ?::uuid');
+    expect(section).not.toContain('FROM tickets t2');
+    expect(section).not.toContain('WHERE t2.tenant = ?::uuid');
+    expect(section).not.toContain('FROM tickets tc');
+    expect(section).not.toContain('WHERE tc.tenant = ?::uuid');
+  });
+
   it('uses structural tenant scoping for ticket update transaction roots', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
     const start = source.indexOf('export async function updateTicketInTransaction');
