@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 export interface LicenseUsage {
@@ -20,8 +20,7 @@ export async function getLicenseUsage(
   const knex = trx || (await createTenantKnex(tenantId)).knex;
   
   // Get the tenant's license limit
-  const tenant = await knex('tenants')
-    .where({ tenant: tenantId })
+  const tenant = await tenantDb(knex, tenantId).table('tenants')
     .first('licensed_user_count');
   
   if (!tenant) {
@@ -29,9 +28,8 @@ export async function getLicenseUsage(
   }
   
   // Count active  MSP (internal) users
-  const usedResult = await knex('users')
+  const usedResult = await tenantDb(knex, tenantId).table('users')
     .where({ 
-      tenant: tenantId,
       user_type: 'internal',
       is_inactive: false 
     })

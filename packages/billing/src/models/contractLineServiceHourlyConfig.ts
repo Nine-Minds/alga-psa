@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,6 +9,10 @@ export default class ContractLineServiceHourlyConfig {
 
   constructor(knex: Knex | Knex.Transaction) {
     this.knex = knex;
+  }
+
+  private table(table: string, tenant: string): Knex.QueryBuilder {
+    return tenantDb(this.knex, tenant).table(table);
   }
 
   /**
@@ -27,10 +31,9 @@ export default class ContractLineServiceHourlyConfig {
   async getByConfigId(configId: string): Promise<IContractLineServiceHourlyConfig | null> {
     const tenant = await this.getTenant();
     
-    const config = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
+    const config = await this.table('contract_line_service_hourly_configs', tenant) // Corrected table name (plural)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .first();
     
@@ -45,7 +48,7 @@ export default class ContractLineServiceHourlyConfig {
     
     const now = new Date();
     
-    await this.knex('contract_line_service_hourly_configs').insert({ // Corrected table name (plural)
+    await this.table('contract_line_service_hourly_configs', tenant).insert({ // Corrected table name (plural)
       config_id: data.config_id,
       hourly_rate: data.hourly_rate, // Add hourly_rate back
       minimum_billable_time: data.minimum_billable_time,
@@ -85,10 +88,9 @@ export default class ContractLineServiceHourlyConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
+    const result = await this.table('contract_line_service_hourly_configs', tenant) // Corrected table name (plural)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .update(updateData);
     
@@ -101,10 +103,9 @@ export default class ContractLineServiceHourlyConfig {
   async delete(configId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
+    const result = await this.table('contract_line_service_hourly_configs', tenant) // Corrected table name (plural)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .delete();
     

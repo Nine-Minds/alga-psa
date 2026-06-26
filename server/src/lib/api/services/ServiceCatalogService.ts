@@ -61,6 +61,7 @@ export class ServiceCatalogService extends BaseService<IService> {
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IService>> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
+    const db = tenantDb(knex, tenant);
 
     const page = options.page ?? 1;
     const limit = options.limit ?? 25;
@@ -118,7 +119,7 @@ export class ServiceCatalogService extends BaseService<IService> {
         ? 'service_name'
         : sortField;
 
-    const baseQuery = tenantDb(knex, tenant).table('service_catalog as sc');
+    const baseQuery = db.table('service_catalog as sc');
 
     // Count
     const countResult = await applyFilters(baseQuery.clone())
@@ -128,12 +129,7 @@ export class ServiceCatalogService extends BaseService<IService> {
 
     // Data query with join
     const servicesQuery = applyFilters(
-      baseQuery
-        .clone()
-        .leftJoin('service_types as st', function (this: any) {
-          this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-        })
+      db.tenantJoin(baseQuery.clone(), 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' })
         .select(
           'sc.service_id',
           'sc.service_name',
@@ -174,7 +170,7 @@ export class ServiceCatalogService extends BaseService<IService> {
     // Fetch prices for returned services
     const serviceIds = servicesData.map((s: any) => s.service_id);
     const allPrices = serviceIds.length > 0
-      ? await tenantDb(knex, tenant).table('service_prices')
+      ? await db.table('service_prices')
           .whereIn('service_id', serviceIds)
           .select('*')
       : [];
@@ -198,12 +194,9 @@ export class ServiceCatalogService extends BaseService<IService> {
   async getById(id: string, context: ServiceContext): Promise<IService | null> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
+    const db = tenantDb(knex, tenant);
 
-    const service = await tenantDb(knex, tenant).table('service_catalog as sc')
-      .leftJoin('service_types as st', function (this: any) {
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-          .andOn('sc.tenant', '=', 'st.tenant');
-      })
+    const service = await db.tenantJoin(db.table('service_catalog as sc'), 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' })
       .where('sc.service_id', id)
       .select(
         'sc.*',
@@ -215,7 +208,7 @@ export class ServiceCatalogService extends BaseService<IService> {
 
     if (!service) return null;
 
-    const prices = await tenantDb(knex, tenant).table('service_prices')
+    const prices = await db.table('service_prices')
       .where('service_id', id)
       .select('*');
 
@@ -253,7 +246,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       tax_rate_id: serviceInput.tax_rate_id || null,
     };
 
-    const [created] = await knex('service_catalog')
+    const [created] = await tenantDb(knex, tenant).table('service_catalog')
       .insert(serviceData)
       .returning('*');
 

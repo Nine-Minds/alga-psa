@@ -16,7 +16,8 @@ describe('project catalog and material tenant-scoped query contract', () => {
     expect(materialCatalogSource).toContain("tenantScopedTable(trx, 'service_prices', tenant)");
     expect(materialCatalogSource).toContain("tenantScopedTable(trx, 'project_materials as pm', tenant)");
     expect(materialCatalogSource).toContain("tenantScopedTable(trx, 'project_materials', tenant)");
-    expect(materialCatalogSource).toContain(".andOn('pm.tenant', '=', 'sc.tenant')");
+    expect(materialCatalogSource).toContain("tenantDb(trx, tenant).tenantJoin(rowsQuery, 'service_catalog as sc'");
+    expect(materialCatalogSource).not.toContain(".andOn('pm.tenant', '=', 'sc.tenant')");
     expect(materialCatalogSource).not.toContain("'sc.tenant': tenant");
     expect(materialCatalogSource).not.toContain("'pm.tenant': tenant");
     expect(materialCatalogSource).not.toContain('.where({ tenant, service_id: serviceId })');

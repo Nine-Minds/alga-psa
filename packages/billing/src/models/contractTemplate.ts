@@ -88,7 +88,7 @@ const ContractTemplateModel = {
       throw new Error('Tenant context is required for creating contract templates');
     }
 
-    const [record] = await knex<IContractTemplate>('contract_templates')
+    const [record] = await tenantScopedTable(knex, tenant, 'contract_templates')
       .insert({
         tenant,
         template_name: payload.template_name,

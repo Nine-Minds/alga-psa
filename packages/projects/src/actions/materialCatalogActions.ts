@@ -113,13 +113,12 @@ export const listProjectMaterials = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await tenantScopedTable(trx, 'project_materials as pm', tenant)
-      .leftJoin('service_catalog as sc', function () {
-        this.on('pm.service_id', '=', 'sc.service_id').andOn('pm.tenant', '=', 'sc.tenant');
-      })
+    const rowsQuery = tenantScopedTable(trx, 'project_materials as pm', tenant)
       .where({ 'pm.project_id': projectId })
       .select('pm.*', 'sc.service_name as service_name', 'sc.sku as sku')
       .orderBy('pm.created_at', 'desc');
+    tenantDb(trx, tenant).tenantJoin(rowsQuery, 'service_catalog as sc', 'pm.service_id', 'sc.service_id', { type: 'left' });
+    const rows = await rowsQuery;
 
     return rows as IProjectMaterial[];
   });
@@ -141,7 +140,7 @@ export const addProjectMaterial = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const [row] = await trx('project_materials')
+    const [row] = await tenantScopedTable(trx, 'project_materials', tenant)
       .insert({
         tenant,
         project_id: input.project_id,

@@ -118,7 +118,7 @@ export const saveDefaultFolders = withAuth(async (
     await tenantScopedTable('document_default_folders').where({ entity_type: type }).del();
 
     if (rows.length > 0) {
-      await trx('document_default_folders').insert(rows);
+      await tenantScopedTable('document_default_folders').insert(rows);
     }
 
     return await tenantScopedTable('document_default_folders')
@@ -271,7 +271,7 @@ export const loadSuggestedDefaults = withAuth(async (
       });
 
       if (rows.length > 0) {
-        await trx('document_default_folders').insert(rows);
+        await tenantDb(trx, tenant).table('document_default_folders').insert(rows);
       }
     }
 

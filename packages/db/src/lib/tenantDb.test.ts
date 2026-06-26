@@ -98,6 +98,20 @@ describe('tenantDb facade', () => {
     );
   });
 
+  it('supports additional join predicates inside tenant joins', () => {
+    const db = tenantDb(knex, 'tenant-1');
+    const query = db.table('clients as c').select('c.client_id');
+
+    db.tenantJoin(query, 'document_associations as da', 'c.client_id', 'da.entity_id', {
+      type: 'left',
+      on: (join) => join.andOnVal('da.entity_type', '=', 'client'),
+    });
+
+    expect(query.toString()).toContain(
+      `left join "document_associations" as "da" on "c"."client_id" = "da"."entity_id" and "da"."tenant" = "c"."tenant" and "da"."entity_type" = 'client'`
+    );
+  });
+
   it('requires an explicit reason for unscoped access', () => {
     const db = tenantDb(knex, 'tenant-1');
 

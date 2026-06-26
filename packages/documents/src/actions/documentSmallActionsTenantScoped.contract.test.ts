@@ -6,6 +6,7 @@ const files = [
   'defaultFolderActions.ts',
   'documentContentActions.ts',
   'shareLinkActions.ts',
+  '../lib/shareLinkPublic.ts',
 ];
 
 const sources = files.map((file) => ({
@@ -21,7 +22,10 @@ describe('small document actions tenant-scoped query contract', () => {
     expect(combined).toMatch(/tenantDb\(trx, tenant\)\.table(?:<[^>]+>)?\('document_content'\)/);
     expect(combined).toContain("tenantDb(knex, tenant).table('documents')");
     expect(combined).toContain("tenantDb(knex, tenant).table('document_share_links')");
+    expect(combined).toContain("tenantDb(knex, tenant).table('document_share_links').insert");
+    expect(combined).toContain("tenantDb(trx, tenant).table('document_default_folders').insert");
     expect(combined).toContain("knex('document_share_links as sl')");
+    expect(combined).toContain("knex('document_share_access_log').insert");
     expect(combined).not.toContain('createTenantScopedQuery');
 
     for (const { file, source } of sources) {

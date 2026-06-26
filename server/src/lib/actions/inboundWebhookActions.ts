@@ -6,7 +6,7 @@ import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 import type {
@@ -453,13 +453,14 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
     return [];
   }
 
-  const publishedVersions = knex('workflow_definition_versions')
+  const db = tenantDb(knex, tenant);
+  const publishedVersions = db.table('workflow_definition_versions')
     .select('tenant', 'workflow_id')
     .max('version as published_version')
     .groupBy('tenant', 'workflow_id')
     .as('published_versions');
 
-  const rows = await knex('workflow_definitions as workflow_definitions')
+  const rows = await db.table('workflow_definitions as workflow_definitions')
     .leftJoin(publishedVersions, function () {
       this.on('published_versions.workflow_id', 'workflow_definitions.workflow_id')
         .andOn('published_versions.tenant', 'workflow_definitions.tenant');

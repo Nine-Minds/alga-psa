@@ -1,11 +1,18 @@
 'use server'
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { IServiceCategory } from '@alga-psa/types';
 import { ITicketCategory } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 export const getServiceCategories = withAuth(async (user, { tenant }): Promise<IServiceCategory[]> => {
   if (!await hasPermission(user, 'billing', 'read')) {
@@ -15,8 +22,7 @@ export const getServiceCategories = withAuth(async (user, { tenant }): Promise<I
     const {knex: db} = await createTenantKnex();
 
     const categories = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('service_categories')
-        .where({ tenant })
+      return await tenantScopedTable(trx, tenant, 'service_categories')
         .select('category_id', 'category_name', 'description', 'display_order')
         .orderBy('display_order', 'asc');
     });
@@ -43,14 +49,13 @@ export const createServiceCategory = withAuth(async (user, { tenant }, data: {
       // If no display_order provided, get the next available order
       let displayOrder = data.display_order;
       if (displayOrder === undefined || displayOrder === 0) {
-        const maxOrder = await trx('service_categories')
-          .where({ tenant })
+        const maxOrder = await tenantScopedTable(trx, tenant, 'service_categories')
           .max('display_order as max')
           .first();
         displayOrder = (maxOrder?.max || 0) + 1;
       }
 
-      const [newCategory] = await trx('service_categories')
+      const [newCategory] = await tenantScopedTable(trx, tenant, 'service_categories')
         .insert({
           category_name: data.category_name,
           description: data.description || null,
@@ -86,8 +91,8 @@ export const updateServiceCategory = withAuth(async (
     const {knex: db} = await createTenantKnex();
 
     const category = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const [updatedCategory] = await trx('service_categories')
-        .where({ category_id: categoryId, tenant })
+      const [updatedCategory] = await tenantScopedTable(trx, tenant, 'service_categories')
+        .where({ category_id: categoryId })
         .update({
           ...data,
           updated_at: trx.fn.now()
@@ -117,8 +122,8 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if category is in use
-      const servicesCount = await trx('service_catalog')
-        .where({ category_id: categoryId, tenant })
+      const servicesCount = await tenantScopedTable(trx, tenant, 'service_catalog')
+        .where({ category_id: categoryId })
         .count('* as count')
         .first();
 
@@ -126,8 +131,8 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
         throw new Error('Cannot delete category: services are using this category');
       }
 
-      const deletedCount = await trx('service_categories')
-        .where({ category_id: categoryId, tenant })
+      const deletedCount = await tenantScopedTable(trx, tenant, 'service_categories')
+        .where({ category_id: categoryId })
         .delete();
 
       if (deletedCount === 0) {

@@ -16,8 +16,7 @@ import Ticket from '../models/ticket';
 import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from '@alga-psa/auth/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
@@ -68,7 +67,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
-import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { updateTicketWithCache, updateTicketInTransaction } from './optimizedTicketActions';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
@@ -90,6 +89,14 @@ export async function registerSlaCancellation(fn: (tenantId: string, ticketId: s
 const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
 function getEmailEventChannel(): string {
   return EMAIL_EVENT_CHANNEL;
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
@@ -124,8 +131,8 @@ async function resolveAuthorizationSubjectForUser(
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
     try {
-      const roleRows = await trx('user_roles')
-        .where({ tenant, user_id: user.user_id })
+      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+        .where({ user_id: user.user_id })
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
     } catch {
@@ -136,15 +143,15 @@ async function resolveAuthorizationSubjectForUser(
   let teamRows: Array<{ team_id: string }> = [];
   let managedRows: Array<{ user_id: string }> = [];
   try {
-    teamRows = await trx('team_members')
-      .where({ tenant, user_id: user.user_id })
+    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
+      .where({ user_id: user.user_id })
       .select<{ team_id: string }[]>('team_id');
   } catch {
     teamRows = [];
   }
   try {
-    managedRows = await trx('users')
-      .where({ tenant, reports_to: user.user_id })
+    managedRows = await tenantScopedTable(trx, 'users', tenant)
+      .where({ reports_to: user.user_id })
       .select<{ user_id: string }[]>('user_id');
   } catch {
     managedRows = [];
@@ -293,7 +300,7 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             );
 
             // Server-specific: Create the asset association
-            await trx('asset_associations').insert({
+            await tenantScopedTable(trx, 'asset_associations', tenant).insert({
               tenant,
               asset_id: data.asset_id,
               entity_id: ticketResult.ticket_id,
@@ -304,8 +311,8 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             });
 
             // Server-specific: Get full ticket data for return
-            const fullTicket = await trx('tickets')
-                .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
+            const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
+                .where({ ticket_id: ticketResult.ticket_id })
                 .first();
 
             if (!fullTicket) {
@@ -385,8 +392,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         const priorityNamePattern = `P${priorityLevel} -%`;
 
         // Get the corresponding ITIL priority record from tenant's priorities table
-        const itilPriorityRecord = await trx('priorities')
-          .where('tenant', tenant)
+        const itilPriorityRecord = await tenantScopedTable(trx, 'priorities', tenant)
           .where('is_from_itil_standard', true)
           .where('priority_name', 'like', priorityNamePattern)
           .where('item_type', 'ticket')
@@ -438,7 +444,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Server-specific: Create asset association if asset_id is provided
       if (asset_id) {
-        await trx('asset_associations').insert({
+        await tenantScopedTable(trx, 'asset_associations', tenant).insert({
           tenant,
           asset_id: asset_id as string,
           entity_id: ticketResult.ticket_id,
@@ -466,8 +472,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       }
 
       // Server-specific: Get full ticket data for return
-      const fullTicket = await trx('tickets')
-        .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
+      const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketResult.ticket_id })
         .first();
 
       if (!fullTicket) {
@@ -558,10 +564,9 @@ export const fetchTicketAttributes = withAuth(async (user, { tenant }, ticketId:
 
       const attributes = await getTicketAttributes(validatedTicketId);
 
-      const ticketExists = await trx('tickets')
+      const ticketExists = await tenantScopedTable(trx, 'tickets', tenant)
         .where({
-          ticket_id: validatedTicketId,
-          tenant: tenant
+          ticket_id: validatedTicketId
         })
         .first();
 
@@ -598,8 +603,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       }
 
       // Get current ticket state before update
-      const currentTicket = await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .first();
 
       if (!currentTicket) {
@@ -636,8 +641,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           const priorityNamePattern = `P${priorityLevel} -%`;
 
           // Get the corresponding ITIL priority record from tenant's priorities table
-          const itilPriorityRecord = await trx('priorities')
-            .where('tenant', tenant)
+          const itilPriorityRecord = await tenantScopedTable(trx, 'priorities', tenant)
             .where('is_from_itil_standard', true)
             .where('priority_name', 'like', priorityNamePattern)
             .where('item_type', 'ticket')
@@ -653,11 +657,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // Validate location belongs to the client if provided
       if ('location_id' in updateData && updateData.location_id) {
         const clientId = 'client_id' in updateData ? updateData.client_id : currentTicket.client_id;
-        const location = await trx('client_locations')
+        const location = await tenantScopedTable(trx, 'client_locations', tenant)
           .where({
             location_id: updateData.location_id,
-            client_id: clientId,
-            tenant: tenant
+            client_id: clientId
           })
           .first();
 
@@ -685,8 +688,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
         if (newSubcategoryId) {
           // If setting a subcategory, verify it's a valid child of the category
-          const subcategory = await trx('categories')
-            .where({ category_id: newSubcategoryId, tenant: tenant })
+          const subcategory = await tenantScopedTable(trx, 'categories', tenant)
+            .where({ category_id: newSubcategoryId })
             .first();
 
           if (subcategory && subcategory.parent_category !== newCategoryId) {
@@ -715,10 +718,9 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       }
 
       // Get the status before and after update to check for closure
-      const oldStatus = await trx('statuses')
+      const oldStatus = await tenantScopedTable(trx, 'statuses', tenant)
         .where({
-          status_id: currentTicket.status_id,
-          tenant: tenant
+          status_id: currentTicket.status_id
         })
         .first();
 
@@ -727,8 +729,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // writes. Throws TicketCloseValidationError (aborting the transaction)
       // unless gates pass or a permissioned override applies.
       if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
-        const nextStatus = await trx('statuses')
-          .where({ status_id: updateData.status_id, tenant: tenant })
+        const nextStatus = await tenantScopedTable(trx, 'statuses', tenant)
+          .where({ status_id: updateData.status_id })
           .first();
         if (nextStatus?.is_closed && !oldStatus?.is_closed) {
           const merged = { ...currentTicket, ...updateData };
@@ -759,18 +761,16 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       if (isChangingAssignment) {
         // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
         // to avoid constraint violations after the update
-        await trx('ticket_resources')
+        await tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
-            tenant: tenant,
             ticket_id: id,
             additional_user_id: updateData.assigned_to
           })
           .delete();
 
         // Step 2: Get existing resources with the old assigned_to value
-        const existingResources = await trx('ticket_resources')
+        const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
-            tenant: tenant,
             ticket_id: id,
             assigned_to: currentTicket.assigned_to
           })
@@ -789,9 +789,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
         // Step 4: Delete the existing resources with the old assigned_to
         if (existingResources.length > 0) {
-          await trx('ticket_resources')
+          await tenantScopedTable(trx, 'ticket_resources', tenant)
             .where({
-              tenant: tenant,
               ticket_id: id,
               assigned_to: currentTicket.assigned_to
             })
@@ -799,14 +798,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }
 
         // Step 5: Update the ticket with the new assigned_to
-        const [updated] = await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update(updateData)
           .returning('*');
 
         // Step 6: Re-create the resources with the new assigned_to
         for (const resourceData of resourcesToRecreate) {
-          await trx('ticket_resources').insert({
+          await tenantScopedTable(trx, 'ticket_resources', tenant).insert({
             ...resourceData,
             assigned_to: updateData.assigned_to
           });
@@ -815,8 +814,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         updatedTicket = updated;
       } else {
         // Regular update without changing assignment
-        const [updated] = await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update(updateData)
           .returning('*');
 
@@ -829,10 +828,9 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       // Get the new status if it was updated
       const newStatus = updateData.status_id ?
-        await trx('statuses')
+        await tenantScopedTable(trx, 'statuses', tenant)
           .where({
-            status_id: updateData.status_id,
-            tenant: tenant
+            status_id: updateData.status_id
           })
           .first() :
         oldStatus;
@@ -951,22 +949,22 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // Keep the ticket row's denormalized close flag aligned with the selected status.
       if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
         const nextIsClosed = !!newStatus?.is_closed;
-        await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update({ is_closed: nextIsClosed });
         updatedTicket.is_closed = nextIsClosed;
       }
 
       // Record closed_at / closed_by when transitioning to/from closed status
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
-        await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update({ closed_at: occurredAt, closed_by: user.user_id });
         updatedTicket.closed_at = occurredAt;
         updatedTicket.closed_by = user.user_id;
       } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-        await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update({ closed_at: null, closed_by: null });
         updatedTicket.closed_at = null;
         updatedTicket.closed_by = null;
@@ -1004,8 +1002,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // If ticket is being closed and has a response state, clear it
       if (newStatus?.is_closed && !oldStatus?.is_closed && currentTicket.response_state) {
         // Clear response_state on close
-        await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update({ response_state: null });
         updatedTicket.response_state = null;
         responseStateChanged = true;
@@ -1217,7 +1215,8 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       });
       const requestCache = new RequestLocalAuthorizationCache();
 
-      let query = trx('tickets as t')
+      const tenantFacade = tenantDb(trx, tenant);
+      let query = tenantFacade.table('tickets as t')
       .select(
         't.*',
         's.name as status_name',
@@ -1225,61 +1224,35 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         'c.board_name',
         'cat.category_name',
         'co.client_name as client_name',
-        db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
-      )
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-           .andOn('t.tenant', 's.tenant')
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-           .andOn('t.tenant', 'p.tenant')
-      })
-      .leftJoin('boards as c', function() {
-        this.on('t.board_id', 'c.board_id')
-           .andOn('t.tenant', 'c.tenant')
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-           .andOn('t.tenant', 'cat.tenant')
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.entered_by', 'u.user_id')
-           .andOn('t.tenant', 'u.tenant')
-      })
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-           .andOn('t.tenant', 'au.tenant')
-      })
-      .leftJoin('clients as co', function() {
-        this.on('t.client_id', 'co.client_id')
-           .andOn('t.tenant', 'co.tenant')
-      })
-      .where({
-        't.tenant': tenant
-      });
+        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+      );
+      tenantFacade.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      tenantFacade.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+      tenantFacade.tenantJoin(query, 'boards as c', 't.board_id', 'c.board_id', { type: 'left' });
+      tenantFacade.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+      tenantFacade.tenantJoin(query, 'users as u', 't.entered_by', 'u.user_id', { type: 'left' });
+      tenantFacade.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
+      tenantFacade.tenantJoin(query, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
 
     // Apply filters
     if (validatedFilters.boardId) {
       query = query.where('t.board_id', validatedFilters.boardId);
     } else if (validatedFilters.boardFilterState !== 'all') {
-      const boardSubquery = trx('boards')
+      const boardSubquery = tenantScopedTable(trx, 'boards', tenant)
         .select('board_id')
-        .where('tenant', tenant)
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
       query = query.whereIn('t.board_id', boardSubquery);
     }
 
     if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
-      query = query.whereExists(function() {
-        this.select('*')
-            .from('statuses')
-            .whereRaw('statuses.status_id = t.status_id')
-            .andWhere('statuses.is_closed', false)
-            .andWhere('statuses.tenant', tenant);
-      });
+      query = query.whereExists(
+        tenantScopedTable(trx, 'statuses', tenant)
+          .select('*')
+          .whereRaw('statuses.status_id = t.status_id')
+          .andWhere('statuses.is_closed', false)
+      );
     } else if (parsedStatusFilter.kind === 'name') {
       query = query.where('s.name', parsedStatusFilter.statusName);
     } else if (parsedStatusFilter.kind === 'id') {
@@ -1315,37 +1288,28 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
     }
 
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      query = query.whereIn('t.ticket_id', function() {
-        this.select('tm.tagged_id')
-          .from('tag_mappings as tm')
-          .join('tag_definitions as td', function() {
-            this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-          })
-          .where('tm.tagged_type', 'ticket')
-          .andWhere('tm.tenant', tenant)
-          .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      });
+      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
+        .select('tm.tagged_id')
+        .where('tm.tagged_type', 'ticket')
+        .whereIn('td.tag_text', validatedFilters.tags as string[]);
+      tenantFacade.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+      query = query.whereIn('t.ticket_id', tagSubquery);
     }
 
     if (validatedFilters.assignedToMe) {
       const hasProjectRead = await hasPermission(user, 'project', 'read', trx);
       if (!hasProjectRead) {
         const callerUserId = (user as IUserWithRoles).user_id;
+        const ticketResourceSubquery = tenantScopedTable(trx, 'ticket_resources', tenant)
+          .select('ticket_id')
+          .where('additional_user_id', callerUserId);
+        const teamMemberSubquery = tenantScopedTable(trx, 'team_members', tenant)
+          .select('team_id')
+          .where('user_id', callerUserId);
         query = query.where(function(this: any) {
           this.where('t.assigned_to', callerUserId)
-            .orWhereIn('t.ticket_id', function(this: any) {
-              this.select('ticket_id')
-                .from('ticket_resources')
-                .where('tenant', tenant)
-                .andWhere('additional_user_id', callerUserId);
-            })
-            .orWhereIn('t.assigned_team_id', function(this: any) {
-              this.select('team_id')
-                .from('team_members')
-                .where('tenant', tenant)
-                .andWhere('user_id', callerUserId);
-            });
+            .orWhereIn('t.ticket_id', ticketResourceSubquery)
+            .orWhereIn('t.assigned_team_id', teamMemberSubquery);
         });
       }
     }
@@ -1458,10 +1422,9 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       }
 
       // Verify ticket exists
-      const ticket = await trx('tickets')
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
       .where({
-        ticket_id: ticketId,
-        tenant: tenant
+        ticket_id: ticketId
       })
       .first();
 
@@ -1481,7 +1444,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       }
       const nowIso = new Date().toISOString();
 
-      await trx('comment_threads').insert({
+      await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: generatedIds.thread_id,
         ticket_id: ticketId,
@@ -1494,7 +1457,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         created_by: user.user_id || null,
       });
 
-      const [newComment] = await trx('comments').insert({
+      const [newComment] = await tenantScopedTable(trx, 'comments', tenant).insert({
         tenant,
         comment_id: generatedIds.comment_id,
         thread_id: generatedIds.thread_id,
@@ -1568,10 +1531,9 @@ async function performTicketDelete(
     throw new Error('Permission denied: Cannot delete ticket');
   }
 
-  const ticket = await trx('tickets')
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({
-      ticket_id: ticketId,
-      tenant: tenant
+      ticket_id: ticketId
     })
     .first();
 
@@ -1583,8 +1545,8 @@ async function performTicketDelete(
   // API delete path in TicketService) before deleting the ticket itself.
   await deleteTicketChildRecords(trx, ticketId, tenant, ticket);
 
-  await trx('tickets')
-    .where({ ticket_id: ticketId, tenant })
+  await tenantScopedTable(trx, 'tickets', tenant)
+    .where({ ticket_id: ticketId })
     .delete();
 
   await publishEvent({
@@ -1754,8 +1716,8 @@ export const moveTicketsToBoard = withAuth(async (
   for (const ticketId of uniqueIds) {
     try {
       const currentTicket = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => (
-        trx('tickets')
-          .where({ ticket_id: ticketId, tenant: tenantAlias })
+        tenantScopedTable(trx, 'tickets', tenantAlias)
+          .where({ ticket_id: ticketId })
           .first()
       ));
 
@@ -2072,20 +2034,24 @@ export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, tick
       }
 
       // Query schedule entries for the ticket
-      const scheduleEntries = await trx('schedule_entries as se')
+      const tenantFacade = tenantDb(trx, tenant);
+      const scheduleEntriesQuery = tenantFacade.table('schedule_entries as se')
       .select(
         'se.*',
         'sea.user_id'
       )
-      .leftJoin('schedule_entry_assignees as sea', function() {
-        this.on('se.entry_id', 'sea.entry_id')
-           .andOn('se.tenant', 'sea.tenant')
-      })
       .where({
         'se.work_item_id': ticketId,
-        'se.work_item_type': 'ticket',
-        'se.tenant': tenant
+        'se.work_item_type': 'ticket'
       });
+      tenantFacade.tenantJoin(
+        scheduleEntriesQuery,
+        'schedule_entry_assignees as sea',
+        'se.entry_id',
+        'sea.entry_id',
+        { type: 'left' }
+      );
+      const scheduleEntries = await scheduleEntriesQuery;
 
     // Calculate scheduled hours per agent
     const agentSchedules: Record<string, number> = {};
@@ -2188,7 +2154,8 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       client_name?: string;
     };
 
-      const ticket: TicketQueryResult | undefined = await trx('tickets as t')
+      const tenantFacade = tenantDb(trx, tenant);
+      const ticketQuery = tenantFacade.table<TicketQueryResult>('tickets as t')
       .select(
         't.*',
         's.name as status_name',
@@ -2199,35 +2166,15 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         'u_creator.user_type as entered_by_user_type',
         'ct.full_name as contact_name',
         'co.client_name'
-      )
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-           .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('boards as ch', function() {
-        this.on('t.board_id', 'ch.board_id')
-           .andOn('t.tenant', 'ch.tenant');
-      })
-      .leftJoin('users as u_assignee', function() {
-        this.on('t.assigned_to', 'u_assignee.user_id')
-           .andOn('t.tenant', 'u_assignee.tenant');
-      })
-      .leftJoin('users as u_creator', function() {
-        this.on('t.entered_by', 'u_creator.user_id')
-           .andOn('t.tenant', 'u_creator.tenant');
-      })
-      .leftJoin('contacts as ct', function() {
-        this.on('t.contact_name_id', 'ct.contact_name_id')
-           .andOn('t.tenant', 'ct.tenant');
-      })
-      .leftJoin('clients as co', function() {
-        this.on('t.client_id', 'co.client_id')
-           .andOn('t.tenant', 'co.tenant');
-      })
-      .where({
-        't.ticket_id': id,
-        't.tenant': tenant
-      })
+      );
+      tenantFacade.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      tenantFacade.tenantJoin(ticketQuery, 'boards as ch', 't.board_id', 'ch.board_id', { type: 'left' });
+      tenantFacade.tenantJoin(ticketQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
+      tenantFacade.tenantJoin(ticketQuery, 'users as u_creator', 't.entered_by', 'u_creator.user_id', { type: 'left' });
+      tenantFacade.tenantJoin(ticketQuery, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
+      tenantFacade.tenantJoin(ticketQuery, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
+      const ticket: TicketQueryResult | undefined = await ticketQuery
+      .where('t.ticket_id', id)
       .first();
 
       if (!ticket) {
@@ -2259,13 +2206,11 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
 
       // Fetch additional resources and available agents in parallel
       const [additionalAgents, availableAgents] = await Promise.all([
-        trx('ticket_resources')
+        tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
-            ticket_id: id,
-            tenant: tenant
+            ticket_id: id
           }),
-        trx('users')
-          .where({ tenant: tenant })
+        tenantScopedTable(trx, 'users', tenant)
           .orderBy('first_name', 'asc')
       ]);
 
@@ -2335,12 +2280,16 @@ export const getTicketAppointmentRequests = withAuth(async (
         throw new Error('Permission denied');
       }
 
-      return await trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function () {
-          this.on('ar.service_id', 'sc.service_id')
-            .andOn('ar.tenant', 'sc.tenant');
-        })
-        .where('ar.tenant', tenant)
+      const tenantFacade = tenantDb(trx, tenant);
+      const appointmentQuery = tenantFacade.table('appointment_requests as ar');
+      tenantFacade.tenantJoin(
+        appointmentQuery,
+        'service_catalog as sc',
+        'ar.service_id',
+        'sc.service_id',
+        { type: 'left' }
+      );
+      return await appointmentQuery
         .where('ar.ticket_id', ticketId)
         .select(
           'ar.*',

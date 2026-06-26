@@ -1,7 +1,7 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -15,6 +15,7 @@ import fs from 'fs/promises';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getClientById } from '@alga-psa/shared/billingClients/clients';
+import type { Knex } from 'knex';
 
 interface InitialJobData {
   requesterId: string;
@@ -201,7 +202,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
 
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
-  const tenantRecord = await knex('tenants').where({ tenant }).first();
+  const tenantRecord = await tenantDb(knex, tenant).table('tenants').first();
   const companyName = tenantRecord?.company_name || 'Your Company';
 
   for (const invoiceId of invoiceIds) {
@@ -223,8 +224,8 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       let recipientSource: InvoiceEmailRecipientInfo['recipientSource'] = 'none';
 
       if (client.billing_contact_id) {
-        const contact = await knex<IContact>('contacts')
-          .where({ tenant, contact_name_id: client.billing_contact_id })
+        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
+          .where({ contact_name_id: client.billing_contact_id })
           .first();
         if (contact && contact.email) {
           recipientEmail = contact.email;
@@ -305,14 +306,14 @@ interface InvoiceEmailTemplate {
 }
 
 async function getInvoiceEmailTemplate(
-  knex: any,
+  knex: Knex | Knex.Transaction,
   tenant: string,
   locale: string = 'en'
 ): Promise<InvoiceEmailTemplate> {
+  const db = tenantDb(knex, tenant);
   // Try tenant template in requested locale
-  let template = await knex('tenant_email_templates')
+  let template = await db.table('tenant_email_templates')
     .where({
-      tenant,
       name: 'invoice-email',
       language_code: locale,
     })
@@ -320,9 +321,8 @@ async function getInvoiceEmailTemplate(
 
   // Fall back to tenant English template
   if (!template && locale !== 'en') {
-    template = await knex('tenant_email_templates')
+    template = await db.table('tenant_email_templates')
       .where({
-        tenant,
         name: 'invoice-email',
         language_code: 'en',
       })
@@ -402,7 +402,7 @@ export const sendInvoiceEmailAction = withAuth(async (
   const pdfService = createPDFGenerationService(tenant);
   const results: SendInvoiceEmailResult[] = [];
 
-  const tenantRecord = await knex('tenants').where({ tenant }).first();
+  const tenantRecord = await tenantDb(knex, tenant).table('tenants').first();
   const companyName = tenantRecord?.company_name || 'Your Company';
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
@@ -436,8 +436,8 @@ export const sendInvoiceEmailAction = withAuth(async (
       let recipientName = client.client_name;
 
       if (client.billing_contact_id) {
-        const contact = await knex<IContact>('contacts')
-          .where({ tenant, contact_name_id: client.billing_contact_id })
+        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
+          .where({ contact_name_id: client.billing_contact_id })
           .first();
         if (contact) {
           recipientEmail = contact.email;

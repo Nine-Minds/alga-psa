@@ -71,7 +71,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
-import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
@@ -99,6 +99,21 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
+}
+
+function tenantLeftJoin(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  builder: Knex.QueryBuilder,
+  table: string,
+  left: string,
+  right: string,
+  options: { rootTenantColumn?: string; on?: (join: Knex.JoinClause) => void } = {}
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).tenantJoin(builder, table, left, right, {
+    ...options,
+    type: 'left',
+  });
 }
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
@@ -393,7 +408,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     try {
 
     // Fetch ticket with status and location info
-    const ticket = await tenantScopedTable(trx, 'tickets as t', tenant)
+    const ticketQuery = tenantScopedTable(trx, 'tickets as t', tenant)
       .select(
         't.*',
         's.name as status_name',
@@ -415,15 +430,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'cl.is_billing_address',
         'cl.is_shipping_address',
         'cl.is_default as location_is_default'
-      )
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-           .andOn('t.tenant', 's.tenant')
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-           .andOn('t.tenant', 'cl.tenant')
-      })
+      );
+    tenantLeftJoin(trx, tenant, ticketQuery, 'statuses as s', 't.status_id', 's.status_id');
+    tenantLeftJoin(trx, tenant, ticketQuery, 'client_locations as cl', 't.location_id', 'cl.location_id');
+    const ticket = await ticketQuery
       .where({ 't.ticket_id': ticketId })
       .first();
 
@@ -462,27 +472,33 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .orderBy('created_at', 'asc'),
       
       // Documents
-      tenantScopedTable(trx, 'documents as d', tenant)
-        .select('d.*')
-        .leftJoin('document_associations as da', function() {
-          this.on('d.document_id', 'da.document_id')
-             .andOn('d.tenant', 'da.tenant')
-        })
+      tenantLeftJoin(
+        trx,
+        tenant,
+        tenantScopedTable(trx, 'documents as d', tenant)
+          .select('d.*'),
+        'document_associations as da',
+        'd.document_id',
+        'da.document_id'
+      )
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket'
         }),
       
-      tenantScopedTable(trx, 'clients as c', tenant)
+      tenantLeftJoin(
+        trx,
+        tenant,
+        tenantScopedTable(trx, 'clients as c', tenant)
         .select(
           'c.*',
           'da.document_id'
-        )
-        .leftJoin('document_associations as da', function() {
-          this.on('da.entity_id', '=', 'c.client_id')
-              .andOn('da.tenant', '=', 'c.tenant')
-              .andOnVal('da.entity_type', '=', 'client');
-        })
+        ),
+        'document_associations as da',
+        'c.client_id',
+        'da.entity_id',
+        { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
+      )
         .orderBy('c.client_name', 'asc'),
 
       tenantScopedTable(trx, 'ticket_resources', tenant)
@@ -582,20 +598,27 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     
     if (ticket.client_id) {
       [client, contacts, locations] = await Promise.all([
-        tenantScopedTable(trx, 'clients as c', tenant)
-          .select(
-            'c.*',
-            'd.file_id'
-          )
-          .leftJoin('document_associations as da', function() {
-            this.on('da.entity_id', '=', 'c.client_id')
-                .andOn('da.tenant', '=', 'c.tenant')
-                .andOnVal('da.entity_type', '=', 'client');
-          })
-          .leftJoin('documents as d', function() {
-             this.on('d.document_id', '=', 'da.document_id')
-                .andOn('d.tenant', '=', 'c.tenant');
-          })
+        tenantLeftJoin(
+          trx,
+          tenant,
+          tenantLeftJoin(
+            trx,
+            tenant,
+            tenantScopedTable(trx, 'clients as c', tenant)
+              .select(
+                'c.*',
+                'd.file_id'
+              ),
+            'document_associations as da',
+            'c.client_id',
+            'da.entity_id',
+            { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
+          ),
+          'documents as d',
+          'da.document_id',
+          'd.document_id',
+          { rootTenantColumn: 'c.tenant' }
+        )
           .where({
             'c.client_id': ticket.client_id
           })
@@ -735,15 +758,18 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }));
 
     // Get scheduled hours for ticket
-    const scheduleEntries = await tenantScopedTable(trx, 'schedule_entries as se', tenant)
-      .select(
-        'se.*',
-        'sea.user_id'
-      )
-      .leftJoin('schedule_entry_assignees as sea', function() {
-        this.on('se.entry_id', 'sea.entry_id')
-           .andOn('se.tenant', 'sea.tenant')
-      })
+    const scheduleEntries = await tenantLeftJoin(
+      trx,
+      tenant,
+      tenantScopedTable(trx, 'schedule_entries as se', tenant)
+        .select(
+          'se.*',
+          'sea.user_id'
+        ),
+      'schedule_entry_assignees as sea',
+      'se.entry_id',
+      'sea.entry_id'
+    )
       .where({
         'se.work_item_id': ticketId,
         'se.work_item_type': 'ticket'
@@ -828,7 +854,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       .where({ master_ticket_id: bundleRootId })
       .first();
 
-    const rawBundleChildren = await tenantScopedTable(trx, 'tickets as ct', tenant)
+    const rawBundleChildrenQuery = tenantScopedTable(trx, 'tickets as ct', tenant)
       .select(
         'ct.ticket_id',
         'ct.ticket_number',
@@ -842,16 +868,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.assigned_to',
         'ct.board_id',
         'ct.assigned_team_id'
-      )
-      .leftJoin('clients as comp', function() {
-        this.on('ct.client_id', 'comp.client_id')
-          .andOn('ct.tenant', 'comp.tenant');
-      })
+      );
+    tenantLeftJoin(trx, tenant, rawBundleChildrenQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
+    const rawBundleChildren = await rawBundleChildrenQuery
       .where({ 'ct.master_ticket_id': bundleRootId })
       .orderBy('ct.updated_at', 'desc');
 
     const rawBundleMaster = masterTicketId
-      ? await tenantScopedTable(trx, 'tickets as mt', tenant)
+      ? await (async () => {
+        const masterQuery = tenantScopedTable(trx, 'tickets as mt', tenant)
         .select(
           'mt.ticket_id',
           'mt.ticket_number',
@@ -865,13 +890,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.assigned_to',
           'mt.board_id',
           'mt.assigned_team_id'
-        )
-        .leftJoin('clients as comp', function() {
-          this.on('mt.client_id', 'comp.client_id')
-            .andOn('mt.tenant', 'comp.tenant');
-        })
-        .where({ 'mt.ticket_id': masterTicketId })
-        .first()
+        );
+        tenantLeftJoin(trx, tenant, masterQuery, 'clients as comp', 'mt.client_id', 'comp.client_id');
+        return masterQuery
+          .where({ 'mt.ticket_id': masterTicketId })
+          .first();
+      })()
       : null;
 
     const bundleChildren = await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren);
@@ -885,26 +909,23 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master)
     const aggregatedChildClientComments = isBundleMaster
-      ? await tenantScopedTable(trx, 'comments as c', tenant)
+      ? await (async () => {
+        const commentsQuery = tenantScopedTable(trx, 'comments as c', tenant)
         .select(
           'c.*',
           'ct.ticket_id as child_ticket_id',
           'ct.ticket_number as child_ticket_number',
           'ct.title as child_ticket_title',
           'comp.client_name as child_client_name'
-        )
-        .leftJoin('tickets as ct', function() {
-          this.on('c.ticket_id', 'ct.ticket_id')
-            .andOn('c.tenant', 'ct.tenant');
-        })
-        .leftJoin('clients as comp', function() {
-          this.on('ct.client_id', 'comp.client_id')
-            .andOn('ct.tenant', 'comp.tenant');
-        })
-        .where('c.is_internal', false)
-        .andWhere('ct.master_ticket_id', ticketId)
-        .orderBy('c.created_at', 'desc')
-        .limit(200)
+        );
+        tenantLeftJoin(trx, tenant, commentsQuery, 'tickets as ct', 'c.ticket_id', 'ct.ticket_id');
+        tenantLeftJoin(trx, tenant, commentsQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
+        return commentsQuery
+          .where('c.is_internal', false)
+          .andWhere('ct.master_ticket_id', ticketId)
+          .orderBy('c.created_at', 'desc')
+          .limit(200);
+      })()
       : [];
 
     const filteredAggregatedChildClientComments = isBundleMaster
@@ -995,44 +1016,18 @@ async function buildTicketListBaseQuery(
 ): Promise<{ builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery }> {
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
     const scopedQuery = tenantDb(trx, tenant).scoped('tickets as t');
-    let baseQuery = scopedQuery.builder
-      .leftJoin('tickets as mt', function() {
-        this.on('t.master_ticket_id', 'mt.ticket_id')
-          .andOn('t.tenant', 'mt.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-           .andOn('t.tenant', 's.tenant')
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-           .andOn('t.tenant', 'p.tenant')
-           .andOnVal('p.item_type', '=', 'ticket')
-      })
-      .leftJoin('boards as c', function() {
-        this.on('t.board_id', 'c.board_id')
-           .andOn('t.tenant', 'c.tenant')
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-           .andOn('t.tenant', 'cat.tenant')
-      })
-      .leftJoin('clients as comp', function() {
-        this.on('t.client_id', 'comp.client_id')
-           .andOn('t.tenant', 'comp.tenant')
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.entered_by', 'u.user_id')
-           .andOn('t.tenant', 'u.tenant')
-      })
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-           .andOn('t.tenant', 'au.tenant')
-      })
-      .leftJoin('teams as tm', function() {
-        this.on('t.assigned_team_id', 'tm.team_id')
-           .andOn('t.tenant', 'tm.tenant')
-      });
+    let baseQuery = scopedQuery.builder;
+    tenantLeftJoin(trx, tenant, baseQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'statuses as s', 't.status_id', 's.status_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'priorities as p', 't.priority_id', 'p.priority_id', {
+      on: (join) => join.andOnVal('p.item_type', '=', 'ticket'),
+    });
+    tenantLeftJoin(trx, tenant, baseQuery, 'boards as c', 't.board_id', 'c.board_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'categories as cat', 't.category_id', 'cat.category_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'users as u', 't.entered_by', 'u.user_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
 
     // Bundle view filter: hide children in bundled view
     if (validatedFilters.bundleView === 'bundled') {
@@ -1079,13 +1074,12 @@ async function buildTicketListBaseQuery(
     }
 
     if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
-      baseQuery = baseQuery.whereExists(function() {
-        this.select('*')
-            .from('statuses')
-            .whereRaw('statuses.status_id = t.status_id')
-            .andWhere('statuses.is_closed', false)
-            .andWhere('statuses.tenant', tenant);
-      });
+      baseQuery = baseQuery.whereExists(
+        tenantScopedTable(trx, 'statuses', tenant)
+          .select('*')
+          .whereRaw('statuses.status_id = t.status_id')
+          .andWhere('statuses.is_closed', false)
+      );
     } else if (parsedStatusFilter.kind === 'name') {
       baseQuery = baseQuery.where('s.name', parsedStatusFilter.statusName);
     } else if (parsedStatusFilter.kind === 'id') {
@@ -1146,13 +1140,12 @@ async function buildTicketListBaseQuery(
       if (validatedFilters.bundleView === 'bundled') {
         baseQuery = baseQuery.where(function(this: any) {
           this.where('t.client_id', validatedFilters.clientId)
-            .orWhereExists(function(this: any) {
-              this.select('*')
-                .from('tickets as tc')
-                .whereRaw('tc.tenant = t.tenant')
-                .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-                .andWhere('tc.client_id', validatedFilters.clientId);
-            });
+            .orWhereExists(
+              tenantScopedTable(trx, 'tickets as tc', tenant)
+                .select('*')
+                .whereRaw('tc.master_ticket_id = t.ticket_id')
+                .andWhere('tc.client_id', validatedFilters.clientId)
+            );
         });
       } else {
         baseQuery = baseQuery.where('t.client_id', validatedFilters.clientId);
@@ -1163,13 +1156,12 @@ async function buildTicketListBaseQuery(
       if (validatedFilters.bundleView === 'bundled') {
         baseQuery = baseQuery.where(function(this: any) {
           this.where('t.contact_name_id', validatedFilters.contactId)
-            .orWhereExists(function(this: any) {
-              this.select('*')
-                .from('tickets as tc')
-                .whereRaw('tc.tenant = t.tenant')
-                .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-                .andWhere('tc.contact_name_id', validatedFilters.contactId);
-            });
+            .orWhereExists(
+              tenantScopedTable(trx, 'tickets as tc', tenant)
+                .select('*')
+                .whereRaw('tc.master_ticket_id = t.ticket_id')
+                .andWhere('tc.contact_name_id', validatedFilters.contactId)
+            );
         });
       } else {
         baseQuery = baseQuery.where('t.contact_name_id', validatedFilters.contactId);
@@ -1180,17 +1172,12 @@ async function buildTicketListBaseQuery(
 
     // Apply tag filter if provided
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      baseQuery = baseQuery.whereIn('t.ticket_id', function() {
-        this.select('tm.tagged_id')
-          .from('tag_mappings as tm')
-          .join('tag_definitions as td', function() {
-            this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-          })
-          .where('tm.tagged_type', 'ticket')
-          .andWhere('tm.tenant', tenant)
-          .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      });
+      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
+        .select('tm.tagged_id')
+        .where('tm.tagged_type', 'ticket')
+        .whereIn('td.tag_text', validatedFilters.tags as string[]);
+      tenantDb(trx, tenant).tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+      baseQuery = baseQuery.whereIn('t.ticket_id', tagSubquery);
     }
 
     // Apply assignee filter if provided
@@ -1868,11 +1855,13 @@ export const getTicketsForList = withAuth(async (
         ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
         : Promise.resolve(new Map<string, string | null>()),
       ticketIds.length > 0
-        ? tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
+        ? tenantDb(trx, tenant)
+            .tenantJoin(
+              tenantScopedTable(trx, 'tag_mappings as tm', tenant),
+              'tag_definitions as td',
+              'tm.tag_id',
+              'td.tag_id'
+            )
             .whereIn('tm.tagged_id', ticketIds)
             .where('tm.tagged_type', 'ticket')
             .select(
@@ -2416,7 +2405,7 @@ export async function updateTicketInTransaction(
           
         // Step 6: Re-create the resources with the new assigned_to
         for (const resourceData of resourcesToRecreate) {
-          await trx('ticket_resources').insert({
+          await tenantScopedTable(trx, 'ticket_resources', tenant).insert({
             ...resourceData,
             assigned_to: updateData.assigned_to
           });
@@ -2899,10 +2888,9 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Verify ticket exists
-    const ticket = await trx('tickets')
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
       .where({
-        ticket_id: ticketId,
-        tenant: tenant
+        ticket_id: ticketId
       })
       .first();
 
@@ -3269,44 +3257,20 @@ export const fetchBundleChildrenForMaster = withAuth(async (
       user as IUserWithRoles
     );
 
-    const rows = await tenantScopedTable(trx, 'tickets as t', tenant)
-      .leftJoin('tickets as mt', function () {
-        this.on('t.master_ticket_id', 'mt.ticket_id')
-          .andOn('t.tenant', 'mt.tenant');
-      })
-      .leftJoin('statuses as s', function () {
-        this.on('t.status_id', 's.status_id')
-          .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('priorities as p', function () {
-        this.on('t.priority_id', 'p.priority_id')
-          .andOn('t.tenant', 'p.tenant')
-          .andOnVal('p.item_type', '=', 'ticket');
-      })
-      .leftJoin('boards as c', function () {
-        this.on('t.board_id', 'c.board_id')
-          .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('categories as cat', function () {
-        this.on('t.category_id', 'cat.category_id')
-          .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('clients as comp', function () {
-        this.on('t.client_id', 'comp.client_id')
-          .andOn('t.tenant', 'comp.tenant');
-      })
-      .leftJoin('users as u', function () {
-        this.on('t.entered_by', 'u.user_id')
-          .andOn('t.tenant', 'u.tenant');
-      })
-      .leftJoin('users as au', function () {
-        this.on('t.assigned_to', 'au.user_id')
-          .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('teams as tm', function () {
-        this.on('t.assigned_team_id', 'tm.team_id')
-          .andOn('t.tenant', 'tm.tenant');
-      })
+    const childrenQuery = tenantScopedTable(trx, 'tickets as t', tenant);
+    tenantLeftJoin(trx, tenant, childrenQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
+    tenantLeftJoin(trx, tenant, childrenQuery, 'statuses as s', 't.status_id', 's.status_id');
+    tenantLeftJoin(trx, tenant, childrenQuery, 'priorities as p', 't.priority_id', 'p.priority_id', {
+      on: (join) => join.andOnVal('p.item_type', '=', 'ticket'),
+    });
+    tenantLeftJoin(trx, tenant, childrenQuery, 'boards as c', 't.board_id', 'c.board_id');
+    tenantLeftJoin(trx, tenant, childrenQuery, 'categories as cat', 't.category_id', 'cat.category_id');
+    tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+    tenantLeftJoin(trx, tenant, childrenQuery, 'users as u', 't.entered_by', 'u.user_id');
+    tenantLeftJoin(trx, tenant, childrenQuery, 'users as au', 't.assigned_to', 'au.user_id');
+    tenantLeftJoin(trx, tenant, childrenQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
+
+    const rows = await childrenQuery
       .select(
         't.*',
         's.name as status_name',

@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
   inboundEmailRuleInputSchema,
@@ -85,9 +85,9 @@ async function assertReferencedDefaultsExist(
   }
   if (!referencedIds.size) return;
 
-  const rows = await trx('inbound_ticket_defaults')
+  const rows = await tenantDb(trx, tenant).table('inbound_ticket_defaults')
     .select('id')
-    .where({ tenant, is_active: true })
+    .where({ is_active: true })
     .whereIn('id', Array.from(referencedIds));
   const found = new Set(rows.map((row: { id: string }) => row.id));
   for (const id of referencedIds) {
@@ -274,9 +274,9 @@ export const getInboundEmailRuleAiAvailability = withAuth(async (
   try {
     const { ADD_ONS, tenantHasAddOn } = await import('@alga-psa/types');
     const { knex } = await createTenantKnex();
-    const rows = await knex('tenant_addons')
-      .select('addon_key', 'expires_at')
-      .where({ tenant }) as Array<{ addon_key: string; expires_at: string | Date | null }>;
+    const rows = await tenantDb(knex, tenant)
+      .table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')
+      .select('addon_key', 'expires_at');
 
     const now = Date.now();
     const knownAddOns = new Set<string>(Object.values(ADD_ONS));
@@ -316,7 +316,11 @@ export const addClientNameAliasFromRuleTester = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients').select('client_id').where({ tenant, client_id: clientId }).first();
+    const client = await tenantDb(trx, tenant)
+      .table('clients')
+      .select('client_id')
+      .where({ client_id: clientId })
+      .first();
     if (!client) {
       throw new Error('Client not found');
     }

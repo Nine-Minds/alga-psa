@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility.server';
 
 const hasPermissionAsyncMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
@@ -8,6 +8,10 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -114,9 +118,9 @@ function createVisibilityTrx(state: VisibilityState) {
                 .filter((row) => {
                   const board = state.boards.find((candidate) => candidate.board_id === row.board_id);
                   return (
-                    row.tenant === filters['cvgb.tenant'] &&
+                    (!filters['cvgb.tenant'] || row.tenant === filters['cvgb.tenant']) &&
                     row.group_id === filters['cvgb.group_id'] &&
-                    board?.tenant === filters['cvgb.tenant']
+                    (!filters['cvgb.tenant'] || board?.tenant === filters['cvgb.tenant'])
                   );
                 })
                 .map((row) => ({ board_id: row.board_id })),

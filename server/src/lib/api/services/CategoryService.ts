@@ -173,7 +173,7 @@ export class CategoryService extends BaseService {
         tenant: context.tenant
       };
 
-      const [created] = await trx('service_categories')
+      const [created] = await tenantDb(trx, context.tenant).table('service_categories')
         .insert(fullCategoryData)
         .returning('*');
 
@@ -397,7 +397,7 @@ export class CategoryService extends BaseService {
         tenant: context.tenant
       };
 
-      const [created] = await trx('categories')
+      const [created] = await this.buildTenantScopedQuery(trx, context)
         .insert(fullCategoryData)
         .returning('*');
 
@@ -706,11 +706,15 @@ export class CategoryService extends BaseService {
       }
 
       // Get usage statistics
-      const usageStats = await tenantDb(trx, context.tenant).table(`${tableName} as c`)
-        .leftJoin(`${usageTable} as u`, function() {
-          this.on('c.category_id', '=', 'u.category_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
+      const usageQuery = tenantDb(trx, context.tenant).table(`${tableName} as c`);
+      tenantDb(trx, context.tenant).tenantJoin(
+        usageQuery,
+        `${usageTable} as u`,
+        'c.category_id',
+        'u.category_id',
+        { type: 'left' }
+      );
+      const usageStats = await usageQuery
         .groupBy('c.category_id', 'c.category_name')
         .select(
           'c.category_id',

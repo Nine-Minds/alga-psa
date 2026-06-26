@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { ICreditTracking, ITransaction } from 'server/src/interfaces/billing.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
@@ -114,9 +115,8 @@ async function findMissingCredits(
   clientId?: string
 ): Promise<CreditDiscrepancy[]> {
   // Build the query to find credit transactions
-  let query = knex('transactions')
+  let query = tenantDb(knex, tenant).table<ITransaction>('transactions')
     .whereIn('type', CREDIT_TRANSACTION_TYPES)
-    .where('tenant', tenant)
     .andWhere('amount', '>', 0); // Only positive amounts create credits
 
   // Add client filter if provided
@@ -131,9 +131,8 @@ async function findMissingCredits(
   const discrepancies: CreditDiscrepancy[] = [];
 
   for (const transaction of creditTransactions) {
-    const creditTracking = await knex('credit_tracking')
+    const creditTracking = await tenantDb(knex, tenant).table('credit_tracking')
       .where('transaction_id', transaction.transaction_id)
-      .where('tenant', tenant)
       .first();
 
     if (!creditTracking) {
@@ -161,8 +160,7 @@ async function findInconsistentCredits(
   clientId?: string
 ): Promise<CreditDiscrepancy[]> {
   // Build the query to find credit_tracking entries
-  let query = knex('credit_tracking')
-    .where('tenant', tenant);
+  let query = tenantDb(knex, tenant).table<ICreditTracking>('credit_tracking');
 
   // Add client filter if provided
   if (clientId) {
@@ -176,9 +174,8 @@ async function findInconsistentCredits(
   const discrepancies: CreditDiscrepancy[] = [];
 
   for (const creditTracking of creditTrackingEntries) {
-    const transaction = await knex('transactions')
+    const transaction = await tenantDb(knex, tenant).table('transactions')
       .where('transaction_id', creditTracking.transaction_id)
-      .where('tenant', tenant)
       .first();
 
     if (transaction) {
@@ -213,7 +210,7 @@ async function createCreditTrackingEntry(
   transaction: ITransaction,
   tenant: string
 ): Promise<void> {
-  await trx('credit_tracking').insert({
+  await tenantDb(trx, tenant).table('credit_tracking').insert({
     credit_id: uuidv4(),
     tenant,
     client_id: transaction.client_id,
@@ -264,9 +261,8 @@ async function correctCreditTrackingEntry(
     updates.remaining_amount = expectedRemainingAmount;
   }
 
-  await trx('credit_tracking')
+  await tenantDb(trx, tenant).table('credit_tracking')
     .where('credit_id', creditTracking.credit_id)
-    .where('tenant', tenant)
     .update(updates);
 
   // Log the correction
@@ -287,9 +283,8 @@ export async function calculateRemainingCredit(
   tenant: string
 ): Promise<number> {
   // Get the original credit transaction
-  const creditTransaction = await knex('transactions')
+  const creditTransaction = await tenantDb(knex, tenant).table('transactions')
     .where('transaction_id', transactionId)
-    .where('tenant', tenant)
     .first();
 
   if (!creditTransaction || !CREDIT_TRANSACTION_TYPES.includes(creditTransaction.type)) {
@@ -297,19 +292,21 @@ export async function calculateRemainingCredit(
   }
 
   // Get all credit application transactions that reference this credit
-  const applications = await knex('transactions')
+  const applications = await tenantDb(knex, tenant).table('transactions')
     .where('type', 'credit_application')
-    .where('tenant', tenant)
-    .where('related_transaction_id', transactionId)
-    .orWhere('metadata', 'like', `%${transactionId}%`) // Fallback for older transactions
+    .andWhere(function() {
+      this.where('related_transaction_id', transactionId)
+        .orWhere('metadata', 'like', `%${transactionId}%`); // Fallback for older transactions
+    })
     .select();
 
   // Get all credit expiration transactions that reference this credit
-  const expirations = await knex('transactions')
+  const expirations = await tenantDb(knex, tenant).table('transactions')
     .where('type', 'credit_expiration')
-    .where('tenant', tenant)
-    .where('related_transaction_id', transactionId)
-    .orWhere('metadata', 'like', `%${transactionId}%`) // Fallback for older transactions
+    .andWhere(function() {
+      this.where('related_transaction_id', transactionId)
+        .orWhere('metadata', 'like', `%${transactionId}%`); // Fallback for older transactions
+    })
     .select();
 
   // Calculate the total amount applied and expired
@@ -366,9 +363,8 @@ export async function fullCreditReconciliation(
     if (!dryRun) {
       await knex.transaction(async (trx: Knex.Transaction) => {
         // Get all credit_tracking entries for this client
-        const creditTrackingEntries = await trx('credit_tracking')
+        const creditTrackingEntries = await tenantDb(trx, tenant).table('credit_tracking')
           .where('client_id', clientId)
-          .where('tenant', tenant)
           .select();
 
         // Recalculate remaining amount for each credit
@@ -378,9 +374,8 @@ export async function fullCreditReconciliation(
             
             // If the calculated remaining amount differs from the stored one, update it
             if (Math.abs(Number(credit.remaining_amount) - expectedRemainingAmount) > 0.01) {
-              await trx('credit_tracking')
+              await tenantDb(trx, tenant).table('credit_tracking')
                 .where('credit_id', credit.credit_id)
-                .where('tenant', tenant)
                 .update({
                   remaining_amount: expectedRemainingAmount,
                   updated_at: new Date().toISOString()

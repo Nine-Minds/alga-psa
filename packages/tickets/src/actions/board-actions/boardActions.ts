@@ -2,8 +2,7 @@
 
 import { IBoard } from '@alga-psa/types';
 import Board from '../../models/board';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -56,8 +55,11 @@ async function seedBoardTicketStatusesFromStandards(
   boardId: string,
   userId: string
 ): Promise<number> {
-  const existingStatus = await trx('statuses')
-    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+  const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+    tenantDb(trx, tenant).table<Row>(table);
+
+  const existingStatus = await tenantScopedTable('statuses')
+    .where({ board_id: boardId, status_type: 'ticket' })
     .first('status_id');
 
   if (existingStatus) {
@@ -77,7 +79,7 @@ async function seedBoardTicketStatusesFromStandards(
   const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
   const now = new Date().toISOString();
 
-  await trx('statuses').insert(standardStatuses.map((status: any) => ({
+  await tenantScopedTable('statuses').insert(standardStatuses.map((status: any) => ({
     tenant,
     board_id: boardId,
     name: status.name,
@@ -102,11 +104,12 @@ export async function copyBoardTicketStatuses(
   targetBoardId: string,
   userId: string
 ): Promise<number> {
+  const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+    tenantDb(trx, tenant).table<Row>(table);
   const statusColumns = await trx('statuses').columnInfo();
   const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
-  const sourceStatuses = await trx('statuses')
+  const sourceStatuses = await tenantScopedTable('statuses')
     .where({
-      tenant,
       board_id: sourceBoardId,
       status_type: 'ticket'
     })
@@ -137,7 +140,7 @@ export async function copyBoardTicketStatuses(
     ...(hasStatusColumn('updated_at') ? { updated_at: now } : {}),
   }));
 
-  await trx('statuses').insert(clonedStatuses);
+  await tenantScopedTable('statuses').insert(clonedStatuses);
   return clonedStatuses.length;
 }
 
@@ -158,8 +161,7 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const boards = await trx('boards')
-        .where({ tenant })
+      const boards = await tenantDb(trx, tenant).table<IBoard>('boards')
         .where(includeAll ? {} : { is_inactive: false })
         .orderBy('display_order', 'asc')
         .orderBy('board_name', 'asc');
@@ -176,11 +178,13 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+        tenantDb(trx, tenant).table<Row>(table);
+
       // If no display_order provided, get the next available order
       let displayOrder = boardData.display_order;
       if (displayOrder === undefined || displayOrder === 0) {
-        const maxOrder = await trx('boards')
-          .where({ tenant })
+        const maxOrder = await tenantScopedTable('boards')
           .max('display_order as max')
           .first();
         displayOrder = (maxOrder?.max || 0) + 1;
@@ -190,14 +194,14 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
       let isDefault = boardData.is_default || false;
       if (isDefault) {
         // Check if there's already a default board
-        const existingDefault = await trx('boards')
-          .where({ tenant, is_default: true })
+        const existingDefault = await tenantScopedTable('boards')
+          .where({ is_default: true })
           .first();
 
         if (existingDefault) {
           // Unset the existing default
-          await trx('boards')
-            .where({ tenant, is_default: true })
+          await tenantScopedTable('boards')
+            .where({ is_default: true })
             .update({ is_default: false });
         }
       }
@@ -207,9 +211,9 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
       const desiredPriorityType = boardData.priority_type || 'custom';
       let defaultPriorityId = (boardData.default_priority_id || null) as string | null;
       if (!defaultPriorityId) {
-        const row = await trx('priorities')
+        const row = await tenantScopedTable('priorities')
           .select('priority_id')
-          .where({ tenant, item_type: 'ticket' })
+          .where({ item_type: 'ticket' })
           .where(function() {
             if (desiredPriorityType === 'itil') {
               this.where('is_from_itil_standard', true);
@@ -228,16 +232,16 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
         defaultPriorityId = row?.priority_id || null;
       }
       if (!defaultPriorityId) {
-        const row = await trx('priorities')
+        const row = await tenantScopedTable('priorities')
           .select('priority_id')
-          .where({ tenant, item_type: 'ticket' })
+          .where({ item_type: 'ticket' })
           .orderBy('order_number', 'asc')
           .orderBy('priority_name', 'asc')
           .first();
         defaultPriorityId = row?.priority_id || null;
       }
 
-      const [newBoard] = await trx('boards')
+      const [newBoard] = (await tenantScopedTable('boards')
         .insert({
           board_name: boardData.board_name,
           description: boardData.description || null,
@@ -259,42 +263,46 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
           tenant
         })
-        .returning('*');
+        .returning('*')) as IBoard[];
+      const newBoardId = newBoard.board_id;
+      if (!newBoardId) {
+        throw new Error('Failed to create board');
+      }
 
       // If ITIL types are configured, copy the standards to tenant tables
       await ItilStandardsService.handleItilConfiguration(
         trx,
         tenant,
         user.user_id,
-        newBoard.board_id,
-        boardData.category_type,
-        boardData.priority_type
+        newBoardId,
+        boardData.category_type || 'custom',
+        boardData.priority_type || 'custom'
       );
 
-	      if (boardData.ticket_statuses && boardData.ticket_statuses.length > 0) {
-	        await saveBoardTicketStatusesForBoard(
-	          trx,
+      if (boardData.ticket_statuses && boardData.ticket_statuses.length > 0) {
+        await saveBoardTicketStatusesForBoard(
+          trx,
           tenant,
-          newBoard.board_id,
+          newBoardId,
           user.user_id,
           stripStatusIdsForNewBoard(boardData.ticket_statuses)
-	        );
-	      } else if (boardData.copy_ticket_statuses_from_board_id) {
-	        await copyBoardTicketStatuses(
-	          trx,
+        );
+      } else if (boardData.copy_ticket_statuses_from_board_id) {
+        await copyBoardTicketStatuses(
+          trx,
           tenant,
           boardData.copy_ticket_statuses_from_board_id,
-	          newBoard.board_id,
-	          user.user_id
-	        );
-	      } else {
-	        await seedBoardTicketStatusesFromStandards(
-	          trx,
-	          tenant,
-	          newBoard.board_id,
-	          user.user_id
-	        );
-	      }
+          newBoardId,
+          user.user_id
+        );
+      } else {
+        await seedBoardTicketStatusesFromStandards(
+          trx,
+          tenant,
+          newBoardId,
+          user.user_id
+        );
+      }
 
       await publishEvent({
         eventType: 'BOARD_CREATED',
@@ -331,27 +339,29 @@ async function cleanupBoardStatuses(
   tenant: string,
   boardId: string
 ): Promise<void> {
-  const statusIds = await trx('statuses')
-    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+  const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+    tenantDb(trx, tenant).table<Row>(table);
+
+  const statusIds = await tenantScopedTable('statuses')
+    .where({ board_id: boardId, status_type: 'ticket' })
     .pluck('status_id');
 
   if (statusIds.length === 0) return;
 
   // 1. Clear the board's own FK back to statuses (circular ref)
-  await trx('boards')
-    .where({ tenant, board_id: boardId })
+  await tenantScopedTable('boards')
+    .where({ board_id: boardId })
     .whereIn('inbound_reply_reopen_status_id', statusIds)
     .update({ inbound_reply_reopen_status_id: null });
 
   // 2. Remove SLA pause config rows that reference these statuses
-  await trx('status_sla_pause_config')
-    .where({ tenant })
+  await tenantScopedTable('status_sla_pause_config')
     .whereIn('status_id', statusIds)
     .delete();
 
   // 3. Delete the statuses themselves
-  await trx('statuses')
-    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+  await tenantScopedTable('statuses')
+    .where({ board_id: boardId, status_type: 'ticket' })
     .delete();
 }
 
@@ -390,9 +400,12 @@ export const deleteBoard = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction): Promise<DeleteBoardResult> => {
+    const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+      tenantDb(trx, tenant).table<Row>(table);
+
     // 1. Get the board
-    const board = await trx('boards')
-      .where({ tenant, board_id: boardId })
+    const board = await tenantScopedTable('boards')
+      .where({ board_id: boardId })
       .first();
 
     if (!board) {
@@ -409,8 +422,8 @@ export const deleteBoard = withAuth(async (
     }
 
     // 3. Check if board is used in inbound_ticket_defaults (email routing)
-    const inboundDefaultsResult = await trx('inbound_ticket_defaults')
-      .where({ tenant, board_id: boardId })
+    const inboundDefaultsResult = await tenantScopedTable('inbound_ticket_defaults')
+      .where({ board_id: boardId })
       .count('* as count')
       .first();
 
@@ -433,16 +446,15 @@ export const deleteBoard = withAuth(async (
     // ITIL categories are shared and shouldn't block individual board deletion
     let allCategoryIds: string[] = [];
     if (!isItilCategoryBoard) {
-      const allCategories = await trx('categories')
-        .where({ tenant, board_id: boardId })
+      const allCategories = await tenantScopedTable('categories')
+        .where({ board_id: boardId })
         .select('category_id');
       allCategoryIds = allCategories.map((c: { category_id: string }) => c.category_id);
     }
 
     // 6. Check for tickets directly on this board
     // For custom boards, also check tickets in board's categories
-    const ticketCountResult = await trx('tickets')
-      .where({ tenant })
+    const ticketCountResult = await tenantScopedTable('tickets')
       .where(function() {
         this.where('board_id', boardId);
         // Only check category-based tickets for custom boards
@@ -469,8 +481,8 @@ export const deleteBoard = withAuth(async (
     // 6b. Count board ticket statuses (informational — these are always
     // auto-cleaned because the "at least one default" rule makes manual
     // deletion impossible)
-    const statusCountResult = await trx('statuses')
-      .where({ tenant, board_id: boardId, status_type: 'ticket' })
+    const statusCountResult = await tenantScopedTable('statuses')
+      .where({ board_id: boardId, status_type: 'ticket' })
       .count('status_id as count')
       .first();
     const statusCount = Number(statusCountResult?.count || 0);
@@ -506,8 +518,7 @@ export const deleteBoard = withAuth(async (
     let isLastItilBoard = false;
 
     if (isItilBoard) {
-      const otherItilBoardsResult = await trx('boards')
-        .where({ tenant })
+      const otherItilBoardsResult = await tenantScopedTable('boards')
         .whereNot('board_id', boardId)
         .where(function() {
           this.where('category_type', 'itil').orWhere('priority_type', 'itil');
@@ -535,8 +546,8 @@ export const deleteBoard = withAuth(async (
         // we already confirmed zero tickets above)
         await cleanupBoardStatuses(boardTrx, tenantId, boardId);
 
-        const deletedCount = await boardTrx('boards')
-          .where({ tenant: tenantId, board_id: boardId })
+        const deletedCount = await tenantDb(boardTrx, tenantId).table('boards')
+          .where({ board_id: boardId })
           .delete();
 
         if (deletedCount === 0) {
@@ -571,8 +582,8 @@ export const deleteBoard = withAuth(async (
 
     // 9. Delete custom categories (ITIL categories are shared and cleaned up separately)
     if (!isItilCategoryBoard && allCategoryIds.length > 0) {
-      await trx('categories')
-        .where({ tenant, board_id: boardId })
+      await tenantScopedTable('categories')
+        .where({ board_id: boardId })
         .delete();
     }
 
@@ -582,8 +593,8 @@ export const deleteBoard = withAuth(async (
     await cleanupBoardStatuses(trx, tenant, boardId);
 
     // 11. Delete the board
-    await trx('boards')
-      .where({ tenant, board_id: boardId })
+    await tenantScopedTable('boards')
+      .where({ board_id: boardId })
       .delete();
 
     await publishEvent({
@@ -652,9 +663,12 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
+        tenantDb(trx, tenant).table<Row>(table);
+
       // Get the current board to check for ITIL type changes
-      const currentBoard = await trx('boards')
-        .where({ board_id: boardId, tenant })
+      const currentBoard = await tenantScopedTable<IBoard>('boards')
+        .where({ board_id: boardId })
         .first();
 
       if (!currentBoard) {
@@ -663,8 +677,8 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
 
       // If setting as default, unset all other defaults first
       if (boardData.is_default === true) {
-        await trx('boards')
-          .where({ tenant, is_default: true })
+        await tenantScopedTable('boards')
+          .where({ is_default: true })
           .whereNot('board_id', boardId)
           .update({ is_default: false });
       }
@@ -708,10 +722,10 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
 
       const { ticket_statuses: ticketStatuses, ...boardUpdateData } = sanitizedData;
 
-      const [updatedBoard] = await trx('boards')
-        .where({ board_id: boardId, tenant })
+      const [updatedBoard] = (await tenantScopedTable('boards')
+        .where({ board_id: boardId })
         .update(boardUpdateData)
-        .returning('*');
+        .returning('*')) as IBoard[];
 
       // Handle ITIL type changes
       const categoryTypeChanged = boardData.category_type && boardData.category_type !== currentBoard.category_type;
@@ -777,12 +791,11 @@ export const findBoardByName = withAuth(async (_user, { tenant }, name: string):
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const board = await trx('boards')
+    const board = await tenantDb(trx, tenant).table('boards')
       .select('board_id as id', 'board_name as name', 'description', 'is_default', 'is_inactive')
-      .where('tenant', tenant)
       .whereRaw('LOWER(board_name) = LOWER(?)', [name])
-      .first();
+      .first() as FindBoardByNameOutput | undefined;
 
-    return board || null;
+    return board ?? null;
   });
 });

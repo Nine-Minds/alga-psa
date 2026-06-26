@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type {
   IClientTaxSettings,
   ITaxComponent,
@@ -8,6 +8,14 @@ import type {
   ITaxRateDetails as ITaxRate,
   ITaxRateThreshold,
 } from '@alga-psa/types';
+
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 const ClientTaxSettings = {
   async get(clientId: string): Promise<IClientTaxSettings | null> {
@@ -18,10 +26,9 @@ const ClientTaxSettings = {
         throw new Error('Tenant context is required for tax settings operations');
       }
 
-      const taxSettings = await db<IClientTaxSettings>('client_tax_settings')
+      const taxSettings = await tenantScopedTable<IClientTaxSettings>(db, tenant, 'client_tax_settings')
         .where({
-          client_id: clientId,
-          tenant
+          client_id: clientId
         })
         .first();
 
@@ -39,7 +46,7 @@ const ClientTaxSettings = {
   async create(taxSettings: Omit<IClientTaxSettings, 'tenant'>): Promise<IClientTaxSettings> {
     try {
       const { knex: db, tenant } = await createTenantKnex();
-      const [createdSettings] = await db<IClientTaxSettings>('client_tax_settings')
+      const [createdSettings] = await tenantScopedTable<IClientTaxSettings>(db, tenant!, 'client_tax_settings')
         .insert({ ...taxSettings, tenant: tenant! })
         .returning('*');
 
@@ -58,10 +65,9 @@ const ClientTaxSettings = {
         throw new Error('Tenant context is required for tax settings operations');
       }
 
-      const [updatedSettings] = await db<IClientTaxSettings>('client_tax_settings')
+      const [updatedSettings] = await tenantScopedTable<IClientTaxSettings>(db, tenant, 'client_tax_settings')
         .where({
-          client_id: clientId,
-          tenant
+          client_id: clientId
         })
         .update(taxSettings)
         .returning('*');
@@ -79,10 +85,9 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax rate lookup');
       }
-      const taxRate = await db<ITaxRate>('tax_rates')
+      const taxRate = await tenantScopedTable<ITaxRate>(db, tenant, 'tax_rates')
         .where({
-          tax_rate_id,
-          tenant
+          tax_rate_id
         })
         .first();
       return taxRate;
@@ -99,11 +104,10 @@ const ClientTaxSettings = {
         throw new Error('Tenant context is required for tax components lookup');
       }
       // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
-      const components = await db<ITaxComponent>('tax_components')
+      const components = await tenantScopedTable<ITaxComponent>(db, tenant, 'tax_components')
         .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
         .where({
           'composite_tax_mappings.composite_tax_id': tax_rate_id,
-          'tax_components.tenant': tenant,
         })
         .orderBy('composite_tax_mappings.sequence')
         .select('tax_components.*');
@@ -157,7 +161,7 @@ const ClientTaxSettings = {
 
     const trx = await db.transaction();
     try {
-      const [createdTaxRate] = await trx<ITaxRate>('tax_rates')
+      const [createdTaxRate] = await tenantScopedTable<ITaxRate>(trx, tenant, 'tax_rates')
         .insert({ ...taxRate, is_composite: true, tenant: tenant! })
         .returning('*');
 
@@ -187,10 +191,9 @@ const ClientTaxSettings = {
 
     const trx = await db.transaction();
     try {
-      const [updatedTaxRate] = await trx<ITaxRate>('tax_rates')
+      const [updatedTaxRate] = await tenantScopedTable<ITaxRate>(trx, tenant, 'tax_rates')
         .where({
-          tax_rate_id,
-          tenant
+          tax_rate_id
         })
         .update(taxRate)
         .returning('*');

@@ -1,22 +1,28 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '@alga-psa/types';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from '../services/taxService';
 import { ITaxRegion } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 export const getClientTaxSettings = withAuth(async (user, { tenant }, clientId: string): Promise<IClientTaxSettings | null> => {
   try {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const taxSettings = await trx<IClientTaxSettings>('client_tax_settings')
-        .where({ client_id: clientId, tenant })
+      const taxSettings = await tenantScopedTable<IClientTaxSettings>(trx, tenant, 'client_tax_settings')
+        .where({ client_id: clientId })
         .first();
 
     // Removed fetching of components, thresholds, holidays based on tax_rate_id (Phase 1.2)
@@ -48,9 +54,8 @@ export const updateClientTaxSettings = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Update only the fields remaining on client_tax_settings
-    await trx<IClientTaxSettings>('client_tax_settings')
+    await tenantScopedTable<IClientTaxSettings>(trx, tenant, 'client_tax_settings')
       .where('client_id', clientId) // Separate where clauses
-      .andWhere('tenant', tenant!)     // Use non-null assertion for tenant
       .update({
         // tax_rate_id: taxSettings.tax_rate_id, // Removed field
         is_reverse_charge_applicable: taxSettings.is_reverse_charge_applicable,
@@ -62,9 +67,8 @@ export const updateClientTaxSettings = withAuth(async (
         // Removed transaction logic for components, thresholds, holidays (Phase 1.2)
 
         // Fetch updated settings within the same transaction to ensure we get the updated data
-        const updatedSettings = await trx<IClientTaxSettings>('client_tax_settings')
+        const updatedSettings = await tenantScopedTable<IClientTaxSettings>(trx, tenant, 'client_tax_settings')
           .where('client_id', clientId)
-          .andWhere('tenant', tenant!)
           .first();
 
         return updatedSettings || null;
@@ -95,10 +99,9 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
     const { knex } = await createTenantKnex();
     // Select all fields directly from tax_rates
     const taxRates = await withTransaction(knex, async (trx) => {
-      return await trx<ITaxRate>('tax_rates')
+      return await tenantScopedTable<ITaxRate>(trx, tenant, 'tax_rates')
         .select('*') // Select all columns from tax_rates
-        .where('is_active', true) // Filter for active tax rates
-        .andWhere('tenant', tenant); // Filter tax rates by tenant
+        .where('is_active', true); // Filter for active tax rates
     });
 
     return taxRates;
@@ -311,10 +314,9 @@ export const getTaxComponentsByTaxRate = withAuth(async (user, { tenant }, taxRa
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    const components = await knex<ITaxComponent>('tax_components')
+    const components = await tenantScopedTable<ITaxComponent>(knex, tenant, 'tax_components')
       .where({
-        tax_rate_id: taxRateId,
-        tenant
+        tax_rate_id: taxRateId
       })
       .orderBy('sequence', 'asc');
     return components;
@@ -387,7 +389,7 @@ export const createTaxComponent = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [createdComponent] = await knex<ITaxComponent>('tax_components')
+    const [createdComponent] = await tenantScopedTable<ITaxComponent>(knex, tenant, 'tax_components')
       .insert({ ...component, tax_component_id: uuid4(), tenant: tenant! })
       .returning('*');
 
@@ -410,8 +412,8 @@ export const updateTaxComponent = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [updatedComponent] = await knex<ITaxComponent>('tax_components')
-      .where({ tax_component_id: componentId, tenant })
+    const [updatedComponent] = await tenantScopedTable<ITaxComponent>(knex, tenant, 'tax_components')
+      .where({ tax_component_id: componentId })
       .update(component)
       .returning('*');
 
@@ -428,8 +430,8 @@ export const deleteTaxComponent = withAuth(async (user, { tenant }, componentId:
   }
   try {
     const { knex } = await createTenantKnex();
-    await knex('tax_components')
-      .where({ tax_component_id: componentId, tenant })
+    await tenantScopedTable(knex, tenant, 'tax_components')
+      .where({ tax_component_id: componentId })
       .del();
   } catch (error) {
     console.error('Error deleting tax component:', error);
@@ -588,8 +590,8 @@ export const updateClientTaxExemptStatus = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get current status for audit log
-      const currentClient = await trx('clients')
-        .where({ client_id: clientId, tenant })
+      const currentClient = await tenantScopedTable(trx, tenant, 'clients')
+        .where({ client_id: clientId })
         .select('is_tax_exempt', 'tax_exemption_certificate')
         .first();
 
@@ -610,8 +612,8 @@ export const updateClientTaxExemptStatus = withAuth(async (
       }
 
       // Update the client
-      await trx('clients')
-        .where({ client_id: clientId, tenant })
+      await tenantScopedTable(trx, tenant, 'clients')
+        .where({ client_id: clientId })
         .update(updateData);
 
       // Create audit log entry for tax exempt status change
@@ -668,8 +670,8 @@ export const getClientTaxExemptStatus = withAuth(async (
       throw new Error('Tenant context is required');
     }
 
-    const client = await knex('clients')
-      .where({ client_id: clientId, tenant })
+    const client = await tenantScopedTable(knex, tenant, 'clients')
+      .where({ client_id: clientId })
       .select('is_tax_exempt', 'tax_exemption_certificate')
       .first();
 
@@ -707,8 +709,7 @@ export const getTenantTaxSettings = withAuth(async (user, { tenant }): Promise<{
 
     const { knex } = await createTenantKnex();
 
-    const settings = await knex('tenant_settings')
-      .where({ tenant })
+    const settings = await tenantScopedTable(knex, tenant, 'tenant_settings')
       .select('default_tax_source', 'allow_external_tax_override')
       .first();
 
@@ -765,16 +766,14 @@ export const updateTenantTaxSettings = withAuth(async (
     };
 
     // Try to update existing row, or insert if not exists
-    const existingSettings = await knex('tenant_settings')
-      .where({ tenant })
+    const existingSettings = await tenantScopedTable(knex, tenant, 'tenant_settings')
       .first();
 
     if (existingSettings) {
-      await knex('tenant_settings')
-        .where({ tenant })
+      await tenantScopedTable(knex, tenant, 'tenant_settings')
         .update(updateData);
     } else {
-      await knex('tenant_settings')
+      await tenantScopedTable(knex, tenant, 'tenant_settings')
         .insert({
           tenant,
           ...updateData,
@@ -813,8 +812,7 @@ export const getTaxDelegationNudgeState = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const settings = await knex('tenant_settings')
-    .where({ tenant })
+  const settings = await tenantScopedTable(knex, tenant, 'tenant_settings')
     .select('default_tax_source', 'tax_delegation_nudge_dismissed_at')
     .first();
 
@@ -825,8 +823,7 @@ export const getTaxDelegationNudgeState = withAuth(async (
     return { shouldShow: false, adapterLabel: null };
   }
 
-  const mapping = await knex('tenant_external_entity_mappings')
-    .where({ tenant })
+  const mapping = await tenantScopedTable(knex, tenant, 'tenant_external_entity_mappings')
     .whereIn('integration_type', DELEGATION_INTEGRATION_TYPES as unknown as string[])
     .select('integration_type')
     .first();
@@ -860,13 +857,12 @@ export const dismissTaxDelegationNudge = withAuth(async (
   const { knex } = await createTenantKnex();
   const now = new Date().toISOString();
 
-  const existing = await knex('tenant_settings').where({ tenant }).first();
+  const existing = await tenantScopedTable(knex, tenant, 'tenant_settings').first();
   if (existing) {
-    await knex('tenant_settings')
-      .where({ tenant })
+    await tenantScopedTable(knex, tenant, 'tenant_settings')
       .update({ tax_delegation_nudge_dismissed_at: now });
   } else {
-    await knex('tenant_settings').insert({
+    await tenantScopedTable(knex, tenant, 'tenant_settings').insert({
       tenant,
       tax_delegation_nudge_dismissed_at: now,
     });

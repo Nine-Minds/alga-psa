@@ -170,7 +170,7 @@ export const createShareLink = withAuth(
 
     const shareIdValue = randomUUID();
 
-    await knex('document_share_links').insert({
+    await tenantDb(knex, tenant).table('document_share_links').insert({
       tenant,
       share_id: shareIdValue,
       document_id: input.documentId,

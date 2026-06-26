@@ -1,4 +1,5 @@
 import { ADD_ONS, type AddOnKey } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 
 interface TenantAddOnRow {
@@ -21,9 +22,9 @@ export async function getActiveAddOns(tenantId?: string): Promise<AddOnKey[]> {
   }
 
   try {
-    const rows = await knex('tenant_addons')
+    const rows = await tenantDb(knex, effectiveTenantId).table<TenantAddOnRow>('tenant_addons')
       .select('addon_key', 'expires_at')
-      .where({ tenant: effectiveTenantId }) as TenantAddOnRow[];
+      as TenantAddOnRow[];
 
     const now = Date.now();
 

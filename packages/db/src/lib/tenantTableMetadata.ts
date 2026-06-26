@@ -198,6 +198,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   severities: { scope: 'tenant' },
   sessions: { scope: 'tenant' },
   sla_audit_log: { scope: 'tenant' },
+  sla_notifications_sent: { scope: 'tenant' },
   sla_notification_thresholds: { scope: 'tenant' },
   sla_policies: { scope: 'tenant' },
   sla_policy_targets: { scope: 'tenant' },

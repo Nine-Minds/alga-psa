@@ -10,6 +10,7 @@ import { createTenantScopedRootQuery, type TenantScopedQuery } from './tenantSco
 export interface TenantJoinOptions {
   type?: 'inner' | 'left';
   rootTenantColumn?: string;
+  on?: (join: Knex.JoinClause) => void;
 }
 
 type DynamicTenantRow = Record<string, any>;
@@ -128,6 +129,8 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
           options.rootTenantColumn ?? inferRootTenantColumn(parsed, left, right)
         );
       }
+
+      options.on?.(this);
     };
 
     if (options.type === 'left') {

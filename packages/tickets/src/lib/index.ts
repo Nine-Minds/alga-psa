@@ -26,10 +26,11 @@ export {
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
   applyVisibilityBoardFilter,
-  getClientContactVisibilityContext,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';
+// getClientContactVisibilityContext is server-only because it imports the DB
+// facade. Import it from './clientPortalVisibility.server' in server actions.
 export {
   buildTicketStatusFilterOptions,
   createTicketStatusNameFilterValue,

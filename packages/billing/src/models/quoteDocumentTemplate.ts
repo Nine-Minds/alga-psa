@@ -1,5 +1,6 @@
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 const QuoteDocumentTemplate = {
   async getTemplates(
@@ -45,9 +46,9 @@ const QuoteDocumentTemplate = {
         .where({ tenant })
         .select('template_id', 'name', 'version', 'is_default', 'templateAst', 'created_at', 'updated_at'),
       QuoteDocumentTemplate.getStandardTemplates(knexOrTrx),
-      knexOrTrx('quote_document_template_assignments')
+      tenantDb(knexOrTrx, tenant).table('quote_document_template_assignments')
         .select('template_source', 'standard_quote_document_template_code', 'quote_document_template_id')
-        .where({ tenant, scope_type: 'tenant' })
+        .where({ scope_type: 'tenant' })
         .whereNull('scope_id')
         .first(),
     ]);

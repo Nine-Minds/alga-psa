@@ -4,7 +4,7 @@
 
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
@@ -145,19 +145,17 @@ export const updateEmailSettings = withAuth(async (
       updated_at: now
     };
 
+    const settingsTable = () => tenantDb(knex, tenant).table('tenant_email_settings');
+
     // Check if settings exist
-    const existing = await knex('tenant_email_settings')
-      .where({ tenant: tenant })
-      .first();
+    const existing = await settingsTable().first();
 
     if (existing) {
       // Update existing settings
-      await knex('tenant_email_settings')
-        .where({ tenant: tenant })
-        .update(settingsData);
+      await settingsTable().update(settingsData);
     } else {
       // Create new settings
-      await knex('tenant_email_settings')
+      await settingsTable()
         .insert({
           ...settingsData,
           created_at: now
