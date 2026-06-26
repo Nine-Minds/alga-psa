@@ -105,8 +105,7 @@ async function getApplicableTaxHoliday(
   date: string
 ): Promise<Record<string, unknown> | undefined> {
   const currentDate = new Date(date);
-  // tax_holidays has no tenant column; tax_rate_id (already tenant-scoped) gates isolation.
-  const holidays = await tenantDb(knexOrTrx, tenant).unscoped('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
+  const holidays = await tenantDb(knexOrTrx, tenant).parentScopedTable('tax_holidays')
     .where({ tax_rate_id: taxRateId })
     .orderBy('start_date');
 
@@ -206,12 +205,13 @@ async function calculateTaxWithConnection(
   }
 
   if (taxRate.is_composite) {
-    // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
-    const components = await db.table('tax_components')
-      .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
-      .where('composite_tax_mappings.composite_tax_id', taxRate.tax_rate_id)
-      .orderBy('composite_tax_mappings.sequence')
-      .select('tax_components.*');
+    const componentsQuery = db.parentScopedTable<Record<string, unknown>>('composite_tax_mappings as ctm')
+      .where('ctm.composite_tax_id', taxRate.tax_rate_id)
+      .orderBy('ctm.sequence');
+    db.tenantJoin(componentsQuery, 'tax_components as tc', 'ctm.tax_component_id', 'tc.tax_component_id', {
+      tenantPredicate: 'literal',
+    });
+    const components = await componentsQuery.select('tc.*') as Record<string, unknown>[];
 
     let totalTaxAmount = 0;
     let taxableAmount = netAmount;
@@ -228,8 +228,7 @@ async function calculateTaxWithConnection(
     };
   }
 
-  // tax_rate_thresholds has no tenant column; tax_rate_id (already tenant-scoped above) gates isolation.
-  const thresholds = await db.unscoped<TaxRateThresholdRow>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
+  const thresholds = await db.parentScopedTable<TaxRateThresholdRow>('tax_rate_thresholds')
     .where({ tax_rate_id: taxRate.tax_rate_id })
     .orderBy('min_amount');
 

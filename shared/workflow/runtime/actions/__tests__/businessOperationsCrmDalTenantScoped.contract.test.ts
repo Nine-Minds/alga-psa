@@ -27,12 +27,14 @@ describe('CRM workflow DAL tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'client_tax_settings')");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'tax_rates')");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'client_tax_rates')");
-    expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'tax_components')");
+    expect(section).toContain("facade.parentScopedTable('composite_tax_mappings as ctm')");
+    expect(section).toContain("facade.tenantJoin(componentsQuery, 'tax_components as tc'");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'quotes')");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'quote_items')");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'client_locations')");
-    expect(source).toContain(".unscoped('tax_holidays', TENANTLESS_TAX_CHILD_REASON)");
-    expect(section).toContain(".unscoped<TaxThresholdRow>('tax_rate_thresholds', TENANTLESS_TAX_CHILD_REASON)");
+    expect(source).toContain(".parentScopedTable('tax_holidays')");
+    expect(section).toContain(".parentScopedTable<TaxThresholdRow>('tax_rate_thresholds')");
+    expect(section).not.toContain('TENANTLESS_TAX_CHILD_REASON');
 
     expect(section).not.toMatch(/\.where\(\{\s*tenant[,}]/);
     expect(section).not.toMatch(/\.where\(\{\s*'[^']*\.tenant':\s*tenant/);

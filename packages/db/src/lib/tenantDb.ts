@@ -26,6 +26,12 @@ type DynamicTenantRow = Record<string, any>;
 export interface TenantDb {
   readonly tenant: string;
   table<Row extends object = DynamicTenantRow>(tableExpression: string): Knex.QueryBuilder<Row, Row[]>;
+  parentScopedTable<Row extends object = DynamicTenantRow>(tableExpression: string): Knex.QueryBuilder<Row, Row[]>;
+  insertParentScoped<Row extends object = DynamicTenantRow>(
+    tableExpression: string,
+    values: Row | readonly Row[],
+    returning?: string | readonly string[]
+  ): Promise<Row[]>;
   scoped(tableExpression: string): TenantScopedQuery;
   subquery<Row extends object = DynamicTenantRow>(tableExpression: string): Knex.QueryBuilder<Row, Row[]>;
   tenantJoin(
@@ -61,6 +67,14 @@ function assertTenant(tenant: string): void {
 
 function tenantColumn(scope: TenantTableScope): string {
   return scope.scope === 'tenant' ? scope.tenantColumn ?? 'tenant' : 'tenant';
+}
+
+function parentAliasFor(parsed: ParsedTableExpression): string {
+  return `__${parsed.rootAlias.replace(/[^A-Za-z0-9_]/g, '_')}_tenant_parent`;
+}
+
+function normalizeRows<Row extends object>(values: Row | readonly Row[]): Row[] {
+  return Array.isArray(values) ? Array.from(values) as Row[] : [values as Row];
 }
 
 function rootQualifier(column: string): string | null {
@@ -100,6 +114,10 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
       throw new Error(`Admin table ${parsed.tableName} cannot be accessed through tenantDb.scoped`);
     }
 
+    if (scope.scope === 'tenantViaParent') {
+      throw new Error(`Parent-scoped child table ${parsed.tableName} must use tenantDb.parentScopedTable`);
+    }
+
     return createTenantScopedRootQuery(conn, {
       table: tableExpression,
       alias: parsed.rootAlias,
@@ -122,7 +140,84 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
       throw new Error(`Admin table ${parsed.tableName} cannot be accessed through tenantDb.table`);
     }
 
+    if (scope.scope === 'tenantViaParent') {
+      throw new Error(`Parent-scoped child table ${parsed.tableName} must use tenantDb.parentScopedTable`);
+    }
+
     return scoped(tableExpression).builder as Knex.QueryBuilder<Row, Row[]>;
+  }
+
+  function parentScopedTable<Row extends object = DynamicTenantRow>(
+    tableExpression: string
+  ): Knex.QueryBuilder<Row, Row[]> {
+    const parsed = parseTableExpression(tableExpression);
+    const scope = requireTenantTableScope(parsed.tableName);
+
+    if (scope.scope !== 'tenantViaParent') {
+      throw new Error(`Table ${parsed.tableName} is not registered as tenant-scoped through a parent`);
+    }
+
+    const parentScope = requireTenantTableScope(scope.parentTable);
+    if (parentScope.scope !== 'tenant') {
+      throw new Error(`Parent table ${scope.parentTable} for ${parsed.tableName} must be tenant-scoped`);
+    }
+
+    const parentAlias = parentAliasFor(parsed);
+    const parentQuery = table(`${scope.parentTable} as ${parentAlias}`)
+      .select(conn.raw('1'))
+      .whereRaw('?? = ??', [
+        `${parentAlias}.${scope.parentColumn}`,
+        `${parsed.rootAlias}.${scope.childColumn}`,
+      ]);
+
+    return conn<Row, Row[]>(tableExpression).whereExists(parentQuery);
+  }
+
+  async function insertParentScoped<Row extends object = DynamicTenantRow>(
+    tableExpression: string,
+    values: Row | readonly Row[],
+    returning: string | readonly string[] = '*'
+  ): Promise<Row[]> {
+    const parsed = parseTableExpression(tableExpression);
+    const scope = requireTenantTableScope(parsed.tableName);
+
+    if (scope.scope !== 'tenantViaParent') {
+      throw new Error(`Table ${parsed.tableName} is not registered as tenant-scoped through a parent`);
+    }
+
+    if (parsed.rootAlias !== parsed.tableName) {
+      throw new Error(`Parent-scoped inserts must target a table name without alias: ${tableExpression}`);
+    }
+
+    const parentScope = requireTenantTableScope(scope.parentTable);
+    if (parentScope.scope !== 'tenant') {
+      throw new Error(`Parent table ${scope.parentTable} for ${parsed.tableName} must be tenant-scoped`);
+    }
+
+    const rows = normalizeRows(values);
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const parentIds = Array.from(new Set(rows.map((row) => (row as Record<string, unknown>)[scope.childColumn])));
+    if (parentIds.some((id) => id === null || id === undefined || id === '')) {
+      throw new Error(`Parent-scoped insert into ${parsed.tableName} requires ${scope.childColumn}`);
+    }
+
+    const foundParentIds = await table<Record<string, unknown>>(scope.parentTable)
+      .whereIn(scope.parentColumn, parentIds as readonly any[])
+      .pluck(scope.parentColumn);
+    const found = new Set(foundParentIds.map((id) => String(id)));
+    const missing = parentIds.filter((id) => !found.has(String(id)));
+
+    if (missing.length > 0) {
+      throw new Error(`Parent row not found for parent-scoped insert into ${parsed.tableName}`);
+    }
+
+    const inserted = await conn<Row, Row[]>(tableExpression)
+      .insert(values as any)
+      .returning(returning as any);
+    return inserted as Row[];
   }
 
   function tenantJoin(
@@ -214,6 +309,8 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
   return {
     tenant,
     table,
+    parentScopedTable,
+    insertParentScoped,
     scoped,
     subquery: table,
     tenantJoin,

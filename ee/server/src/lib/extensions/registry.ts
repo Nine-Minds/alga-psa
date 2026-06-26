@@ -41,6 +41,10 @@ export class ExtensionRegistry implements IExtensionRegistry {
     return tenantDb(this.knex, tenantId).table(table);
   }
 
+  private extensionPermissions(tenantId: string) {
+    return tenantDb(this.knex, tenantId).parentScopedTable('extension_permissions');
+  }
+
   /**
    * Register a new extension with the system
    */
@@ -79,7 +83,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
 
       // Update permissions
       const permissionsArray = this.extractPermissionsArray(manifest.permissions);
-      await this.updateExtensionPermissions(updated.id, permissionsArray);
+      await this.updateExtensionPermissions(options.tenant_id, updated.id, permissionsArray);
 
       return {
         ...updated,
@@ -102,7 +106,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     // Register permissions
     const permissionsArray = this.extractPermissionsArray(manifest.permissions);
     if (permissionsArray.length > 0) {
-      await this.updateExtensionPermissions(extension.id, permissionsArray);
+      await this.updateExtensionPermissions(options.tenant_id, extension.id, permissionsArray);
     }
 
     return {
@@ -352,9 +356,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
           });
       },
       hasPermission: async (permission: string) => {
-        // extension_permissions is parent-scoped by extension_id and has no
-        // tenant column; keep this raw after resolving the tenant extension.
-        const permissionExists = await this.knex('extension_permissions')
+        const permissionExists = await this.extensionPermissions(options.tenant_id)
           .where({
             extension_id: id,
             resource: permission.split(':')[0],
@@ -454,12 +456,11 @@ export class ExtensionRegistry implements IExtensionRegistry {
    * Update extension permissions
    */
   private async updateExtensionPermissions(
+    tenantId: string,
     extensionId: string,
     permissions: string[]
   ): Promise<void> {
-    // extension_permissions is parent-scoped by extension_id and has no tenant
-    // column, so it intentionally remains raw instead of tenantDb-routed.
-    await this.knex('extension_permissions')
+    await this.extensionPermissions(tenantId)
       .where({ extension_id: extensionId })
       .delete();
 
@@ -474,7 +475,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
         };
       });
 
-      await this.knex('extension_permissions').insert(permissionRows);
+      await tenantDb(this.knex, tenantId).insertParentScoped('extension_permissions', permissionRows);
     }
   }
 

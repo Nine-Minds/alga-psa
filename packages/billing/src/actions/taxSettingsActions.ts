@@ -334,8 +334,7 @@ export const getTaxRateThresholdsByTaxRate = withAuth(async (user, { tenant }, t
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    // Note: tax_rate_thresholds table doesn't have tenant column, RLS enforced via tax_rate_id
-    const thresholds = await tenantDb(knex, tenant).unscoped<ITaxRateThreshold>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
+    const thresholds = await tenantDb(knex, tenant).parentScopedTable<ITaxRateThreshold>('tax_rate_thresholds')
       .where({ tax_rate_id: taxRateId })
       .orderBy('min_amount', 'asc');
     return thresholds;
@@ -359,8 +358,7 @@ export const getTaxHolidaysByTaxRate = withAuth(async (user, { tenant }, taxRate
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    // Note: tax_holidays table doesn't have tenant column, RLS enforced via tax_rate_id
-    const holidays = await tenantDb(knex, tenant).unscoped<ITaxHoliday>('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
+    const holidays = await tenantDb(knex, tenant).parentScopedTable<ITaxHoliday>('tax_holidays')
       .where({ tax_rate_id: taxRateId })
       .orderBy('start_date', 'desc');
     return holidays;
@@ -443,9 +441,10 @@ export const createTaxRateThreshold = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [createdThreshold] = await tenantDb(knex, tenant).unscoped<ITaxRateThreshold>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
-      .insert({ ...threshold, tax_rate_threshold_id: uuid4() })
-      .returning('*');
+    const [createdThreshold] = await tenantDb(knex, tenant).insertParentScoped<ITaxRateThreshold>(
+      'tax_rate_thresholds',
+      { ...threshold, tax_rate_threshold_id: uuid4() }
+    );
 
     return createdThreshold;
   } catch (error) {
@@ -465,9 +464,11 @@ export const updateTaxRateThreshold = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [updatedThreshold] = await tenantDb(knex, tenant).unscoped<ITaxRateThreshold>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
+    const thresholdPatch = { ...threshold };
+    delete thresholdPatch.tax_rate_id;
+    const [updatedThreshold] = await tenantDb(knex, tenant).parentScopedTable<ITaxRateThreshold>('tax_rate_thresholds')
       .where({ tax_rate_threshold_id: thresholdId })
-      .update(threshold)
+      .update(thresholdPatch)
       .returning('*');
 
     return updatedThreshold;
@@ -483,7 +484,7 @@ export const deleteTaxRateThreshold = withAuth(async (user, { tenant }, threshol
   }
   try {
     const { knex } = await createTenantKnex();
-    await tenantDb(knex, tenant).unscoped('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
+    await tenantDb(knex, tenant).parentScopedTable('tax_rate_thresholds')
       .where({ tax_rate_threshold_id: thresholdId })
       .del();
   } catch (error) {
@@ -502,9 +503,10 @@ export const createTaxHoliday = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [createdHoliday] = await tenantDb(knex, tenant).unscoped<ITaxHoliday>('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
-      .insert({ ...holiday, tax_holiday_id: uuid4() })
-      .returning('*');
+    const [createdHoliday] = await tenantDb(knex, tenant).insertParentScoped<ITaxHoliday>(
+      'tax_holidays',
+      { ...holiday, tax_holiday_id: uuid4() }
+    );
 
     return createdHoliday;
   } catch (error) {
@@ -524,9 +526,11 @@ export const updateTaxHoliday = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [updatedHoliday] = await tenantDb(knex, tenant).unscoped<ITaxHoliday>('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
+    const holidayPatch = { ...holiday };
+    delete holidayPatch.tax_rate_id;
+    const [updatedHoliday] = await tenantDb(knex, tenant).parentScopedTable<ITaxHoliday>('tax_holidays')
       .where({ tax_holiday_id: holidayId })
-      .update(holiday)
+      .update(holidayPatch)
       .returning('*');
 
     return updatedHoliday;
@@ -542,7 +546,7 @@ export const deleteTaxHoliday = withAuth(async (user, { tenant }, holidayId: str
   }
   try {
     const { knex } = await createTenantKnex();
-    await tenantDb(knex, tenant).unscoped('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
+    await tenantDb(knex, tenant).parentScopedTable('tax_holidays')
       .where({ tax_holiday_id: holidayId })
       .del();
   } catch (error) {

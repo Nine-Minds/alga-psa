@@ -191,10 +191,11 @@ describe('EE integrations wave 2 tenant facade contract', () => {
     const registry = read('ee/server/src/lib/extensions/registry.ts');
 
     expect(registry).toContain("return tenantDb(this.knex, tenantId).table(table);");
+    expect(registry).toContain("return tenantDb(this.knex, tenantId).parentScopedTable('extension_permissions');");
+    expect(registry).toContain("tenantDb(this.knex, tenantId).insertParentScoped('extension_permissions', permissionRows)");
     expect(registry).toContain("this.tenantTable(options.tenant_id, 'extensions')");
     expect(registry).toContain("this.tenantTable(options.tenant_id, 'extension_settings')");
     expect(registry).toContain("unscoped('extensions', 'getAllExtensions supports tenantless extension listing')");
-    expect(registry).toContain('extension_permissions is parent-scoped by extension_id and has no');
     expect(registry).not.toMatch(/\.where\(\{[\s\S]{0,160}tenant_id:\s*options\.tenant_id/);
     expect(registry).not.toMatch(/\.where\(\{[\s\S]{0,160}tenant_id:\s*tenantId/);
     expectNoDirectRoots(registry, [

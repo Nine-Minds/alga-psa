@@ -1,5 +1,11 @@
 export type TenantTableScope =
   | { scope: 'tenant'; tenantColumn?: string }
+  | {
+    scope: 'tenantViaParent';
+    parentTable: string;
+    parentColumn: string;
+    childColumn: string;
+  }
   | { scope: 'global' }
   | { scope: 'admin' };
 
@@ -65,6 +71,12 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   companies: { scope: 'tenant' },
   comments: { scope: 'tenant' },
   comment_reactions: { scope: 'tenant' },
+  composite_tax_mappings: {
+    scope: 'tenantViaParent',
+    parentTable: 'tax_rates',
+    parentColumn: 'tax_rate_id',
+    childColumn: 'composite_tax_id',
+  },
   // Confirmed distributed by tenant in server/migrations/20260422130000_add_content_moderation.cjs.
   content_reports: { scope: 'tenant' },
   contact_additional_email_addresses: { scope: 'tenant' },
@@ -148,6 +160,12 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   extension_audit_logs: { scope: 'tenant' },
   extension_api_endpoint: { scope: 'global' },
   extension_bundle: { scope: 'global' },
+  extension_permissions: {
+    scope: 'tenantViaParent',
+    parentTable: 'extensions',
+    parentColumn: 'id',
+    childColumn: 'extension_id',
+  },
   extension_registry: { scope: 'global' },
   extension_settings: { scope: 'tenant', tenantColumn: 'tenant_id' },
   extension_storage: { scope: 'tenant', tenantColumn: 'tenant_id' },
@@ -334,6 +352,18 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   system_workflow_form_definitions: { scope: 'global' },
   system_workflow_task_definitions: { scope: 'global' },
   tax_components: { scope: 'tenant' },
+  tax_holidays: {
+    scope: 'tenantViaParent',
+    parentTable: 'tax_rates',
+    parentColumn: 'tax_rate_id',
+    childColumn: 'tax_rate_id',
+  },
+  tax_rate_thresholds: {
+    scope: 'tenantViaParent',
+    parentTable: 'tax_rates',
+    parentColumn: 'tax_rate_id',
+    childColumn: 'tax_rate_id',
+  },
   tax_rates: { scope: 'tenant' },
   tax_regions: { scope: 'tenant' },
   tag_definitions: { scope: 'tenant' },

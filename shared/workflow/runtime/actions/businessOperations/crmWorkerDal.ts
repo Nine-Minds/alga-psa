@@ -40,8 +40,6 @@ function tenantScopedTable(
   return tenantDb(knexOrTrx, tenant).table(table);
 }
 
-const TENANTLESS_TAX_CHILD_REASON = 'Tenant isolation is inherited from already tenant-scoped tax parent rows';
-
 type TaxThresholdRow = {
   min_amount: number | string;
   max_amount?: number | string | null;
@@ -228,9 +226,8 @@ async function getApplicableTaxHoliday(
   date: string
 ): Promise<Record<string, unknown> | undefined> {
   const currentDate = new Date(date);
-  // tax_holidays has no tenant column; tax_rate_id (already tenant-scoped) gates isolation.
   const holidays = await tenantDb(knexOrTrx, tenant)
-    .unscoped('tax_holidays', TENANTLESS_TAX_CHILD_REASON)
+    .parentScopedTable('tax_holidays')
     .where({ tax_rate_id: taxRateId })
     .orderBy('start_date');
 
@@ -332,14 +329,14 @@ async function calculateTaxWithConnection(
   }
 
   if (taxRate.is_composite) {
-    // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
-    const components = await tenantScopedTable(knexOrTrx, tenant, 'tax_components')
-      .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
-      .where({
-        'composite_tax_mappings.composite_tax_id': taxRate.tax_rate_id,
-      })
-      .orderBy('composite_tax_mappings.sequence')
-      .select('tax_components.*');
+    const facade = tenantDb(knexOrTrx, tenant);
+    const componentsQuery = facade.parentScopedTable('composite_tax_mappings as ctm')
+      .where('ctm.composite_tax_id', taxRate.tax_rate_id)
+      .orderBy('ctm.sequence');
+    facade.tenantJoin(componentsQuery, 'tax_components as tc', 'ctm.tax_component_id', 'tc.tax_component_id', {
+      tenantPredicate: 'literal',
+    });
+    const components = await componentsQuery.select('tc.*') as Record<string, unknown>[];
 
     let totalTaxAmount = 0;
     let taxableAmount = netAmount;
@@ -356,9 +353,8 @@ async function calculateTaxWithConnection(
     };
   }
 
-  // tax_rate_thresholds has no tenant column; tax_rate_id (already tenant-scoped above) gates isolation.
   const thresholds = await tenantDb(knexOrTrx, tenant)
-    .unscoped<TaxThresholdRow>('tax_rate_thresholds', TENANTLESS_TAX_CHILD_REASON)
+    .parentScopedTable<TaxThresholdRow>('tax_rate_thresholds')
     .where('tax_rate_id', taxRate.tax_rate_id)
     .orderBy('min_amount');
 

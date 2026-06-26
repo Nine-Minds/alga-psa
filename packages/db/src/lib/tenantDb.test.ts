@@ -73,6 +73,43 @@ describe('tenantDb facade', () => {
     expect(query.toString()).toBe('select * from "knex_migrations"');
   });
 
+  it('scopes tenantless child tables through registered tenant-owned parents', () => {
+    const db = tenantDb(knex, 'tenant-1');
+    const query = db.parentScopedTable('tax_holidays as th').where('th.name', 'Holiday');
+
+    expect(query.toString()).toContain(
+      `from "tax_holidays" as "th" where exists (select 1 from "tax_rates" as "__th_tenant_parent" where "__th_tenant_parent"."tenant" = 'tenant-1' and "__th_tenant_parent"."tax_rate_id" = "th"."tax_rate_id")`
+    );
+    expect(query.toString()).toContain(`"th"."name" = 'Holiday'`);
+  });
+
+  it('fails closed when parent-scoped child tables use direct tenant roots', () => {
+    const db = tenantDb(knex, 'tenant-1');
+
+    expect(() => db.table('tax_holidays')).toThrow(
+      'Parent-scoped child table tax_holidays must use tenantDb.parentScopedTable'
+    );
+    expect(() => db.parentScopedTable('tax_rates')).toThrow(
+      'Table tax_rates is not registered as tenant-scoped through a parent'
+    );
+  });
+
+  it('fails closed for malformed parent-scoped inserts before querying', async () => {
+    const db = tenantDb(knex, 'tenant-1');
+
+    await expect(
+      db.insertParentScoped('tax_rates', { tax_rate_id: 'tax-rate-1' })
+    ).rejects.toThrow('Table tax_rates is not registered as tenant-scoped through a parent');
+
+    await expect(
+      db.insertParentScoped('tax_holidays as th', { tax_rate_id: 'tax-rate-1' })
+    ).rejects.toThrow('Parent-scoped inserts must target a table name without alias');
+
+    await expect(
+      db.insertParentScoped('tax_holidays', { name: 'Holiday' })
+    ).rejects.toThrow('Parent-scoped insert into tax_holidays requires tax_rate_id');
+  });
+
   it('adds tenant equality when joining tenant tables', () => {
     const db = tenantDb(knex, 'tenant-1');
     const query = db.table('tickets as t').select('t.ticket_id');

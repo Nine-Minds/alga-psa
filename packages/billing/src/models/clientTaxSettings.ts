@@ -17,6 +17,31 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
+async function assertTenantTaxComponents(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  components: ITaxComponent[]
+): Promise<void> {
+  const componentIds = Array.from(new Set(components.map((component) => component.tax_component_id)));
+  if (componentIds.length === 0) {
+    return;
+  }
+
+  const foundIds = await tenantScopedTable<Pick<ITaxComponent, 'tax_component_id'>>(
+    conn,
+    tenant,
+    'tax_components'
+  )
+    .whereIn('tax_component_id', componentIds)
+    .pluck('tax_component_id');
+  const found = new Set(foundIds.map((id) => String(id)));
+  const missing = componentIds.filter((id) => !found.has(String(id)));
+
+  if (missing.length > 0) {
+    throw new Error('One or more tax components do not belong to this tenant');
+  }
+}
+
 const ClientTaxSettings = {
   async get(clientId: string): Promise<IClientTaxSettings | null> {
     try {
@@ -103,14 +128,14 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax components lookup');
       }
-      // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
-      const components = await tenantScopedTable<ITaxComponent>(db, tenant, 'tax_components')
-        .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
-        .where({
-          'composite_tax_mappings.composite_tax_id': tax_rate_id,
-        })
-        .orderBy('composite_tax_mappings.sequence')
-        .select('tax_components.*');
+      const facade = tenantDb(db, tenant);
+      const componentsQuery = facade.parentScopedTable<ITaxComponent>('composite_tax_mappings as ctm')
+        .where('ctm.composite_tax_id', tax_rate_id)
+        .orderBy('ctm.sequence');
+      facade.tenantJoin(componentsQuery, 'tax_components as tc', 'ctm.tax_component_id', 'tc.tax_component_id', {
+        tenantPredicate: 'literal',
+      });
+      const components = await componentsQuery.select('tc.*') as ITaxComponent[];
       return components;
     } catch (error) {
       console.error(`Error getting composite tax components for tax rate ${tax_rate_id}:`, error);
@@ -124,10 +149,8 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax rate thresholds lookup');
       }
-      const thresholds = await tenantDb(db, tenant).unscoped<ITaxRateThreshold>(
-        'tax_rate_thresholds',
-        'tax_rate_thresholds are scoped by parent tax_rates.tax_rate_id'
-      )
+      const thresholds = await tenantDb(db, tenant)
+        .parentScopedTable<ITaxRateThreshold>('tax_rate_thresholds')
         .where({ tax_rate_id })
         .orderBy('min_amount');
       return thresholds;
@@ -143,10 +166,8 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax holidays lookup');
       }
-      const holidays = await tenantDb(db, tenant).unscoped<ITaxHoliday>(
-        'tax_holidays',
-        'tax_holidays are scoped by parent tax_rates.tax_rate_id'
-      )
+      const holidays = await tenantDb(db, tenant)
+        .parentScopedTable<ITaxHoliday>('tax_holidays')
         .where('tax_rate_id', tax_rate_id)
         .orderBy('start_date');
       return holidays;
@@ -175,10 +196,11 @@ const ClientTaxSettings = {
         sequence: index + 1,
       }));
 
-      await tenantDb(trx, tenant).unscoped<ICompositeTaxMapping>(
+      await assertTenantTaxComponents(trx, tenant, components);
+      await tenantDb(trx, tenant).insertParentScoped<ICompositeTaxMapping>(
         'composite_tax_mappings',
-        'composite_tax_mappings are scoped by parent composite tax rates and tax components'
-      ).insert(compositeMappings);
+        compositeMappings
+      );
 
       await trx.commit();
       return createdTaxRate;
@@ -205,10 +227,7 @@ const ClientTaxSettings = {
         .update(taxRate)
         .returning('*');
 
-      await tenantDb(trx, tenant).unscoped<ICompositeTaxMapping>(
-        'composite_tax_mappings',
-        'composite_tax_mappings are scoped by parent composite tax rates and tax components'
-      )
+      await tenantDb(trx, tenant).parentScopedTable<ICompositeTaxMapping>('composite_tax_mappings')
         .where({ composite_tax_id: tax_rate_id })
         .del();
 
@@ -218,10 +237,11 @@ const ClientTaxSettings = {
         sequence: index + 1,
       }));
 
-      await tenantDb(trx, tenant).unscoped<ICompositeTaxMapping>(
+      await assertTenantTaxComponents(trx, tenant, components);
+      await tenantDb(trx, tenant).insertParentScoped<ICompositeTaxMapping>(
         'composite_tax_mappings',
-        'composite_tax_mappings are scoped by parent composite tax rates and tax components'
-      ).insert(compositeMappings);
+        compositeMappings
+      );
 
       await trx.commit();
       return updatedTaxRate;

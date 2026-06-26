@@ -143,8 +143,8 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
     const { knex } = await createTenantKnex();
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
       // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
-      // any tenant-less child tables (composite_tax_mappings/tax_holidays/tax_rate_thresholds).
-      const db = tenantDb(trx, tenant);
+      // child tables scoped through tax_rates.
+      const db = tenantDb(trx, tenantId);
       const exists = await db.table('tax_rates')
         .where({ tax_rate_id: taxRateId })
         .first('tax_rate_id');
@@ -152,34 +152,19 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
         throw new Error('Tax rate not found or already deleted.');
       }
 
-      // Clean up child records owned by the tax rate.
-      // composite_tax_mappings/tax_holidays/tax_rate_thresholds have no tenant column
-      // (in Citus, tax_rates.PK is compound (tenant, tax_rate_id), so tax_rate_id alone
-      // isn't globally unique). Scope each delete by joining back to tax_rates with the
-      // tenant guard so we can never touch another tenant's rows.
-      const ownedTaxRate = db.table('tax_rates')
-        .select('tax_rate_id')
-        .where({ tax_rate_id: taxRateId });
-
-      await db.unscoped('composite_tax_mappings', 'tenant-less tax child scoped through tenant-owned tax_rates')
+      await db.parentScopedTable('composite_tax_mappings')
         .where({ composite_tax_id: taxRateId })
-        .whereIn('composite_tax_id', ownedTaxRate.clone())
         .del();
       await db.table('tax_components').where({ tax_rate_id: taxRateId }).del();
-      await db.unscoped('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
+      await db.parentScopedTable('tax_holidays')
         .where({ tax_rate_id: taxRateId })
-        .whereIn('tax_rate_id', ownedTaxRate.clone())
         .del();
-      await db.unscoped('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
+      await db.parentScopedTable('tax_rate_thresholds')
         .where({ tax_rate_id: taxRateId })
-        .whereIn('tax_rate_id', ownedTaxRate.clone())
         .del();
 
       const deletedCount = await db.table('tax_rates')
-        .where({
-          tax_rate_id: taxRateId,
-          tenant
-        })
+        .where({ tax_rate_id: taxRateId })
         .del();
 
       if (deletedCount === 0) {
