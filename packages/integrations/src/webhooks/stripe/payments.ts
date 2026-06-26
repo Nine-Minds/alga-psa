@@ -293,8 +293,11 @@ async function handleLicenseOrderWebhook(
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const knex = await getAdminConnection();
 
-    // Intentional admin lookup: tenant is derived from the submission before tenant-owned roots can be scoped.
-    const submission = await knex('service_request_submissions')
+    const submission = await tenantDb(knex, '__license_order_submission_discovery__')
+      .unscoped(
+        'service_request_submissions',
+        'tenant discovery from license order submission webhook'
+      )
       .where({ submission_id: submissionId })
       .first('submitted_payload', 'tenant', 'client_id');
 
@@ -329,7 +332,7 @@ async function handleLicenseOrderWebhook(
     }
 
     // Client name → license customer (table is `clients`, PK client_id).
-    const client = await tenantDb(knex, tenant).table('clients').where({ client_id: clientId, tenant }).first('client_name');
+    const client = await tenantDb(knex, tenant).table('clients').where({ client_id: clientId }).first('client_name');
     const customer = (client?.client_name as string | undefined) ?? 'Unknown';
 
     // Start the issuance Temporal workflow (idempotent via workflow id)

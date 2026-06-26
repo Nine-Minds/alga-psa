@@ -659,7 +659,7 @@ export const getTenantProjectStatuses = withAuth(async (
   }
 
   // Fall back to standard_statuses table (old system)
-  const standardStatuses = await knex('standard_statuses')
+  const standardStatuses = await tenantDb(knex, tenant).table('standard_statuses')
     .where({ item_type: 'project_task' })
     .orderBy('display_order');
 

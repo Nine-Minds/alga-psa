@@ -714,7 +714,7 @@ export class ContactModel {
     };
 
     try {
-      await trx('contacts').insert(insertData);
+      await tenantScopedTable(trx, 'contacts', tenant).insert(insertData);
       await this.replacePhoneNumbers(contactId, tenant, validatedInput.phone_numbers, trx, now);
       await this.replaceAdditionalEmailAddresses(contactId, tenant, validatedInput.additional_email_addresses, trx, now);
 
@@ -973,7 +973,7 @@ export class ContactModel {
 
     const customTypeMap = await this.ensureCustomPhoneTypeDefinitions(preparedRows, tenant, trx, now);
 
-    await trx('contact_phone_numbers').insert(
+    await tenantScopedTable(trx, 'contact_phone_numbers', tenant).insert(
       preparedRows.map((row) => ({
         tenant,
         contact_phone_number_id: row.contact_phone_number_id || uuidv4(),
@@ -1024,7 +1024,7 @@ export class ContactModel {
 
     const customTypeMap = await this.ensureCustomEmailTypeDefinitions(preparedRows, tenant, trx, now);
 
-    await trx('contact_additional_email_addresses').insert(
+    await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant).insert(
       preparedRows.map((row) => ({
         tenant,
         contact_additional_email_address_id: row.contact_additional_email_address_id || uuidv4(),
@@ -1324,24 +1324,23 @@ export class ContactModel {
     trx: Knex.Transaction,
     options: { limit?: number; includeInactive?: boolean } = {}
   ): Promise<IContact[]> {
+    const normalizedSearchDigits = normalizePhoneForSearch(searchTerm);
+    const phoneSearchQuery = tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant)
+      .select(trx.raw('1'))
+      .whereRaw('cpn.contact_name_id = c.contact_name_id')
+      .andWhere(function matchPhone() {
+        this.where('cpn.phone_number', 'ilike', `%${searchTerm}%`);
+
+        if (normalizedSearchDigits) {
+          this.orWhere('cpn.normalized_phone_number', 'like', `%${normalizedSearchDigits}%`);
+        }
+      });
+
     let query = tenantScopedTable(trx, 'contacts as c', tenant)
       .where(function searchByTerm() {
         this.where('c.full_name', 'ilike', `%${searchTerm}%`)
           .orWhere('c.email', 'ilike', `%${searchTerm}%`)
-          .orWhereExists(function searchPhones() {
-            this.select(trx.raw('1'))
-              .from('contact_phone_numbers as cpn')
-              .whereRaw('cpn.tenant = c.tenant')
-              .andWhereRaw('cpn.contact_name_id = c.contact_name_id')
-              .andWhere(function matchPhone() {
-                this.where('cpn.phone_number', 'ilike', `%${searchTerm}%`);
-
-                const normalizedDigits = normalizePhoneForSearch(searchTerm);
-                if (normalizedDigits) {
-                  this.orWhere('cpn.normalized_phone_number', 'like', `%${normalizedDigits}%`);
-                }
-              });
-          });
+          .orWhereExists(phoneSearchQuery);
       });
 
     if (!options.includeInactive) {
@@ -1674,7 +1673,7 @@ export class ContactModel {
       }));
 
     if (missingRows.length > 0) {
-      await trx('contact_phone_type_definitions')
+      await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
         .insert(missingRows)
         .onConflict(['tenant', 'normalized_label'])
         .ignore();
@@ -1738,7 +1737,7 @@ export class ContactModel {
       }));
 
     if (missingRows.length > 0) {
-      await trx('contact_email_type_definitions')
+      await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
         .insert(missingRows)
         .onConflict(['tenant', 'normalized_label'])
         .ignore();

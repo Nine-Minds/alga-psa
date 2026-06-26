@@ -40,7 +40,7 @@ async function seedBoardTicketStatusesFromStandards(
     return 0;
   }
 
-  const standardStatuses = await trx('standard_statuses')
+  const standardStatuses = await tenantDb(trx, tenant).table('standard_statuses')
     .where({ item_type: 'ticket' })
     .orderBy('display_order', 'asc')
     .orderBy('name', 'asc');
@@ -533,7 +533,7 @@ export const importReferenceData = withAuth(async (
       if (dataType === 'categories' && item.parent_category_uuid) {
         // We need to map the standard parent UUID to the tenant's parent category
         // First, find the standard parent category
-        const standardParentCategory = await trx('standard_categories')
+        const standardParentCategory = await tenantDb(trx, tenant).table('standard_categories')
           .where('id', item.parent_category_uuid)
           .first();
 

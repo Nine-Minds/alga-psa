@@ -1,5 +1,6 @@
 'use server'
 
+import { tenantDb } from '@alga-psa/db'
 import { createTenantKnex } from '@/lib/db'
 import { WorkflowVersionResponse } from '../../services/flow/types'
 
@@ -9,10 +10,12 @@ export async function fetchWorkflowVersion(
   version?: number
 ): Promise<WorkflowVersionResponse> {
   const {knex} = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const legacyWorkflowLookupReason = 'legacy workflow version child tables lack tenant columns and are constrained by scoped workflow version id';
 
   try {
     // Get workflow and version info
-    const workflowQuery = knex('workflows as w')
+    const workflowQuery = db.table('workflows as w')
       .select(
         'w.id',
         'w.created_at as workflow_created_at',
@@ -43,7 +46,7 @@ export async function fetchWorkflowVersion(
     }
 
     // Get nodes with properties and outputs
-    const nodes = await knex('node_versions as nv')
+    const nodes = await db.unscoped('node_versions as nv', legacyWorkflowLookupReason)
       .select(
         'nv.*',
         knex.raw(`
@@ -81,7 +84,7 @@ export async function fetchWorkflowVersion(
       .groupBy('nv.id')
 
     // Get edges
-    const edges = await knex('edge_versions')
+    const edges = await db.unscoped('edge_versions', legacyWorkflowLookupReason)
       .select('*')
       .where('workflow_version_id', workflowData.version_id)
 

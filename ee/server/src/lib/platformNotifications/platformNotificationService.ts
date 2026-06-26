@@ -10,7 +10,11 @@
  * No runtime audience matching — the recipient table IS the source of truth.
  */
 
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import type { Knex } from 'knex';
+
+const PLATFORM_NOTIFICATION_ADMIN_TENANT = '__platform_notification_admin__';
 
 // ── Types ──
 
@@ -121,12 +125,16 @@ export class PlatformNotificationService {
     this.masterTenantId = masterTenantId;
   }
 
+  private notificationTable(conn: Knex | Knex.Transaction) {
+    return tenantDb(conn, this.masterTenantId || PLATFORM_NOTIFICATION_ADMIN_TENANT).table('platform_notifications');
+  }
+
   // ── Admin CRUD ──
 
   async listNotifications(options?: { activeOnly?: boolean }): Promise<PlatformNotification[]> {
     const knex = await getAdminConnection();
 
-    let query = knex('platform_notifications')
+    let query = this.notificationTable(knex)
       .select('*');
 
     if (options?.activeOnly !== false) {
@@ -140,7 +148,7 @@ export class PlatformNotificationService {
   async getNotification(notificationId: string): Promise<PlatformNotification | null> {
     const knex = await getAdminConnection();
 
-    const row = await knex('platform_notifications')
+    const row = await this.notificationTable(knex)
       .where({ notification_id: notificationId })
       .first();
 
@@ -151,7 +159,7 @@ export class PlatformNotificationService {
     const knex = await getAdminConnection();
 
     const notification = await knex.transaction(async (trx) => {
-      const [row] = await trx('platform_notifications')
+      const [row] = await this.notificationTable(trx)
         .insert({
           title: input.title,
           banner_content: input.banner_content,
@@ -189,7 +197,7 @@ export class PlatformNotificationService {
       if (input.expires_at !== undefined) updateData.expires_at = input.expires_at ? new Date(input.expires_at) : null;
       if (input.is_active !== undefined) updateData.is_active = input.is_active;
 
-      const [row] = await trx('platform_notifications')
+      const [row] = await this.notificationTable(trx)
         .where({ notification_id: notificationId })
         .update(updateData)
         .returning('*');
@@ -209,7 +217,7 @@ export class PlatformNotificationService {
   async deleteNotification(notificationId: string): Promise<boolean> {
     const knex = await getAdminConnection();
 
-    const count = await knex('platform_notifications')
+    const count = await this.notificationTable(knex)
       .where({ notification_id: notificationId })
       .update({ is_active: false, updated_at: new Date() });
 
@@ -233,8 +241,14 @@ export class PlatformNotificationService {
     notificationId: string,
     recipients: Array<{ user_id: string; tenant: string; excluded?: boolean }>
   ): Promise<void> {
+    const recipientTable = () =>
+      tenantDb(trx, PLATFORM_NOTIFICATION_ADMIN_TENANT).unscoped(
+        'platform_notification_recipients',
+        'platform notification materialization writes recipients across selected tenants',
+      );
+
     // Get existing recipients to preserve their read state and matched_at
-    const existing = await trx('platform_notification_recipients')
+    const existing = await recipientTable()
       .where({ notification_id: notificationId })
       .select('tenant', 'user_id', 'matched_at', 'excluded_at', 'dismissed_at', 'detail_viewed_at');
 
@@ -243,7 +257,7 @@ export class PlatformNotificationService {
     );
 
     // Delete all current recipients
-    await trx('platform_notification_recipients')
+    await recipientTable()
       .where({ notification_id: notificationId })
       .delete();
 
@@ -268,7 +282,7 @@ export class PlatformNotificationService {
     // Batch insert
     const batchSize = 500;
     for (let i = 0; i < rows.length; i += batchSize) {
-      await trx('platform_notification_recipients').insert(rows.slice(i, i + batchSize));
+      await recipientTable().insert(rows.slice(i, i + batchSize));
     }
   }
 
@@ -281,12 +295,12 @@ export class PlatformNotificationService {
     _userType: string
   ): Promise<PlatformNotification[]> {
     const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenantId);
 
     // Join recipients with notifications — only return notifications
     // where this user is a materialized recipient and hasn't dismissed
-    const query = knex('platform_notification_recipients as r')
+    const query = db.table('platform_notification_recipients as r')
       .join('platform_notifications as n', 'r.notification_id', 'n.notification_id')
-      .where('r.tenant', tenantId)
       .where('r.user_id', userId)
       .whereNull('r.excluded_at')
       .whereNull('r.dismissed_at')
@@ -312,8 +326,8 @@ export class PlatformNotificationService {
   async dismissNotification(tenantId: string, notificationId: string, userId: string): Promise<void> {
     const knex = await getAdminConnection();
 
-    await knex('platform_notification_recipients')
-      .where({ tenant: tenantId, notification_id: notificationId, user_id: userId })
+    await tenantDb(knex, tenantId).table('platform_notification_recipients')
+      .where({ notification_id: notificationId, user_id: userId })
       .whereNull('dismissed_at')
       .update({ dismissed_at: new Date() });
   }
@@ -321,8 +335,8 @@ export class PlatformNotificationService {
   async recordDetailView(tenantId: string, notificationId: string, userId: string): Promise<void> {
     const knex = await getAdminConnection();
 
-    await knex('platform_notification_recipients')
-      .where({ tenant: tenantId, notification_id: notificationId, user_id: userId })
+    await tenantDb(knex, tenantId).table('platform_notification_recipients')
+      .where({ notification_id: notificationId, user_id: userId })
       .whereNull('detail_viewed_at')
       .update({ detail_viewed_at: new Date() });
   }
@@ -334,8 +348,10 @@ export class PlatformNotificationService {
     emailSearch?: string
   ): Promise<ResolvedRecipient[]> {
     const knex = await getAdminConnection();
+    const audienceDb = tenantDb(knex, PLATFORM_NOTIFICATION_ADMIN_TENANT);
 
-    let query = knex('users as u')
+    let query = audienceDb
+      .unscoped('users as u', 'platform notification audience resolution spans eligible tenants')
       .leftJoin('tenants as t', 'u.tenant', 't.tenant')
       .select(
         'u.user_id',
@@ -366,7 +382,8 @@ export class PlatformNotificationService {
     const userRolesMap: Map<string, string[]> = new Map();
 
     if (userIds.length > 0) {
-      const roleRows = await knex('user_roles as ur')
+      const roleRows = await audienceDb
+        .unscoped('user_roles as ur', 'platform notification audience resolution spans user roles across tenants')
         .join('roles as r', function () {
           this.on('ur.tenant', '=', 'r.tenant').andOn('ur.role_id', '=', 'r.role_id');
         })
@@ -389,7 +406,8 @@ export class PlatformNotificationService {
         // Use LEFT JOINs so tenants with partial Stripe data (e.g. customer but no
         // subscription, or subscription but no matching price/product) still appear
         // with whatever data is available.
-        const subRows = await knex('stripe_customers as sc')
+        const subRows = await audienceDb
+          .unscoped('stripe_customers as sc', 'platform notification audience resolution spans subscription data across tenants')
           .leftJoin('stripe_subscriptions as ss', function () {
             this.on('sc.tenant', '=', 'ss.tenant')
               .andOn('sc.stripe_customer_id', '=', 'ss.stripe_customer_id');
@@ -485,8 +503,10 @@ export class PlatformNotificationService {
 
   async getNotificationStats(notificationId: string): Promise<NotificationStats> {
     const knex = await getAdminConnection();
+    const reportingDb = tenantDb(knex, PLATFORM_NOTIFICATION_ADMIN_TENANT);
 
-    const rows = await knex('platform_notification_recipients as r')
+    const rows = await reportingDb
+      .unscoped('platform_notification_recipients as r', 'platform notification stats aggregate recipients across tenants')
       .leftJoin('tenants as t', 'r.tenant', 't.tenant')
       .where('r.notification_id', notificationId)
       .whereNull('r.excluded_at')
@@ -531,9 +551,11 @@ export class PlatformNotificationService {
 
   async getNotificationReads(notificationId: string): Promise<NotificationRecipientRead[]> {
     const knex = await getAdminConnection();
+    const reportingDb = tenantDb(knex, PLATFORM_NOTIFICATION_ADMIN_TENANT);
 
     // Step 1: Fetch recipients (distributed by tenant — avoids cross-shard join with users)
-    const recipientRows = await knex('platform_notification_recipients')
+    const recipientRows = await reportingDb
+      .unscoped('platform_notification_recipients', 'platform notification read report lists recipients across tenants')
       .where({ notification_id: notificationId })
       .whereNull('excluded_at')
       .select('user_id', 'tenant', 'matched_at', 'dismissed_at', 'detail_viewed_at');
@@ -550,8 +572,7 @@ export class PlatformNotificationService {
 
     const userMap = new Map<string, { email: string; first_name: string | null; last_name: string | null }>();
     for (const [tenant, userIds] of tenantGroups) {
-      const users = await knex('users')
-        .where('tenant', tenant)
+      const users = await tenantDb(knex, tenant).table('users')
         .whereIn('user_id', userIds)
         .select('user_id', 'tenant', 'email', 'first_name', 'last_name');
       for (const u of users) {
@@ -567,7 +588,8 @@ export class PlatformNotificationService {
     const tenantIds = [...tenantGroups.keys()];
     const tenantNameMap = new Map<string, string>();
     if (tenantIds.length > 0) {
-      const tenantRows = await knex('tenants')
+      const tenantRows = await reportingDb
+        .unscoped('tenants', 'platform notification read report resolves tenant names across recipients')
         .whereIn('tenant', tenantIds)
         .select('tenant', 'client_name');
       for (const t of tenantRows) {

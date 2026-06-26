@@ -469,7 +469,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       };
 
       // Insert invoice
-      const [invoice] = await trx('invoices').insert(invoiceData).returning('*');
+      const [invoice] = await tenantDb(trx, context.tenant).table('invoices').insert(invoiceData).returning('*');
 
       // Create line items if provided
       if (data.items?.length) {
@@ -1084,7 +1084,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_payments').insert(paymentData);
+      await tenantDb(trx, context.tenant).table('invoice_payments').insert(paymentData);
 
       deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_RECORDED',
@@ -1245,7 +1245,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_credits').insert(creditData);
+      await tenantDb(trx, context.tenant).table('invoice_credits').insert(creditData);
 
       // Update invoice credit applied
       const newCreditApplied = (invoice.credit_applied || 0) + data.credit_amount;
@@ -1392,7 +1392,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_payments').insert(refundData);
+      await tenantDb(trx, context.tenant).table('invoice_payments').insert(refundData);
 
       deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_REFUNDED',
@@ -1824,7 +1824,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const client = await getClientDetails(trx, tenant, data.clientId);
       const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
 
-      await trx('invoices').insert({
+      await tenantDb(trx, tenant).table('invoices').insert({
         invoice_id: invoiceId,
         tenant,
         client_id: data.clientId,
@@ -2292,7 +2292,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       created_at: new Date()
     }));
 
-    await trx('invoice_line_items').insert(lineItemsData);
+    await tenantDb(trx, context.tenant).table('invoice_line_items').insert(lineItemsData);
 
     for (const item of lineItemsData) {
       await publishEvent({

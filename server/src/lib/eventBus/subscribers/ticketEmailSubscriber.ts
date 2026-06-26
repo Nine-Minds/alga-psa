@@ -753,7 +753,7 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
         return category.category_name;
       }
       // Fall back to global standard_categories table (uses 'id' not 'category_id')
-      const standardCategory = await db('standard_categories')
+      const standardCategory = await scopedDb.table('standard_categories')
         .where({ id: value })
         .first();
       return standardCategory?.category_name || String(value);

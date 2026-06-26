@@ -1,4 +1,5 @@
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import {
   resolveReactivationContactEmail,
 } from '@enterprise/lib/billing/tenantReactivationDetection';
@@ -14,8 +15,8 @@ export async function handleInactiveLoginWinback(input: {
   tenantId: string;
 }): Promise<void> {
   const knex = await getAdminConnection();
-  const rows = await knex('pending_tenant_deletions')
-    .where({ tenant: input.tenantId })
+  const db = tenantDb(knex, input.tenantId);
+  const rows = await db.table('pending_tenant_deletions')
     .whereIn('status', ['pending', 'awaiting_confirmation', 'confirmed'])
     .where((builder: any) => {
       builder
@@ -45,8 +46,7 @@ export async function handleInactiveLoginWinback(input: {
     return;
   }
 
-  const tenantRow = await knex('tenants')
-    .where('tenant', input.tenantId)
+  const tenantRow = await db.table('tenants')
     .first('client_name');
 
   const token = await createTenantReactivationToken({

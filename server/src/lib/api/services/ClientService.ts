@@ -47,9 +47,11 @@ function scopedTable<Row extends object = Record<string, any>>(
 
 async function getExistingPublicTables(
   trx: Knex.Transaction,
+  tenantId: string,
   tableNames: string[]
 ): Promise<Set<string>> {
-  const rows = await trx('information_schema.tables')
+  const rows = await tenantDb(trx, tenantId)
+    .unscoped('information_schema.tables', 'schema discovery for optional Entra client cleanup tables')
     .select('table_name')
     .where({ table_schema: 'public' })
     .whereIn('table_name', tableNames);
@@ -72,7 +74,7 @@ async function cleanupEntraReferencesBeforeClientDelete(
     'entra_contact_reconciliation_queue',
     'entra_client_tenant_mappings',
   ];
-  const existingTables = await getExistingPublicTables(trx, tableNames);
+  const existingTables = await getExistingPublicTables(trx, tenantId, tableNames);
   if (existingTables.size === 0) {
     return;
   }
@@ -130,7 +132,7 @@ async function cleanupEntraReferencesBeforeClientDelete(
         updated_at: now,
       }));
 
-      await trx('entra_client_tenant_mappings').insert(unmappedRows);
+      await db.table('entra_client_tenant_mappings').insert(unmappedRows);
     }
 
     await db.table('entra_client_tenant_mappings')
@@ -295,7 +297,7 @@ export class ClientService extends BaseService<IClient> {
       };
 
       // Insert into clients table
-      const [client] = await trx('clients').insert(clientData).returning('*');
+      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*');
 
       await ensureDefaultContractForClientIfBillingConfigured(trx, {
         tenant: context.tenant,
@@ -755,7 +757,7 @@ export class ClientService extends BaseService<IClient> {
         updated_at: knex.raw('now()')
       };
 
-      const [location] = await trx('client_locations')
+      const [location] = await tenantDb(trx, context.tenant).table('client_locations')
         .insert(locationData)
         .returning('*');
 
@@ -1038,7 +1040,7 @@ export class ClientService extends BaseService<IClient> {
 
         if (!tagDef) {
           // Create the tag definition
-          const [newTagDef] = await trx('tag_definitions')
+          const [newTagDef] = await db.table('tag_definitions')
             .insert({
               tenant: context.tenant,
               tag_text: tagText,
@@ -1055,7 +1057,7 @@ export class ClientService extends BaseService<IClient> {
         }
 
         // Create the mapping
-        await trx('tag_mappings')
+        await db.table('tag_mappings')
           .insert({
             tenant: context.tenant,
             tag_id: tagId,

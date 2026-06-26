@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getTenantDeletionState } from '@ee/lib/tenant-management/workflowClient';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
@@ -87,7 +88,8 @@ export async function GET(req: NextRequest) {
 
     const knex = await getAdminConnection();
 
-    let query = knex('pending_tenant_deletions as pd')
+    let query = tenantDb(knex, '__tenant_deletion_admin_listing__')
+      .unscoped('pending_tenant_deletions as pd', 'tenant deletion admin listing spans all pending deletion rows')
       .leftJoin('tenants as t', 'pd.tenant', 't.tenant')
       .select([
         'pd.deletion_id',

@@ -262,6 +262,7 @@ export class ProjectService extends BaseService<IProject> {
     const { knex } = await this.getKnex();
     
     const project = await withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, context.tenant);
       const projectNumber = data.project_number ?? await SharedNumberingService.getNextNumber('PROJECT', { knex: trx, tenant: context.tenant });
 
       // Generate WBS code
@@ -296,12 +297,12 @@ export class ProjectService extends BaseService<IProject> {
         updated_at: new Date()
       };
 
-      const [project] = await trx(this.tableName).insert(projectData).returning('*');
+      const [project] = await db.table(this.tableName).insert(projectData).returning('*');
 
       // Create initial phase if needed
       if (data.create_default_phase) {
         const phaseWbsCode = await ProjectModel.generateNextWbsCode(trx, context.tenant, project.wbs_code);
-        await trx('project_phases').insert({
+        await db.table('project_phases').insert({
           phase_id: trx.raw('gen_random_uuid()'),
           project_id: project.project_id,
           phase_name: 'Initial Phase',
@@ -532,7 +533,7 @@ export class ProjectService extends BaseService<IProject> {
           updated_at: new Date()
         };
   
-        const [phase] = await trx('project_phases')
+        const [phase] = await tenantDb(trx, context.tenant).table('project_phases')
           .insert(phaseData)
           .returning('*');
   
@@ -664,7 +665,7 @@ export class ProjectService extends BaseService<IProject> {
           updated_at: new Date()
         };
   
-        const [task] = await trx('project_tasks')
+        const [task] = await db.table('project_tasks')
           .insert(taskData)
           .returning('*');
 
@@ -873,7 +874,7 @@ export class ProjectService extends BaseService<IProject> {
           updated_at: new Date()
         };
   
-        const [item] = await trx('task_checklist_items')
+        const [item] = await tenantDb(trx, context.tenant).table('task_checklist_items')
           .insert(itemData)
           .returning('*');
   
@@ -914,7 +915,7 @@ export class ProjectService extends BaseService<IProject> {
         created_at: new Date()
       };
   
-      const [link] = await knex('project_ticket_links')
+      const [link] = await tenantDb(knex, context.tenant).table('project_ticket_links')
         .insert(linkData)
         .returning('*');
   
@@ -1101,12 +1102,13 @@ export class ProjectService extends BaseService<IProject> {
   private async setupDefaultStatusMappings(projectId: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
       
-      const standardStatuses = await knex('standard_statuses')
+      const db = tenantDb(knex, context.tenant);
+      const standardStatuses = await db.table('standard_statuses')
         .where({ item_type: 'project_task' })
         .orderBy('display_order');
   
       for (const status of standardStatuses) {
-        await knex('project_status_mappings').insert({
+        await db.table('project_status_mappings').insert({
           project_id: projectId,
           standard_status_id: status.standard_status_id,
           is_standard: true,
@@ -1131,6 +1133,13 @@ export class ProjectService extends BaseService<IProject> {
           const db = tenantDb(knex, context.tenant);
           const query = db.table('project_tasks');
           db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+          db.tenantJoin(
+            query,
+            'project_status_mappings as project_status_mapping',
+            'project_tasks.project_status_mapping_id',
+            'project_status_mapping.project_status_mapping_id',
+            { type: 'left' }
+          );
           return query
           .where({
             'project_phases.project_id': projectId
@@ -1141,12 +1150,8 @@ export class ProjectService extends BaseService<IProject> {
             knex.raw('SUM(project_tasks.estimated_hours) as total_estimated_hours'),
             knex.raw('SUM(project_tasks.actual_hours) as total_actual_hours')
           ])
-          .leftJoin('project_status_mappings', function joinProjectStatusMappings(this: Knex.JoinClause) {
-            this.on('project_tasks.project_status_mapping_id', '=', 'project_status_mappings.project_status_mapping_id')
-              .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
-          })
           .leftJoin('standard_statuses', function joinStandardStatuses(this: Knex.JoinClause) {
-            this.on('project_status_mappings.standard_status_id', '=', 'standard_statuses.standard_status_id');
+            this.on('project_status_mapping.standard_status_id', '=', 'standard_statuses.standard_status_id');
           })
           .first();
         })()

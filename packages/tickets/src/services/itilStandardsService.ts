@@ -80,7 +80,7 @@ export class ItilStandardsService {
     const db = tenantDb(trx, tenant);
 
     // Get ITIL standard categories from reference table
-    const itilCategories = await trx('standard_categories')
+    const itilCategories = await db.table('standard_categories')
       .where('is_itil_standard', true)
       .select('*')
       .orderBy('parent_category_uuid', 'asc'); // Parents first

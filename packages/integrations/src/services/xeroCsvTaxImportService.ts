@@ -1,6 +1,6 @@
 import { v4 as uuid4, validate as uuidValidate } from 'uuid';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
 import { parseCSV } from '@alga-psa/core';
 
@@ -330,6 +330,7 @@ export class XeroCsvTaxImportService {
     if (!tenant) {
       throw new Error('Tenant context required for invoice matching');
     }
+    const scopedDb = tenantDb(knex, tenant);
 
     // Group rows by Xero invoice number
     const invoiceGroups = new Map<string, XeroInvoiceDetailsRow[]>();
@@ -381,8 +382,8 @@ export class XeroCsvTaxImportService {
 
       // If no tracking category, try to match by invoice number
       if (!algaInvoiceId) {
-        const invoice = await knex('invoices')
-          .where({ tenant, invoice_number: xeroInvoiceNumber })
+        const invoice = await scopedDb.table('invoices')
+          .where({ invoice_number: xeroInvoiceNumber })
           .select('invoice_id')
           .first();
 
@@ -399,8 +400,7 @@ export class XeroCsvTaxImportService {
           // Support decorated references like "<uuid> | PO <number>" by extracting a UUID prefix when present.
           const referenceInvoiceId = extractInvoiceIdFromReference(reference);
 
-          const query = knex('invoices')
-            .where({ tenant })
+          const query = scopedDb.table('invoices')
             .select('invoice_id');
 
           if (referenceInvoiceId) {
@@ -447,6 +447,7 @@ export class XeroCsvTaxImportService {
 
     const rows = this.parseInvoiceDetailsReport(csvContent);
     const matched = await this.matchInvoicesToAlga(rows);
+    const scopedDb = tenantDb(knex, tenant);
 
     // Group rows by Xero invoice number for unmatched count
     const xeroInvoiceNumbers = new Set(rows.map(r => r.invoiceNumber));
@@ -461,9 +462,8 @@ export class XeroCsvTaxImportService {
     // Process matched invoices
     const matchedInvoiceIds = Array.from(matched.keys());
     const invoiceInfo = matchedInvoiceIds.length > 0
-      ? await knex('invoices')
+      ? await scopedDb.table('invoices')
           .whereIn('invoice_id', matchedInvoiceIds)
-          .where({ tenant })
           .select('invoice_id', 'invoice_number', 'tax_source')
       : [];
 
@@ -579,9 +579,10 @@ export class XeroCsvTaxImportService {
       return result;
     }
 
-    const invoiceInfo = await knex('invoices')
+    const scopedDb = tenantDb(knex, tenant);
+
+    const invoiceInfo = await scopedDb.table('invoices')
       .whereIn('invoice_id', matchedInvoiceIds)
-      .where({ tenant })
       .select('invoice_id', 'invoice_number', 'tax_source');
 
     const invoiceInfoMap = new Map(invoiceInfo.map(i => [i.invoice_id, i]));
@@ -688,9 +689,11 @@ export class XeroCsvTaxImportService {
     matchedInvoice: MatchedInvoice,
     userId?: string
   ): Promise<SingleTaxImportResult> {
+    const scopedDb = tenantDb(knex, tenant);
+
     // Get current charges
-    const charges = await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    const charges = await scopedDb.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
       .select('item_id', 'description', 'tax_amount', 'net_amount')
       .orderBy('created_at')
       .orderBy('item_id');
@@ -726,8 +729,8 @@ export class XeroCsvTaxImportService {
         taxAmount = 0;
       }
 
-      await knex('invoice_charges')
-        .where({ item_id: charge.item_id, tenant })
+      await scopedDb.table('invoice_charges')
+        .where({ item_id: charge.item_id })
         .update({
           external_tax_amount: taxAmount,
           external_tax_code: matchedInvoice.lines[0]?.taxType ?? null,
@@ -739,16 +742,16 @@ export class XeroCsvTaxImportService {
     }
 
     // Update invoice tax_source
-    await knex('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    await scopedDb.table('invoices')
+      .where({ invoice_id: invoiceId })
       .update({
         tax_source: 'external' as TaxSource,
         updated_at: knex.fn.now()
       });
 
     // Recalculate invoice total
-    const newTotals = await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    const newTotals = await scopedDb.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
       .select(
         knex.raw('COALESCE(SUM(net_amount), 0) as subtotal'),
         knex.raw('COALESCE(SUM(COALESCE(external_tax_amount, tax_amount, 0)), 0) as tax')
@@ -757,8 +760,8 @@ export class XeroCsvTaxImportService {
 
     const newTotal = Number(newTotals?.subtotal ?? 0) + Number(newTotals?.tax ?? 0);
 
-    await knex('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    await scopedDb.table('invoices')
+      .where({ invoice_id: invoiceId })
       .update({
         total_amount: newTotal,
         updated_at: knex.fn.now()
@@ -769,7 +772,7 @@ export class XeroCsvTaxImportService {
     const importedTax = totalTax;
     const difference = importedTax - originalTax;
 
-    await knex('external_tax_imports').insert({
+    await scopedDb.table('external_tax_imports').insert({
       import_id: importId,
       tenant,
       invoice_id: invoiceId,

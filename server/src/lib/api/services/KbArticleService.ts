@@ -105,14 +105,13 @@ export class KbArticleService extends BaseService<any> {
       order,
     } = options;
 
-    let dataQuery = tenantDb(knex, context.tenant).table('kb_articles as ka')
+    const db = tenantDb(knex, context.tenant);
+    let dataQuery = db.table('kb_articles as ka')
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      });
+      ]);
+    db.tenantJoin(dataQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
 
     let countQuery = this.buildTenantScopedQuery(knex, context);
 
@@ -172,18 +171,17 @@ export class KbArticleService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
 
-    const article = await tenantDb(knex, context.tenant).table('kb_articles as ka')
+    const db = tenantDb(knex, context.tenant);
+    const articleQuery = db.table('kb_articles as ka')
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
         'dbc.block_data',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      })
-      .leftJoin('document_block_content as dbc', function () {
-        this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
-      })
+      ]);
+    db.tenantJoin(articleQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+    db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+
+    const article = await articleQuery
       .andWhere('ka.article_id', id)
       .first();
 
@@ -192,6 +190,7 @@ export class KbArticleService extends BaseService<any> {
 
   async create(data: CreateKbArticleData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+    const db = tenantDb(knex, context.tenant);
 
     if (!data.title?.trim()) {
       throw new Error('Title is required');
@@ -223,7 +222,7 @@ export class KbArticleService extends BaseService<any> {
     const documentId = randomUUID();
     const now = new Date();
 
-    await knex('documents').insert({
+    await db.table('documents').insert({
       tenant: context.tenant,
       document_id: documentId,
       document_name: data.title.trim(),
@@ -245,7 +244,7 @@ export class KbArticleService extends BaseService<any> {
       }
 
       if (blocks.length > 0) {
-        await knex('document_block_content').insert({
+        await db.table('document_block_content').insert({
           content_id: randomUUID(),
           document_id: documentId,
           tenant: context.tenant,
@@ -263,7 +262,7 @@ export class KbArticleService extends BaseService<any> {
       : null;
 
     try {
-      await knex('kb_articles').insert({
+      await db.table('kb_articles').insert({
         tenant: context.tenant,
         article_id: articleId,
         document_id: documentId,
@@ -278,7 +277,7 @@ export class KbArticleService extends BaseService<any> {
         updated_by: context.userId,
       });
     } catch (err) {
-      await tenantDb(knex, context.tenant).table('documents')
+      await db.table('documents')
         .where('document_id', documentId)
         .del()
         .catch(() => {});
@@ -485,7 +484,7 @@ export class KbArticleService extends BaseService<any> {
         .where('document_id', article.document_id)
         .update({ block_data: JSON.stringify(blocks), updated_at: now });
     } else {
-      await knex('document_block_content').insert({
+      await tenantDb(knex, context.tenant).table('document_block_content').insert({
         content_id: randomUUID(),
         document_id: article.document_id,
         tenant: context.tenant,
@@ -506,7 +505,7 @@ export class KbArticleService extends BaseService<any> {
   async getCategories(context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    return knex('standard_categories')
+    return tenantDb(knex, context.tenant).table('standard_categories')
       .select('id', 'category_name', 'parent_category_uuid', 'display_order')
       .orderBy('display_order', 'asc')
       .orderBy('category_name', 'asc');

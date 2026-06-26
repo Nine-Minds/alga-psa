@@ -290,7 +290,7 @@ export const getClientKBCategories = withAuth(
 
       // standard_categories is a global reference table (no tenant column) — no tenant filter needed.
       // Tenant scoping comes from the kb_articles subquery which filters by tenant.
-      const categoriesWithArticles = await trx('standard_categories as sc')
+      const categoriesWithArticles = await scopedDb.table('standard_categories as sc')
         .select([
           'sc.id',
           'sc.category_name as name',

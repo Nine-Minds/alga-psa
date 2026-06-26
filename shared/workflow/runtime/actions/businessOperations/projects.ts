@@ -651,7 +651,7 @@ async function ensureProjectDefaultStatusMappings(
   const existing = await getScopedProjectStatusMappings(tx, projectId);
   if (existing.length > 0) return existing;
 
-  const standardStatuses = await tx.trx('standard_statuses')
+  const standardStatuses = await tenantDb(tx.trx, tx.tenantId).table('standard_statuses')
     .where({ item_type: 'project_task' })
     .orderBy('display_order', 'asc');
 

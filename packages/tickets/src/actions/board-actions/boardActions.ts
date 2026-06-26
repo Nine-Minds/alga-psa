@@ -66,7 +66,7 @@ async function seedBoardTicketStatusesFromStandards(
     return 0;
   }
 
-  const standardStatuses = await trx('standard_statuses')
+  const standardStatuses = await tenantDb(trx, tenant).table('standard_statuses')
     .where({ item_type: 'ticket' })
     .orderBy('display_order', 'asc')
     .orderBy('name', 'asc');

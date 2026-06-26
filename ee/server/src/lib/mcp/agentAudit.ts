@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 
 /** One agent tool invocation, recorded for the exportable agent-action audit. */
@@ -18,7 +19,7 @@ export async function writeAgentAudit(entry: AgentAuditEntry): Promise<void> {
   try {
     await runWithTenant(entry.tenant, async () => {
       const { knex } = await createTenantKnex(entry.tenant);
-      await knex('mcp_agent_audit').insert({
+      await tenantDb(knex, entry.tenant).table('mcp_agent_audit').insert({
         tenant: entry.tenant,
         agent_id: entry.agentId,
         tool: entry.tool,
@@ -57,7 +58,7 @@ export async function exportAgentAudit(
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
     const scoped = () => {
-      const q = knex('mcp_agent_audit').where({ tenant });
+      const q = tenantDb(knex, tenant).table('mcp_agent_audit');
       return filter.agentId ? q.where({ agent_id: filter.agentId }) : q;
     };
     const limit = Math.max(1, Math.min(filter.limit ?? 25, 200));

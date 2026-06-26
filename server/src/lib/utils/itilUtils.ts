@@ -1,3 +1,5 @@
+import { tenantDb } from '@alga-psa/db';
+
 // ITIL Utility Functions for Priority Calculation and Business Logic
 
 /**
@@ -272,7 +274,7 @@ export function formatItilCategoryDisplay(category?: string | null, subcategory?
  * @returns Promise<Array> of ITIL category records from standard_categories table
  */
 export async function getItilCategoriesFromDB(db: any): Promise<any[]> {
-  return await db('standard_categories')
+  return await tenantDb(db, '__itil_standard_category_reference__').table('standard_categories')
     .where('is_itil_standard', true)
     .orderBy('category_name', 'asc');
 }

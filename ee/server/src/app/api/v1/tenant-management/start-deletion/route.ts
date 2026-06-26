@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { observabilityLogger } from '@/lib/observability/logging';
@@ -101,14 +102,14 @@ export async function POST(req: NextRequest) {
 
     // Verify target tenant exists
     const knex = await getAdminConnection();
-    const targetTenant = await knex('tenants').where({ tenant: tenantId }).first();
+    const targetTenantDb = tenantDb(knex, tenantId);
+    const targetTenant = await targetTenantDb.table('tenants').first();
     if (!targetTenant) {
       return NextResponse.json({ success: false, error: 'Tenant not found' }, { status: 404 });
     }
 
     // Check for existing pending deletion
-    const existingDeletion = await knex('pending_tenant_deletions')
-      .where({ tenant: tenantId })
+    const existingDeletion = await targetTenantDb.table('pending_tenant_deletions')
       .whereNotIn('status', ['deleted', 'rolled_back', 'failed'])
       .first();
 

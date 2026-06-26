@@ -950,7 +950,7 @@ export const getTemplateWithDetails = withAuth(async (
     rawStatusMappings.map(async (mapping) => {
       if (mapping.status_id) {
         // First, try standard_statuses (for standard statuses)
-        const standardStatus = await knex('standard_statuses')
+        const standardStatus = await tenantDb(knex, tenant).table('standard_statuses')
           .where({ standard_status_id: mapping.status_id })
           .first();
 
