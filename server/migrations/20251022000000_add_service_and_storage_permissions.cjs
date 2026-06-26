@@ -3,9 +3,18 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+const MIGRATION_TENANT = 'migration:20251022000000_add_service_and_storage_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for service and storage permission backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   // Define the permissions to add
@@ -23,8 +32,9 @@ exports.up = async function(knex) {
 
   // For each tenant, add the permissions
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Get existing permissions to avoid duplicates
-    const existingPerms = await knex('permissions')
+    const existingPerms = await db.table('permissions')
       .where({ tenant })
       .select('resource', 'action');
 
@@ -37,16 +47,16 @@ exports.up = async function(knex) {
         permission_id: knex.raw('gen_random_uuid()'),
         ...p,
         created_at: new Date()
-      }));
+    }));
 
     if (permissionsToAdd.length > 0) {
-      await knex('permissions').insert(permissionsToAdd);
+      await db.table('permissions').insert(permissionsToAdd);
       console.log(`Added ${permissionsToAdd.length} new permissions for tenant ${tenant}`);
     }
 
     // Get MSP Admin role for this tenant (msp=true, client=false, case-insensitive)
     // Service and storage are MSP-only features
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({
         tenant,
         msp: true,
@@ -57,7 +67,7 @@ exports.up = async function(knex) {
 
     if (adminRole) {
       // Get all service and storage permissions for this tenant (MSP only)
-      const serviceAndStoragePerms = await knex('permissions')
+      const serviceAndStoragePerms = await db.table('permissions')
         .where({
           tenant,
           msp: true  // Only MSP permissions
@@ -66,7 +76,7 @@ exports.up = async function(knex) {
         .select('permission_id');
 
       // Get existing role permissions for admin
-      const existingRolePerms = await knex('role_permissions')
+      const existingRolePerms = await db.table('role_permissions')
         .where({
           tenant,
           role_id: adminRole.role_id
@@ -82,10 +92,10 @@ exports.up = async function(knex) {
           tenant,
           role_id: adminRole.role_id,
           permission_id: p.permission_id
-        }));
+      }));
 
       if (rolePermissionsToAdd.length > 0) {
-        await knex('role_permissions').insert(rolePermissionsToAdd);
+        await db.table('role_permissions').insert(rolePermissionsToAdd);
         console.log(`Added ${rolePermissionsToAdd.length} role permissions to Admin role for tenant ${tenant}`);
       }
     }
@@ -97,24 +107,31 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   for (const { tenant } of tenants) {
-    // Remove role permissions first (foreign key constraint)
-    await knex('role_permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where('tenant', tenant)
-      .whereIn('permission_id', function() {
-        this.select('permission_id')
-          .from('permissions')
-          .where('tenant', tenant)
-          .whereIn('resource', ['service', 'storage']);
-      })
+      .whereIn('resource', ['service', 'storage'])
+      .pluck('permission_id');
+
+    if (!permissionIds.length) {
+      continue;
+    }
+
+    // Remove role permissions first (foreign key constraint)
+    await db.table('role_permissions')
+      .where('tenant', tenant)
+      .whereIn('permission_id', permissionIds)
       .delete();
 
     // Remove permissions
-    await knex('permissions')
+    await db.table('permissions')
       .where('tenant', tenant)
       .whereIn('resource', ['service', 'storage'])
       .delete();

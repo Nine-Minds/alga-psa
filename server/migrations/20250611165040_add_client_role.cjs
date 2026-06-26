@@ -1,15 +1,24 @@
+const MIGRATION_TENANT = 'migration:20250611165040_add_client_role';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for client role backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
 
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   // For each tenant, add the roles if they don't exist
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // --- Role Definitions ---
     const rolesToCreate = [
       { role_name: 'Client', description: 'Client user role' },
@@ -18,13 +27,13 @@ exports.up = async function(knex) {
     ];
 
     for (const role of rolesToCreate) {
-      const existingRole = await knex('roles')
+      const existingRole = await db.table('roles')
         .where({ tenant })
         .whereRaw('LOWER(role_name) = ?', [role.role_name.toLowerCase()])
         .first();
       
       if (!existingRole) {
-        await knex('roles').insert({
+        await db.table('roles').insert({
           tenant,
           role_id: knex.raw('gen_random_uuid()'),
           ...role
@@ -34,7 +43,7 @@ exports.up = async function(knex) {
 
     // --- Permission Definitions ---
     const getPermissions = async (permissionMap) => {
-      const permissions = await knex('permissions')
+      const permissions = await db.table('permissions')
         .where({ tenant })
         .where(function() {
           for (const resource in permissionMap) {
@@ -72,14 +81,14 @@ exports.up = async function(knex) {
 
     // --- Role-Permission Assignment ---
     const assignPermissionsToRole = async (roleName, permissions) => {
-      const role = await knex('roles')
+      const role = await db.table('roles')
         .where({ tenant })
         .whereRaw('LOWER(role_name) = ?', [roleName.toLowerCase()])
         .first();
 
       if (role) {
         for (const perm of permissions) {
-          const exists = await knex('role_permissions')
+          const exists = await db.table('role_permissions')
             .where({
               tenant,
               role_id: role.role_id,
@@ -88,7 +97,7 @@ exports.up = async function(knex) {
             .first();
 
           if (!exists) {
-            await knex('role_permissions').insert({
+            await db.table('role_permissions').insert({
               tenant,
               role_id: role.role_id,
               permission_id: perm.permission_id
@@ -113,15 +122,18 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   const roleNames = ['Client', 'Client_Admin', 'Dispatcher'];
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Get the role IDs for the roles we are removing
-    const rolesToDelete = await knex('roles')
+    const rolesToDelete = await db.table('roles')
       .where({ tenant })
       .whereIn('role_name', roleNames)
       .select('role_id');
@@ -130,13 +142,13 @@ exports.down = async function(knex) {
 
     if (roleIdsToDelete.length > 0) {
       // Remove role permissions
-      await knex('role_permissions')
+      await db.table('role_permissions')
         .where({ tenant })
         .whereIn('role_id', roleIdsToDelete)
         .delete();
 
       // Remove roles
-      await knex('roles')
+      await db.table('roles')
         .where({ tenant })
         .whereIn('role_id', roleIdsToDelete)
         .delete();

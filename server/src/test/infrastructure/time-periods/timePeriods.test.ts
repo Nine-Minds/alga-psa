@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { ITimePeriodSettings, ITimePeriod } from '../../interfaces/timeEntry.interfaces';
 import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { ISO8601String } from '../../types/types.d';
@@ -27,6 +28,13 @@ import {
   dateHelpers
 } from '../../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
 
 describe('Time Periods Infrastructure', () => {
   const context = new TestContext({
@@ -83,7 +91,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: undefined
     };
 
-    await context.db('time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(setting);
 
     const timePeriodData: Omit<ITimePeriod, 'period_id'> = {
       start_date: '2023-01-01',
@@ -97,7 +105,7 @@ describe('Time Periods Infrastructure', () => {
     expect(toPlainDate(result.start_date).toString()).toBe('2023-01-01');
     expect(toPlainDate(result.end_date).toString()).toBe('2023-01-07');
 
-    const savedPeriod = await context.db('time_periods').where('period_id', result.period_id).first();
+    const savedPeriod = await tenantTable(context, 'time_periods').where('period_id', result.period_id).first();
     expect(savedPeriod).toBeDefined();
     expect(toPlainDate(savedPeriod.start_date).toString()).toBe('2023-01-01');
     expect(toPlainDate(savedPeriod.end_date).toString()).toBe('2023-01-07');
@@ -118,7 +126,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: 0
     };
 
-    await context.db('time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(setting);
 
     const result = await generateAndSaveTimePeriods(
       '2023-01-01',
@@ -165,7 +173,7 @@ describe('Time Periods Infrastructure', () => {
       },
     ];
 
-    await context.db('time_period_settings').insert(settings);
+    await tenantTable(context, 'time_period_settings').insert(settings);
 
     const result = await generateAndSaveTimePeriods(
       '2023-01-01',
@@ -200,7 +208,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: 0
     };
 
-    await context.db('time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(setting);
 
     const timePeriodData1: Omit<ITimePeriod, 'period_id'> = {
       start_date: createTestDateISO({ year: 2026, month: 1, day: 1 }),
@@ -238,7 +246,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: 0
     };
 
-    await context.db('time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(setting);
 
     const existingPeriod: Omit<ITimePeriod, 'period_id'> = {
       start_date: '2023-01-15',
@@ -283,7 +291,7 @@ describe('Time Periods Infrastructure', () => {
       },
     ];
 
-    await context.db('time_period_settings').insert(settings);
+    await tenantTable(context, 'time_period_settings').insert(settings);
 
     const periods = await generateTimePeriods(
       settings,

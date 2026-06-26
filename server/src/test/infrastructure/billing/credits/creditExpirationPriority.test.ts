@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
@@ -25,6 +26,13 @@ const currentUserRef: { user: any } = { user: null };
 
 let context: TestContext;
 
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
+
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
@@ -37,7 +45,7 @@ async function ensureClientBillingSettings(
   clientId: string,
   overrides: Record<string, unknown> = {}
 ) {
-  await context.db('client_billing_settings')
+  await tenantTable(context, 'client_billing_settings')
     .where({ client_id: clientId, tenant: context.tenantId })
     .del();
 
@@ -60,7 +68,7 @@ async function ensureClientBillingSettings(
     delete baseSettings.credit_expiration_notification_days;
   }
 
-  await context.db('client_billing_settings').insert(baseSettings);
+  await tenantTable(context, 'client_billing_settings').insert(baseSettings);
 }
 
 async function createManualInvoice(
@@ -91,7 +99,7 @@ async function createManualInvoice(
   const tax = items.reduce((sum, item) => sum + (item.taxAmount ?? 0), 0);
   const total = subtotal + tax;
 
-  await context.db('invoices').insert({
+  await tenantTable(context, 'invoices').insert({
     invoice_id: invoiceId,
     tenant: context.tenantId,
     client_id: clientId,
@@ -110,7 +118,7 @@ async function createManualInvoice(
   });
 
   if (items.length) {
-    await context.db('invoice_charges').insert(
+    await tenantTable(context, 'invoice_charges').insert(
       items.map((item) => ({
         item_id: uuidv4(),
         invoice_id: invoiceId,
@@ -139,7 +147,7 @@ async function applyCreditsManually(
 ) {
   const nowIso = new Date().toISOString();
 
-  await context.db('invoices')
+  await tenantTable(context, 'invoices')
     .where({ invoice_id: invoiceId })
     .update({
       status: 'sent',
@@ -153,7 +161,7 @@ async function applyCreditsManually(
   for (const credit of orderedCredits) {
     if (remaining <= 0) break;
 
-    const tracking = await context.db('credit_tracking')
+    const tracking = await tenantTable(context, 'credit_tracking')
       .where({ transaction_id: credit.transaction_id, tenant: context.tenantId })
       .first();
 
@@ -173,7 +181,7 @@ async function applyCreditsManually(
 
     appliedCredits.push({ transactionId: credit.transaction_id, amount: applyAmount });
 
-    await context.db('credit_tracking')
+    await tenantTable(context, 'credit_tracking')
       .where({ transaction_id: credit.transaction_id, tenant: context.tenantId })
       .update({
         remaining_amount: available - applyAmount,
@@ -185,7 +193,7 @@ async function applyCreditsManually(
 
   const totalApplied = appliedCredits.reduce((sum, entry) => sum + entry.amount, 0);
 
-  const clientRow = await context.db('clients')
+  const clientRow = await tenantTable(context, 'clients')
     .where({ client_id: clientId, tenant: context.tenantId })
     .first();
 
@@ -194,7 +202,7 @@ async function applyCreditsManually(
 
   const creditApplicationTransactionId = uuidv4();
 
-  await context.db('transactions').insert({
+  await tenantTable(context, 'transactions').insert({
     transaction_id: creditApplicationTransactionId,
     client_id: clientId,
     invoice_id: invoiceId,
@@ -208,7 +216,7 @@ async function applyCreditsManually(
     metadata: { applied_credits: appliedCredits }
   });
 
-  await context.db('transactions').insert({
+  await tenantTable(context, 'transactions').insert({
     transaction_id: uuidv4(),
     client_id: clientId,
     amount: -totalApplied,
@@ -219,7 +227,7 @@ async function applyCreditsManually(
     tenant: context.tenantId
   });
 
-  await context.db('credit_allocations').insert({
+  await tenantTable(context, 'credit_allocations').insert({
     allocation_id: uuidv4(),
     transaction_id: creditApplicationTransactionId,
     invoice_id: invoiceId,
@@ -228,14 +236,14 @@ async function applyCreditsManually(
     tenant: context.tenantId
   });
 
-  await context.db('clients')
+  await tenantTable(context, 'clients')
     .where({ client_id: clientId, tenant: context.tenantId })
     .update({
       credit_balance: newBalance,
       updated_at: nowIso
     });
 
-  await context.db('invoices')
+  await tenantTable(context, 'invoices')
     .where({ invoice_id: invoiceId })
     .update({
       credit_applied: totalApplied,
@@ -266,11 +274,6 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
   };
 });
-
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -332,7 +335,7 @@ describe('Credit Expiration Prioritization Tests', () => {
   const testHelpers = TestContext.createHelpers();
 
   async function ensureRegion(context: TestContext, regionCode: string) {
-    await context.db('tax_regions')
+    await tenantTable(context, 'tax_regions')
       .insert({
         tenant: context.tenantId,
         region_code: regionCode,
@@ -501,7 +504,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     await runInTenant(() => finalizeInvoice(creditWithoutExpirationInvoice.invoice_id));
     
     // Step 4: Get the credit transactions
-    const creditWithExpirationTx = await context.db('transactions')
+    const creditWithExpirationTx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: creditWithExpirationInvoice.invoice_id,
@@ -509,7 +512,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       })
       .first();
     
-    const creditWithoutExpirationTx = await context.db('transactions')
+    const creditWithoutExpirationTx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: creditWithoutExpirationInvoice.invoice_id,
@@ -518,11 +521,11 @@ describe('Credit Expiration Prioritization Tests', () => {
       .first();
     
     // Step 5: Update the second credit to have no expiration date
-    await context.db('transactions')
+    await tenantTable(context, 'transactions')
       .where({ transaction_id: creditWithoutExpirationTx.transaction_id })
       .update({ expiration_date: null });
     
-    await context.db('credit_tracking')
+    await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: creditWithoutExpirationTx.transaction_id,
         tenant: context.tenantId
@@ -565,7 +568,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       [creditWithExpirationTx, creditWithoutExpirationTx]
     );
 
-    const updatedInvoice = await context.db('invoices')
+    const updatedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId1 })
       .first();
 
@@ -575,7 +578,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
     
     // Step 11: Verify credit application transaction
-    const creditApplicationTx = await context.db('transactions')
+    const creditApplicationTx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: invoiceId1,
@@ -599,14 +602,14 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(metadata.applied_credits[1].amount).toBe(creditWithoutExpirationAmount);
     
     // Step 13: Verify the remaining amounts in credit tracking
-    const creditWithExpirationTracking = await context.db('credit_tracking')
+    const creditWithExpirationTracking = await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: creditWithExpirationTx.transaction_id,
         tenant: context.tenantId
       })
       .first();
     
-    const creditWithoutExpirationTracking = await context.db('credit_tracking')
+    const creditWithoutExpirationTracking = await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: creditWithoutExpirationTx.transaction_id,
         tenant: context.tenantId
@@ -723,7 +726,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     await runInTenant(() => finalizeInvoice(credit3Invoice.invoice_id));
     
     // Step 3: Get the credit transactions
-    const credit1Tx = await context.db('transactions')
+    const credit1Tx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: credit1Invoice.invoice_id,
@@ -731,7 +734,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       })
       .first();
     
-    const credit2Tx = await context.db('transactions')
+    const credit2Tx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: credit2Invoice.invoice_id,
@@ -739,7 +742,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       })
       .first();
     
-    const credit3Tx = await context.db('transactions')
+    const credit3Tx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: credit3Invoice.invoice_id,
@@ -769,7 +772,7 @@ describe('Credit Expiration Prioritization Tests', () => {
 
     await runInTenant(() => finalizeInvoice(invoiceIdCycle1));
 
-    const updatedInvoice1 = await context.db('invoices')
+    const updatedInvoice1 = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceIdCycle1 })
       .first();
     
@@ -789,7 +792,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice1.total_amount)).toBe(expectedRemainingTotal1);
     
     // Step 9: Verify credit application transaction for first invoice
-    const creditApplicationTx1 = await context.db('transactions')
+    const creditApplicationTx1 = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: invoiceIdCycle1,
@@ -834,7 +837,7 @@ describe('Credit Expiration Prioritization Tests', () => {
 
     await runInTenant(() => finalizeInvoice(invoiceIdCycle2));
 
-    const updatedInvoice2 = await context.db('invoices')
+    const updatedInvoice2 = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceIdCycle2 })
       .first();
     
@@ -860,7 +863,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice2.total_amount)).toBe(expectedRemainingTotal2);
     
     // Step 15: Verify credit application transaction for second invoice
-    const creditApplicationTx2 = await context.db('transactions')
+    const creditApplicationTx2 = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: invoiceIdCycle2,
@@ -900,21 +903,21 @@ describe('Credit Expiration Prioritization Tests', () => {
     }
     
     // Step 17: Verify the final state of credit tracking entries
-    const credit1Tracking = await context.db('credit_tracking')
+    const credit1Tracking = await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: credit1Tx.transaction_id,
         tenant: context.tenantId
       })
       .first();
     
-    const credit2Tracking = await context.db('credit_tracking')
+    const credit2Tracking = await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: credit2Tx.transaction_id,
         tenant: context.tenantId
       })
       .first();
     
-    const credit3Tracking = await context.db('credit_tracking')
+    const credit3Tracking = await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: credit3Tx.transaction_id,
         tenant: context.tenantId
@@ -1004,7 +1007,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     await runInTenant(() => finalizeInvoice(activeCreditInvoice.invoice_id));
     
     // Step 3: Get the credit transactions
-    const expiringCreditTx = await context.db('transactions')
+    const expiringCreditTx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: expiringCreditInvoice.invoice_id,
@@ -1012,7 +1015,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       })
       .first();
     
-    const activeCreditTx = await context.db('transactions')
+    const activeCreditTx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: activeCreditInvoice.invoice_id,
@@ -1042,7 +1045,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     // Step 6: Manually expire the first credit
     // Update credit tracking entry
-    await context.db('credit_tracking')
+    await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: expiringCreditTx.transaction_id,
         tenant: context.tenantId
@@ -1054,7 +1057,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       });
     
     // Create expiration transaction
-    await context.db('transactions').insert({
+    await tenantTable(context, 'transactions').insert({
       transaction_id: uuidv4(),
       client_id: client_id,
       amount: -expiringCreditAmount,
@@ -1067,7 +1070,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     });
     
     // Update client credit balance
-    await context.db('clients')
+    await tenantTable(context, 'clients')
       .where({ client_id: client_id, tenant: context.tenantId })
       .update({
         credit_balance: activeCreditAmount, // Only the active credit remains
@@ -1087,7 +1090,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     );
 
     // Step 9: Get the updated invoice
-    const updatedInvoice = await context.db('invoices')
+    const updatedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceIdManual })
       .first();
 
@@ -1108,7 +1111,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
     
     // Step 11: Verify credit application transaction
-    const creditApplicationTx = await context.db('transactions')
+    const creditApplicationTx = await tenantTable(context, 'transactions')
       .where({
         client_id: client_id,
         invoice_id: invoiceIdManual,
@@ -1132,7 +1135,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(metadata.applied_credits[0].amount).toBe(activeCreditAmount);
     
     // Step 13: Verify the expired credit was not used
-    const expiringCreditTracking = await context.db('credit_tracking')
+    const expiringCreditTracking = await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: expiringCreditTx.transaction_id,
         tenant: context.tenantId
@@ -1143,7 +1146,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(expiringCreditTracking.remaining_amount)).toBe(0);
     
     // Step 14: Verify the active credit was fully used
-    const activeCreditTracking = await context.db('credit_tracking')
+    const activeCreditTracking = await tenantTable(context, 'credit_tracking')
       .where({
         transaction_id: activeCreditTx.transaction_id,
         tenant: context.tenantId

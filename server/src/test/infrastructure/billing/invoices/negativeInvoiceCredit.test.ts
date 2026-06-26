@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { tenantDb } from '@alga-psa/db';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { getCreditDetails, listClientCredits } from '@alga-psa/billing/actions/creditActions';
@@ -55,10 +56,14 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -118,12 +123,27 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
+
+async function hasSchemaTable(context: TestContext, tableName: string): Promise<boolean> {
+  const row = await tenantDb(context.db, '__test_schema__')
+    .unscoped('information_schema.tables', 'test schema table existence check')
+    .where({ table_schema: 'public', table_name: tableName })
+    .first('table_name');
+  return Boolean(row);
+}
+
 async function generateInvoiceFromCharges(
   context: TestContext,
   billingCycleId: string,
   charges: IBillingCharge[]
 ): Promise<{ invoiceId: string; invoice: Record<string, unknown> }> {
-  const cycleRecord = await context.db('client_billing_cycles')
+  const cycleRecord = await tenantTable(context, 'client_billing_cycles')
     .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
     .first();
 
@@ -155,7 +175,7 @@ async function generateInvoiceFromCharges(
     context.userId
   );
 
-  const invoiceRow = await context.db('invoices')
+  const invoiceRow = await tenantTable(context, 'invoices')
     .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
     .first();
 
@@ -170,11 +190,11 @@ async function generateInvoiceFromCharges(
 }
 
 async function ensureClientContractLine(context: TestContext, startDate: string): Promise<void> {
-  if (!(await context.db.schema.hasTable('client_contract_lines'))) {
+  if (!(await hasSchemaTable(context, 'client_contract_lines'))) {
     return;
   }
 
-  const existingLine = await context.db('client_contract_lines')
+  const existingLine = await tenantTable(context, 'client_contract_lines')
     .where({ client_id: context.clientId, tenant: context.tenantId })
     .first();
 
@@ -184,7 +204,7 @@ async function ensureClientContractLine(context: TestContext, startDate: string)
 
   const contractLineId = uuidv4();
 
-  await context.db('contract_lines')
+  await tenantTable(context, 'contract_lines')
     .insert({
       contract_line_id: contractLineId,
       tenant: context.tenantId,
@@ -198,7 +218,7 @@ async function ensureClientContractLine(context: TestContext, startDate: string)
       billing_timing: 'arrears'
     });
 
-  await context.db('client_contract_lines')
+  await tenantTable(context, 'client_contract_lines')
     .insert({
       client_contract_line_id: uuidv4(),
       client_id: context.clientId,
@@ -369,7 +389,7 @@ describe('Negative Invoice Credit Tests', () => {
         context.userId
       );
 
-      const invoice = await context.db('invoices')
+      const invoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
@@ -391,7 +411,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(updatedCredit).toBe(12500); // $125.00 credit
 
       // 14. Verify credit issuance transaction
-      const creditTransaction = await context.db('transactions')
+      const creditTransaction = await tenantTable(context, 'transactions')
         .where({
           client_id: client_id,
           invoice_id: invoice.invoice_id,
@@ -405,7 +425,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(creditTransaction.description).toContain('Credit issued from negative invoice');
 
       // 16. Verify invoice status
-      const finalizedInvoice = await context.db('invoices')
+      const finalizedInvoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: invoice.invoice_id })
         .first();
 
@@ -470,7 +490,7 @@ describe('Negative Invoice Credit Tests', () => {
 
       await finalizeInvoice(createdInvoice.invoice_id);
 
-      const creditRow = await context.db('credit_tracking')
+      const creditRow = await tenantTable(context, 'credit_tracking')
         .where({ tenant: context.tenantId, client_id: clientId })
         .orderBy('created_at', 'desc')
         .first();
@@ -622,7 +642,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(Number(invoice.total_amount)).toBe(-11500); // -$115.00 (-$125 + $10)
 
       // Get invoice items to verify individual calculations
-      const invoiceItems = await context.db('invoice_charges')
+      const invoiceItems = await tenantTable(context, 'invoice_charges')
         .where({ invoice_id: invoiceId })
         .orderBy('net_amount', 'desc');
 
@@ -645,7 +665,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(updatedCredit).toBe(11500); // $115.00 credit (absolute value of -$115.00)
 
       // 14. Verify credit issuance transaction
-      const creditTransaction = await context.db('transactions')
+      const creditTransaction = await tenantTable(context, 'transactions')
         .where({
           client_id: client_id,
           invoice_id: invoiceId,
@@ -696,7 +716,7 @@ describe('Negative Invoice Credit Tests', () => {
 
       await ensureClientContractLine(context, startDate1);
 
-      const existingContractLine = await context.db('client_contract_lines')
+      const existingContractLine = await tenantTable(context, 'client_contract_lines')
         .where({ client_id: client_id, tenant: context.tenantId })
         .first();
       expect(existingContractLine).toBeTruthy();
@@ -762,7 +782,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(creditAfterNegativeInvoice).toBe(12500); // $125.00 credit
 
       // Verify transaction record for the negative invoice credit
-      const creditTransaction = await context.db('transactions')
+      const creditTransaction = await tenantTable(context, 'transactions')
         .where({ 
           client_id: client_id,
           type: 'credit_issuance_from_negative_invoice'
@@ -831,7 +851,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(positiveInvoiceId);
 
       // 22. Verify the final state of the positive invoice
-      const finalPositiveInvoice = await context.db('invoices')
+      const finalPositiveInvoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: positiveInvoiceId })
         .first();
 
@@ -844,7 +864,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(finalCredit).toBe(1500); // $15.00 = $125.00 - $110.00 
 
       // 24. Verify credit application transaction
-      const creditApplicationTransaction = await context.db('transactions')
+      const creditApplicationTransaction = await tenantTable(context, 'transactions')
         .where({
           client_id: client_id,
           invoice_id: positiveInvoiceId,
@@ -978,7 +998,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(positiveInvoiceId);
 
       // 21. Verify the final state of the positive invoice
-      const finalPositiveInvoice = await context.db('invoices')
+      const finalPositiveInvoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: positiveInvoiceId })
         .first();
 
@@ -991,7 +1011,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(finalCredit).toBe(0); // All credit was used
 
       // 23. Verify credit application transaction
-      const creditApplicationTransaction = await context.db('transactions')
+      const creditApplicationTransaction = await tenantTable(context, 'transactions')
         .where({
           client_id: client_id,
           invoice_id: positiveInvoiceId,
@@ -1125,7 +1145,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(positiveInvoiceId);
 
       // 21. Verify the final state of the positive invoice
-      const finalPositiveInvoice = await context.db('invoices')
+      const finalPositiveInvoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: positiveInvoiceId })
         .first();
 
@@ -1138,7 +1158,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(finalCredit).toBe(14500); // $145.00 remaining credit ($200.00 - $55.00)
 
       // 23. Verify credit application transaction
-      const creditApplicationTransaction = await context.db('transactions')
+      const creditApplicationTransaction = await tenantTable(context, 'transactions')
         .where({
           client_id: client_id,
           invoice_id: positiveInvoiceId,

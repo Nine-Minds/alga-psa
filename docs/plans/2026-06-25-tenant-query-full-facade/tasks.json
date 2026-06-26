@@ -96,6 +96,54 @@
       "dependsOn": [],
       "owner": "Dirac",
       "notes": "EE project task/document/portal/email attachment Playwright tests plus server e2e API fixtures."
+    },
+    {
+      "id": "T410A",
+      "title": "Migrate EE Playwright residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Harvey",
+      "notes": "Contract wizard, workflow designer, project task status, document CRUD, invoicing host, and Hudu EE tests now use tenant facade roots and explicit unscoped workflow/schema/global boundaries. Legacy contract-wizard plan/billing tables remain direct because they are not registered in tenant metadata."
+    },
+    {
+      "id": "T410B",
+      "title": "Migrate high-volume server integration residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Tesla",
+      "notes": "Project templates, comment threading/model, appointment, scheduling, collaborative editing, inbound routing, and service request attachment/history/domain tests now use tenant facade roots with explicit schema/global/all-tenant boundaries."
+    },
+    {
+      "id": "T410C",
+      "title": "Migrate shared workflow DB test residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Noether",
+      "notes": "shared/workflow/runtime/actions DB tests for projects/time/contacts/clients/scheduling/CRM/shared actor resolution now use tenantDb roots, tenantJoin where needed, and explicit unscoped schema/global boundaries; contract tests already matched current facade shapes."
+    },
+    {
+      "id": "T410D",
+      "title": "Migrate migration and seed residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Kant",
+      "notes": "Permission/role/workflow migration scripts and dev seed invoice charges now use tenantDb roots or explicit unscoped tenant enumeration/maintenance/historical repair boundaries."
+    },
+    {
+      "id": "T410E",
+      "title": "Migrate billing and finance test residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Mill",
+      "notes": "Billing invoice, contract wizard/currency, infrastructure invoice/credit/payment/accounting/multicurrency tests now use tenant facade roots plus explicit tenant-fixture/schema/bootstrap boundaries."
+    },
+    {
+      "id": "T410F",
+      "title": "Migrate workflow service/calendar/survey residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "main",
+      "notes": "Workflow runtime/quota/audit/export tests plus calendar, survey, authorization, KB, client portal document/share, and ticket/project permission/e2e residuals now use tenantDb roots, tenantJoin where needed, and explicit schema/tenant-fixture unscoped boundaries."
     }
   ]
 }

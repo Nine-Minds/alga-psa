@@ -5,13 +5,22 @@ const WORKFLOW_PERMISSIONS = [
   { resource: 'workflow', action: 'publish', msp: true, client: false, description: 'Publish workflows' },
   { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows' },
 ];
+const MIGRATION_TENANT = 'migration:20260424200000_ensure_workflow_permissions_for_newer_tenants';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for newer-tenant workflow permission repair';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
 
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   for (const { tenant } of tenants) {
-    const existingPerms = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const existingPerms = await db.table('permissions')
       .where({ tenant, resource: 'workflow' })
       .select('permission_id', 'action');
 
@@ -23,33 +32,33 @@ exports.up = async function up(knex) {
         permission_id: knex.raw('gen_random_uuid()'),
         created_at: new Date(),
         ...permission,
-      }));
+    }));
 
     if (permissionsToInsert.length > 0) {
-      await knex('permissions').insert(permissionsToInsert);
+      await db.table('permissions').insert(permissionsToInsert);
     }
 
     // Keep pre-existing rows aligned with the current MSP-only workflow permission contract.
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource: 'workflow' })
       .whereIn('action', WORKFLOW_PERMISSIONS.map((permission) => permission.action))
       .update({ msp: true, client: false });
 
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({ tenant, msp: true })
       .whereRaw('LOWER(role_name) = ?', ['admin'])
       .first('role_id');
 
     if (!adminRole) continue;
 
-    const workflowPermissionRows = await knex('permissions')
+    const workflowPermissionRows = await db.table('permissions')
       .where({ tenant, resource: 'workflow', msp: true })
       .whereIn('action', WORKFLOW_PERMISSIONS.map((permission) => permission.action))
       .select('permission_id');
 
     if (!workflowPermissionRows.length) continue;
 
-    const existingRolePerms = await knex('role_permissions')
+    const existingRolePerms = await db.table('role_permissions')
       .where({ tenant, role_id: adminRole.role_id })
       .whereIn('permission_id', workflowPermissionRows.map((permission) => permission.permission_id))
       .select('permission_id');
@@ -61,10 +70,10 @@ exports.up = async function up(knex) {
         tenant,
         role_id: adminRole.role_id,
         permission_id: permission.permission_id,
-      }));
+    }));
 
     if (rolePermissionsToInsert.length > 0) {
-      await knex('role_permissions').insert(rolePermissionsToInsert);
+      await db.table('role_permissions').insert(rolePermissionsToInsert);
     }
   }
 };

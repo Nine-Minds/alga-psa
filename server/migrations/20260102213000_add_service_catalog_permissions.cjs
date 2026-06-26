@@ -5,8 +5,17 @@
  * so we reuse the `service:*` RBAC resource for both services and products.
  */
 
+const MIGRATION_TENANT = 'migration:20260102213000_add_service_catalog_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for service catalog permission backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   const permissionDefs = [
     { resource: 'service', action: 'create', msp: true, client: false, description: 'Create services/products in the service catalog' },
@@ -16,14 +25,15 @@ exports.up = async function up(knex) {
   ];
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Insert any missing permissions for this tenant
     for (const def of permissionDefs) {
-      const existing = await knex('permissions')
+      const existing = await db.table('permissions')
         .where({ tenant, resource: def.resource, action: def.action })
         .first(['permission_id', 'msp', 'client', 'description']);
 
       if (!existing) {
-        await knex('permissions').insert({
+        await db.table('permissions').insert({
           tenant,
           resource: def.resource,
           action: def.action,
@@ -38,7 +48,7 @@ exports.up = async function up(knex) {
         const nextDescription = existing.description || def.description;
 
         if (nextMsp !== existing.msp || nextClient !== existing.client || nextDescription !== existing.description) {
-          await knex('permissions')
+          await db.table('permissions')
             .where({ tenant, permission_id: existing.permission_id })
             .update({
               msp: nextMsp,
@@ -52,22 +62,22 @@ exports.up = async function up(knex) {
 
     // Ensure MSP Admin role gets these permissions (Admin is defined as "all MSP permissions")
     // but role_permissions may already be missing them on existing tenants.
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({ tenant, role_name: 'Admin', msp: true })
       .first(['role_id']);
     if (!adminRole) continue;
 
-    const perms = await knex('permissions')
+    const perms = await db.table('permissions')
       .where({ tenant, resource: 'service' })
       .whereIn('action', permissionDefs.map((d) => d.action))
       .select(['permission_id']);
 
     for (const { permission_id } of perms) {
-      const existingRp = await knex('role_permissions')
+      const existingRp = await db.table('role_permissions')
         .where({ tenant, role_id: adminRole.role_id, permission_id })
         .first('tenant');
       if (existingRp) continue;
-      await knex('role_permissions').insert({
+      await db.table('role_permissions').insert({
         tenant,
         role_id: adminRole.role_id,
         permission_id,
@@ -77,22 +87,25 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   const actions = ['create', 'read', 'update', 'delete'];
 
   for (const { tenant } of tenants) {
-    const permissionIds = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where({ tenant, resource: 'service' })
       .whereIn('action', actions)
       .pluck('permission_id');
 
     if (permissionIds.length > 0) {
-      await knex('role_permissions')
+      await db.table('role_permissions')
         .where({ tenant })
         .whereIn('permission_id', permissionIds)
         .del();
 
-      await knex('permissions')
+      await db.table('permissions')
         .where({ tenant, resource: 'service' })
         .whereIn('action', actions)
         .del();

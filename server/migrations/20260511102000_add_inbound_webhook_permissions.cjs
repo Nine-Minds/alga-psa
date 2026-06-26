@@ -1,4 +1,6 @@
 const RESOURCE = 'inbound_webhook';
+const MIGRATION_TENANT = 'migration:20260511102000_add_inbound_webhook_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for inbound webhook permission backfill';
 
 const PERMISSIONS = [
   { action: 'create', description: 'Create inbound webhooks' },
@@ -8,27 +10,34 @@ const PERMISSIONS = [
   { action: 'replay', description: 'Replay inbound webhook deliveries' },
 ];
 
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').pluck('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).pluck('tenant');
 
   for (const tenant of tenants) {
-    const adminRole = await knex('roles')
+    const db = tenantDb(knex, tenant);
+    const adminRole = await db.table('roles')
       .where({ tenant, role_name: 'Admin', msp: true })
       .first('role_id');
 
     for (const { action, description } of PERMISSIONS) {
-      const existingPermission = await knex('permissions')
+      const existingPermission = await db.table('permissions')
         .where({ tenant, resource: RESOURCE, action })
         .first(['permission_id', 'msp', 'client', 'description']);
 
       let permissionId = existingPermission?.permission_id;
 
       if (!existingPermission) {
-        const [inserted] = await knex('permissions')
+        const [inserted] = await db.table('permissions')
           .insert({
             tenant,
             resource: RESOURCE,
@@ -41,7 +50,7 @@ exports.up = async function up(knex) {
           .returning(['permission_id']);
         permissionId = inserted.permission_id;
       } else if (!existingPermission.msp || existingPermission.client || !existingPermission.description) {
-        await knex('permissions')
+        await db.table('permissions')
           .where({ tenant, permission_id: existingPermission.permission_id })
           .update({
             msp: true,
@@ -54,12 +63,12 @@ exports.up = async function up(knex) {
         continue;
       }
 
-      const existingAssignment = await knex('role_permissions')
+      const existingAssignment = await db.table('role_permissions')
         .where({ tenant, role_id: adminRole.role_id, permission_id: permissionId })
         .first('tenant');
 
       if (!existingAssignment) {
-        await knex('role_permissions').insert({
+        await db.table('role_permissions').insert({
           tenant,
           role_id: adminRole.role_id,
           permission_id: permissionId,
@@ -75,11 +84,14 @@ exports.up = async function up(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function down(knex) {
-  const tenants = await knex('tenants').pluck('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).pluck('tenant');
   const actions = PERMISSIONS.map((permission) => permission.action);
 
   for (const tenant of tenants) {
-    const permissionIds = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where({ tenant, resource: RESOURCE })
       .whereIn('action', actions)
       .pluck('permission_id');
@@ -88,12 +100,12 @@ exports.down = async function down(knex) {
       continue;
     }
 
-    await knex('role_permissions')
+    await db.table('role_permissions')
       .where({ tenant })
       .whereIn('permission_id', permissionIds)
       .del();
 
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource: RESOURCE })
       .whereIn('action', actions)
       .del();

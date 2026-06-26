@@ -2,13 +2,22 @@
  * Ensure all projects have status mappings and all tasks reference them
  * This migration is idempotent and safe to run multiple times
  */
+const MIGRATION_TENANT = 'migration:20251117120000_ensure_project_task_statuses';
+const PROJECT_TASK_STATUS_REPAIR_REASON = 'all-tenant project task status repair';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   console.log('Starting migration: ensure_project_task_statuses');
 
   // Step 1: Ensure all projects have status mappings
   console.log('Step 1: Checking projects without status mappings...');
 
-  const projectsWithoutStatuses = await knex('projects as p')
+  const projectsWithoutStatuses = await migrationDb.unscoped('projects as p', PROJECT_TASK_STATUS_REPAIR_REASON)
     .leftJoin('project_status_mappings as psm', function() {
       this.on('p.project_id', 'psm.project_id')
         .andOn('p.tenant', 'psm.tenant');
@@ -21,7 +30,7 @@ exports.up = async function(knex) {
 
   if (projectsWithoutStatuses.length > 0) {
     // Get standard statuses for project_task
-    const standardStatuses = await knex('standard_statuses')
+    const standardStatuses = await migrationDb.unscoped('standard_statuses', PROJECT_TASK_STATUS_REPAIR_REASON)
       .where('item_type', 'project_task')
       .orderBy('display_order');
 
@@ -29,7 +38,7 @@ exports.up = async function(knex) {
       console.log('WARNING: No standard statuses found for project_task. Checking regular statuses table...');
 
       // Try the regular statuses table
-      const regularStatuses = await knex('statuses')
+      const regularStatuses = await migrationDb.unscoped('statuses', PROJECT_TASK_STATUS_REPAIR_REASON)
         .where('item_type', 'project_task')
         .orderBy('order_number');
 
@@ -57,7 +66,7 @@ exports.up = async function(knex) {
       const batchSize = 1000;
       for (let i = 0; i < statusMappings.length; i += batchSize) {
         const batch = statusMappings.slice(i, i + batchSize);
-        await knex('project_status_mappings').insert(batch);
+        await migrationDb.unscoped('project_status_mappings', PROJECT_TASK_STATUS_REPAIR_REASON).insert(batch);
       }
 
       console.log(`Created ${statusMappings.length} status mappings using regular statuses`);
@@ -82,7 +91,7 @@ exports.up = async function(knex) {
       const batchSize = 1000;
       for (let i = 0; i < statusMappings.length; i += batchSize) {
         const batch = statusMappings.slice(i, i + batchSize);
-        await knex('project_status_mappings').insert(batch);
+        await migrationDb.unscoped('project_status_mappings', PROJECT_TASK_STATUS_REPAIR_REASON).insert(batch);
       }
 
       console.log(`Created ${statusMappings.length} status mappings using standard statuses`);
@@ -92,7 +101,7 @@ exports.up = async function(knex) {
   // Step 2: Assign status mappings to tasks that don't have one
   console.log('Step 2: Checking tasks without status mappings...');
 
-  const tasksWithoutStatus = await knex('project_tasks as pt')
+  const tasksWithoutStatus = await migrationDb.unscoped('project_tasks as pt', PROJECT_TASK_STATUS_REPAIR_REASON)
     .join('project_phases as pp', function() {
       this.on('pt.phase_id', 'pp.phase_id')
         .andOn('pt.tenant', 'pp.tenant');
@@ -112,7 +121,7 @@ exports.up = async function(knex) {
 
       for (const task of batch) {
         // Get the first status mapping for this project
-        const firstStatus = await knex('project_status_mappings')
+        const firstStatus = await migrationDb.unscoped('project_status_mappings', PROJECT_TASK_STATUS_REPAIR_REASON)
           .where({
             project_id: task.project_id,
             tenant: task.tenant
@@ -121,7 +130,7 @@ exports.up = async function(knex) {
           .first();
 
         if (firstStatus) {
-          await knex('project_tasks')
+          await migrationDb.unscoped('project_tasks', PROJECT_TASK_STATUS_REPAIR_REASON)
             .where({
               task_id: task.task_id,
               tenant: task.tenant

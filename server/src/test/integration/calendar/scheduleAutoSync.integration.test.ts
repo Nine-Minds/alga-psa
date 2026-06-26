@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi, waitFor } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig.ts';
 import { addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@alga-psa/scheduling/actions/scheduleActions';
 import { registerCalendarSyncSubscriber } from '../../../lib/eventBus/subscribers/calendarSyncSubscriber';
@@ -32,6 +33,25 @@ const shared = vi.hoisted(() => ({
 }));
 
 const eventHandlers = vi.hoisted(() => new Map<string, Set<(event: any) => Promise<void>>>());
+
+function sharedTenantTable(table: string, tenant: string) {
+  if (!shared.db) {
+    throw new Error('Database not initialized');
+  }
+  return tenantDb(shared.db, tenant).table(table);
+}
+
+function tenantTable(db: Knex, tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows(db: Knex, tenant: string) {
+  return tenantDb(db, tenant).unscoped('tenants', 'schedule auto sync test fixture creates and removes tenant rows');
+}
+
+function schemaTable(db: Knex, table: string) {
+  return tenantDb(db, '__schedule_auto_sync_schema__').unscoped(table, 'schedule auto sync test reads schema metadata');
+}
 
 function buildDbExports() {
   return {
@@ -129,7 +149,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProviders(filter: { tenant: string; isActive?: boolean }) {
       if (!shared.db) throw new Error('Database not initialized');
-      const query = shared.db('calendar_providers').where('tenant', filter.tenant);
+      const query = sharedTenantTable('calendar_providers', filter.tenant).where('tenant', filter.tenant);
       if (filter.isActive !== undefined) {
         query.andWhere('is_active', filter.isActive);
       }
@@ -158,9 +178,9 @@ describe('Schedule entry creation triggers calendar sync', () => {
     shared.userId = userId;
     shared.providerId = providerId;
 
-    shared.scheduleEntryColumns = await db('schedule_entries').columnInfo();
+    shared.scheduleEntryColumns = await schemaTable(db, 'schedule_entries').columnInfo();
 
-    await db('tenants')
+    await tenantRows(db, tenantId)
       .insert({
         tenant: tenantId,
         client_name: 'Auto Sync Tenant',
@@ -171,7 +191,7 @@ describe('Schedule entry creation triggers calendar sync', () => {
       .onConflict('tenant')
       .ignore();
 
-    await db('users')
+    await tenantTable(db, tenantId, 'users')
       .insert({
         tenant: tenantId,
         user_id: userId,
@@ -184,7 +204,7 @@ describe('Schedule entry creation triggers calendar sync', () => {
       .onConflict(['tenant', 'user_id'])
       .ignore();
 
-    await db('calendar_providers').insert({
+    await tenantTable(db, tenantId, 'calendar_providers').insert({
       id: providerId,
       tenant: tenantId,
       provider_type: 'google',
@@ -217,10 +237,10 @@ describe('Schedule entry creation triggers calendar sync', () => {
     }
 
     if (db) {
-      await db('calendar_providers').where({ tenant: tenantId }).del();
-      await db('schedule_entries').where({ tenant: tenantId }).del();
-      await db('users').where({ tenant: tenantId, user_id: userId }).del();
-      await db('tenants').where({ tenant: tenantId }).del();
+      await tenantTable(db, tenantId, 'calendar_providers').del();
+      await tenantTable(db, tenantId, 'schedule_entries').del();
+      await tenantTable(db, tenantId, 'users').where({ user_id: userId }).del();
+      await tenantRows(db, tenantId).where({ tenant: tenantId }).del();
       await db.destroy();
     }
   });
@@ -228,8 +248,8 @@ describe('Schedule entry creation triggers calendar sync', () => {
   beforeEach(async () => {
     shared.syncCalls.length = 0;
     shared.deleteCalls.length = 0;
-    await db('calendar_event_mappings').where({ tenant: tenantId }).del();
-    await db('schedule_entries').where({ tenant: tenantId }).del();
+    await tenantTable(db, tenantId, 'calendar_event_mappings').del();
+    await tenantTable(db, tenantId, 'schedule_entries').del();
   });
 
   it('invokes outbound calendar sync when a schedule entry is saved', async () => {
@@ -319,7 +339,7 @@ describe('Schedule entry creation triggers calendar sync', () => {
       providerId,
     });
 
-    const remaining = await db('schedule_entries').where({ tenant: tenantId, entry_id: entryId }).first();
+    const remaining = await tenantTable(db, tenantId, 'schedule_entries').where({ entry_id: entryId }).first();
     expect(remaining).toBeUndefined();
   });
 });

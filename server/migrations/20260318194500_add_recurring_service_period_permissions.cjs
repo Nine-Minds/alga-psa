@@ -1,13 +1,19 @@
 const RESOURCE = 'billing.recurring_service_periods';
 const ACTIONS = ['view', 'manage_future', 'regenerate', 'correct_history'];
 const TARGET_ROLE_NAMES = ['admin', 'manager'];
+const MIGRATION_TENANT = 'migration:20260318194500_add_recurring_service_period_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for recurring service period permission backfill';
 
-async function assignPermissionsToRole(knex, tenant, roleId, permissionIds) {
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
+async function assignPermissionsToRole(db, tenant, roleId, permissionIds) {
   if (!roleId || permissionIds.length === 0) {
     return;
   }
 
-  const existing = await knex('role_permissions')
+  const existing = await db.table('role_permissions')
     .where({ tenant, role_id: roleId })
     .whereIn('permission_id', permissionIds)
     .select('permission_id');
@@ -19,21 +25,24 @@ async function assignPermissionsToRole(knex, tenant, roleId, permissionIds) {
       tenant,
       role_id: roleId,
       permission_id: permissionId,
-    }));
+  }));
 
   if (inserts.length > 0) {
-    await knex('role_permissions').insert(inserts);
+    await db.table('role_permissions').insert(inserts);
   }
 }
 
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) {
     return;
   }
 
   for (const { tenant } of tenants) {
-    const existingPerms = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const existingPerms = await db.table('permissions')
       .where({ tenant, resource: RESOURCE })
       .select('permission_id', 'action');
 
@@ -46,19 +55,19 @@ exports.up = async function up(knex) {
         resource: RESOURCE,
         action,
         created_at: new Date(),
-      }));
+    }));
 
     if (permissionsToAdd.length > 0) {
-      await knex('permissions').insert(permissionsToAdd);
+      await db.table('permissions').insert(permissionsToAdd);
     }
 
-    const permissionRows = await knex('permissions')
+    const permissionRows = await db.table('permissions')
       .where({ tenant, resource: RESOURCE })
       .whereIn('action', ACTIONS)
       .select('permission_id');
     const permissionIds = permissionRows.map((row) => row.permission_id);
 
-    const roles = await knex('roles')
+    const roles = await db.table('roles')
       .where({ tenant })
       .whereIn(
         knex.raw('LOWER(role_name)'),
@@ -67,19 +76,22 @@ exports.up = async function up(knex) {
       .select('role_id', 'role_name');
 
     for (const role of roles) {
-      await assignPermissionsToRole(knex, tenant, role.role_id, permissionIds);
+      await assignPermissionsToRole(db, tenant, role.role_id, permissionIds);
     }
   }
 };
 
 exports.down = async function down(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) {
     return;
   }
 
   for (const { tenant } of tenants) {
-    const permissionRows = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionRows = await db.table('permissions')
       .where({ tenant, resource: RESOURCE })
       .whereIn('action', ACTIONS)
       .select('permission_id');
@@ -89,12 +101,12 @@ exports.down = async function down(knex) {
       continue;
     }
 
-    await knex('role_permissions')
+    await db.table('role_permissions')
       .where({ tenant })
       .whereIn('permission_id', permissionIds)
       .delete();
 
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource: RESOURCE })
       .whereIn('action', ACTIONS)
       .delete();

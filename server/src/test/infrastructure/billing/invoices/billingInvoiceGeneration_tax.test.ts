@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../../test-utils/testContext';
 import {
   createTestService,
@@ -40,10 +41,14 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -100,6 +105,13 @@ const {
   afterEach: rollbackContext,
   afterAll: cleanupContext
 } = TestContext.createHelpers();
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
 
 describe('Billing Invoice Tax Calculations', () => {
   let context: TestContext;
@@ -199,7 +211,7 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'client_id');
 
       // Ensure tax region exists
-      await context.db('tax_regions').insert({
+      await tenantTable(context, 'tax_regions').insert({
         tenant: context.tenantId,
         region_code: 'US-NY',
         region_name: 'New York',
@@ -207,7 +219,7 @@ describe('Billing Invoice Tax Calculations', () => {
       }).onConflict(['tenant', 'region_code']).ignore();
 
       // Create NY tax rate (10% for easy calculation)
-      const nyTaxRate = await context.db('tax_rates')
+      const nyTaxRate = await tenantTable(context, 'tax_rates')
         .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
         .first('tax_rate_id');
 
@@ -218,14 +230,14 @@ describe('Billing Invoice Tax Calculations', () => {
       const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
       // Set up client tax settings
-      await context.db('client_tax_settings').insert({
+      await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
         is_reverse_charge_applicable: false
       });
 
       // Set up client tax rate relationship
-      await context.db('client_tax_rates').insert({
+      await tenantTable(context, 'client_tax_rates').insert({
         client_tax_rates_id: uuidv4(),
         client_id: client_id,
         tenant: context.tenantId,
@@ -266,7 +278,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
       await finalizeInvoice(manualInvoice.invoice_id);
 
-      const invoice = await context.db('invoices')
+      const invoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
@@ -275,7 +287,7 @@ describe('Billing Invoice Tax Calculations', () => {
       expect(Number(invoice!.tax)).toBe(1000);      // $10.00 (10% of original $100)
       expect(Number(invoice!.total_amount)).toBe(1000); // $10.00 (tax only)
 
-      const invoiceItems = await context.db('invoice_charges')
+      const invoiceItems = await tenantTable(context, 'invoice_charges')
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('net_amount', 'desc');
 
@@ -306,7 +318,7 @@ describe('Billing Invoice Tax Calculations', () => {
         updated_at: Temporal.Now.plainDateISO().toString()
       }, 'client_id');
 
-      await context.db('tax_regions').insert([
+      await tenantTable(context, 'tax_regions').insert([
         {
           tenant: context.tenantId,
           region_code: 'US-NY',
@@ -321,7 +333,7 @@ describe('Billing Invoice Tax Calculations', () => {
         }
       ]).onConflict(['tenant', 'region_code']).ignore();
 
-      await context.db('tax_rates')
+      await tenantTable(context, 'tax_rates')
         .where({ tenant: context.tenantId, region_code: 'US-NY' })
         .update({ is_active: false });
 
@@ -333,13 +345,13 @@ describe('Billing Invoice Tax Calculations', () => {
         is_active: true
       }, 'tax_rate_id');
 
-      await context.db('client_tax_settings').insert({
+      await tenantTable(context, 'client_tax_settings').insert({
         client_id: clientId,
         tenant: context.tenantId,
         is_reverse_charge_applicable: false
       });
 
-      await context.db('client_tax_rates').insert({
+      await tenantTable(context, 'client_tax_rates').insert({
         client_tax_rates_id: uuidv4(),
         client_id: clientId,
         tenant: context.tenantId,
@@ -377,7 +389,7 @@ describe('Billing Invoice Tax Calculations', () => {
       await assignServiceTaxRate(context, serviceNY, 'US-NY');
       await assignServiceTaxRate(context, serviceCA, 'US-CA');
 
-      await context.db('client_tax_rates').insert({
+      await tenantTable(context, 'client_tax_rates').insert({
         client_tax_rates_id: uuidv4(),
         client_id: clientId,
         tenant: context.tenantId,
@@ -395,7 +407,7 @@ describe('Billing Invoice Tax Calculations', () => {
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
 
-      const cycleRecord = await context.db('client_billing_cycles')
+      const cycleRecord = await tenantTable(context, 'client_billing_cycles')
         .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
         .first();
 
@@ -456,11 +468,11 @@ describe('Billing Invoice Tax Calculations', () => {
         context.userId
       );
 
-      const invoiceRow = await context.db('invoices')
+      const invoiceRow = await tenantTable(context, 'invoices')
         .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
-      const invoiceItems = await context.db('invoice_charges')
+      const invoiceItems = await tenantTable(context, 'invoice_charges')
         .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('description', 'asc');
 
@@ -492,7 +504,7 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'client_id');
 
       // Ensure tax region exists
-      await context.db('tax_regions').insert({
+      await tenantTable(context, 'tax_regions').insert({
         tenant: context.tenantId,
         region_code: 'US-NY',
         region_name: 'New York',
@@ -508,14 +520,14 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'tax_rate_id');
 
       // Set up client tax settings
-      await context.db('client_tax_settings').insert({
+      await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
         is_reverse_charge_applicable: false
       });
 
       // Set up client tax rate relationship
-      await context.db('client_tax_rates').insert({
+      await tenantTable(context, 'client_tax_rates').insert({
         client_tax_rates_id: uuidv4(),
         client_id: client_id,
         tenant: context.tenantId,
@@ -578,11 +590,11 @@ describe('Billing Invoice Tax Calculations', () => {
 
       await finalizeInvoice(manualInvoice.invoice_id);
 
-      const updatedInvoice = await context.db('invoices')
+      const updatedInvoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
-      const invoiceItems = await context.db('invoice_charges')
+      const invoiceItems = await tenantTable(context, 'invoice_charges')
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('net_amount', 'desc');
 
@@ -627,14 +639,14 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'client_id');
 
       // Ensure tax region exists
-      await context.db('tax_regions').insert({
+      await tenantTable(context, 'tax_regions').insert({
         tenant: context.tenantId,
         region_code: 'US-NY',
         region_name: 'New York',
         is_active: true
       }).onConflict(['tenant', 'region_code']).ignore();
 
-      const nyTaxRate = await context.db('tax_rates')
+      const nyTaxRate = await tenantTable(context, 'tax_rates')
         .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
         .first('tax_rate_id');
 
@@ -645,14 +657,14 @@ describe('Billing Invoice Tax Calculations', () => {
       const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
       // Set up client tax settings
-      await context.db('client_tax_settings').insert({
+      await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
         is_reverse_charge_applicable: false
       });
 
       // Set up client tax rate relationship
-      await context.db('client_tax_rates').insert({
+      await tenantTable(context, 'client_tax_rates').insert({
         client_tax_rates_id: uuidv4(),
         client_id: client_id,
         tenant: context.tenantId,
@@ -663,7 +675,7 @@ describe('Billing Invoice Tax Calculations', () => {
       });
 
       // Ensure tax rate is active
-      await context.db('tax_rates')
+      await tenantTable(context, 'tax_rates')
         .where({ tax_rate_id: nyTaxRateId })
         .update({ is_active: true });
 
@@ -703,11 +715,11 @@ describe('Billing Invoice Tax Calculations', () => {
 
       await finalizeInvoice(mixedTaxInvoice.invoice_id);
 
-      const persistedInvoice = await context.db('invoices')
+      const persistedInvoice = await tenantTable(context, 'invoices')
         .where({ invoice_id: mixedTaxInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
-      const invoiceItems = await context.db('invoice_charges')
+      const invoiceItems = await tenantTable(context, 'invoice_charges')
         .where({ invoice_id: mixedTaxInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('net_amount', 'desc');
 
@@ -746,7 +758,7 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'client_id');
 
     // Ensure tax region exists
-    await context.db('tax_regions').insert({
+    await tenantTable(context, 'tax_regions').insert({
       tenant: context.tenantId,
       region_code: 'US-NY',
       region_name: 'New York',
@@ -762,14 +774,14 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'tax_rate_id');
 
     // Set up client tax settings
-    await context.db('client_tax_settings').insert({
+    await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
       is_reverse_charge_applicable: false
     });
 
     // Set up client tax rate relationship
-    await context.db('client_tax_rates').insert({
+    await tenantTable(context, 'client_tax_rates').insert({
       client_tax_rates_id: uuidv4(),
       client_id: client_id,
       tenant: context.tenantId,
@@ -799,7 +811,7 @@ describe('Billing Invoice Tax Calculations', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    const cycleRecord = await context.db('client_billing_cycles')
+    const cycleRecord = await tenantTable(context, 'client_billing_cycles')
       .where({ billing_cycle_id: billingCycle, tenant: context.tenantId })
       .first();
 
@@ -842,7 +854,7 @@ describe('Billing Invoice Tax Calculations', () => {
       context.userId
     );
 
-    const invoice = await context.db('invoices')
+    const invoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
       .first();
 
@@ -876,14 +888,14 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'client_id');
 
     // Ensure tax region exists
-    await context.db('tax_regions').insert({
+    await tenantTable(context, 'tax_regions').insert({
       tenant: context.tenantId,
       region_code: 'US-NY',
       region_name: 'New York',
       is_active: true
     }).onConflict(['tenant', 'region_code']).ignore();
 
-    const nyTaxRate = await context.db('tax_rates')
+    const nyTaxRate = await tenantTable(context, 'tax_rates')
       .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
       .first('tax_rate_id');
 
@@ -894,14 +906,14 @@ describe('Billing Invoice Tax Calculations', () => {
     const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
     // Set up client tax settings
-    await context.db('client_tax_settings').insert({
+    await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
       is_reverse_charge_applicable: false
     });
 
     // Set up client tax rate relationship
-    await context.db('client_tax_rates').insert({
+    await tenantTable(context, 'client_tax_rates').insert({
       client_tax_rates_id: uuidv4(),
       client_id: client_id,
       tenant: context.tenantId,
@@ -934,7 +946,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
     await finalizeInvoice(manualInvoice.invoice_id);
 
-    const invoice = await context.db('invoices')
+    const invoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
       .first();
 
@@ -962,7 +974,7 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'client_id');
 
     // Ensure tax regions exist
-    await context.db('tax_regions').insert([
+    await tenantTable(context, 'tax_regions').insert([
       {
         tenant: context.tenantId,
         region_code: 'US-NY',
@@ -978,7 +990,7 @@ describe('Billing Invoice Tax Calculations', () => {
     ]).onConflict(['tenant', 'region_code']).ignore();
 
     // Create tax rates for different regions
-    await context.db('tax_rates')
+    await tenantTable(context, 'tax_rates')
       .where({ tenant: context.tenantId, region_code: 'US-NY' })
       .update({ is_active: false });
 
@@ -989,7 +1001,7 @@ describe('Billing Invoice Tax Calculations', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    await context.db('tax_rates')
+    await tenantTable(context, 'tax_rates')
       .where({ tenant: context.tenantId, region_code: 'US-CA' })
       .update({ is_active: false });
 
@@ -1001,14 +1013,14 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'tax_rate_id');
 
     // Set up client tax settings
-    await context.db('client_tax_settings').insert({
+    await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
       is_reverse_charge_applicable: false
     });
 
     // Set up client tax rate relationship
-    await context.db('client_tax_rates').insert({
+    await tenantTable(context, 'client_tax_rates').insert({
       client_tax_rates_id: uuidv4(),
       client_id: client_id,
       tenant: context.tenantId,
@@ -1055,7 +1067,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
     // Set up for recalculation by ensuring dates are in a format that Temporal.PlainDate.from() can parse
     const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    await context.db('invoices')
+    await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId })
       .update({
         invoice_date: today,
@@ -1066,10 +1078,10 @@ describe('Billing Invoice Tax Calculations', () => {
     const billingEngine = new BillingEngine();
     
     // First update the invoice items
-    await context.db('invoice_charges').where({ invoice_id: invoiceId }).delete();
+    await tenantTable(context, 'invoice_charges').where({ invoice_id: invoiceId }).delete();
     
     // Insert both the NY and CA items
-    await context.db('invoice_charges').insert([
+    await tenantTable(context, 'invoice_charges').insert([
       {
         item_id: uuidv4(),
         invoice_id: invoiceId,
@@ -1112,12 +1124,12 @@ describe('Billing Invoice Tax Calculations', () => {
     await billingEngine.recalculateInvoice(invoiceId);
     
     // Fetch updated invoice
-    const updatedInvoice = await context.db('invoices')
+    const updatedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
       
     // Fetch updated items
-    const updatedItems = await context.db('invoice_charges')
+    const updatedItems = await tenantTable(context, 'invoice_charges')
       .where({ invoice_id: invoiceId })
       .orderBy('created_at', 'asc');
 
@@ -1175,7 +1187,7 @@ describe('Billing Invoice Tax Calculations', () => {
       tenant: context.tenantId
     }, 'billing_cycle_id');
 
-    const cycleRecord = await context.db('client_billing_cycles')
+    const cycleRecord = await tenantTable(context, 'client_billing_cycles')
       .where({ billing_cycle_id: billingCycle, tenant: context.tenantId })
       .first();
 
@@ -1236,13 +1248,13 @@ describe('Billing Invoice Tax Calculations', () => {
       context.userId
     );
 
-    const invoiceRow = await context.db('invoices')
+    const invoiceRow = await tenantTable(context, 'invoices')
       .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
       .first();
 
     expect(invoiceRow).not.toBeNull();
 
-    const items = await context.db('invoice_charges')
+    const items = await tenantTable(context, 'invoice_charges')
       .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
       .orderBy('created_at', 'asc');
 
@@ -1282,14 +1294,14 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'client_id');
 
     // Ensure tax region exists with active tax rate
-    await context.db('tax_regions').insert({
+    await tenantTable(context, 'tax_regions').insert({
       tenant: context.tenantId,
       region_code: 'US-NY',
       region_name: 'New York',
       is_active: true
     }).onConflict(['tenant', 'region_code']).ignore();
 
-    const nyTaxRate = await context.db('tax_rates')
+    const nyTaxRate = await tenantTable(context, 'tax_rates')
       .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
       .first('tax_rate_id');
 
@@ -1300,14 +1312,14 @@ describe('Billing Invoice Tax Calculations', () => {
     const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
     // Set up client tax settings WITH REVERSE CHARGE ENABLED
-    await context.db('client_tax_settings').insert({
+    await tenantTable(context, 'client_tax_settings').insert({
       client_id: clientId,
       tenant: context.tenantId,
       is_reverse_charge_applicable: true // This is the key setting
     });
 
     // Set up client tax rate relationship (would normally cause tax to be applied)
-    await context.db('client_tax_rates').insert({
+    await tenantTable(context, 'client_tax_rates').insert({
       client_tax_rates_id: uuidv4(),
       client_id: clientId,
       tenant: context.tenantId,
@@ -1342,7 +1354,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
     await finalizeInvoice(manualInvoice.invoice_id);
 
-    const invoice = await context.db('invoices')
+    const invoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
       .first();
 
@@ -1355,7 +1367,7 @@ describe('Billing Invoice Tax Calculations', () => {
     expect(Number(invoice!.total_amount)).toBe(10000); // $100.00
 
     // Verify the invoice charge also has zero tax
-    const invoiceItems = await context.db('invoice_charges')
+    const invoiceItems = await tenantTable(context, 'invoice_charges')
       .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId });
 
     expect(invoiceItems).toHaveLength(1);

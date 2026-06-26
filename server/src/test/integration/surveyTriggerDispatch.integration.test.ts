@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { __testHooks } from '../../lib/eventBus/subscribers/surveySubscriber';
@@ -67,6 +68,14 @@ describe('Survey trigger dispatch integration', () => {
 
   const getState = () => (globalThis as any)['__surveyTriggerDispatchTestState__'] as TestState;
 
+  function tenantTable(table: string) {
+    return tenantDb(db, tenantId).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, tenantId).unscoped('tenants', 'survey trigger dispatch test fixture creates and removes tenant rows');
+  }
+
   beforeAll(async () => {
     db = await createTestDbConnection();
     getState().integrationDb = db;
@@ -94,14 +103,14 @@ describe('Survey trigger dispatch integration', () => {
       return;
     }
 
-    await db('survey_triggers').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('survey_templates').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('projects').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('contacts').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('clients').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('statuses').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('tenants').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable('survey_triggers').delete().catch(() => undefined);
+    await tenantTable('survey_templates').delete().catch(() => undefined);
+    await tenantTable('tickets').delete().catch(() => undefined);
+    await tenantTable('projects').delete().catch(() => undefined);
+    await tenantTable('contacts').delete().catch(() => undefined);
+    await tenantTable('clients').delete().catch(() => undefined);
+    await tenantTable('statuses').delete().catch(() => undefined);
+    await tenantRows().where({ tenant: tenantId }).delete().catch(() => undefined);
 
     state.currentTenantId = null;
   });
@@ -173,7 +182,7 @@ describe('Survey trigger dispatch integration', () => {
 
     const now = new Date();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant: tenantId,
       email: 'integration-tenant@example.com',
       plan: 'standard',
@@ -182,7 +191,7 @@ describe('Survey trigger dispatch integration', () => {
       updated_at: now,
     });
 
-    await db('clients').insert({
+    await tenantTable('clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: 'Integration Client',
@@ -190,7 +199,7 @@ describe('Survey trigger dispatch integration', () => {
       updated_at: now,
     });
 
-    await db('contacts').insert({
+    await tenantTable('contacts').insert({
       tenant: tenantId,
       contact_name_id: contactId,
       full_name: 'Integration Contact',
@@ -200,7 +209,7 @@ describe('Survey trigger dispatch integration', () => {
       updated_at: now,
     });
 
-    await db('statuses').insert({
+    await tenantTable('statuses').insert({
       tenant: tenantId,
       status_id: statusId,
       name: 'Closed',
@@ -210,7 +219,7 @@ describe('Survey trigger dispatch integration', () => {
       created_at: now,
     });
 
-    await db('survey_templates').insert({
+    await tenantTable('survey_templates').insert({
       tenant: tenantId,
       template_id: templateId,
       template_name: 'Integration Template',
@@ -226,7 +235,7 @@ describe('Survey trigger dispatch integration', () => {
       updated_at: now,
     });
 
-    await db('tickets').insert({
+    await tenantTable('tickets').insert({
       tenant: tenantId,
       ticket_id: ticketId,
       ticket_number: `TCK-${uuidv4().slice(0, 8)}`,
@@ -242,7 +251,7 @@ describe('Survey trigger dispatch integration', () => {
   }
 
   async function insertSurveyTrigger(options: { statusIds?: string[]; triggerType?: string }) {
-    await db('survey_triggers').insert({
+    await tenantTable('survey_triggers').insert({
       tenant: tenantId,
       trigger_id: uuidv4(),
       template_id: templateId,
@@ -281,7 +290,7 @@ describe('Survey trigger dispatch integration', () => {
 
     const now = new Date();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant: tenantId,
       email: 'integration-tenant@example.com',
       plan: 'standard',
@@ -290,7 +299,7 @@ describe('Survey trigger dispatch integration', () => {
       updated_at: now,
     });
 
-    await db('clients').insert({
+    await tenantTable('clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: 'Integration Client',
@@ -298,7 +307,7 @@ describe('Survey trigger dispatch integration', () => {
       updated_at: now,
     });
 
-    await db('contacts').insert({
+    await tenantTable('contacts').insert({
       tenant: tenantId,
       contact_name_id: contactId,
       full_name: 'Integration Contact',
@@ -308,7 +317,7 @@ describe('Survey trigger dispatch integration', () => {
       updated_at: now,
     });
 
-    await db('survey_templates').insert({
+    await tenantTable('survey_templates').insert({
       tenant: tenantId,
       template_id: templateId,
       template_name: 'Integration Template',
@@ -326,7 +335,7 @@ describe('Survey trigger dispatch integration', () => {
 
     // Create a status for the project
     const projectStatusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable('statuses').insert({
       tenant: tenantId,
       status_id: projectStatusId,
       name: 'Completed',
@@ -336,7 +345,7 @@ describe('Survey trigger dispatch integration', () => {
       created_at: now,
     });
 
-    await db('projects').insert({
+    await tenantTable('projects').insert({
       tenant: tenantId,
       project_id: projectId,
       wbs_code: `PRJ-${uuidv4().slice(0, 8)}`,

@@ -2,6 +2,12 @@ const fs = require('fs');
 const path = require('path');
 
 const WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
+const MIGRATION_TENANT = 'migration:20251221103000_register_email_workflow_runtime_v2';
+const SYSTEM_WORKFLOW_REGISTRATION_REASON = 'register system email workflow runtime definition';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
 
 function loadDefinition() {
   // Load from utils/ subfolder relative to this migration file
@@ -13,12 +19,14 @@ function loadDefinition() {
 }
 
 exports.up = async function (knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Use v2 workflow with inputMapping format
   const definition = loadDefinition();
   const hasIsSystemColumn = await knex.schema.hasColumn('workflow_definitions', 'is_system');
   const hasIsVisibleColumn = await knex.schema.hasColumn('workflow_definitions', 'is_visible');
 
-  const existing = await knex('workflow_definitions').where({ workflow_id: WORKFLOW_ID }).first();
+  const existing = await migrationDb.unscoped('workflow_definitions', SYSTEM_WORKFLOW_REGISTRATION_REASON).where({ workflow_id: WORKFLOW_ID }).first();
   if (existing) {
     const updateData = {
       draft_definition: definition,
@@ -36,7 +44,7 @@ exports.up = async function (knex) {
       updateData.is_visible = true;
     }
 
-    await knex('workflow_definitions')
+    await migrationDb.unscoped('workflow_definitions', SYSTEM_WORKFLOW_REGISTRATION_REASON)
       .where({ workflow_id: WORKFLOW_ID })
       .update(updateData);
     return;
@@ -61,9 +69,9 @@ exports.up = async function (knex) {
     insertData.is_visible = true;
   }
 
-  await knex('workflow_definitions').insert(insertData);
+  await migrationDb.unscoped('workflow_definitions', SYSTEM_WORKFLOW_REGISTRATION_REASON).insert(insertData);
 
-  await knex('workflow_definition_versions').insert({
+  await migrationDb.unscoped('workflow_definition_versions', SYSTEM_WORKFLOW_REGISTRATION_REASON).insert({
     workflow_id: WORKFLOW_ID,
     version: definition.version,
     definition_json: definition,
@@ -74,6 +82,8 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
-  await knex('workflow_definition_versions').where({ workflow_id: WORKFLOW_ID }).del();
-  await knex('workflow_definitions').where({ workflow_id: WORKFLOW_ID }).del();
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  await migrationDb.unscoped('workflow_definition_versions', SYSTEM_WORKFLOW_REGISTRATION_REASON).where({ workflow_id: WORKFLOW_ID }).del();
+  await migrationDb.unscoped('workflow_definitions', SYSTEM_WORKFLOW_REGISTRATION_REASON).where({ workflow_id: WORKFLOW_ID }).del();
 };

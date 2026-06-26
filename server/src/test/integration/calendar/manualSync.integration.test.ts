@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig.ts';
 
 const modulePaths = vi.hoisted(() => {
@@ -71,13 +72,32 @@ vi.mock(modulePaths.rootDbModulePathNoExt, () => buildDbExports());
 
 const providerTenantMap = vi.hoisted(() => new Map<string, string>());
 
+function contextTenantTable(table: string, tenant: string) {
+  if (!context.db) {
+    throw new Error('Database not initialized');
+  }
+  return tenantDb(context.db, tenant).table(table);
+}
+
+function tenantTable(db: Knex, tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows(db: Knex, tenant: string) {
+  return tenantDb(db, tenant).unscoped('tenants', 'manual calendar sync test fixture creates and removes tenant rows');
+}
+
+function schemaTable(db: Knex, table: string) {
+  return tenantDb(db, '__manual_calendar_sync_schema__').unscoped(table, 'manual calendar sync test reads schema metadata');
+}
+
 vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProvider(providerId: string, tenant: string) {
       if (!context.db) {
         throw new Error('Database not initialized');
       }
-      const row = await context.db('calendar_providers')
+      const row = await contextTenantTable('calendar_providers', tenant)
         .where({ id: providerId, tenant })
         .first();
       if (!row) {
@@ -108,7 +128,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
       if (!tenant) {
         throw new Error(`Tenant not known for provider ${providerId}`);
       }
-      await context.db('calendar_providers')
+      await contextTenantTable('calendar_providers', tenant)
         .where({ id: providerId, tenant })
         .update({
           status: updates.status,
@@ -131,7 +151,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
         throw new Error('Tenant context missing');
       }
 
-      const mapping = await context.db('calendar_event_mappings')
+      const mapping = await contextTenantTable('calendar_event_mappings', tenant)
         .where({
           tenant,
           calendar_provider_id: providerId,
@@ -147,7 +167,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
       const lastSyncedAt = new Date('2025-10-31T11:05:00.000Z');
       const externalLastModified = '2025-10-31T11:00:00.000Z';
 
-      await context.db('calendar_event_mappings')
+      await contextTenantTable('calendar_event_mappings', tenant)
         .where({ id: mapping.id, tenant })
         .update({
           sync_status: 'synced',
@@ -181,7 +201,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
         throw new Error('Tenant context missing');
       }
 
-      const mapping = await context.db('calendar_event_mappings')
+      const mapping = await contextTenantTable('calendar_event_mappings', tenant)
         .where({
           tenant,
           calendar_provider_id: providerId,
@@ -194,7 +214,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
       }
 
       const columns = context.scheduleEntryColumns;
-      const existing = await context.db('schedule_entries')
+      const existing = await contextTenantTable('schedule_entries', tenant)
         .where({ tenant, entry_id: mapping.schedule_entry_id })
         .first();
 
@@ -236,7 +256,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
           insertRecord.duration_minutes = 60;
         }
 
-        await context.db('schedule_entries').insert(insertRecord);
+        await contextTenantTable('schedule_entries', tenant).insert(insertRecord);
         context.lastPullMetadata = {
           externalEventId,
           providerId,
@@ -244,7 +264,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
           externalLastModified: '2025-10-31T12:05:00.000Z',
         };
       } else {
-        await context.db('schedule_entries')
+        await contextTenantTable('schedule_entries', tenant)
           .where({ tenant, entry_id: mapping.schedule_entry_id })
           .update({
             notes: 'Updated via inbound sync',
@@ -258,7 +278,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
         };
       }
 
-      await context.db('calendar_event_mappings')
+      await contextTenantTable('calendar_event_mappings', tenant)
         .where({ id: mapping.id, tenant })
         .update({
           sync_status: 'synced',
@@ -310,9 +330,9 @@ describe('Manual calendar sync integration', () => {
 
     await db.migrate.latest();
 
-    context.scheduleEntryColumns = await db('schedule_entries').columnInfo();
+    context.scheduleEntryColumns = await schemaTable(db, 'schedule_entries').columnInfo();
 
-    await db('tenants').insert({
+    await tenantRows(db, testTenant).insert({
       tenant: testTenant,
       client_name: 'Calendar Sync Tenant',
       email: 'calendar-sync@example.com',
@@ -320,7 +340,7 @@ describe('Manual calendar sync integration', () => {
       updated_at: new Date(),
     }).onConflict('tenant').ignore();
 
-    await db('users').insert({
+    await tenantTable(db, testTenant, 'users').insert({
       tenant: testTenant,
       user_id: testUserId,
       username: 'calendar-sync-user',
@@ -333,11 +353,11 @@ describe('Manual calendar sync integration', () => {
 
   afterAll(async () => {
     if (db) {
-      await db('calendar_event_mappings').where({ tenant: testTenant }).del();
-      await db('calendar_providers').where({ tenant: testTenant }).del();
-      await db('schedule_entries').where({ tenant: testTenant }).del();
-      await db('users').where({ tenant: testTenant, user_id: testUserId }).del();
-      await db('tenants').where({ tenant: testTenant }).del();
+      await tenantTable(db, testTenant, 'calendar_event_mappings').del();
+      await tenantTable(db, testTenant, 'calendar_providers').del();
+      await tenantTable(db, testTenant, 'schedule_entries').del();
+      await tenantTable(db, testTenant, 'users').where({ user_id: testUserId }).del();
+      await tenantRows(db, testTenant).where({ tenant: testTenant }).del();
       await db.destroy();
     }
   });
@@ -348,9 +368,9 @@ describe('Manual calendar sync integration', () => {
     context.lastPullMetadata = null;
     providerTenantMap.clear();
 
-    await db('calendar_event_mappings').where({ tenant: testTenant }).del();
-    await db('calendar_providers').where({ tenant: testTenant }).del();
-    await db('schedule_entries').where({ tenant: testTenant }).del();
+    await tenantTable(db, testTenant, 'calendar_event_mappings').del();
+    await tenantTable(db, testTenant, 'calendar_providers').del();
+    await tenantTable(db, testTenant, 'schedule_entries').del();
   });
 
   function buildScheduleEntryInsert(entryId: string) {
@@ -399,7 +419,7 @@ describe('Manual calendar sync integration', () => {
     const mappingId = uuidv4();
     const externalEventId = 'ext-manual-push';
 
-    await db('calendar_providers').insert({
+    await tenantTable(db, testTenant, 'calendar_providers').insert({
       id: providerId,
       tenant: testTenant,
       provider_type: 'google',
@@ -415,9 +435,9 @@ describe('Manual calendar sync integration', () => {
       updated_at: new Date(),
     });
 
-    await db('schedule_entries').insert(buildScheduleEntryInsert(scheduleEntryId));
+    await tenantTable(db, testTenant, 'schedule_entries').insert(buildScheduleEntryInsert(scheduleEntryId));
 
-    await db('calendar_event_mappings').insert({
+    await tenantTable(db, testTenant, 'calendar_event_mappings').insert({
       id: mappingId,
       tenant: testTenant,
       calendar_provider_id: providerId,
@@ -440,7 +460,7 @@ describe('Manual calendar sync integration', () => {
     expect(context.lastPushMetadata?.entryId).toBe(scheduleEntryId);
     expect(context.lastPushMetadata?.providerId).toBe(providerId);
 
-    const updatedMapping = await db('calendar_event_mappings')
+    const updatedMapping = await tenantTable(db, testTenant, 'calendar_event_mappings')
       .where({ id: mappingId, tenant: testTenant })
       .first();
 
@@ -455,7 +475,7 @@ describe('Manual calendar sync integration', () => {
     expect(updatedMapping?.alga_last_modified instanceof Date).toBe(true);
     expect(updatedMapping?.sync_error_message).toBeNull();
 
-    const providerRow = await db('calendar_providers')
+    const providerRow = await tenantTable(db, testTenant, 'calendar_providers')
       .where({ id: providerId, tenant: testTenant })
       .first();
     expect(providerRow?.status).toBe('connected');
@@ -469,7 +489,7 @@ describe('Manual calendar sync integration', () => {
     const mappingId = uuidv4();
     const externalEventId = 'ext-inbound-123';
 
-    await db('calendar_providers').insert({
+    await tenantTable(db, testTenant, 'calendar_providers').insert({
       id: providerId,
       tenant: testTenant,
       provider_type: 'google',
@@ -485,7 +505,7 @@ describe('Manual calendar sync integration', () => {
       updated_at: new Date(),
     });
 
-    await db('calendar_event_mappings').insert({
+    await tenantTable(db, testTenant, 'calendar_event_mappings').insert({
       id: mappingId,
       tenant: testTenant,
       calendar_provider_id: providerId,
@@ -507,7 +527,7 @@ describe('Manual calendar sync integration', () => {
     expect(context.lastPullMetadata?.externalEventId).toBe(externalEventId);
     expect(context.lastPullMetadata?.created).toBe(true);
 
-    const storedEntry = await db('schedule_entries')
+    const storedEntry = await tenantTable(db, testTenant, 'schedule_entries')
       .where({ tenant: testTenant, entry_id: inboundEntryId })
       .first();
 
@@ -515,7 +535,7 @@ describe('Manual calendar sync integration', () => {
     expect(storedEntry?.notes).toBe('Created via inbound sync');
     expect(storedEntry?.status).toBe('scheduled');
 
-    const updatedMapping = await db('calendar_event_mappings')
+    const updatedMapping = await tenantTable(db, testTenant, 'calendar_event_mappings')
       .where({ id: mappingId, tenant: testTenant })
       .first();
 

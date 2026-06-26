@@ -14,15 +14,21 @@ const REPORT_PERMISSION_DEFS = [
 ];
 
 const REPORT_READ_ROLES = ['Finance', 'Manager', 'Technician', 'Project Manager', 'Dispatcher'];
+const MIGRATION_TENANT = 'migration:20260511120000_add_reports_rbac_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for reports RBAC permission backfill';
 
-async function ensurePermission(knex, tenant, def) {
-  const existing = await knex('permissions')
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
+async function ensurePermission(knex, db, tenant, def) {
+  const existing = await db.table('permissions')
     .where({ tenant, resource: def.resource, action: def.action })
     .first();
 
   if (existing) {
     if (existing.msp !== def.msp || existing.client !== def.client || existing.description !== def.description) {
-      await knex('permissions')
+      await db.table('permissions')
         .where({ tenant, permission_id: existing.permission_id })
         .update({
           msp: def.msp,
@@ -35,7 +41,7 @@ async function ensurePermission(knex, tenant, def) {
     return existing.permission_id;
   }
 
-  const [inserted] = await knex('permissions')
+  const [inserted] = await db.table('permissions')
     .insert({
       tenant,
       resource: def.resource,
@@ -50,8 +56,8 @@ async function ensurePermission(knex, tenant, def) {
   return inserted.permission_id;
 }
 
-async function assignPermission(knex, tenant, roleId, permissionId) {
-  const existing = await knex('role_permissions')
+async function assignPermission(knex, db, tenant, roleId, permissionId) {
+  const existing = await db.table('role_permissions')
     .where({ tenant, role_id: roleId, permission_id: permissionId })
     .first('tenant');
 
@@ -59,7 +65,7 @@ async function assignPermission(knex, tenant, roleId, permissionId) {
     return;
   }
 
-  await knex('role_permissions').insert({
+  await db.table('role_permissions').insert({
     tenant,
     role_id: roleId,
     permission_id: permissionId,
@@ -68,43 +74,49 @@ async function assignPermission(knex, tenant, roleId, permissionId) {
 }
 
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     const permissionIdsByAction = new Map();
 
     for (const def of REPORT_PERMISSION_DEFS) {
-      permissionIdsByAction.set(def.action, await ensurePermission(knex, tenant, def));
+      permissionIdsByAction.set(def.action, await ensurePermission(knex, db, tenant, def));
     }
 
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({ tenant, role_name: 'Admin', msp: true })
       .first('role_id');
 
     if (adminRole) {
       for (const permissionId of permissionIdsByAction.values()) {
-        await assignPermission(knex, tenant, adminRole.role_id, permissionId);
+        await assignPermission(knex, db, tenant, adminRole.role_id, permissionId);
       }
     }
 
     const readPermissionId = permissionIdsByAction.get('read');
-    const readRoles = await knex('roles')
+    const readRoles = await db.table('roles')
       .where({ tenant, msp: true })
       .whereIn('role_name', REPORT_READ_ROLES)
       .select('role_id');
 
     for (const role of readRoles) {
-      await assignPermission(knex, tenant, role.role_id, readPermissionId);
+      await assignPermission(knex, db, tenant, role.role_id, readPermissionId);
     }
   }
 };
 
 exports.down = async function down(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   const actions = REPORT_PERMISSION_DEFS.map((def) => def.action);
 
   for (const { tenant } of tenants) {
-    const permissionIds = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where({ tenant, resource: 'reports' })
       .whereIn('action', actions)
       .pluck('permission_id');
@@ -113,12 +125,12 @@ exports.down = async function down(knex) {
       continue;
     }
 
-    await knex('role_permissions')
+    await db.table('role_permissions')
       .where({ tenant })
       .whereIn('permission_id', permissionIds)
       .del();
 
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource: 'reports' })
       .whereIn('action', actions)
       .del();

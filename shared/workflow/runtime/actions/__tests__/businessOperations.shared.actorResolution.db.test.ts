@@ -1,9 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
 import { resolveRunActorUserId } from '../businessOperations/shared';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 describe('workflow shared helper actor resolution', () => {
   let db: Knex;
@@ -26,7 +31,7 @@ describe('workflow shared helper actor resolution', () => {
     const actorB = await createUser(db, tenantB, { email: 'actor-b@example.com' });
 
     const leakingWorkflowId = uuidv4();
-    await db('workflow_definitions').insert({
+    await tenantTable(db, tenantB, 'workflow_definitions').insert({
       workflow_id: leakingWorkflowId,
       tenant: tenantB,
       name: 'Cross Tenant Definition',
@@ -41,7 +46,7 @@ describe('workflow shared helper actor resolution', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
-    await db('workflow_definition_versions').insert({
+    await tenantTable(db, tenantB, 'workflow_definition_versions').insert({
       version_id: uuidv4(),
       workflow_id: leakingWorkflowId,
       tenant: tenantB,
@@ -55,7 +60,7 @@ describe('workflow shared helper actor resolution', () => {
     });
 
     const crossTenantRunId = uuidv4();
-    await db('workflow_runs').insert({
+    await tenantTable(db, tenantA, 'workflow_runs').insert({
       run_id: crossTenantRunId,
       workflow_id: leakingWorkflowId,
       workflow_version: 1,
@@ -69,7 +74,7 @@ describe('workflow shared helper actor resolution', () => {
     expect(leakedActor).toBeNull();
 
     const scopedWorkflowId = uuidv4();
-    await db('workflow_definitions').insert({
+    await tenantTable(db, tenantA, 'workflow_definitions').insert({
       workflow_id: scopedWorkflowId,
       tenant: tenantA,
       name: 'Tenant Scoped Definition',
@@ -86,7 +91,7 @@ describe('workflow shared helper actor resolution', () => {
     });
 
     const scopedRunId = uuidv4();
-    await db('workflow_runs').insert({
+    await tenantTable(db, tenantA, 'workflow_runs').insert({
       run_id: scopedRunId,
       workflow_id: scopedWorkflowId,
       workflow_version: 1,

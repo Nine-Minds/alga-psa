@@ -1,13 +1,23 @@
+const MIGRATION_TENANT = 'migration:20260320105000_add_quote_approval_permission';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for quote approval permission backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
-    let permission = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    let permission = await db.table('permissions')
       .where({ tenant, resource: 'quotes', action: 'approve' })
       .first(['permission_id', 'description', 'msp', 'client']);
 
     if (!permission) {
-      const [inserted] = await knex('permissions')
+      const [inserted] = await db.table('permissions')
         .insert({
           tenant,
           resource: 'quotes',
@@ -19,7 +29,7 @@ exports.up = async function up(knex) {
         .returning(['permission_id', 'description', 'msp', 'client']);
       permission = inserted;
     } else if (!permission.msp || permission.client || !permission.description) {
-      await knex('permissions')
+      await db.table('permissions')
         .where({ tenant, permission_id: permission.permission_id })
         .update({
           msp: true,
@@ -29,18 +39,18 @@ exports.up = async function up(knex) {
         });
     }
 
-    const adminRoles = await knex('roles')
+    const adminRoles = await db.table('roles')
       .where({ tenant, msp: true })
       .whereIn('role_name', ['Admin'])
       .select('role_id');
 
     for (const role of adminRoles) {
-      const existingRolePermission = await knex('role_permissions')
+      const existingRolePermission = await db.table('role_permissions')
         .where({ tenant, role_id: role.role_id, permission_id: permission.permission_id })
         .first('tenant');
 
       if (!existingRolePermission) {
-        await knex('role_permissions').insert({
+        await db.table('role_permissions').insert({
           tenant,
           role_id: role.role_id,
           permission_id: permission.permission_id,
@@ -51,10 +61,13 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
-    const permissionIds = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where({ tenant, resource: 'quotes', action: 'approve' })
       .pluck('permission_id');
 
@@ -62,12 +75,12 @@ exports.down = async function down(knex) {
       continue;
     }
 
-    await knex('role_permissions')
+    await db.table('role_permissions')
       .where({ tenant })
       .whereIn('permission_id', permissionIds)
       .del();
 
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource: 'quotes', action: 'approve' })
       .del();
   }

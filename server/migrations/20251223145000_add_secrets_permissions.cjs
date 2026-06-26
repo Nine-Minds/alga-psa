@@ -16,16 +16,26 @@ const SECRETS_PERMISSIONS = [
   { resource: 'secrets', action: 'manage', description: 'Create, update, and delete secrets' },
   { resource: 'secrets', action: 'use', description: 'Reference secrets in workflows' },
 ];
+const MIGRATION_TENANT = 'migration:20251223145000_add_secrets_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for secrets permission creation';
+const SECRETS_PERMISSION_DISCOVERY_REASON = 'discover secrets permissions for rollback';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
 
 exports.up = async function (knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Insert permissions for this tenant
     const permissionIds = [];
     for (const perm of SECRETS_PERMISSIONS) {
-      const [row] = await knex('permissions')
+      const [row] = await db.table('permissions')
         .insert({
           tenant,
           resource: perm.resource,
@@ -37,10 +47,10 @@ exports.up = async function (knex) {
     }
 
     // Get Admin and Editor roles for this tenant
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({ tenant, role_name: 'Admin' })
       .first();
-    const editorRole = await knex('roles')
+    const editorRole = await db.table('roles')
       .where({ tenant, role_name: 'Editor' })
       .first();
 
@@ -48,7 +58,7 @@ exports.up = async function (knex) {
     if (adminRole) {
       for (const perm of permissionIds) {
         // Check if already assigned (idempotency)
-        const existing = await knex('role_permissions')
+        const existing = await db.table('role_permissions')
           .where({
             tenant,
             role_id: adminRole.role_id,
@@ -56,7 +66,7 @@ exports.up = async function (knex) {
           })
           .first();
         if (!existing) {
-          await knex('role_permissions').insert({
+          await db.table('role_permissions').insert({
             tenant,
             role_id: adminRole.role_id,
             permission_id: perm.permission_id,
@@ -70,7 +80,7 @@ exports.up = async function (knex) {
       for (const perm of permissionIds) {
         if (perm.action === 'view' || perm.action === 'use') {
           // Check if already assigned (idempotency)
-          const existing = await knex('role_permissions')
+          const existing = await db.table('role_permissions')
             .where({
               tenant,
               role_id: editorRole.role_id,
@@ -78,7 +88,7 @@ exports.up = async function (knex) {
             })
             .first();
           if (!existing) {
-            await knex('role_permissions').insert({
+            await db.table('role_permissions').insert({
               tenant,
               role_id: editorRole.role_id,
               permission_id: perm.permission_id,
@@ -91,20 +101,27 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Remove role_permissions for secrets
-  const secretsPermissions = await knex('permissions')
+  const secretsPermissions = await migrationDb.unscoped('permissions', SECRETS_PERMISSION_DISCOVERY_REASON)
     .where({ resource: 'secrets' })
     .select('tenant', 'permission_id');
 
   for (const perm of secretsPermissions) {
-    await knex('role_permissions')
+    const db = tenantDb(knex, perm.tenant);
+    await db.table('role_permissions')
+      .where({
+        tenant: perm.tenant,
+        permission_id: perm.permission_id,
+      })
+      .del();
+
+    await db.table('permissions')
       .where({
         tenant: perm.tenant,
         permission_id: perm.permission_id,
       })
       .del();
   }
-
-  // Remove secrets permissions
-  await knex('permissions').where({ resource: 'secrets' }).del();
 };

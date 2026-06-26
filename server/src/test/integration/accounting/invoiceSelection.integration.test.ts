@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../test-utils/testContext';
 import { createTestService } from '../../../../test-utils/billingTestHelpers';
 import { createClient } from '../../../../test-utils/testDataFactory';
@@ -15,6 +16,21 @@ import Invoice from '@alga-psa/billing/models/invoice';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  ctx: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(ctx.db, ctx.tenantId).table<Row>(tableExpression);
+}
+
+async function hasSchemaTable(ctx: TestContext, tableName: string): Promise<boolean> {
+  const row = await tenantDb(ctx.db, '__test_schema__')
+    .unscoped('information_schema.tables', 'test schema table existence check')
+    .where({ table_schema: 'public', table_name: tableName })
+    .first('table_name');
+  return Boolean(row);
+}
 
 function toDateOnly(value: unknown): string | null {
   if (!value) {
@@ -73,15 +89,15 @@ describe('Accounting export invoice selection integration', () => {
   beforeEach(async () => {
     ctx = await helpers.beforeEach();
 
-    await ctx.db('accounting_export_errors').where({ tenant: ctx.tenantId }).del();
-    await ctx.db('accounting_export_lines').where({ tenant: ctx.tenantId }).del();
-    await ctx.db('accounting_export_batches').where({ tenant: ctx.tenantId }).del();
-    await ctx.db('transactions').where({ tenant: ctx.tenantId }).del();
-    await ctx.db('invoice_charge_details').where({ tenant: ctx.tenantId }).del();
-    await ctx.db('invoice_charges').where({ tenant: ctx.tenantId }).del();
-    await ctx.db('invoices').where({ tenant: ctx.tenantId }).del();
-    if (await ctx.db.schema.hasTable('companies')) {
-      await ctx.db('companies').where({ tenant: ctx.tenantId }).del();
+    await tenantTable(ctx, 'accounting_export_errors').where({ tenant: ctx.tenantId }).del();
+    await tenantTable(ctx, 'accounting_export_lines').where({ tenant: ctx.tenantId }).del();
+    await tenantTable(ctx, 'accounting_export_batches').where({ tenant: ctx.tenantId }).del();
+    await tenantTable(ctx, 'transactions').where({ tenant: ctx.tenantId }).del();
+    await tenantTable(ctx, 'invoice_charge_details').where({ tenant: ctx.tenantId }).del();
+    await tenantTable(ctx, 'invoice_charges').where({ tenant: ctx.tenantId }).del();
+    await tenantTable(ctx, 'invoices').where({ tenant: ctx.tenantId }).del();
+    if (await hasSchemaTable(ctx, 'companies')) {
+      await tenantTable(ctx, 'companies').where({ tenant: ctx.tenantId }).del();
     }
 
     selector = new AccountingExportInvoiceSelector(ctx.db, ctx.tenantId);
@@ -104,17 +120,17 @@ describe('Accounting export invoice selection integration', () => {
   }, HOOK_TIMEOUT);
 
   async function ensureCompany(companyId: string, companyName: string) {
-    if (!(await ctx.db.schema.hasTable('companies'))) {
+    if (!(await hasSchemaTable(ctx, 'companies'))) {
       return;
     }
 
-    const exists = await ctx.db('companies')
+    const exists = await tenantTable(ctx, 'companies')
       .where({ tenant: ctx.tenantId, company_id: companyId })
       .first();
 
     if (!exists) {
       const now = new Date().toISOString();
-      await ctx.db('companies').insert({
+      await tenantTable(ctx, 'companies').insert({
         tenant: ctx.tenantId,
         company_id: companyId,
         company_name: companyName,
@@ -161,7 +177,7 @@ describe('Accounting export invoice selection integration', () => {
       const invoiceNumber = `INV-${invoiceId.slice(0, 6)}`;
       const invoiceDate = new Date(params.invoiceDate).toISOString();
 
-      await ctx.db('invoices').insert({
+      await tenantTable(ctx, 'invoices').insert({
         invoice_id: invoiceId,
         tenant: ctx.tenantId,
         client_id: params.clientId ?? ctx.clientId,
@@ -181,7 +197,7 @@ describe('Accounting export invoice selection integration', () => {
       });
 
       const chargeId = uuidv4();
-      await ctx.db('invoice_charges').insert({
+      await tenantTable(ctx, 'invoice_charges').insert({
         item_id: chargeId,
         tenant: ctx.tenantId,
         invoice_id: invoiceId,
@@ -198,7 +214,7 @@ describe('Accounting export invoice selection integration', () => {
       });
 
       if (params.detailServicePeriodStart || params.detailServicePeriodEnd) {
-        await ctx.db('invoice_charge_details').insert({
+        await tenantTable(ctx, 'invoice_charge_details').insert({
           item_detail_id: uuidv4(),
           item_id: chargeId,
           tenant: ctx.tenantId,
@@ -215,7 +231,7 @@ describe('Accounting export invoice selection integration', () => {
       }
 
       const transactionId = uuidv4();
-      await ctx.db('transactions').insert({
+      await tenantTable(ctx, 'transactions').insert({
         transaction_id: transactionId,
         tenant: ctx.tenantId,
         client_id: params.clientId ?? ctx.clientId,
@@ -352,7 +368,7 @@ describe('Accounting export invoice selection integration', () => {
     const transactionId = uuidv4();
     const invoiceDate = '2025-02-10T00:00:00.000Z';
 
-    await ctx.db('invoices').insert({
+    await tenantTable(ctx, 'invoices').insert({
       invoice_id: invoiceId,
       tenant: ctx.tenantId,
       client_id: ctx.clientId,
@@ -371,7 +387,7 @@ describe('Accounting export invoice selection integration', () => {
       updated_at: invoiceDate
     });
 
-    await ctx.db('invoice_charges').insert({
+    await tenantTable(ctx, 'invoice_charges').insert({
       item_id: chargeId,
       tenant: ctx.tenantId,
       invoice_id: invoiceId,
@@ -387,7 +403,7 @@ describe('Accounting export invoice selection integration', () => {
       updated_at: invoiceDate
     });
 
-    await ctx.db('invoice_charge_details').insert([
+    await tenantTable(ctx, 'invoice_charge_details').insert([
       {
         item_detail_id: uuidv4(),
         item_id: chargeId,
@@ -418,7 +434,7 @@ describe('Accounting export invoice selection integration', () => {
       }
     ]);
 
-    await ctx.db('transactions').insert({
+    await tenantTable(ctx, 'transactions').insert({
       transaction_id: transactionId,
       tenant: ctx.tenantId,
       client_id: ctx.clientId,
@@ -475,7 +491,7 @@ describe('Accounting export invoice selection integration', () => {
     const transactionId = uuidv4();
     const invoiceDate = '2025-02-10T00:00:00.000Z';
 
-    await ctx.db('invoices').insert({
+    await tenantTable(ctx, 'invoices').insert({
       invoice_id: invoiceId,
       tenant: ctx.tenantId,
       client_id: ctx.clientId,
@@ -494,7 +510,7 @@ describe('Accounting export invoice selection integration', () => {
       updated_at: invoiceDate
     });
 
-    await ctx.db('invoice_charges').insert([
+    await tenantTable(ctx, 'invoice_charges').insert([
       {
         item_id: clientChargeId,
         tenant: ctx.tenantId,
@@ -527,7 +543,7 @@ describe('Accounting export invoice selection integration', () => {
       }
     ]);
 
-    await ctx.db('invoice_charge_details').insert([
+    await tenantTable(ctx, 'invoice_charge_details').insert([
       {
         item_detail_id: uuidv4(),
         item_id: clientChargeId,
@@ -558,7 +574,7 @@ describe('Accounting export invoice selection integration', () => {
       }
     ]);
 
-    await ctx.db('transactions').insert({
+    await tenantTable(ctx, 'transactions').insert({
       transaction_id: transactionId,
       tenant: ctx.tenantId,
       client_id: ctx.clientId,
@@ -638,7 +654,7 @@ describe('Accounting export invoice selection integration', () => {
     const historicalInvoiceDate = '2025-01-20T00:00:00.000Z';
     const canonicalInvoiceDate = '2025-02-20T00:00:00.000Z';
 
-    await ctx.db('invoices').insert([
+    await tenantTable(ctx, 'invoices').insert([
       {
         invoice_id: historicalInvoiceId,
         tenant: ctx.tenantId,
@@ -677,7 +693,7 @@ describe('Accounting export invoice selection integration', () => {
       }
     ]);
 
-    await ctx.db('invoice_charges').insert([
+    await tenantTable(ctx, 'invoice_charges').insert([
       {
         item_id: historicalChargeId,
         tenant: ctx.tenantId,
@@ -725,7 +741,7 @@ describe('Accounting export invoice selection integration', () => {
       }
     ]);
 
-    await ctx.db('invoice_charge_details').insert([
+    await tenantTable(ctx, 'invoice_charge_details').insert([
       {
         item_detail_id: uuidv4(),
         item_id: clientChargeId,
@@ -756,7 +772,7 @@ describe('Accounting export invoice selection integration', () => {
       }
     ]);
 
-    await ctx.db('transactions').insert([
+    await tenantTable(ctx, 'transactions').insert([
       {
         transaction_id: historicalTransactionId,
         tenant: ctx.tenantId,
@@ -972,7 +988,7 @@ describe('Accounting export invoice selection integration', () => {
     const seeded = await seedInvoices();
 
     const now = new Date().toISOString();
-    await ctx.db('tenant_external_entity_mappings').insert({
+    await tenantTable(ctx, 'tenant_external_entity_mappings').insert({
       id: uuidv4(),
       tenant: ctx.tenantId,
       integration_type: 'quickbooks_online',

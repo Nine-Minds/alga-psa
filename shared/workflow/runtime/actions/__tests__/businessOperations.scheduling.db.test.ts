@@ -1,9 +1,20 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import ScheduleEntry from '../../../../models/scheduleEntry';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
+
+const SCHEMA_INTROSPECTION_TENANT = '__workflow_scheduling_db_test_schema__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, SCHEMA_INTROSPECTION_TENANT).unscoped(table, reason);
+}
 
 const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
@@ -85,7 +96,7 @@ async function ensureTechnicianRole(db: Knex, tenantId: string, userId: string):
   const roleId = uuidv4();
   const nowIso = new Date().toISOString();
 
-  const roleColumns = await db('information_schema.columns')
+  const roleColumns = await unscopedTable(db, 'information_schema.columns', 'schema introspection for scheduling role fixture')
     .select('column_name')
     .where({ table_schema: 'public', table_name: 'roles' });
   const roleColumnSet = new Set(roleColumns.map((row: { column_name: string }) => row.column_name));
@@ -99,9 +110,9 @@ async function ensureTechnicianRole(db: Knex, tenantId: string, userId: string):
   if (roleColumnSet.has('created_at')) roleRow.created_at = nowIso;
   if (roleColumnSet.has('updated_at')) roleRow.updated_at = nowIso;
 
-  await db('roles').insert(roleRow);
+  await tenantTable(db, tenantId, 'roles').insert(roleRow);
 
-  const userRoleColumns = await db('information_schema.columns')
+  const userRoleColumns = await unscopedTable(db, 'information_schema.columns', 'schema introspection for scheduling user-role fixture')
     .select('column_name')
     .where({ table_schema: 'public', table_name: 'user_roles' });
   const userRoleColumnSet = new Set(userRoleColumns.map((row: { column_name: string }) => row.column_name));
@@ -114,7 +125,7 @@ async function ensureTechnicianRole(db: Knex, tenantId: string, userId: string):
   if (userRoleColumnSet.has('created_at')) userRoleRow.created_at = nowIso;
   if (userRoleColumnSet.has('updated_at')) userRoleRow.updated_at = nowIso;
 
-  await db('user_roles').insert(userRoleRow);
+  await tenantTable(db, tenantId, 'user_roles').insert(userRoleRow);
 }
 
 async function createScheduleEntry(
@@ -137,7 +148,7 @@ async function createScheduleEntry(
   const entryId = uuidv4();
   const nowIso = new Date().toISOString();
 
-  await db('schedule_entries').insert({
+  await tenantTable(db, tenantId, 'schedule_entries').insert({
     tenant: tenantId,
     entry_id: entryId,
     title: options.title ?? 'Test Entry',
@@ -155,7 +166,7 @@ async function createScheduleEntry(
   });
 
   for (const userId of options.assignedUserIds) {
-    await db('schedule_entry_assignees').insert({
+    await tenantTable(db, tenantId, 'schedule_entry_assignees').insert({
       tenant: tenantId,
       entry_id: entryId,
       user_id: userId,
@@ -318,10 +329,11 @@ describe('scheduling business operation db actions', () => {
 
     expect(override.new_start).toBe('2026-05-01T11:30:00.000Z');
 
-    const conflictRows = await db('schedule_conflicts').where({ tenant: runtimeState.tenantId, entry_id_1: override.updated_entry_id });
+    const conflictRows = await tenantTable(db, runtimeState.tenantId, 'schedule_conflicts')
+      .where({ tenant: runtimeState.tenantId, entry_id_1: override.updated_entry_id });
     expect(conflictRows.length).toBeGreaterThan(0);
 
-    const audit = await db('audit_logs')
+    const audit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:scheduling.reschedule' })
       .orderBy('timestamp', 'desc')
       .first();
@@ -368,7 +380,7 @@ describe('scheduling business operation db actions', () => {
     expect(replaced.assigned_user_ids.sort()).toEqual([replacementA, replacementB].sort());
     expect(replaced.events_emitted).toBe(2);
 
-    const assignmentRows = await db('schedule_entry_assignees')
+    const assignmentRows = await tenantTable(db, runtimeState.tenantId, 'schedule_entry_assignees')
       .where({ tenant: runtimeState.tenantId, entry_id: replaced.updated_entry_id })
       .select('user_id');
     expect(assignmentRows.map((row: { user_id: string }) => row.user_id).sort()).toEqual([replacementA, replacementB].sort());
@@ -405,7 +417,9 @@ describe('scheduling business operation db actions', () => {
     expect(canceled.status.toLowerCase()).toContain('cancel');
     expect(canceled.event_type).toBe('APPOINTMENT_CANCELED');
 
-    const afterCancel = await db('schedule_entries').where({ tenant: runtimeState.tenantId, entry_id: canceled.updated_entry_id }).first();
+    const afterCancel = await tenantTable(db, runtimeState.tenantId, 'schedule_entries')
+      .where({ tenant: runtimeState.tenantId, entry_id: canceled.updated_entry_id })
+      .first();
     expect(afterCancel).toBeDefined();
     expect(String(afterCancel.status).toLowerCase()).toContain('cancel');
 
@@ -418,10 +432,12 @@ describe('scheduling business operation db actions', () => {
     expect(completed.status.toLowerCase()).toContain('complete');
     expect(completed.event_type).toBe('APPOINTMENT_COMPLETED');
 
-    const afterComplete = await db('schedule_entries').where({ tenant: runtimeState.tenantId, entry_id: completed.updated_entry_id }).first();
+    const afterComplete = await tenantTable(db, runtimeState.tenantId, 'schedule_entries')
+      .where({ tenant: runtimeState.tenantId, entry_id: completed.updated_entry_id })
+      .first();
     expect(String(afterComplete.status).toLowerCase()).toContain('complete');
 
-    const auditRows = await db('audit_logs')
+    const auditRows = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId })
       .whereIn('operation', ['workflow_action:scheduling.cancel', 'workflow_action:scheduling.complete']);
     expect(auditRows.length).toBeGreaterThanOrEqual(2);
@@ -564,10 +580,13 @@ describe('scheduling business operation db actions', () => {
       entry_id: entryId,
     })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
 
-    const row = await db('schedule_entries').where({ tenant: runtimeState.tenantId, entry_id: entryId }).first();
+    const row = await tenantTable(db, runtimeState.tenantId, 'schedule_entries')
+      .where({ tenant: runtimeState.tenantId, entry_id: entryId })
+      .first();
     expect(row.scheduled_start.toISOString()).toBe('2026-05-06T10:00:00.000Z');
 
-    const assignees = await db('schedule_entry_assignees').where({ tenant: runtimeState.tenantId, entry_id: entryId });
+    const assignees = await tenantTable(db, runtimeState.tenantId, 'schedule_entry_assignees')
+      .where({ tenant: runtimeState.tenantId, entry_id: entryId });
     expect(assignees).toHaveLength(1);
   });
 
@@ -589,13 +608,16 @@ describe('scheduling business operation db actions', () => {
     expect(result.work_item_id).toBeNull();
     expect(result.work_item_type).toBe('ad_hoc');
 
-    const row = await db('schedule_entries').where({ tenant: runtimeState.tenantId, entry_id: result.entry_id }).first();
+    const row = await tenantTable(db, runtimeState.tenantId, 'schedule_entries')
+      .where({ tenant: runtimeState.tenantId, entry_id: result.entry_id })
+      .first();
     expect(row.title).toBe('Patch window prep');
     expect(row.work_item_id).toBeNull();
     expect(row.work_item_type).toBe('ad_hoc');
     expect(row.status).toBe('scheduled');
 
-    const assignees = await db('schedule_entry_assignees').where({ tenant: runtimeState.tenantId, entry_id: result.entry_id });
+    const assignees = await tenantTable(db, runtimeState.tenantId, 'schedule_entry_assignees')
+      .where({ tenant: runtimeState.tenantId, entry_id: result.entry_id });
     expect(assignees.map((assignee: { user_id: string }) => assignee.user_id).sort()).toEqual([techA, techB].sort());
   });
 
@@ -665,7 +687,8 @@ describe('scheduling business operation db actions', () => {
       window: { start: '2026-06-22T10:00:00.000Z', end: '2026-06-22T11:00:00.000Z' },
     })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
 
-    const rows = await db('schedule_entries').where({ tenant: runtimeState.tenantId, title: 'Denied' });
+    const rows = await tenantTable(db, runtimeState.tenantId, 'schedule_entries')
+      .where({ tenant: runtimeState.tenantId, title: 'Denied' });
     expect(rows).toHaveLength(0);
   });
 });

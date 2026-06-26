@@ -1,21 +1,31 @@
+const MIGRATION_TENANT = 'migration:20250716144947_update_client_portal_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for client portal permission reset';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').pluck('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).pluck('tenant');
   
   console.log(`Updating permissions for ${tenants.length} tenants`);
   
   for (const tenant of tenants) {
+    const db = tenantDb(knex, tenant);
     // Step 1: Delete all role permissions for this tenant
     console.log(`Removing all role permissions for tenant ${tenant}`);
-    await knex('role_permissions').where({ tenant }).delete();
+    await db.table('role_permissions').where({ tenant }).delete();
     
     // Step 2: Delete all permissions for this tenant
     console.log(`Removing all permissions for tenant ${tenant}`);
-    await knex('permissions').where({ tenant }).delete();
+    await db.table('permissions').where({ tenant }).delete();
     
     // Step 3: Remove user assignments for roles that will be deleted
     console.log(`Removing user role assignments for unwanted roles in tenant ${tenant}`);
-    const rolesToDelete = await knex('roles')
+    const rolesToDelete = await db.table('roles')
       .where({ tenant })
       .where(function() {
         this.where({ role_name: 'Manager', msp: true });
@@ -24,7 +34,7 @@ exports.up = async function(knex) {
     
     if (rolesToDelete.length > 0) {
       const roleIds = rolesToDelete.map(r => r.role_id);
-      await knex('user_roles')
+      await db.table('user_roles')
         .where({ tenant })
         .whereIn('role_id', roleIds)
         .delete();
@@ -33,7 +43,7 @@ exports.up = async function(knex) {
     
     // Step 4: Remove unwanted roles
     console.log(`Removing unwanted roles for tenant ${tenant}`);
-    await knex('roles')
+    await db.table('roles')
       .where({ tenant })
       .where(function() {
         this.where({ role_name: 'Manager', msp: true });
@@ -230,11 +240,11 @@ exports.up = async function(knex) {
     ];
     
     // Insert all permissions
-    await knex('permissions').insert(allPermissions);
+    await db.table('permissions').insert(allPermissions);
     console.log(`Created ${allPermissions.length} permissions for tenant ${tenant}`);
     
     // Step 6: Get all roles for mapping
-    const roles = await knex('roles').where({ tenant });
+    const roles = await db.table('roles').where({ tenant });
     const roleMap = {};
     roles.forEach(role => {
       const key = `${role.msp ? 'msp' : 'client'}_${role.role_name.toLowerCase()}`;
@@ -245,7 +255,7 @@ exports.up = async function(knex) {
     
     // MSP Admin gets all MSP permissions
     if (roleMap.msp_admin) {
-      const mspPermissions = await knex('permissions')
+      const mspPermissions = await db.table('permissions')
         .where({ tenant, msp: true })
         .pluck('permission_id');
       
@@ -256,7 +266,7 @@ exports.up = async function(knex) {
       }));
       
       if (adminRolePerms.length > 0) {
-        await knex('role_permissions').insert(adminRolePerms);
+        await db.table('role_permissions').insert(adminRolePerms);
         console.log(`Assigned ${adminRolePerms.length} permissions to MSP Admin role`);
       }
     }
@@ -287,7 +297,7 @@ exports.up = async function(knex) {
       const financeRolePerms = [];
       for (const [resource, actions] of Object.entries(financePermissions)) {
         for (const action of actions) {
-          const permission = await knex('permissions')
+          const permission = await db.table('permissions')
             .where({ tenant, resource, action, msp: true })
             .first();
           if (permission) {
@@ -301,7 +311,7 @@ exports.up = async function(knex) {
       }
       
       if (financeRolePerms.length > 0) {
-        await knex('role_permissions').insert(financeRolePerms);
+        await db.table('role_permissions').insert(financeRolePerms);
         console.log(`Assigned ${financeRolePerms.length} permissions to MSP Finance role`);
       }
     }
@@ -328,7 +338,7 @@ exports.up = async function(knex) {
       const technicianRolePerms = [];
       for (const [resource, actions] of Object.entries(technicianPermissions)) {
         for (const action of actions) {
-          const permission = await knex('permissions')
+          const permission = await db.table('permissions')
             .where({ tenant, resource, action, msp: true })
             .first();
           if (permission) {
@@ -342,7 +352,7 @@ exports.up = async function(knex) {
       }
       
       if (technicianRolePerms.length > 0) {
-        await knex('role_permissions').insert(technicianRolePerms);
+        await db.table('role_permissions').insert(technicianRolePerms);
         console.log(`Assigned ${technicianRolePerms.length} permissions to MSP Technician role`);
       }
     }
@@ -373,7 +383,7 @@ exports.up = async function(knex) {
       const pmRolePerms = [];
       for (const [resource, actions] of Object.entries(projectManagerPermissions)) {
         for (const action of actions) {
-          const permission = await knex('permissions')
+          const permission = await db.table('permissions')
             .where({ tenant, resource, action, msp: true })
             .first();
           if (permission) {
@@ -387,7 +397,7 @@ exports.up = async function(knex) {
       }
       
       if (pmRolePerms.length > 0) {
-        await knex('role_permissions').insert(pmRolePerms);
+        await db.table('role_permissions').insert(pmRolePerms);
         console.log(`Assigned ${pmRolePerms.length} permissions to MSP Project Manager role`);
       }
     }
@@ -415,7 +425,7 @@ exports.up = async function(knex) {
       const dispatcherRolePerms = [];
       for (const [resource, actions] of Object.entries(dispatcherPermissions)) {
         for (const action of actions) {
-          const permission = await knex('permissions')
+          const permission = await db.table('permissions')
             .where({ tenant, resource, action, msp: true })
             .first();
           if (permission) {
@@ -429,7 +439,7 @@ exports.up = async function(knex) {
       }
       
       if (dispatcherRolePerms.length > 0) {
-        await knex('role_permissions').insert(dispatcherRolePerms);
+        await db.table('role_permissions').insert(dispatcherRolePerms);
         console.log(`Assigned ${dispatcherRolePerms.length} permissions to MSP Dispatcher role`);
       }
     }
@@ -451,7 +461,7 @@ exports.up = async function(knex) {
       const clientAdminRolePerms = [];
       for (const [resource, actions] of Object.entries(clientAdminPermissions)) {
         for (const action of actions) {
-          const permission = await knex('permissions')
+          const permission = await db.table('permissions')
             .where({ tenant, resource, action, msp: false, client: true })
             .first();
           if (permission) {
@@ -465,7 +475,7 @@ exports.up = async function(knex) {
       }
       
       if (clientAdminRolePerms.length > 0) {
-        await knex('role_permissions').insert(clientAdminRolePerms);
+        await db.table('role_permissions').insert(clientAdminRolePerms);
         console.log(`Assigned ${clientAdminRolePerms.length} permissions to Client Admin role`);
       }
     }
@@ -487,7 +497,7 @@ exports.up = async function(knex) {
       const clientFinanceRolePerms = [];
       for (const [resource, actions] of Object.entries(clientFinancePermissions)) {
         for (const action of actions) {
-          const permission = await knex('permissions')
+          const permission = await db.table('permissions')
             .where({ tenant, resource, action, msp: false, client: true })
             .first();
           if (permission) {
@@ -501,7 +511,7 @@ exports.up = async function(knex) {
       }
       
       if (clientFinanceRolePerms.length > 0) {
-        await knex('role_permissions').insert(clientFinanceRolePerms);
+        await db.table('role_permissions').insert(clientFinanceRolePerms);
         console.log(`Assigned ${clientFinanceRolePerms.length} permissions to Client Finance role`);
       }
     }
@@ -520,7 +530,7 @@ exports.up = async function(knex) {
       const clientUserRolePerms = [];
       for (const [resource, actions] of Object.entries(clientUserPermissions)) {
         for (const action of actions) {
-          const permission = await knex('permissions')
+          const permission = await db.table('permissions')
             .where({ tenant, resource, action, msp: false, client: true })
             .first();
           if (permission) {
@@ -534,7 +544,7 @@ exports.up = async function(knex) {
       }
       
       if (clientUserRolePerms.length > 0) {
-        await knex('role_permissions').insert(clientUserRolePerms);
+        await db.table('role_permissions').insert(clientUserRolePerms);
         console.log(`Assigned ${clientUserRolePerms.length} permissions to Client User role`);
       }
     }

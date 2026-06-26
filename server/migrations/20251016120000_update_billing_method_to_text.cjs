@@ -5,7 +5,16 @@
  * 3. Migrates existing 'per_unit' values to 'usage'
  */
 
+const MIGRATION_TENANT = 'migration:20251016120000_update_billing_method_to_text';
+const BILLING_METHOD_NORMALIZATION_REASON = 'all-tenant billing method normalization';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Drop ALL possible check constraints on service_catalog
   await knex.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS billing_method_check');
   await knex.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS service_catalog_billing_method_check');
@@ -21,18 +30,18 @@ exports.up = async function(knex) {
   await knex.raw('ALTER TABLE service_types ALTER COLUMN billing_method TYPE TEXT');
 
   // NOW migrate existing data: change 'per_unit' to 'usage'
-  await knex('service_catalog')
+  await migrationDb.unscoped('service_catalog', BILLING_METHOD_NORMALIZATION_REASON)
     .where('billing_method', 'per_unit')
     .update({ billing_method: 'usage' });
 
-  await knex('service_types')
+  await migrationDb.unscoped('service_types', BILLING_METHOD_NORMALIZATION_REASON)
     .where('billing_method', 'per_unit')
     .update({ billing_method: 'usage' });
 
-  const [{ count: serviceCatalogResidualCount }] = await knex('service_catalog')
+  const [{ count: serviceCatalogResidualCount }] = await migrationDb.unscoped('service_catalog', BILLING_METHOD_NORMALIZATION_REASON)
     .where('billing_method', 'per_unit')
     .count('* as count');
-  const [{ count: serviceTypesResidualCount }] = await knex('service_types')
+  const [{ count: serviceTypesResidualCount }] = await migrationDb.unscoped('service_types', BILLING_METHOD_NORMALIZATION_REASON)
     .where('billing_method', 'per_unit')
     .count('* as count');
 
@@ -44,12 +53,14 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Revert data migration: change 'usage' back to 'per_unit'
-  await knex('service_catalog')
+  await migrationDb.unscoped('service_catalog', BILLING_METHOD_NORMALIZATION_REASON)
     .where('billing_method', 'usage')
     .update({ billing_method: 'per_unit' });
 
-  await knex('service_types')
+  await migrationDb.unscoped('service_types', BILLING_METHOD_NORMALIZATION_REASON)
     .where('billing_method', 'usage')
     .update({ billing_method: 'per_unit' });
 

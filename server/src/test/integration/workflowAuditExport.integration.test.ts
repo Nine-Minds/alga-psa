@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { exportWorkflowAuditLogsAction } from '@alga-psa/workflows/actions';
-import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { createTenantKnex, getCurrentTenantId, tenantDb } from '@alga-psa/db';
 import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 
 let tenantId = '';
@@ -66,14 +66,26 @@ function hasColumn(columns: ColumnMap, name: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, name);
 }
 
+function tenantTable(tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows(tenant: string) {
+  return tenantDb(db, tenant).unscoped('tenants', 'workflow audit export test fixture creates tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__workflow_audit_export_schema__').unscoped(table, 'workflow audit export test reads schema metadata');
+}
+
 describe('workflow audit export integration', () => {
   beforeAll(async () => {
     try {
       db = await createTestDbConnection();
-      tenantColumns = await db('tenants').columnInfo();
-      userColumns = await db('users').columnInfo();
-      workflowColumns = await db('workflow_definitions').columnInfo();
-      runColumns = await db('workflow_runs').columnInfo();
+      tenantColumns = await schemaTable('tenants').columnInfo();
+      userColumns = await schemaTable('users').columnInfo();
+      workflowColumns = await schemaTable('workflow_definitions').columnInfo();
+      runColumns = await schemaTable('workflow_runs').columnInfo();
     } catch {
       dbAvailable = false;
     }
@@ -91,7 +103,7 @@ describe('workflow audit export integration', () => {
     mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: ['admin'] } as any);
     mockedHasPermission.mockResolvedValue(true as any);
 
-    await db('tenants').insert({
+    await tenantRows(tenantId).insert({
       tenant: tenantId,
       ...(hasColumn(tenantColumns, 'company_name')
         ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -101,7 +113,7 @@ describe('workflow audit export integration', () => {
       ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {})
     });
 
-    await db('users').insert({
+    await tenantTable(tenantId, 'users').insert({
       tenant: tenantId,
       user_id: userId,
       username: `user-${tenantId.slice(0, 8)}`,
@@ -127,7 +139,7 @@ describe('workflow audit export integration', () => {
     }
     const workflowId = uuidv4();
 
-    await db('workflow_definitions').insert({
+    await tenantTable(tenantId, 'workflow_definitions').insert({
       workflow_id: workflowId,
       tenant: tenantId,
       name: 'Quarterly Review',
@@ -144,7 +156,7 @@ describe('workflow audit export integration', () => {
       ...(hasColumn(workflowColumns, 'updated_at') ? { updated_at: db.fn.now() } : {})
     });
 
-    await db('audit_logs').insert({
+    await tenantTable(tenantId, 'audit_logs').insert({
       audit_id: uuidv4(),
       tenant: tenantId,
       timestamp: db.fn.now(),
@@ -196,7 +208,7 @@ describe('workflow audit export integration', () => {
     }
 
     const workflowId = uuidv4();
-    await db('workflow_definitions').insert({
+    await tenantTable(tenantId, 'workflow_definitions').insert({
       workflow_id: workflowId,
       tenant: tenantId,
       name: 'Permissions Fixture',
@@ -220,9 +232,10 @@ describe('workflow audit export integration', () => {
 
     mockedHasPermission.mockResolvedValue(true as any);
     const otherTenantWorkflowId = uuidv4();
-    await db('workflow_definitions').insert({
+    const otherTenantId = uuidv4();
+    await tenantTable(otherTenantId, 'workflow_definitions').insert({
       workflow_id: otherTenantWorkflowId,
-      tenant: uuidv4(),
+      tenant: otherTenantId,
       name: 'Other Tenant Workflow',
       key: 'other.tenant.workflow',
       description: null,
@@ -251,7 +264,7 @@ describe('workflow audit export integration', () => {
     const runId = uuidv4();
     const now = new Date().toISOString();
 
-    await db('workflow_definitions').insert({
+    await tenantTable(tenantId, 'workflow_definitions').insert({
       workflow_id: workflowId,
       tenant: tenantId,
       name: 'Compatibility Workflow',
@@ -266,7 +279,7 @@ describe('workflow audit export integration', () => {
       ...(hasColumn(workflowColumns, 'updated_at') ? { updated_at: db.fn.now() } : {})
     });
 
-    await db('workflow_runs').insert({
+    await tenantTable(tenantId, 'workflow_runs').insert({
       run_id: runId,
       workflow_id: workflowId,
       workflow_version: 1,
@@ -280,7 +293,7 @@ describe('workflow audit export integration', () => {
       ...(hasColumn(runColumns, 'completed_at') ? { completed_at: null } : {})
     });
 
-    await db('audit_logs').insert({
+    await tenantTable(tenantId, 'audit_logs').insert({
       audit_id: uuidv4(),
       tenant: tenantId,
       timestamp: db.fn.now(),

@@ -13,6 +13,7 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -59,10 +60,14 @@ let createdIds: CreatedIds = {
   shareIds: []
 };
 
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds): Promise<void> {
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTable(db, tenantId, table).where(where).del();
     } catch {
       // Ignore cleanup issues
     }
@@ -89,7 +94,7 @@ async function createDocument(db: Knex, tenantId: string, userId: string, name: 
   const docId = uuidv4();
   const now = new Date();
 
-  await db('documents').insert({
+  await tenantTable(db, tenantId, 'documents').insert({
     tenant: tenantId,
     document_id: docId,
     document_name: name,
@@ -409,7 +414,7 @@ describe('Document Share Links Integration Tests', () => {
       });
 
       // Verify log entry
-      const logEntry = await db('document_share_access_log')
+      const logEntry = await tenantTable(db, tenantId, 'document_share_access_log')
         .where({
           tenant: tenantId,
           share_id: shareLink.share_id
@@ -432,7 +437,7 @@ describe('Document Share Links Integration Tests', () => {
       createdIds.shareIds.push(shareLink.share_id);
 
       // Initial count should be 0
-      let shareRecord = await db('document_share_links')
+      let shareRecord = await tenantTable(db, tenantId, 'document_share_links')
         .where({ tenant: tenantId, share_id: shareLink.share_id })
         .first();
       expect(shareRecord.download_count).toBe(0);
@@ -443,7 +448,7 @@ describe('Document Share Links Integration Tests', () => {
       await incrementDownloadCount(shareLink.token);
 
       // Count should be 3
-      shareRecord = await db('document_share_links')
+      shareRecord = await tenantTable(db, tenantId, 'document_share_links')
         .where({ tenant: tenantId, share_id: shareLink.share_id })
         .first();
       expect(shareRecord.download_count).toBe(3);
@@ -468,7 +473,7 @@ describe('Document Share Links Integration Tests', () => {
       expect(revoked).toBe(true);
 
       // Verify revocation metadata
-      const revokedRecord = await db('document_share_links')
+      const revokedRecord = await tenantTable(db, tenantId, 'document_share_links')
         .where({ tenant: tenantId, share_id: shareLink.share_id })
         .first();
       expect(revokedRecord.is_revoked).toBe(true);

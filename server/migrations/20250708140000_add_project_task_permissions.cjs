@@ -2,15 +2,22 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+const MIGRATION_TENANT = 'migration:20250708140000_add_project_task_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for project task permission backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function(knex) {
   // Helper function to create a permission if it doesn't exist
-  const ensurePermission = async (tenant, resource, action, msp = true, client = false, description = null) => {
-    const existing = await knex('permissions')
+  const ensurePermission = async (db, tenant, resource, action, msp = true, client = false, description = null) => {
+    const existing = await db.table('permissions')
       .where({ tenant, resource, action })
       .first();
     
     if (!existing) {
-      const [permission] = await knex('permissions')
+      const [permission] = await db.table('permissions')
         .insert({
           tenant,
           resource,
@@ -26,7 +33,7 @@ exports.up = async function(knex) {
     }
     
     // Update existing permission with msp/client flags and description
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource, action })
       .update({ msp, client, description });
     
@@ -34,13 +41,13 @@ exports.up = async function(knex) {
   };
 
   // Helper function to assign permission to role
-  const assignPermissionToRole = async (tenant, roleId, permissionId) => {
-    const existing = await knex('role_permissions')
+  const assignPermissionToRole = async (db, tenant, roleId, permissionId) => {
+    const existing = await db.table('role_permissions')
       .where({ tenant, role_id: roleId, permission_id: permissionId })
       .first();
     
     if (!existing) {
-      await knex('role_permissions').insert({
+      await db.table('role_permissions').insert({
         tenant,
         role_id: roleId,
         permission_id: permissionId,
@@ -50,9 +57,12 @@ exports.up = async function(knex) {
   };
 
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     console.log(`Processing tenant: ${tenant} - Adding project_task permissions`);
 
     // Define project_task permissions (similar to project permissions)
@@ -68,6 +78,7 @@ exports.up = async function(knex) {
     // Create permissions for MSP portal
     for (const perm of projectTaskPermissions) {
       const permission = await ensurePermission(
+        db,
         tenant,
         'project_task',
         perm.action,
@@ -80,7 +91,7 @@ exports.up = async function(knex) {
 
     // Find all roles that have project permissions and grant them project_task permissions too
     // Split the join to avoid Citus repartitioning issues
-    const projectPermissions = await knex('permissions')
+    const projectPermissions = await db.table('permissions')
       .where('tenant', tenant)
       .where('resource', 'project')
       .select('permission_id', 'action');
@@ -89,7 +100,7 @@ exports.up = async function(knex) {
     
     let rolesWithProjectPerms = [];
     if (projectPermissionIds.length > 0) {
-      const rolePermissions = await knex('role_permissions')
+      const rolePermissions = await db.table('role_permissions')
         .where('tenant', tenant)
         .whereIn('permission_id', projectPermissionIds)
         .select('role_id', 'permission_id')
@@ -112,13 +123,14 @@ exports.up = async function(knex) {
     for (const rolePerm of rolesWithProjectPerms) {
       const permissionId = permissionMap.get(rolePerm.action);
       if (permissionId) {
-        await assignPermissionToRole(tenant, rolePerm.role_id, permissionId);
+        await assignPermissionToRole(db, tenant, rolePerm.role_id, permissionId);
         console.log(`Granted project_task:${rolePerm.action} to role ${rolePerm.role_id}`);
       }
     }
 
     // Also create read permission for client portal (like projects)
     const clientReadPermission = await ensurePermission(
+      db,
       tenant,
       'project_task',
       'read',
@@ -132,7 +144,7 @@ exports.up = async function(knex) {
     
     // Find client roles that have project:read permission and grant them project_task:read
     // Split the joins to avoid Citus repartitioning issues
-    const projectReadPermission = await knex('permissions')
+    const projectReadPermission = await db.table('permissions')
       .where('tenant', tenant)
       .where('resource', 'project')
       .where('action', 'read')
@@ -141,7 +153,7 @@ exports.up = async function(knex) {
     let clientRolesWithProjectRead = [];
     if (projectReadPermission) {
       // Get role permissions for this permission
-      const rolePerms = await knex('role_permissions')
+      const rolePerms = await db.table('role_permissions')
         .where('tenant', tenant)
         .where('permission_id', projectReadPermission.permission_id)
         .select('role_id');
@@ -150,7 +162,7 @@ exports.up = async function(knex) {
       
       if (roleIds.length > 0) {
         // Get client roles from those role IDs
-        clientRolesWithProjectRead = await knex('roles')
+        clientRolesWithProjectRead = await db.table('roles')
           .where('tenant', tenant)
           .whereIn('role_id', roleIds)
           .where('client', true)
@@ -160,7 +172,7 @@ exports.up = async function(knex) {
     }
 
     for (const role of clientRolesWithProjectRead) {
-      await assignPermissionToRole(tenant, role.role_id, clientReadPermission.permission_id);
+      await assignPermissionToRole(db, tenant, role.role_id, clientReadPermission.permission_id);
       console.log(`Granted project_task:read to client role ${role.role_name}`);
     }
   }
@@ -172,11 +184,14 @@ exports.up = async function(knex) {
  */
 exports.down = async function(knex) {
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Find project_task permissions
-    const permissions = await knex('permissions')
+    const permissions = await db.table('permissions')
       .where({ tenant, resource: 'project_task' })
       .select('permission_id');
 
@@ -184,13 +199,13 @@ exports.down = async function(knex) {
 
     if (permissionIds.length > 0) {
       // Remove role assignments
-      await knex('role_permissions')
+      await db.table('role_permissions')
         .where('tenant', tenant)
         .whereIn('permission_id', permissionIds)
         .delete();
 
       // Remove permissions
-      await knex('permissions')
+      await db.table('permissions')
         .where('tenant', tenant)
         .whereIn('permission_id', permissionIds)
         .delete();

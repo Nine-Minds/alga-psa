@@ -1,5 +1,14 @@
+const MIGRATION_TENANT = 'migration:20260127120000_backfill_email_process_permission';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for email process permission backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 exports.up = async function (knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   const permission = {
@@ -11,13 +20,14 @@ exports.up = async function (knex) {
   };
 
   for (const { tenant } of tenants) {
-    const existing = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const existing = await db.table('permissions')
       .where({ tenant, resource: permission.resource, action: permission.action })
       .select('permission_id')
       .limit(1);
 
     if (!existing.length) {
-      await knex('permissions').insert({
+      await db.table('permissions').insert({
         tenant,
         permission_id: knex.raw('gen_random_uuid()'),
         created_at: new Date(),
@@ -25,24 +35,24 @@ exports.up = async function (knex) {
       });
     }
 
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({ tenant, role_name: 'Admin', msp: true })
       .first();
 
     if (!adminRole) continue;
 
-    const permRow = await knex('permissions')
+    const permRow = await db.table('permissions')
       .where({ tenant, resource: permission.resource, action: permission.action })
       .first();
 
     if (!permRow?.permission_id) continue;
 
-    const hasRolePerm = await knex('role_permissions')
+    const hasRolePerm = await db.table('role_permissions')
       .where({ tenant, role_id: adminRole.role_id, permission_id: permRow.permission_id })
       .first();
 
     if (!hasRolePerm) {
-      await knex('role_permissions').insert({
+      await db.table('role_permissions').insert({
         tenant,
         role_id: adminRole.role_id,
         permission_id: permRow.permission_id
@@ -52,25 +62,27 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   for (const { tenant } of tenants) {
-    const perms = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const perms = await db.table('permissions')
       .where({ tenant, resource: 'email', action: 'process' })
       .select('permission_id');
 
     const permIds = perms.map((p) => p.permission_id);
     if (!permIds.length) continue;
 
-    await knex('role_permissions')
+    await db.table('role_permissions')
       .where({ tenant })
       .whereIn('permission_id', permIds)
       .del();
 
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource: 'email', action: 'process' })
       .del();
   }
 };
-

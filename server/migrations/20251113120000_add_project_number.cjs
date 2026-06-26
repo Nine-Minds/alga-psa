@@ -1,3 +1,11 @@
+const MIGRATION_TENANT = 'migration:20251113120000_add_project_number';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for project number backfill';
+const PROJECT_NUMBER_ROLLBACK_REASON = 'all-tenant project number sequence rollback';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 /**
  * Check if we're running on a Citus distributed database cluster.
  * @param { import("knex").Knex } knex
@@ -36,6 +44,8 @@ async function waitForCitusPropagation(knex, ms, message) {
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Check if column already exists
   const columnExists = await knex.raw(`
     SELECT column_name
@@ -89,17 +99,18 @@ exports.up = async function(knex) {
   console.log('🚀 Starting project number backfill...\n');
 
   // Get all tenants
-  const tenants = await knex('tenants')
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON)
     .select('tenant')
     .orderBy('tenant');
 
   console.log(`Found ${tenants.length} tenant(s)\n`);
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     console.log(`Processing tenant: ${tenant}`);
 
     // Get all projects without project_number for this tenant
-    const projects = await knex('projects')
+    const projects = await db.table('projects')
       .select('project_id', 'project_name', 'created_at')
       .where({ tenant })
       .whereNull('project_number')
@@ -121,7 +132,7 @@ exports.up = async function(knex) {
 
       const projectNumber = result.rows[0].number;
 
-      await knex('projects')
+      await db.table('projects')
         .where({ tenant, project_id: project.project_id })
         .update({ project_number: projectNumber });
 
@@ -153,7 +164,8 @@ exports.up = async function(knex) {
 
     // Retry backfill for any remaining NULL values
     for (const { tenant } of tenants) {
-      const remainingProjects = await knex('projects')
+      const db = tenantDb(knex, tenant);
+      const remainingProjects = await db.table('projects')
         .select('project_id', 'project_name', 'created_at')
         .where({ tenant })
         .whereNull('project_number')
@@ -171,7 +183,7 @@ exports.up = async function(knex) {
 
         const projectNumber = result.rows[0].number;
 
-        await knex('projects')
+        await db.table('projects')
           .where({ tenant, project_id: project.project_id })
           .update({ project_number: projectNumber });
 
@@ -232,13 +244,14 @@ exports.up = async function(knex) {
       // Try one more backfill for these specific projects
       console.log('\nAttempting final targeted backfill...');
       for (const project of lastCheckRows.rows) {
+        const db = tenantDb(knex, project.tenant);
         const result = await knex.raw(
           `SELECT generate_next_number(:tenant::uuid, 'PROJECT') as number`,
           { tenant: project.tenant }
         );
         const projectNumber = result.rows[0].number;
 
-        await knex('projects')
+        await db.table('projects')
           .where({ tenant: project.tenant, project_id: project.project_id })
           .update({ project_number: projectNumber });
 
@@ -349,13 +362,15 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   await knex.raw('DROP INDEX IF EXISTS idx_projects_tenant_project_number');
 
   await knex.schema.alterTable('projects', (table) => {
     table.dropColumn('project_number');
   });
 
-  await knex('next_number')
+  await migrationDb.unscoped('next_number', PROJECT_NUMBER_ROLLBACK_REASON)
     .where('entity_type', 'PROJECT')
     .delete();
 };

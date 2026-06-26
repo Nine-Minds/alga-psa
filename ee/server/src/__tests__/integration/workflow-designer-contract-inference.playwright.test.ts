@@ -5,6 +5,7 @@
  * including inferred vs pinned modes, schema previews, and validation states.
  */
 import { test, expect, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
@@ -22,6 +23,16 @@ import { ensureSystemEmailWorkflow } from './helpers/workflowSeedHelper';
 
 applyPlaywrightAuthEnvDefaults();
 
+const WORKFLOW_CONTRACT_TEST_BOUNDARY_TENANT = '__workflow_contract_inference_test_boundary__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTestTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, WORKFLOW_CONTRACT_TEST_BOUNDARY_TENANT).unscoped(table, reason);
+}
+
 // Clean up any orphan test workflows to prevent test pollution
 async function cleanupTestWorkflows(db: Knex): Promise<void> {
   try {
@@ -31,7 +42,11 @@ async function cleanupTestWorkflows(db: Knex): Promise<void> {
       'Distinction%', 'Switch%', 'ReadOnly%', 'Contract%', 'New Workflow%'
     ];
     for (const pattern of testPatterns) {
-      await db('workflow_definitions')
+      await unscopedTestTable(
+        db,
+        'workflow_definitions',
+        'workflow contract inference test cleanup removes orphan test workflows across tenants'
+      )
         .where('name', 'like', pattern)
         .whereNot('name', 'Inbound Email Processing') // Don't delete system workflow
         .del();
@@ -99,12 +114,12 @@ async function setupDesigner(page: Page, permissions = ADMIN_PERMISSIONS): Promi
       throw new Error('Expected Viewer permissions config to be provided');
     }
 
-    let viewerRole = await db('roles')
+    let viewerRole = await tenantTable(db, tenantId, 'roles')
       .where({ tenant: tenantId, role_name: 'Viewer', msp: true })
       .first<{ role_id: string }>('role_id');
 
     if (!viewerRole) {
-      const [inserted] = await db('roles')
+      const [inserted] = await tenantTable(db, tenantId, 'roles')
         .insert({
           tenant: tenantId,
           role_id: uuidv4(),
@@ -122,7 +137,7 @@ async function setupDesigner(page: Page, permissions = ADMIN_PERMISSIONS): Promi
     await ensureRoleHasPermission(db, tenantId, 'Viewer', viewerConfig.permissions);
 
     const viewerEmail = `test-viewer-${uuidv4().slice(0, 8)}@example.com`.toLowerCase();
-    const [viewerUser] = await db('users')
+    const [viewerUser] = await tenantTable(db, tenantId, 'users')
       .insert({
         tenant: tenantId,
         username: viewerEmail,
@@ -137,7 +152,7 @@ async function setupDesigner(page: Page, permissions = ADMIN_PERMISSIONS): Promi
       })
       .returning<{ user_id: string }[]>('user_id');
 
-    await db('user_roles').insert({
+    await tenantTable(db, tenantId, 'user_roles').insert({
       tenant: tenantId,
       user_id: viewerUser.user_id,
       role_id: viewerRole.role_id,
@@ -192,7 +207,7 @@ async function createWorkflowWithTrigger(
     steps: [],
   };
 
-  await db('workflow_definitions').insert({
+  await tenantTable(db, tenantId, 'workflow_definitions').insert({
     workflow_id: workflowId,
     tenant: tenantId,
     name,
@@ -370,7 +385,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await workflowPage.waitForLoaded();
 
       // Select the workflow
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
+      const workflowName = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
 
       // Verify inferred indicator is visible
@@ -385,7 +400,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(workflowPage.contractSchemaPreviewLabel()).toContainText('Available fields preview');
     } finally {
       if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -412,7 +427,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();
 
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
+      const workflowName = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
 
       // Preview label is now behind advanced settings by default
@@ -421,7 +436,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(workflowPage.contractSchemaPreviewLabel()).toContainText('Available fields preview');
     } finally {
       if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -471,7 +486,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();
 
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
+      const workflowName = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
 
       // Verify we start in pinned mode
@@ -489,7 +504,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(workflowPage.payloadSchemaSelectButton).toHaveCount(0);
     } finally {
       if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -516,7 +531,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();
 
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
+      const workflowName = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
 
       // Verify simplified trigger/input summary content is present
@@ -524,7 +539,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(workflowPage.contractSection).not.toContainText('Trigger summary');
     } finally {
       if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -551,7 +566,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();
 
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
+      const workflowName = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
       await workflowPage.ensureContractAdvancedOpen();
 
@@ -570,7 +585,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await page.keyboard.press('Escape');
     } finally {
       if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -610,7 +625,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await workflowPage.waitForLoaded();
 
       // Test inferred workflow modal
-      const workflow1Name = (await db('workflow_definitions').where({ workflow_id: workflowId1 }).first())?.name;
+      const workflow1Name = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId1 }).first())?.name;
       await workflowPage.selectWorkflowByName(workflow1Name);
       await workflowPage.ensureContractAdvancedOpen();
 
@@ -622,7 +637,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       }
 
       // Test pinned workflow modal
-      const workflow2Name = (await db('workflow_definitions').where({ workflow_id: workflowId2 }).first())?.name;
+      const workflow2Name = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId2 }).first())?.name;
       await workflowPage.selectWorkflowByName(workflow2Name);
       await workflowPage.ensureContractAdvancedOpen();
 
@@ -633,8 +648,8 @@ test.describe('Workflow Designer UI - Contract Section', () => {
         await page.keyboard.press('Escape');
       }
     } finally {
-      if (workflowId1) await db('workflow_definitions').where({ workflow_id: workflowId1 }).del().catch(() => {});
-      if (workflowId2) await db('workflow_definitions').where({ workflow_id: workflowId2 }).del().catch(() => {});
+      if (workflowId1) await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId1 }).del().catch(() => {});
+      if (workflowId2) await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId2 }).del().catch(() => {});
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -668,7 +683,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       expect(publishDisabled).toBe(true);
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -696,7 +711,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();
 
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
+      const workflowName = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
 
       // Verify contract section is visible (can view)
@@ -707,7 +722,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(workflowPage.contractModeToggle).toBeDisabled();
     } finally {
       if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -734,7 +749,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();
 
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
+      const workflowName = (await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
       await workflowPage.ensureContractAdvancedOpen();
 
@@ -747,11 +762,11 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(previewContent).toBeVisible({ timeout: 30_000 });
 
       // Verify workflow is still in draft (not published)
-      const record = await db('workflow_definitions').where({ workflow_id: workflowId }).first();
+      const record = await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).first();
       expect(record.status).toBe('draft');
     } finally {
       if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -769,11 +784,11 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     try {
       // Seed an additional tenant event with a different schema ref so we can switch triggers post-publish
       // and get a stable "draft inferred schema != published contract schema" state.
-      await db('event_catalog')
+      await tenantTable(db, tenantData.tenant.tenantId, 'event_catalog')
         .where({ tenant: tenantData.tenant.tenantId, event_type: 'CUSTOM_EVENT' })
         .del()
         .catch(() => {});
-      await db('event_catalog').insert({
+      await tenantTable(db, tenantData.tenant.tenantId, 'event_catalog').insert({
         event_id: uuidv4(),
         tenant: tenantData.tenant.tenantId,
         event_type: 'CUSTOM_EVENT',
@@ -809,7 +824,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // (inferred schema is now different from published schema)
       await expect(workflowPage.contractDiffersWarning()).toBeVisible({ timeout: 30_000 });
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => {});
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => {});
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -835,7 +850,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await workflowPage.waitForWorkflowInList(workflowName);
 
       // Verify the workflow was saved
-      const record = await db('workflow_definitions').where({ name: workflowName }).first();
+      const record = await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).first();
       expect(record).toBeDefined();
 
       // Publish should be blocked (disabled or show error when clicked)
@@ -850,7 +865,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       }
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => {});
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => {});
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -888,7 +903,7 @@ test.describe('Workflow Designer UI - Contract Mode Persistence', () => {
       await expect(workflowPage.isContractModePinned()).resolves.toBe(true);
       await expect(workflowPage.payloadSchemaSelectButton).toBeVisible({ timeout: 30_000 });
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => {});
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => {});
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -922,7 +937,7 @@ test.describe('Workflow Designer UI - Contract Mode Persistence', () => {
       await expect(workflowPage.isContractModeInferred()).resolves.toBe(true);
       await expect(workflowPage.inferredModeIndicator()).toBeVisible();
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => {});
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => {});
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }

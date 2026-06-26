@@ -1,16 +1,26 @@
+const MIGRATION_TENANT = 'migration:20250407110700_add_client_billing_permission';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for client billing permission backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   // For each tenant, add the permissions and update roles
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Get existing permissions to avoid duplicates
-    const existingPerms = await knex('permissions')
+    const existingPerms = await db.table('permissions')
       .where({ tenant, resource: 'client_billing' })
       .select('resource', 'action');
 
@@ -24,20 +34,20 @@ exports.up = async function(knex) {
        tenant,
        permission_id: knex.raw('gen_random_uuid()'),
        ...p
-     }));
+    }));
 
     if (permissionsToAdd.length > 0) {
-      await knex('permissions').insert(permissionsToAdd);
+      await db.table('permissions').insert(permissionsToAdd);
     }
 
     // Get client_admin role
-    const clientAdminRole = await knex('roles')
+    const clientAdminRole = await db.table('roles')
       .where({ tenant, role_name: 'client_admin' })
       .first();
 
     if (clientAdminRole) {
       // Get the client_billing permission
-      const clientBillingPerm = await knex('permissions')
+      const clientBillingPerm = await db.table('permissions')
         .where({ 
           tenant, 
           resource: 'client_billing',
@@ -47,7 +57,7 @@ exports.up = async function(knex) {
 
       if (clientBillingPerm) {
         // Check if role permission already exists
-        const existingRolePerm = await knex('role_permissions')
+        const existingRolePerm = await db.table('role_permissions')
           .where({
             tenant,
             role_id: clientAdminRole.role_id,
@@ -57,7 +67,7 @@ exports.up = async function(knex) {
 
         // Assign permission to client_admin role if not already assigned
         if (!existingRolePerm) {
-          await knex('role_permissions').insert({
+          await db.table('role_permissions').insert({
             tenant,
             role_id: clientAdminRole.role_id,
             permission_id: clientBillingPerm.permission_id
@@ -73,13 +83,16 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) return;
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     // Get permission IDs
-    const permissions = await knex('permissions')
+    const permissions = await db.table('permissions')
       .where({ 
         tenant, 
         resource: 'client_billing',
@@ -90,13 +103,13 @@ exports.down = async function(knex) {
       const permissionIds = permissions.map(p => p.permission_id);
 
       // Remove role permissions
-      await knex('role_permissions')
+      await db.table('role_permissions')
         .where('tenant', tenant)
         .whereIn('permission_id', permissionIds)
         .delete();
 
       // Remove permissions
-      await knex('permissions')
+      await db.table('permissions')
         .where({ 
           tenant, 
           resource: 'client_billing',
