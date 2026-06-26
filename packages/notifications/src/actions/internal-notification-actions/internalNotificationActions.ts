@@ -666,11 +666,14 @@ export const getInternalNotificationCategoriesAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = tenantScopedTable(trx, 'internal_notification_categories as inc', tenant)
-      .leftJoin('tenant_internal_notification_category_settings as tics', function() {
-        this.on('tics.category_id', 'inc.internal_notification_category_id')
-            .andOn('tics.tenant', trx.raw('?', [tenant]));
-      })
+    const db = tenantDb(trx, tenant);
+    let query = db.table('internal_notification_categories as inc') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(query, 'tenant_internal_notification_category_settings as tics', 'tics.category_id', 'inc.internal_notification_category_id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    query = query
       .select(
         'inc.internal_notification_category_id',
         'inc.name',
@@ -708,11 +711,14 @@ export const getSubtypesAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = tenantScopedTable(trx, 'internal_notification_subtypes as ins', tenant)
-      .leftJoin('tenant_internal_notification_subtype_settings as tiss', function() {
-        this.on('tiss.subtype_id', 'ins.internal_notification_subtype_id')
-            .andOn('tiss.tenant', trx.raw('?', [tenant]));
-      })
+    const db = tenantDb(trx, tenant);
+    let query = db.table('internal_notification_subtypes as ins') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(query, 'tenant_internal_notification_subtype_settings as tiss', 'tiss.subtype_id', 'ins.internal_notification_subtype_id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    query = query
       .where('ins.internal_category_id', categoryId)
       .select(
         'ins.internal_notification_subtype_id',

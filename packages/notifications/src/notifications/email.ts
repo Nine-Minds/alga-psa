@@ -212,11 +212,14 @@ export class EmailNotificationService implements NotificationService {
 
   async getCategories(tenant: string): Promise<NotificationCategory[]> {
     const knex = await this.getTenantKnex();
-    return this.tenantScopedTable(knex, 'notification_categories as nc', tenant)
-      .leftJoin('tenant_notification_category_settings as tcs', function() {
-        this.on('tcs.category_id', 'nc.id')
-          .andOn('tcs.tenant', knex.raw('?', [tenant]));
-      })
+    const db = tenantDb(knex, tenant);
+    const query = db.table('notification_categories as nc') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(query, 'tenant_notification_category_settings as tcs', 'tcs.category_id', 'nc.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    return query
       .select(
         'nc.id',
         'nc.name',
@@ -235,11 +238,14 @@ export class EmailNotificationService implements NotificationService {
   ): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }> {
     const knex = await this.getTenantKnex();
 
-    const category = await this.tenantScopedTable(knex, 'notification_categories as nc', tenant)
-      .leftJoin('tenant_notification_category_settings as tcs', function() {
-        this.on('tcs.category_id', 'nc.id')
-          .andOn('tcs.tenant', knex.raw('?', [tenant]));
-      })
+    const db = tenantDb(knex, tenant);
+    const categoryQuery = db.table('notification_categories as nc') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(categoryQuery, 'tenant_notification_category_settings as tcs', 'tcs.category_id', 'nc.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const category = await categoryQuery
       .select(
         'nc.id',
         'nc.name',
@@ -256,11 +262,13 @@ export class EmailNotificationService implements NotificationService {
       throw new Error('Category not found');
     }
 
-    const subtypes = await tenantDb(knex, tenant).table('notification_subtypes as ns')
-      .leftJoin('tenant_notification_subtype_settings as tss', function() {
-        this.on('tss.subtype_id', 'ns.id')
-          .andOn('tss.tenant', knex.raw('?', [tenant]));
-      })
+    const subtypesQuery = db.table('notification_subtypes as ns') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(subtypesQuery, 'tenant_notification_subtype_settings as tss', 'tss.subtype_id', 'ns.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const subtypes = await subtypesQuery
       .select(
         'ns.id',
         'ns.category_id',
@@ -283,8 +291,9 @@ export class EmailNotificationService implements NotificationService {
     category: Partial<Pick<NotificationCategory, 'is_enabled' | 'is_default_enabled'>>
   ): Promise<NotificationCategory> {
     const knex = await this.getTenantKnex();
+    const db = tenantDb(knex, tenant);
 
-    await tenantDb(knex, tenant).table('tenant_notification_category_settings')
+    await db.table('tenant_notification_category_settings')
       .insert({
         tenant,
         category_id: id,
@@ -298,11 +307,13 @@ export class EmailNotificationService implements NotificationService {
         updated_at: new Date().toISOString()
       });
 
-    const result = await this.tenantScopedTable(knex, 'notification_categories as nc', tenant)
-      .leftJoin('tenant_notification_category_settings as tcs', function() {
-        this.on('tcs.category_id', 'nc.id')
-          .andOn('tcs.tenant', knex.raw('?', [tenant]));
-      })
+    const query = db.table('notification_categories as nc') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(query, 'tenant_notification_category_settings as tcs', 'tcs.category_id', 'nc.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    const result = await query
       .select(
         'nc.id',
         'nc.name',

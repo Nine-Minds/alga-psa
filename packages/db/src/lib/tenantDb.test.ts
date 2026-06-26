@@ -98,6 +98,20 @@ describe('tenantDb facade', () => {
     );
   });
 
+  it('supports tenant joins against the facade tenant for global roots', () => {
+    const db = tenantDb(knex, 'tenant-1');
+    const query = db.table('notification_categories as nc').select('nc.id');
+
+    db.tenantJoin(query, 'tenant_notification_category_settings as tcs', 'tcs.category_id', 'nc.id', {
+      type: 'left',
+      tenantPredicate: 'literal',
+    });
+
+    expect(query.toString()).toContain(
+      `left join "tenant_notification_category_settings" as "tcs" on "tcs"."category_id" = "nc"."id" and "tcs"."tenant" = 'tenant-1'`
+    );
+  });
+
   it('supports additional join predicates inside tenant joins', () => {
     const db = tenantDb(knex, 'tenant-1');
     const query = db.table('clients as c').select('c.client_id');

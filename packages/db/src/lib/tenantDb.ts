@@ -9,6 +9,7 @@ import { createTenantScopedRootQuery, type TenantScopedQuery } from './tenantSco
 
 export interface TenantJoinOptions {
   type?: 'inner' | 'left';
+  tenantPredicate?: 'root' | 'literal';
   rootTenantColumn?: string;
   on?: (join: Knex.JoinClause) => void;
 }
@@ -123,11 +124,17 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
       this.on(left, '=', right);
 
       if (scope.scope === 'tenant') {
-        this.andOn(
-          `${parsed.rootAlias}.${tenantColumn(scope)}`,
-          '=',
-          options.rootTenantColumn ?? inferRootTenantColumn(parsed, left, right)
-        );
+        const joinedTenantColumn = `${parsed.rootAlias}.${tenantColumn(scope)}`;
+
+        if (options.tenantPredicate === 'literal') {
+          this.andOn(joinedTenantColumn, '=', conn.raw('?', [tenant]));
+        } else {
+          this.andOn(
+            joinedTenantColumn,
+            '=',
+            options.rootTenantColumn ?? inferRootTenantColumn(parsed, left, right)
+          );
+        }
       }
 
       options.on?.(this);

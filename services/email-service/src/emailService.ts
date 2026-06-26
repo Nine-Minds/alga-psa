@@ -1319,15 +1319,16 @@ export class EmailService {
   private async refreshProviders() {
     stateLog('refresh_start', { instanceId: this.instanceId, currentWorkers: this.workers.size });
     const db = await getAdminConnection();
-    const providerRoot = tenantDb(db, IMAP_PROVIDER_DISCOVERY).unscoped(
+    const facade = tenantDb(db, IMAP_PROVIDER_DISCOVERY);
+    const providerRoot = facade.unscoped(
       'email_providers as ep',
       'cross-tenant IMAP provider refresh discovery'
     );
+    facade.tenantJoin(providerRoot, 'imap_email_provider_config as ic', 'ep.id', 'ic.email_provider_id', {
+      rootTenantColumn: 'ep.tenant',
+    });
+
     const rows = await providerRoot
-      .join('imap_email_provider_config as ic', function (this: any) {
-        this.on('ep.id', '=', 'ic.email_provider_id')
-          .andOn('ep.tenant', '=', 'ic.tenant');
-      })
       .where('ep.provider_type', 'imap')
       .andWhere('ep.is_active', true)
       .select(
@@ -1394,7 +1395,7 @@ export class EmailService {
       }
     }
 
-    for (const row of rows as ImapProviderRow[]) {
+    for (const row of rows as unknown as ImapProviderRow[]) {
       if (typeof row.folder_filters === 'string') {
         try {
           row.folder_filters = JSON.parse(row.folder_filters as any) || [];

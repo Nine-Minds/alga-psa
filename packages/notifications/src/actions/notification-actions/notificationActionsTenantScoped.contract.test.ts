@@ -16,12 +16,18 @@ describe('notification actions tenant-scoped query contract', () => {
     expect(source).toContain('tenantScopedTable(trx, "system_email_templates", tenant)');
     expect(source).toContain('db.tenantJoin(systemTemplatesQuery, "notification_subtypes as s"');
     expect(source).toContain('db.tenantJoin(systemTemplatesQuery, "notification_categories as c"');
-    expect(source).toContain("tenantScopedTable(trx, 'notification_categories as nc', tenant)");
-    expect(source).toContain("tenantDb(trx, tenant).table('notification_subtypes as ns')");
+    expect(source).toContain("const query = db.table('notification_categories as nc')");
+    expect(source).toContain("db.tenantJoin(query, 'tenant_notification_category_settings as tcs'");
+    expect(source).toContain("db.tenantJoin(categoryQuery, 'tenant_notification_category_settings as tcs'");
+    expect(source).toContain("db.tenantJoin(subtypesQuery, 'tenant_notification_subtype_settings as tss'");
+    expect(source).toContain("db.tenantJoin(updatedQuery, 'tenant_notification_category_settings as tcs'");
+    expect(source).toContain("db.tenantJoin(updatedQuery, 'tenant_notification_subtype_settings as tss'");
+    expect(source).toContain("tenantPredicate: 'literal'");
 
     expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toMatch(/\btrx\(['"](system_email_templates|notification_categories)(\s+as\s+[^'"]*)?['"]\)/);
     expect(source).not.toMatch(/\.join\(["'](notification_subtypes|notification_categories)(\s+as\s+[^"']*)?["']/);
+    expect(source).not.toMatch(/\.andOn\(['"]t(?:cs|ss)\.tenant['"],\s*trx\.raw\(['"]\?['"],\s*\[tenant\]\)\)/);
     expect(source).not.toMatch(/\btrx\(["'](tenant_email_templates|tenant_notification_category_settings|tenant_notification_subtype_settings|users)["']\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
     expect(source).not.toMatch(/\btrx\(["'](tenant_email_templates|tenant_notification_category_settings|tenant_notification_subtype_settings|users)["']\)\.where\(\{[^}]*tenant/);
   });

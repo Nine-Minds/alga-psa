@@ -21,9 +21,15 @@ describe('internal notification actions tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'internal_notification_subtypes'");
     expect(source).toContain("tenantScopedTable(trx, 'internal_notification_templates', tenant)");
     expect(source).toContain("tenantDb(trx, '__internal_notification_template_name_lookup__')");
+    expect(source).toContain("db.table('internal_notification_categories as inc')");
+    expect(source).toContain("db.table('internal_notification_subtypes as ins')");
+    expect(source).toContain("db.tenantJoin(query, 'tenant_internal_notification_category_settings as tics'");
+    expect(source).toContain("db.tenantJoin(query, 'tenant_internal_notification_subtype_settings as tiss'");
+    expect(source).toContain("tenantPredicate: 'literal'");
 
     expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toMatch(/\btrx\(['"](internal_notification_categories|internal_notification_subtypes|internal_notification_templates)(\s+as\s+[^'"]*)?['"]\)/);
+    expect(source).not.toMatch(/\.andOn\(['"]ti(?:cs|ss)\.tenant['"],\s*trx\.raw\(['"]\?['"],\s*\[tenant\]\)\)/);
     expect(source).not.toMatch(/\btrx\(['"](internal_notifications|user_internal_notification_preferences|tenant_internal_notification_category_settings|tenant_internal_notification_subtype_settings|tenant_settings|user_preferences)['"]\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
     expect(source).not.toMatch(/\.andWhere\('u\.tenant', tenant\)/);
   });
