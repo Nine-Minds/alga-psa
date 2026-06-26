@@ -264,7 +264,7 @@ export async function reconcileWorkflowScheduleRegistration(
       .where('job_id', existing.job_id)
       .select('runner_type')
       .select(knex.raw(`metadata->>'interval' as interval`))
-      .first() as WorkflowScheduleJobRunnerRow | undefined;
+      .first() as unknown as WorkflowScheduleJobRunnerRow | undefined;
     if (job?.runner_type === runnerType && job.interval === existing.cron) {
       return 'converged';
     }

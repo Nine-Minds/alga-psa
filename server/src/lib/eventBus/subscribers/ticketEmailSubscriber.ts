@@ -17,6 +17,7 @@ import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
@@ -66,8 +67,8 @@ async function resolveTicketingFromAddress(
     // optional sender_display_name override. Falls back to undefined when no
     // matching row or no display name is set; callers then use board-name
     // fallback for backward compatibility.
-    const provider = await knex('email_providers')
-      .where({ tenant: tenantId, mailbox: candidate })
+    const provider = await tenantDb(knex, tenantId).table('email_providers')
+      .where({ mailbox: candidate })
       .first(['sender_display_name']);
 
     const senderDisplayName = typeof provider?.sender_display_name === 'string'

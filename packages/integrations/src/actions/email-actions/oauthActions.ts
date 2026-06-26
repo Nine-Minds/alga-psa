@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
 import { resolveMicrosoftConsumerProfileConfig } from '../../lib/microsoftConsumerProfileResolution';
 
@@ -30,7 +30,7 @@ export const initiateEmailOAuth = withAuth(async (
     // If providerId is specified, ensure it belongs to the caller's tenant
     if (params.providerId) {
       const { knex } = await createTenantKnex();
-      const exists = await knex('email_providers')
+      const exists = await tenantDb(knex, tenant).table('email_providers')
         .where({ id: params.providerId, tenant })
         .first();
       if (!exists) {

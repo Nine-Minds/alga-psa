@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { EntraConnectionType, EntraPartnerConnectionRow } from '../../../interfaces/entra.interfaces';
 import { mapEntraPartnerConnectionRow } from './entraRowMappers';
 
@@ -14,7 +15,7 @@ export async function getActiveEntraPartnerConnection(
 ): Promise<EntraPartnerConnectionRow | null> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
-    const row = await knex('entra_partner_connections')
+    const row = await tenantDb(knex, tenant).table('entra_partner_connections')
       .where({ tenant, is_active: true })
       .orderBy('updated_at', 'desc')
       .first();
@@ -37,9 +38,10 @@ export async function updateEntraConnectionValidation(
 ): Promise<void> {
   await runWithTenant(params.tenant, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, params.tenant);
 
     const snapshot = params.snapshot || {};
-    await knex('entra_partner_connections')
+    await db.table('entra_partner_connections')
       .where({
         tenant: params.tenant,
         is_active: true,
@@ -62,7 +64,7 @@ export async function disconnectActiveEntraConnection(
 ): Promise<void> {
   await runWithTenant(params.tenant, async () => {
     const { knex } = await createTenantKnex();
-    await knex('entra_partner_connections')
+    await tenantDb(knex, params.tenant).table('entra_partner_connections')
       .where({
         tenant: params.tenant,
         is_active: true,

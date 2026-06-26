@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { OAuth2Client } from 'google-auth-library';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface GooglePubSubMessage {
   message: {
@@ -121,13 +124,19 @@ export async function handleGoogleWebhook(request: NextRequest) {
 
     if (subscriptionName) {
       try {
-        const cfg = await knex('google_email_provider_config')
-          .select('email_provider_id')
+        const cfg = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+          .unscoped(
+            'google_email_provider_config',
+            'tenant discovery from Google email Pub/Sub subscription'
+          )
+          .select('email_provider_id', 'tenant')
           .where('pubsub_subscription_name', subscriptionName)
           .first();
-        if (cfg?.email_provider_id) {
-          provider = await knex('email_providers')
+        if (cfg?.email_provider_id && cfg?.tenant) {
+          provider = await tenantDb(knex, cfg.tenant)
+            .table('email_providers')
             .where('id', cfg.email_provider_id)
+            .andWhere('tenant', cfg.tenant)
             .andWhere('provider_type', 'google')
             .andWhere('is_active', true)
             .first();
@@ -142,7 +151,8 @@ export async function handleGoogleWebhook(request: NextRequest) {
 
     if (!provider) {
       console.log(`🔍 Looking up Gmail provider by address: ${notification.emailAddress}`);
-      provider = await knex('email_providers')
+      provider = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+        .unscoped('email_providers', 'tenant discovery from Google email webhook mailbox')
         .where('mailbox', notification.emailAddress)
         .andWhere('provider_type', 'google')
         .andWhere('is_active', true)
@@ -157,8 +167,10 @@ export async function handleGoogleWebhook(request: NextRequest) {
 
     console.log(`✅ Found Gmail provider: ${provider.id} for ${notification.emailAddress}`);
 
-    googleConfig = await knex('google_email_provider_config')
+    googleConfig = await tenantDb(knex, provider.tenant)
+      .table('google_email_provider_config')
       .where('email_provider_id', provider.id)
+      .andWhere('tenant', provider.tenant)
       .first();
 
     if (!googleConfig) {

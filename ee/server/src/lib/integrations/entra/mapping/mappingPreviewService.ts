@@ -123,7 +123,7 @@ export async function buildEntraMappingPreview(
     const db = tenantDb(knex, tenant);
 
     const [managedTenantRows, clientRows, inboundDomainRows] = await Promise.all([
-      knex('entra_managed_tenants')
+      db.table('entra_managed_tenants')
         .where({ tenant })
         .orderByRaw('coalesce(display_name, entra_tenant_id) asc')
         .select('*'),

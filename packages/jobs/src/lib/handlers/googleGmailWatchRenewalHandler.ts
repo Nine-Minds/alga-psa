@@ -17,10 +17,11 @@ export async function renewGoogleGmailWatchSubscriptions(
   const knex = await getAdminConnection();
   const threshold = new Date(Date.now() + lookAheadMinutes * 60_000);
 
-  const providers = await tenantDb(knex, tenantId).table('email_providers as ep')
-    .join('google_email_provider_config as gc', function () {
-      this.on('ep.id', '=', 'gc.email_provider_id').andOn('ep.tenant', '=', 'gc.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const providersQuery = tenantDb(knex, tenantId).table('email_providers as ep');
+  db.tenantJoin(providersQuery, 'google_email_provider_config as gc', 'ep.id', 'gc.email_provider_id');
+
+  const providers = await providersQuery
     .where('ep.provider_type', 'google')
     .andWhere('ep.is_active', true)
     .andWhere(function () {

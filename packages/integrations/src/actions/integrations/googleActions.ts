@@ -3,7 +3,7 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';
 const GOOGLE_CLIENT_SECRET_SECRET = 'google_client_secret';
@@ -217,9 +217,10 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
     if (!permitted) return { success: false, error: 'Forbidden' };
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Email providers: mark disconnected + clear tokens
-    await knex('email_providers')
+    await db.table('email_providers')
       .where({ tenant, provider_type: 'google' })
       .update({
         status: 'disconnected',
@@ -227,7 +228,7 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
         updated_at: knex.fn.now()
       });
 
-    await knex('google_email_provider_config')
+    await db.table('google_email_provider_config')
       .where({ tenant })
       .update({
         access_token: null,

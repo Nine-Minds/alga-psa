@@ -25,11 +25,11 @@ export async function GET(): Promise<Response> {
         .where({ is_active: true, mapping_state: 'mapped' })
         .count<{ count: string }>('* as count')
         .first(),
-      knex('entra_managed_tenants')
+      db.table('entra_managed_tenants')
         .where({ tenant: flagGate.tenantId })
         .max<{ last_discovered_at: string | null }>('discovered_at as last_discovered_at')
         .first(),
-      knex('entra_sync_settings')
+      db.table('entra_sync_settings')
         .where({ tenant: flagGate.tenantId })
         .first(['sync_interval_minutes']),
     ]);

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ADD_ONS } from '@alga-psa/types';
 import {
   getMicrosoftProfileReadiness,
@@ -466,7 +466,7 @@ async function tenantHasLegacyMspSsoUsage(knex: any, tenant: string): Promise<bo
 }
 
 async function tenantHasLegacyMicrosoftEmailUsage(knex: any, tenant: string): Promise<boolean> {
-  const provider = await knex('email_providers')
+  const provider = await tenantDb(knex, tenant).table('email_providers')
     .where({ tenant, provider_type: 'microsoft' })
     .first();
 
@@ -1359,8 +1359,9 @@ export const resetMicrosoftProvidersToDisconnected = withAuth(async (
     if (!permitted) return { success: false, error: 'Forbidden' };
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
-    await knex('email_providers')
+    await db.table('email_providers')
       .where({ tenant, provider_type: 'microsoft' })
       .update({
         status: 'disconnected',
@@ -1368,7 +1369,7 @@ export const resetMicrosoftProvidersToDisconnected = withAuth(async (
         updated_at: knex.fn.now(),
       });
 
-    await knex('microsoft_email_provider_config')
+    await db.table('microsoft_email_provider_config')
       .where({ tenant })
       .update({
         access_token: null,

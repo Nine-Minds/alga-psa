@@ -197,7 +197,7 @@ async function findExistingRecurringJob(
     query.whereNotIn('status', ['failed', 'completed']);
   }
   const row = await query;
-  return (row as ExistingRecurringJob | undefined) ?? null;
+  return (row as unknown as ExistingRecurringJob | undefined) ?? null;
 }
 
 /**

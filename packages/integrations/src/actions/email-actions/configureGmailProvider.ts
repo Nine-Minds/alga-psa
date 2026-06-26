@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { setupPubSub } from './setupPubSub';
 import { GmailWebhookService } from '../../services/email/GmailWebhookService';
 import type { GoogleEmailProviderConfig } from '../../components/email/types';
@@ -68,7 +68,8 @@ export async function configureGmailProvider({
       // Check if Pub/Sub was already initialized recently (within 24 hours) unless force=true
       if (!force) {
         const {knex} = await createTenantKnex(tenant);
-        const config = await knex('google_email_provider_config')
+        const db = tenantDb(knex, tenant);
+        const config = await db.table('google_email_provider_config')
           .select('pubsub_initialised_at')
           .where('email_provider_id', providerId)
           .andWhere('tenant', tenant)
@@ -122,7 +123,8 @@ export async function configureGmailProvider({
 
       // Step 2: Update pubsub_initialised_at timestamp
       const { knex } = await createTenantKnex(tenant);
-      await knex('google_email_provider_config')
+      const db = tenantDb(knex, tenant);
+      await db.table('google_email_provider_config')
         .where('email_provider_id', providerId)
         .andWhere('tenant', tenant)
         .update({
@@ -134,13 +136,13 @@ export async function configureGmailProvider({
         console.log(`🔗 Registering Gmail watch subscription for provider ${providerId}`);
         
         // Get both the base provider and Google-specific config
-        const baseProvider = await knex('email_providers')
+        const baseProvider = await db.table('email_providers')
           .select('*')
           .where('id', providerId)
           .andWhere('tenant', tenant)
           .first();
 
-        const googleConfig = await knex('google_email_provider_config')
+        const googleConfig = await db.table('google_email_provider_config')
           .select('*')
           .where('email_provider_id', providerId)
           .andWhere('tenant', tenant)
@@ -209,7 +211,7 @@ export async function configureGmailProvider({
         });
         
         // Update the main provider's last_sync_at to reflect successful configuration
-        await knex('email_providers')
+        await db.table('email_providers')
           .where('id', providerId)
           .andWhere('tenant', tenant)
           .update({

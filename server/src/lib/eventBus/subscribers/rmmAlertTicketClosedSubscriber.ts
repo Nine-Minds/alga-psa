@@ -17,6 +17,14 @@ import { getEventBus } from '../index';
 
 let isRegistered = false;
 
+interface AlertResetRow {
+  alert_id: string;
+  external_alert_id: string;
+  integration_id: string;
+  matched_rule_id: string | null;
+  provider: string;
+}
+
 export async function registerRmmAlertTicketClosedSubscriber(): Promise<void> {
   if (isRegistered) return;
   await getEventBus().subscribe('TICKET_CLOSED', handleTicketClosed, { subscriberId: 'rmmAlertTicketClosed' });
@@ -47,14 +55,14 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
       .andWhere('a.ticket_id', ticketId)
       .whereIn('a.status', ['active', 'acknowledged'])
       .select(
-        'a.alert_id',
-        'a.external_alert_id',
-        'a.integration_id',
-        'a.matched_rule_id',
-        'i.provider'
+        'a.alert_id as alert_id',
+        'a.external_alert_id as external_alert_id',
+        'a.integration_id as integration_id',
+        'a.matched_rule_id as matched_rule_id',
+        'i.provider as provider'
       );
     db.tenantJoin(alertsQuery, 'rmm_integrations as i', 'i.integration_id', 'a.integration_id');
-    const alerts = await alertsQuery;
+    const alerts = (await alertsQuery) as unknown as AlertResetRow[];
     if (alerts.length === 0) return;
 
     for (const alert of alerts) {

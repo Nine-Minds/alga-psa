@@ -51,7 +51,7 @@ export async function confirmEntraMappings(
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
-        const managedTenant = await trx('entra_managed_tenants')
+        const managedTenant = await db.table('entra_managed_tenants')
           .where({
             tenant: params.tenant,
             managed_tenant_id: managedTenantId,
