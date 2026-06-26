@@ -837,7 +837,13 @@
       "missingHelp": "We have not detected this record in DNS yet. Double-check that it exists in your DNS provider with the exact value shown above.",
       "mismatchHelp": "The DNS record exists, but the value does not match what Resend expects.",
       "matchedHelp": "Detected value matches what we expected.",
-      "unknownHelp": "We have not checked DNS yet. Re-check DNS to run verification."
+      "unknownHelp": "We have not checked DNS yet. Re-check DNS to run verification.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Full name",
+      "valueLabel": "Value",
+      "copyHostAriaLabel": "Copy host",
+      "copyFqdnAriaLabel": "Copy full name",
+      "hostHint": "Tip: in your DNS provider, enter only the Host shown above. Most providers (Namecheap, GoDaddy, Cloudflare, and others) add “{{domain}}” automatically. If you paste the full name instead, the domain gets repeated (…{{domain}}.{{domain}}) and the record will never verify."
     }
   },
   "inboundRules": {
