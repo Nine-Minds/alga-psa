@@ -543,7 +543,7 @@
   {
     "id": "F068",
     "description": "[P3] Purchase Orders list/detail screens",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -559,7 +559,7 @@
   {
     "id": "F070",
     "description": "[P3] Vendors management screen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -761,7 +761,7 @@
   {
     "id": "F095",
     "description": "[P4] Sales Orders list/detail screens",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -769,7 +769,7 @@
   {
     "id": "F096",
     "description": "[P4] SO create/edit UI (lines, allocation/invoice mode, fulfillment_type)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -906,7 +906,7 @@
   {
     "id": "F113",
     "description": "[P6] Transfers UI (dispatch/receive, in-transit list)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -1044,7 +1044,7 @@
   {
     "id": "F130",
     "description": "[P6] RMA case list/detail UI (standard + advance)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -1086,7 +1086,7 @@
   {
     "id": "F135",
     "description": "[P7] Low-stock dashboard widget (per location) + report",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -1166,7 +1166,7 @@
   {
     "id": "F145",
     "description": "[P7] Units screen: combined serial/MAC search + status/location/client filters",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -1174,7 +1174,7 @@
   {
     "id": "F146",
     "description": "[P7] Stock screen: on-hand/available by product \u00d7 location with low-stock highlight",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -1199,7 +1199,7 @@
   {
     "id": "F149",
     "description": "[P7] Inventory dashboard composition (assemble widgets)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]

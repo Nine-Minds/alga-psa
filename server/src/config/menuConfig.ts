@@ -146,7 +146,16 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.inventory',
         icon: Package,
         subItems: [
-          { name: 'Stock Locations', translationKey: 'nav.inventoryLocations', icon: MapPin, href: '/msp/inventory/locations' }
+          { name: 'Dashboard', translationKey: 'nav.inventoryDashboard', icon: Gauge, href: '/msp/inventory' },
+          { name: 'Stock', translationKey: 'nav.inventoryStock', icon: Package, href: '/msp/inventory/stock' },
+          { name: 'Stock Locations', translationKey: 'nav.inventoryLocations', icon: MapPin, href: '/msp/inventory/locations' },
+          { name: 'Stock Units', translationKey: 'nav.inventoryUnits', icon: Layers3, href: '/msp/inventory/units' },
+          { name: 'Vendors', translationKey: 'nav.inventoryVendors', icon: Handshake, href: '/msp/inventory/vendors' },
+          { name: 'Purchase Orders', translationKey: 'nav.inventoryPurchaseOrders', icon: Receipt, href: '/msp/inventory/purchase-orders' },
+          { name: 'Sales Orders', translationKey: 'nav.inventorySalesOrders', icon: ReceiptText, href: '/msp/inventory/sales-orders' },
+          { name: 'Transfers', translationKey: 'nav.inventoryTransfers', icon: FileOutput, href: '/msp/inventory/transfers' },
+          { name: 'RMA', translationKey: 'nav.inventoryRma', icon: ListTree, href: '/msp/inventory/rma' },
+          { name: 'Loaners', translationKey: 'nav.inventoryLoaners', icon: Timer, href: '/msp/inventory/loaners' }
         ]
       },
       {

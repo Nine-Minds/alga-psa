@@ -208,6 +208,18 @@ export const getSalesOrder = withAuth(
   },
 );
 
+export const listSalesOrders = withAuth(
+  async (user, { tenant }, _input?: { includeCancelled?: boolean }): Promise<ISalesOrder[]> => {
+    await requireSoPerm(user, 'read');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return (await trx('sales_orders')
+        .where({ tenant })
+        .orderBy('created_at', 'desc')) as ISalesOrder[];
+    });
+  },
+);
+
 export const createSalesOrder = withAuth(
   async (
     user,

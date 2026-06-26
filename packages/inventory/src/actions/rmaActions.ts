@@ -560,6 +560,24 @@ export const closeRma = withAuth(
 // Reports
 // ---------------------------------------------------------------------------
 
+/** List RMA cases, newest first. Optionally filter by status and/or rma_type. */
+export const listRmaCases = withAuth(
+  async (
+    user,
+    { tenant },
+    filter?: { status?: RmaStatus; rma_type?: IRmaCase['rma_type'] },
+  ): Promise<IRmaCase[]> => {
+    await requireInvPerm(user, 'read');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const query = trx('rma_cases').where({ tenant });
+      if (filter?.status) query.andWhere({ status: filter.status });
+      if (filter?.rma_type) query.andWhere({ rma_type: filter.rma_type });
+      return (await query.orderBy('opened_at', 'desc')) as IRmaCase[];
+    });
+  },
+);
+
 export type DeadUnitOwedRow = IRmaCase & { days_remaining: number | null };
 
 /** Dashboard report: dead units owed to vendors, soonest-due first, with days remaining. */
