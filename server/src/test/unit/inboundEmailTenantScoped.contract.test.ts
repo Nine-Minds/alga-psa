@@ -50,6 +50,8 @@ describe('inbound email tenant-scoped query contract', () => {
     expect(section).toContain('const db = tenantDb(knex, tenant);');
     expect(section).toContain("db.table('workflow_definition_versions')");
     expect(section).toContain("db.table('workflow_definitions as workflow_definitions')");
+    expect(section).toContain('db.tenantJoinSubquery(');
+    expect(section).not.toContain('.leftJoin(publishedVersions');
     expect(section).not.toContain("knex('workflow_definition_versions')");
     expect(section).not.toContain("knex('workflow_definitions as workflow_definitions')");
   });

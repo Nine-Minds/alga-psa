@@ -52,6 +52,10 @@ describe('scheduling tenant-scoped query contract', () => {
     expect(timeSheetOperationsSource).toContain("facade.tenantJoin(timeEntrySummaries, 'time_periods as summary_tp'");
     expect(timeSheetOperationsSource).toContain("facade.tenantJoin(timeEntrySummaries, 'time_entries as te'");
     expect(timeSheetOperationsSource).toContain("facade.tenantJoin(periodsQuery, 'time_sheets as ts'");
+    expect(timeSheetOperationsSource).toContain("facade.tenantJoinSubquery(periodsQuery, timeEntrySummaries");
+    expect(timeSheetOperationsSource).toContain("facade.tenantJoinSubquery(periodsQuery, entryCounts");
+    expect(timeSheetOperationsSource).toContain("facade.tenantJoinSubquery(periodsQuery, periodSheetCounts");
+    expect(timeSheetOperationsSource).not.toContain(".leftJoin(timeEntrySummaries");
     expect(timeSheetOperationsSource).not.toContain("'time_sheets.tenant': tenant");
     expect(timeSheetOperationsSource).not.toContain(".where('time_sheets.tenant', tenant)");
   });

@@ -126,6 +126,27 @@ describe('tenantDb facade', () => {
     );
   });
 
+  it('supports tenant joins to derived subqueries', () => {
+    const db = tenantDb(knex, 'tenant-1');
+    const latestLocations = db.table('client_locations as cl')
+      .select('cl.tenant', 'cl.client_id', knex.raw('1 as rn'))
+      .as('latest_locations');
+    const query = db.table('clients as c').select('c.client_id');
+
+    db.tenantJoinSubquery(query, latestLocations, 'c.client_id', 'latest_locations.client_id', {
+      type: 'left',
+      rootTenantColumn: 'c.tenant',
+      joinedTenantColumn: 'latest_locations.tenant',
+      on(join) {
+        join.andOn('latest_locations.rn', '=', knex.raw('1'));
+      },
+    });
+
+    expect(query.toString()).toContain(
+      `left join (select "cl"."tenant", "cl"."client_id", 1 as rn from "client_locations" as "cl" where "cl"."tenant" = 'tenant-1') as "latest_locations" on "c"."client_id" = "latest_locations"."client_id" and "latest_locations"."tenant" = "c"."tenant" and "latest_locations"."rn" = 1`
+    );
+  });
+
   it('requires an explicit reason for unscoped access', () => {
     const db = tenantDb(knex, 'tenant-1');
 

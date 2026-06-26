@@ -779,12 +779,14 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
-      baseQuery = baseQuery
-        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.rn', '=', trx.raw('1'));
-        });
+      scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        joinedTenantColumn: 'cl.tenant',
+        on(join) {
+          join.andOn('cl.rn', '=', trx.raw('1'));
+        },
+      });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -943,12 +945,14 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
-      baseQuery = baseQuery
-        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.rn', '=', trx.raw('1'));
-        });
+      scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        joinedTenantColumn: 'cl.tenant',
+        on(join) {
+          join.andOn('cl.rn', '=', trx.raw('1'));
+        },
+      });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);

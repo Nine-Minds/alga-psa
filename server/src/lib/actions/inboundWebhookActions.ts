@@ -460,11 +460,20 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
     .groupBy('tenant', 'workflow_id')
     .as('published_versions');
 
-  const rows = await db.table('workflow_definitions as workflow_definitions')
-    .leftJoin(publishedVersions, function () {
-      this.on('published_versions.workflow_id', 'workflow_definitions.workflow_id')
-        .andOn('published_versions.tenant', 'workflow_definitions.tenant');
-    })
+  const workflowDefinitionsQuery = db.table('workflow_definitions as workflow_definitions');
+  db.tenantJoinSubquery(
+    workflowDefinitionsQuery,
+    publishedVersions,
+    'published_versions.workflow_id',
+    'workflow_definitions.workflow_id',
+    {
+      type: 'left',
+      rootTenantColumn: 'workflow_definitions.tenant',
+      joinedTenantColumn: 'published_versions.tenant',
+    }
+  );
+
+  const rows = await workflowDefinitionsQuery
     .select(
       'workflow_definitions.workflow_id',
       'workflow_definitions.name',
@@ -472,7 +481,6 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
       'workflow_definitions.status',
       knex.raw('published_versions.published_version as published_version'),
     )
-    .where('workflow_definitions.tenant', tenant)
     .where((query) => {
       query.whereNull('workflow_definitions.is_visible').orWhere('workflow_definitions.is_visible', true);
     })

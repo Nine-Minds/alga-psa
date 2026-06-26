@@ -133,6 +133,10 @@ describe('workflow tenant facade roots', () => {
 
     const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
     expect(metadataSource).toContain("event_catalog: { scope: 'tenant' }");
+
+    const runtimeSource = read('ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts');
+    expect(runtimeSource).toContain('db.tenantJoinSubquery(itemsQuery, versionsSubquery');
+    expect(runtimeSource).not.toContain(".leftJoin(versionsSubquery");
   });
 
   it('routes workflow runtime support tenant roots through tenantDb', () => {

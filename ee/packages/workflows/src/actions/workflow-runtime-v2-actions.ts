@@ -1418,23 +1418,26 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
     }
   };
 
-  const countQuery = tenantDb(knex, tenantId).table('workflow_definitions as wd');
+  const db = tenantDb(knex, tenantId);
+  const countQuery = db.table('workflow_definitions as wd');
   applyFilters(countQuery);
   const countRow = await countQuery.count<{ count: number | string }[]>({ count: '*' }).first();
   const totalItems = countRow?.count == null ? 0 : Number(countRow.count);
 
-  const versionsSubquery = tenantDb(knex, tenantId).table('workflow_definition_versions')
+  const versionsSubquery = db.table('workflow_definition_versions')
     .select('tenant', 'workflow_id')
     .max('version as published_version')
     .groupBy('tenant', 'workflow_id')
     .as('pv');
 
-  const itemsQuery = tenantDb(knex, tenantId).table('workflow_definitions as wd')
+  const itemsQuery = db.table('workflow_definitions as wd')
     .select('wd.*')
-    .select(knex.raw('pv.published_version as published_version'))
-    .leftJoin(versionsSubquery, function () {
-      this.on('pv.workflow_id', 'wd.workflow_id').andOn('pv.tenant', 'wd.tenant');
-    });
+    .select(knex.raw('pv.published_version as published_version'));
+  db.tenantJoinSubquery(itemsQuery, versionsSubquery, 'pv.workflow_id', 'wd.workflow_id', {
+    type: 'left',
+    rootTenantColumn: 'wd.tenant',
+    joinedTenantColumn: 'pv.tenant',
+  });
 
   applyFilters(itemsQuery);
 

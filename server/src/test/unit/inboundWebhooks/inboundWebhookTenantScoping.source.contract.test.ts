@@ -16,11 +16,13 @@ describe('inbound webhook tenant scoping source contracts', () => {
     expect(actionSource).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
     expect(actionSource).toContain('const db = tenantDb(knex, tenant);');
     expect(actionSource).toContain("db.table<InboundWebhookRow>('inbound_webhooks')");
+    expect(actionSource).toContain('db.tenantJoinSubquery(');
     expect(actionSource).toContain('insert({\n            tenant,');
     expect(lookupSource).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(lookupSource).toContain("tenantDb(knex, tenant).table<InboundWebhookConfigLookupRow>('inbound_webhooks')");
 
     expect(actionSource).not.toMatch(/\bknex(?:<[^>]+>)?\(['"]inbound_webhooks['"]\)/);
+    expect(actionSource).not.toContain('.leftJoin(publishedVersions');
     expect(lookupSource).not.toMatch(/\bknex(?:<[^>]+>)?\(['"]inbound_webhooks['"]\)/);
   });
 

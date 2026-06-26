@@ -14,6 +14,13 @@ export interface TenantJoinOptions {
   on?: (join: Knex.JoinClause) => void;
 }
 
+export interface TenantSubqueryJoinOptions {
+  type?: 'inner' | 'left';
+  rootTenantColumn: string;
+  joinedTenantColumn: string;
+  on?: (join: Knex.JoinClause) => void;
+}
+
 type DynamicTenantRow = Record<string, any>;
 
 export interface TenantDb {
@@ -27,6 +34,13 @@ export interface TenantDb {
     left: string,
     right: string,
     options?: TenantJoinOptions
+  ): Knex.QueryBuilder;
+  tenantJoinSubquery(
+    builder: Knex.QueryBuilder,
+    subquery: Knex.QueryBuilder,
+    left: string,
+    right: string,
+    options: TenantSubqueryJoinOptions
   ): Knex.QueryBuilder;
   unscoped<Row extends object = DynamicTenantRow>(
     tableExpression: string,
@@ -147,6 +161,28 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
     return builder.join(tableExpression, joinTenantTable);
   }
 
+  function tenantJoinSubquery(
+    builder: Knex.QueryBuilder,
+    subquery: Knex.QueryBuilder,
+    left: string,
+    right: string,
+    options: TenantSubqueryJoinOptions
+  ): Knex.QueryBuilder {
+    const joinDerivedTenantQuery = function joinDerivedTenantQuery(this: Knex.JoinClause) {
+      this
+        .on(left, '=', right)
+        .andOn(options.joinedTenantColumn, '=', options.rootTenantColumn);
+
+      options.on?.(this);
+    };
+
+    if (options.type === 'left') {
+      return builder.leftJoin(subquery, joinDerivedTenantQuery);
+    }
+
+    return builder.join(subquery, joinDerivedTenantQuery);
+  }
+
   function unscoped<Row extends object = DynamicTenantRow>(
     tableExpression: string,
     reason: string
@@ -164,6 +200,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
     scoped,
     subquery: table,
     tenantJoin,
+    tenantJoinSubquery,
     unscoped,
   };
 }

@@ -266,19 +266,22 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
       join.andOn('ts.user_id', '=', db.raw('?', [validatedParams.userId]));
     },
   });
+  facade.tenantJoinSubquery(periodsQuery, timeEntrySummaries, 'tp.period_id', 'tes.period_id', {
+    type: 'left',
+    rootTenantColumn: 'tp.tenant',
+    joinedTenantColumn: 'tes.tenant',
+  });
+  facade.tenantJoinSubquery(periodsQuery, entryCounts, 'ts.id', 'ec.time_sheet_id', {
+    type: 'left',
+    rootTenantColumn: 'tp.tenant',
+    joinedTenantColumn: 'ec.tenant',
+  });
+  facade.tenantJoinSubquery(periodsQuery, periodSheetCounts, 'tp.period_id', 'psc.period_id', {
+    type: 'left',
+    rootTenantColumn: 'tp.tenant',
+    joinedTenantColumn: 'psc.tenant',
+  });
   periodsQuery
-    .leftJoin(timeEntrySummaries, function() {
-      this.on('tp.period_id', '=', 'tes.period_id')
-          .andOn('tp.tenant', '=', 'tes.tenant');
-    })
-    .leftJoin(entryCounts, function() {
-      this.on('ts.id', '=', 'ec.time_sheet_id')
-          .andOn('tp.tenant', '=', 'ec.tenant');
-    })
-    .leftJoin(periodSheetCounts, function() {
-      this.on('tp.period_id', '=', 'psc.period_id')
-          .andOn('tp.tenant', '=', 'psc.tenant');
-    })
     .orderBy('tp.start_date', 'desc')
     .select(
       'tp.*',
