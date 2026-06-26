@@ -234,9 +234,7 @@ export const buildActorMap = async (
   const ids = Array.from(new Set(userIds.filter(Boolean)));
   if (!ids.length) return new Map();
 
-  const query = tenant
-    ? workflowTenantTable<ActorUserRow>(knex, tenant, 'users').whereIn('user_id', ids)
-    : knex<ActorUserRow>('users').whereIn('user_id', ids);
+  const query = workflowTenantTable<ActorUserRow>(knex, tenant, 'users').whereIn('user_id', ids);
   const users = await query.select<ActorUserRow[]>('user_id', 'first_name', 'last_name', 'email');
 
   const map = new Map<string, string>();

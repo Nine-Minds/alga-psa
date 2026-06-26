@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 
 import { ceIndexers } from '@alga-psa/search/indexers';
 import { upsertSearchDoc } from '@alga-psa/search/upsert';
+import { tenantDb } from '@alga-psa/db';
 import type { EntityIndexer } from '@alga-psa/types';
 
 async function loadAllIndexers(): Promise<EntityIndexer[]> {
@@ -30,6 +31,8 @@ const require = createRequire(import.meta.url);
 const knexfilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../knexfile.cjs');
 const knexConfig = require(knexfilePath);
 const BACKFILL_BATCH_SIZE = 500;
+const SEARCH_BACKFILL_TENANT_ENUMERATION = '__search_backfill_tenant_enumeration__';
+const SEARCH_BACKFILL_TENANT_ENUMERATION_REASON = 'Search backfill enumerates tenants when no specific tenant is requested';
 
 interface TenantRecord {
   tenant: string;
@@ -75,7 +78,8 @@ export async function resolveBackfillTenants(
     return [options.tenant];
   }
 
-  const rows = await knex<TenantRecord>('tenants')
+  const rows = await tenantDb(knex, SEARCH_BACKFILL_TENANT_ENUMERATION)
+    .unscoped<TenantRecord>('tenants', SEARCH_BACKFILL_TENANT_ENUMERATION_REASON)
     .select('tenant')
     .orderBy('tenant', 'asc');
 

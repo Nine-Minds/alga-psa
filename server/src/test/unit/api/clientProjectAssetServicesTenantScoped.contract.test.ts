@@ -43,5 +43,7 @@ describe('client, project, and asset API services tenant-scoped query contract',
 
     expect(assetSource).toContain("db.tenantJoin(query, 'tickets as t'");
     expect(assetSource).toContain('scopedTable(knex, context.tenant, tableName)');
+    expect(assetSource).not.toContain('knex(this.tableName)');
+    expect(assetSource).not.toContain('knex(tableName).insert');
   });
 });

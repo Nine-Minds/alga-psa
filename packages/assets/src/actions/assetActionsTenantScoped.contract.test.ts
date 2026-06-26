@@ -32,6 +32,7 @@ describe('asset action helper tenant-scoped query contract', () => {
         expect(helperSection).toContain("tenantScopedTable(trx, 'assets', tenant)");
         expect(helperSection).toContain("tenantScopedTable(knex, 'workstation_assets', tenant)");
         expect(helperSection).toContain("tenantScopedTable(knex, table, tenant)");
+        expect(helperSection).not.toContain('await knex(table).insert');
         expect(helperSection).not.toContain('.where({ tenant, user_id: user.user_id');
         expect(helperSection).not.toContain('.where({ tenant, reports_to: user.user_id');
         expect(helperSection).not.toContain('.where({ tenant })');

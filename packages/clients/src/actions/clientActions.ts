@@ -430,7 +430,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     }
 
     const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await trx<IClient>('clients')
+      const [created] = await tenantScopedTable(trx, 'clients', tenant)
         .insert({
           ...clientData,
           tenant,

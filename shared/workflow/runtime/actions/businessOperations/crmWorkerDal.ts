@@ -40,6 +40,14 @@ function tenantScopedTable(
   return tenantDb(knexOrTrx, tenant).table(table);
 }
 
+const TENANTLESS_TAX_CHILD_REASON = 'Tenant isolation is inherited from already tenant-scoped tax parent rows';
+
+type TaxThresholdRow = {
+  min_amount: number | string;
+  max_amount?: number | string | null;
+  rate: number | string;
+};
+
 const createQuoteBaseSchema = z.object({
   client_id: z.string().uuid().optional().nullable(),
   contact_id: z.string().uuid().optional().nullable(),
@@ -215,12 +223,14 @@ function calculateThresholdBasedTax(
 
 async function getApplicableTaxHoliday(
   knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
   taxRateId: string,
   date: string
 ): Promise<Record<string, unknown> | undefined> {
   const currentDate = new Date(date);
   // tax_holidays has no tenant column; tax_rate_id (already tenant-scoped) gates isolation.
-  const holidays = await knexOrTrx('tax_holidays')
+  const holidays = await tenantDb(knexOrTrx, tenant)
+    .unscoped('tax_holidays', TENANTLESS_TAX_CHILD_REASON)
     .where({ tax_rate_id: taxRateId })
     .orderBy('start_date');
 
@@ -231,11 +241,12 @@ async function getApplicableTaxHoliday(
 
 async function calculateComponentTax(
   knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
   component: Record<string, unknown>,
   amount: number,
   date: string
 ): Promise<number> {
-  const holiday = await getApplicableTaxHoliday(knexOrTrx, String(component.tax_rate_id), date);
+  const holiday = await getApplicableTaxHoliday(knexOrTrx, tenant, String(component.tax_rate_id), date);
   if (holiday) return 0;
   return Math.ceil((amount * toNumber(component.rate)) / 100);
 }
@@ -334,7 +345,7 @@ async function calculateTaxWithConnection(
     let taxableAmount = netAmount;
     for (const component of components) {
       if (!isDateApplicable(component, date)) continue;
-      const componentTax = await calculateComponentTax(knexOrTrx, component, taxableAmount, date);
+      const componentTax = await calculateComponentTax(knexOrTrx, tenant, component, taxableAmount, date);
       totalTaxAmount += componentTax;
       if (component.is_compound) taxableAmount += componentTax;
     }
@@ -346,8 +357,9 @@ async function calculateTaxWithConnection(
   }
 
   // tax_rate_thresholds has no tenant column; tax_rate_id (already tenant-scoped above) gates isolation.
-  const thresholds = await knexOrTrx('tax_rate_thresholds')
-    .where({ tax_rate_id: taxRate.tax_rate_id })
+  const thresholds = await tenantDb(knexOrTrx, tenant)
+    .unscoped<TaxThresholdRow>('tax_rate_thresholds', TENANTLESS_TAX_CHILD_REASON)
+    .where('tax_rate_id', taxRate.tax_rate_id)
     .orderBy('min_amount');
 
   if (thresholds.length > 0) {

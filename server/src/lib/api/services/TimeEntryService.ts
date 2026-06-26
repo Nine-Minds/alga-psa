@@ -329,7 +329,7 @@ export class TimeEntryService extends BaseService<any> {
       Object.assign(timeEntryData, billingInfo);
     }
 
-    const [timeEntry] = await knex(this.tableName)
+    const [timeEntry] = await this.buildTenantScopedQuery(knex, context)
       .insert(timeEntryData)
       .returning('*');
 
@@ -577,7 +577,7 @@ export class TimeEntryService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const [session] = await knex(this.tableName)
+    const [session] = await this.buildTenantScopedQuery(knex, context)
       .insert(timeEntryData)
       .returning('*');
 

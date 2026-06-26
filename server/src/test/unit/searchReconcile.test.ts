@@ -199,6 +199,7 @@ describe('search reconciliation', () => {
     expect(initializeScheduledJobs).toContain("const cron = '0 6 * * *';");
     expect(initializeScheduledJobs).toContain('scheduleSearchReconcileJob(tenantId, cron)');
     expect(reconcileHandler).toContain("SEARCH_RECONCILE_JOB_NAME = 'search:reconcile'");
+    expect(reconcileHandler).toContain(".unscoped<TenantRecord>('tenants', SEARCH_RECONCILE_TENANT_ENUMERATION_REASON)");
     expect(jobsIndex).toContain('scheduleRecurringJob<SearchReconcileJobData>');
   });
 

@@ -8,6 +8,7 @@ const projectTaskLookupSource = readFileSync(resolve(__dirname, './projectTaskLo
 const capacityThresholdSource = readFileSync(resolve(__dirname, '../lib/capacityThresholdWorkflowEvents.ts'), 'utf8');
 const timeSheetOperationsSource = readFileSync(resolve(__dirname, './timeSheetOperations.ts'), 'utf8');
 const workItemActionsSource = readFileSync(resolve(__dirname, './workItemActions.ts'), 'utf8');
+const metadataSource = readFileSync(resolve(__dirname, '../../../db/src/lib/tenantTableMetadata.ts'), 'utf8');
 
 describe('scheduling tenant-scoped query contract', () => {
   it('uses tenantDb roots for time period models and settings actions', () => {
@@ -38,6 +39,7 @@ describe('scheduling tenant-scoped query contract', () => {
     expect(capacityThresholdSource).toContain("facade.tenantJoin(capacityQuery, 'users as u'");
     expect(capacityThresholdSource).toContain("facade.tenantJoin(bookedQuery, 'schedule_entries as se'");
     expect(capacityThresholdSource).toContain("facade.tenantJoin(bookedQuery, 'team_members as tm'");
+    expect(metadataSource).toContain("resources: { scope: 'tenant' }");
     expect(capacityThresholdSource).not.toContain(".leftJoin('resources as r'");
   });
 

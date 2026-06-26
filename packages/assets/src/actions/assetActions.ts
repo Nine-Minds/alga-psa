@@ -583,7 +583,7 @@ async function upsertExtensionData(
             .where({ asset_id })
             .update(extensionFields);
     } else {
-        await knex(table).insert({ tenant, asset_id, ...extensionFields });
+        await tenantScopedTable(knex, table, tenant).insert({ tenant, asset_id, ...extensionFields });
     }
 }
 

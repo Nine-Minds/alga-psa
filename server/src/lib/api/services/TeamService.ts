@@ -157,16 +157,10 @@ export class TeamService extends BaseService<ITeam> {
       // Select fields with member count
       dataQuery = dataQuery.select(
         't.*',
-        knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
-        knex.raw(`(
-          SELECT COUNT(*)
-          FROM team_members tm
-          JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-          WHERE tm.team_id = t.team_id
-          AND tm.tenant = t.tenant
-          AND u.is_inactive = false
-        ) as member_count`)
-      );
+        knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name')
+      ).select({
+        member_count: this.activeMemberCountSubquery(knex, context.tenant, 't'),
+      });
   
       // Execute queries
       const [teams, [{ count }]] = await Promise.all([
@@ -836,16 +830,10 @@ export class TeamService extends BaseService<ITeam> {
         't.team_name',
         't.manager_id',
         knex.raw('COALESCE(m.first_name || \' \' || m.last_name, m.username) as manager_name'),
-        'th.parent_team_id',
-        knex.raw(`(
-          SELECT COUNT(*)
-          FROM team_members tm
-          JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-          WHERE tm.team_id = t.team_id
-          AND tm.tenant = t.tenant
-          AND u.is_inactive = false
-        ) as member_count`)
-      );
+        'th.parent_team_id'
+      ).select({
+        member_count: this.activeMemberCountSubquery(knex, context.tenant, 't'),
+      });
 
     // Build hierarchy structure
     const teamMap = new Map<string, TeamHierarchyNode>();
@@ -1447,22 +1435,8 @@ export class TeamService extends BaseService<ITeam> {
         .select(
           knex.raw('COUNT(*) as total_teams'),
           knex.raw('COUNT(CASE WHEN manager_id IS NOT NULL THEN 1 END) as teams_with_managers'),
-          knex.raw(`AVG((
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = teams.team_id
-            AND tm.tenant = teams.tenant
-            AND u.is_inactive = false
-          )) as average_team_size`),
-          knex.raw(`SUM((
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = teams.team_id
-            AND tm.tenant = teams.tenant
-            AND u.is_inactive = false
-          )) as total_members`)
+          knex.raw('AVG((?)) as average_team_size', [this.activeMemberCountSubquery(knex, context.tenant, 'teams')]),
+          knex.raw('SUM((?)) as total_members', [this.activeMemberCountSubquery(knex, context.tenant, 'teams')])
         )
         .first(),
 
@@ -1530,6 +1504,19 @@ export class TeamService extends BaseService<ITeam> {
   /**
    * Apply team-specific filters
    */
+  private activeMemberCountSubquery(knex: Knex, tenant: string, teamAlias: string): Knex.QueryBuilder {
+    const scopedDb = tenantDb(knex, tenant);
+    const subquery = scopedDb.table('team_members as tm')
+      .count('*')
+      .whereRaw('?? = ??', ['tm.team_id', `${teamAlias}.team_id`])
+      .where('u.is_inactive', false);
+
+    scopedDb.tenantJoin(subquery, 'users as u', 'tm.user_id', 'u.user_id');
+    scopedDb.tenantWhereColumn(subquery, 'tm.tenant', `${teamAlias}.tenant`);
+
+    return subquery;
+  }
+
   private applyTeamFilters(query: Knex.QueryBuilder, filters: TeamFilterData, knex: Knex, tenant: string, hasManagerJoin: boolean = false): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
     Object.entries(filters).forEach(([key, value]) => {
@@ -1550,24 +1537,10 @@ export class TeamService extends BaseService<ITeam> {
           }
           break;
         case 'member_count_min':
-          query.whereRaw(`(
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = t.team_id
-            AND tm.tenant = t.tenant
-            AND u.is_inactive = false
-          ) >= ?`, [value]);
+          query.whereRaw('(?) >= ?', [this.activeMemberCountSubquery(knex, tenant, 't'), value]);
           break;
         case 'member_count_max':
-          query.whereRaw(`(
-            SELECT COUNT(*)
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-            WHERE tm.team_id = t.team_id
-            AND tm.tenant = t.tenant
-            AND u.is_inactive = false
-          ) <= ?`, [value]);
+          query.whereRaw('(?) <= ?', [this.activeMemberCountSubquery(knex, tenant, 't'), value]);
           break;
         case 'project_id':
           query.whereExists(

@@ -14,6 +14,10 @@ describe('credit and search job handlers tenant-scoped query contract', () => {
       const source = readFileSync(resolve(__dirname, file), 'utf8');
       expect(source).toContain('tenantDb');
       expect(source).not.toContain('createTenantScopedQuery');
+      if (file === 'searchReconcileHandler.ts') {
+        expect(source).toContain(".unscoped<TenantRecord>('tenants', SEARCH_RECONCILE_TENANT_ENUMERATION_REASON)");
+        expect(source).not.toContain("knex<TenantRecord>('tenants')");
+      }
       expect(source).not.toContain(".where('tenant', tenant)");
       expect(source).not.toContain(".where('tenant', tenantId)");
       expect(source).not.toMatch(/\.where\(\{\s*tenant[\s,:}]/);

@@ -36,7 +36,9 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(updateSection).not.toContain("trx<IClient>('clients')");
 
     expect(createSection).toContain("tenantScopedTable(knex, 'default_billing_settings', tenant)");
+    expect(createSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
     expect(createSection).not.toContain("knex('default_billing_settings')");
+    expect(createSection).not.toContain("trx<IClient>('clients')");
     expect(createSection).not.toContain(".where({ tenant })");
   });
 

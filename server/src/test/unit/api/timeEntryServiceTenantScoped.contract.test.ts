@@ -15,6 +15,7 @@ describe('time entry API service tenant-scoped query contract', () => {
 
     expect(source).toContain('this.buildTenantScopedQuery(knex, context)');
     expect(source).toContain('tenantDb(');
+    expect(source).not.toContain('knex(this.tableName)');
     for (const table of [
       'tickets',
       'time_sheets',

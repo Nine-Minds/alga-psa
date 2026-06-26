@@ -251,7 +251,7 @@ export class AssetService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const [asset] = await knex(this.tableName)
+    const [asset] = await scopedTable(knex, context.tenant, this.tableName)
       .insert(assetRecord)
       .returning('*');
 
@@ -418,7 +418,7 @@ export class AssetService extends BaseService<any> {
         .update(extensionData);
     } else {
       extensionData.created_at = new Date();
-      await knex(tableName).insert(extensionData);
+      await scopedTable(knex, context.tenant, tableName).insert(extensionData);
     }
   }
 

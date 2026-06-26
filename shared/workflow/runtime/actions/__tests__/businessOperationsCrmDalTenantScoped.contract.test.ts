@@ -31,9 +31,13 @@ describe('CRM workflow DAL tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'quotes')");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'quote_items')");
     expect(section).toContain("tenantScopedTable(knexOrTrx, tenant, 'client_locations')");
+    expect(source).toContain(".unscoped('tax_holidays', TENANTLESS_TAX_CHILD_REASON)");
+    expect(section).toContain(".unscoped<TaxThresholdRow>('tax_rate_thresholds', TENANTLESS_TAX_CHILD_REASON)");
 
     expect(section).not.toMatch(/\.where\(\{\s*tenant[,}]/);
     expect(section).not.toMatch(/\.where\(\{\s*'[^']*\.tenant':\s*tenant/);
     expect(section).not.toMatch(/\.where\(['"]tenant['"],\s*tenant\)/);
+    expect(section).not.toContain("knexOrTrx('tax_holidays')");
+    expect(section).not.toContain("knexOrTrx('tax_rate_thresholds')");
   });
 });

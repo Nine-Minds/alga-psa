@@ -617,9 +617,9 @@ async function fetchActivityDetailRow(
   db.tenantJoin(query, 'users as u', 'i.user_id', 'u.user_id', { type: 'left', rootTenantColumn: 'i.tenant' });
   db.tenantJoin(query, 'statuses as st', 'i.status_id', 'st.status_id', { type: 'left', rootTenantColumn: 'i.tenant' });
   db.tenantJoin(query, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'system_interaction_types as sit', 'i.type_id', 'sit.type_id', { type: 'left' });
 
   return await query
-    .leftJoin('system_interaction_types as sit', 'i.type_id', 'sit.type_id')
     .where('i.interaction_id', activityId)
     .select(
       'i.interaction_id',
@@ -2337,8 +2337,8 @@ export function registerCrmActions(): void {
         db.tenantJoin(query, 'users as u', 'i.user_id', 'u.user_id', { type: 'left', rootTenantColumn: 'i.tenant' });
         db.tenantJoin(query, 'statuses as st', 'i.status_id', 'st.status_id', { type: 'left', rootTenantColumn: 'i.tenant' });
         db.tenantJoin(query, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+        db.tenantJoin(query, 'system_interaction_types as sit', 'i.type_id', 'sit.type_id', { type: 'left' });
         query
-          .leftJoin('system_interaction_types as sit', 'i.type_id', 'sit.type_id')
           .select(
             'i.interaction_id',
             'i.type_id',

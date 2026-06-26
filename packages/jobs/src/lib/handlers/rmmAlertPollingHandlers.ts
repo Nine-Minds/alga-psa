@@ -41,6 +41,8 @@ export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 export const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 
 const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
+const RMM_POLLING_RECONCILE_TENANT = '__rmm_polling_reconcile__';
+const RMM_POLLING_RECONCILE_REASON = 'RMM polling reconciler scans integration schedules across tenants';
 
 export interface RmmAlertReconciliationJobData extends Record<string, unknown> {
   tenantId: string;
@@ -210,7 +212,8 @@ export async function reconcileRmmPollingSchedules(
 ): Promise<{ ensured: number; cancelled: number }> {
   await ensureFetchersRegistered();
   const adminKnex = await getAdminConnection();
-  const integrations = await adminKnex('rmm_integrations')
+  const integrations = await tenantDb(adminKnex, RMM_POLLING_RECONCILE_TENANT)
+    .unscoped('rmm_integrations', RMM_POLLING_RECONCILE_REASON)
     .whereIn('provider', [...RMM_ALERT_POLLING_PROVIDERS, 'huntress'])
     .select('tenant', 'integration_id', 'provider', 'is_active', 'settings');
 

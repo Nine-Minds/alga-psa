@@ -64,6 +64,7 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(source).toContain('function tenantJoin(');
     expect(helperSection).toContain("tenantJoin(tx, taskQuery, 'project_phases as pp'");
     expect(helperSection).toContain("tenantJoin(tx, query, 'statuses as s'");
+    expect(helperSection).toContain("tenantJoin(tx, query, 'standard_statuses as ss'");
     expect(source).not.toContain('createTenantScopedQuery');
     expect(helperSection).toContain("tenantScopedTable(tx, 'projects')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'project_phases')");
@@ -76,6 +77,7 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(helperSection).not.toContain("tx.trx('project_tasks as pt')");
     expect(helperSection).not.toContain("tx.trx('tickets').where({ tenant: tx.tenantId");
     expect(helperSection).not.toContain("tx.trx('project_status_mappings')");
+    expect(helperSection).not.toContain(".leftJoin('standard_statuses as ss'");
     expect(helperSection).not.toContain(".where({ 'psm.tenant': tx.tenantId");
     expect(helperSection).not.toContain(".where({ 'pt.tenant': tx.tenantId");
   });

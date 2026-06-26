@@ -23,8 +23,11 @@ describe('team service core tenant-scoped query contract', () => {
     expect(section).toContain(".table('teams as t')");
     expect(section).toContain(".table('team_members')");
     expect(section).toContain(".table('users')");
+    expect(section).toContain('activeMemberCountSubquery(knex, context.tenant, \'t\')');
+    expect(source).toContain("scopedDb.tenantWhereColumn(subquery, 'tm.tenant', `${teamAlias}.tenant`)");
 
     expect(section).not.toMatch(/knex\('(?:teams as t|team_members|users)'\)\s*\./);
+    expect(section).not.toContain('JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant');
     expect(section).not.toMatch(/\.where\('(?:t\.)?tenant', (?:context|team)\.tenant\)/);
     expect(section).not.toMatch(/\.where\(\{[^}]*tenant: (?:context|team)\.tenant/);
   });

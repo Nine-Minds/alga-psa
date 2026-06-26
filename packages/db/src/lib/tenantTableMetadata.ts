@@ -277,6 +277,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   quotes: { scope: 'tenant' },
   quote_items: { scope: 'tenant' },
   recurring_service_periods: { scope: 'tenant' },
+  resources: { scope: 'tenant' },
   roles: { scope: 'tenant' },
   role_permissions: { scope: 'tenant' },
   rmm_alert_rules: { scope: 'tenant' },

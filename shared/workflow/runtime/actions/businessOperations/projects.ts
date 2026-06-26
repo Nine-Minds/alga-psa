@@ -586,11 +586,9 @@ async function getProjectStatusMappingDetails(
 ): Promise<ProjectStatusMappingDetails | null> {
   const query = tenantScopedTable(tx, 'project_status_mappings as psm');
   tenantJoin(tx, query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  tenantJoin(tx, query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
 
   const row = await query
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
     .where('psm.project_status_mapping_id', projectStatusMappingId)
     .select(
       'psm.*',
@@ -621,10 +619,8 @@ async function getScopedProjectStatusMappings(
 ): Promise<ProjectStatusMappingDetails[]> {
   let query = tenantScopedTable(tx, 'project_status_mappings as psm');
   tenantJoin(tx, query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  tenantJoin(tx, query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   query = query
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
     .where('psm.project_id', projectId);
 
   query = phaseId ? query.andWhere('psm.phase_id', phaseId) : query.whereNull('psm.phase_id');

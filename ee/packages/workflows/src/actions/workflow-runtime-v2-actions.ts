@@ -101,6 +101,7 @@ import {
   buildCsv as buildWorkflowAuditCsv,
   buildWorkflowAuditCsvRows
 } from './workflow-audit-csv';
+import { workflowTenantDb, workflowTenantTable } from '../lib/workflowTenantDb';
 
 const throwHttpError = (status: number, message: string, details?: unknown): never => {
   const error = new Error(message) as Error & { status?: number; details?: unknown };
@@ -1251,27 +1252,6 @@ const requireWorkflowPermission = async (
 const hasWorkflowScheduleTable = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex']
 ): Promise<boolean> => knex.schema.hasTable('tenant_workflow_schedule');
-
-const WORKFLOW_ALL_TENANT_QUERY_TENANT = '__workflow_all_tenant_query__';
-const WORKFLOW_ALL_TENANT_QUERY_REASON = 'Workflow admin/all-tenant query keeps tenant equality as correlated predicates';
-
-function workflowTenantDb(
-  conn: Knex | Knex.Transaction,
-  tenant: string | null | undefined
-): ReturnType<typeof tenantDb> {
-  return tenantDb(conn, tenant ?? WORKFLOW_ALL_TENANT_QUERY_TENANT);
-}
-
-function workflowTenantTable(
-  conn: Knex | Knex.Transaction,
-  tenant: string | null | undefined,
-  table: string
-): Knex.QueryBuilder<any, any> {
-  const db = workflowTenantDb(conn, tenant);
-  return tenant
-    ? db.table(table) as Knex.QueryBuilder<any, any>
-    : db.unscoped(table, WORKFLOW_ALL_TENANT_QUERY_REASON) as Knex.QueryBuilder<any, any>;
-}
 
 const loadWorkflowScheduleStateMap = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],

@@ -41,7 +41,9 @@ describe('CRM workflow action tenant-scoped query contract', () => {
 
     expect(helperSection).toContain("tenantScopedTable(tx, 'interaction_types')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'statuses')");
-    expect(helperSection).toContain("tenantScopedTableForTenant(trx, tenantId, 'interactions as i')");
+    expect(helperSection).toContain("const db = tenantDb(trx, tenantId);");
+    expect(helperSection).toContain("const query = db.table('interactions as i');");
+    expect(helperSection).toContain("db.tenantJoin(query, 'system_interaction_types as sit'");
     expect(helperSection).toContain("tenantScopedTableForTenant(trx, tenantId, 'contacts')");
     expect(helperSection).toContain("tenantScopedTableForTenant(trx, tenantId, 'clients')");
     expect(helperSection).toContain("tenantScopedTableForTenant(trx, tenantId, 'user_roles')");
@@ -68,11 +70,12 @@ describe('CRM workflow action tenant-scoped query contract', () => {
     expect(actionSection).toContain("tenantScopedTable(tx, 'tag_mappings')");
     expect(actionSection).toContain("db.tenantJoin(query, 'clients as c'");
     expect(actionSection).toContain("db.tenantJoin(query, 'interaction_types as it'");
+    expect(actionSection).toContain("db.tenantJoin(query, 'system_interaction_types as sit'");
     expect(actionSection).not.toMatch(directRootPattern);
     expect(actionSection).not.toMatch(/\.where\(\{\s*tenant\s*:/);
     expect(actionSection).not.toMatch(/\.(?:where|andWhere)\(\s*['`][^'`]*tenant['`]/);
 
-    expect(actionSection).toContain("tenantScopedTable(tx, 'system_interaction_types')");
+    expect(actionSection).not.toContain("leftJoin('system_interaction_types as sit'");
     expect(actionSection).not.toContain("tx.trx('system_interaction_types')");
   });
 

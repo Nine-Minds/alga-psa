@@ -8,6 +8,8 @@ import type { EntityIndexer } from '@alga-psa/types';
 
 export const SEARCH_RECONCILE_JOB_NAME = 'search:reconcile';
 const RECONCILE_BATCH_SIZE = 500;
+const SEARCH_RECONCILE_TENANT_ENUMERATION = '__search_reconcile_tenant_enumeration__';
+const SEARCH_RECONCILE_TENANT_ENUMERATION_REASON = 'Search reconcile job enumerates tenants when no specific tenant is requested';
 
 export interface SearchReconcileJobData extends Record<string, unknown> {
   tenantId?: string;
@@ -35,7 +37,8 @@ async function resolveReconcileTenants(data: SearchReconcileJobData): Promise<st
   }
 
   const knex = await getConnection(null);
-  const rows = await knex<TenantRecord>('tenants')
+  const rows = await tenantDb(knex, SEARCH_RECONCILE_TENANT_ENUMERATION)
+    .unscoped<TenantRecord>('tenants', SEARCH_RECONCILE_TENANT_ENUMERATION_REASON)
     .select('tenant')
     .orderBy('tenant', 'asc');
 

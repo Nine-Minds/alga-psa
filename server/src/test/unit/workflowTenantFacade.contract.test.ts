@@ -79,7 +79,9 @@ describe('workflow tenant facade roots', () => {
   it('routes workflow integration and scheduling roots through the workflow tenant facade', () => {
     const helperSource = read('ee/packages/workflows/src/lib/workflowTenantDb.ts');
     expect(helperSource).toContain("import { tenantDb } from '@alga-psa/db'");
-    expect(helperSource).toContain('tenantDb(conn, tenantId).table<Row>(table)');
+    expect(helperSource).toContain('export function workflowTenantDb(');
+    expect(helperSource).toContain('tenantDb(conn, tenantId ?? WORKFLOW_ALL_TENANT_QUERY_TENANT)');
+    expect(helperSource).toContain('db.unscoped(table, WORKFLOW_ALL_TENANT_QUERY_REASON)');
 
     const files = [
       'ee/packages/workflows/src/runtime/integrationModules.ts',
