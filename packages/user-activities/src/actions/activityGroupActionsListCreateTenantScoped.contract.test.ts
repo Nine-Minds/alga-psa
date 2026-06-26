@@ -24,7 +24,7 @@ describe('activity group list/create tenant-scoped query contract', () => {
     expect(listSection).toContain(".table('user_activity_groups");
     expect(listSection).toContain(".table('user_activity_group_items");
     expect(createSection).toContain(".table('user_activity_groups");
-    expect(createSection).toContain("const [created] = await trx('user_activity_groups')");
+    expect(createSection).toContain("const [created] = await tenantDb(trx, tenant).table('user_activity_groups')");
 
     expect(listSection).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(listSection).not.toMatch(/trx\('user_activity_groups'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);

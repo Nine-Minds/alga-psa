@@ -33,7 +33,8 @@ describe('temporary API key service tenant-scoped query contract', () => {
     const cleanupSection = sectionBetween('static async cleanupExpiredAiKeys', '\n}\n');
 
     expect(cleanupSection).toContain('withAdminTransaction');
-    expect(cleanupSection).toContain("trx('api_keys')");
+    expect(cleanupSection).toContain("tenantDb(trx, '__temporary_api_key_cleanup__')");
+    expect(cleanupSection).toContain(".unscoped('api_keys', 'temporary API key cleanup sweeps expired AI session keys across all tenants')");
     expect(cleanupSection).toContain('Intentional admin-wide sweep');
   });
 });

@@ -1,11 +1,12 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) { // Changed to async function
-    const tenantInfo = await knex('tenants').select('tenant').first();
-    if (!tenantInfo) return;
-    const tenantId = tenantInfo.tenant;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+    const { tenantId, db } = context;
 
     // Fetch the relevant service_type_ids for this tenant
-    const serviceTypes = await knex('service_types')
-        .where({ tenant: tenantId }) // Assuming tenant column is tenant based on ensure_tenant_service_types migration
+    const serviceTypes = await db.table('service_types')
         .whereIn('name', ['Hourly Time', 'Fixed Price', 'Usage Based']) // Fetch only the types used in this seed
         .select('id', 'name');
 
@@ -46,15 +47,14 @@ exports.seed = async function (knex) { // Changed to async function
 
             // Insert missing types, ignoring conflicts just in case
             if (typesToInsert.length > 0) {
-                await knex('service_types')
+                await db.table('service_types')
                     .insert(typesToInsert)
                     .onConflict(['tenant', 'name'])
                     .ignore();
                 console.log(`[SEED 23_service_catalog] Attempted to create ${typesToInsert.length} missing service types for tenant ${tenantId}.`);
 
                 // Re-fetch the service types for the tenant
-                const updatedServiceTypes = await knex('service_types')
-                    .where({ tenant: tenantId })
+                const updatedServiceTypes = await db.table('service_types')
                     .whereIn('name', requiredTypes)
                     .select('id', 'name');
 
@@ -81,7 +81,7 @@ exports.seed = async function (knex) { // Changed to async function
 
     // If the check passes, proceed with insertion
     console.log(`[SEED 23_service_catalog] Found all required service types for tenant ${tenantId}. Proceeding with insert.`);
-    return knex('service_catalog').insert([
+    return db.table('service_catalog').insert([
         {
             tenant: tenantId,
             service_name: 'Rabbit Tracking',
@@ -90,7 +90,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 7500,
             unit_of_measure: 'Hour',
-            category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Network Services' }).select('category_id').first()
+            category_id: db.table('service_categories').where({ category_name: 'Network Services' }).select('category_id').first()
         },
         {
             tenant: tenantId,
@@ -100,7 +100,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'fixed', // Add required billing_method
             default_rate: 15000,
             unit_of_measure: 'Service',
-            category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Security Services' }).select('category_id').first()
+            category_id: db.table('service_categories').where({ category_name: 'Security Services' }).select('category_id').first()
         },
         {
             tenant: tenantId,
@@ -110,7 +110,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'usage',
             default_rate: 2500,
             unit_of_measure: 'Dose',
-            category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Cloud Services' }).select('category_id').first()
+            category_id: db.table('service_categories').where({ category_name: 'Cloud Services' }).select('category_id').first()
         },
         {
             tenant: tenantId,
@@ -120,7 +120,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 10000,
             unit_of_measure: 'Hour',
-            category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Network Services' }).select('category_id').first()
+            category_id: db.table('service_categories').where({ category_name: 'Network Services' }).select('category_id').first()
         },
         {
             tenant: tenantId,
@@ -130,7 +130,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'fixed', // Add required billing_method
             default_rate: 500000,
             unit_of_measure: 'Month',
-            category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Security Services' }).select('category_id').first()
+            category_id: db.table('service_categories').where({ category_name: 'Security Services' }).select('category_id').first()
         },
         {
             tenant: tenantId,
@@ -140,7 +140,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 10000,
             unit_of_measure: 'Hour',
-            category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Support Services' }).select('category_id').first()
+            category_id: db.table('service_categories').where({ category_name: 'Support Services' }).select('category_id').first()
         },
         {
             tenant: tenantId, // Corrected tenant reference
@@ -150,7 +150,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 15000,
             unit_of_measure: 'Hour',
-            category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Support Services' }).select('category_id').first() // Corrected tenant reference in subquery
+            category_id: db.table('service_categories').where({ category_name: 'Support Services' }).select('category_id').first() // Corrected tenant reference in subquery
         }
     ]);
 // }); // Removed extra closing from previous .then structure

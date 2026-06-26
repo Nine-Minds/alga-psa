@@ -21,7 +21,7 @@ describe('activity group move/remove tenant-scoped query contract', () => {
 
     expect(section).toContain(".table('user_activity_groups");
     expect(section).toContain(".table('user_activity_group_items");
-    expect(section).toContain("await trx('user_activity_group_items').insert({");
+    expect(section).toContain("await tenantDb(trx, tenant).table('user_activity_group_items').insert({");
 
     expect(section).not.toMatch(/trx\('user_activity_groups'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/trx\('user_activity_group_items'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);

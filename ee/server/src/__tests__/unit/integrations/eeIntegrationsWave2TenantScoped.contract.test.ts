@@ -79,8 +79,10 @@ describe('EE integrations wave 2 tenant facade contract', () => {
     expect(combined).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(userOps).toContain('const existingInternalUser = await db.unscoped(');
     expect(userOps).toContain('global internal-user email uniqueness check during tenant admin bootstrap');
-    expect(tenantOps).toContain("const existing = await knex('stripe_subscriptions')");
-    expect(tenantOps).toContain("const tenantResult = await trx('tenants')");
+    expect(tenantOps).toContain("const existing = await tenantDb(knex, TENANT_CREATION_SUBSCRIPTION_DISCOVERY_CONTEXT)");
+    expect(tenantOps).toContain("tenant creation checks existing Stripe subscription before tenant context exists");
+    expect(tenantOps).toContain("const tenantResult = await tenantDb(trx, TENANT_CREATION_BOOTSTRAP_CONTEXT)");
+    expect(tenantOps).toContain("tenant creation inserts tenant row before tenant context exists");
     expect(tenantOps).toContain("tenantDb(trx, input.tenantId).table('stripe_subscriptions')");
     expect(tenantOps).toContain("db.table('tenant_email_settings')");
     expect(userOps).toContain("const db = tenantDb(trx, input.tenantId);");
