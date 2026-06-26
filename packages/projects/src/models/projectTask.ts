@@ -354,7 +354,7 @@ const ProjectTaskModel = {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    const [newItem] = await knexOrTrx('task_checklist_items')
+    const [newItem] = await tenantScopedTable(knexOrTrx, 'task_checklist_items', tenant)
       .insert({
         ...itemData,
         task_id: taskId,
@@ -474,7 +474,7 @@ const ProjectTaskModel = {
       // or we fall back to the additional user being added.
       const assignedTo: string = (task.assigned_to as string | null) || userId;
 
-      await knexOrTrx('task_resources').insert({
+      await tenantScopedTable(knexOrTrx, 'task_resources', tenant).insert({
         tenant,
         task_id: taskId,
         assigned_to: assignedTo,

@@ -80,9 +80,8 @@ export async function fetchTenantParty(
     };
   }
 
-  const tenantRecord = await knexOrTrx('tenants')
+  const tenantRecord = await db.table('tenants')
     .select('client_name')
-    .where({ tenant })
     .first<Record<string, unknown>>();
 
   const tenantName = asTrimmedString(tenantRecord?.client_name);

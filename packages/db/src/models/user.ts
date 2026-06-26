@@ -23,8 +23,7 @@ const User = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive = false): Promise<IUser[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      let query = knexOrTrx<IUser>('users').select('*');
-      query = query.andWhere('tenant', tenant);
+      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*');
       if (!includeInactive) {
         query = query.andWhere('is_inactive', false);
       }
@@ -91,10 +90,9 @@ const User = {
   findUserByUsername: async (knexOrTrx: Knex | Knex.Transaction, username: string): Promise<IUser | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await knexOrTrx<IUser>('users')
+      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
         .where('username', username.toLowerCase())
-        .andWhere('tenant', tenant)
         .first();
       return user;
     } catch (error) {
@@ -106,9 +104,8 @@ const User = {
   findOldestUser: async (knexOrTrx: Knex | Knex.Transaction): Promise<IUser | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const oldestUser = await knexOrTrx<IUser>('users')
+      const oldestUser = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
-        .where('tenant', tenant)
         .orderBy('created_at', 'asc')
         .first();
       return oldestUser;
@@ -121,10 +118,9 @@ const User = {
   get: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUser | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await knexOrTrx<IUser>('users')
+      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
         .where('user_id', user_id)
-        .andWhere('tenant', tenant)
         .first();
       return user;
     } catch (error) {
@@ -147,7 +143,7 @@ const User = {
       }
 
       return await knexOrTrx.transaction(async (trx) => {
-        const [insertedUser] = await trx<IUser>('users')
+        const [insertedUser] = await tenantDb(trx, tenant).table<IUser>('users')
           .insert({
             ...userData,
             is_inactive: false,
@@ -175,10 +171,9 @@ const User = {
   getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserWithRoles | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await knexOrTrx<IUser>('users')
+      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
         .where('user_id', user_id)
-        .andWhere('tenant', tenant)
         .first();
       if (user) {
         const roles = await User.getUserRoles(knexOrTrx, user_id);
@@ -194,7 +189,7 @@ const User = {
   update: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, user: Partial<IUser>): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await knexOrTrx<IUser>('users').where('user_id', user_id).andWhere('tenant', tenant).update(user);
+      await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).update(user);
     } catch (error) {
       logger.error(`Error updating user with id ${user_id}:`, error);
       throw error;
@@ -261,7 +256,7 @@ const User = {
   updatePassword: async (user_id: string, tenant: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await db<IUser>('users').where({ user_id, tenant }).update({ hashed_password });
+      await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
       logger.system(`Password updated for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
       logger.error(`Error updating password for user ${user_id} in tenant ${tenant}:`, error);
@@ -286,7 +281,7 @@ const User = {
   delete: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await knexOrTrx<IUser>('users').where('user_id', user_id).andWhere('tenant', tenant).del();
+      await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).del();
     } catch (error) {
       logger.error(`Error deleting user with id ${user_id}:`, error);
       throw error;
@@ -296,7 +291,7 @@ const User = {
   getMultiple: async (knexOrTrx: Knex | Knex.Transaction, userIds: string[]): Promise<IUser[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const users = await knexOrTrx<IUser>('users').select('*').where('tenant', tenant).whereIn('user_id', userIds);
+      const users = await tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*').whereIn('user_id', userIds);
       return users;
     } catch (error) {
       logger.error('Error getting multiple users:', error);
@@ -311,14 +306,9 @@ const User = {
   ): Promise<IRole[]> => {
     const tenant = tenantOverride ?? (await requireTenantId(knexOrTrx));
     try {
-      const query = knexOrTrx<IRole>('roles')
-        .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id')
-            .andOn('roles.tenant', '=', 'user_roles.tenant')
-            .andOnVal('user_roles.tenant', tenant);
-        })
-        .where('user_roles.user_id', user_id)
-        .where('roles.tenant', tenant);
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table<IRole>('roles').where('user_roles.user_id', user_id);
+      db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
 
       const roles = await query.select('*');
       return roles;
@@ -337,13 +327,12 @@ const User = {
     }
 
     try {
-      const rows = await knexOrTrx('roles')
-        .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id').andOn('roles.tenant', '=', 'user_roles.tenant');
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table('roles')
         .whereIn('user_roles.user_id', userIds)
-        .where('roles.tenant', tenant)
         .select('user_roles.user_id', 'roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client');
+      db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
+      const rows = await query;
 
       for (const row of rows as any[]) {
         const userId = row.user_id;
@@ -381,27 +370,18 @@ const User = {
   ): Promise<IRoleWithPermissions[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const query = knexOrTrx<IRole>('roles')
-        .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id')
-            .andOn('roles.tenant', '=', 'user_roles.tenant')
-            .andOn('user_roles.tenant', '=', knexOrTrx.raw('?', [tenant]));
-        })
-        .where('user_roles.user_id', user_id)
-        .andWhere('roles.tenant', tenant);
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table<IRole>('roles')
+        .where('user_roles.user_id', user_id);
+      db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
 
       const roles = await query.select(['roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client']);
 
       const rolesWithPermissions = await Promise.all(
         roles.map(async (role: any): Promise<IRoleWithPermissions> => {
-          const permissionQuery = knexOrTrx<IPermission>('permissions')
-            .join('role_permissions', function () {
-              this.on('permissions.permission_id', '=', 'role_permissions.permission_id')
-                .andOn('permissions.tenant', '=', 'role_permissions.tenant')
-                .andOn('role_permissions.tenant', '=', knexOrTrx.raw('?', [tenant]));
-            })
-            .where('role_permissions.role_id', role.role_id)
-            .andWhere('permissions.tenant', tenant);
+          const permissionQuery = db.table<IPermission>('permissions')
+            .where('role_permissions.role_id', role.role_id);
+          db.tenantJoin(permissionQuery, 'role_permissions', 'permissions.permission_id', 'role_permissions.permission_id');
 
           const permissions = await permissionQuery.select([
             'permissions.permission_id',
@@ -426,13 +406,14 @@ const User = {
   updateUserRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, roles: IRole[]): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await knexOrTrx('user_roles').where({ user_id, tenant }).del();
+      const db = tenantDb(knexOrTrx, tenant);
+      await db.table('user_roles').where({ user_id }).del();
       const userRoles = roles.map((role): IUserRoleWithOptionalTenant => ({
         user_id,
         role_id: role.role_id,
         tenant,
       }));
-      await knexOrTrx('user_roles').insert(userRoles);
+      await db.table('user_roles').insert(userRoles);
     } catch (error) {
       logger.error(`Error updating roles for user with id ${user_id}:`, error);
       throw error;
@@ -453,9 +434,8 @@ const User = {
   updateLastLogin: async (userId: string, tenant: string, loginMethod: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      const updated = await db<IUser>('users')
+      const updated = await tenantDb(db, tenant).table<IUser>('users')
         .where('user_id', userId)
-        .andWhere('tenant', tenant)
         .update({
           last_login_at: db.fn.now(),
           last_login_method: loginMethod,

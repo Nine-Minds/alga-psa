@@ -1,6 +1,7 @@
 import { getCurrentTenantId } from '../db';
 import { ITicketCategory } from '../../interfaces/ticket.interfaces';
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 const TicketCategory = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITicketCategory[]> => {
@@ -241,13 +242,11 @@ const TicketCategory = {
       }
 
       // Check if category is in use by tickets using a proper tenant-aware query
-      const inUseCount = await knexOrTrx('tickets')
+      const inUseCount = await tenantDb(knexOrTrx, tenant).table('tickets')
         .where(function() {
           this.where({
-            tenant,
             category_id: id
           }).orWhere({
-            tenant,
             subcategory_id: id
           });
         })

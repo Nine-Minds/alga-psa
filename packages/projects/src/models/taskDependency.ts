@@ -59,7 +59,7 @@ const TaskDependencyModel = {
         }
         
         try {
-            const [dependency] = await knexOrTrx('project_task_dependencies')
+            const [dependency] = await tenantScopedTable(knexOrTrx, 'project_task_dependencies', tenant)
                 .insert({
                     dependency_id: uuidv4(),
                     tenant,
