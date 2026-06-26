@@ -95,6 +95,11 @@ function money(cents: number, currency = 'USD'): string {
 const NUM_HEADER = 'text-right';
 const NUM_CELL = 'text-right tabular-nums';
 
+/** Operator-facing message from an unknown error, with a plain-language fallback. */
+function errMessage(e: unknown, fallback: string): string {
+  return e instanceof Error && e.message ? e.message : fallback;
+}
+
 /** Turn a raw enum value ("partially_received") into a sentence-case label ("Partially received"). */
 function humanize(value?: string | null): string {
   if (!value) return '';
@@ -132,8 +137,16 @@ const STATUS_FILTER_OPTIONS = [
 /** Statuses that represent money still on order (counted in the header's open total). */
 const OUTSTANDING_STATUSES = new Set(['open', 'partially_received']);
 
-export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrderListRow[] }) {
+export function PurchaseOrdersManager({
+  initialPos,
+  loadError = false,
+}: {
+  initialPos: PurchaseOrderListRow[];
+  loadError?: boolean;
+}) {
   const [pos, setPos] = useState<PurchaseOrderListRow[]>(initialPos || []);
+  // Seeded from the server: a failed SSR load must read as an error, not as "no POs".
+  const [loadFailed, setLoadFailed] = useState(loadError);
   const [vendors, setVendors] = useState<IVendor[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [search, setSearch] = useState('');
@@ -154,9 +167,11 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
   const reload = useCallback(async () => {
     try {
       setPos(await listPurchaseOrders({}));
+      setLoadFailed(false);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load purchase orders');
+      setLoadFailed(true);
+      toast.error("Couldn't load purchase orders.");
     }
   }, []);
 
@@ -165,7 +180,7 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
       setVendors(await listVendors({}));
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load vendors');
+      toast.error("Couldn't load vendors.");
     }
   }, []);
 
@@ -174,7 +189,7 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
       setProducts((await listInventoryProducts()) as ProductOption[]);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load products');
+      toast.error("Couldn't load products.");
     }
   }, []);
 
@@ -251,11 +266,11 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
         expected_date: form.expected_date || null,
         lines,
       });
-      toast.success('Purchase order created');
+      toast.success('Purchase order created.');
       setDialogOpen(false);
       await reload();
-    } catch (e: any) {
-      toast.error(e?.message || 'Save failed');
+    } catch (e) {
+      toast.error(errMessage(e, "Couldn't create the purchase order."));
     } finally {
       setSaving(false);
     }
@@ -264,20 +279,20 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
   const submit = async (po: IPurchaseOrder) => {
     try {
       await submitPurchaseOrder(po.po_id);
-      toast.success('Purchase order submitted');
+      toast.success('Purchase order submitted.');
       await reload();
-    } catch (e: any) {
-      toast.error(e?.message || 'Submit failed');
+    } catch (e) {
+      toast.error(errMessage(e, "Couldn't submit the purchase order."));
     }
   };
 
   const cancel = async (po: IPurchaseOrder) => {
     try {
       await cancelPurchaseOrder(po.po_id);
-      toast.success('Purchase order cancelled');
+      toast.success('Purchase order cancelled.');
       await reload();
-    } catch (e: any) {
-      toast.error(e?.message || 'Cancel failed');
+    } catch (e) {
+      toast.error(errMessage(e, "Couldn't cancel the purchase order."));
     }
   };
 
@@ -308,8 +323,8 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
       }
       setReceiveForms(forms);
       setReceivePo(full);
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to load purchase order');
+    } catch (e) {
+      toast.error(errMessage(e, "Couldn't load the purchase order."));
       setReceiveOpen(false);
     }
   };
@@ -346,12 +361,9 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
         serials,
       });
       if (result.over_receipt) {
-        toast(
-          `Received ${quantity} — over-receipt: cumulative received now exceeds the quantity ordered`,
-          { icon: '⚠️' },
-        );
+        toast(`Received ${quantity}. You've now received more than was ordered.`, { icon: '⚠️' });
       } else {
-        toast.success(`Received ${quantity} (PO status: ${result.po_status})`);
+        toast.success(`Received ${quantity}. Purchase order is now ${humanize(result.po_status).toLowerCase()}.`);
       }
       // Refresh the open dialog and the list.
       const full = await getPurchaseOrder(line.po_id);
@@ -372,8 +384,8 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
         });
       }
       await reload();
-    } catch (e: any) {
-      toast.error(e?.message || 'Receive failed');
+    } catch (e) {
+      toast.error(errMessage(e, "Couldn't receive this line."));
     } finally {
       setReceiving(false);
     }
@@ -487,19 +499,21 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Purchase Orders</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {pos.length} purchase order{pos.length === 1 ? '' : 's'}
-            {outstanding.length > 0 && (
-              <span className="font-medium text-gray-700"> · {money(openTotal, openCurrency)} on order</span>
-            )}
-          </p>
+          {!loadFailed && (
+            <p className="text-sm text-gray-500 mt-0.5">
+              {pos.length} purchase order{pos.length === 1 ? '' : 's'}
+              {outstanding.length > 0 && (
+                <span className="font-medium text-gray-700"> · {money(openTotal, openCurrency)} on order</span>
+              )}
+            </p>
+          )}
         </div>
         <Button id="purchase-orders-add-button" onClick={openCreate}>
           Add Purchase Order
         </Button>
       </div>
 
-      {pos.length > 0 && (
+      {!loadFailed && pos.length > 0 && (
         <div className="flex items-center gap-3">
           <div className="w-72">
             <Input
@@ -535,7 +549,17 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
         </div>
       )}
 
-      {pos.length === 0 ? (
+      {loadFailed ? (
+        <EmptyState
+          title="Couldn't load purchase orders"
+          description="Something went wrong loading this page. Try again."
+          action={
+            <Button id="purchase-orders-retry" onClick={reload}>
+              Retry
+            </Button>
+          }
+        />
+      ) : pos.length === 0 ? (
         <EmptyState
           title="No purchase orders yet"
           description="Create a purchase order to track what's on order from your vendors."

@@ -22,13 +22,15 @@ export default async function PurchaseOrdersPage() {
   }
 
   let initialPos: PurchaseOrderListRow[] = [];
+  let loadError = false;
   try {
     initialPos = await listPurchaseOrders({});
   } catch (error) {
     console.error('Failed to load purchase orders:', error);
+    loadError = true;
   }
 
-  return <PurchaseOrdersManager initialPos={initialPos} />;
+  return <PurchaseOrdersManager initialPos={initialPos} loadError={loadError} />;
 }
 
 export const dynamic = 'force-dynamic';
