@@ -39,7 +39,7 @@ beforeAll(async () => {
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
-  SERVICE = (await knex('service_catalog').where({ tenant: TENANT }).first()).service_id;
+  SERVICE = (await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').first()).service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
 });
 

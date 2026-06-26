@@ -29,7 +29,7 @@ beforeAll(async () => {
   const e = readEnv();
   knex = knexLib({ client: 'pg', connection: { host: 'localhost', port: 5472, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' }, pool: { min: 1, max: 4 } });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
-  SER_SERVICE = (await knex('service_catalog').where({ tenant: TENANT }).first()).service_id;
+  SER_SERVICE = (await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').first()).service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
   CLIENT = (await knex('clients').where({ tenant: TENANT }).first()).client_id;
 });

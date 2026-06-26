@@ -34,7 +34,7 @@ beforeAll(async () => {
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
-  const svcs = await knex('service_catalog').where({ tenant: TENANT }).limit(3).select('service_id');
+  const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').limit(3).select('service_id');
   KIT_SERVICE = svcs[0].service_id;
   COMP_A = svcs[1].service_id;
   COMP_B = svcs[2].service_id;

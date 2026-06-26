@@ -33,7 +33,7 @@ beforeAll(async () => {
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
-  const svcs = await knex('service_catalog').where({ tenant: TENANT }).limit(2).select('service_id');
+  const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').limit(2).select('service_id');
   SERVICE = svcs[0].service_id;
   SER_SERVICE = svcs[1].service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
@@ -74,7 +74,11 @@ describe('inventory — RMA / reports / search (real DB, rolled back)', () => {
         { tenant: TENANT, rma_type: 'advance_replacement', service_id: SERVICE, status: 'dead_unit_owed', reason: 'late', dead_unit_due_date: knex.raw("now() + interval '20 days'") },
         { tenant: TENANT, rma_type: 'advance_replacement', service_id: SERVICE, status: 'dead_unit_owed', reason: 'soon', dead_unit_due_date: knex.raw("now() + interval '3 days'") },
       ]);
-      const owed = await trx('rma_cases').where({ tenant: TENANT, status: 'dead_unit_owed' }).orderBy('dead_unit_due_date', 'asc').select('reason');
+      const owed = await trx('rma_cases')
+        .where({ tenant: TENANT, status: 'dead_unit_owed' })
+        .whereIn('reason', ['soon', 'late'])
+        .orderBy('dead_unit_due_date', 'asc')
+        .select('reason');
       expect(owed[0].reason).toBe('soon');
     });
   });
