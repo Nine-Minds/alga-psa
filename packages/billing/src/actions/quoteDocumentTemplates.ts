@@ -98,13 +98,12 @@ export const setDefaultQuoteDocumentTemplate = withAuth(async (
       .del();
 
     // Clear is_default on all custom templates
-    await trx('quote_document_templates')
-      .where({ tenant })
+    await tenantScopedTable(trx, tenant, 'quote_document_templates')
       .update({ is_default: false });
 
     if (payload.templateSource === 'custom') {
-      await trx('quote_document_templates')
-        .where({ tenant, template_id: payload.templateId })
+      await tenantScopedTable(trx, tenant, 'quote_document_templates')
+        .where({ template_id: payload.templateId })
         .update({ is_default: true });
     }
 
@@ -136,8 +135,8 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
     let wasDefault = false;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existing = await trx('quote_document_templates')
-        .where({ tenant, template_id: templateId })
+      const existing = await tenantScopedTable(trx, tenant, 'quote_document_templates')
+        .where({ template_id: templateId })
         .first();
 
       if (!existing) {
@@ -159,16 +158,15 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
           .del();
       }
 
-      await trx('quote_document_templates')
-        .where({ tenant, template_id: templateId })
+      await tenantScopedTable(trx, tenant, 'quote_document_templates')
+        .where({ template_id: templateId })
         .del();
     });
 
     // If deleted template was default, fall back to another template
     if (wasDefault) {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const fallbackCustom = await trx('quote_document_templates')
-          .where({ tenant })
+        const fallbackCustom = await tenantScopedTable(trx, tenant, 'quote_document_templates')
           .select('template_id')
           .orderBy('name')
           .first();

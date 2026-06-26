@@ -2,6 +2,19 @@ import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+): Knex.QueryBuilder<IQuoteDocumentTemplate, IQuoteDocumentTemplate[]> {
+  return tenantDb(conn, tenant).table<IQuoteDocumentTemplate>('quote_document_templates');
+}
+
+interface QuoteTemplateAssignmentRow {
+  template_source?: 'standard' | 'custom';
+  standard_quote_document_template_code?: string | null;
+  quote_document_template_id?: string | null;
+}
+
 const QuoteDocumentTemplate = {
   async getTemplates(
     knexOrTrx: Knex | Knex.Transaction,
@@ -11,7 +24,7 @@ const QuoteDocumentTemplate = {
       throw new Error('Tenant context is required for getting quote document templates');
     }
 
-    return knexOrTrx('quote_document_templates').where({ tenant }).select('*');
+    return tenantScopedTable(knexOrTrx, tenant).select('*');
   },
 
   async getStandardTemplates(
@@ -42,13 +55,12 @@ const QuoteDocumentTemplate = {
     }
 
     const [tenantTemplates, standardTemplates, tenantAssignment] = await Promise.all([
-      knexOrTrx('quote_document_templates')
-        .where({ tenant })
+      tenantScopedTable(knexOrTrx, tenant)
         .select('template_id', 'name', 'version', 'is_default', 'templateAst', 'created_at', 'updated_at'),
       QuoteDocumentTemplate.getStandardTemplates(knexOrTrx),
-      tenantDb(knexOrTrx, tenant).table('quote_document_template_assignments')
+      tenantDb(knexOrTrx, tenant).table<QuoteTemplateAssignmentRow>('quote_document_template_assignments')
         .select('template_source', 'standard_quote_document_template_code', 'quote_document_template_id')
-        .where({ scope_type: 'tenant' })
+        .where('scope_type', 'tenant')
         .whereNull('scope_id')
         .first(),
     ]);
@@ -112,7 +124,7 @@ const QuoteDocumentTemplate = {
       templateAst: insertRecord.templateAst,
     };
 
-    const [savedTemplate] = await knexOrTrx('quote_document_templates')
+    const [savedTemplate] = await tenantScopedTable(knexOrTrx, tenant)
       .insert(insertRecord)
       .onConflict(['tenant', 'template_id'])
       .merge(updateRecord)

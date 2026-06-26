@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import Service, { serviceSchema, refinedServiceSchema } from '../models/service'; // Import both schemas
 import type { IService, IServiceType, IServicePrice, DeletionValidationResult } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { validateArray } from '@alga-psa/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
@@ -713,8 +713,8 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
                 .where({ service_id: serviceId, tenant })
                 .del();
 
-            await trx('service_rate_tiers')
-                .where({ service_id: serviceId, tenant })
+            await tenantDb(trx, tenant).table('service_rate_tiers')
+                .where({ service_id: serviceId })
                 .del();
 
             // Clear nullable references

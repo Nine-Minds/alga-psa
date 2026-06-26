@@ -118,10 +118,9 @@ export default class ContractLineServiceHourlyConfig {
   async getUserTypeRates(configId: string): Promise<IUserTypeRate[]> {
     const tenant = await this.getTenant();
     
-    const rates = await this.knex('user_type_rates')
+    const rates = await this.table('user_type_rates', tenant)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .select('*');
     
@@ -137,7 +136,7 @@ export default class ContractLineServiceHourlyConfig {
     const rateId = uuidv4();
     const now = new Date();
     
-    await this.knex('user_type_rates').insert({
+    await this.table('user_type_rates', tenant).insert({
       rate_id: rateId,
       config_id: data.config_id,
       user_type: data.user_type,
@@ -171,10 +170,9 @@ export default class ContractLineServiceHourlyConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('user_type_rates')
+    const result = await this.table('user_type_rates', tenant)
       .where({
-        rate_id: rateId,
-        tenant
+        rate_id: rateId
       })
       .update(updateData);
     
@@ -187,10 +185,9 @@ export default class ContractLineServiceHourlyConfig {
   async deleteUserTypeRatesByConfigId(configId: string): Promise<number> {
     const tenant = await this.getTenant();
 
-    const result = await this.knex('user_type_rates')
+    const result = await this.table('user_type_rates', tenant)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .delete();
 
@@ -218,7 +215,7 @@ export default class ContractLineServiceHourlyConfig {
       updated_at: now
     }));
 
-    const inserted = await this.knex('user_type_rates')
+    const inserted = await this.table('user_type_rates', tenant)
       .insert(ratesToInsert)
       .returning('rate_id'); // Return the generated rate_ids
 
@@ -232,10 +229,9 @@ export default class ContractLineServiceHourlyConfig {
   async deleteUserTypeRate(rateId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('user_type_rates')
+    const result = await this.table('user_type_rates', tenant)
       .where({
-        rate_id: rateId,
-        tenant
+        rate_id: rateId
       })
       .delete();
     
