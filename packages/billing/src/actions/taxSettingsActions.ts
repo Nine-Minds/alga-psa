@@ -122,7 +122,7 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
 export const getActiveTaxRegions = withAuth(async (user, { tenant }): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> => {
   try {
     const { knex } = await createTenantKnex();
-    const activeRegions = await knex<ITaxRegion>('tax_regions')
+    const activeRegions = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .select('region_code', 'region_name')
       .where('is_active', true)
       .where('tenant', tenant)
@@ -146,7 +146,7 @@ export const getActiveTaxRegions = withAuth(async (user, { tenant }): Promise<Pi
 export const getTaxRegions = withAuth(async (user, { tenant }): Promise<ITaxRegion[]> => {
   try {
     const { knex } = await createTenantKnex();
-    const regions = await knex<ITaxRegion>('tax_regions')
+    const regions = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .select('*')
       .where('tenant', tenant)
       .orderBy('region_name', 'asc');
@@ -185,7 +185,7 @@ export const createTaxRegion = withAuth(async (
 
   try {
     // Check for existing region_code within the tenant
-    const existingRegion = await knex<ITaxRegion>('tax_regions')
+    const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .where('tenant', tenant)
       .andWhere('region_code', region_code)
       .first();
@@ -194,7 +194,7 @@ export const createTaxRegion = withAuth(async (
       throw new Error(`Tax region with code "${region_code}" already exists.`);
     }
 
-    const [createdRegion] = await knex<ITaxRegion>('tax_regions')
+    const [createdRegion] = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .insert({
         region_code,
         region_name,
@@ -252,7 +252,7 @@ export const updateTaxRegion = withAuth(async (
   // Ensure there's something to update
   if (Object.keys(updateData).length === 0) {
     // Optionally, fetch and return the existing region or throw an error
-     const existingRegion = await knex<ITaxRegion>('tax_regions')
+     const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .where('tenant', tenant)
       .andWhere('region_code', region_code)
       .first();
@@ -266,7 +266,7 @@ export const updateTaxRegion = withAuth(async (
 
     // If updating the region_code, check for uniqueness
     if (data.region_code !== undefined && data.region_code !== region_code) {
-      const existingRegion = await knex<ITaxRegion>('tax_regions')
+      const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
         .where('tenant', tenant)
         .andWhere('region_code', data.region_code)
         .first();
@@ -276,7 +276,7 @@ export const updateTaxRegion = withAuth(async (
       }
     }
 
-    const [updatedRegion] = await knex<ITaxRegion>('tax_regions')
+    const [updatedRegion] = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .where('tenant', tenant)
       .andWhere('region_code', region_code)
       .update(updateData)
@@ -341,7 +341,7 @@ export const getTaxRateThresholdsByTaxRate = withAuth(async (user, { tenant }, t
       throw new Error('Tenant context is required');
     }
     // Note: tax_rate_thresholds table doesn't have tenant column, RLS enforced via tax_rate_id
-    const thresholds = await knex<ITaxRateThreshold>('tax_rate_thresholds')
+    const thresholds = await tenantDb(knex, tenant).unscoped<ITaxRateThreshold>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .where({ tax_rate_id: taxRateId })
       .orderBy('min_amount', 'asc');
     return thresholds;
@@ -366,7 +366,7 @@ export const getTaxHolidaysByTaxRate = withAuth(async (user, { tenant }, taxRate
       throw new Error('Tenant context is required');
     }
     // Note: tax_holidays table doesn't have tenant column, RLS enforced via tax_rate_id
-    const holidays = await knex<ITaxHoliday>('tax_holidays')
+    const holidays = await tenantDb(knex, tenant).unscoped<ITaxHoliday>('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .where({ tax_rate_id: taxRateId })
       .orderBy('start_date', 'desc');
     return holidays;
@@ -449,7 +449,7 @@ export const createTaxRateThreshold = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [createdThreshold] = await knex<ITaxRateThreshold>('tax_rate_thresholds')
+    const [createdThreshold] = await tenantDb(knex, tenant).unscoped<ITaxRateThreshold>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .insert({ ...threshold, tax_rate_threshold_id: uuid4() })
       .returning('*');
 
@@ -471,7 +471,7 @@ export const updateTaxRateThreshold = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [updatedThreshold] = await knex<ITaxRateThreshold>('tax_rate_thresholds')
+    const [updatedThreshold] = await tenantDb(knex, tenant).unscoped<ITaxRateThreshold>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .where({ tax_rate_threshold_id: thresholdId })
       .update(threshold)
       .returning('*');
@@ -489,7 +489,7 @@ export const deleteTaxRateThreshold = withAuth(async (user, { tenant }, threshol
   }
   try {
     const { knex } = await createTenantKnex();
-    await knex('tax_rate_thresholds')
+    await tenantDb(knex, tenant).unscoped('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .where({ tax_rate_threshold_id: thresholdId })
       .del();
   } catch (error) {
@@ -508,7 +508,7 @@ export const createTaxHoliday = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [createdHoliday] = await knex<ITaxHoliday>('tax_holidays')
+    const [createdHoliday] = await tenantDb(knex, tenant).unscoped<ITaxHoliday>('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .insert({ ...holiday, tax_holiday_id: uuid4() })
       .returning('*');
 
@@ -530,7 +530,7 @@ export const updateTaxHoliday = withAuth(async (
   }
   try {
     const { knex } = await createTenantKnex();
-    const [updatedHoliday] = await knex<ITaxHoliday>('tax_holidays')
+    const [updatedHoliday] = await tenantDb(knex, tenant).unscoped<ITaxHoliday>('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .where({ tax_holiday_id: holidayId })
       .update(holiday)
       .returning('*');
@@ -548,7 +548,7 @@ export const deleteTaxHoliday = withAuth(async (user, { tenant }, holidayId: str
   }
   try {
     const { knex } = await createTenantKnex();
-    await knex('tax_holidays')
+    await tenantDb(knex, tenant).unscoped('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
       .where({ tax_holiday_id: holidayId })
       .del();
   } catch (error) {

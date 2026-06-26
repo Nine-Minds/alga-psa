@@ -396,7 +396,6 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
 
       const mapping = await db.table('calendar_event_mappings')
         .where('id', mappingId)
-        .andWhere('tenant', tenantId)
         .first();
 
       if (!mapping) {
@@ -424,12 +423,10 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
 
       const scheduleEntry = await db.table('schedule_entries')
         .where('entry_id', scheduleEntryId)
-        .andWhere('tenant', tenantId)
         .first();
 
-      const assignees = await knex('schedule_entry_assignees')
+      const assignees = await db.table('schedule_entry_assignees')
         .where('entry_id', scheduleEntryId)
-        .andWhere('tenant', tenantId)
         .select('user_id');
 
       const assigneeIds = assignees.map((row) => row.user_id).filter(Boolean);
@@ -444,7 +441,6 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
 
       const users = await db.table('users')
         .whereIn('user_id', assigneeIds)
-        .andWhere('tenant', tenantId)
         .andWhere('is_inactive', false)
         .select('user_id', 'email', 'first_name', 'last_name');
 
@@ -482,7 +478,6 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
 
       await db.table('calendar_event_mappings')
         .where('id', mappingId)
-        .andWhere('tenant', tenantId)
         .update({
           sync_error_message: updatedMessage,
           updated_at: new Date().toISOString()

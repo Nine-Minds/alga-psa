@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { WorkflowBundleV1 } from '@alga-psa/workflows/bundle';
 import {
   WorkflowDefinitionModelV2,
@@ -48,9 +49,10 @@ export const importWorkflowBundleV1 = async (
     };
 
     for (const wf of bundle.workflows) {
-      const existing = await trx('workflow_definitions')
+      const db = tenantDb(trx, tenantId);
+      const existing = await db.table('workflow_definitions')
         .select('workflow_id', 'key')
-        .where({ tenant: tenantId, key: wf.key })
+        .where({ key: wf.key })
         .first() as { workflow_id: string; key: string } | undefined;
 
       if (existing) {
@@ -122,7 +124,7 @@ export const importWorkflowBundleV1 = async (
       summary.createdWorkflows.push({ key: wf.key, workflowId });
 
       if (existing) {
-        await trx('workflow_definition_versions')
+        await db.table('workflow_definition_versions')
           .where({ workflow_id: workflowId })
           .del();
       }

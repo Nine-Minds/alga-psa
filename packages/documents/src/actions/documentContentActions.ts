@@ -39,7 +39,7 @@ export const createContentDocument = withAuth(async (
 
         // Create the document content
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('document_content').insert({
+            return await tenantDb(trx, tenant).table('document_content').insert({
                 id: uuidv4(),
                 document_id: documentResult._id,
                 content: initialContent,
@@ -128,7 +128,7 @@ export const updateDocumentContent = withAuth(async (
                         updated_by_id: data.updated_by_id
                     });
             } else {
-                return await trx('document_content').insert({
+                return await tenantScopedTable('document_content').insert({
                     id: uuidv4(),
                     document_id: documentId,
                     content: data.content,

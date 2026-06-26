@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
 import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';
 import { consumeCalendarOAuthState } from '../../../../../../lib/utils/calendar/oauthStateStore';
@@ -172,8 +172,7 @@ export async function GET(request: NextRequest) {
     // Tier gate: EE calendar requires INTEGRATIONS feature
     {
       const knex = await getAdminConnection();
-      const tenantRecord = await knex('tenants')
-        .where({ tenant: stateData.tenant })
+      const tenantRecord = await tenantDb(knex, stateData.tenant).table('tenants')
         .select('plan')
         .first();
       const { tier } = resolveTier(tenantRecord?.plan);

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   DuePosition,
@@ -258,7 +259,7 @@ async function loadExistingRecurringServicePeriodRecords(
   trx: Knex.Transaction,
   params: { tenant: string; contractLineId: string },
 ): Promise<IRecurringServicePeriodRecord[]> {
-  const rows = await trx('recurring_service_periods')
+  const rows = await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
@@ -310,8 +311,10 @@ async function persistRecurringServicePeriodRegeneration(
     recordsToInsert: IRecurringServicePeriodRecord[];
   },
 ) {
+  const db = tenantDb(trx, params.tenant);
+
   for (const record of params.recordsToSupersede) {
-    await trx('recurring_service_periods')
+    await db.table('recurring_service_periods')
       .where({ tenant: params.tenant, record_id: record.recordId })
       .update({
         lifecycle_state: record.lifecycleState,
@@ -320,7 +323,7 @@ async function persistRecurringServicePeriodRegeneration(
   }
 
   if (params.recordsToInsert.length > 0) {
-    await trx('recurring_service_periods').insert(
+    await db.table('recurring_service_periods').insert(
       params.recordsToInsert.map(serializeRecurringServicePeriodRecord),
     );
   }
@@ -330,7 +333,7 @@ async function retireFutureContractCadenceRowsForLine(
   trx: Knex.Transaction,
   params: { tenant: string; contractLineId: string; retiredAt: string },
 ) {
-  await trx('recurring_service_periods')
+  await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
@@ -348,15 +351,11 @@ async function loadContractCadenceObligations(
   trx: Knex.Transaction,
   params: { tenant: string; contractId?: string; contractLineId?: string },
 ): Promise<ContractCadenceObligationRow[]> {
-  const query = trx('contract_lines as cl')
-    .join('client_contracts as cc', function () {
-      this.on('cc.contract_id', '=', 'cl.contract_id')
-        .andOn('cc.tenant', '=', 'cl.tenant');
-    })
-    .join('contracts as ct', function () {
-      this.on('ct.contract_id', '=', 'cl.contract_id')
-        .andOn('ct.tenant', '=', 'cl.tenant');
-    })
+  const db = tenantDb(trx, params.tenant);
+  const query = db.table('contract_lines as cl');
+  db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  query
     .where('cl.tenant', params.tenant)
     .where('cc.is_active', true)
     .where((builder) =>
@@ -381,7 +380,8 @@ async function loadContractCadenceObligations(
     query.andWhere('cl.contract_line_id', params.contractLineId);
   }
 
-  return query;
+  const rows = await query;
+  return rows as ContractCadenceObligationRow[];
 }
 
 async function syncContractCadenceObligation(

@@ -67,8 +67,9 @@ const Document = {
 
     insert: async (knexOrTrx: Knex | Knex.Transaction, document: IDocument): Promise<Pick<IDocument, "document_id">> => {
         try {
-            const [document_id] = await knexOrTrx<IDocument>('documents')
-                .insert(document)
+            const tenant = document.tenant || await requireTenantId(knexOrTrx);
+            const [document_id] = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .insert({ ...document, tenant })
                 .returning('document_id');
             return document_id;
         } catch (error) {

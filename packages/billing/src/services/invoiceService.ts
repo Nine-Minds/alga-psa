@@ -211,7 +211,7 @@ async function linkAndMarkSourceBillingRecord(params: {
       throw new Error(`Internal error: Time entry ${entryId} could not be marked invoiced for invoice ${invoiceId}.`);
     }
 
-    await tx('invoice_time_entries').insert({
+    await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
       invoice_time_entry_id: uuidv4(),
       invoice_id: invoiceId,
       entry_id: entryId,
@@ -235,7 +235,7 @@ async function linkAndMarkSourceBillingRecord(params: {
       throw new Error(`Internal error: Usage record ${usageId} could not be marked invoiced for invoice ${invoiceId}.`);
     }
 
-    await tx('invoice_usage_records').insert({
+    await tenantScopedTable(tx, tenant, 'invoice_usage_records').insert({
       invoice_usage_record_id: uuidv4(),
       invoice_id: invoiceId,
       usage_id: usageId,
@@ -536,7 +536,7 @@ export async function persistManualInvoiceCharges(
       tenant
     };
 
-    await tx('invoice_charges').insert(invoiceItem);
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
     if (requestItem.service_id) {
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
@@ -624,7 +624,7 @@ export async function persistManualInvoiceCharges(
       tenant
     };
 
-    await tx('invoice_charges').insert(invoiceItem);
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
     subtotal += netAmount;
   }
 
@@ -777,7 +777,7 @@ async function persistFixedInvoiceCharges(
         created_at: now,
         tenant
       };
-      await tx('invoice_charges').insert(invoiceItem);
+      await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
       fixedSubtotal += netAmount;
     }
   }
@@ -876,7 +876,7 @@ async function persistFixedInvoiceCharges(
     const aggregatedTaxRate = planNetTotal
       ? Number(((planTaxTotal / planNetTotal) * 100).toFixed(6))
       : 0;
-    await tx('invoice_charges').insert({
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert({
       item_id: parentItemId,
       invoice_id: invoiceId,
       service_id: null,
@@ -914,7 +914,7 @@ async function persistFixedInvoiceCharges(
         ? Math.round(allocatedAmountCents / detailQuantity)
         : allocatedAmountCents;
 
-      await tx('invoice_charge_details').insert({
+      await tenantScopedTable(tx, tenant, 'invoice_charge_details').insert({
         item_detail_id: detailId,
         item_id: parentItemId,
         service_id: detail.serviceId,
@@ -929,7 +929,7 @@ async function persistFixedInvoiceCharges(
         tenant
       });
 
-      await tx('invoice_charge_fixed_details').insert({
+      await tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details').insert({
         item_detail_id: detailId,
         base_rate: detail.base_rate,
         enable_proration: detail.enable_proration,
@@ -1046,7 +1046,7 @@ export async function persistInvoiceCharges(
       created_at: now,
       tenant
     };
-    await tx('invoice_charges').insert(invoiceItem);
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
 
     const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
     const shouldPersistDetail =
@@ -1070,7 +1070,7 @@ export async function persistInvoiceCharges(
       const detailQuantity = Number(charge.quantity ?? 1) || 1;
       const detailRate = Number(charge.rate ?? 0) || 0;
 
-      await tx('invoice_charge_details').insert({
+      await tenantScopedTable(tx, tenant, 'invoice_charge_details').insert({
         item_detail_id: detailId,
         item_id: invoiceItem.item_id,
         service_id: charge.serviceId,
@@ -1561,7 +1561,7 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   const currentBalance = Number(lastTransaction?.balance_after || 0);
 
   // Record transaction
-  await tx('transactions').insert({
+  await tenantScopedTable(tx, tenant, 'transactions').insert({
     transaction_id: uuidv4(),
     client_id: client.client_id,
     invoice_id: invoiceId,

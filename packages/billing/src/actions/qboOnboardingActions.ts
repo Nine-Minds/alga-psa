@@ -3,7 +3,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- onboarding actions consult QBO customers and connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
@@ -92,7 +92,9 @@ export const getCustomerMatchCandidates = withAuth(async (
   const realm = await requireDefaultRealm(tenant);
 
   // All non-inactive clients for this tenant
-  const clientRows: Array<{ client_id: string; client_name: string }> = await knex('clients')
+  const db = tenantDb(knex, tenant);
+
+  const clientRows: Array<{ client_id: string; client_name: string }> = await db.table('clients')
     .where({ tenant: tenant })
     .where(function () {
       this.whereNull('is_inactive').orWhere('is_inactive', false);
@@ -101,7 +103,7 @@ export const getCustomerMatchCandidates = withAuth(async (
 
   // Existing 'client' mappings from the ledger (for this realm)
   const existingMappings: Array<{ alga_entity_id: string; external_entity_id: string; metadata: Record<string, any> | null }> =
-    await knex('tenant_external_entity_mappings')
+    await db.table('tenant_external_entity_mappings')
       .where({
         tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
@@ -182,7 +184,7 @@ export const linkClientToQboCustomer = withAuth(async (
   const realm = await requireDefaultRealm(tenant);
 
   // Reject if external id already linked to a different client
-  const existing = await knex('tenant_external_entity_mappings')
+  const existing = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
     .where({
       tenant: tenant,
       integration_type: SYNC_ADAPTER_TYPE,
@@ -201,7 +203,7 @@ export const linkClientToQboCustomer = withAuth(async (
 
   if (existing) {
     // Update existing row
-    await knex('tenant_external_entity_mappings')
+    await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
       .where({ id: existing.id })
       .update({
         alga_entity_id: input.clientId,
@@ -268,7 +270,7 @@ export const createQboCustomerForClient = withAuth(async (
     const { knex } = await createTenantKnex();
     const realm = await requireDefaultRealm(tenant);
 
-    const clientRow = await knex('clients')
+    const clientRow = await tenantDb(knex, tenant).table('clients')
       .where({ client_id: clientId, tenant: tenant })
       .select('client_name')
       .first();
@@ -341,7 +343,9 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   const qboInvoices = await fetchQboInvoicesPaged(qboClient, input);
 
   // Fetch invoice ids already mapped in QBO for this realm
-  const mappedIds: string[] = await knex('tenant_external_entity_mappings')
+  const db = tenantDb(knex, tenant);
+
+  const mappedIds: string[] = await db.table('tenant_external_entity_mappings')
     .where({
       tenant: tenant,
       integration_type: SYNC_ADAPTER_TYPE,
@@ -352,7 +356,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
 
   // Finalized Alga invoices not already mapped: status 'sent' or 'paid'
   const candidateQuery = (status: string) => {
-    const query = knex('invoices')
+    const query = db.table('invoices')
       .where({ tenant: tenant, status })
       .select('invoice_id', 'invoice_number', 'total_amount', 'client_id');
     if (mappedIds.length > 0) {
@@ -372,7 +376,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
 
   // Client→external customer mappings for consistency check
   const clientMappingRows: Array<{ external_entity_id: string; alga_entity_id: string }> =
-    await knex('tenant_external_entity_mappings')
+    await db.table('tenant_external_entity_mappings')
       .where({
         tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
@@ -466,14 +470,14 @@ export const backfillPaymentsForLinkedInvoices = withAuth(async (
 
   // Fetch invoice status + client_id
   const invoiceRows: Array<{ invoice_id: string; status: string; client_id: string | null }> =
-    await knex('invoices')
+    await tenantDb(knex, tenant).table('invoices')
       .whereIn('invoice_id', invoiceIds)
       .where({ tenant: tenant })
       .select('invoice_id', 'status', 'client_id');
 
   // Fetch external invoice mappings
   const mappingRows: Array<{ alga_entity_id: string; external_entity_id: string }> =
-    await knex('tenant_external_entity_mappings')
+    await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
       .where({
         tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
@@ -489,7 +493,7 @@ export const backfillPaymentsForLinkedInvoices = withAuth(async (
 
   // Client→external customer mappings
   const clientMappingRows: Array<{ alga_entity_id: string; external_entity_id: string }> =
-    await knex('tenant_external_entity_mappings')
+    await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
       .where({
         tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
@@ -633,7 +637,7 @@ export const getOnboardingWizardState = withAuth(async (
     return { completedAt: null, lastRunAt: null, connected: false };
   }
 
-  const row = await knex('tenant_settings').where({ tenant: tenant }).select('settings').first();
+  const row = await tenantDb(knex, tenant).table('tenant_settings').where({ tenant: tenant }).select('settings').first();
   const onboarding = (row?.settings?.accountingSync?.[ONBOARDING_KEY]?.[realm] ?? {}) as Record<string, string | null>;
 
   return {
@@ -662,7 +666,7 @@ export const completeOnboardingWizard = withAuth(async (
   });
 
   // Store wizard completion state keyed by realm
-  const row = await knex('tenant_settings').where({ tenant: tenant }).select('settings').first();
+  const row = await tenantDb(knex, tenant).table('tenant_settings').where({ tenant: tenant }).select('settings').first();
   const existing = row?.settings ?? {};
   const accountingSync = existing.accountingSync ?? {};
   const onboardingMap = accountingSync[ONBOARDING_KEY] ?? {};
@@ -683,11 +687,11 @@ export const completeOnboardingWizard = withAuth(async (
   };
 
   if (row) {
-    await knex('tenant_settings')
+    await tenantDb(knex, tenant).table('tenant_settings')
       .where({ tenant: tenant })
       .update({ settings: next, updated_at: knex.fn.now() });
   } else {
-    await knex('tenant_settings').insert({ tenant: tenant, settings: next });
+    await tenantDb(knex, tenant).table('tenant_settings').insert({ tenant: tenant, settings: next });
   }
 
   return { done: true };

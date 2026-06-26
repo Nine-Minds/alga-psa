@@ -18,7 +18,10 @@ function workflowRunSnapshots(
 ): Knex.QueryBuilder<WorkflowRunSnapshotRecord, WorkflowRunSnapshotRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowRunSnapshotRecord>('workflow_run_snapshots')
-    : knex<WorkflowRunSnapshotRecord>('workflow_run_snapshots');
+    : tenantDb(knex, '__workflow_run_snapshot_unscoped__').unscoped<WorkflowRunSnapshotRecord>(
+      'workflow_run_snapshots',
+      'workflow run snapshot model supports legacy run_id lookups before the tenant is resolved'
+    );
 }
 
 const WorkflowRunSnapshotModelV2 = {

@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Thin knex helpers over tenant_external_entity_mappings — the single ledger
@@ -30,12 +31,16 @@ export class SyncMappingLedger {
     private readonly integrationType: string
   ) {}
 
+  private table<Row extends object = ExternalEntityMappingRow>() {
+    return tenantDb(this.knex, this.tenantId).table<Row>(TABLE);
+  }
+
   async findByExternalId(
     algaEntityType: string,
     externalEntityId: string,
     targetRealm?: string | null
   ): Promise<ExternalEntityMappingRow | undefined> {
-    const query = this.knex<ExternalEntityMappingRow>(TABLE)
+    const query = this.table<ExternalEntityMappingRow>()
       .where({
         tenant: this.tenantId,
         integration_type: this.integrationType,
@@ -56,7 +61,7 @@ export class SyncMappingLedger {
     algaEntityType: string,
     algaEntityId: string
   ): Promise<ExternalEntityMappingRow | undefined> {
-    return this.knex<ExternalEntityMappingRow>(TABLE)
+    return this.table<ExternalEntityMappingRow>()
       .where({
         tenant: this.tenantId,
         integration_type: this.integrationType,
@@ -74,7 +79,7 @@ export class SyncMappingLedger {
     syncStatus?: string;
     metadata?: Record<string, unknown> | null;
   }): Promise<ExternalEntityMappingRow> {
-    const [row] = await this.knex<ExternalEntityMappingRow>(TABLE)
+    const [row] = await this.table<ExternalEntityMappingRow>()
       .insert({
         tenant: this.tenantId,
         integration_type: this.integrationType,
@@ -110,14 +115,14 @@ export class SyncMappingLedger {
       update.last_synced_at = this.knex.fn.now();
     }
 
-    await this.knex(TABLE)
+    await this.table()
       .where({ tenant: this.tenantId, id })
       .update(update);
   }
 
   /** Counts by sync_status for the health panel. */
   async countByStatus(): Promise<Record<string, number>> {
-    const rows = await this.knex(TABLE)
+    const rows = await this.table()
       .where({ tenant: this.tenantId, integration_type: this.integrationType })
       .select('sync_status')
       .count<{ sync_status: string | null; count: string }[]>('* as count')

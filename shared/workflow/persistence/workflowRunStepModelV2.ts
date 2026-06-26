@@ -23,7 +23,10 @@ function workflowRunSteps(
 ): Knex.QueryBuilder<WorkflowRunStepRecord, WorkflowRunStepRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowRunStepRecord>('workflow_run_steps')
-    : knex<WorkflowRunStepRecord>('workflow_run_steps');
+    : tenantDb(knex, '__workflow_run_step_unscoped__').unscoped<WorkflowRunStepRecord>(
+      'workflow_run_steps',
+      'workflow run step model supports legacy run_id/step_id lookups before the tenant is resolved'
+    );
 }
 
 const WorkflowRunStepModelV2 = {

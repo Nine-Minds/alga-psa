@@ -23,8 +23,8 @@ describe('user service core CRUD tenant-scoped query contract', () => {
     expect(section).toContain('this.buildTenantScopedQuery(trx, context)');
     expect(section).toContain('tenantDb(trx, ');
     expect(section).toContain(".table('roles");
-    expect(section).toContain("const [createdUser] = await trx('users').insert(userData).returning(USER_RESPONSE_FIELD_NAMES)");
-    expect(section).toContain("await trx('user_roles').insert(userRoles)");
+    expect(section).toContain("const [createdUser] = await tenantDb(trx, context.tenant).table('users')");
+    expect(section).toContain("await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles)");
 
     expect(section).not.toMatch(/knex\('users'\)\s*\./);
     expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.(?:where|andWhere|select|update)/);

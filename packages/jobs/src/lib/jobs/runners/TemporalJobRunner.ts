@@ -569,7 +569,7 @@ export class TemporalJobRunner implements IJobRunner {
         throw new Error(`Unable to attribute Temporal job to a user for tenant ${data.tenantId}`);
       }
 
-      const [inserted] = await knex('jobs')
+      const [inserted] = await tenantScopedTable(knex, 'jobs', data.tenantId)
         .insert({
           tenant: data.tenantId,
           type: jobName,

@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type {
   AccountingSyncCycleRecord,
   AccountingSyncCycleStats,
@@ -7,8 +8,14 @@ import type {
 
 const TABLE = 'accounting_sync_cycles';
 
+type CycleIdProjection = Pick<AccountingSyncCycleRecord, 'cycle_id'>;
+
 export class SyncCycleRepository {
   constructor(private readonly knex: Knex) {}
+
+  private table<Row extends object = Record<string, unknown>>(tenant: string) {
+    return tenantDb(this.knex, tenant).table<Row>(TABLE);
+  }
 
   /** cursor_after of the most recent succeeded cycle, or null on first run. */
   async getLastSuccessfulCursor(
@@ -16,7 +23,7 @@ export class SyncCycleRepository {
     adapterType: string,
     targetRealm: string
   ): Promise<string | null> {
-    const row = await this.knex<AccountingSyncCycleRecord>(TABLE)
+    const row = await this.table<AccountingSyncCycleRecord>(tenant)
       .where({ tenant, adapter_type: adapterType, target_realm: targetRealm, status: 'succeeded' })
       .whereNotNull('cursor_after')
       .orderBy('started_at', 'desc')
@@ -31,7 +38,7 @@ export class SyncCycleRepository {
     targetRealm: string;
     cursorBefore: string | null;
   }): Promise<string> {
-    const [row] = await this.knex(TABLE)
+    const [row] = (await this.table(params.tenant)
       .insert({
         tenant: params.tenant,
         adapter_type: params.adapterType,
@@ -39,7 +46,7 @@ export class SyncCycleRepository {
         status: 'running',
         cursor_before: params.cursorBefore
       })
-      .returning('cycle_id');
+      .returning('cycle_id')) as Array<CycleIdProjection | string>;
 
     return typeof row === 'object' ? row.cycle_id : row;
   }
@@ -54,7 +61,7 @@ export class SyncCycleRepository {
       error?: string | null;
     }
   ): Promise<void> {
-    await this.knex(TABLE)
+    await this.table(tenant)
       .where({ tenant, cycle_id: cycleId })
       .update({
         status: result.status,
@@ -70,7 +77,7 @@ export class SyncCycleRepository {
     adapterType: string,
     targetRealm?: string | null
   ): Promise<AccountingSyncCycleRecord | null> {
-    const query = this.knex<AccountingSyncCycleRecord>(TABLE)
+    const query = this.table<AccountingSyncCycleRecord>(tenant)
       .where({ tenant, adapter_type: adapterType })
       .orderBy('started_at', 'desc');
 

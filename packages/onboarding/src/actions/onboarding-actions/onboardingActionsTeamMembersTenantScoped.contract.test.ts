@@ -23,8 +23,8 @@ describe('onboarding team-member tenant-scoped query contract', () => {
     expect(section).toContain(".table('users");
     expect(section).toContain("tenantScopedTable('users')");
     expect(section).toContain("tenantScopedTable('roles')");
-    expect(section).toContain("await trx('users').insert({");
-    expect(section).toContain("await trx('user_roles').insert({");
+    expect(section).toContain("await tenantScopedTable('users').insert({");
+    expect(section).toContain("await tenantScopedTable('user_roles').insert({");
 
     expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
     expect(section).not.toMatch(/trx\('roles'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);

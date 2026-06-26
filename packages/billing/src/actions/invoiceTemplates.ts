@@ -2,7 +2,7 @@
 // TODO: Argument count issues with model methods
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import Invoice from '@alga-psa/billing/models/invoice'; // Assuming Invoice model has template methods
@@ -23,6 +23,8 @@ import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 
+const GLOBAL_TEMPLATE_LOOKUP = 'global-template-lookup';
+
 export const getInvoiceTemplate = withAuth(async (
     user,
     { tenant },
@@ -30,7 +32,8 @@ export const getInvoiceTemplate = withAuth(async (
 ): Promise<IInvoiceTemplate | null> => {
     const { knex } = await createTenantKnex();
     const template = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const record = await trx('invoice_templates')
+      const db = tenantDb(trx, tenant);
+      const record = await db.table('invoice_templates')
         .select(
           'template_id',
           'tenant',
@@ -51,7 +54,7 @@ export const getInvoiceTemplate = withAuth(async (
         return undefined;
       }
 
-      const tenantAssignment = await trx('invoice_template_assignments')
+      const tenantAssignment = await db.table('invoice_template_assignments')
         .select('template_source', 'invoice_template_id')
         .where({ tenant, scope_type: 'tenant' })
         .whereNull('scope_id')
@@ -106,12 +109,13 @@ export const setDefaultTemplate = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        await trx('invoice_template_assignments')
+        const db = tenantDb(trx, tenant);
+        await db.table('invoice_template_assignments')
             .where({ tenant, scope_type: 'tenant' })
             .whereNull('scope_id')
             .del();
 
-        await trx('invoice_templates')
+        await db.table('invoice_templates')
             .where({ tenant })
             .update({ is_default: false });
 
@@ -120,7 +124,7 @@ export const setDefaultTemplate = withAuth(async (
         }
 
         if (payload.templateSource === 'custom') {
-            await trx('invoice_templates')
+            await db.table('invoice_templates')
                 .where({ tenant, template_id: payload.templateId })
                 .update({ is_default: true });
         }
@@ -146,7 +150,7 @@ export const setDefaultTemplate = withAuth(async (
                       invoice_template_id: payload.templateId
                   };
 
-        await trx('invoice_template_assignments').insert(assignmentRecord);
+        await db.table('invoice_template_assignments').insert(assignmentRecord);
     });
 });
 
@@ -173,7 +177,7 @@ export const setClientTemplate = withAuth(async (
 
     const { knex } = await createTenantKnex();
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('clients')
+      return await tenantDb(trx, tenant).table('clients')
           .where({
               client_id: clientId,
               tenant
@@ -299,7 +303,6 @@ export const addInvoiceAnnotation = withAuth(async (
         ...annotation,
         created_at: new Date(), // Assuming timestamp needed (Use Date object)
     };
-    // await knex('invoice_annotations').insert(newAnnotation); // Example insert
     return newAnnotation;
 });
 
@@ -309,7 +312,7 @@ export const getInvoiceAnnotations = withAuth(async (
     invoiceId: string
 ): Promise<IInvoiceAnnotation[]> => {
     const { knex } = await createTenantKnex();
-    return knex('invoice_annotations')
+    return tenantDb(knex, tenant).table('invoice_annotations')
         .where({ invoice_id: invoiceId, tenant })
         .orderBy('created_at', 'asc');
 });
@@ -394,7 +397,8 @@ export const deleteInvoiceTemplate = withAuth(async (
     try {
         let templateWasTenantDefault = false;
         const result = await deleteEntityWithValidation('invoice_template', templateId, knex, tenant, async (trx) => {
-            const tenantAssignment = await trx('invoice_template_assignments')
+            const db = tenantDb(trx, tenant);
+            const tenantAssignment = await db.table('invoice_template_assignments')
                 .select('assignment_id')
                 .where({
                     tenant,
@@ -407,7 +411,7 @@ export const deleteInvoiceTemplate = withAuth(async (
 
             templateWasTenantDefault = Boolean(tenantAssignment);
 
-            await trx('invoice_template_assignments')
+            await db.table('invoice_template_assignments')
                 .where({
                     tenant,
                     template_source: 'custom',
@@ -416,11 +420,11 @@ export const deleteInvoiceTemplate = withAuth(async (
                 .del();
 
             // Clean up child records owned by the template
-            await trx('template_sections')
+            await db.table('template_sections')
                 .where({ template_id: templateId, tenant })
                 .del();
 
-            const deletedCount = await trx('invoice_templates')
+            const deletedCount = await db.table('invoice_templates')
                 .where({
                     template_id: templateId,
                     tenant
@@ -434,7 +438,8 @@ export const deleteInvoiceTemplate = withAuth(async (
 
         if (result.deleted && templateWasTenantDefault) {
             await withTransaction(knex, async (trx) => {
-                const fallbackCustom = await trx('invoice_templates')
+                const db = tenantDb(trx, tenant);
+                const fallbackCustom = await db.table('invoice_templates')
                     .where({ tenant })
                     .select('template_id')
                     .orderBy('name')
@@ -446,7 +451,8 @@ export const deleteInvoiceTemplate = withAuth(async (
                         templateId: fallbackCustom.template_id
                     });
                 } else {
-                    const fallbackStandard = await trx('standard_invoice_templates')
+                    const fallbackStandard = await tenantDb(trx, GLOBAL_TEMPLATE_LOOKUP)
+                        .unscoped('standard_invoice_templates', 'global standard invoice template fallback')
                         .select('standard_invoice_template_code')
                         .orderByRaw("CASE WHEN standard_invoice_template_code = 'standard-default' THEN 0 ELSE 1 END")
                         .orderBy('name')
@@ -458,12 +464,12 @@ export const deleteInvoiceTemplate = withAuth(async (
                             standardTemplateCode: fallbackStandard.standard_invoice_template_code
                         });
                     } else {
-                        await trx('invoice_template_assignments')
+                        await db.table('invoice_template_assignments')
                             .where({ tenant, scope_type: 'tenant' })
                             .whereNull('scope_id')
                             .del();
 
-                        await trx('invoice_templates')
+                        await db.table('invoice_templates')
                             .where({ tenant })
                             .update({ is_default: false });
                     }

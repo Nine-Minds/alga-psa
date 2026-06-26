@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { ICreditReconciliationReport } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,6 +10,14 @@ import { auditLog } from '@alga-psa/db';
 import { resolveReconciliationReport } from './creditReconciliationActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+) {
+  return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
 
 /**
  * Create a credit tracking entry for a missing entry
@@ -53,7 +61,7 @@ export const createMissingCreditTrackingEntry = withAuth(async (
       const creditId = uuidv4();
 
       // Create the credit tracking entry
-      await trx('credit_tracking').insert({
+      await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
         credit_id: creditId,
         tenant,
         client_id: report.client_id,
@@ -159,7 +167,7 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
       const now = new Date().toISOString();
 
       // Update the credit tracking entry
-      const updateResult = await trx('credit_tracking')
+      const updateResult = await tenantScopedTable(trx, tenant, 'credit_tracking')
         .where({
           credit_id: report.metadata.credit_id,
           tenant
@@ -266,7 +274,7 @@ export const applyCustomCreditAdjustment = withAuth(async (
       const adjustmentAmount = amount !== undefined ? amount : report.difference;
 
       // Get the current client credit balance
-      const [client] = await trx('clients')
+      const [client] = await tenantScopedTable(trx, tenant, 'clients')
         .where({ client_id: report.client_id, tenant })
         .select('credit_balance');
 
@@ -279,7 +287,7 @@ export const applyCustomCreditAdjustment = withAuth(async (
 
       // Create a transaction to record the adjustment
       const transactionId = uuidv4();
-      await trx('transactions').insert({
+      await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: report.client_id,
         amount: adjustmentAmount,
@@ -298,7 +306,7 @@ export const applyCustomCreditAdjustment = withAuth(async (
       });
 
       // Update the client's credit balance
-      await trx('clients')
+      await tenantScopedTable(trx, tenant, 'clients')
         .where({ client_id: report.client_id, tenant })
         .update({
           credit_balance: newBalance,

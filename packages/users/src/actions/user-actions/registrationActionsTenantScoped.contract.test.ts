@@ -21,8 +21,8 @@ describe('registration actions tenant-scoped query contract', () => {
     expect(section).toContain(".table('users");
     expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');
-    expect(section).toContain("const [user] = await trx('users')");
-    expect(section).toContain("await trx('user_roles').insert({");
+    expect(section).toContain("const [user] = await tenantDb(trx, contact.tenant).table('users')");
+    expect(section).toContain("await tenantDb(trx, contact.tenant).table('user_roles').insert({");
 
     expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where/);
     expect(section).not.toMatch(/trx\('roles'\)\.where\(\{\s*tenant: contact\.tenant\s*\}\)/);

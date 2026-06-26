@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import {
@@ -118,14 +118,13 @@ export const fetchInvoicesPaginated = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Build base query for counting and fetching
       const buildBaseQuery = () => {
-        const query = trx('invoices')
-          .join('clients', function () {
-            this.on('invoices.client_id', '=', 'clients.client_id')
-              .andOn('invoices.tenant', '=', 'clients.tenant');
-          })
-          .where('invoices.tenant', tenant);
+        const query = db.table('invoices');
+        db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
+        query.where('invoices.tenant', tenant);
 
         // Apply status filter
         if (status === 'draft') {
@@ -170,11 +169,9 @@ export const fetchInvoicesPaginated = withAuth(async (
 
       // Build data query with pagination
       // Use a subquery to get distinct invoice IDs first, then join for full data
-      const invoiceIdsQuery = trx('invoices')
-        .join('clients', function () {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-            .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
+      const invoiceIdsQuery = db.table('invoices');
+      db.tenantJoin(invoiceIdsQuery, 'clients', 'invoices.client_id', 'clients.client_id');
+      invoiceIdsQuery
         .where('invoices.tenant', tenant)
         .select('invoices.invoice_id');
 
@@ -226,19 +223,24 @@ export const fetchInvoicesPaginated = withAuth(async (
 
       // Now fetch full invoice data for the paginated IDs
       // IMPORTANT: Always include tenant filter for defense-in-depth security
-      const invoices = await trx('invoices')
-        .join('clients', function () {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-            .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
-        .leftJoin('client_locations', function () {
-          this.on('clients.client_id', '=', 'client_locations.client_id')
-            .andOn('clients.tenant', '=', 'client_locations.tenant')
-            .andOn(function() {
+      const invoicesQuery = db.table('invoices');
+      db.tenantJoin(invoicesQuery, 'clients', 'invoices.client_id', 'clients.client_id');
+      db.tenantJoin(
+        invoicesQuery,
+        'client_locations',
+        'clients.client_id',
+        'client_locations.client_id',
+        {
+          type: 'left',
+          on(join) {
+            join.andOn(function() {
               this.on('client_locations.is_billing_address', '=', trx.raw('true'))
-                  .orOn('client_locations.is_default', '=', trx.raw('true'));
+                .orOn('client_locations.is_default', '=', trx.raw('true'));
             });
-        })
+          }
+        }
+      );
+      const invoices = await invoicesQuery
         .where('invoices.tenant', tenant)
         .whereIn('invoices.invoice_id', ids)
         .select(
@@ -372,19 +374,26 @@ export const fetchInvoicesByClient = withAuth(async (
     
     // Get invoices with client info and location data in a single query, filtered by client_id
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
-        .join('clients', function() {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-              .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
-        .leftJoin('client_locations', function () {
-          this.on('clients.client_id', '=', 'client_locations.client_id')
-            .andOn('clients.tenant', '=', 'client_locations.tenant')
-            .andOn(function() {
+      const db = tenantDb(trx, tenant);
+      const query = db.table('invoices');
+      db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
+      db.tenantJoin(
+        query,
+        'client_locations',
+        'clients.client_id',
+        'client_locations.client_id',
+        {
+          type: 'left',
+          on(join) {
+            join.andOn(function() {
               this.on('client_locations.is_billing_address', '=', trx.raw('true'))
-                  .orOn('client_locations.is_default', '=', trx.raw('true'));
+                .orOn('client_locations.is_default', '=', trx.raw('true'));
             });
-        })
+          }
+        }
+      );
+
+      return await query
         .where({
           'invoices.client_id': clientId,
           'invoices.tenant': tenant
@@ -486,15 +495,12 @@ export const fetchInvoicesByContract = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
-        .join('client_contracts', function () {
-          this.on('invoices.client_contract_id', '=', 'client_contracts.client_contract_id')
-            .andOn('invoices.tenant', '=', 'client_contracts.tenant');
-        })
-        .join('clients', function() {
-          this.on('invoices.client_id', '=', 'clients.client_id')
-            .andOn('invoices.tenant', '=', 'clients.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const query = db.table('invoices');
+      db.tenantJoin(query, 'client_contracts', 'invoices.client_contract_id', 'client_contracts.client_contract_id');
+      db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
+
+      return await query
         .where({
           'invoices.client_contract_id': contractId,
           'invoices.tenant': tenant
@@ -612,7 +618,9 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
 ): Promise<string | null> => {
   const { knex } = await createTenantKnex();
 
-  const invoice = await knex('invoices')
+  const db = tenantDb(knex, tenant);
+
+  const invoice = await db.table('invoices')
     .select('client_id')
     .where({
       invoice_id: invoiceId,
@@ -625,7 +633,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   }
 
   try {
-    const client = await knex('clients')
+    const client = await db.table('clients')
       .select('invoice_template_id')
       .where({
         client_id: invoice.client_id,
@@ -665,7 +673,7 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const invoice = await knex('invoices')
+  const invoice = await tenantDb(knex, tenant).table('invoices')
     .where({ tenant, invoice_id: invoiceId })
     .select('invoice_id', 'client_contract_id', 'po_number')
     .first();

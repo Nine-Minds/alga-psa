@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import type { IClientContractLineCycle, IClient, ISO8601String, BillingCycleType } from '@alga-psa/types';
 import { parseISO } from 'date-fns';
@@ -10,6 +11,16 @@ import {
   normalizeAnchorSettingsForCycle,
   type NormalizedBillingCycleAnchorSettings
 } from './billingCycleAnchors';
+
+type ClientBillingAnchorSettingsRow = {
+  tenant: string;
+  client_id: string;
+  billing_cycle_anchor_day_of_month: number | null;
+  billing_cycle_anchor_month_of_year: number | null;
+  billing_cycle_anchor_day_of_week: number | null;
+  billing_cycle_anchor_reference_date: unknown | null;
+};
+
 /**
  * Result type for billing cycle creation.
  */
@@ -53,6 +64,16 @@ async function createBillingCycle(
     period_end_date: ISO8601String;
   }
 ): Promise<BillingCycleCreationResult> {
+  const tenant = cycle.tenant;
+  if (!tenant) {
+    return {
+      success: false,
+      error: 'db_error',
+      message: 'Client tenant is required to create a billing cycle.'
+    };
+  }
+
+  const db = tenantDb(knex, tenant);
   const effectiveDate = ensureUtcMidnightIsoDate(cycle.effective_date);
   const periodStart = ensureUtcMidnightIsoDate(cycle.period_start_date);
   const periodEnd = ensureUtcMidnightIsoDate(cycle.period_end_date);
@@ -71,10 +92,10 @@ async function createBillingCycle(
   }
 
   // Overlap check under [start, end) semantics. Touching boundaries are allowed.
-  const overlap = await knex('client_billing_cycles')
+  const overlap = await db.table('client_billing_cycles')
     .where({
       client_id: cycle.client_id,
-      tenant: cycle.tenant,
+      tenant,
       is_active: true
     })
     .whereNotNull('period_end_date')
@@ -92,11 +113,11 @@ async function createBillingCycle(
   }
 
   // Check for exact start-date duplicates (more user-friendly than relying on insert failure).
-  const existingCycle = await knex('client_billing_cycles')
+  const existingCycle = await db.table('client_billing_cycles')
     .where({
       client_id: cycle.client_id,
       effective_date: effectiveDate,
-      tenant: cycle.tenant,
+      tenant,
       is_active: true
     })
     .first()
@@ -120,7 +141,7 @@ async function createBillingCycle(
   };
 
   try {
-    await knex('client_billing_cycles').insert(fullCycle);
+    await db.table('client_billing_cycles').insert(fullCycle);
     console.log(`Created billing cycle for client ${cycle.client_id} from ${fullCycle.period_start_date} to ${fullCycle.period_end_date}`);
     return { success: true };
   } catch (error: unknown) {
@@ -164,13 +185,22 @@ export async function createClientContractLineCycles(
 ): Promise<BillingCycleCreationResult> {
   const billingCycle = client.billing_cycle as BillingCycleType;
   const now = ensureUtcMidnightIsoDate(new Date().toISOString().split('T')[0] + 'T00:00:00Z');
+  const tenant = client.tenant;
+  if (!tenant) {
+    return {
+      success: false,
+      error: 'db_error',
+      message: 'Client tenant is required to create billing cycles.'
+    };
+  }
 
   const anchorSettings = await loadClientAnchorSettings(knex, client, billingCycle);
+  const db = tenantDb(knex, tenant);
 
-  const lastCycle = await knex('client_billing_cycles')
+  const lastCycle = await db.table('client_billing_cycles')
     .where({
       client_id: client.client_id,
-      tenant: client.tenant,
+      tenant,
       is_active: true
     })
     .orderBy('period_start_date', 'desc')
@@ -279,8 +309,13 @@ async function loadClientAnchorSettings(
   billingCycle: BillingCycleType
 ): Promise<NormalizedBillingCycleAnchorSettings> {
   const defaults = getAnchorDefaultsForCycle(billingCycle);
-  const settings = await knex('client_billing_settings')
-    .where({ tenant: client.tenant, client_id: client.client_id })
+  const tenant = client.tenant;
+  if (!tenant) {
+    throw new Error('Client tenant is required to load billing anchor settings');
+  }
+
+  const settings = await tenantDb(knex, tenant).table<ClientBillingAnchorSettingsRow>('client_billing_settings')
+    .where({ tenant, client_id: client.client_id })
     .first()
     .select(
       'billing_cycle_anchor_day_of_month',

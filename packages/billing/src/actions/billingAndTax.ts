@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
@@ -279,15 +279,12 @@ function buildAvailableBillingPeriodsBaseQuery(
     tenant: string,
     options: FetchBillingPeriodsOptions,
 ) {
-    const query = trx('client_billing_cycles as cbc')
-        .join('clients as c', function () {
-            this.on('c.client_id', '=', 'cbc.client_id')
-                .andOn('c.tenant', '=', 'cbc.tenant');
-        })
-        .leftJoin('invoices as i', function () {
-            this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                .andOn('i.tenant', '=', 'cbc.tenant');
-        })
+    const db = tenantDb(trx, tenant);
+    const query = db.table('client_billing_cycles as cbc');
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'cbc.client_id');
+    db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id', { type: 'left' });
+
+    query
         .where('cbc.tenant', tenant)
         .whereNotNull('cbc.period_end_date')
         .whereNull('i.invoice_id');
@@ -365,35 +362,27 @@ async function fetchPersistedRecurringDueWorkDbRows(
 ): Promise<PersistedRecurringDueWorkDbRow[]> {
     const dueStates = [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES];
 
-    const contractLineRowsQuery = trx('recurring_service_periods as rsp')
-        .join('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-                .andOn('cl.tenant', '=', 'rsp.tenant');
-        })
-        .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-                .andOn('ct.tenant', '=', 'cl.tenant');
-        })
-        .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-                .andOn('c.tenant', '=', 'ct.tenant');
-        })
-        .leftJoin('client_contracts as cc', function () {
-            this.on('cc.contract_id', '=', 'ct.contract_id')
-                .andOn('cc.client_id', '=', 'c.client_id')
-                .andOn('cc.tenant', '=', 'rsp.tenant')
+    const db = tenantDb(trx, tenant);
+    const contractLineRowsQuery = db.table('recurring_service_periods as rsp');
+    db.tenantJoin(contractLineRowsQuery, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+    db.tenantJoin(contractLineRowsQuery, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+    db.tenantJoin(contractLineRowsQuery, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+    db.tenantJoin(contractLineRowsQuery, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cc.client_id', '=', 'c.client_id')
                 .andOn('cc.is_active', '=', trx.raw('?', [true]));
-        })
-        .leftJoin('client_tax_settings as cts', function () {
-            this.on('cts.client_id', '=', 'c.client_id')
-                .andOn('cts.tenant', '=', 'rsp.tenant');
-        })
-        .leftJoin('client_billing_cycles as cbc', function () {
-            this.on('cbc.client_id', '=', 'c.client_id')
-                .andOn('cbc.tenant', '=', 'rsp.tenant')
-                .andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
+        },
+    });
+    db.tenantJoin(contractLineRowsQuery, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
+    db.tenantJoin(contractLineRowsQuery, 'client_billing_cycles as cbc', 'cbc.client_id', 'c.client_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
                 .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
-        })
+        },
+    });
+    contractLineRowsQuery
         .where('rsp.tenant', tenant)
         .where('rsp.obligation_type', 'contract_line')
         .where((builder) =>
@@ -434,37 +423,28 @@ async function fetchPersistedRecurringDueWorkDbRows(
         dateColumn: 'rsp.service_period_start',
     });
 
-    const clientContractLineRowsQuery = trx('recurring_service_periods as rsp')
-        .join('contract_lines as cl', function () {
-            // Post-drop compatibility: client-cadence recurring rows still use
-            // obligation_type=client_contract_line, but obligation_id resolves to contract_line_id.
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-                .andOn('cl.tenant', '=', 'rsp.tenant');
-        })
-        .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-                .andOn('ct.tenant', '=', 'cl.tenant');
-        })
-        .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-                .andOn('c.tenant', '=', 'ct.tenant');
-        })
-        .leftJoin('client_contracts as cc', function () {
-            this.on('cc.contract_id', '=', 'ct.contract_id')
-                .andOn('cc.client_id', '=', 'c.client_id')
-                .andOn('cc.tenant', '=', 'rsp.tenant')
+    const clientContractLineRowsQuery = db.table('recurring_service_periods as rsp');
+    // Post-drop compatibility: client-cadence recurring rows still use
+    // obligation_type=client_contract_line, but obligation_id resolves to contract_line_id.
+    db.tenantJoin(clientContractLineRowsQuery, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+    db.tenantJoin(clientContractLineRowsQuery, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+    db.tenantJoin(clientContractLineRowsQuery, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+    db.tenantJoin(clientContractLineRowsQuery, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cc.client_id', '=', 'c.client_id')
                 .andOn('cc.is_active', '=', trx.raw('?', [true]));
-        })
-        .leftJoin('client_tax_settings as cts', function () {
-            this.on('cts.client_id', '=', 'c.client_id')
-                .andOn('cts.tenant', '=', 'rsp.tenant');
-        })
-        .leftJoin('client_billing_cycles as cbc', function () {
-            this.on('cbc.client_id', '=', 'c.client_id')
-                .andOn('cbc.tenant', '=', 'rsp.tenant')
-                .andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
+        },
+    });
+    db.tenantJoin(clientContractLineRowsQuery, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
+    db.tenantJoin(clientContractLineRowsQuery, 'client_billing_cycles as cbc', 'cbc.client_id', 'c.client_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
                 .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
-        })
+        },
+    });
+    clientContractLineRowsQuery
         .where('rsp.tenant', tenant)
         .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
         .where((builder) =>
@@ -525,17 +505,14 @@ async function fetchClientCadenceMaterializationGaps(
         return [];
     }
 
-    const activeRecurringRows = await trx('client_contracts as cc')
-        .join('contracts as ct', function () {
-            // template_contract_id is provenance only; live recurring rows belong to the
-            // client-owned contract and its cloned contract_lines.
-            this.on('ct.contract_id', '=', 'cc.contract_id')
-                .andOn('ct.tenant', '=', 'cc.tenant');
-        })
-        .join('contract_lines as cl', function () {
-            this.on('cl.contract_id', '=', 'ct.contract_id')
-                .andOn('cl.tenant', '=', 'ct.tenant');
-        })
+    const db = tenantDb(trx, tenant);
+    const activeRecurringRowsQuery = db.table('client_contracts as cc');
+    // template_contract_id is provenance only; live recurring rows belong to the
+    // client-owned contract and its cloned contract_lines.
+    db.tenantJoin(activeRecurringRowsQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+    db.tenantJoin(activeRecurringRowsQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+
+    const activeRecurringRows = await activeRecurringRowsQuery
         .where('cc.tenant', tenant)
         .whereIn('cc.client_id', clientIds)
         .where('cc.is_active', true)
@@ -760,11 +737,11 @@ async function fetchClientBillingMetadataById(
         return new Map();
     }
 
-    const rows = await trx('clients as c')
-        .leftJoin('client_tax_settings as cts', function () {
-            this.on('cts.client_id', '=', 'c.client_id')
-                .andOn('cts.tenant', '=', 'c.tenant');
-        })
+    const db = tenantDb(trx, tenant);
+    const query = db.table('clients as c');
+    db.tenantJoin(query, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
+
+    const rows = await query
         .where('c.tenant', tenant)
         .whereIn('c.client_id', clientIds)
         .select(
@@ -1288,7 +1265,7 @@ export const getClientTaxRate = withAuth(async (
 
     const { knex } = await createTenantKnex();
     const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('tax_rates')
+        return await tenantDb(trx, tenant).table('tax_rates')
             .where({
                 region_code: taxRegion, // Changed from region
                 tenant
@@ -1331,15 +1308,12 @@ export const getAvailableBillingPeriods = withAuth(async (
         const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
             // Build base query
             const buildBaseQuery = () => {
-                const query = trx('client_billing_cycles as cbc')
-                    .join('clients as c', function () {
-                        this.on('c.client_id', '=', 'cbc.client_id')
-                            .andOn('c.tenant', '=', 'cbc.tenant');
-                    })
-                    .leftJoin('invoices as i', function () {
-                        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                            .andOn('i.tenant', '=', 'cbc.tenant');
-                    })
+                const db = tenantDb(trx, tenant);
+                const query = db.table('client_billing_cycles as cbc');
+                db.tenantJoin(query, 'clients as c', 'c.client_id', 'cbc.client_id');
+                db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id', { type: 'left' });
+
+                query
                     .where('cbc.tenant', tenant)
                     .whereNotNull('cbc.period_end_date')
                     .whereNull('i.invoice_id');
@@ -1396,7 +1370,7 @@ export const getAvailableBillingPeriods = withAuth(async (
                 )
                 .orderBy('cbc.period_end_date', 'desc')
                 .limit(pageSize)
-                .offset(offset);
+                .offset(offset) as unknown as Array<Omit<BillingPeriodWithMeta, 'can_generate' | 'is_early'>>;
 
             // Process periods with flags
             const currentPlainDate = toPlainDate(currentDate);
@@ -1617,7 +1591,7 @@ export const getDueDate = withAuth(async (
 
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('clients')
+        return await tenantDb(trx, tenant).table('clients')
             .where({
                 client_id: clientId,
                 tenant
@@ -1654,7 +1628,7 @@ export const getNextBillingDate = withAuth(async (
 
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('client_billing_cycles')
+        return await tenantDb(trx, tenant).table('client_billing_cycles')
             .where({
                 client_id: clientId,
                 tenant
@@ -1765,6 +1739,11 @@ export interface IPaymentTermOption {
   name: string; // e.g., 'Net 15', 'Net 30'
 }
 
+type PaymentTermOptionRow = IPaymentTermOption & {
+  is_active?: boolean;
+  sort_order?: number;
+};
+
 /**
  * Fetches the list of available payment terms.
  * TODO: Implement actual logic - query a table or return a predefined list.
@@ -1779,10 +1758,16 @@ export const getPaymentTermsList = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const terms = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('payment_terms')
-        .select('term_code as id', 'term_name as name')
+      return await tenantDb(trx, tenant).unscoped<PaymentTermOptionRow>(
+        'payment_terms',
+        'optional global payment terms reference table; current migrations store client payment_terms as a column'
+      )
+        .select({
+          id: 'term_code',
+          name: 'term_name',
+        })
         // Assuming an 'is_active' flag exists for filtering relevant terms
-        .where({ is_active: true })
+        .where('is_active', true)
         // Assuming a 'sort_order' column exists for consistent ordering
         .orderBy('sort_order', 'asc');
     });

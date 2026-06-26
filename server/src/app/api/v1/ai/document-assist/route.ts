@@ -3,6 +3,7 @@ import { getExperimentalFeaturesForTenant } from '@alga-psa/tenancy/actions';
 import { ADD_ONS } from '@alga-psa/types';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { AddOnAccessError, assertTenantAddOnAccess } from '@/lib/tier-gating/assertAddOnAccess';
+import { tenantDb } from '@alga-psa/db';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -35,9 +36,9 @@ async function resolveDocumentName(tenantId: string, documentId: string): Promis
   try {
     const name = await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
-      const row = await knex('documents')
+      const row = await tenantDb(knex, tenantId).table('documents')
         .select('document_name')
-        .where({ document_id: documentId, tenant: tenantId })
+        .where({ document_id: documentId })
         .first();
       return row?.document_name || null;
     });

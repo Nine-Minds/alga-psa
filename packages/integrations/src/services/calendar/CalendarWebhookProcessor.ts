@@ -551,7 +551,11 @@ export class CalendarWebhookProcessor {
   private async getProviderByGoogleSubscription(subscriptionName: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await knex('google_calendar_provider_config as gc')
+      const row = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+        .unscoped(
+          'google_calendar_provider_config as gc',
+          'tenant discovery from Google calendar Pub/Sub provider config'
+        )
         .join(
           tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
             .unscoped('calendar_providers', 'tenant discovery from Google calendar Pub/Sub subscription')
@@ -582,7 +586,11 @@ export class CalendarWebhookProcessor {
   private async getProviderByGoogleChannelId(channelId: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await knex('google_calendar_provider_config as gc')
+      const row = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+        .unscoped(
+          'google_calendar_provider_config as gc',
+          'tenant discovery from Google calendar channel provider config'
+        )
         .join(
           tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
             .unscoped('calendar_providers', 'tenant discovery from Google calendar channel webhook')
@@ -616,7 +624,11 @@ export class CalendarWebhookProcessor {
   private async getProviderByMicrosoftSubscription(subscriptionId: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await knex('microsoft_calendar_provider_config as mc')
+      const row = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+        .unscoped(
+          'microsoft_calendar_provider_config as mc',
+          'tenant discovery from Microsoft calendar provider config'
+        )
         .join(
           tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
             .unscoped('calendar_providers', 'tenant discovery from Microsoft calendar subscription')

@@ -18,7 +18,7 @@ import {
   AccountingExportFileAttachment,
   PendingTaxImportRecord
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { unparseCSV } from '@alga-psa/core';
@@ -58,6 +58,11 @@ type DbClient = {
   client_name: string;
   billing_email?: string | null;
   payment_terms?: string | null;
+};
+
+type InvoiceTaxSourceRow = {
+  invoice_id: string;
+  tax_source: string | null;
 };
 
 /**
@@ -212,6 +217,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
         // Resolve service mapping to get QuickBooks item name
         const serviceMapping = await resolver.resolveServiceMapping({
+          tenantId: context.batch.tenant,
           adapterType: this.type,
           serviceId: charge.service_id,
           targetRealm: context.batch.target_realm
@@ -237,6 +243,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         let taxCode = '';
         if (!shouldExcludeTax && charge.tax_region) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
+            tenantId: context.batch.tenant,
             adapterType: this.type,
             taxRegionId: charge.tax_region,
             targetRealm: context.batch.target_realm
@@ -247,6 +254,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       // Resolve payment terms
       const paymentTermId = client.payment_terms ?? 'net_30';
       const termMapping = await resolver.resolvePaymentTermMapping({
+        tenantId: context.batch.tenant,
         adapterType: this.type,
         paymentTermId,
         targetRealm: context.batch.target_realm
@@ -255,6 +263,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
       // Resolve optional client/customer mapping
       const customerMapping = await resolver.resolveClientMapping({
+        tenantId: context.batch.tenant,
         adapterType: this.type,
         clientId,
         targetRealm: context.batch.target_realm
@@ -431,6 +440,9 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   ): Promise<PendingTaxImportRecord[]> {
     const { knex } = await createTenantKnex();
     const tenantId = context.batch.tenant;
+    if (!tenantId) {
+      throw new Error('Tenant is required to create pending QuickBooks tax import records');
+    }
     const pendingRecords: PendingTaxImportRecord[] = [];
     const now = new Date().toISOString();
 
@@ -451,12 +463,12 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     // Load invoices to check their tax_source setting
     const invoiceIds = Array.from(invoiceRefs.keys());
-    const invoices = await knex('invoices')
+    const invoices = await tenantDb(knex, tenantId).table<InvoiceTaxSourceRow>('invoices')
       .select('invoice_id', 'tax_source')
       .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
-    const invoiceTaxSources = new Map(invoices.map((inv: { invoice_id: string; tax_source: string | null }) =>
+    const invoiceTaxSources = new Map(invoices.map((inv) =>
       [inv.invoice_id, inv.tax_source]
     ));
 
@@ -498,7 +510,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       return new Map();
     }
 
-    const rows = await knex<DbInvoice>('invoices')
+    const rows = await tenantDb(knex, tenantId).table<DbInvoice>('invoices')
       .select(
         'invoice_id',
         'invoice_number',
@@ -529,7 +541,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       return new Map();
     }
 
-    const rows = await knex<DbCharge>('invoice_charges')
+    const rows = await tenantDb(knex, tenantId).table<DbCharge>('invoice_charges')
       .select(
         'item_id',
         'invoice_id',
@@ -567,7 +579,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       return new Map();
     }
 
-    const clients = await knex<DbClient>('clients')
+    const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email', 'payment_terms')
       .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));

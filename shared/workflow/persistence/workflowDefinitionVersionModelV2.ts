@@ -46,7 +46,10 @@ function workflowDefinitionVersions(
 ): Knex.QueryBuilder<WorkflowDefinitionVersionRecord, WorkflowDefinitionVersionRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowDefinitionVersionRecord>('workflow_definition_versions')
-    : knex<WorkflowDefinitionVersionRecord>('workflow_definition_versions');
+    : tenantDb(knex, '__workflow_definition_version_unscoped__').unscoped<WorkflowDefinitionVersionRecord>(
+      'workflow_definition_versions',
+      'workflow definition version model supports legacy workflow_id/version lookups before the tenant is resolved'
+    );
 }
 
 const WorkflowDefinitionVersionModelV2 = {

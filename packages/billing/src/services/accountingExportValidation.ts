@@ -1,9 +1,18 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver } from './accountingMappingResolver';
 import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
 
+type ChargeProjection = {
+  tenant: string;
+  item_id: string;
+  invoice_id?: string | null;
+  service_id?: string | null;
+  tax_region?: string | null;
+};
+
 type ChargeDetailProjection = {
+  tenant: string;
   item_id: string;
   service_period_start?: string | Date | null;
   service_period_end?: string | Date | null;
@@ -14,6 +23,26 @@ type NormalizedRecurringPeriod = {
   service_period_start: string | null;
   service_period_end: string | null;
   billing_timing: 'arrears' | 'advance' | null;
+};
+
+type InvoiceProjection = {
+  tenant: string;
+  invoice_id: string;
+  client_id?: string | null;
+  tax_source?: string | null;
+  invoice_type?: string | null;
+};
+
+type ClientProjection = {
+  tenant: string;
+  client_id: string;
+  payment_terms?: string | null;
+};
+
+type ServiceProjection = {
+  tenant: string;
+  service_id: string;
+  service_name: string;
 };
 
 function buildLineServicePeriodMetadata(
@@ -54,14 +83,20 @@ export class AccountingExportValidation {
       throw new Error(`Export batch ${batchId} not found`);
     }
 
+    const tenant = batch.tenant;
+    if (!tenant) {
+      throw new Error(`Export batch ${batchId} is missing tenant context`);
+    }
+
     const lines = await repo.listLines(batchId);
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const validationTimestamp = new Date().toISOString();
 
     // Clear prior unresolved validation errors so each validation run reflects current mappings.
-    await knex('accounting_export_errors')
+    await db.table('accounting_export_errors')
       .where({
-        tenant: batch.tenant,
+        tenant,
         batch_id: batchId,
         resolution_state: 'open'
       })
@@ -97,22 +132,22 @@ export class AccountingExportValidation {
 
     const charges =
       chargeIds.size > 0
-        ? await knex('invoice_charges')
+        ? await db.table<ChargeProjection>('invoice_charges')
             .select('item_id', 'invoice_id', 'service_id', 'tax_region')
             .whereIn('item_id', Array.from(chargeIds))
-            .andWhere({ tenant: batch.tenant })
+            .andWhere({ tenant })
         : [];
-    const chargesById = new Map(charges.map((charge: any) => [charge.item_id, charge]));
+    const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
     const chargeDetailRows =
       chargeIds.size > 0
-        ? await knex('invoice_charge_details')
+        ? await db.table<ChargeDetailProjection>('invoice_charge_details')
             .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
             .whereIn('item_id', Array.from(chargeIds))
-            .andWhere({ tenant: batch.tenant })
+            .andWhere({ tenant })
             .orderBy('service_period_start', 'asc')
         : [];
     const canonicalPeriodsByChargeId = new Map<string, NormalizedRecurringPeriod[]>();
-    for (const detailRow of chargeDetailRows as ChargeDetailProjection[]) {
+    for (const detailRow of chargeDetailRows) {
       const normalized = normalizeRecurringPeriod(detailRow);
       if (!normalized.service_period_start && !normalized.service_period_end) {
         continue;
@@ -124,12 +159,12 @@ export class AccountingExportValidation {
 
     const invoices =
       invoiceIds.size > 0
-        ? await knex('invoices')
+        ? await db.table<InvoiceProjection>('invoices')
             .select('invoice_id', 'client_id', 'tax_source', 'invoice_type')
             .whereIn('invoice_id', Array.from(invoiceIds))
-            .andWhere({ tenant: batch.tenant })
+            .andWhere({ tenant })
         : [];
-    const invoiceTaxSourceById = new Map(invoices.map((row: any) => [row.invoice_id, row.tax_source]));
+    const invoiceTaxSourceById = new Map(invoices.map((row) => [row.invoice_id, row.tax_source]));
     const clientIds = new Set<string>();
     if (isQuickBooks) {
       for (const invoice of invoices) {
@@ -161,12 +196,12 @@ export class AccountingExportValidation {
 
     const clients =
       clientIds.size > 0
-        ? await knex('clients')
+        ? await db.table<ClientProjection>('clients')
             .select('client_id', 'payment_terms')
             .whereIn('client_id', Array.from(clientIds))
-            .andWhere({ tenant: batch.tenant })
+            .andWhere({ tenant })
         : [];
-    const clientsById = new Map(clients.map((row: any) => [row.client_id, row]));
+    const clientsById = new Map(clients.map((row) => [row.client_id, row]));
 
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();
@@ -185,13 +220,13 @@ export class AccountingExportValidation {
 
     const services =
       serviceIds.size > 0
-        ? await knex('service_catalog')
+        ? await db.table<ServiceProjection>('service_catalog')
             .select('service_id', 'service_name')
             .whereIn('service_id', Array.from(serviceIds))
-            .andWhere({ tenant: batch.tenant })
+            .andWhere({ tenant })
         : [];
     const serviceNameById = new Map<string, string>(
-      services.map((row: any) => [row.service_id, row.service_name])
+      services.map((row) => [row.service_id, row.service_name])
     );
 
     for (const line of lines) {
@@ -292,6 +327,7 @@ export class AccountingExportValidation {
       const serviceMappingKey = `${charge.service_id}:${batch.target_realm ?? 'default'}`;
       if (!checkedServiceMappings.has(serviceMappingKey)) {
         const mapping = await resolver.resolveServiceMapping({
+          tenantId: tenant,
           adapterType,
           targetRealm: batch.target_realm,
           serviceId: charge.service_id
@@ -324,6 +360,7 @@ export class AccountingExportValidation {
         const cacheKey = `${charge.tax_region}:${batch.target_realm ?? 'default'}`;
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
+            tenantId: tenant,
             adapterType,
             taxRegionId: charge.tax_region,
             targetRealm: batch.target_realm
@@ -382,6 +419,7 @@ export class AccountingExportValidation {
           const paymentKey = `${client.payment_terms}:${batch.target_realm ?? 'default'}`;
           if (!checkedPaymentTerms.has(paymentKey)) {
             const termMapping = await resolver.resolvePaymentTermMapping({
+              tenantId: tenant,
               adapterType,
               paymentTermId: client.payment_terms,
               targetRealm: batch.target_realm

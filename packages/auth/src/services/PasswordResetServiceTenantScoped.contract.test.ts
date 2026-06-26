@@ -11,10 +11,11 @@ describe('PasswordResetService tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'password_reset_tokens', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'users', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'password_reset_tokens', tokenTenant)");
-    expect(source).toContain("tenantScopedTable(trx, 'password_reset_tokens as prt', tokenTenant)");
+    expect(source).toContain('tokenTenantDb.tenantJoin(');
     expect(source).toContain("tenantScopedTable(trx, 'password_reset_tokens', tokenInfo.tenant)");
     expect(source).toContain("tenantScopedTable(knex, 'password_reset_tokens', tenant)");
     expect(source).toContain("tenantScopedTable(tx, 'password_reset_tokens', resolvedTenant)");
+    expect(source).toContain(".unscoped('password_reset_tokens', 'tenant discovery from password reset token')");
     expect(source).not.toContain(".where('tenant', tenant)");
     expect(source).not.toContain(".where('tenant', tokenTenant)");
     expect(source).not.toContain(".where('prt.tenant', tokenTenant)");

@@ -183,7 +183,7 @@ export const addSingleTeamMember = withAuth(async (
         // Use provided password or generate a default one
         const tempPassword = await hashPassword(member.password || 'TempPassword123!');
 
-        await trx('users').insert({
+        await tenantScopedTable('users').insert({
           user_id: userId,
           tenant,
           username: member.email.toLowerCase(),  // Use email as username
@@ -205,7 +205,7 @@ export const addSingleTeamMember = withAuth(async (
           .first();
 
         if (role) {
-          await trx('user_roles').insert({
+          await tenantScopedTable('user_roles').insert({
             user_id: userId,
             role_id: role.role_id,
             tenant
@@ -219,7 +219,7 @@ export const addSingleTeamMember = withAuth(async (
             .first();
           
           if (defaultRole) {
-            await trx('user_roles').insert({
+            await tenantScopedTable('user_roles').insert({
               user_id: userId,
               role_id: defaultRole.role_id,
               tenant
@@ -327,7 +327,7 @@ export const addTeamMembers = withAuth(async (
           // Use provided password or generate a default one
           const tempPassword = await hashPassword(member.password || 'TempPassword123!');
 
-          await trx('users').insert({
+          await tenantScopedTable('users').insert({
             user_id: userId,
             tenant,
             username: member.email.toLowerCase(),  // Use email as username
@@ -349,7 +349,7 @@ export const addTeamMembers = withAuth(async (
             .first();
 
           if (role) {
-            await trx('user_roles').insert({
+            await tenantScopedTable('user_roles').insert({
               user_id: userId,
               role_id: role.role_id,
               tenant
@@ -363,7 +363,7 @@ export const addTeamMembers = withAuth(async (
               .first();
             
             if (defaultRole) {
-              await trx('user_roles').insert({
+              await tenantScopedTable('user_roles').insert({
                 user_id: userId,
                 role_id: defaultRole.role_id,
                 tenant
@@ -481,6 +481,8 @@ export const createClient = withAuth(async (
 
     // Create new client
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       // Create the client without email/phone (those go in locations)
       const clientData = {
         client_name: data.clientName,
@@ -504,7 +506,7 @@ export const createClient = withAuth(async (
 
       // Create default location with email and phone if provided
       if (data.clientEmail || data.clientPhone) {
-        await trx('client_locations').insert({
+        await tenantScopedTable('client_locations').insert({
           location_id: require('crypto').randomUUID(),
           client_id: clientId,
           tenant,
@@ -664,7 +666,7 @@ export const setupBilling = withAuth(async (
       const rateInCents = Math.round((parseFloat(data.servicePrice) || 0) * 100);
       // Billing behavior is contract/service configuration context, not service-type identity.
       serviceId = require('crypto').randomUUID();
-      await trx('service_catalog').insert({
+      await tenantScopedTable('service_catalog').insert({
         service_id: serviceId,
         tenant,
         service_name: data.serviceName,
@@ -677,7 +679,7 @@ export const setupBilling = withAuth(async (
       });
 
       // Create service_prices entry so the catalog UI shows the correct currency & rate
-      await trx('service_prices').insert({
+      await tenantScopedTable('service_prices').insert({
         price_id: require('crypto').randomUUID(),
         tenant,
         service_id: serviceId,
@@ -696,7 +698,7 @@ export const setupBilling = withAuth(async (
         await tenantScopedTable('default_billing_settings')
           .update({ default_currency_code: currencyCode, updated_at: trx.fn.now() });
       } else {
-        await trx('default_billing_settings').insert({
+        await tenantScopedTable('default_billing_settings').insert({
           tenant,
           zero_dollar_invoice_handling: 'normal',
           suppress_zero_dollar_invoices: false,
@@ -757,7 +759,7 @@ export const configureTicketing = withAuth(async (
               })
             });
         } else {
-          await trx('next_number').insert({
+          await tenantScopedTable('next_number').insert({
             tenant,
             entity_type: 'TICKET',
             prefix: data.ticketPrefix ?? '',
@@ -797,7 +799,9 @@ export const configureTicketing = withAuth(async (
         // This is a manually created board
         boardId = require('crypto').randomUUID();
         const shouldBeDefault = data.isDefaultBoard || false;
-        const boardColumns = await trx('boards').columnInfo();
+        const boardColumns = await tenantDb(trx, tenant)
+          .unscoped('boards', 'columnInfo reads schema metadata, not tenant rows')
+          .columnInfo();
         
         // If setting as default, clear any existing defaults first
         if (shouldBeDefault) {
@@ -808,7 +812,7 @@ export const configureTicketing = withAuth(async (
             .update({ is_default: false });
         }
         
-        await trx('boards').insert({
+        await tenantScopedTable('boards').insert({
           board_id: boardId,
           tenant,
           board_name: data.boardName,
@@ -863,7 +867,7 @@ export const configureTicketing = withAuth(async (
             }
           }
           
-          await trx('categories').insert({
+          await tenantScopedTable('categories').insert({
             category_id: categoryId,
             tenant,
             category_name: categoryName,
@@ -924,7 +928,7 @@ export const configureTicketing = withAuth(async (
 
           if (!existingStatus) {
             const statusId = require('crypto').randomUUID();
-            await trx('statuses').insert({
+            await tenantScopedTable('statuses').insert({
               status_id: statusId,
               tenant,
               board_id: boardId,
@@ -961,7 +965,7 @@ export const configureTicketing = withAuth(async (
 
         if (!existingPriority) {
           const priorityId = require('crypto').randomUUID();
-          await trx('priorities').insert({
+          await tenantScopedTable('priorities').insert({
             priority_id: priorityId,
             tenant,
             priority_name: priorityName,

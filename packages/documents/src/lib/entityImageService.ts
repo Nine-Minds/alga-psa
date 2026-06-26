@@ -68,7 +68,7 @@ async function ensureImageFolder(
     .first();
 
   if (!existing) {
-    await trx('document_folders').insert({
+    await tenantDb(trx, tenant).table('document_folders').insert({
       tenant,
       folder_id: uuidv4(),
       folder_path: folderPath,
@@ -151,7 +151,7 @@ export async function uploadEntityImage(
         // Best-effort: if folder creation fails, document still lands in root
       }
 
-      const [document] = await trx('documents')
+      const [document] = await tenantDb(trx, tenant).table('documents')
         .insert({ ...documentData, folder_path: folderPath })
         .returning(['document_id']);
 
@@ -169,7 +169,7 @@ export async function uploadEntityImage(
           .update({ is_entity_logo: false });
       }
 
-      await trx('document_associations').insert({
+      await tenantDb(trx, tenant).table('document_associations').insert({
         document_id: document.document_id,
         entity_id: entityId,
         entity_type: entityType,
@@ -345,7 +345,7 @@ export async function linkExistingDocumentAsEntityImage(
           .update({ is_entity_logo: true });
       } else {
         // Create new association
-        await trx('document_associations').insert({
+        await tenantDb(trx, tenant).table('document_associations').insert({
           document_id: documentId,
           entity_id: entityId,
           entity_type: entityType,

@@ -629,7 +629,7 @@ export class TimeSheetService extends BaseService<any> {
           created_at: new Date()
         };
   
-        const [comment] = await trx('time_sheet_comments')
+        const [comment] = await tenantDb(trx, context.tenant).table('time_sheet_comments')
           .insert(commentData)
           .returning('*');
   
@@ -724,7 +724,7 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        const [period] = await trx('time_periods')
+        const [period] = await tenantDb(trx, context.tenant).table('time_periods')
           .insert(periodData)
           .returning('*');
   
@@ -829,7 +829,7 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
-        const [settings] = await trx('time_period_settings')
+        const [settings] = await tenantDb(trx, context.tenant).table('time_period_settings')
           .insert(settingsData)
           .returning('*');
   
@@ -891,16 +891,16 @@ export class TimeSheetService extends BaseService<any> {
       // Check permissions for private entries
       if (!await this.canViewAllSchedules(context)) {
         const userId = context.userId;
+        const assigneeVisibilityQuery = tenantDb(knex, context.tenant).table('schedule_entry_assignees as sea')
+          .select('sea.user_id')
+          .whereRaw('sea.entry_id = schedule_entries.entry_id')
+          .whereRaw('sea.tenant = schedule_entries.tenant')
+          .where('sea.user_id', userId);
+
         query = query.where(function() {
           this.where('is_private', false)
             .orWhere('created_by', userId)
-            .orWhereExists(function() {
-              this.select('user_id')
-                .from('schedule_entry_assignees as sea')
-                .whereRaw('sea.entry_id = schedule_entries.entry_id')
-                .whereRaw('sea.tenant = schedule_entries.tenant')
-                .where('sea.user_id', userId);
-            });
+            .orWhereExists(assigneeVisibilityQuery);
         });
       }
 
@@ -1052,7 +1052,7 @@ export class TimeSheetService extends BaseService<any> {
               tenant: context.tenant
             }));
   
-            await trx('schedule_entry_assignees').insert(assigneeData);
+            await tenantDb(trx, context.tenant).table('schedule_entry_assignees').insert(assigneeData);
           }
         }
 

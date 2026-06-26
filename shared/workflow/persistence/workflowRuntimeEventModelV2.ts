@@ -25,7 +25,10 @@ function workflowRuntimeEvents(
 ): Knex.QueryBuilder<WorkflowRuntimeEventRecord, WorkflowRuntimeEventRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowRuntimeEventRecord>('workflow_runtime_events')
-    : knex<WorkflowRuntimeEventRecord>('workflow_runtime_events');
+    : tenantDb(knex, '__workflow_runtime_event_unscoped__').unscoped<WorkflowRuntimeEventRecord>(
+      'workflow_runtime_events',
+      'workflow runtime event model supports tenantless event searches and replay/admin discovery'
+    );
 }
 
 const WorkflowRuntimeEventModelV2 = {

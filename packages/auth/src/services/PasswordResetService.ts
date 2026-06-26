@@ -31,6 +31,8 @@ export interface TokenVerificationResult {
   error?: string;
 }
 
+const PASSWORD_RESET_TENANT_DISCOVERY = 'tenant-discovery';
+
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
   return tenantDb(conn, tenant).table(table);
 }
@@ -113,7 +115,7 @@ export class PasswordResetService {
         });
 
       // Create new reset token (using transaction)
-      const [resetToken] = await trx('password_reset_tokens')
+      const [resetToken] = await tenantScopedTable(trx, 'password_reset_tokens', tenant)
         .insert({
           tenant,
           user_id: user.user_id,
@@ -195,7 +197,8 @@ export class PasswordResetService {
         // First, find the token to get its tenant
         // This initial query needs to scan all shards, but it's necessary
         // to determine which tenant the token belongs to
-        const tokenInfo = await trx('password_reset_tokens')
+        const tokenInfo = await tenantDb(trx, PASSWORD_RESET_TENANT_DISCOVERY)
+          .unscoped('password_reset_tokens', 'tenant discovery from password reset token')
           .where({
             token_hash: tokenHash,  // Compare hashes
             used_at: null
@@ -219,11 +222,14 @@ export class PasswordResetService {
           .del();
         
         // Now fetch the full token with user info (single-shard query)
-        const resetToken = await tenantScopedTable(trx, 'password_reset_tokens as prt', tokenTenant)
-          .join('users as u', function() {
-            this.on('prt.tenant', '=', 'u.tenant')
-                .andOn('prt.user_id', '=', 'u.user_id');
-          })
+        const tokenTenantDb = tenantDb(trx, tokenTenant);
+        const resetTokenQuery = tokenTenantDb.table('password_reset_tokens as prt');
+        const resetToken = await tokenTenantDb.tenantJoin(
+          resetTokenQuery,
+          'users as u',
+          'prt.user_id',
+          'u.user_id'
+        )
           .where({
             'prt.token_hash': tokenHash,  // Compare hashes
             'prt.used_at': null
@@ -292,7 +298,8 @@ export class PasswordResetService {
       // Use withTransaction helper for proper connection management
       return await withTransaction(knex, async (trx) => {
         // First get the token info to find its tenant
-        const tokenInfo = await trx('password_reset_tokens')
+        const tokenInfo = await tenantDb(trx, PASSWORD_RESET_TENANT_DISCOVERY)
+          .unscoped('password_reset_tokens', 'tenant discovery from password reset token use')
           .where({
             token_hash: tokenHash,  // Compare hashes
             used_at: null

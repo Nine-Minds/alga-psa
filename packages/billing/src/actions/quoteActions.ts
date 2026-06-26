@@ -2,7 +2,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote PDF generation creates document records - direct model access required in server action context */
 
 import { randomUUID } from 'crypto';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -145,14 +145,15 @@ function extractRoleIdsFromUser(user: BillingAuthUser): string[] {
 }
 
 async function resolveAuthorizationSubjectForUser(
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   tenant: string,
   user: BillingAuthUser
 ): Promise<AuthorizationSubject> {
+  const db = tenantDb(knex, tenant);
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
     try {
-      const roleRows = await knex('user_roles')
+      const roleRows = await db.table('user_roles')
         .where({ tenant, user_id: user.user_id })
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
@@ -162,8 +163,8 @@ async function resolveAuthorizationSubjectForUser(
   }
 
   const [teamRows, managedRows] = await Promise.all([
-    knex('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    knex('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    db.table('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+    db.table('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
   ]);
 
   return {
@@ -333,13 +334,13 @@ const getQuoteRecipients = async (
 ): Promise<string[]> => {
   const [contactRecipient, clientRecipient] = await Promise.all([
     quote.contact_id
-      ? knex('contacts')
+      ? tenantDb(knex, tenant).table('contacts')
         .select('email')
         .where({ tenant, contact_name_id: quote.contact_id })
         .first<{ email?: string | null }>()
       : Promise.resolve(null),
     quote.client_id
-      ? knex('clients')
+      ? tenantDb(knex, tenant).table('clients')
         .select('billing_email')
         .where({ tenant, client_id: quote.client_id })
         .first<{ billing_email?: string | null }>()
@@ -463,14 +464,14 @@ export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteI
   let currencyCode = parsedInput.currency_code;
   if (!currencyCode) {
     if (parsedInput.client_id) {
-      const client = await knex('clients')
+      const client = await tenantDb(knex, tenant).table('clients')
         .where({ tenant, client_id: parsedInput.client_id })
         .select('default_currency_code')
         .first();
       currencyCode = client?.default_currency_code ?? undefined;
     }
     if (!currencyCode) {
-      const billingSettings = await knex('default_billing_settings')
+      const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
         .where({ tenant })
         .select('default_currency_code')
         .first();
@@ -534,14 +535,14 @@ export const getQuote = withAuth(async (
   // Resolve accepted_by UUID to a display name
   if (quote.accepted_by) {
     try {
-      const contact = await knex('contacts')
+      const contact = await tenantDb(knex, tenant).table('contacts')
         .select('full_name')
         .where({ tenant, contact_name_id: quote.accepted_by })
         .first<{ full_name?: string }>();
       if (contact?.full_name) {
         quote.accepted_by_name = contact.full_name;
       } else {
-        const user = await knex('users')
+        const user = await tenantDb(knex, tenant).table('users')
           .select('first_name', 'last_name')
           .where({ tenant, user_id: quote.accepted_by })
           .first<{ first_name?: string; last_name?: string }>();
@@ -691,7 +692,7 @@ export const updateQuoteItem = withAuth(async (
     ...input,
     updated_by: input.updated_by ?? getActorUserId(user),
   });
-  const quoteItem = await knex('quote_items')
+  const quoteItem = await tenantDb(knex, tenant).table('quote_items')
     .where({ tenant, quote_item_id: quoteItemId })
     .first<{ quote_id: string; quote_item_id: string }>('quote_id', 'quote_item_id');
   if (!quoteItem) {
@@ -722,7 +723,7 @@ export const removeQuoteItem = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quoteItem = await knex('quote_items')
+  const quoteItem = await tenantDb(knex, tenant).table('quote_items')
     .where({ tenant, quote_item_id: quoteItemId })
     .first<{ quote_id: string; quote_item_id: string }>('quote_id', 'quote_item_id');
   if (!quoteItem) {
@@ -1311,7 +1312,7 @@ export const sendQuote = withAuth(async (
   try {
     const [recipients, tenantRecord] = await Promise.all([
       getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
+      tenantDb(knex, tenant).table('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
     ]);
 
     if (recipients.length > 0) {
@@ -1404,7 +1405,7 @@ export const resendQuote = withAuth(async (
   try {
     const [recipients, tenantRecord] = await Promise.all([
       getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
+      tenantDb(knex, tenant).table('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
     ]);
 
     if (recipients.length > 0) {
@@ -1493,7 +1494,7 @@ export const sendQuoteReminder = withAuth(async (
   try {
     const [recipients, tenantRecord] = await Promise.all([
       getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
+      tenantDb(knex, tenant).table('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
     ]);
 
     if (recipients.length > 0) {
@@ -1731,11 +1732,10 @@ export const getQuotePdfFileId = withAuth(async (
     return null;
   }
 
-  const doc = await knex('document_associations as da')
-    .join('documents as d', function () {
-      this.on('da.document_id', 'd.document_id')
-        .andOn('da.tenant', 'd.tenant');
-    })
+  const db = tenantDb(knex, tenant);
+  const docQuery = db.table('document_associations as da');
+  db.tenantJoin(docQuery, 'documents as d', 'da.document_id', 'd.document_id');
+  const doc = await docQuery
     .where({
       'da.entity_id': quoteId,
       'da.entity_type': 'quote',

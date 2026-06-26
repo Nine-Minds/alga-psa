@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { IQuoteItem } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 
 function ensureIntegerField(value: unknown, fieldName: string): void {
@@ -24,12 +25,46 @@ function normalizeQuoteItem(row: Record<string, any>): IQuoteItem {
   } as IQuoteItem;
 }
 
+function quoteTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
+
+type QuoteItemServiceLookupRow = {
+  tenant?: string;
+  service_id?: string;
+  service_name: string;
+  sku?: string | null;
+  default_rate?: number | string | null;
+  unit_of_measure?: string | null;
+  billing_method?: IQuoteItem['billing_method'];
+  item_kind?: IQuoteItem['service_item_kind'];
+  cost?: number | string | null;
+  cost_currency?: string | null;
+};
+
+type QuoteCurrencyLookupRow = {
+  tenant?: string;
+  quote_id?: string;
+  currency_code?: string | null;
+};
+
+type ServicePriceLookupRow = {
+  tenant?: string;
+  service_id?: string;
+  currency_code?: string;
+  rate?: number | string | null;
+};
+
 async function getNextDisplayOrder(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string
 ): Promise<number> {
-  const result = await knexOrTrx('quote_items')
+  const result = await quoteTable(knexOrTrx, tenant, 'quote_items')
     .where({ tenant, quote_id: quoteId })
     .max<{ max?: number | string }>('display_order as max')
     .first();
@@ -47,7 +82,7 @@ const QuoteItem = {
       throw new Error('Tenant context is required for listing quote items');
     }
 
-    const items = await knexOrTrx('quote_items')
+    const items = await quoteTable(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_id: quoteId })
       .orderBy('display_order', 'asc')
       .orderBy('created_at', 'asc');
@@ -70,7 +105,7 @@ const QuoteItem = {
     let resolvedItem = { ...item };
 
     if (item.service_id) {
-      const service = await knexOrTrx('service_catalog')
+      const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
         .where({ tenant, service_id: item.service_id })
         .select(
           'service_name',
@@ -91,13 +126,13 @@ const QuoteItem = {
       // Look up currency-specific price from service_prices when unit_price not explicitly provided
       let resolvedUnitPrice = resolvedItem.unit_price;
       if (resolvedUnitPrice == null) {
-        const quote = await knexOrTrx('quotes')
+        const quote = await quoteTable<QuoteCurrencyLookupRow>(knexOrTrx, tenant, 'quotes')
           .where({ tenant, quote_id: item.quote_id })
           .select('currency_code')
           .first();
         const currencyCode = quote?.currency_code ?? 'USD';
 
-        const priceRow = await knexOrTrx('service_prices')
+        const priceRow = await quoteTable<ServicePriceLookupRow>(knexOrTrx, tenant, 'service_prices')
           .where({ tenant, service_id: item.service_id, currency_code: currencyCode })
           .select('rate')
           .first();
@@ -127,7 +162,7 @@ const QuoteItem = {
     const totalPrice = quantity * unitPrice;
     const displayOrder = resolvedItem.display_order ?? await getNextDisplayOrder(knexOrTrx, tenant, item.quote_id);
 
-    const [createdItem] = await knexOrTrx('quote_items')
+    const [createdItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .insert({
         tenant,
         ...resolvedItem,
@@ -142,7 +177,7 @@ const QuoteItem = {
 
     await recalculateQuoteFinancials(knexOrTrx, tenant, item.quote_id);
 
-    const refreshedItem = await knexOrTrx('quote_items')
+    const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_item_id: createdItem.quote_item_id })
       .first();
 
@@ -159,7 +194,7 @@ const QuoteItem = {
       throw new Error('Tenant context is required for updating quote item');
     }
 
-    const existingItem = await knexOrTrx('quote_items')
+    const existingItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_item_id: quoteItemId })
       .first();
 
@@ -175,7 +210,7 @@ const QuoteItem = {
 
     const totalPrice = Number(quantity) * Number(unitPrice);
 
-    const [updatedItem] = await knexOrTrx('quote_items')
+    const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_item_id: quoteItemId })
       .update({
         ...updateData,
@@ -188,7 +223,7 @@ const QuoteItem = {
 
     await recalculateQuoteFinancials(knexOrTrx, tenant, existingItem.quote_id);
 
-    const refreshedItem = await knexOrTrx('quote_items')
+    const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_item_id: quoteItemId })
       .first();
 
@@ -204,7 +239,7 @@ const QuoteItem = {
       throw new Error('Tenant context is required for deleting quote item');
     }
 
-    const existingItem = await knexOrTrx('quote_items')
+    const existingItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_item_id: quoteItemId })
       .select('quote_id')
       .first();
@@ -213,18 +248,18 @@ const QuoteItem = {
       throw new Error(`Quote item ${quoteItemId} not found in tenant ${tenant}`);
     }
 
-    await knexOrTrx('quote_items')
+    await quoteTable(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_item_id: quoteItemId })
       .del();
 
-    const remainingItems = await knexOrTrx('quote_items')
+    const remainingItems = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_id: existingItem.quote_id })
       .orderBy('display_order', 'asc')
       .orderBy('created_at', 'asc');
 
     for (const [index, item] of remainingItems.entries()) {
       if (item.display_order !== index) {
-        await knexOrTrx('quote_items')
+        await quoteTable(knexOrTrx, tenant, 'quote_items')
           .where({ tenant, quote_item_id: item.quote_item_id })
           .update({ display_order: index });
       }
@@ -245,7 +280,7 @@ const QuoteItem = {
       throw new Error('Tenant context is required for reordering quote items');
     }
 
-    const actualItemIds = await knexOrTrx('quote_items')
+    const actualItemIds = await quoteTable(knexOrTrx, tenant, 'quote_items')
       .where({ tenant, quote_id: quoteId })
       .pluck('quote_item_id') as string[];
 
@@ -260,7 +295,7 @@ const QuoteItem = {
     }
 
     for (const [index, quoteItemId] of orderedQuoteItemIds.entries()) {
-      await knexOrTrx('quote_items')
+      await quoteTable(knexOrTrx, tenant, 'quote_items')
         .where({ tenant, quote_id: quoteId, quote_item_id: quoteItemId })
         .update({ display_order: index });
     }

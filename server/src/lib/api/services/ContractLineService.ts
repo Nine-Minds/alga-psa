@@ -143,13 +143,13 @@ export class ContractLineService extends BaseService<IContractLine> {
   
       // Build enhanced query with analytics if requested
       let dataQuery = this.buildContractLineQuery(knex, context, serviceOptions);
-      dataQuery = this.applyContractLineFilters(dataQuery, filters);
+      dataQuery = this.applyContractLineFilters(dataQuery, filters, knex, context);
       dataQuery = this.applySorting(dataQuery, sort, order);
       dataQuery = this.applyPagination(dataQuery, page, limit);
   
       // Build count query
       let countQuery = this.buildBaseQuery(knex, context);
-      countQuery = this.applyContractLineFilters(countQuery, filters);
+      countQuery = this.applyContractLineFilters(countQuery, filters, knex, context);
   
       // Execute queries
       const [plans, [{ count }]] = await Promise.all([
@@ -184,13 +184,13 @@ export class ContractLineService extends BaseService<IContractLine> {
   
       // Build enhanced query with analytics if requested
       let dataQuery = this.buildContractLineQuery(knex, context, serviceOptions);
-      dataQuery = this.applyContractLineFilters(dataQuery, filters);
+      dataQuery = this.applyContractLineFilters(dataQuery, filters, knex, context);
       dataQuery = this.applySorting(dataQuery, sort, order);
       dataQuery = this.applyPagination(dataQuery, page, limit);
   
       // Build count query
       let countQuery = this.buildBaseQuery(knex, context);
-      countQuery = this.applyContractLineFilters(countQuery, filters);
+      countQuery = this.applyContractLineFilters(countQuery, filters, knex, context);
   
       // Execute queries
       const [plans, [{ count }]] = await Promise.all([
@@ -298,7 +298,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         delete (planData as any).base_rate;
 
-        const [contractLine] = await trx('contract_lines').insert(planData).returning('*');
+        const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
 
         return {
           contractLineId: contractLine.contract_line_id,
@@ -835,7 +835,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         context
       );
 
-      const [contract] = await trx('contracts').insert(contractData).returning('*');
+      const [contract] = await tenantDb(trx, context.tenant).table('contracts').insert(contractData).returning('*');
       return addHateoasLinks(contract, this.generateContractLinks(contract.contract_id, context)) as ContractResponse;
     });
   }
@@ -1029,7 +1029,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         after_hours_multiplier: templateLine.after_hours_multiplier,
       }, context);
 
-      const [newContractLine] = await trx('contract_lines')
+      const [newContractLine] = await tenantDb(trx, context.tenant).table('contract_lines')
         .insert(contractLineData)
         .returning('*');
 
@@ -1171,7 +1171,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       delete newPlanData.tenant; // Will be set by addCreateAuditFields
       const auditedData = this.addCreateAuditFields(newPlanData, context);
       
-      const [newPlan] = await trx('contract_lines').insert(auditedData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
       
       // Copy services if requested
       if (data.copy_services) {
@@ -1203,7 +1203,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         created_by: context.userId
       }, context);
       
-      const [template] = await trx('plan_templates').insert(templateData).returning('*');
+      const [template] = await tenantDb(trx, context.tenant).table('plan_templates').insert(templateData).returning('*');
       
       // Add default services if provided
       if (data.default_services && data.default_services.length > 0) {
@@ -1217,7 +1217,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           created_at: new Date()
         }));
         
-        await trx('template_services').insert(serviceData);
+        await tenantDb(trx, context.tenant).table('template_services').insert(serviceData);
       }
       
       return template as PlanTemplateResponse;
@@ -1252,7 +1252,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         is_custom: true
       }, context);
       
-      const [newPlan] = await trx('contract_lines').insert(planData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
       
       // Add template services
       const templateServices = await tenantDb(trx, context.tenant).table('template_services')
@@ -1395,7 +1395,7 @@ export class ContractLineService extends BaseService<IContractLine> {
             ...planData
           }, context);
           
-          const [plan] = await trx('contract_lines').insert(auditedData).returning('*');
+          const [plan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
           results.push(addHateoasLinks(plan, this.generatePlanLinks(plan.contract_line_id, context)) as ContractLineResponse);
         }
         
@@ -1623,27 +1623,24 @@ export class ContractLineService extends BaseService<IContractLine> {
 
   private applyContractLineFilters(
     query: Knex.QueryBuilder, 
-    filters: ContractLineFilterData
+    filters: ContractLineFilterData,
+    knex: Knex,
+    context: ServiceContext
   ): Knex.QueryBuilder {
     // Apply base filters
     query = this.applyFilters(query, filters);
     
     // Apply specific contract line filters
     if (filters.has_services !== undefined) {
+      const serviceConfigurationProbe = tenantDb(knex, context.tenant).table('contract_line_service_configuration as psc')
+        .select(1)
+        .whereRaw('psc.contract_line_id = cl.contract_line_id')
+        .whereRaw('psc.tenant = cl.tenant');
+
       if (filters.has_services) {
-        query = query.whereExists(function() {
-          this.select(1)
-              .from('contract_line_service_configuration as psc')
-              .whereRaw('psc.contract_line_id = cl.contract_line_id')
-              .whereRaw('psc.tenant = cl.tenant');
-        });
+        query = query.whereExists(serviceConfigurationProbe);
       } else {
-        query = query.whereNotExists(function() {
-          this.select(1)
-              .from('contract_line_service_configuration as psc')
-              .whereRaw('psc.contract_line_id = cl.contract_line_id')
-              .whereRaw('psc.tenant = cl.tenant');
-        });
+        query = query.whereNotExists(serviceConfigurationProbe);
       }
     }
 

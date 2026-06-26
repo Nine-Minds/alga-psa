@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from 'winston';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import {
@@ -234,9 +235,10 @@ export async function updateJobStatus(input: {
   logger.debug('Updating job status', { jobId, tenantId, status });
 
   await runWithTenant(tenantId, async (trx) => {
+    const db = tenantDb(trx, tenantId);
     // Get current metadata
-    const currentJob = await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    const currentJob = await db.table('jobs')
+      .where({ job_id: jobId })
       .first('metadata');
 
     const currentMetadata = currentJob?.metadata
@@ -253,8 +255,8 @@ export async function updateJobStatus(input: {
     };
 
     // Update job record
-    await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    await db.table('jobs')
+      .where({ job_id: jobId })
       .update({
         status,
         metadata: JSON.stringify(updatedMetadata),
@@ -282,7 +284,7 @@ export async function createJobDetail(input: {
   logger.debug('Creating job detail', { jobId, tenantId, stepName, status });
 
   const detailId = await runWithTenant(tenantId, async (trx) => {
-    const [row] = await trx('job_details')
+    const [row] = await tenantDb(trx, tenantId).table('job_details')
       .insert({
         tenant: tenantId,
         job_id: jobId,
@@ -324,8 +326,8 @@ export async function getJobData(input: {
   const { jobId, tenantId } = input;
 
   return runWithTenant(tenantId, async (trx) => {
-    const job = await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    const job = await tenantDb(trx, tenantId).table('jobs')
+      .where({ job_id: jobId })
       .first();
 
     if (!job) {

@@ -28,7 +28,10 @@ function workflowActionInvocations(
 ): Knex.QueryBuilder<WorkflowActionInvocationRecord, WorkflowActionInvocationRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowActionInvocationRecord>('workflow_action_invocations')
-    : knex<WorkflowActionInvocationRecord>('workflow_action_invocations');
+    : tenantDb(knex, '__workflow_action_invocation_unscoped__').unscoped<WorkflowActionInvocationRecord>(
+      'workflow_action_invocations',
+      'workflow action invocation model supports legacy idempotency/run lookups before the tenant is resolved'
+    );
 }
 
 const WorkflowActionInvocationModelV2 = {

@@ -112,7 +112,8 @@ export const searchServiceCatalogForPicker = withAuth(async (
   const searchTerm = options.search?.trim() ? `%${options.search.trim()}%` : null;
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const base = trx('service_catalog as sc').where({ 'sc.tenant': tenant });
+    const facade = tenantDb(trx, tenant);
+    const base = facade.table('service_catalog as sc').where({ 'sc.tenant': tenant });
 
     if (options.is_active !== undefined) {
       base.andWhere('sc.is_active', options.is_active);
@@ -143,25 +144,28 @@ export const searchServiceCatalogForPicker = withAuth(async (
 
     const query = base
       .clone()
-      .select(
-        'sc.service_id',
-        'sc.service_name',
-        'sc.billing_method',
-        'sc.unit_of_measure',
-        'sc.item_kind',
-        'sc.sku',
+      .select<CatalogPickerItem[]>(
+        'sc.service_id as service_id',
+        'sc.service_name as service_name',
+        'sc.billing_method as billing_method',
+        'sc.unit_of_measure as unit_of_measure',
+        'sc.item_kind as item_kind',
+        'sc.sku as sku',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
-        'sc.cost_currency'
+        'sc.cost_currency as cost_currency'
       );
 
     if (options.currency_code) {
       const currencyCode = options.currency_code;
       query
-        .leftJoin('service_prices as sp', function () {
-          this.on('sp.service_id', 'sc.service_id')
-            .andOn('sp.tenant', 'sc.tenant')
-            .andOn('sp.currency_code', trx.raw('?', [currencyCode]));
+        .modify((builder) => {
+          facade.tenantJoin(builder, 'service_prices as sp', 'sp.service_id', 'sc.service_id', {
+            type: 'left',
+            on(join) {
+              join.andOn('sp.currency_code', trx.raw('?', [currencyCode]));
+            }
+          });
         })
         .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'))
         .select(trx.raw(
@@ -175,7 +179,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
       .offset(offset);
 
     return {
-      items: rows as CatalogPickerItem[],
+      items: rows,
       totalCount,
     };
   });
@@ -268,7 +272,8 @@ export const getServices = withAuth(async (
           default_rate: 'sc.default_rate'
         };
 
-        const baseQuery = trx('service_catalog as sc').where({ 'sc.tenant': tenant });
+        const facade = tenantDb(trx, tenant);
+        const baseQuery = facade.table('service_catalog as sc').where({ 'sc.tenant': tenant });
 
         // Get total count for pagination
         const countQuery = applyFilters(baseQuery.clone());
@@ -282,9 +287,8 @@ export const getServices = withAuth(async (
         const servicesQuery = applyFilters(
           baseQuery
             .clone()
-            .leftJoin('service_types as st', function() {
-              this.on('sc.custom_service_type_id', '=', 'st.id')
-                .andOn('sc.tenant', '=', 'st.tenant');
+            .modify((queryBuilder) => {
+              facade.tenantJoin(queryBuilder, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
             })
             .select(
               'sc.service_id',
@@ -327,7 +331,7 @@ export const getServices = withAuth(async (
         // Fetch all prices for these services
         const serviceIds = servicesData.map((s: { service_id: string }) => s.service_id);
         const allPrices = serviceIds.length > 0
-          ? await trx('service_prices')
+          ? await facade.table<IServicePrice>('service_prices')
               .where({ tenant })
               .whereIn('service_id', serviceIds)
               .select('*')
@@ -426,7 +430,7 @@ export const createService = withAuth(async (
         return withTransaction(db, async (trx: Knex.Transaction) => {
 
         // 1. Verify the custom service type exists
-        const customServiceType = await trx<IServiceType>('service_types')
+        const customServiceType = await tenantDb(trx, tenant).table<IServiceType>('service_types')
             .where('id', custom_service_type_id)
             .andWhere('tenant', tenant) // Match tenant
             .first();
@@ -521,7 +525,7 @@ export const deleteService = withAuth(async (
 
     try {
         const { knex } = await createTenantKnex();
-        const existing = await knex('service_catalog')
+        const existing = await tenantDb(knex, tenant).table('service_catalog')
             .where({ service_id: serviceId, tenant })
             .select('item_kind')
             .first();
@@ -578,7 +582,9 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             const associations: ProductAssociationCheck['associations'] = [];
 
             // Check invoice_items
-            const invoiceItemsResult = await trx('invoice_items')
+            const db = tenantDb(trx, tenant);
+
+            const invoiceItemsResult = await db.table('invoice_items')
                 .where({ service_id: serviceId, tenant })
                 .count('* as count')
                 .first();
@@ -592,7 +598,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             }
 
             // Check time_entries
-            const timeEntriesResult = await trx('time_entries')
+            const timeEntriesResult = await db.table('time_entries')
                 .where({ service_id: serviceId, tenant })
                 .count('* as count')
                 .first();
@@ -606,7 +612,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             }
 
             // Check ticket_materials
-            const ticketMaterialsResult = await trx('ticket_materials')
+            const ticketMaterialsResult = await db.table('ticket_materials')
                 .where({ service_id: serviceId, tenant })
                 .count('* as count')
                 .first();
@@ -620,7 +626,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             }
 
             // Check project_materials
-            const projectMaterialsResult = await trx('project_materials')
+            const projectMaterialsResult = await db.table('project_materials')
                 .where({ service_id: serviceId, tenant })
                 .count('* as count')
                 .first();
@@ -634,7 +640,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             }
 
             // Check contract_line_services
-            const contractLineServicesResult = await trx('contract_line_services')
+            const contractLineServicesResult = await db.table('contract_line_services')
                 .where({ service_id: serviceId, tenant })
                 .count('* as count')
                 .first();
@@ -648,7 +654,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             }
 
             // Check contract_line_service_configuration
-            const contractLineServiceConfigResult = await trx('contract_line_service_configuration')
+            const contractLineServiceConfigResult = await db.table('contract_line_service_configuration')
                 .where({ service_id: serviceId, tenant })
                 .count('* as count')
                 .first();
@@ -662,7 +668,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             }
 
             // Check bucket_usage
-            const bucketUsageResult = await trx('bucket_usage')
+            const bucketUsageResult = await db.table('bucket_usage')
                 .where({ service_catalog_id: serviceId, tenant })
                 .count('* as count')
                 .first();
@@ -709,7 +715,8 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
 
             // Delete related records that are safe to remove (pricing, config records)
             // These have CASCADE on delete but we do it explicitly for clarity
-            await trx('service_prices')
+            const db = tenantDb(trx, tenant);
+            await db.table('service_prices')
                 .where({ service_id: serviceId, tenant })
                 .del();
 
@@ -718,20 +725,20 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
                 .del();
 
             // Clear nullable references
-            await trx('project_tasks')
+            await db.table('project_tasks')
                 .where({ service_id: serviceId, tenant })
                 .update({ service_id: null });
 
-            await trx('project_template_tasks')
+            await db.table('project_template_tasks')
                 .where({ service_id: serviceId, tenant })
                 .update({ service_id: null });
 
-            await trx('invoice_charge_details')
+            await db.table('invoice_charge_details')
                 .where({ service_id: serviceId, tenant })
                 .update({ service_id: null });
 
             // Delete the product
-            const deletedCount = await trx('service_catalog')
+            const deletedCount = await db.table('service_catalog')
                 .where({ service_id: serviceId, tenant })
                 .del();
 
@@ -868,7 +875,7 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if any services are using this service type
-      const servicesUsingType = await trx('service_catalog')
+      const servicesUsingType = await tenantDb(trx, tenantId).table('service_catalog')
         .where({ custom_service_type_id: id, tenant: tenantId })
         .count('service_id as count')
         .first();
@@ -930,13 +937,13 @@ export const createServiceTypeInline = withAuth(async (
       }
 
       // If it already exists for this tenant, return it (avoid 23505 on repeated clicks)
-      const existing = await trx<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
+      const existing = await tenantDb(trx, tenant).table<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
       if (existing) {
         return existing;
       }
 
       // Get the highest order number to calculate next order
-      const maxOrderResult = await trx('service_types')
+      const maxOrderResult = await tenantDb(trx, tenant).table('service_types')
         .where({ tenant })
         .max('order_number as max_order')
         .first();
@@ -945,7 +952,7 @@ export const createServiceTypeInline = withAuth(async (
 
       // Create service type with default billing method and next order.
       // Use ON CONFLICT DO NOTHING to make the action idempotent under concurrency.
-      const inserted = await trx<IServiceType>('service_types')
+      const inserted = await tenantDb(trx, tenant).table<IServiceType>('service_types')
         .insert({
           tenant,
           name: normalizedName,
@@ -963,7 +970,7 @@ export const createServiceTypeInline = withAuth(async (
       }
 
       // Insert was skipped due to conflict; fetch and return the existing row.
-      const afterConflict = await trx<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
+      const afterConflict = await tenantDb(trx, tenant).table<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
       if (!afterConflict) {
         throw new Error('Failed to create service type');
       }

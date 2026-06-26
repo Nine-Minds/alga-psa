@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {
   workflowStepQuotaService,
@@ -37,7 +38,11 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
   while (true) {
     const resumptions = await knex.transaction(async (trx) => {
       const nowIso = new Date().toISOString();
-      const candidates = await trx<QuotaWaitCandidate>('workflow_run_waits as w')
+      const candidates = await tenantDb(trx, '__workflow_quota_resume_scan__')
+        .unscoped<QuotaWaitCandidate>(
+          'workflow_run_waits as w',
+          'workflow quota resume scanner intentionally discovers waiting quota runs across tenants'
+        )
         .join('workflow_runs as r', function () {
           this.on('r.run_id', 'w.run_id').andOn('r.tenant', 'w.tenant');
         })
@@ -89,26 +94,34 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
       if (selected.length === 0) return [];
 
       const selectedWaitIds = selected.map((entry) => entry.wait_id);
-      const selectedRunIds = selected.map((entry) => entry.run_id);
 
-      await trx('workflow_run_waits')
-        .whereIn('wait_id', selectedWaitIds)
-        .andWhere({ status: 'WAITING' })
-        .update({
-          status: 'RESOLVED',
-          resolved_at: nowIso,
-        });
+      for (const [tenantId, waits] of byTenant.entries()) {
+        const tenantSelected = waits.filter((wait) => selectedWaitIds.includes(wait.wait_id));
+        const tenantWaitIds = tenantSelected.map((wait) => wait.wait_id);
+        if (tenantWaitIds.length === 0) continue;
 
-      await trx('workflow_runs')
-        .whereIn('run_id', selectedRunIds)
-        .andWhere({ status: 'WAITING' })
-        .update({
-          status: 'RUNNING',
-          resume_event_name: null,
-          resume_event_payload: null,
-          resume_error: null,
-          error_json: null,
-        });
+        const tenantRunIds = tenantSelected.map((wait) => wait.run_id);
+        const db = tenantDb(trx, tenantId);
+
+        await db.table('workflow_run_waits')
+          .whereIn('wait_id', tenantWaitIds)
+          .andWhere({ status: 'WAITING' })
+          .update({
+            status: 'RESOLVED',
+            resolved_at: nowIso,
+          });
+
+        await db.table('workflow_runs')
+          .whereIn('run_id', tenantRunIds)
+          .andWhere({ status: 'WAITING' })
+          .update({
+            status: 'RUNNING',
+            resume_event_name: null,
+            resume_event_payload: null,
+            resume_error: null,
+            error_json: null,
+          });
+      }
 
       for (const selectedWait of selected) {
         await WorkflowRunLogModelV2.create(trx, {

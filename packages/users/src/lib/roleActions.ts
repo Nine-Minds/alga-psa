@@ -59,7 +59,7 @@ export const assignRoleToUser = withAuth(async (
             throw new Error('Cannot assign MSP role to client portal user');
         }
 
-        const [userRole] = await trx('user_roles')
+        const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
         return userRole;

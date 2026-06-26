@@ -21,7 +21,7 @@ describe('user actions update roles tenant-scoped query contract', () => {
 
     expect(section).toContain('tenantDb(trx, ');
     expect(section).toContain(".table('user_roles");
-    expect(section).toContain("await trx('user_roles').insert(userRoles)");
+    expect(section).toContain("await tenantDb(trx, tenant).table('user_roles').insert(userRoles)");
 
     expect(section).not.toMatch(/trx\('user_roles'\)\s*[\r\n]+\s*\.where/);
     expect(section).not.toMatch(/\.where\(\{\s*user_id: userId,\s*tenant: tenant \|\| undefined\s*\}\)/);

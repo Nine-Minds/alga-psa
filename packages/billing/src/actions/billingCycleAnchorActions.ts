@@ -1,7 +1,7 @@
 'use server'
 
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 
 import type { BillingCycleType } from '@alga-psa/types';
@@ -59,7 +59,7 @@ export const getClientBillingCycleAnchor = withAuth(async (
   }
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .where({ tenant, client_id: clientId })
       .first()
       .select('billing_cycle');
@@ -67,7 +67,7 @@ export const getClientBillingCycleAnchor = withAuth(async (
       throw new Error('Client not found');
     }
 
-    const settings = await trx('client_billing_settings')
+    const settings = await tenantDb(trx, tenant).table('client_billing_settings')
       .where({ tenant, client_id: clientId })
       .first()
       .select(
@@ -192,7 +192,7 @@ export const previewClientBillingPeriods = withAuth(async (
   );
 
   const config = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .where({ tenant, client_id: clientId })
       .first()
       .select('billing_cycle');
@@ -200,7 +200,7 @@ export const previewClientBillingPeriods = withAuth(async (
       throw new Error('Client not found');
     }
 
-    const settings = await trx('client_billing_settings')
+    const settings = await tenantDb(trx, tenant).table('client_billing_settings')
       .where({ tenant, client_id: clientId })
       .first()
       .select(

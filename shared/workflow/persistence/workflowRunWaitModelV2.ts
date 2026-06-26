@@ -23,7 +23,10 @@ function workflowRunWaits(
 ): Knex.QueryBuilder<WorkflowRunWaitRecord, WorkflowRunWaitRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowRunWaitRecord>('workflow_run_waits')
-    : knex<WorkflowRunWaitRecord>('workflow_run_waits');
+    : tenantDb(knex, '__workflow_run_wait_unscoped__').unscoped<WorkflowRunWaitRecord>(
+      'workflow_run_waits',
+      'workflow run wait model supports legacy wait_id/event discovery before the tenant is resolved'
+    );
 }
 
 const WorkflowRunWaitModelV2 = {
@@ -91,7 +94,11 @@ const WorkflowRunWaitModelV2 = {
   },
 
   listDueRetries: async (knex: Knex): Promise<WorkflowRunWaitRecord[]> => {
-    return knex<WorkflowRunWaitRecord>('workflow_run_waits')
+    return tenantDb(knex, '__workflow_due_retry_waits_unscoped__')
+      .unscoped<WorkflowRunWaitRecord>(
+        'workflow_run_waits',
+        'workflow retry wait scheduler intentionally scans due waits across tenants'
+      )
       .where({
         wait_type: 'retry',
         status: 'WAITING'
@@ -100,7 +107,11 @@ const WorkflowRunWaitModelV2 = {
   },
 
   listDueTimeouts: async (knex: Knex): Promise<WorkflowRunWaitRecord[]> => {
-    return knex<WorkflowRunWaitRecord>('workflow_run_waits')
+    return tenantDb(knex, '__workflow_due_timeout_waits_unscoped__')
+      .unscoped<WorkflowRunWaitRecord>(
+        'workflow_run_waits',
+        'workflow event timeout scheduler intentionally scans due waits across tenants'
+      )
       .where({
         wait_type: 'event',
         status: 'WAITING'
@@ -110,7 +121,11 @@ const WorkflowRunWaitModelV2 = {
   },
 
   listDueTimeWaits: async (knex: Knex): Promise<WorkflowRunWaitRecord[]> => {
-    return knex<WorkflowRunWaitRecord>('workflow_run_waits')
+    return tenantDb(knex, '__workflow_due_time_waits_unscoped__')
+      .unscoped<WorkflowRunWaitRecord>(
+        'workflow_run_waits',
+        'workflow time wait scheduler intentionally scans due waits across tenants'
+      )
       .where({
         wait_type: 'time',
         status: 'WAITING'

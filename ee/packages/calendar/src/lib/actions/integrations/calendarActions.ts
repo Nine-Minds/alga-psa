@@ -663,7 +663,7 @@ export async function retryMicrosoftCalendarSubscriptionRenewalImpl(
     }
 
     const { knex } = await createTenantKnex();
-    const provider = await tenantDb(knex, tenant).table('calendar_providers').where({ id: providerId, tenant }).first();
+    const provider = await tenantDb(knex, tenant).table('calendar_providers').where({ id: providerId }).first();
 
     if (!provider) {
       return { success: false, error: 'Provider not found or access denied' };

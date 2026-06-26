@@ -1,12 +1,11 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
-import { BillingCycleType, IClientContractLineCycle } from '@alga-psa/types';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import type { BillingCycleType, IClient, IClientContractLineCycle, ISO8601String } from '@alga-psa/types';
 import { createClientContractLineCycles, type BillingCycleCreationResult } from '../lib/billing/createBillingCycles';
 import { v4 as uuidv4 } from 'uuid';
 import { getNextBillingDate } from './billingAndTax';
 import { hardDeleteInvoice } from './invoiceModification';
-import { ISO8601String } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -26,7 +25,7 @@ export const getBillingCycle = withAuth(async (
   const { knex: conn } = await createTenantKnex();
 
   const result: { billing_cycle?: BillingCycleType | null } | undefined = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantDb(trx, tenant).table('clients')
       .where({
         client_id: clientId,
         tenant
@@ -54,7 +53,7 @@ export const updateBillingCycle = withAuth(async (
   // scalar update here used to leave the ledger stale, stranding the client in a
   // "repair required" state on the invoicing screen.
   await withTransaction(conn, async (trx: Knex.Transaction) => {
-    const settings = await trx('client_billing_settings')
+    const settings = await tenantDb(trx, tenant).table('client_billing_settings')
       .where({ tenant, client_id: clientId })
       .first()
       .select(
@@ -97,7 +96,7 @@ export const canCreateNextBillingCycle = withAuth(async (
 
   // Get the client's current billing cycle type
   const client = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantDb(trx, tenant).table('clients')
       .where({
         client_id: clientId,
         tenant
@@ -111,7 +110,7 @@ export const canCreateNextBillingCycle = withAuth(async (
 
   // Get the latest billing cycle
   const lastCycle = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
+    return await tenantDb(trx, tenant).table('client_billing_cycles')
       .where({
         client_id: clientId,
         is_active: true,
@@ -162,7 +161,7 @@ export const getNextBillingCycleStatusForClients = withAuth(async (
   const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
 
   const lastCycles = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
+    return await tenantDb(trx, tenant).table('client_billing_cycles')
       .whereIn('client_id', clientIds)
       .andWhere({
         tenant,
@@ -223,7 +222,7 @@ export const createNextBillingCycle = withAuth(async (
   const { knex: conn } = await createTenantKnex();
 
   const client = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantDb(trx, tenant).table<IClient>('clients')
       .where({
         client_id: clientId,
         tenant
@@ -252,7 +251,7 @@ async function getBillingCycleRecord(
   cycleId: string
 ) {
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('client_billing_cycles')
+    return tenantDb(trx, tenant).table('client_billing_cycles')
       .where({
         billing_cycle_id: cycleId,
         tenant,
@@ -273,7 +272,7 @@ async function deactivateBillingCycleRecord(
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('client_billing_cycles')
+    return tenantDb(trx, tenant).table('client_billing_cycles')
       .where({
         billing_cycle_id: cycleId,
         tenant
@@ -306,7 +305,7 @@ async function permanentlyDeleteBillingCycleRecord(
   }
 
   const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('client_billing_cycles')
+    return tenantDb(trx, tenant).table('client_billing_cycles')
       .where({
         billing_cycle_id: cycleId,
         tenant
@@ -334,7 +333,7 @@ export const removeBillingCycle = withAuth(async (
 
   // Check for existing invoices
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
+    return await tenantDb(trx, tenant).table('invoices')
       .where({
         billing_cycle_id: cycleId,
         tenant
@@ -362,7 +361,7 @@ export const hardDeleteBillingCycle = withAuth(async (
 
   // Check for existing invoices
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
+    return await tenantDb(trx, tenant).table('invoices')
       .where({
         billing_cycle_id: cycleId,
         tenant
@@ -591,30 +590,29 @@ export const hardDeleteRecurringInvoice = withAuth(async (
   await hardDeleteInvoice(params.invoiceId);
 });
 
-export const getInvoicedBillingCycles = withAuth(async (
-  user,
-  { tenant }
-): Promise<(IClientContractLineCycle & {
+type InvoicedBillingCycleRow = IClientContractLineCycle & {
   client_name: string;
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
-})[]> => {
+};
+
+export const getInvoicedBillingCycles = withAuth(async (
+  user,
+  { tenant }
+): Promise<InvoicedBillingCycleRow[]> => {
   if (!await hasPermission(user, 'billing', 'read')) {
     throw new Error('Permission denied: billing read required');
   }
   const { knex: conn } = await createTenantKnex();
 
   // Get all billing cycles that have invoices
-  const invoicedCycles = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles as cbc')
-      .join('clients as c', function() {
-        this.on('c.client_id', '=', 'cbc.client_id')
-            .andOn('c.tenant', '=', 'cbc.tenant');
-      })
-      .join('invoices as i', function() {
-        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-            .andOn('i.tenant', '=', 'cbc.tenant');
-      })
+  const invoicedCycles = await withTransaction(conn, async (trx: Knex.Transaction): Promise<InvoicedBillingCycleRow[]> => {
+    const db = tenantDb(trx, tenant);
+    const query = db.table('client_billing_cycles as cbc');
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'cbc.client_id');
+    db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+
+    const rows = await query
       .where('cbc.tenant', tenant)
       .whereNotNull('cbc.period_end_date')
       .select(
@@ -628,6 +626,8 @@ export const getInvoicedBillingCycles = withAuth(async (
         'cbc.tenant'
       )
       .orderBy('cbc.period_end_date', 'desc');
+
+    return rows as unknown as InvoicedBillingCycleRow[];
   });
 
   return invoicedCycles;
@@ -688,7 +688,8 @@ async function fetchRecurringInvoiceHistoryPage(
       WHERE ic.invoice_id = i.invoice_id
         AND ic.tenant = i.tenant
     `;
-    const recurringSummaryQuery = trx('recurring_service_periods as rsp')
+    const db = tenantDb(trx, tenant);
+    const recurringSummaryQuery = db.table('recurring_service_periods as rsp')
       .where('rsp.tenant', tenant)
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
@@ -701,11 +702,9 @@ async function fetchRecurringInvoiceHistoryPage(
       .as('rsp_summary');
 
     const buildBaseQuery = () => {
-      const query = trx('invoices as i')
-        .join('clients as c', function () {
-          this.on('c.client_id', '=', 'i.client_id')
-            .andOn('c.tenant', '=', 'i.tenant');
-        })
+      const query = db.table('invoices as i');
+      db.tenantJoin(query, 'clients as c', 'c.client_id', 'i.client_id');
+      query
         .leftJoin(recurringSummaryQuery, 'rsp_summary.invoice_id', 'i.invoice_id')
         .where('i.tenant', tenant)
         .whereRaw(
@@ -858,7 +857,7 @@ export const getAllBillingCycles = withAuth(async (
 
   // Get billing cycles from clients table
   const results = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantDb(trx, tenant).table('clients')
       .where({ tenant })
       .select('client_id', 'billing_cycle');
   });

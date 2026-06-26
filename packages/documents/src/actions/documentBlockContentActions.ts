@@ -106,7 +106,7 @@ export const createBlockDocument = withAuth(async (
       const documentResult = await Document.insert(trx, documentData);
 
       // Create the block content
-      const [blockContent] = await trx('document_block_content')
+      const [blockContent] = await tenantScopedTable(trx, 'document_block_content', tenant)
         .insert({
           content_id: uuidv4(),
           document_id: documentResult.document_id,
@@ -299,7 +299,7 @@ export const updateBlockContent = withAuth(async (
         return { updatedContent, document, oldContent };
       } else {
         // Create new block content record
-        const [newContent] = await trx('document_block_content')
+        const [newContent] = await tenantScopedTable(trx, 'document_block_content', tenant)
           .insert({
             content_id: uuidv4(),
             document_id: documentId,

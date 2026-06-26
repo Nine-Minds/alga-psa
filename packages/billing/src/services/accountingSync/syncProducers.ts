@@ -1,5 +1,6 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- producers consult the QBO connection state to decide whether to enqueue */
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { resolveDefaultRealm } from './accountingSyncSettings';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
@@ -59,7 +60,7 @@ export async function enqueueInvoiceAutoExport(
     }
 
     // Look up invoice_type to route the operation correctly.
-    const invoiceRow = await knex('invoices')
+    const invoiceRow = await tenantDb(knex, tenantId).table('invoices')
       .where({ invoice_id: invoiceId, tenant: tenantId })
       .select('invoice_type')
       .first();
@@ -145,7 +146,7 @@ export async function enqueueInvoiceVoid(
     }
 
     // Only enqueue when a mapping exists (otherwise there's nothing to void in QBO)
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
         tenant: tenantId,
         integration_type: SYNC_ADAPTER_TYPE,
@@ -217,7 +218,7 @@ export async function enqueueExternalPaymentPush(
     }
 
     // Skip invoices that don't have a QBO mapping yet (pre-go-live invoices).
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
         tenant: tenantId,
         integration_type: SYNC_ADAPTER_TYPE,

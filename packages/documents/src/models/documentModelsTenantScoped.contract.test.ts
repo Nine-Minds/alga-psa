@@ -8,9 +8,10 @@ const documentSource = readFileSync(resolve(__dirname, 'document.ts'), 'utf8');
 describe('document model tenant-scoped query contract', () => {
   it('uses structural tenant scoping for document association roots', () => {
     expect(associationSource).toMatch(/tenantDb\(knexOrTrx, tenant\)\.table(?:<[^>]+>)?\('document_associations'\)/);
-    expect(associationSource).toContain("await knexOrTrx('document_associations').insert(association)");
+    expect(associationSource).toContain("tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations').insert(association)");
     expect(associationSource).not.toContain('createTenantScopedQuery');
 
+    expect(associationSource).not.toContain("knexOrTrx('document_associations')");
     expect(associationSource).not.toMatch(/knexOrTrx\('document_associations'\)\.where\(\{[^}]*tenant/);
     expect(associationSource).not.toMatch(/knexOrTrx\('document_associations'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
   });

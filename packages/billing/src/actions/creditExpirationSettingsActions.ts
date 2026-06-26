@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ICreditExpirationSettings } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -20,14 +20,15 @@ export const getCreditExpirationSettings = withAuth(async (
   const { knex } = await createTenantKnex();
   if (!tenant) throw new Error('No tenant found');
 
-  const clientSettings = await knex('client_billing_settings')
+  const db = tenantDb(knex, tenant);
+  const clientSettings = await db.table('client_billing_settings')
     .where({
       client_id: clientId,
       tenant,
     })
     .first();
 
-  const defaultSettings = await knex('default_billing_settings').where({ tenant }).first();
+  const defaultSettings = await db.table('default_billing_settings').where({ tenant }).first();
 
   let enableCreditExpiration = true;
   if (clientSettings?.enable_credit_expiration !== undefined) {

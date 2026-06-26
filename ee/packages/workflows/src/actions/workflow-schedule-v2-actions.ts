@@ -159,9 +159,10 @@ const requireWorkflowPermission = async (
 
 const getLatestPublishedWorkflowVersion = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
-  workflowId: string
+  workflowId: string,
+  tenant: string
 ): Promise<WorkflowDefinitionVersionRecord | null> => {
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId, tenant);
   return versions[0] ?? null;
 };
 
@@ -300,7 +301,7 @@ const validateSchedulableWorkflow = async (
     return throwHttpError(404, 'Workflow not found');
   }
 
-  const latestVersion = await getLatestPublishedWorkflowVersion(knex, workflowId);
+  const latestVersion = await getLatestPublishedWorkflowVersion(knex, workflowId, tenant);
   if (!latestVersion) {
     return toWorkflowScheduleValidationFailure(
       'WORKFLOW_NOT_PUBLISHED',

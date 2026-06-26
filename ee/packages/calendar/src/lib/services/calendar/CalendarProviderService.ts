@@ -272,9 +272,9 @@ export class CalendarProviderService {
         };
 
         if (data.providerType === 'google') {
-          await db('google_calendar_provider_config').insert(vendorRecord);
+          await tenantDb(db, data.tenant).table('google_calendar_provider_config').insert(vendorRecord);
         } else if (data.providerType === 'microsoft') {
-          await db('microsoft_calendar_provider_config').insert(vendorRecord);
+          await tenantDb(db, data.tenant).table('microsoft_calendar_provider_config').insert(vendorRecord);
         }
       }
 
@@ -352,10 +352,10 @@ export class CalendarProviderService {
           existingProvider.provider_type === 'google'
             ? 'google_calendar_provider_config'
             : 'microsoft_calendar_provider_config';
+        const vendorDb = tenantDb(db, tenant);
 
-        const existingVendorRecord = await db(vendorTable)
+        const existingVendorRecord = await vendorDb.table(vendorTable)
           .where('calendar_provider_id', providerId)
-          .andWhere('tenant', tenant)
           .first();
 
         if (existingVendorRecord) {
@@ -364,12 +364,11 @@ export class CalendarProviderService {
               ? { ...vendorUpdate, updated_at: db.fn.now() }
               : { updated_at: db.fn.now() };
 
-          await db(vendorTable)
+          await vendorDb.table(vendorTable)
             .where('calendar_provider_id', providerId)
-            .andWhere('tenant', tenant)
             .update(updatePayload);
         } else if (this.hasRequiredVendorFields(existingProvider.provider_type, normalizedVendorConfig)) {
-          await db(vendorTable).insert({
+          await vendorDb.table(vendorTable).insert({
             calendar_provider_id: providerId,
             tenant,
             ...vendorUpdate,
@@ -456,14 +455,12 @@ export class CalendarProviderService {
 
       // Delete vendor-specific configuration first
       if (provider.provider_type === 'google') {
-        await db('google_calendar_provider_config')
+        await tenantDb(db, provider.tenant).table('google_calendar_provider_config')
           .where('calendar_provider_id', providerId)
-          .andWhere('tenant', provider.tenant)
           .del();
       } else if (provider.provider_type === 'microsoft') {
-        await db('microsoft_calendar_provider_config')
+        await tenantDb(db, provider.tenant).table('microsoft_calendar_provider_config')
           .where('calendar_provider_id', providerId)
-          .andWhere('tenant', provider.tenant)
           .del();
       }
 
@@ -764,9 +761,8 @@ export class CalendarProviderService {
         ? 'google_calendar_provider_config'
         : 'microsoft_calendar_provider_config';
 
-    return db(table)
+    return tenantDb(db, tenant).table(table)
       .where('calendar_provider_id', providerId)
-      .andWhere('tenant', tenant)
       .first();
   }
 

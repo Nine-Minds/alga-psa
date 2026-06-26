@@ -23,6 +23,8 @@ import {
   type SafeApiUser
 } from '../../services/userResponseSanitizer';
 
+const USER_TENANT_DISCOVERY = 'tenant-discovery';
+
 interface ActionResult {
   success: boolean;
   message?: string;
@@ -116,7 +118,9 @@ async function findExistingUserByEmailGlobally(
       criteria.user_type = options.userType;
     }
 
-    let query = trx('users').where(criteria);
+    let query = tenantDb(trx, USER_TENANT_DISCOVERY)
+      .unscoped('users', 'global identity email uniqueness check before tenant selection')
+      .where(criteria);
 
     if (options?.excludeUserId) {
       query = query.whereNot('user_id', options.excludeUserId);
@@ -150,7 +154,10 @@ export const checkEmailExistsGlobally = withAuth(async (
         criteria.user_type = userType;
       }
 
-      const existingUser = await trx('users').where(criteria).first('user_id');
+      const existingUser = await tenantDb(trx, USER_TENANT_DISCOVERY)
+        .unscoped('users', 'global identity email uniqueness check before tenant selection')
+        .where(criteria)
+        .first('user_id');
       return !!existingUser;
     });
   } catch (error) {
@@ -281,7 +288,7 @@ export const addUser = withAuth(async (
 
       }
 
-      const [newUser] = await trx('users')
+      const [newUser] = await tenantDb(trx, tenant).table('users')
         .insert({
           first_name: userData.firstName,
           last_name: userData.lastName,
@@ -295,7 +302,7 @@ export const addUser = withAuth(async (
           reports_to: userData.reportsTo || undefined
         }).returning(USER_RESPONSE_FIELD_NAMES);
 
-      await trx('user_roles').insert({
+      await tenantDb(trx, tenant).table('user_roles').insert({
         user_id: newUser.user_id,
         role_id: userData.roleId,
         tenant: tenant || undefined
@@ -736,7 +743,7 @@ export const updateUserRoles = withAuth(async (
           role_id: roleId,
           tenant: tenant || undefined
         }));
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
       }
     });
 
@@ -764,7 +771,8 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
   try {
     // Email suffix functionality removed for security - only check contacts
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, USER_TENANT_DISCOVERY)
+        .unscoped('contacts', 'tenant discovery for client portal registration contact lookup')
         .join('clients', function() {
           this.on('clients.client_id', '=', 'contacts.client_id')
               .andOn('clients.tenant', '=', 'contacts.tenant');
@@ -805,7 +813,8 @@ export const registerClientUser = withAuth(async (
       }
 
       // First verify the contact exists and get their tenant
-      const contact = await trx('contacts')
+      const contact = await tenantDb(trx, USER_TENANT_DISCOVERY)
+        .unscoped('contacts', 'tenant discovery for client portal registration contact lookup')
         .join('clients', function() {
           this.on('clients.client_id', '=', 'contacts.client_id')
               .andOn('clients.tenant', '=', 'contacts.tenant');
@@ -851,7 +860,7 @@ export const registerClientUser = withAuth(async (
       const hashedPassword = await hashPassword(password);
       logger.debug('Password hashed successfully');
 
-      const [newUser] = await trx('users')
+      const [newUser] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
           username: email.toLowerCase(),
@@ -880,7 +889,7 @@ export const registerClientUser = withAuth(async (
       }
 
       // Assign the role to the user
-      await trx('user_roles').insert({
+      await tenantDb(trx, contact.tenant).table('user_roles').insert({
         user_id: newUser.user_id,
         role_id: clientRole.role_id,
         tenant: contact.tenant

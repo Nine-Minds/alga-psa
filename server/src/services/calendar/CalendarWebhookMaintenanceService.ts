@@ -88,11 +88,31 @@ export class CalendarWebhookMaintenanceService {
           'cross-tenant Microsoft calendar webhook renewal candidate discovery'
         );
 
-    let query = providerRoot
-      .join('microsoft_calendar_provider_config as mcp', function() {
-        this.on('cp.id', '=', 'mcp.calendar_provider_id')
-          .andOn('cp.tenant', '=', 'mcp.tenant');
-      })
+    let query = providerRoot;
+    if (tenantId) {
+      query = tenantDb(knex, tenantId).tenantJoin(
+        query,
+        'microsoft_calendar_provider_config as mcp',
+        'cp.id',
+        'mcp.calendar_provider_id',
+        { rootTenantColumn: 'cp.tenant' }
+      );
+    } else {
+      query = query.join(
+        tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+          .unscoped(
+            'microsoft_calendar_provider_config',
+            'cross-tenant Microsoft calendar webhook renewal config discovery'
+          )
+          .as('mcp'),
+        function() {
+          this.on('cp.id', '=', 'mcp.calendar_provider_id')
+            .andOn('cp.tenant', '=', 'mcp.tenant');
+        }
+      );
+    }
+
+    query = query
       .where('cp.provider_type', 'microsoft')
       .andWhere('cp.is_active', true);
 
@@ -114,7 +134,7 @@ export class CalendarWebhookMaintenanceService {
     }
 
     // Select all columns needed to construct CalendarProviderConfig
-    const rows = await query.select(
+    const rows = (await query.select(
       'cp.id',
       'cp.tenant',
       'cp.provider_name',
@@ -139,7 +159,7 @@ export class CalendarWebhookMaintenanceService {
       'mcp.refresh_token',
       'mcp.token_expires_at',
       'mcp.calendar_id as vendor_calendar_id'
-    );
+    )) as Array<{ id: string; tenant: string }>;
 
     // Use CalendarProviderService to properly hydrate the config with decryption
     const providerService = new CalendarProviderService();

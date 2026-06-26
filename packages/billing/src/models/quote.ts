@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { IQuote, IQuoteListItem, IQuoteWithClient, PaginatedResult, QuoteStatus } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import QuoteItem from './quoteItem';
@@ -35,6 +36,16 @@ function isExpiredOnAccess(quote: Pick<IQuote, 'status' | 'valid_until'>): boole
   return new Date(quote.valid_until) < getTodayStartUTC();
 }
 
+function quoteTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
+
+type QuoteWithClientRow = IQuoteWithClient;
+
 async function expireQuoteIfNeeded(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -44,7 +55,7 @@ async function expireQuoteIfNeeded(
     return quote;
   }
 
-  const [expiredQuote] = await knexOrTrx('quotes')
+  const [expiredQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
     .where({ tenant, quote_id: quote.quote_id })
     .update({
       status: 'expired',
@@ -89,7 +100,7 @@ const Quote = {
       throw new Error('Tenant context is required for getting quote');
     }
 
-    const quote = await knexOrTrx('quotes')
+    const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant, quote_id: quoteId })
       .first();
 
@@ -105,7 +116,7 @@ const Quote = {
       throw new Error('Tenant context is required for getting quote by number');
     }
 
-    const quote = await knexOrTrx('quotes')
+    const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant, quote_number: quoteNumber })
       .orderBy('version', 'desc')
       .first();
@@ -122,7 +133,7 @@ const Quote = {
       throw new Error('Tenant context is required for getting quote by converted contract');
     }
 
-    const quote = await knexOrTrx('quotes')
+    const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant, converted_contract_id: contractId })
       .first();
 
@@ -138,7 +149,7 @@ const Quote = {
       throw new Error('Tenant context is required for getting quote by converted invoice');
     }
 
-    const quote = await knexOrTrx('quotes')
+    const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant, converted_invoice_id: invoiceId })
       .first();
 
@@ -160,10 +171,10 @@ const Quote = {
     const sortBy = allowedSortColumns.includes(options.sortBy as any) ? options.sortBy! : 'quote_date';
     const sortOrder = options.sortOrder === 'asc' ? 'asc' : 'desc';
 
-    const baseQuery = knexOrTrx('quotes as q')
-      .leftJoin('clients as c', function joinClients() {
-        this.on('q.client_id', '=', 'c.client_id').andOn('q.tenant', '=', 'c.tenant');
-      })
+    const db = tenantDb(knexOrTrx, tenant);
+    const baseQuery = db.table<QuoteWithClientRow>('quotes as q');
+    db.tenantJoin(baseQuery, 'clients as c', 'q.client_id', 'c.client_id', { type: 'left' });
+    baseQuery
       .where('q.tenant', tenant)
       .andWhere('q.is_template', options.is_template ?? false);
 
@@ -179,16 +190,16 @@ const Quote = {
     const total = Number(totalResult?.count ?? 0);
     const totalPages = Math.ceil(total / pageSize) || 1;
 
-    const rows = await baseQuery.clone()
+    const rows = (await baseQuery.clone()
       .select('q.*', 'c.client_name')
       .orderBy(`q.${sortBy}`, sortOrder)
       .limit(pageSize)
-      .offset((page - 1) * pageSize);
+      .offset((page - 1) * pageSize)) as QuoteWithClientRow[];
 
-    const data = rows.map((row) => ({
+    const data: IQuoteListItem[] = rows.map((row) => ({
       ...row,
       display_quote_number: formatDisplayQuoteNumber(row)
-    })) as IQuoteListItem[];
+    }));
 
     return {
       data,
@@ -208,13 +219,17 @@ const Quote = {
       throw new Error('Tenant context is required for listing client quotes');
     }
 
-    return knexOrTrx('quotes as q')
-      .leftJoin('clients as c', function joinClients() {
-        this.on('q.client_id', '=', 'c.client_id').andOn('q.tenant', '=', 'c.tenant');
-      })
-      .where({ 'q.tenant': tenant, 'q.client_id': clientId, 'q.is_template': false })
+    const db = tenantDb(knexOrTrx, tenant);
+    const query = db.table<QuoteWithClientRow>('quotes as q');
+    db.tenantJoin(query, 'clients as c', 'q.client_id', 'c.client_id', { type: 'left' });
+    const rows = (await query
+      .where('q.tenant', tenant)
+      .andWhere('q.client_id', clientId)
+      .andWhere('q.is_template', false)
       .select('q.*', 'c.client_name')
-      .orderBy('q.quote_date', 'desc') as Promise<IQuoteWithClient[]>;
+      .orderBy('q.quote_date', 'desc')) as QuoteWithClientRow[];
+
+    return rows;
   },
 
   async create(
@@ -230,7 +245,7 @@ const Quote = {
       ? null
       : await SharedNumberingService.getNextNumber('QUOTE', { knex: knexOrTrx, tenant });
 
-    const [createdQuote] = await knexOrTrx('quotes')
+    const [createdQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .insert({
         tenant,
         ...quote,
@@ -261,7 +276,7 @@ const Quote = {
       throw new Error('Tenant context is required for updating quote');
     }
 
-    const existingQuote = await knexOrTrx('quotes')
+    const existingQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant, quote_id: quoteId })
       .first();
 
@@ -277,7 +292,7 @@ const Quote = {
       throw new Error(`Invalid quote status transition from ${existingQuote.status} to ${updateData.status}`);
     }
 
-    const [updatedQuote] = await knexOrTrx('quotes')
+    const [updatedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant, quote_id: quoteId })
       .update({ ...updateData, updated_at: knexOrTrx.fn.now() })
       .returning('*');
@@ -296,7 +311,7 @@ const Quote = {
 
     if (!updatedQuote.is_template) {
       await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
-      const recalculatedQuote = await knexOrTrx('quotes')
+      const recalculatedQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
         .where({ tenant, quote_id: quoteId })
         .first();
       return recalculatedQuote ?? updatedQuote;
@@ -315,7 +330,7 @@ const Quote = {
     }
 
     return deleteEntityWithValidation('quote', quoteId, knexOrTrx, tenant, async (trx, tenantId) => {
-      await trx('quotes')
+      await tenantDb(trx, tenantId).table('quotes')
         .where({ tenant: tenantId, quote_id: quoteId })
         .del();
     });
@@ -345,7 +360,7 @@ const Quote = {
     }
 
     const rootQuoteId = sourceQuote.parent_quote_id ?? sourceQuote.quote_id;
-    const versionRows = await knexOrTrx('quotes')
+    const versionRows = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant })
       .andWhere((builder) => {
         builder.where('quote_id', rootQuoteId).orWhere('parent_quote_id', rootQuoteId);
@@ -354,7 +369,7 @@ const Quote = {
 
     const nextVersion = Math.max(sourceQuote.version, ...versionRows.map((row) => Number(row.version ?? 0))) + 1;
 
-    const [revisedQuote] = await knexOrTrx('quotes')
+    const [revisedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .insert({
         tenant,
         client_id: sourceQuote.client_id ?? null,
@@ -386,7 +401,7 @@ const Quote = {
 
     for (const item of sourceQuote.quote_items ?? []) {
       const { quote_item_id, tenant: _itemTenant, created_at, updated_at, ...itemData } = item;
-      await knexOrTrx('quote_items')
+      await quoteTable(knexOrTrx, tenant, 'quote_items')
         .insert({
           tenant,
           ...itemData,
@@ -394,7 +409,7 @@ const Quote = {
         });
     }
 
-    await knexOrTrx('quotes')
+    await quoteTable(knexOrTrx, tenant, 'quotes')
       .where({ tenant, quote_id: sourceQuote.quote_id })
       .update({
         status: 'superseded',
@@ -432,7 +447,7 @@ const Quote = {
       throw new Error('Tenant context is required for listing quote versions');
     }
 
-    const sourceQuote = await knexOrTrx('quotes')
+    const sourceQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant, quote_id: quoteId })
       .first();
 
@@ -441,7 +456,7 @@ const Quote = {
     }
 
     const rootQuoteId = sourceQuote.parent_quote_id ?? sourceQuote.quote_id;
-    const versions = await knexOrTrx('quotes')
+    const versions = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ tenant })
       .andWhere((builder) => {
         builder.where('quote_id', rootQuoteId).orWhere('parent_quote_id', rootQuoteId);

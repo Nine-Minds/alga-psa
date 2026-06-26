@@ -1,6 +1,7 @@
 import { Knex } from "knex";
 import {
   createTenantKnex,
+  tenantDb,
   withTransaction,
 } from "@alga-psa/db";
 import {
@@ -240,7 +241,8 @@ export class BillingEngine {
       return this.locationTaxRegionCodeCache.get(cacheKey) ?? null;
     }
 
-    const row = await this.knex("client_locations")
+    const db = tenantDb(this.knex, this.tenant);
+    const row = await db.table("client_locations")
       .where({ tenant: this.tenant, location_id: locationId })
       .select("region_code")
       .first();
@@ -272,7 +274,8 @@ export class BillingEngine {
 
     if (service.tax_rate_id) {
       try {
-        const taxRateInfo = await this.knex("tax_rates")
+        const db = tenantDb(this.knex, this.tenant);
+        const taxRateInfo = await db.table("tax_rates")
           .where({ tax_rate_id: service.tax_rate_id, tenant: this.tenant })
           // TODO: Add validity checks if needed (e.g., is_active, date range matching billing period)
           .select("region_code")
@@ -313,7 +316,8 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -323,7 +327,7 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const existingInvoice = await this.knex("invoices")
+    const existingInvoice = await db.table("invoices")
       .where({
         client_id: clientId,
         billing_cycle_id: billingCycleId,
@@ -363,7 +367,8 @@ export class BillingEngine {
     this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
       await this.initKnex();
-      const client = await this.knex<IClient>("clients")
+      const db = tenantDb(this.knex, this.tenant!);
+      const client = await db.table<IClient>("clients")
         .where({ client_id: clientId, tenant: this.tenant! })
         .first();
 
@@ -435,7 +440,8 @@ export class BillingEngine {
       return {};
     }
 
-    const dueRows = await this.knex("recurring_service_periods")
+    const db = tenantDb(this.knex, this.tenant);
+    const dueRows = await db.table("recurring_service_periods")
       .where({ tenant: this.tenant })
       .whereIn("obligation_id", eligibleLineIds)
       .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
@@ -462,7 +468,7 @@ export class BillingEngine {
       );
 
     if (dueRows.length === 0) {
-      const existingMaterializedRow = await this.knex("recurring_service_periods")
+      const existingMaterializedRow = await db.table("recurring_service_periods")
         .where({ tenant: this.tenant })
         .whereIn("obligation_id", eligibleLineIds)
         .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
@@ -508,7 +514,11 @@ export class BillingEngine {
   ): Promise<IBillingResult & { error?: string }> {
     try {
       await this.initKnex();
-      const client = await this.knex<IClient>("clients")
+      if (!this.tenant) {
+        throw new Error("tenant context not found");
+      }
+      const db = tenantDb(this.knex, this.tenant);
+      const client = await db.table<IClient>("clients")
         .where({ client_id: clientId, tenant: this.tenant! })
         .first();
       console.log(
@@ -516,7 +526,7 @@ export class BillingEngine {
       );
 
       // Fetch the specific billing cycle record
-      const cycleRecord = await this.knex("client_billing_cycles")
+      const cycleRecord = await db.table("client_billing_cycles")
         .where({
           billing_cycle_id: billingCycleId,
           client_id: clientId, // Ensure it matches the client
@@ -977,28 +987,13 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const rows = await this.knex("client_contracts as cc")
-      .join("contracts as c", function () {
-        this.on("c.contract_id", "=", "cc.contract_id").andOn(
-          "c.tenant",
-          "=",
-          "cc.tenant",
-        );
-      })
-      .join("contract_lines as cl", function () {
-        this.on("cl.contract_id", "=", "c.contract_id").andOn(
-          "cl.tenant",
-          "=",
-          "c.tenant",
-        );
-      })
-      .join("contract_line_services as cls", function () {
-        this.on("cls.contract_line_id", "=", "cl.contract_line_id").andOn(
-          "cls.tenant",
-          "=",
-          "cl.tenant",
-        );
-      })
+    const db = tenantDb(this.knex, this.tenant);
+    const eligibleLinesQuery = db.table("client_contracts as cc");
+    db.tenantJoin(eligibleLinesQuery, "contracts as c", "c.contract_id", "cc.contract_id");
+    db.tenantJoin(eligibleLinesQuery, "contract_lines as cl", "cl.contract_id", "c.contract_id");
+    db.tenantJoin(eligibleLinesQuery, "contract_line_services as cls", "cls.contract_line_id", "cl.contract_line_id");
+
+    const rows = await eligibleLinesQuery
       .where({
         "cc.tenant": this.tenant,
         "cc.client_id": input.clientId,
@@ -1041,7 +1036,8 @@ export class BillingEngine {
         ? new Set(selection.usageRecordIds)
         : null;
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -1054,56 +1050,16 @@ export class BillingEngine {
     const unresolvedCharges: Array<ITimeBasedCharge | IUsageBasedCharge> = [];
     const defaultTaxRegion = await this.getClientDefaultTaxRegionCode(clientId);
 
-    const timeEntries = await this.knex("time_entries")
-      .join("users", function () {
-        this.on("time_entries.user_id", "=", "users.user_id").andOn(
-          "users.tenant",
-          "=",
-          "time_entries.tenant",
-        );
-      })
-      .leftJoin("service_catalog", function () {
-        this.on(
-          "service_catalog.service_id",
-          "=",
-          "time_entries.service_id",
-        ).andOn("service_catalog.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("project_ticket_links", function () {
-        this.on(
-          "time_entries.work_item_id",
-          "=",
-          "project_ticket_links.ticket_id",
-        ).andOn("project_ticket_links.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("project_tasks", function () {
-        this.on(
-          "time_entries.work_item_id",
-          "=",
-          "project_tasks.task_id",
-        ).andOn("project_tasks.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("project_phases", function () {
-        this.on("project_tasks.phase_id", "=", "project_phases.phase_id").andOn(
-          "project_phases.tenant",
-          "=",
-          "project_tasks.tenant",
-        );
-      })
-      .leftJoin("projects", function () {
-        this.on("project_phases.project_id", "=", "projects.project_id").andOn(
-          "projects.tenant",
-          "=",
-          "project_phases.tenant",
-        );
-      })
-      .leftJoin("tickets", function () {
-        this.on("time_entries.work_item_id", "=", "tickets.ticket_id").andOn(
-          "tickets.tenant",
-          "=",
-          "time_entries.tenant",
-        );
-      })
+    const timeEntriesQuery = db.table<any>("time_entries");
+    db.tenantJoin(timeEntriesQuery, "users", "time_entries.user_id", "users.user_id");
+    db.tenantJoin(timeEntriesQuery, "service_catalog", "service_catalog.service_id", "time_entries.service_id", { type: "left" });
+    db.tenantJoin(timeEntriesQuery, "project_ticket_links", "time_entries.work_item_id", "project_ticket_links.ticket_id", { type: "left" });
+    db.tenantJoin(timeEntriesQuery, "project_tasks", "time_entries.work_item_id", "project_tasks.task_id", { type: "left" });
+    db.tenantJoin(timeEntriesQuery, "project_phases", "project_tasks.phase_id", "project_phases.phase_id", { type: "left" });
+    db.tenantJoin(timeEntriesQuery, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
+    db.tenantJoin(timeEntriesQuery, "tickets", "time_entries.work_item_id", "tickets.ticket_id", { type: "left" });
+
+    const timeEntries = await timeEntriesQuery
       .where({
         "time_entries.tenant": this.tenant,
       })
@@ -1140,7 +1096,7 @@ export class BillingEngine {
         workDate,
       });
       if (eligibleLineIds.length === 1) {
-        const updatedCount = await this.knex("time_entries")
+        const updatedCount = await db.table("time_entries")
           .where({
             tenant: this.tenant,
             entry_id: entry.entry_id,
@@ -1248,14 +1204,10 @@ export class BillingEngine {
       } satisfies ITimeBasedCharge);
     }
 
-    const usageRecords = await this.knex("usage_tracking")
-      .leftJoin("service_catalog", function () {
-        this.on(
-          "service_catalog.service_id",
-          "=",
-          "usage_tracking.service_id",
-        ).andOn("service_catalog.tenant", "=", "usage_tracking.tenant");
-      })
+    const usageRecordsQuery = db.table<any>("usage_tracking");
+    db.tenantJoin(usageRecordsQuery, "service_catalog", "service_catalog.service_id", "usage_tracking.service_id", { type: "left" });
+
+    const usageRecords = await usageRecordsQuery
       .where({
         "usage_tracking.client_id": clientId,
         "usage_tracking.tenant": this.tenant,
@@ -1286,7 +1238,7 @@ export class BillingEngine {
         workDate,
       });
       if (eligibleLineIds.length === 1) {
-        const updatedCount = await this.knex("usage_tracking")
+        const updatedCount = await db.table("usage_tracking")
           .where({
             tenant: this.tenant,
             usage_id: record.usage_id,
@@ -1393,7 +1345,8 @@ export class BillingEngine {
       throw new Error("Database connection not initialized");
     }
 
-    const client = await knex("clients")
+    const db = tenantDb(knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -1410,21 +1363,11 @@ export class BillingEngine {
     // Query contract lines via client-owned client_contracts -> contracts -> contract_lines.
     // template_contract_id is provenance for draft/review flows only; live billing must
     // read the cloned lines from cc.contract_id.
-    const clientContractLines = await knex("client_contracts as cc")
-      .join("contracts as c", function () {
-        this.on("c.contract_id", "=", "cc.contract_id").andOn(
-          "c.tenant",
-          "=",
-          "cc.tenant",
-        );
-      })
-      .join("contract_lines as cl", function () {
-        this.on("cl.contract_id", "=", "c.contract_id").andOn(
-          "cl.tenant",
-          "=",
-          "c.tenant",
-        );
-      })
+    const clientContractLinesQuery = db.table<any>("client_contracts as cc");
+    db.tenantJoin(clientContractLinesQuery, "contracts as c", "c.contract_id", "cc.contract_id");
+    db.tenantJoin(clientContractLinesQuery, "contract_lines as cl", "cl.contract_id", "c.contract_id");
+
+    const clientContractLines = await clientContractLinesQuery
       .where({
         "cc.client_id": clientId,
         "cc.is_active": true,
@@ -1528,7 +1471,8 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -1538,7 +1482,7 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const result = (await this.knex("client_billing_cycles")
+    const result = (await db.table("client_billing_cycles")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -1549,7 +1493,7 @@ export class BillingEngine {
 
     if (!result) {
       // Check again for existing cycle to handle race conditions
-      const existingCycle = await this.knex("client_billing_cycles")
+      const existingCycle = await db.table("client_billing_cycles")
         .where({
           client_id: clientId,
           tenant: this.tenant,
@@ -1568,10 +1512,10 @@ export class BillingEngine {
           tenant: this.tenant,
         };
 
-        await this.knex("client_billing_cycles").insert(defaultCycle);
+        await db.table("client_billing_cycles").insert(defaultCycle);
       } catch (error) {
         // If insert fails due to race condition, get the existing record
-        const cycle = await this.knex("client_billing_cycles")
+        const cycle = await db.table("client_billing_cycles")
           .where({
             client_id: clientId,
             tenant: this.tenant,
@@ -1606,7 +1550,8 @@ export class BillingEngine {
         };
       }
 
-      const client = await this.knex("clients")
+      const db = tenantDb(this.knex, this.tenant);
+      const client = await db.table("clients")
         .where({
           client_id: clientId,
           tenant: this.tenant,
@@ -1619,7 +1564,7 @@ export class BillingEngine {
         };
       }
 
-      const cycles = await this.knex("client_billing_cycles")
+      const cycles = await db.table("client_billing_cycles")
         .where({
           client_id: clientId,
           tenant: this.tenant,
@@ -1771,6 +1716,7 @@ export class BillingEngine {
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
+    const db = tenantDb(this.knex, this.tenant);
 
     const resolvedBillingCycle =
       billingCycle ??
@@ -1813,9 +1759,7 @@ export class BillingEngine {
     // Check for an active pricing schedule that overlaps the due service period.
     if (clientContractLine.contract_id) {
       try {
-        const activePricingSchedule = await this.knex(
-          "contract_pricing_schedules",
-        )
+        const activePricingSchedule = await db.table("contract_pricing_schedules")
           .where({
             tenant: this.tenant,
             contract_id: clientContractLine.contract_id,
@@ -1853,7 +1797,7 @@ export class BillingEngine {
       console.log(
         `No custom rate found for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}). Calculating based on services/plan rate.`,
       );
-      const client = (await this.knex("clients")
+      const client = (await db.table("clients")
         .where({
           client_id: clientId,
           tenant: this.tenant,
@@ -1871,7 +1815,7 @@ export class BillingEngine {
       const tenant = this.tenant; // Capture tenant value for joins
 
       // Get the contract line details to determine if this is a fixed fee plan
-      const contractLineDetails = await this.knex("contract_lines")
+      const contractLineDetails = await db.table("contract_lines")
         .where({
           contract_line_id: clientContractLine.contract_line_id,
           tenant: client.tenant,
@@ -1934,26 +1878,16 @@ export class BillingEngine {
 
       // Query services from contract_line_services (the contract definition)
       // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
-      const planServices = await this.knex("contract_line_services as cls")
-        .join("contract_line_service_configuration as clsc", function () {
-          this.on("clsc.contract_line_id", "=", "cls.contract_line_id")
-            .andOn("clsc.service_id", "=", "cls.service_id")
-            .andOn("clsc.tenant", "=", "cls.tenant");
-        })
-        .leftJoin("contract_line_service_fixed_config as clsfc", function () {
-          this.on("clsfc.config_id", "=", "clsc.config_id").andOn(
-            "clsfc.tenant",
-            "=",
-            "clsc.tenant",
-          );
-        })
-        .join("service_catalog as sc", function () {
-          this.on("sc.service_id", "=", "cls.service_id").andOn(
-            "sc.tenant",
-            "=",
-            "cls.tenant",
-          );
-        })
+      const planServicesQuery = db.table<any>("contract_line_services as cls");
+      db.tenantJoin(planServicesQuery, "contract_line_service_configuration as clsc", "clsc.contract_line_id", "cls.contract_line_id", {
+        on(join) {
+          join.andOn("clsc.service_id", "=", "cls.service_id");
+        },
+      });
+      db.tenantJoin(planServicesQuery, "contract_line_service_fixed_config as clsfc", "clsfc.config_id", "clsc.config_id", { type: "left" });
+      db.tenantJoin(planServicesQuery, "service_catalog as sc", "sc.service_id", "cls.service_id");
+
+      const planServices = await planServicesQuery
         .where({
           "cls.contract_line_id": clientContractLine.client_contract_line_id,
           "cls.tenant": tenant,
@@ -2093,25 +2027,21 @@ export class BillingEngine {
         // contract_line_services; selecting it from cls_fallback raised
         // "column cls_fallback.config_id does not exist" and aborted billing
         // for any fixed line whose catalog items are all products/licenses.
-        const fallbackService = await this.knex(
-          "contract_line_services as cls_fallback",
-        )
-          .join("contract_line_service_configuration as clsc_fallback", function () {
-            this.on(
-              "clsc_fallback.contract_line_id",
-              "=",
-              "cls_fallback.contract_line_id",
-            )
-              .andOn("clsc_fallback.service_id", "=", "cls_fallback.service_id")
-              .andOn("clsc_fallback.tenant", "=", "cls_fallback.tenant");
-          })
-          .join("service_catalog as sc", function () {
-            this.on("sc.service_id", "=", "cls_fallback.service_id").andOn(
-              "sc.tenant",
-              "=",
-              "cls_fallback.tenant",
-            );
-          })
+        const fallbackServiceQuery = db.table<any>("contract_line_services as cls_fallback");
+        db.tenantJoin(
+          fallbackServiceQuery,
+          "contract_line_service_configuration as clsc_fallback",
+          "clsc_fallback.contract_line_id",
+          "cls_fallback.contract_line_id",
+          {
+            on(join) {
+              join.andOn("clsc_fallback.service_id", "=", "cls_fallback.service_id");
+            },
+          },
+        );
+        db.tenantJoin(fallbackServiceQuery, "service_catalog as sc", "sc.service_id", "cls_fallback.service_id");
+
+        const fallbackService = await fallbackServiceQuery
           .where({
             "cls_fallback.contract_line_id":
               clientContractLine.client_contract_line_id,
@@ -3103,7 +3033,8 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -3114,7 +3045,7 @@ export class BillingEngine {
     }
 
     // Fetch the contract line details to get plan-wide settings
-    const plan = await this.knex("contract_lines")
+    const plan = await db.table("contract_lines")
       .where({
         contract_line_id: clientContractLine.contract_line_id,
         tenant: this.tenant,
@@ -3227,65 +3158,22 @@ export class BillingEngine {
         servicePeriodEndExclusive,
       });
 
-    const query = this.knex("time_entries")
-      .join("users", function () {
-        this.on("time_entries.user_id", "=", "users.user_id").andOn(
-          "users.tenant",
-          "=",
-          "time_entries.tenant",
-        );
-      })
-      .leftJoin("service_catalog", function () {
-        this.on(
-          "service_catalog.service_id",
-          "=",
-          "time_entries.service_id",
-        ).andOn("service_catalog.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("service_prices as sp", function () {
-        this.on("sp.service_id", "=", "service_catalog.service_id")
-          .andOn("sp.tenant", "=", "service_catalog.tenant")
-          .andOn(
-            "sp.currency_code",
-            "=",
-            knexRef.raw("?", [contractCurrency]),
-          );
-      })
-      .leftJoin("project_ticket_links", function () {
-        this.on(
-          "time_entries.work_item_id",
-          "=",
-          "project_ticket_links.ticket_id",
-        ).andOn("project_ticket_links.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("project_tasks", function () {
-        this.on(
-          "time_entries.work_item_id",
-          "=",
-          "project_tasks.task_id",
-        ).andOn("project_tasks.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("project_phases", function () {
-        this.on("project_tasks.phase_id", "=", "project_phases.phase_id").andOn(
-          "project_phases.tenant",
-          "=",
-          "project_tasks.tenant",
-        );
-      })
-      .leftJoin("projects", function () {
-        this.on("project_phases.project_id", "=", "projects.project_id").andOn(
-          "projects.tenant",
-          "=",
-          "project_phases.tenant",
-        );
-      })
-      .leftJoin("tickets", function () {
-        this.on("time_entries.work_item_id", "=", "tickets.ticket_id").andOn(
-          "tickets.tenant",
-          "=",
-          "time_entries.tenant",
-        );
-      })
+    const query = db.table<any>("time_entries");
+    db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
+    db.tenantJoin(query, "service_catalog", "service_catalog.service_id", "time_entries.service_id", { type: "left" });
+    db.tenantJoin(query, "service_prices as sp", "sp.service_id", "service_catalog.service_id", {
+      type: "left",
+      on(join) {
+        join.andOn("sp.currency_code", "=", knexRef.raw("?", [contractCurrency]));
+      },
+    });
+    db.tenantJoin(query, "project_ticket_links", "time_entries.work_item_id", "project_ticket_links.ticket_id", { type: "left" });
+    db.tenantJoin(query, "project_tasks", "time_entries.work_item_id", "project_tasks.task_id", { type: "left" });
+    db.tenantJoin(query, "project_phases", "project_tasks.phase_id", "project_phases.phase_id", { type: "left" });
+    db.tenantJoin(query, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
+    db.tenantJoin(query, "tickets", "time_entries.work_item_id", "tickets.ticket_id", { type: "left" });
+
+    query
       .where({
         "time_entries.tenant": client.tenant,
       })
@@ -3511,7 +3399,8 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -3619,23 +3508,16 @@ export class BillingEngine {
         servicePeriodEndExclusive,
       });
 
-    const usageRecordQuery = this.knex("usage_tracking")
-      .leftJoin("service_catalog", function () {
-        this.on(
-          "service_catalog.service_id",
-          "=",
-          "usage_tracking.service_id",
-        ).andOn("service_catalog.tenant", "=", "usage_tracking.tenant");
-      })
-      .leftJoin("service_prices as sp", function () {
-        this.on("sp.service_id", "=", "service_catalog.service_id")
-          .andOn("sp.tenant", "=", "service_catalog.tenant")
-          .andOn(
-            "sp.currency_code",
-            "=",
-            knexRef.raw("?", [contractCurrency]),
-          );
-      })
+    const usageRecordQuery = db.table<any>("usage_tracking");
+    db.tenantJoin(usageRecordQuery, "service_catalog", "service_catalog.service_id", "usage_tracking.service_id", { type: "left" });
+    db.tenantJoin(usageRecordQuery, "service_prices as sp", "sp.service_id", "service_catalog.service_id", {
+      type: "left",
+      on(join) {
+        join.andOn("sp.currency_code", "=", knexRef.raw("?", [contractCurrency]));
+      },
+    });
+
+    usageRecordQuery
       .where({
         "usage_tracking.client_id": clientId,
         "usage_tracking.tenant": this.tenant,
@@ -3817,28 +3699,13 @@ export class BillingEngine {
       return [];
     }
 
-    const rows = await this.knex("client_contracts as cc")
-      .join("contracts as c", function () {
-        this.on("c.contract_id", "=", "cc.contract_id").andOn(
-          "c.tenant",
-          "=",
-          "cc.tenant",
-        );
-      })
-      .join("contract_lines as cl", function () {
-        this.on("cl.contract_id", "=", "c.contract_id").andOn(
-          "cl.tenant",
-          "=",
-          "c.tenant",
-        );
-      })
-      .join("contract_line_services as cls", function () {
-        this.on("cls.contract_line_id", "=", "cl.contract_line_id").andOn(
-          "cls.tenant",
-          "=",
-          "cl.tenant",
-        );
-      })
+    const db = tenantDb(this.knex, this.tenant);
+    const uniqueAssignmentQuery = db.table("client_contracts as cc");
+    db.tenantJoin(uniqueAssignmentQuery, "contracts as c", "c.contract_id", "cc.contract_id");
+    db.tenantJoin(uniqueAssignmentQuery, "contract_lines as cl", "cl.contract_id", "c.contract_id");
+    db.tenantJoin(uniqueAssignmentQuery, "contract_line_services as cls", "cls.contract_line_id", "cl.contract_line_id");
+
+    const rows = await uniqueAssignmentQuery
       .where({
         "cc.tenant": this.tenant,
         "cc.client_id": input.clientId,
@@ -3875,7 +3742,8 @@ export class BillingEngine {
       return [];
     }
 
-    const rows = await this.knex("contract_line_services")
+    const db = tenantDb(this.knex, this.tenant);
+    const rows = await db.table("contract_line_services")
       .where({
         tenant: this.tenant,
         contract_line_id: contractLineId,
@@ -3929,7 +3797,8 @@ export class BillingEngine {
       coverageRatio,
     } = timingResolution;
 
-    const client = (await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = (await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -3941,30 +3810,25 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
-    const db = this.knex;
-
-    let planServicesQuery = db("contract_line_services as cls")
-      .join("contract_line_service_configuration as clsc", function () {
-        this.on("clsc.contract_line_id", "=", "cls.contract_line_id")
-          .andOn("clsc.service_id", "=", "cls.service_id")
-          .andOn("clsc.tenant", "=", "cls.tenant");
-      })
-      .join("service_catalog as sc", function () {
-        this.on("sc.service_id", "=", "cls.service_id").andOn(
-          "sc.tenant",
+    let planServicesQuery = db.table<any>("contract_line_services as cls");
+    db.tenantJoin(planServicesQuery, "contract_line_service_configuration as clsc", "clsc.contract_line_id", "cls.contract_line_id", {
+      on(join) {
+        join.andOn("clsc.service_id", "=", "cls.service_id");
+      },
+    });
+    db.tenantJoin(planServicesQuery, "service_catalog as sc", "sc.service_id", "cls.service_id");
+    db.tenantJoin(planServicesQuery, "service_prices as sp", "sp.service_id", "sc.service_id", {
+      type: "left",
+      on: (join) => {
+        join.andOn(
+          "sp.currency_code",
           "=",
-          "cls.tenant",
+          this.knex.raw("?", [clientContractLine.currency_code || "USD"]),
         );
-      })
-      .leftJoin("service_prices as sp", function () {
-        this.on("sp.service_id", "=", "sc.service_id")
-          .andOn("sp.tenant", "=", "sc.tenant")
-          .andOn(
-            "sp.currency_code",
-            "=",
-            db.raw("?", [clientContractLine.currency_code || "USD"]),
-          );
-      })
+      },
+    });
+
+    planServicesQuery
       .where({
         "cls.contract_line_id": clientContractLine.client_contract_line_id,
         "cls.tenant": tenant,
@@ -4156,10 +4020,12 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = (await this.knex("clients")
+    const tenant = this.tenant;
+    const db = tenantDb(this.knex, tenant);
+    const client = (await db.table("clients")
       .where({
         client_id: clientId,
-        tenant: this.tenant,
+        tenant,
       })
       .first()) as IClient;
 
@@ -4167,12 +4033,10 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const tenant = this.tenant;
-
     let materialRows: any[] = [];
 
     try {
-      materialRows = await this.knex
+      const ticketMaterialsQuery = db.table("ticket_materials as tm")
         .select([
           this.knex.raw(`'ticket' as source_type`),
           "tm.ticket_material_id as source_id",
@@ -4184,15 +4048,24 @@ export class BillingEngine {
           "tm.created_at",
           "sc.service_name",
           "sc.tax_rate_id",
-        ])
-        .from("ticket_materials as tm")
-        .join("service_catalog as sc", function () {
-          this.on("tm.service_id", "=", "sc.service_id").andOn(
-            "tm.tenant",
-            "=",
-            "sc.tenant",
-          );
-        })
+        ]);
+      db.tenantJoin(ticketMaterialsQuery, "service_catalog as sc", "tm.service_id", "sc.service_id");
+      const projectMaterialsQuery = db.table("project_materials as pm")
+        .select([
+          this.knex.raw(`'project' as source_type`),
+          "pm.project_material_id as source_id",
+          "pm.service_id",
+          "pm.quantity",
+          "pm.rate",
+          "pm.currency_code",
+          "pm.description",
+          "pm.created_at",
+          "sc.service_name",
+          "sc.tax_rate_id",
+        ]);
+      db.tenantJoin(projectMaterialsQuery, "service_catalog as sc", "pm.service_id", "sc.service_id");
+
+      materialRows = await ticketMaterialsQuery
         .where({
           "tm.tenant": tenant,
           "tm.client_id": clientId,
@@ -4202,27 +4075,7 @@ export class BillingEngine {
         .where("tm.created_at", ">=", billingPeriod.startDate)
         .andWhere("tm.created_at", "<", billingPeriod.endDate)
         .unionAll([
-          this.knex
-            .select([
-              this.knex.raw(`'project' as source_type`),
-              "pm.project_material_id as source_id",
-              "pm.service_id",
-              "pm.quantity",
-              "pm.rate",
-              "pm.currency_code",
-              "pm.description",
-              "pm.created_at",
-              "sc.service_name",
-              "sc.tax_rate_id",
-            ])
-            .from("project_materials as pm")
-            .join("service_catalog as sc", function () {
-              this.on("pm.service_id", "=", "sc.service_id").andOn(
-                "pm.tenant",
-                "=",
-                "sc.tenant",
-              );
-            })
+          projectMaterialsQuery
             .where({
               "pm.tenant": tenant,
               "pm.client_id": clientId,
@@ -4312,7 +4165,8 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -4324,28 +4178,16 @@ export class BillingEngine {
 
     // Get bucket configurations for this plan
     // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
-    const bucketConfigs = await this.knex(
-      "contract_line_service_configuration as clsc",
-    )
-      .join("contract_line_services as cls", function () {
-        this.on("clsc.contract_line_id", "=", "cls.contract_line_id")
-          .andOn("clsc.service_id", "=", "cls.service_id")
-          .andOn("clsc.tenant", "=", "cls.tenant");
-      })
-      .leftJoin("contract_line_service_bucket_config as clsbc", function () {
-        this.on("clsbc.config_id", "=", "clsc.config_id").andOn(
-          "clsbc.tenant",
-          "=",
-          "clsc.tenant",
-        );
-      })
-      .join("service_catalog as sc", function () {
-        this.on("cls.service_id", "=", "sc.service_id").andOn(
-          "sc.tenant",
-          "=",
-          "cls.tenant",
-        );
-      })
+    const bucketConfigQuery = db.table<any>("contract_line_service_configuration as clsc");
+    db.tenantJoin(bucketConfigQuery, "contract_line_services as cls", "clsc.contract_line_id", "cls.contract_line_id", {
+      on(join) {
+        join.andOn("clsc.service_id", "=", "cls.service_id");
+      },
+    });
+    db.tenantJoin(bucketConfigQuery, "contract_line_service_bucket_config as clsbc", "clsbc.config_id", "clsc.config_id", { type: "left" });
+    db.tenantJoin(bucketConfigQuery, "service_catalog as sc", "cls.service_id", "sc.service_id");
+
+    const bucketConfigs = await bucketConfigQuery
       .where({
         "cls.contract_line_id": contractLine.client_contract_line_id,
         "clsc.configuration_type": "Bucket",
@@ -4370,7 +4212,7 @@ export class BillingEngine {
     const bucketChargesPromises = bucketConfigs.map(
       async (bucketConfig): Promise<IBucketCharge[]> => {
         // Pull usage records captured for bucket plans within this billing period
-        const usageRecords = await this.knex("bucket_usage")
+        const usageRecords = await db.table("bucket_usage")
           .where({
             tenant: client.tenant,
             client_id: clientId,
@@ -4551,14 +4393,11 @@ export class BillingEngine {
     }
 
     // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
-    const existing = await this.knex("invoice_charge_details as iid")
-      .join("contract_line_service_configuration as clsc", function () {
-        this.on("iid.config_id", "=", "clsc.config_id").andOn(
-          "iid.tenant",
-          "=",
-          "clsc.tenant",
-        );
-      })
+    const db = tenantDb(this.knex, this.tenant);
+    const existingChargeQuery = db.table("invoice_charge_details as iid");
+    db.tenantJoin(existingChargeQuery, "contract_line_service_configuration as clsc", "iid.config_id", "clsc.config_id");
+
+    const existing = await existingChargeQuery
       .where("iid.tenant", this.tenant)
       .andWhere("clsc.contract_line_id", clientContractLineId)
       .andWhere("iid.service_period_start", servicePeriodStart)
@@ -4578,7 +4417,7 @@ export class BillingEngine {
       chargeFamily: "fixed",
     });
 
-    const recurringLinkedCharge = await this.knex("recurring_service_periods")
+    const recurringLinkedCharge = await db.table("recurring_service_periods")
       .where("tenant", this.tenant)
       .where("charge_family", "fixed")
       .where("due_position", billingTiming)
@@ -4785,7 +4624,8 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -4805,35 +4645,13 @@ export class BillingEngine {
 
     // Query discounts via client_contracts -> contracts -> contract_lines
     // instead of the deprecated client_contract_lines table
-    const discountRows = (await this.knex("discounts")
-      .join("contract_line_discounts", function () {
-        this.on(
-          "discounts.discount_id",
-          "=",
-          "contract_line_discounts.discount_id",
-        ).andOn("contract_line_discounts.tenant", "=", "discounts.tenant");
-      })
-      .join("contract_lines as cl", function () {
-        this.on(
-          "cl.contract_line_id",
-          "=",
-          "contract_line_discounts.contract_line_id",
-        ).andOn("cl.tenant", "=", "contract_line_discounts.tenant");
-      })
-      .join("contracts as c", function () {
-        this.on("c.contract_id", "=", "cl.contract_id").andOn(
-          "c.tenant",
-          "=",
-          "cl.tenant",
-        );
-      })
-      .join("client_contracts as cc", function () {
-        this.on("cc.contract_id", "=", "c.contract_id").andOn(
-          "cc.tenant",
-          "=",
-          "c.tenant",
-        );
-      })
+    const discountRowsQuery = db.table("discounts");
+    db.tenantJoin(discountRowsQuery, "contract_line_discounts", "discounts.discount_id", "contract_line_discounts.discount_id");
+    db.tenantJoin(discountRowsQuery, "contract_lines as cl", "cl.contract_line_id", "contract_line_discounts.contract_line_id");
+    db.tenantJoin(discountRowsQuery, "contracts as c", "c.contract_id", "cl.contract_id");
+    db.tenantJoin(discountRowsQuery, "client_contracts as cc", "cc.contract_id", "c.contract_id");
+
+    const discountRows = (await discountRowsQuery
       .where({
         "cc.client_id": clientId,
         "cc.tenant": client.tenant,
@@ -4978,7 +4796,8 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const client = await this.knex("clients")
+    const db = tenantDb(this.knex, this.tenant);
+    const client = await db.table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -4988,11 +4807,11 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const adjustments = await this.knex("adjustments").where({
+    const adjustments = await db.table<any>("adjustments").where({
       client_id: clientId,
       tenant: client.tenant,
     });
-    return Array.isArray(adjustments) ? adjustments : [];
+    return Array.isArray(adjustments) ? (adjustments as IAdjustment[]) : [];
   }
 
   /**
@@ -5006,6 +4825,7 @@ export class BillingEngine {
     }
 
     let tenant = this.tenant;
+    const db = tenantDb(this.knex, tenant);
 
     console.log(`Recalculating invoice ${invoiceId}`);
 
@@ -5013,7 +4833,7 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const invoice = await this.knex("invoices")
+    const invoice = await db.table("invoices")
       .where({
         invoice_id: invoiceId,
         tenant: this.tenant,
@@ -5026,7 +4846,7 @@ export class BillingEngine {
       );
     }
 
-    const client = await this.knex("clients")
+    const client = await db.table("clients")
       .where({
         client_id: invoice.client_id,
         tenant: this.tenant,

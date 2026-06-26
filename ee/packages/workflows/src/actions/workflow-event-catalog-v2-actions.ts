@@ -158,6 +158,7 @@ export const listEventCatalogCategoriesV2Action = withAuth(async (user, { tenant
     .whereNotNull('category')
     .orderBy('category', 'asc');
 
+  // system_event_catalog is a global workflow event catalog; tenant event categories are loaded above.
   const systemRows = await knex('system_event_catalog')
     .distinct('category')
     .whereNotNull('category')
@@ -578,7 +579,7 @@ export const detachWorkflowTriggerFromEventAction = withAuth(async (user, { tena
     throw new Error('Workflow not found');
   }
   // Get latest published version definition.
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, parsed.workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, parsed.workflowId, tenant);
   const latest = versions[0];
   if (!latest) {
     throw new Error('Workflow has no published versions');

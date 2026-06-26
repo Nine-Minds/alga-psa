@@ -24,9 +24,11 @@ describe('small document actions tenant-scoped query contract', () => {
     expect(combined).toContain("tenantDb(knex, tenant).table('document_share_links')");
     expect(combined).toContain("tenantDb(knex, tenant).table('document_share_links').insert");
     expect(combined).toContain("tenantDb(trx, tenant).table('document_default_folders').insert");
-    expect(combined).toContain("knex('document_share_links as sl')");
-    expect(combined).toContain("knex('document_share_access_log').insert");
+    expect(combined).toContain(".unscoped('document_share_links as sl', SHARE_TOKEN_DISCOVERY_REASON)");
+    expect(combined).toContain("tenantDb(knex, tenant).table('document_share_access_log').insert");
     expect(combined).not.toContain('createTenantScopedQuery');
+    expect(combined).not.toContain("knex('document_share_links as sl')");
+    expect(combined).not.toContain("knex('document_share_access_log').insert");
 
     for (const { file, source } of sources) {
       expect(source, file).not.toMatch(/\b(?:knex|trx)\('(document_default_folders|document_content|documents|document_share_links)'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);

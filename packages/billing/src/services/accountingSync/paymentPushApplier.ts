@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
@@ -125,7 +126,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
 
     // ── Resolve client/customer mapping (QBO Customer ID) ────────────────
     // The client_id lives on the invoice row; the customer mapping is keyed by it.
-    const invoiceRow = await deps.knex('invoices')
+    const invoiceRow = await tenantDb(deps.knex, deps.tenantId).table('invoices')
       .where({ invoice_id: payload.invoiceId, tenant: deps.tenantId })
       .select('client_id')
       .first<{ client_id: string } | undefined>();

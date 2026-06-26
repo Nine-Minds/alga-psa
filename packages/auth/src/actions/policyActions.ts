@@ -44,7 +44,7 @@ export const createRole = withAuth(async (user, { tenant }, roleName: string, de
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         await assertSecuritySettingsPermission(user, 'create', trx);
-        const [role] = await trx('roles').insert({
+        const [role] = await tenantScopedTable(trx, 'roles', tenant).insert({
             role_name: roleName,
             description,
             tenant,
@@ -155,7 +155,7 @@ export const assignPermissionToRole = withAuth(async (user, { tenant }, roleId: 
         }
 
         // Then insert the role permission
-        await trx('role_permissions')
+        await tenantScopedTable(trx, 'role_permissions', tenant)
             .insert({
                 role_id: roleId,
                 permission_id: permissionId,
@@ -226,7 +226,7 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
             throw new Error('Cannot assign MSP role to client portal user');
         }
 
-        const [userRole] = await trx('user_roles')
+        const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
         return userRole;
@@ -342,7 +342,7 @@ export const createPolicy = withAuth(async (user, { tenant }, policyName: string
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         await assertSecuritySettingsPermission(user, 'create', trx);
-        const [policy] = await trx('policies').insert({
+        const [policy] = await tenantScopedTable(trx, 'policies', tenant).insert({
             tenant,
             policy_name: policyName,
             resource,

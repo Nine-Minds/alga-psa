@@ -19,10 +19,10 @@ describe('user actions register client user tenant-scoped query contract', () =>
   it('uses structural tenant scoping for tenant-known client-role lookup', () => {
     const section = sectionBetween('export const registerClientUser', 'export const checkPasswordResetStatus');
 
-    expect(section).toContain("await trx('contacts')");
+    expect(section).toContain(".unscoped('contacts', 'tenant discovery for client portal registration contact lookup')");
     expect(section).toContain('findExistingUserByEmailGlobally(email');
-    expect(section).toContain("await trx('users')");
-    expect(section).toContain("await trx('user_roles').insert");
+    expect(section).toContain("await tenantDb(trx, contact.tenant).table('users')");
+    expect(section).toContain("await tenantDb(trx, contact.tenant).table('user_roles').insert");
     expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');
     expect(section).toContain("whereRaw('LOWER(role_name) = ?', ['user'])");

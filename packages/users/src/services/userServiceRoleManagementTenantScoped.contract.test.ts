@@ -23,7 +23,7 @@ describe('user service role management tenant-scoped query contract', () => {
     expect(section).toContain('tenantDb(trx, ');
     expect(section).toContain(".table('roles");
     expect(section).toContain(".table('user_roles");
-    expect(section).toContain("await trx('user_roles').insert(userRoles)");
+    expect(section).toContain("await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles)");
 
     expect(section).not.toMatch(/trx\('users'\)\s*\./);
     expect(section).not.toMatch(/trx\('roles'\)\s*\./);

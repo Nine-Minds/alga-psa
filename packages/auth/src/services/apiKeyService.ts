@@ -83,7 +83,7 @@ export class ApiKeyService {
         metadata: options?.metadata ?? null,
       };
 
-      const [record] = await knex('api_keys').insert(insertPayload).returning('*');
+      const [record] = await this.apiKeysQuery(knex, tenant).insert(insertPayload).returning('*');
 
       if (!record) {
         throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);

@@ -180,11 +180,11 @@ async function _createArticleInternal(
     }
   }
 
-  // Create the underlying document directly via knex
+  // Create the underlying document.
   const documentId = randomUUID();
   const now = new Date();
 
-  await knex('documents').insert({
+  await tenantScopedTable(knex, 'documents', tenant).insert({
     tenant,
     document_id: documentId,
     document_name: input.title.trim(),
@@ -198,7 +198,7 @@ async function _createArticleInternal(
 
   // Store block content if provided
   if (input.content && Array.isArray(input.content) && input.content.length > 0) {
-    await knex('document_block_content').insert({
+    await tenantScopedTable(knex, 'document_block_content', tenant).insert({
       content_id: randomUUID(),
       document_id: documentId,
       tenant,
@@ -219,7 +219,7 @@ async function _createArticleInternal(
     : null;
 
   try {
-    await knex('kb_articles').insert({
+    await tenantScopedTable(knex, 'kb_articles', tenant).insert({
       tenant,
       article_id: articleId,
       document_id: document.document_id,
@@ -648,7 +648,7 @@ export const submitForReview = withAuth(
       assigned_by: user.user_id,
     }));
 
-    await knex('kb_article_reviewers').insert(reviewerRecords);
+    await tenantScopedTable(knex, 'kb_article_reviewers', tenant).insert(reviewerRecords);
 
     return true;
   }
@@ -763,10 +763,8 @@ export const getArticles = withAuth(
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      });
+      ]);
+    tenantDb(knex, tenant).tenantJoin(query, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
 
     if (filters.status) {
       query = query.andWhere('ka.status', filters.status);
@@ -793,28 +791,28 @@ export const getArticles = withAuth(
 
     // Filter by tag IDs (legacy)
     if (filters.tagIds && filters.tagIds.length > 0) {
-      query = query.whereExists(function () {
-        this.select(knex.raw('1'))
-          .from('tag_mappings as tm')
-          .whereRaw('tm.tagged_id = ka.article_id')
-          .whereRaw('tm.tenant = ka.tenant')
-          .where('tm.tagged_type', 'knowledge_base_article')
-          .whereIn('tm.tag_id', filters.tagIds as string[]);
-      });
+      const tagIdSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
+        .select(knex.raw('1'))
+        .whereRaw('tm.tagged_id = ka.article_id')
+        .whereRaw('tm.tenant = ka.tenant')
+        .where('tm.tagged_type', 'knowledge_base_article')
+        .whereIn('tm.tag_id', filters.tagIds as string[]);
+
+      query = query.whereExists(tagIdSubquery);
     }
 
     // Filter by tag text (used by TagFilter component)
     if (filters.tags && filters.tags.length > 0) {
-      query = query.whereIn('ka.article_id', function () {
-        this.select('tm.tagged_id')
-          .from('tag_mappings as tm')
-          .join('tag_definitions as td', function () {
-            this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
-          })
-          .where('tm.tagged_type', 'knowledge_base_article')
-          .whereRaw('tm.tenant = ka.tenant')
-          .whereIn('td.tag_text', filters.tags as string[]);
-      });
+      const tagTextSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
+        .select('tm.tagged_id')
+        .join('tag_definitions as td', function () {
+          this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
+        })
+        .where('tm.tagged_type', 'knowledge_base_article')
+        .whereRaw('tm.tenant = ka.tenant')
+        .whereIn('td.tag_text', filters.tags as string[]);
+
+      query = query.whereIn('ka.article_id', tagTextSubquery);
     }
 
     // Get total count
@@ -880,7 +878,7 @@ async function reconcileOrphanedKBDocuments(
     };
   });
 
-  await knex('kb_articles').insert(records);
+  await tenantScopedTable(knex, 'kb_articles', tenant).insert(records);
 }
 
 /**
@@ -917,10 +915,8 @@ export const getArticlesWithTags = withAuth(
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      });
+      ]);
+    tenantDb(knex, tenant).tenantJoin(query, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
 
     if (filters.status) {
       query = query.andWhere('ka.status', filters.status);
@@ -941,26 +937,26 @@ export const getArticlesWithTags = withAuth(
       });
     }
     if (filters.tagIds && filters.tagIds.length > 0) {
-      query = query.whereExists(function () {
-        this.select(knex.raw('1'))
-          .from('tag_mappings as tm')
-          .whereRaw('tm.tagged_id = ka.article_id')
-          .whereRaw('tm.tenant = ka.tenant')
-          .where('tm.tagged_type', 'knowledge_base_article')
-          .whereIn('tm.tag_id', filters.tagIds as string[]);
-      });
+      const tagIdSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
+        .select(knex.raw('1'))
+        .whereRaw('tm.tagged_id = ka.article_id')
+        .whereRaw('tm.tenant = ka.tenant')
+        .where('tm.tagged_type', 'knowledge_base_article')
+        .whereIn('tm.tag_id', filters.tagIds as string[]);
+
+      query = query.whereExists(tagIdSubquery);
     }
     if (filters.tags && filters.tags.length > 0) {
-      query = query.whereIn('ka.article_id', function () {
-        this.select('tm.tagged_id')
-          .from('tag_mappings as tm')
-          .join('tag_definitions as td', function () {
-            this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
-          })
-          .where('tm.tagged_type', 'knowledge_base_article')
-          .whereRaw('tm.tenant = ka.tenant')
-          .whereIn('td.tag_text', filters.tags as string[]);
-      });
+      const tagTextSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
+        .select('tm.tagged_id')
+        .join('tag_definitions as td', function () {
+          this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
+        })
+        .where('tm.tagged_type', 'knowledge_base_article')
+        .whereRaw('tm.tenant = ka.tenant')
+        .whereIn('td.tag_text', filters.tags as string[]);
+
+      query = query.whereIn('ka.article_id', tagTextSubquery);
     }
 
     const countResult = await query.clone().clearSelect().count('* as count').first();
@@ -1007,12 +1003,12 @@ export const getArticlesWithTags = withAuth(
       .distinctOn('td.tag_text')
       .select('td.*')
       .where('td.tagged_type', 'knowledge_base_article')
-      .whereExists(function () {
-        this.select(knex.raw('1'))
-          .from('tag_mappings as tm')
+      .whereExists(
+        tenantDb(knex, tenant).table('tag_mappings as tm')
+          .select(knex.raw('1'))
           .whereRaw('tm.tenant = td.tenant')
-          .whereRaw('tm.tag_id = td.tag_id');
-      })
+          .whereRaw('tm.tag_id = td.tag_id')
+      )
       .orderBy('td.tag_text', 'asc')
       .orderBy('td.created_at', 'asc');
 
@@ -1057,7 +1053,8 @@ export const getArticle = withAuth(
       return null;
     }
 
-    const article = await tenantScopedTable(knex, 'kb_articles as ka', tenant)
+    const db = tenantDb(knex, tenant);
+    const articleQuery = tenantScopedTable(knex, 'kb_articles as ka', tenant)
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
@@ -1065,13 +1062,11 @@ export const getArticle = withAuth(
         'd.file_id',
         'd.mime_type',
         'dbc.block_data',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      })
-      .leftJoin('document_block_content as dbc', function () {
-        this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
-      })
+      ]);
+    db.tenantJoin(articleQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+    db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+
+    const article = await articleQuery
       .andWhere('ka.article_id', articleId)
       .first();
 
@@ -1098,14 +1093,14 @@ export const getStaleArticles = withAuth(
       return permissionError('Permission denied');
     }
 
-    const articles = await tenantScopedTable(knex, 'kb_articles as ka', tenant)
+    const articlesQuery = tenantScopedTable(knex, 'kb_articles as ka', tenant)
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
-      ])
-      .leftJoin('documents as d', function () {
-        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
-      })
+      ]);
+    tenantDb(knex, tenant).tenantJoin(articlesQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+
+    const articles = await articlesQuery
       .andWhere('ka.status', 'published')
       .andWhere('ka.next_review_due', '<=', knex.fn.now())
       .orderBy('ka.next_review_due', 'asc');

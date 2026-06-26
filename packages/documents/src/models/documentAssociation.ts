@@ -16,7 +16,7 @@ class DocumentAssociation {
       tenant,
     };
 
-    await knexOrTrx('document_associations').insert(association);
+    await tenantDb(knexOrTrx, tenant).table<IDocumentAssociation>('document_associations').insert(association);
 
     return { association_id: association.association_id };
   }

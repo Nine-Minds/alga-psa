@@ -280,7 +280,7 @@ async function ensureEntityFoldersInitializedInternal(
     });
 
   if (foldersToInsert.length > 0) {
-    await knex('document_folders').insert(foldersToInsert);
+    await tenantScopedTable(knex, 'document_folders', tenant).insert(foldersToInsert);
   }
 }
 
@@ -816,7 +816,7 @@ export const addDocument = withAuth(async (user, { tenant }, data: DocumentInput
       };
 
       console.log('Adding document:', new_document);
-      await trx('documents').insert(new_document);
+      await tenantScopedTable(trx, 'documents', tenant).insert(new_document);
 
       return { _id: new_document.document_id };
     });
@@ -1147,11 +1147,11 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await tenantScopedTable(trx, 'documents', tenant)
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+
+      const documents = await documentsQuery
         .leftJoin('users', function() {
           this.on('documents.created_by', '=', 'users.user_id')
               .andOn('users.tenant', '=', trx.raw('?', [tenant]));
@@ -1195,11 +1195,11 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await tenantScopedTable(trx, 'documents', tenant)
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+
+      const documents = await documentsQuery
         .leftJoin('users', function() {
           this.on('documents.created_by', '=', 'users.user_id')
               .andOn('users.tenant', '=', trx.raw('?', [tenant]));
@@ -1303,11 +1303,11 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await tenantScopedTable(trx, 'documents', tenant)
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+
+      const documents = await documentsQuery
         .leftJoin('users', function() {
           this.on('documents.created_by', '=', 'users.user_id')
               .andOn('users.tenant', '=', trx.raw('?', [tenant]));
@@ -1356,11 +1356,11 @@ export const getDocumentsByContractId = withAuth(async (user, { tenant }, contra
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await tenantScopedTable(trx, 'documents', tenant)
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+
+      const documents = await documentsQuery
         .where({
           'document_associations.entity_id': contractId,
           'document_associations.entity_type': 'contract'
@@ -1873,10 +1873,11 @@ export const getDocumentCountsForEntities = withAuth(async (
         return countMap;
       }
 
-      const rows = await tenantScopedTable(trx, 'document_associations as da', tenant)
-        .join('documents as d', function joinDocuments() {
-          this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const rowsQuery = tenantScopedTable(trx, 'document_associations as da', tenant);
+      db.tenantJoin(rowsQuery, 'documents as d', 'da.document_id', 'd.document_id');
+
+      const rows = await rowsQuery
         .whereIn('da.entity_id', entityIds)
         .where('da.entity_type', entityType)
         .select('da.entity_id', 'd.document_id', 'd.created_by', 'd.is_client_visible');
@@ -1944,11 +1945,11 @@ export const getDocumentsByEntity = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-        let query = tenantScopedTable(trx, 'documents', tenant)
-          .join('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('documents.tenant', '=', 'document_associations.tenant');
-          })
+        const db = tenantDb(trx, tenant);
+        let query = tenantScopedTable(trx, 'documents', tenant);
+        db.tenantJoin(query, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+
+        query = query
           .leftJoin('users', function() {
             this.on('documents.created_by', '=', 'users.user_id')
                 .andOn('users.tenant', '=', trx.raw('?', [tenant]));
@@ -2771,7 +2772,7 @@ export const uploadDocument = withAuth(async (
 
       // Use transaction for document creation and associations
       const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        await trx('documents').insert(document);
+        await tenantScopedTable(trx, 'documents', tenant).insert(document);
         const documentWithId = document;
 
         // Create associations if any entity IDs are provided
@@ -3948,7 +3949,7 @@ export const createFolder = withAuth(async (
   }
 
   // Create folder
-  await knex('document_folders').insert({
+  await tenantScopedTable(knex, 'document_folders', tenant).insert({
     tenant,
     folder_path: folderPath,
     folder_name: folderName,

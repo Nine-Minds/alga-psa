@@ -11,6 +11,8 @@ import {
   formatRateLimitError
 } from '../../lib/rateLimiting';
 
+const REGISTRATION_TENANT_DISCOVERY = 'tenant-discovery';
+
 interface IRegistrationResult {
   success: boolean;
   error?: string;
@@ -44,7 +46,8 @@ export async function initiateRegistration(
     
     if (contactVerification.exists) {
       // Get contact's client and tenant
-      const contact = await adminDb('contacts')
+      const contact = await tenantDb(adminDb, REGISTRATION_TENANT_DISCOVERY)
+        .unscoped('contacts', 'tenant discovery for contact-based registration')
         .join('clients', function() {
           this.on('contacts.client_id', '=', 'clients.client_id')
               .andOn('contacts.tenant', '=', 'clients.tenant');
@@ -92,7 +95,8 @@ export async function getUserClientIdForRegistration(userId: string): Promise<st
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
       // First try to get client ID from contact if user is contact-based
       if (user.contact_id) {
-        const contact = await trx('contacts')
+        const contact = await tenantDb(trx, REGISTRATION_TENANT_DISCOVERY)
+          .unscoped('contacts', 'tenant discovery for registration client lookup')
           .where('contact_name_id', user.contact_id)
           .select('client_id')
           .first();
@@ -121,7 +125,8 @@ async function registerContactUser(
   try {
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
       // Get contact details and tenant
-      const contact = await trx('contacts')
+      const contact = await tenantDb(trx, REGISTRATION_TENANT_DISCOVERY)
+        .unscoped('contacts', 'tenant discovery for contact-based registration')
         .join('clients', function() {
           this.on('contacts.client_id', '=', 'clients.client_id')
               .andOn('contacts.tenant', '=', 'clients.tenant');
@@ -154,7 +159,7 @@ async function registerContactUser(
 
       // Create user
       const hashedPassword = await hashPassword(password);
-      const [user] = await trx('users')
+      const [user] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
           username: email.toLowerCase(),
@@ -180,7 +185,7 @@ async function registerContactUser(
       }
 
       // Assign role
-      await trx('user_roles').insert({
+      await tenantDb(trx, contact.tenant).table('user_roles').insert({
         tenant: contact.tenant,
         user_id: user.user_id,
         role_id: userRole.role_id

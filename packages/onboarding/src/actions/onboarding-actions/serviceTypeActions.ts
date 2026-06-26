@@ -105,7 +105,7 @@ export const createTenantServiceType = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const inserted = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [row] = await trx('service_types')
+      const [row] = await tenantDb(trx, tenant).table('service_types')
         .insert({
           tenant,
           name: input.name,

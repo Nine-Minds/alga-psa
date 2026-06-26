@@ -41,7 +41,10 @@ function workflowRuns(
 ): Knex.QueryBuilder<WorkflowRunRecord, WorkflowRunRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowRunRecord>('workflow_runs')
-    : knex<WorkflowRunRecord>('workflow_runs');
+    : tenantDb(knex, '__workflow_run_unscoped__').unscoped<WorkflowRunRecord>(
+      'workflow_runs',
+      'workflow run model supports legacy run_id/status discovery before the tenant is resolved'
+    );
 }
 
 const WorkflowRunModelV2 = {
@@ -57,7 +60,7 @@ const WorkflowRunModelV2 = {
   },
 
   // `tenant` is optional during the transition: when supplied the query prunes to
-  // a single Citus shard; when omitted it falls back to a (multi-shard) run_id scan.
+  // a single Citus shard; when omitted it uses an explicit unscoped run_id scan.
   update: async (knex: Knex, runId: string, data: Partial<WorkflowRunRecord>, tenant?: string | null): Promise<WorkflowRunRecord> => {
     const [record] = await workflowRuns(knex, tenant)
       .where({ run_id: runId })

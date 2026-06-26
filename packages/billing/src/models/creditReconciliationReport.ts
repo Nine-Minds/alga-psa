@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 
@@ -11,6 +11,36 @@ interface ListReportsOptions {
   endDate?: string;
   page?: number;
   pageSize?: number;
+}
+
+type CreditReconciliationReportRow = Omit<ICreditReconciliationReport, 'metadata'> & {
+  metadata?: ICreditReconciliationReport['metadata'] | string | null;
+};
+
+function tenantScopedTable<Row extends object = CreditReconciliationReportRow>(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+) {
+  return tenantDb(conn, tenant).table<Row>('credit_reconciliation_reports');
+}
+
+function parseReportMetadata(report: CreditReconciliationReportRow): ICreditReconciliationReport {
+  if (typeof report.metadata !== 'string') {
+    return report as ICreditReconciliationReport;
+  }
+
+  try {
+    return {
+      ...report,
+      metadata: JSON.parse(report.metadata)
+    };
+  } catch (e) {
+    console.warn(`Failed to parse metadata for report ${report.report_id}:`, e);
+    return {
+      ...report,
+      metadata: undefined
+    };
+  }
 }
 
 class CreditReconciliationReport {
@@ -47,7 +77,7 @@ class CreditReconciliationReport {
       }
 
       const dbInstance = trx || knex;
-      const [createdReport] = await dbInstance('credit_reconciliation_reports')
+      const [createdReport] = await tenantScopedTable(dbInstance, tenant)
         .insert({
           report_id: reportId,
           ...dataWithProcessedMetadata,
@@ -61,16 +91,7 @@ class CreditReconciliationReport {
         throw new Error('Failed to create reconciliation report - no record returned');
       }
 
-      // Parse metadata back to object if it exists
-      if (createdReport.metadata && typeof createdReport.metadata === 'string') {
-        try {
-          createdReport.metadata = JSON.parse(createdReport.metadata);
-        } catch (e) {
-          console.warn(`Failed to parse metadata for report ${reportId}:`, e);
-        }
-      }
-
-      return createdReport;
+      return parseReportMetadata(createdReport);
     } catch (error) {
       console.error('Error creating reconciliation report:', error);
       throw error;
@@ -93,22 +114,14 @@ class CreditReconciliationReport {
     }
 
     try {
-      const report = await knex('credit_reconciliation_reports')
+      const report = await tenantScopedTable(knex, tenant)
         .where({
           report_id: reportId,
           tenant
         })
         .first();
 
-      if (report && report.metadata && typeof report.metadata === 'string') {
-        try {
-          report.metadata = JSON.parse(report.metadata);
-        } catch (e) {
-          console.warn(`Failed to parse metadata for report ${reportId}:`, e);
-        }
-      }
-
-      return report || null;
+      return report ? parseReportMetadata(report) : null;
     } catch (error) {
       console.error(`Error fetching reconciliation report ${reportId}:`, error);
       throw error;
@@ -135,7 +148,7 @@ class CreditReconciliationReport {
     }
 
     try {
-      const query = knex('credit_reconciliation_reports')
+      const query = tenantScopedTable(knex, tenant)
         .where({
           client_id: clientId,
           tenant
@@ -152,17 +165,7 @@ class CreditReconciliationReport {
 
       const reports = await query;
 
-      // Parse metadata for each report
-      return reports.map(report => {
-        if (report.metadata && typeof report.metadata === 'string') {
-          try {
-            report.metadata = JSON.parse(report.metadata);
-          } catch (e) {
-            console.warn(`Failed to parse metadata for report ${report.report_id}:`, e);
-          }
-        }
-        return report;
-      });
+      return reports.map(parseReportMetadata);
     } catch (error) {
       console.error(`Error fetching reconciliation reports for client ${clientId}:`, error);
       throw error;
@@ -202,7 +205,7 @@ class CreditReconciliationReport {
       }
 
       const dbInstance = trx || knex;
-      const [updatedReport] = await dbInstance('credit_reconciliation_reports')
+      const [updatedReport] = await tenantScopedTable(dbInstance, tenant)
         .where({
           report_id: reportId,
           tenant
@@ -217,16 +220,7 @@ class CreditReconciliationReport {
         throw new Error(`Reconciliation report ${reportId} not found or belongs to different tenant`);
       }
 
-      // Parse metadata back to object if it exists
-      if (updatedReport.metadata && typeof updatedReport.metadata === 'string') {
-        try {
-          updatedReport.metadata = JSON.parse(updatedReport.metadata);
-        } catch (e) {
-          console.warn(`Failed to parse metadata for report ${reportId}:`, e);
-        }
-      }
-
-      return updatedReport;
+      return parseReportMetadata(updatedReport);
     } catch (error) {
       console.error(`Error updating reconciliation report ${reportId}:`, error);
       throw error;
@@ -265,7 +259,7 @@ class CreditReconciliationReport {
 
     try {
       // Build base query
-      const baseQuery = knex('credit_reconciliation_reports')
+      const baseQuery = tenantScopedTable(knex, tenant)
         .where({ tenant });
 
       // Apply filters
@@ -290,8 +284,8 @@ class CreditReconciliationReport {
       }
 
       // Get total count for pagination
-      const [{ count }] = await baseQuery.clone().count('report_id as count');
-      const total = parseInt(count as string);
+      const countRows = await baseQuery.clone().count('report_id as count') as unknown as Array<{ count: string | number }>;
+      const total = Number(countRows[0]?.count ?? 0);
       const totalPages = Math.ceil(total / pageSize);
 
       // Get paginated results
@@ -301,17 +295,7 @@ class CreditReconciliationReport {
         .limit(pageSize)
         .offset(offset);
 
-      // Parse metadata for each report
-      const reportsWithParsedMetadata = reports.map(report => {
-        if (report.metadata && typeof report.metadata === 'string') {
-          try {
-            report.metadata = JSON.parse(report.metadata);
-          } catch (e) {
-            console.warn(`Failed to parse metadata for report ${report.report_id}:`, e);
-          }
-        }
-        return report;
-      });
+      const reportsWithParsedMetadata = reports.map(parseReportMetadata);
 
       return {
         reports: reportsWithParsedMetadata,
@@ -355,7 +339,7 @@ class CreditReconciliationReport {
       const dbInstance = trx || knex;
       const now = new Date().toISOString();
 
-      const [resolvedReport] = await dbInstance('credit_reconciliation_reports')
+      const [resolvedReport] = await tenantScopedTable(dbInstance, tenant)
         .where({
           report_id: reportId,
           tenant
@@ -374,16 +358,7 @@ class CreditReconciliationReport {
         throw new Error(`Reconciliation report ${reportId} not found or belongs to different tenant`);
       }
 
-      // Parse metadata if it exists
-      if (resolvedReport.metadata && typeof resolvedReport.metadata === 'string') {
-        try {
-          resolvedReport.metadata = JSON.parse(resolvedReport.metadata);
-        } catch (e) {
-          console.warn(`Failed to parse metadata for report ${reportId}:`, e);
-        }
-      }
-
-      return resolvedReport;
+      return parseReportMetadata(resolvedReport);
     } catch (error) {
       console.error(`Error resolving reconciliation report ${reportId}:`, error);
       throw error;
@@ -405,15 +380,15 @@ class CreditReconciliationReport {
     }
 
     try {
-      const [{ count }] = await knex('credit_reconciliation_reports')
+      const countRows = await tenantScopedTable(knex, tenant)
         .where({
           client_id: clientId,
           tenant,
           status: 'open'
         })
-        .count('report_id as count');
+        .count('report_id as count') as unknown as Array<{ count: string | number }>;
 
-      return parseInt(count as string);
+      return Number(countRows[0]?.count ?? 0);
     } catch (error) {
       console.error(`Error counting open reconciliation reports for client ${clientId}:`, error);
       throw error;
@@ -436,14 +411,14 @@ class CreditReconciliationReport {
     }
 
     try {
-      const [{ count }] = await knex('credit_reconciliation_reports')
+      const countRows = await tenantScopedTable(knex, tenant)
         .where({
           tenant,
           status
         })
-        .count('report_id as count');
+        .count('report_id as count') as unknown as Array<{ count: string | number }>;
 
-      return parseInt(count as string);
+      return Number(countRows[0]?.count ?? 0);
     } catch (error) {
       console.error(`Error counting reconciliation reports with status ${status}:`, error);
       throw error;
@@ -465,11 +440,11 @@ class CreditReconciliationReport {
     }
 
     try {
-      const result = await knex('credit_reconciliation_reports')
+      const result = await tenantScopedTable(knex, tenant)
         .where({ tenant })
-        .sum('difference as total');
+        .sum('difference as total') as unknown as Array<{ total?: string | number | null }>;
 
-      return parseFloat(result[0].total || '0');
+      return Number(result[0]?.total ?? 0);
     } catch (error) {
       console.error('Error getting total discrepancy amount:', error);
       throw error;

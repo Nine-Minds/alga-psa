@@ -12,6 +12,7 @@
 import type { Knex } from 'knex';
 import type { IContract, IContractWithClient, IContractLine } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import {
   deriveClientContractStatus,
   checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
@@ -40,6 +41,14 @@ const assertNonTemplateContractOwner = (
   }
 };
 
+function contractTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
+
 /**
  * Contract model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
@@ -58,7 +67,7 @@ const Contract = {
     }
 
     try {
-      const result = await knexOrTrx('client_contracts')
+      const result = await contractTable(knexOrTrx, tenant, 'client_contracts')
         .where({ contract_id: contractId, tenant, is_active: true })
         .count('client_contract_id as count')
         .first() as { count?: string };
@@ -83,11 +92,10 @@ const Contract = {
     }
 
     try {
-      const result = await knexOrTrx('invoice_charges as ii')
-        .join('client_contracts as cc', function () {
-          this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
-            .andOn('ii.tenant', '=', 'cc.tenant');
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table('invoice_charges as ii');
+      db.tenantJoin(query, 'client_contracts as cc', 'ii.client_contract_id', 'cc.client_contract_id');
+      const result = await query
         .where({
           'cc.contract_id': contractId,
           'cc.tenant': tenant
@@ -122,32 +130,32 @@ const Contract = {
       }
 
       // Get client_contract_ids that will be deleted
-      const clientContractIds = await knexOrTrx('client_contracts')
+      const clientContractIds = await contractTable(knexOrTrx, tenant, 'client_contracts')
         .where({ contract_id: contractId, tenant })
         .pluck('client_contract_id');
 
       // Delete client contract assignments
-      await knexOrTrx('client_contracts')
+      await contractTable(knexOrTrx, tenant, 'client_contracts')
         .where({ contract_id: contractId, tenant })
         .delete();
 
-      const contractLineIds = await knexOrTrx('contract_lines')
+      const contractLineIds = await contractTable(knexOrTrx, tenant, 'contract_lines')
         .where({ contract_id: contractId, tenant })
         .pluck('contract_line_id');
 
       if (contractLineIds.length > 0) {
-        await knexOrTrx('recurring_service_periods')
+        await contractTable(knexOrTrx, tenant, 'recurring_service_periods')
           .where({ tenant })
           .whereIn('obligation_id', contractLineIds)
           .delete();
 
         // Clear contract_line_id in time_entries before deleting contract_lines
-        await knexOrTrx('time_entries')
+        await contractTable(knexOrTrx, tenant, 'time_entries')
           .where({ tenant })
           .whereIn('contract_line_id', contractLineIds)
           .update({ contract_line_id: null });
 
-        const configIds = await knexOrTrx('contract_line_service_configuration')
+        const configIds = await contractTable(knexOrTrx, tenant, 'contract_line_service_configuration')
           .where({ tenant })
           .whereIn('contract_line_id', contractLineIds)
           .pluck('config_id');
@@ -155,60 +163,60 @@ const Contract = {
         if (configIds.length > 0) {
           // Child tables reference contract_line_service_configuration via (tenant, config_id).
           // Citus disallows cascading actions on distributed foreign keys; handle deletes explicitly.
-          await knexOrTrx('contract_line_service_rate_tiers')
+          await contractTable(knexOrTrx, tenant, 'contract_line_service_rate_tiers')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
 
-          await knexOrTrx('contract_line_service_fixed_config')
+          await contractTable(knexOrTrx, tenant, 'contract_line_service_fixed_config')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
 
-          await knexOrTrx('contract_line_service_bucket_config')
+          await contractTable(knexOrTrx, tenant, 'contract_line_service_bucket_config')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
 
-          await knexOrTrx('contract_line_service_hourly_config')
+          await contractTable(knexOrTrx, tenant, 'contract_line_service_hourly_config')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
 
-          await knexOrTrx('contract_line_service_hourly_configs')
+          await contractTable(knexOrTrx, tenant, 'contract_line_service_hourly_configs')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
 
-          await knexOrTrx('contract_line_service_usage_config')
+          await contractTable(knexOrTrx, tenant, 'contract_line_service_usage_config')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
 
-          await knexOrTrx('contract_line_service_configuration')
+          await contractTable(knexOrTrx, tenant, 'contract_line_service_configuration')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
         }
 
-        await knexOrTrx('contract_line_service_defaults')
+        await contractTable(knexOrTrx, tenant, 'contract_line_service_defaults')
           .where({ tenant })
           .whereIn('contract_line_id', contractLineIds)
           .delete();
 
-        await knexOrTrx('contract_line_services')
+        await contractTable(knexOrTrx, tenant, 'contract_line_services')
           .where({ tenant })
           .whereIn('contract_line_id', contractLineIds)
           .delete();
 
-        await knexOrTrx('contract_lines')
+        await contractTable(knexOrTrx, tenant, 'contract_lines')
           .where({ tenant })
           .whereIn('contract_line_id', contractLineIds)
           .delete();
       }
 
       // Delete the contract itself
-      const deleted = await knexOrTrx('contracts')
+      const deleted = await contractTable(knexOrTrx, tenant, 'contracts')
         .where({ contract_id: contractId, tenant })
         .andWhere((builder) =>
           builder.whereNull('is_template').orWhere('is_template', false)
@@ -236,7 +244,7 @@ const Contract = {
     }
 
     try {
-      const contracts = await knexOrTrx('contracts')
+      const contracts = await contractTable<IContract>(knexOrTrx, tenant, 'contracts')
         .where({ tenant })
         .whereNot('is_template', true)
         .select('*');
@@ -246,7 +254,7 @@ const Contract = {
         await Contract.checkAndUpdateExpiredStatus(knexOrTrx, tenant, contract.contract_id);
       }
 
-      return await knexOrTrx('contracts')
+      return await contractTable<IContract>(knexOrTrx, tenant, 'contracts')
         .where({ tenant })
         .whereNot('is_template', true)
         .select('*');
@@ -268,23 +276,14 @@ const Contract = {
     }
 
     try {
-      const rows = await knexOrTrx('client_contracts as cc')
-        .join('contracts as co', function () {
-          this.on('co.contract_id', '=', 'cc.contract_id').andOn('co.tenant', '=', 'cc.tenant');
-        })
-        .leftJoin('contract_templates as template', function () {
-          this.on('cc.template_contract_id', '=', 'template.template_id').andOn(
-            'cc.tenant',
-            '=',
-            'template.tenant'
-          );
-        })
-        .leftJoin('clients as c', function () {
-          this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .leftJoin('clients as owner', function () {
-          this.on('co.owner_client_id', '=', 'owner.client_id').andOn('co.tenant', '=', 'owner.tenant');
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table('client_contracts as cc');
+      db.tenantJoin(query, 'contracts as co', 'co.contract_id', 'cc.contract_id');
+      db.tenantJoin(query, 'contract_templates as template', 'cc.template_contract_id', 'template.template_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as owner', 'co.owner_client_id', 'owner.client_id', { type: 'left' });
+
+      const rows = await query
         .where({ 'cc.tenant': tenant })
         .andWhere((builder) =>
           builder.whereNull('co.is_template').orWhere('co.is_template', false)
@@ -338,7 +337,7 @@ const Contract = {
     }
 
     try {
-      const contract = await knexOrTrx('contracts')
+      const contract = await contractTable<IContract>(knexOrTrx, tenant, 'contracts')
         .where({ contract_id: contractId, tenant })
         .andWhere((builder) =>
           builder.whereNull('is_template').orWhere('is_template', false)
@@ -377,7 +376,7 @@ const Contract = {
     };
 
     try {
-      const [created] = await knexOrTrx('contracts').insert(payload).returning('*');
+      const [created] = await contractTable<IContract>(knexOrTrx, tenant, 'contracts').insert(payload).returning('*');
       return created;
     } catch (error) {
       console.error('Error creating contract:', error);
@@ -412,7 +411,7 @@ const Contract = {
         updated_at: new Date().toISOString()
       };
 
-      const [updated] = await knexOrTrx<IContract>('contracts')
+      const [updated] = await contractTable<IContract>(knexOrTrx, tenant, 'contracts')
         .where({ contract_id: contractId, tenant })
         .andWhere((builder) =>
           builder.whereNull('is_template').orWhere('is_template', false)
@@ -444,8 +443,9 @@ const Contract = {
     }
 
     try {
-      return await knexOrTrx('contract_lines as cl')
-        .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
+      return await contractTable<IContractLine>(knexOrTrx, tenant, 'contract_lines as cl')
+        .where('cl.contract_id', contractId)
+        .andWhere('cl.tenant', tenant)
         .select(
           'cl.tenant',
           'cl.contract_id',
@@ -502,7 +502,7 @@ const Contract = {
     }
 
     try {
-      const contract = await knexOrTrx('contracts')
+      const contract = await contractTable<IContract>(knexOrTrx, tenant, 'contracts')
         .where({ contract_id: contractId, tenant })
         .first();
 
@@ -514,7 +514,7 @@ const Contract = {
         return;
       }
 
-      const assignments = await knexOrTrx('client_contracts')
+      const assignments = await contractTable(knexOrTrx, tenant, 'client_contracts')
         .where({ contract_id: contractId, tenant })
         .select('end_date');
 
@@ -539,7 +539,7 @@ const Contract = {
       const latestEndDateObj = new Date(latestEndDate);
 
       if (latestEndDateObj < now) {
-        await knexOrTrx('contracts')
+        await contractTable(knexOrTrx, tenant, 'contracts')
           .where({ contract_id: contractId, tenant })
           .update({
             status: 'expired',

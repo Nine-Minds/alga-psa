@@ -26,6 +26,15 @@ export const RESERVED_ASSET_TYPE_SLUGS: readonly string[] = [
   'unknown',
 ];
 
+const BUILTIN_ASSET_TYPES: ReadonlyArray<{ slug: string; name: string; display_order: number }> = [
+  { slug: 'workstation', name: 'Workstation', display_order: 0 },
+  { slug: 'network_device', name: 'Network Device', display_order: 1 },
+  { slug: 'server', name: 'Server', display_order: 2 },
+  { slug: 'mobile_device', name: 'Mobile Device', display_order: 3 },
+  { slug: 'printer', name: 'Printer', display_order: 4 },
+  { slug: 'unknown', name: 'Unknown', display_order: 5 },
+];
+
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
 
 export type FieldSchemaIssueCode =
@@ -201,12 +210,44 @@ function tenantScopedTable(knex: Knex, tenant: string, table: string): Knex.Quer
   return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
+function builtinAssetTypeEntries(tenant: string): AssetTypeRegistryEntry[] {
+  return BUILTIN_ASSET_TYPES.map((type) => ({
+    tenant,
+    type_id: `builtin_${type.slug}`,
+    slug: type.slug,
+    name: type.name,
+    icon: null,
+    fields_schema: [],
+    is_builtin: true,
+    display_order: type.display_order,
+    created_at: '',
+    updated_at: '',
+  }));
+}
+
+function isMissingAssetTypeRegistryTable(error: unknown): boolean {
+  const dbError = error as { code?: string; table?: string; message?: string };
+  return (
+    dbError?.code === '42P01' &&
+    (dbError.table === 'asset_type_registry' ||
+      dbError.table === undefined ||
+      dbError.message?.includes('asset_type_registry') === true)
+  );
+}
+
 export async function listAssetTypes(knex: Knex, tenant: string): Promise<AssetTypeRegistryEntry[]> {
-  const rows = await tenantScopedTable(knex, tenant, 'asset_type_registry')
-    .orderBy('is_builtin', 'desc')
-    .orderBy('display_order', 'asc')
-    .orderBy('name', 'asc');
-  return rows.map(mapRow);
+  try {
+    const rows = await tenantScopedTable(knex, tenant, 'asset_type_registry')
+      .orderBy('is_builtin', 'desc')
+      .orderBy('display_order', 'asc')
+      .orderBy('name', 'asc');
+    return rows.map(mapRow);
+  } catch (error) {
+    if (isMissingAssetTypeRegistryTable(error)) {
+      return builtinAssetTypeEntries(tenant);
+    }
+    throw error;
+  }
 }
 
 export async function getAssetTypeBySlug(
@@ -214,8 +255,15 @@ export async function getAssetTypeBySlug(
   tenant: string,
   slug: string
 ): Promise<AssetTypeRegistryEntry | null> {
-  const row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
-  return row ? mapRow(row) : null;
+  try {
+    const row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
+    return row ? mapRow(row) : null;
+  } catch (error) {
+    if (isMissingAssetTypeRegistryTable(error)) {
+      return builtinAssetTypeEntries(tenant).find((entry) => entry.slug === slug) ?? null;
+    }
+    throw error;
+  }
 }
 
 export async function createAssetType(

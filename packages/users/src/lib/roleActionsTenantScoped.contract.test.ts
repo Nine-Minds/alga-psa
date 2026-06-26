@@ -11,7 +11,7 @@ describe('role actions tenant-scoped query contract', () => {
     expect(source).toContain(".table('roles");
     expect(source).toContain(".table('users");
     expect(source).toContain(".table('user_roles");
-    expect(source).toContain("const [userRole] = await trx('user_roles')");
+    expect(source).toContain("const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')");
 
     expect(source).not.toMatch(/trx\('roles'\)\s*\./);
     expect(source).not.toMatch(/trx\('users'\)\s*\./);

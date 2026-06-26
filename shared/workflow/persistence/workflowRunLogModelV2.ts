@@ -31,7 +31,10 @@ function workflowRunLogs(
 ): Knex.QueryBuilder<WorkflowRunLogRecord, WorkflowRunLogRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowRunLogRecord>('workflow_run_logs')
-    : knex<WorkflowRunLogRecord>('workflow_run_logs');
+    : tenantDb(knex, '__workflow_run_log_unscoped__').unscoped<WorkflowRunLogRecord>(
+      'workflow_run_logs',
+      'workflow run log model supports legacy run_id lookups before the tenant is resolved'
+    );
 }
 
 const WorkflowRunLogModelV2 = {

@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { ITaxRate, DeletionValidationResult } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { v4 as uuid4 } from 'uuid';
@@ -25,7 +25,7 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('tax_rates')
+      return await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
         .where({ tenant })
         .select('*');
     });
@@ -60,7 +60,7 @@ export const addTaxRate = withAuth(async (user, { tenant }, taxRateData: Omit<IT
       // Generate a UUID for the tax_rate_id
       const tax_rate_id = uuid4();
 
-      const [newTaxRate] = await trx('tax_rates')
+      const [newTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
         .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
         .returning('*');
       return newTaxRate;
@@ -88,7 +88,7 @@ export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITax
 
       // Validate date range before update, excluding current tax rate
       if (taxRateData.start_date || taxRateData.end_date) {
-        const existingRate = await trx('tax_rates')
+        const existingRate = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
           .where({
             tax_rate_id: taxRateData.tax_rate_id,
             tenant
@@ -117,7 +117,7 @@ export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITax
         updateData.end_date = null;
       }
 
-      const [updatedTaxRate] = await trx('tax_rates')
+      const [updatedTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
         .where({
           tax_rate_id: updateData.tax_rate_id,
           tenant
@@ -145,7 +145,8 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
       // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
       // any tenant-less child tables (composite_tax_mappings/tax_holidays/tax_rate_thresholds).
-      const exists = await trx('tax_rates')
+      const db = tenantDb(trx, tenant);
+      const exists = await db.table('tax_rates')
         .where({ tax_rate_id: taxRateId, tenant })
         .first('tax_rate_id');
       if (!exists) {
@@ -157,25 +158,25 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
       // (in Citus, tax_rates.PK is compound (tenant, tax_rate_id), so tax_rate_id alone
       // isn't globally unique). Scope each delete by joining back to tax_rates with the
       // tenant guard so we can never touch another tenant's rows.
-      const ownedTaxRate = trx('tax_rates')
+      const ownedTaxRate = db.table('tax_rates')
         .select('tax_rate_id')
         .where({ tax_rate_id: taxRateId, tenant });
 
-      await trx('composite_tax_mappings')
+      await db.unscoped('composite_tax_mappings', 'tenant-less tax child scoped through tenant-owned tax_rates')
         .where({ composite_tax_id: taxRateId })
         .whereIn('composite_tax_id', ownedTaxRate.clone())
         .del();
-      await trx('tax_components').where({ tax_rate_id: taxRateId, tenant }).del();
-      await trx('tax_holidays')
+      await db.table('tax_components').where({ tax_rate_id: taxRateId, tenant }).del();
+      await db.unscoped('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
         .where({ tax_rate_id: taxRateId })
         .whereIn('tax_rate_id', ownedTaxRate.clone())
         .del();
-      await trx('tax_rate_thresholds')
+      await db.unscoped('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
         .where({ tax_rate_id: taxRateId })
         .whereIn('tax_rate_id', ownedTaxRate.clone())
         .del();
 
-      const deletedCount = await trx('tax_rates')
+      const deletedCount = await db.table('tax_rates')
         .where({
           tax_rate_id: taxRateId,
           tenant

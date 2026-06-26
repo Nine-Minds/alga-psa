@@ -3,7 +3,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- sync actions consult QBO connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import {
@@ -235,11 +235,11 @@ export const getInvoiceSyncStatuses = withAuth(async (
   }
 
   const [mappings, ops] = await Promise.all([
-    knex('tenant_external_entity_mappings')
+    tenantDb(knex, tenant).table('tenant_external_entity_mappings')
       .where({ tenant: tenant, integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .select('alga_entity_id', 'external_entity_id', 'sync_status', 'last_synced_at', 'metadata'),
-    knex('accounting_sync_operations')
+    tenantDb(knex, tenant).table('accounting_sync_operations')
       .where({ tenant, adapter_type: SYNC_ADAPTER_TYPE, operation: 'export_invoice', alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .whereIn('status', ['pending', 'in_progress', 'skipped'])

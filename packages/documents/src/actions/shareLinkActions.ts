@@ -102,6 +102,9 @@ const SHARE_LINK_SELECT_COLUMNS = [
   'created_by',
 ] as const;
 
+const SHARE_TOKEN_DISCOVERY_TENANT = 'share-token-discovery';
+const SHARE_TOKEN_DISCOVERY_REASON = 'public share token lookup before tenant is known';
+
 /**
  * Generate a cryptographically secure 256-bit token encoded as URL-safe base64
  */
@@ -306,17 +309,28 @@ export async function validateShareToken(
   // Use admin connection since this is called without authentication
   const knex = await getConnection();
 
-  const shareLink = await knex('document_share_links as sl')
+  const discovery = await tenantDb(knex, SHARE_TOKEN_DISCOVERY_TENANT)
+    .unscoped('document_share_links as sl', SHARE_TOKEN_DISCOVERY_REASON)
+    .select('sl.tenant')
+    .where('sl.token', token)
+    .first<{ tenant: string }>();
+
+  if (!discovery?.tenant) {
+    return { valid: false, error: 'Invalid share link' };
+  }
+
+  const db = tenantDb(knex, discovery.tenant);
+  const shareLinkQuery = db.table('document_share_links as sl')
     .select([
       ...SHARE_LINK_SELECT_COLUMNS.map((col) => `sl.${col}`),
       'd.document_name',
       'd.file_id',
     ])
-    .leftJoin('documents as d', function () {
-      this.on('d.document_id', '=', 'sl.document_id').andOn('d.tenant', '=', 'sl.tenant');
-    })
-    .where('sl.token', token)
-    .first();
+    .where('sl.token', token);
+
+  db.tenantJoin(shareLinkQuery, 'documents as d', 'd.document_id', 'sl.document_id', { type: 'left' });
+
+  const shareLink = await shareLinkQuery.first();
 
   if (!shareLink) {
     return { valid: false, error: 'Invalid share link' };
@@ -392,7 +406,7 @@ export async function logShareAccess(
 
   const knex = await getConnection();
 
-  await knex('document_share_access_log').insert({
+  await tenantDb(knex, tenant).table('document_share_access_log').insert({
     tenant,
     share_id: shareId,
     ip_address: details.ipAddress || null,

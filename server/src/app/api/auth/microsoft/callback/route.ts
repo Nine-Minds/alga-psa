@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
@@ -231,10 +232,10 @@ export async function GET(request: NextRequest) {
         try {
           await runWithTenant(stateData.tenant, async () => {
             const { knex } = await createTenantKnex();
+            const db = tenantDb(knex, stateData.tenant);
             // Save tokens
-            await knex('microsoft_email_provider_config')
+            await db.table('microsoft_email_provider_config')
               .where('email_provider_id', stateData.providerId)
-              .andWhere('tenant', stateData.tenant)
               .update({
                 access_token: access_token,
                 refresh_token: refresh_token || null,
@@ -243,9 +244,8 @@ export async function GET(request: NextRequest) {
               });
 
             // Mark provider connected
-            await knex('email_providers')
+            await db.table('email_providers')
               .where('id', stateData.providerId)
-              .andWhere('tenant', stateData.tenant)
               .update({
                 status: 'connected',
                 error_message: null,
@@ -254,14 +254,12 @@ export async function GET(request: NextRequest) {
 
             // Build provider config and register webhook subscription
             try {
-              const provider = await knex('email_providers')
+              const provider = await db.table('email_providers')
                 .where('id', stateData.providerId)
-                .andWhere('tenant', stateData.tenant)
                 .first();
 
-              const msConfig = await knex('microsoft_email_provider_config')
+              const msConfig = await db.table('microsoft_email_provider_config')
                 .where('email_provider_id', stateData.providerId)
-                .andWhere('tenant', stateData.tenant)
                 .first();
 
               if (provider && msConfig) {

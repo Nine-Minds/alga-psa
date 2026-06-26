@@ -60,7 +60,10 @@ function tenantWorkflowSchedule(
 ): Knex.QueryBuilder<WorkflowScheduleStateRecord, WorkflowScheduleStateRecord[]> {
   return tenant
     ? tenantDb(knex, tenant).table<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
-    : knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule');
+    : tenantDb(knex, '__workflow_schedule_unscoped__').unscoped<WorkflowScheduleStateRecord>(
+      'tenant_workflow_schedule',
+      'workflow schedule model supports legacy schedule_id lookups before the tenant is resolved'
+    );
 }
 
 const WorkflowScheduleStateModel = {

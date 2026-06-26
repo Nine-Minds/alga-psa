@@ -280,7 +280,9 @@ export class UserService extends BaseService<IUser> {
       };
 
       // Insert user
-      const [createdUser] = await trx('users').insert(userData).returning(USER_RESPONSE_FIELD_NAMES);
+      const [createdUser] = await tenantDb(trx, context.tenant).table('users')
+        .insert(userData)
+        .returning(USER_RESPONSE_FIELD_NAMES);
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
@@ -289,7 +291,7 @@ export class UserService extends BaseService<IUser> {
           role_id: roleId,
           tenant: context.tenant
         }));
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
       }
 
       // Create default user preferences
@@ -670,7 +672,7 @@ export class UserService extends BaseService<IUser> {
           role_id: roleId,
           tenant: context.tenant
         }));
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
       }
 
       // Log role change activity
@@ -1555,7 +1557,7 @@ export class UserService extends BaseService<IUser> {
     };
 
     for (const [settingName, settingValue] of Object.entries(defaultPreferences)) {
-      await trx('user_preferences').insert({
+      await tenantDb(trx, context.tenant).table('user_preferences').insert({
         user_id: userId,
         setting_name: settingName,
         setting_value: JSON.stringify(settingValue),

@@ -2265,7 +2265,7 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     // best-effort telemetry
   }
 
-  const run = await WorkflowRunModelV2.getById(knex, launchResult.runId);
+  const run = await WorkflowRunModelV2.getById(knex, launchResult.runId, tenant);
   await auditWorkflowEvent(knex, user, {
     operation: 'workflow_run_start',
     tableName: 'workflow_runs',
@@ -2714,7 +2714,7 @@ export const listWorkflowAuditLogsAction = withAuth(async (user, { tenant }, inp
     }
   }
   if (parsed.tableName === 'workflow_runs') {
-    const run = await WorkflowRunModelV2.getById(knex, parsed.recordId);
+    const run = await WorkflowRunModelV2.getById(knex, parsed.recordId, tenant);
     if (!run || (tenant && run.tenant !== tenant)) {
       return throwHttpError(404, 'Not found');
     }

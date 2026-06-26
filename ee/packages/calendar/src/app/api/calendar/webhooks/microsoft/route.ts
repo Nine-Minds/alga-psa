@@ -133,7 +133,11 @@ export async function POST(request: NextRequest) {
             const knex = await getAdminConnection();
             const now = new Date().toISOString();
 
-            const providers = await knex('microsoft_calendar_provider_config as mcp')
+            const providers = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
+              .unscoped(
+                'microsoft_calendar_provider_config as mcp',
+                'tenant discovery from Microsoft calendar webhook provider config'
+              )
               .join(
                 tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
                   .unscoped('calendar_providers', 'tenant discovery for Microsoft calendar webhook health update')

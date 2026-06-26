@@ -10,9 +10,9 @@ describe('api key service tenant-scoped query contract', () => {
     expect(source).toContain('private static apiKeysQuery');
     expect(source).toContain("tenantDb(knex, tenant).table<ApiKey>('api_keys')");
     expect(source).not.toContain('createTenantScopedQuery');
-    expect(source).toContain("const [record] = await knex('api_keys').insert(insertPayload).returning('*')");
+    expect(source).toContain("const [record] = await this.apiKeysQuery(knex, tenant).insert(insertPayload).returning('*')");
 
-    expect(source.match(/knex\('api_keys'\)/g)).toHaveLength(1);
+    expect(source.match(/knex\('api_keys'\)/g)).toBeNull();
     expect(source).not.toMatch(/knex\('api_keys'\)\s*\.(?:where|select|join|orderBy|update|del|increment)/);
     expect(source).not.toMatch(/\.where\(\{[^}]*tenant/);
     expect(source).not.toMatch(/\.where\('api_keys\.tenant', tenant\)/);

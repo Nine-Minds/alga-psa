@@ -55,6 +55,7 @@ export class TaskInboxService {
         resolvedDefinitionType = 'tenant';
       } else {
         // 2. If tenantTaskDef not found, attempt to find systemTaskDef
+        // System workflow task definitions are global task catalogs; tenant definitions are resolved first above.
         const systemTaskDef = await knex('system_workflow_task_definitions')
           .where({
             task_type: params.taskType,
@@ -343,7 +344,11 @@ export class TaskInboxService {
   async cleanupAllTemporaryForms(knex: Knex): Promise<number> {
     try {
       // Get distinct tenants that have temporary forms
-      const tenants = await knex('workflow_form_definitions')
+      const tenants = await tenantDb(knex, '__temporary_form_cleanup_discovery__')
+        .unscoped<{ tenant: string; is_temporary: boolean }>(
+          'workflow_form_definitions',
+          'temporary form cleanup intentionally discovers tenants with temporary forms'
+        )
         .where({ is_temporary: true })
         .distinct('tenant')
         .pluck('tenant');

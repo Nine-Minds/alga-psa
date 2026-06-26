@@ -232,7 +232,7 @@ async function ensureLegacyMicrosoftProfileBackfill(
   const clientSecretRef = getMicrosoftProfileSecretRef(profileId);
   const now = new Date();
 
-  await db('microsoft_profiles').insert({
+  await tenantScopedTable<MicrosoftProfileRow>(db, 'microsoft_profiles', tenant).insert({
     tenant,
     profile_id: profileId,
     display_name: DEFAULT_MICROSOFT_PROFILE_NAME,
@@ -320,7 +320,11 @@ async function ensureMicrosoftConsumerBindingMigration(
     updated_at: new Date(),
   };
 
-  await db('microsoft_profile_consumer_bindings').insert(binding);
+  await tenantScopedTable<MicrosoftConsumerBindingRow>(
+    db,
+    'microsoft_profile_consumer_bindings',
+    tenant
+  ).insert(binding);
   return binding;
 }
 

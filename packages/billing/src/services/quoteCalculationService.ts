@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 interface QuoteCalculationContext {
   quote_id: string;
@@ -27,6 +28,13 @@ interface QuoteItemRow {
   net_amount?: number | string | null;
   tax_amount?: number | string | null;
   location_id?: string | null;
+}
+
+interface TaxRateThresholdRow {
+  tax_rate_id: string;
+  min_amount: number | string;
+  max_amount?: number | string | null;
+  rate: number | string;
 }
 
 function toNumber(value: unknown): number {
@@ -92,12 +100,13 @@ function calculateThresholdBasedTax(
 
 async function getApplicableTaxHoliday(
   knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
   taxRateId: string,
   date: string
 ): Promise<Record<string, unknown> | undefined> {
   const currentDate = new Date(date);
   // tax_holidays has no tenant column; tax_rate_id (already tenant-scoped) gates isolation.
-  const holidays = await knexOrTrx('tax_holidays')
+  const holidays = await tenantDb(knexOrTrx, tenant).unscoped('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
     .where({ tax_rate_id: taxRateId })
     .orderBy('start_date');
 
@@ -108,11 +117,12 @@ async function getApplicableTaxHoliday(
 
 async function calculateComponentTax(
   knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
   component: Record<string, unknown>,
   amount: number,
   date: string
 ): Promise<number> {
-  const holiday = await getApplicableTaxHoliday(knexOrTrx, String(component.tax_rate_id), date);
+  const holiday = await getApplicableTaxHoliday(knexOrTrx, tenant, String(component.tax_rate_id), date);
   if (holiday) return 0;
   return Math.ceil((amount * toNumber(component.rate)) / 100);
 }
@@ -127,7 +137,8 @@ async function calculateTaxWithConnection(
   isTaxable: boolean,
   currencyCode?: string | null
 ): Promise<{ taxAmount: number; taxRate: number }> {
-  const client = await knexOrTrx('clients')
+  const db = tenantDb(knexOrTrx, tenant);
+  const client = await db.table('clients')
     .where({ tenant, client_id: clientId })
     .select('is_tax_exempt')
     .first();
@@ -140,7 +151,7 @@ async function calculateTaxWithConnection(
     return { taxAmount: 0, taxRate: 0 };
   }
 
-  const taxSettings = await knexOrTrx('client_tax_settings')
+  const taxSettings = await db.table('client_tax_settings')
     .where({ tenant, client_id: clientId })
     .select('is_reverse_charge_applicable')
     .first();
@@ -149,7 +160,7 @@ async function calculateTaxWithConnection(
   }
 
   if (regionCode) {
-    const applicableRates = await knexOrTrx('tax_rates')
+    const applicableRates = await db.table('tax_rates')
       .where({ tenant, region_code: regionCode, is_active: true })
       .andWhere('start_date', '<=', date)
       .andWhere(function dateRange() {
@@ -168,7 +179,7 @@ async function calculateTaxWithConnection(
     };
   }
 
-  const defaultRateAssoc = await knexOrTrx('client_tax_rates')
+  const defaultRateAssoc = await db.table('client_tax_rates')
     .where({ tenant, client_id: clientId, is_default: true })
     .whereNull('location_id')
     .select('tax_rate_id')
@@ -178,7 +189,7 @@ async function calculateTaxWithConnection(
     return { taxAmount: 0, taxRate: 0 };
   }
 
-  const taxRate = await knexOrTrx('tax_rates')
+  const taxRate = await db.table('tax_rates')
     .where({ tenant, tax_rate_id: defaultRateAssoc.tax_rate_id, is_active: true })
     .andWhere('start_date', '<=', date)
     .andWhere(function dateRange() {
@@ -196,7 +207,7 @@ async function calculateTaxWithConnection(
 
   if (taxRate.is_composite) {
     // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
-    const components = await knexOrTrx('tax_components')
+    const components = await db.table('tax_components')
       .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
       .where({
         'tax_components.tenant': tenant,
@@ -209,7 +220,7 @@ async function calculateTaxWithConnection(
     let taxableAmount = netAmount;
     for (const component of components) {
       if (!isDateApplicable(component, date)) continue;
-      const componentTax = await calculateComponentTax(knexOrTrx, component, taxableAmount, date);
+      const componentTax = await calculateComponentTax(knexOrTrx, tenant, component, taxableAmount, date);
       totalTaxAmount += componentTax;
       if (component.is_compound) taxableAmount += componentTax;
     }
@@ -221,7 +232,7 @@ async function calculateTaxWithConnection(
   }
 
   // tax_rate_thresholds has no tenant column; tax_rate_id (already tenant-scoped above) gates isolation.
-  const thresholds = await knexOrTrx('tax_rate_thresholds')
+  const thresholds = await db.unscoped<TaxRateThresholdRow>('tax_rate_thresholds', 'tenant-less tax child scoped through tenant-owned tax_rates')
     .where({ tax_rate_id: taxRate.tax_rate_id })
     .orderBy('min_amount');
 
@@ -245,7 +256,8 @@ export async function recalculateQuoteFinancials(
   tenant: string,
   quoteId: string
 ): Promise<void> {
-  const quote = await knexOrTrx('quotes')
+  const db = tenantDb(knexOrTrx, tenant);
+  const quote = await db.table('quotes')
     .where({ tenant, quote_id: quoteId })
     .first() as QuoteCalculationContext | undefined;
 
@@ -253,13 +265,13 @@ export async function recalculateQuoteFinancials(
     return;
   }
 
-  const items = await knexOrTrx('quote_items')
+  const items = await db.table('quote_items')
     .where({ tenant, quote_id: quoteId })
     .orderBy('display_order', 'asc')
     .orderBy('created_at', 'asc') as QuoteItemRow[];
 
   const client = quote.client_id
-    ? await knexOrTrx('clients')
+    ? await db.table('clients')
         .where({ tenant, client_id: quote.client_id })
         .select('region_code')
         .first()
@@ -274,7 +286,7 @@ export async function recalculateQuoteFinancials(
   );
   const locationRegionMap = new Map<string, string | null>();
   if (distinctLocationIds.length > 0) {
-    const locationRows = await knexOrTrx('client_locations')
+    const locationRows = await db.table('client_locations')
       .where({ tenant })
       .whereIn('location_id', distinctLocationIds)
       .select('location_id', 'region_code');
@@ -358,7 +370,7 @@ export async function recalculateQuoteFinancials(
       tax += taxAmount;
     }
 
-    await knexOrTrx('quote_items')
+    await db.table('quote_items')
       .where({ tenant, quote_item_id: item.quote_item_id })
       .update({
         total_price: resolvedTotalPrice,
@@ -370,7 +382,7 @@ export async function recalculateQuoteFinancials(
       });
   }
 
-  await knexOrTrx('quotes')
+  await db.table('quotes')
     .where({ tenant, quote_id: quoteId })
     .update({
       subtotal,
