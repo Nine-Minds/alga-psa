@@ -39,7 +39,7 @@ import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';

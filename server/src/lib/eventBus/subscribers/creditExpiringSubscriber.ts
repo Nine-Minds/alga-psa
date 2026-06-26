@@ -146,7 +146,7 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
         const notificationService = getEmailNotificationService();
 
         // Get notification subtype
-        const subtype = await trx('notification_subtypes')
+        const subtype = await scopedDb.table('notification_subtypes')
           .where({ name: CREDIT_EXPIRING_SUBTYPE })
           .first();
 

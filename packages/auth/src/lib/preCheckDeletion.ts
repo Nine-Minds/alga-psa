@@ -2,7 +2,7 @@
 
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { getDeletionConfig, validateDeletion } from '@alga-psa/core';
+import { getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
 import { getCurrentUser } from './getCurrentUser';
 import { hasPermission } from './rbac';
 

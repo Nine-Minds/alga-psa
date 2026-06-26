@@ -536,7 +536,7 @@ async function sendEmailNotification(
     const emailService = getEmailNotificationService();
 
     // Get the SLA notification subtype ID
-    const subtype = await trx('notification_subtypes')
+    const subtype = await tenantDb(trx, tenant).table('notification_subtypes')
       .whereIn('name', [templateName, 'SLA Warning', 'SLA Breach'])
       .first();
 

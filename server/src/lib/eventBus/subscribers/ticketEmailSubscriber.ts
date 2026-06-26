@@ -378,7 +378,7 @@ async function resolveNotificationGate(
   if (settings && !settings.is_enabled) {
     gate = { kind: 'globally-disabled' };
   } else {
-    const subtype = await knex('notification_subtypes')
+    const subtype = await scopedDb.table('notification_subtypes')
       .where({ name: subtypeName })
       .first();
 
@@ -722,7 +722,7 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
         return priority.priority_name;
       }
       // Fall back to global standard_priorities table
-      const standardPriority = await db('standard_priorities')
+      const standardPriority = await scopedDb.table('standard_priorities')
         .where({ priority_id: value })
         .first();
       return standardPriority?.priority_name || String(value);
@@ -737,7 +737,7 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
         return board.board_name;
       }
       // Fall back to global standard_boards table (uses 'id' not 'board_id')
-      const standardBoard = await db('standard_boards')
+      const standardBoard = await scopedDb.table('standard_boards')
         .where({ id: value })
         .first();
       return standardBoard?.board_name || String(value);

@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getXeroCsvTaxImportService } from '../../services/xeroCsvTaxImportService';
@@ -43,9 +43,9 @@ export const getXeroCsvSettings = withAuth(async (
   { tenant }
 ): Promise<XeroCsvSettings> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await db.table('tenant_settings')
     .select('settings')
     .first();
 
@@ -67,6 +67,7 @@ export const updateXeroCsvSettings = withAuth(async (
   updates: Partial<XeroCsvSettings>
 ): Promise<XeroCsvSettings> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
   const canManageIntegrations = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageIntegrations) {
@@ -74,8 +75,7 @@ export const updateXeroCsvSettings = withAuth(async (
   }
 
   // Get current settings
-  const existingRow = await knex('tenant_settings')
-    .where({ tenant })
+  const existingRow = await db.table('tenant_settings')
     .select('settings')
     .first();
 
@@ -96,14 +96,13 @@ export const updateXeroCsvSettings = withAuth(async (
   const now = new Date();
 
   if (existingRow) {
-    await knex('tenant_settings')
-      .where({ tenant })
+    await db.table('tenant_settings')
       .update({
         settings: JSON.stringify(newSettings),
         updated_at: now
       });
   } else {
-    await knex('tenant_settings').insert({
+    await db.table('tenant_settings').insert({
       tenant,
       settings: JSON.stringify(newSettings),
       onboarding_completed: false,

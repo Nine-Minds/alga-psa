@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { getClientTickets, updateTicketStatus } from '@alga-psa/client-portal/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getTicketCategories } from '@alga-psa/tickets/actions';
+import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
 import type { IStatus } from '@alga-psa/types';

@@ -6,7 +6,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';

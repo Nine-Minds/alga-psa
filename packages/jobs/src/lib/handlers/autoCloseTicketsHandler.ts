@@ -2,7 +2,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { updateTicketInTransaction } from '@alga-psa/tickets/actions';
+import { updateTicketInTransaction } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
@@ -161,7 +161,7 @@ async function syncAutoCloseState(
   for (const p of pending) {
     const current = existingByTicket.get(p.ticket_id);
     if (!current) {
-      await knex('ticket_auto_close_state')
+      await tenantScopedTable(knex, 'ticket_auto_close_state', tenant)
         .insert({
           tenant,
           ticket_id: p.ticket_id,

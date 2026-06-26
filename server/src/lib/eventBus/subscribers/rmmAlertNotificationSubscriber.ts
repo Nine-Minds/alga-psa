@@ -134,7 +134,7 @@ async function deliverEmail(
     const settings = await db.table('notification_settings').first();
     if (settings && !settings.is_enabled) return;
 
-    const subtype = await knex('notification_subtypes').where({ name: SUBTYPE_NAME }).first();
+    const subtype = await db.table('notification_subtypes').where({ name: SUBTYPE_NAME }).first();
     if (!subtype || !subtype.is_enabled) return;
 
     const preference = await db.table('user_notification_preferences')

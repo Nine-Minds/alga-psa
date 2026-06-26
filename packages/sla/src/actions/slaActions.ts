@@ -137,7 +137,7 @@ export const createSlaPolicy = withAuth(async (
           .update({ is_default: false, updated_at: trx.fn.now() });
       }
 
-      const [newPolicy] = await trx('sla_policies')
+      const [newPolicy] = await tenantScopedTable(trx, 'sla_policies', tenant)
         .insert({
           tenant,
           sla_policy_id: policyId,
@@ -172,7 +172,7 @@ export const createSlaPolicy = withAuth(async (
           created_at: trx.fn.now()
         }));
 
-        await trx('sla_notification_thresholds').insert(thresholdInserts);
+        await tenantScopedTable(trx, 'sla_notification_thresholds', tenant).insert(thresholdInserts);
       }
 
       return newPolicy as ISlaPolicy;
@@ -442,7 +442,7 @@ export const createSlaPolicyTarget = withAuth(async (
         throw new Error(`A target for this priority already exists in this policy`);
       }
 
-      const [newTarget] = await trx('sla_policy_targets')
+      const [newTarget] = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
         .insert({
           tenant,
           target_id: crypto.randomUUID(),
@@ -643,7 +643,7 @@ export const upsertSlaPolicyTargets = withAuth(async (
           results.push(updated as ISlaPolicyTarget);
         } else {
           // Insert new target
-          const [inserted] = await trx('sla_policy_targets')
+          const [inserted] = await tenantScopedTable(trx, 'sla_policy_targets', tenant)
             .insert({
               tenant,
               target_id: crypto.randomUUID(),
@@ -756,7 +756,7 @@ export const upsertSlaNotificationThresholds = withAuth(async (
         created_at: trx.fn.now()
       }));
 
-      const inserted = await trx('sla_notification_thresholds')
+      const inserted = await tenantScopedTable(trx, 'sla_notification_thresholds', tenant)
         .insert(inserts)
         .returning('*');
 

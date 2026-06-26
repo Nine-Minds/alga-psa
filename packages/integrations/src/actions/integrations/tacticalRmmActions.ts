@@ -1125,12 +1125,11 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
       return { success: true, mappings: [] };
     }
 
-    const rows = await tenantScopedTable(knex, 'rmm_organization_mappings as rom', tenant)
-      .leftJoin('clients as c', function () {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        const join = this as any;
-        join.on('c.client_id', '=', 'rom.client_id').andOn('c.tenant', '=', 'rom.tenant');
-      })
+    const db = tenantDb(knex, tenant);
+    const rowsQuery = db.table('rmm_organization_mappings as rom');
+    db.tenantJoin(rowsQuery, 'clients as c', 'c.client_id', 'rom.client_id', { type: 'left' });
+
+    const rows = await rowsQuery
       .where({
         'rom.integration_id': integration.integration_id,
       })
@@ -1352,12 +1351,12 @@ async function findOrCreateSoftwareCatalogEntry(
   const normalizedName = normalizeSoftwareName(input.name);
   const publisher = input.publisher ? String(input.publisher).trim() : null;
 
-  const existing = await knex('software_catalog')
-    .where({ tenant, normalized_name: normalizedName, publisher })
+  const existing = await tenantScopedTable(knex, 'software_catalog', tenant)
+    .where({ normalized_name: normalizedName, publisher })
     .first(['software_id']);
   if (existing?.software_id) return existing.software_id;
 
-  const [row] = await knex('software_catalog')
+  const [row] = await tenantScopedTable(knex, 'software_catalog', tenant)
     .insert({
       tenant,
       name: input.name.trim(),
@@ -1382,8 +1381,8 @@ async function syncAssetSoftwareToNormalizedTables(
 ): Promise<{ installed: number; uninstalled: number; catalogCreated: number }> {
   const stats = { installed: 0, uninstalled: 0, catalogCreated: 0 };
 
-  const currentSoftware = await knex('asset_software')
-    .where({ tenant, asset_id: assetId, is_current: true })
+  const currentSoftware = await tenantScopedTable(knex, 'asset_software', tenant)
+    .where({ asset_id: assetId, is_current: true })
     .select('software_id');
   const currentSoftwareIds = new Set<string>(
     currentSoftware.map((s: { software_id: unknown }) => String(s.software_id))
@@ -1401,8 +1400,8 @@ async function syncAssetSoftwareToNormalizedTables(
 
     seenSoftwareIds.add(softwareId);
 
-    const existing = await knex('asset_software')
-      .where({ tenant, asset_id: assetId, software_id: softwareId })
+    const existing = await tenantScopedTable(knex, 'asset_software', tenant)
+      .where({ asset_id: assetId, software_id: softwareId })
       .first();
 
     if (existing) {
@@ -1418,11 +1417,11 @@ async function syncAssetSoftwareToNormalizedTables(
         stats.installed += 1;
       }
 
-      await knex('asset_software')
-        .where({ tenant, asset_id: assetId, software_id: softwareId })
+      await tenantScopedTable(knex, 'asset_software', tenant)
+        .where({ asset_id: assetId, software_id: softwareId })
         .update(updateData);
     } else {
-      await knex('asset_software').insert({
+      await tenantScopedTable(knex, 'asset_software', tenant).insert({
         tenant,
         asset_id: assetId,
         software_id: softwareId,
@@ -1439,8 +1438,8 @@ async function syncAssetSoftwareToNormalizedTables(
 
   for (const softwareId of currentSoftwareIds) {
     if (!seenSoftwareIds.has(softwareId)) {
-      await knex('asset_software')
-        .where({ tenant, asset_id: assetId, software_id: softwareId, is_current: true })
+      await tenantScopedTable(knex, 'asset_software', tenant)
+        .where({ asset_id: assetId, software_id: softwareId, is_current: true })
         .update({ is_current: false, uninstalled_at: syncTimestamp });
       stats.uninstalled += 1;
     }

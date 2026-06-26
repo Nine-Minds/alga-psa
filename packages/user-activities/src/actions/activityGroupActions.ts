@@ -132,7 +132,7 @@ export const createActivityGroup = withAuth(async (
 
     const nextSortOrder = ((maxSort?.max as number | null) ?? -1) + 1;
 
-    const [created] = await trx('user_activity_groups')
+    const [created] = await tenantDb(trx, tenant).table('user_activity_groups')
       .insert({
         tenant,
         user_id: user.user_id,
@@ -265,7 +265,7 @@ export const moveActivityToGroup = withAuth(async (
       .increment('sort_order', 1);
 
     // Insert at new position
-    await trx('user_activity_group_items').insert({
+    await tenantDb(trx, tenant).table('user_activity_group_items').insert({
       tenant,
       group_id: targetGroupId,
       activity_id: activityId,

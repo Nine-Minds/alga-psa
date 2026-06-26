@@ -5,7 +5,7 @@ import Priority from '../models/priority';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 
 const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>

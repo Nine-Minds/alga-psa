@@ -161,7 +161,7 @@ async function resolveInstallForTenant(knex: Knex, tenantId: string, extensionId
 }
 
 async function assertEndpointBelongsToVersion(trx: Knex, endpointId: string, versionId: string) {
-  const row = await trx('extension_api_endpoint')
+  const row = await tenantDb(trx, '__extension_schedule_endpoint_validation__').table('extension_api_endpoint')
     .where({ id: endpointId, version_id: versionId })
     .first(['id', 'path', 'method'])
   if (!row) {
@@ -711,8 +711,8 @@ export const runExtensionScheduleNow = withAuth(async (
     // Guardrail: rate limit run-now per tenant (5/minute).
     try {
       const since = new Date(Date.now() - 60_000)
-      const rows = await knex('jobs')
-        .where({ tenant, type: 'extension-scheduled-invocation' })
+      const rows = await db.table('jobs')
+        .where({ type: 'extension-scheduled-invocation' })
         .andWhere('created_at', '>=', since)
         .select(['metadata'])
       let runNowCount = 0

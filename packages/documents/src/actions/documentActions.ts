@@ -34,7 +34,7 @@ import { deleteFile } from './file-actions/fileActions';
 import { NextResponse } from 'next/server';
 // deleteDocumentContent and deleteBlockContent imports removed – content rows are
 // now deleted inline inside the deleteDocument transaction.
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
@@ -2946,6 +2946,8 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+
     // First try to find a tenant-specific type
     const tenantType = await tenantScopedTable(trx, 'document_types', tenant)
       .where({ type_name: mimeType })
@@ -2956,7 +2958,7 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     }
 
     // Then try to find a shared type
-    const sharedType = await trx('shared_document_types')
+    const sharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: mimeType })
       .first();
 
@@ -2977,7 +2979,7 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     }
 
     // Then check shared general type
-    const generalSharedType = await trx('shared_document_types')
+    const generalSharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: generalType })
       .first();
 
@@ -2986,7 +2988,7 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     }
 
     // If no match found, return the unknown type (application/octet-stream) from shared types
-    const unknownType = await trx('shared_document_types')
+    const unknownType = await scopedDb.table('shared_document_types')
       .where({ type_name: 'application/octet-stream' })
       .first();
 

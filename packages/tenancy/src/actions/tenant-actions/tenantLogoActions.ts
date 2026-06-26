@@ -62,7 +62,7 @@ export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
             updated_at: knex.fn.now()
           });
       } else {
-        await knex('tenant_settings').insert({
+        await tenantSettingsQuery(knex, tenant).insert({
           tenant,
           settings: updatedSettings,
           created_at: knex.fn.now(),

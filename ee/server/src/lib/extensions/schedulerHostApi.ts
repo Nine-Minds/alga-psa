@@ -23,6 +23,7 @@ import { getJobRunnerInstance, initializeJobRunner } from 'server/src/lib/jobs/i
 
 // Metrics for scheduler host API operations
 const meter = metrics.getMeter('alga-psa-extensions')
+const EXTENSION_ENDPOINT_GLOBAL_TENANT = '__extension_scheduler_endpoint_global__'
 
 const schedulerApiCounter = meter.createCounter('extension_scheduler_api_calls_total', {
   description: 'Total number of extension scheduler API calls',
@@ -187,7 +188,7 @@ async function listVersionEndpoints(
   knex: Knex,
   versionId: string
 ): Promise<Array<{ id: string; method: string; path: string; handler: string }>> {
-  const rows = await knex('extension_api_endpoint')
+  const rows = await tenantDb(knex, EXTENSION_ENDPOINT_GLOBAL_TENANT).table('extension_api_endpoint')
     .where({ version_id: versionId })
     .orderBy([{ column: 'path', order: 'asc' }])
     .select(['id', 'method', 'path', 'handler'])
@@ -200,7 +201,8 @@ async function listVersionEndpoints(
 }
 
 async function materializeVersionEndpoints(knex: Knex, versionId: string): Promise<void> {
-  const version = await knex('extension_version')
+  const extensionDb = tenantDb(knex, EXTENSION_ENDPOINT_GLOBAL_TENANT)
+  const version = await extensionDb.table('extension_version')
     .where({ id: versionId })
     .first(['api_endpoints'])
   if (!version) return
@@ -226,7 +228,7 @@ async function materializeVersionEndpoints(knex: Knex, versionId: string): Promi
   if (deduped.size === 0) return
 
   const now = new Date()
-  await knex('extension_api_endpoint')
+  await extensionDb.table('extension_api_endpoint')
     .insert(
       Array.from(deduped.values()).map((e) => ({
         version_id: versionId,
@@ -247,7 +249,7 @@ async function resolveEndpointByPath(
 ): Promise<{ id: string; method: string; path: string } | null> {
   const selector = parseEndpointSelector(endpointSelector)
   const queryEndpoint = async () => {
-    const query = knex('extension_api_endpoint')
+    const query = tenantDb(knex, EXTENSION_ENDPOINT_GLOBAL_TENANT).table('extension_api_endpoint')
       .where({ version_id: versionId })
       .andWhere(function () {
         this.where('path', selector.path).orWhere('path', selector.path.replace(/^\//, ''))

@@ -20,19 +20,18 @@ export const getTenantDetails = withAuth(async (_user, { tenant }): Promise<Tena
     const [tenantDetails] = (await tenantScopedTable(trx, 'tenants', tenant)
       .select('*')) as Tenant[];
 
-    const clients = (await tenantDb(trx, tenant).table('tenant_companies as tc')
-      .join('clients as c', function() {
-        this.on('tc.client_id', '=', 'c.client_id')
-            .andOn('tc.tenant', '=', 'c.tenant');
-      })
+    const clientsQuery = tenantDb(trx, tenant).table('tenant_companies as tc');
+    tenantDb(trx, tenant).tenantJoin(clientsQuery, 'clients as c', 'tc.client_id', 'c.client_id');
+
+    const clients = (await clientsQuery
       .select(
-        'c.client_id',
-        'c.client_name',
-        'tc.is_default',
-        'tc.created_at',
-        'tc.updated_at'
+        'c.client_id as client_id',
+        'c.client_name as client_name',
+        'tc.is_default as is_default',
+        'tc.created_at as created_at',
+        'tc.updated_at as updated_at'
       )
-      .whereNull('tc.deleted_at')) as TenantCompany[];
+      .whereNull('tc.deleted_at')) as unknown as TenantCompany[];
 
     return {
       ...tenantDetails,
@@ -52,7 +51,7 @@ export const updateTenantName = withAuth(async (_user, { tenant }, name: string)
 export const addClientToTenant = withAuth(async (_user, { tenant }, clientId: string): Promise<void> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    await trx('tenant_companies')
+    await tenantScopedTable(trx, 'tenant_companies', tenant)
       .insert({
         tenant,
         client_id: clientId,

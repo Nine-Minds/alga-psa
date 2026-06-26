@@ -548,7 +548,7 @@ async function validateInteractionTypeId(
 ): Promise<void> {
   const [tenantType, systemType] = await Promise.all([
     tenantScopedTable(tx, 'interaction_types').where('type_id', typeId).first(),
-    tx.trx('system_interaction_types').where({ type_id: typeId }).first(),
+    tenantScopedTable(tx, 'system_interaction_types').where({ type_id: typeId }).first(),
   ]);
 
   if (tenantType || systemType) {
@@ -2271,7 +2271,7 @@ export function registerCrmActions(): void {
         targetSummary = { project_id: input.target.id, project_name: project.project_name ?? null, client_id: clientId };
       }
 
-      const noteType = await tx.trx('system_interaction_types').where({ type_name: 'Note' }).first();
+      const noteType = await tenantScopedTable(tx, 'system_interaction_types').where({ type_name: 'Note' }).first();
       if (!noteType) throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'System interaction type Note missing' });
 
       const noteId = uuidv4();

@@ -926,7 +926,7 @@ async function logSlaEvent(
   eventData: Record<string, unknown>,
   triggeredBy?: string
 ): Promise<void> {
-  await trx('sla_audit_log').insert({
+  await tenantScopedTable(trx, tenant, 'sla_audit_log').insert({
     tenant,
     ticket_id: ticketId,
     event_type: eventType,

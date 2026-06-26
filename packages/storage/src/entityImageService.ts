@@ -88,6 +88,7 @@ async function getDocumentTypeForMimeType(
   tenant: string,
   mimeType: string,
 ): Promise<{ typeId: string; isShared: boolean }> {
+  const db = tenantDb(knexOrTrx, tenant);
   const tenantType = await tenantScopedTable(knexOrTrx, 'document_types', tenant)
     .where({ type_name: mimeType })
     .first();
@@ -96,7 +97,7 @@ async function getDocumentTypeForMimeType(
     return { typeId: tenantType.type_id, isShared: false };
   }
 
-  const sharedType = await knexOrTrx('shared_document_types')
+  const sharedType = await db.table('shared_document_types')
     .where({ type_name: mimeType })
     .first();
 
@@ -114,7 +115,7 @@ async function getDocumentTypeForMimeType(
     return { typeId: generalTenantType.type_id, isShared: false };
   }
 
-  const generalSharedType = await knexOrTrx('shared_document_types')
+  const generalSharedType = await db.table('shared_document_types')
     .where({ type_name: generalType })
     .first();
 
@@ -122,7 +123,7 @@ async function getDocumentTypeForMimeType(
     return { typeId: generalSharedType.type_id, isShared: true };
   }
 
-  const unknownType = await knexOrTrx('shared_document_types')
+  const unknownType = await db.table('shared_document_types')
     .where({ type_name: 'application/octet-stream' })
     .first();
 

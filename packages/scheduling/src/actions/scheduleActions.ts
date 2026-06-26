@@ -7,7 +7,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
   buildAppointmentAssignedPayload,
   buildAppointmentCanceledPayload,

@@ -241,16 +241,15 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
       });
 
     // Calendar providers: mark disconnected + clear tokens + webhook identifiers
-    await knex('calendar_providers')
-      .where({ tenant, provider_type: 'google' })
+    await db.table('calendar_providers')
+      .where({ provider_type: 'google' })
       .update({
         status: 'disconnected',
         error_message: null,
         updated_at: knex.fn.now()
       });
 
-    await knex('google_calendar_provider_config')
-      .where({ tenant })
+    await db.table('google_calendar_provider_config')
       .update({
         access_token: null,
         refresh_token: null,

@@ -141,7 +141,7 @@ export const scheduleTeamsMeeting = withAuth(async (
     try {
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
         const scopedDb = tenantDb(trx, tenant);
-        const onlineMeetingType = await trx('system_interaction_types')
+        const onlineMeetingType = await scopedDb.table('system_interaction_types')
           .where({ type_name: 'Online Meeting' })
           .first('type_id');
 

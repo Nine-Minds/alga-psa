@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { IInteractionType, ISystemInteractionType, DeletionValidationResult } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { assertMspPermission } from '../lib/authHelpers';
 
 type InteractionTypeRow = IInteractionType & {
@@ -42,7 +42,7 @@ export const getSystemInteractionTypes = withAuth(async (user, { tenant }): Prom
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('system_interaction_types')
+      return await tenantDb(trx, tenant).table<ISystemInteractionType>('system_interaction_types')
         .select('*')
         .orderBy('type_name');
     });
@@ -63,7 +63,7 @@ export const getSystemInteractionTypeById = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     const type = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('system_interaction_types')
+      return await tenantDb(trx, tenant).table<ISystemInteractionType>('system_interaction_types')
         .where({ type_id: typeId })
         .first();
     });

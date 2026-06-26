@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
+import { isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';

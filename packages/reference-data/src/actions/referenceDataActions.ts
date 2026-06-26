@@ -7,7 +7,7 @@ import { IStandardStatus, IStatus } from '@alga-psa/types';
 import { IStandardServiceType } from '@alga-psa/types';
 import { IInteractionType } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 export type ReferenceDataType = 'priorities' | 'statuses' | 'service_types' | 'task_types' | 'interaction_types' | 'service_categories' | 'categories' | 'boards';

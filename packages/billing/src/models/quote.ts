@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import type { IQuote, IQuoteListItem, IQuoteWithClient, PaginatedResult, QuoteStatus } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from '@shared/services/numberingService';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
 import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';

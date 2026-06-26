@@ -1,4 +1,5 @@
 import { getAdminConnection } from "@alga-psa/db/admin";
+import { tenantDb } from "@alga-psa/db";
 
 function parseSettings(raw: any): any {
   if (!raw) return undefined;
@@ -21,9 +22,8 @@ export async function isAutoLinkEnabledForTenant(
   }
 
   const knex = await getAdminConnection();
-  const record = await knex("tenant_settings")
+  const record = await tenantDb(knex, tenantId).table("tenant_settings")
     .select("settings")
-    .where({ tenant: tenantId })
     .first();
 
   if (!record) {

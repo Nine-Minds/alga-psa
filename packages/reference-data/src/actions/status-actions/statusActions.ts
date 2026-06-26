@@ -3,7 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { generateKeyBetween } from 'fractional-indexing';
-import { getDeletionConfig, validateDeletion } from '@alga-psa/core';
+import { getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
 import { tenantDb } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,

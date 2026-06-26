@@ -16,6 +16,13 @@ export interface PortalInvitation {
   metadata: Record<string, any>;
 }
 
+interface PortalInvitationVerificationRow extends PortalInvitation {
+  tenant: string;
+  full_name: string;
+  contact_email: string;
+  client_name?: string | null;
+}
+
 export interface TokenVerificationResult {
   valid: boolean;
   tenant?: string;
@@ -29,6 +36,8 @@ export interface TokenVerificationResult {
   error?: string;
   errorCode?: 'INVALID_OR_EXPIRED_TOKEN' | 'VERIFICATION_FAILED';
 }
+
+const PORTAL_INVITATION_TENANT_DISCOVERY = 'tenant-discovery';
 
 export class PortalInvitationService {
   /**
@@ -99,7 +108,7 @@ export class PortalInvitationService {
       }
 
       // Create invitation record (using transaction)
-      const [invitation] = await trx('portal_invitations')
+      const [invitation] = await tenantDb(trx, tenant).table('portal_invitations')
         .insert({
           tenant,
           contact_id: contactId,
@@ -185,7 +194,7 @@ export class PortalInvitationService {
       }
 
       // Create invitation record
-      const [invitation] = await knex('portal_invitations')
+      const [invitation] = await tenantDb(knex, tenant).table('portal_invitations')
         .insert({
           tenant,
           contact_id: contactId,
@@ -224,7 +233,8 @@ export class PortalInvitationService {
         // First, find the invitation to get its tenant
         // This initial query needs to scan all shards, but it's necessary
         // to determine which tenant the token belongs to
-        const tokenInfo = await trx('portal_invitations')
+        const tokenInfo = await tenantDb(trx, PORTAL_INVITATION_TENANT_DISCOVERY)
+          .unscoped('portal_invitations', 'tenant discovery from portal invitation token')
           .where({
             token,
             used_at: null
@@ -249,15 +259,12 @@ export class PortalInvitationService {
           .del();
         
         // Now fetch the full invitation with joins (single-shard query)
-        const invitation = await tenantDb(trx, tokenTenant).table('portal_invitations as pi')
-          .join('contacts as c', function() {
-            this.on('pi.tenant', '=', 'c.tenant')
-                .andOn('pi.contact_id', '=', 'c.contact_name_id');
-          })
-          .leftJoin('clients as comp', function() {
-            this.on('c.tenant', '=', 'comp.tenant')
-                .andOn('c.client_id', '=', 'comp.client_id');
-          })
+        const scopedDb = tenantDb(trx, tokenTenant);
+        const invitationQuery = scopedDb.table('portal_invitations as pi');
+        scopedDb.tenantJoin(invitationQuery, 'contacts as c', 'pi.contact_id', 'c.contact_name_id');
+        scopedDb.tenantJoin(invitationQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+
+        const invitation = await invitationQuery
           .where({
             'pi.token': token,
             'pi.used_at': null
@@ -269,7 +276,7 @@ export class PortalInvitationService {
             'c.email as contact_email',
             'comp.client_name'
           )
-          .first();
+          .first() as PortalInvitationVerificationRow | undefined;
 
         if (!invitation) {
           return {

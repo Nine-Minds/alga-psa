@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ITicketCategory, DeletionDependency, DeletionValidationResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(

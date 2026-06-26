@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
 
     // Verify pending deletion exists
     const knex = await getAdminConnection();
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
     const pendingDeletion = await tenantDb(knex, '__tenant_deletion_confirmation_lookup__')
       .unscoped('pending_tenant_deletions', 'tenant deletion confirmation resolves tenant by workflow id before tenant context exists')
       .where({ workflow_id: workflowId })
@@ -139,7 +140,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Log to unified extension audit table
-    await knex('extension_audit_logs')
+    await auditLogs
       .insert({
         tenant: MASTER_BILLING_TENANT_ID,
         event_type: 'tenant.confirm_deletion',

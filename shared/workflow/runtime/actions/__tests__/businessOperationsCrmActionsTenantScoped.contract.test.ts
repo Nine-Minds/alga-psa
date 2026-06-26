@@ -72,7 +72,8 @@ describe('CRM workflow action tenant-scoped query contract', () => {
     expect(actionSection).not.toMatch(/\.where\(\{\s*tenant\s*:/);
     expect(actionSection).not.toMatch(/\.(?:where|andWhere)\(\s*['`][^'`]*tenant['`]/);
 
-    expect(actionSection).toContain("tx.trx('system_interaction_types')");
+    expect(actionSection).toContain("tenantScopedTable(tx, 'system_interaction_types')");
+    expect(actionSection).not.toContain("tx.trx('system_interaction_types')");
   });
 
   it('routes contact action tenant roots through tenantDb', () => {

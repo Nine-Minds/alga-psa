@@ -35,7 +35,7 @@ import {
 } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { validateData } from '@alga-psa/validation';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
     assetSchema,
     assetAssociationSchema,

@@ -2,7 +2,8 @@
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { deleteEntityWithValidation, unparseCSV, isEnterprise } from '@alga-psa/core';
+import { unparseCSV, isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';

@@ -5,7 +5,7 @@ import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserW
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,

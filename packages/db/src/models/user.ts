@@ -9,6 +9,7 @@ import type {
   IPermission,
 } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
+import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
 import { verifyPassword } from '@alga-psa/core/encryption';
 
@@ -161,7 +162,7 @@ const User = {
           return { user_id: insertedUser.user_id, role_id: role.role_id, tenant };
         });
 
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
 
         return insertedUser;
       });

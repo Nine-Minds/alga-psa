@@ -13,7 +13,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -938,6 +938,7 @@ export class TicketService extends BaseService<ITicket> {
     tenant: string,
     mimeType: string,
   ): Promise<{ typeId: string; isShared: boolean }> {
+    const scopedDb = tenantDb(knex, tenant);
     const tenantType = await tenantScopedTable(knex, 'document_types', tenant)
       .where({ type_name: mimeType })
       .first();
@@ -946,7 +947,7 @@ export class TicketService extends BaseService<ITicket> {
       return { typeId: tenantType.type_id, isShared: false };
     }
 
-    const sharedType = await knex('shared_document_types')
+    const sharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: mimeType })
       .first();
 
@@ -964,7 +965,7 @@ export class TicketService extends BaseService<ITicket> {
       return { typeId: generalTenantType.type_id, isShared: false };
     }
 
-    const generalSharedType = await knex('shared_document_types')
+    const generalSharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: generalType })
       .first();
 
@@ -972,7 +973,7 @@ export class TicketService extends BaseService<ITicket> {
       return { typeId: generalSharedType.type_id, isShared: true };
     }
 
-    const unknownType = await knex('shared_document_types')
+    const unknownType = await scopedDb.table('shared_document_types')
       .where({ type_name: 'application/octet-stream' })
       .first();
 

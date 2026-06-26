@@ -913,7 +913,7 @@ export const approveAppointmentRequest = withAuth(async (
         // Anonymous public bookings have no client/contact; interactions require one,
         // so the meeting is recorded without an interaction in that case.
         if (request.client_id || request.contact_id) {
-          const onlineMeetingType = await trx('system_interaction_types')
+          const onlineMeetingType = await tenantDb(trx, tenant).table('system_interaction_types')
             .where({ type_name: 'Online Meeting' })
             .first('type_id');
 

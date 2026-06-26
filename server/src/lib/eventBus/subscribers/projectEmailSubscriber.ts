@@ -208,7 +208,7 @@ async function sendNotificationIfEnabled(
     }
 
     // 2. Look up notification subtype ID
-    const subtype = await knex('notification_subtypes')
+    const subtype = await scopedDb.table('notification_subtypes')
       .where({ name: subtypeName })
       .first();
 

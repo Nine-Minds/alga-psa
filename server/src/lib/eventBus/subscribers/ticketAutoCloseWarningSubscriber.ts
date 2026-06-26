@@ -77,7 +77,7 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
       const { knex } = await createTenantKnex();
       const scopedDb = tenantDb(knex, tenantId);
 
-      const subtype = await knex('notification_subtypes')
+      const subtype = await scopedDb.table('notification_subtypes')
         .where({ name: WARNING_SUBTYPE_NAME })
         .first();
       if (!subtype) {

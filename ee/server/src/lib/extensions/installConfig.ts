@@ -153,8 +153,8 @@ async function loadInstallRowById(db: Knex, installId: string): Promise<InstallR
   return row ?? null;
 }
 
-async function loadBundleContentHash(db: Knex, versionId: string): Promise<string | null> {
-  const bundle = await db('extension_bundle')
+async function loadBundleContentHash(db: Knex, tenantId: string, versionId: string): Promise<string | null> {
+  const bundle = await tenantDb(db, tenantId).table('extension_bundle')
     .where({ version_id: versionId })
     .orderBy('created_at', 'desc')
     .first(['content_hash']);
@@ -231,7 +231,7 @@ export async function getInstallConfigByInstallId(installId: string): Promise<In
 
 async function hydrateInstallConfig(db: Knex, installRow: InstallRow): Promise<InstallConfigResult> {
   const [bundleHash, configRow, secretsRow] = await Promise.all([
-    loadBundleContentHash(db, installRow.version_id),
+    loadBundleContentHash(db, installRow.tenant_id, installRow.version_id),
     loadConfigRow(db, installRow.tenant_id, installRow.install_id),
     loadSecretsRow(db, installRow.tenant_id, installRow.install_id),
   ]);

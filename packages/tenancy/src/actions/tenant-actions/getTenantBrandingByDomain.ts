@@ -22,6 +22,8 @@ interface TenantPortalConfig {
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
+const PORTAL_DOMAIN_TENANT_DISCOVERY = 'tenant-discovery';
+
 async function getTenantSettings(tenantId: string) {
   const tenantKnex = await getConnection(tenantId);
   return tenantSettingsQuery(tenantKnex, tenantId)
@@ -35,7 +37,8 @@ async function lookupTenantSettingsByDomain(normalizedDomain: string) {
       const tenantPrefix = parts[0];
       const knex = await getConnection();
 
-      const portalDomain = await knex('portal_domains')
+      const portalDomain = await tenantDb(knex, PORTAL_DOMAIN_TENANT_DISCOVERY)
+        .unscoped('portal_domains', 'tenant discovery from client portal subdomain')
         .where('canonical_host', 'like', `${tenantPrefix}.portal.%`)
         .andWhere('status', 'active')
         .first();
@@ -53,7 +56,8 @@ async function lookupTenantSettingsByDomain(normalizedDomain: string) {
   }
 
   const knex = await getConnection();
-  const portalDomain = await knex('portal_domains')
+  const portalDomain = await tenantDb(knex, PORTAL_DOMAIN_TENANT_DISCOVERY)
+    .unscoped('portal_domains', 'tenant discovery from client portal custom domain')
     .whereRaw('lower(domain) = ?', [normalizedDomain])
     .first();
 

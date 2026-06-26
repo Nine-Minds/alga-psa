@@ -10,15 +10,19 @@ import {
   createBoard,
   updateBoard,
   deleteBoard,
+} from '@alga-psa/tickets/actions/board-actions/boardActions';
+import {
   getBoardTicketStatuses,
+} from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
+import {
   getBoardCloseRules,
   upsertBoardCloseRules,
   getBoardAutoCloseRules,
   createBoardAutoCloseRule,
   updateBoardAutoCloseRule,
   deleteBoardAutoCloseRule,
-} from '@alga-psa/tickets/actions';
-import type { IBoardAutoCloseRule } from '@alga-psa/tickets/actions';
+} from '@alga-psa/tickets/actions/close-rules/closeRuleActions';
+import type { IBoardAutoCloseRule } from '@alga-psa/tickets/actions/close-rules/closeRuleActions';
 import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@alga-psa/tickets/lib';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';

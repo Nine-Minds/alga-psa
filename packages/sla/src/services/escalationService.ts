@@ -405,14 +405,14 @@ async function sendEscalationEmailNotification(
     const emailService = getEmailNotificationService();
 
     // Get the SLA Escalation notification subtype ID
-    const subtype = await trx('notification_subtypes')
+    const subtype = await tenantDb(trx, tenant).table('notification_subtypes')
       .where({ name: 'SLA Escalation' })
       .first();
 
     if (!subtype) {
       console.warn('SLA Escalation notification subtype not found, falling back to SLA Warning');
       // Try to fall back to SLA Warning subtype
-      const fallbackSubtype = await trx('notification_subtypes')
+      const fallbackSubtype = await tenantDb(trx, tenant).table('notification_subtypes')
         .where({ name: 'SLA Warning' })
         .first();
 

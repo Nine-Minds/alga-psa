@@ -15,7 +15,8 @@ describe('entity image service tenant facade migration contract', () => {
     expect(source).toContain("tenantScopedTable(knex, 'documents', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
     expect(source).toContain("tenantScopedTable(knex, 'document_associations', tenant)");
-    expect(source).toContain("knexOrTrx('shared_document_types')");
+    expect(source).toContain("db.table('shared_document_types')");
+    expect(source).not.toContain("knexOrTrx('shared_document_types')");
     expect(source).not.toContain("trx('document_folders')");
     expect(source).not.toContain("knex('documents')");
     expect(source).not.toContain("trx('document_associations')");

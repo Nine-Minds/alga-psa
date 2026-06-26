@@ -236,8 +236,12 @@ type StripeLineItem = {
   quantity: number;
 };
 
-function tenantScopedTable(conn: Knex, table: string, tenant: string): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: Knex,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
 }
 
 export class StripeService {
@@ -361,7 +365,7 @@ export class StripeService {
     const stripeCustomer = stripeCustomerResponse as Stripe.Customer;
 
     // Insert into database
-    const [customer] = await db<StripeCustomer>('stripe_customers')
+    const [customer] = await tenantDb(db, tenantId).table<StripeCustomer>('stripe_customers')
       .insert({
         tenant: tenantId,
         stripe_customer_external_id: stripeCustomer.id,
@@ -438,7 +442,7 @@ export class StripeService {
       .first();
 
     if (!dbProduct) {
-      const [newProduct] = await db<StripeProduct>('stripe_products')
+      const [newProduct] = await tenantScopedTable<StripeProduct>(db, 'stripe_products', tenantId)
         .insert({
           tenant: tenantId,
           stripe_product_external_id: product.id,
@@ -462,7 +466,7 @@ export class StripeService {
     if (!dbPrice) {
       const interval = stripePrice.recurring?.interval;
       const recurringInterval = (interval === 'month' || interval === 'year') ? interval : null;
-      const [newPrice] = await db<StripePrice>('stripe_prices')
+      const [newPrice] = await tenantScopedTable<StripePrice>(db, 'stripe_prices', tenantId)
         .insert({
           tenant: tenantId,
           stripe_price_external_id: stripePrice.id,
@@ -513,7 +517,7 @@ export class StripeService {
       .first();
 
     if (!dbProduct) {
-      const [newProduct] = await db<StripeProduct>('stripe_products')
+      const [newProduct] = await tenantScopedTable<StripeProduct>(db, 'stripe_products', tenantId)
         .insert({
           tenant: tenantId,
           stripe_product_external_id: product.id,
@@ -539,7 +543,7 @@ export class StripeService {
       const interval = price.recurring?.interval;
       const recurringInterval = (interval === 'month' || interval === 'year') ? interval : null;
 
-      const [newPrice] = await db<StripePrice>('stripe_prices')
+      const [newPrice] = await tenantScopedTable<StripePrice>(db, 'stripe_prices', tenantId)
         .insert({
           tenant: tenantId,
           stripe_price_external_id: price.id,
@@ -574,7 +578,7 @@ export class StripeService {
           .where('stripe_product_external_id', baseProduct.id)
           .first();
         if (!dbBaseProduct) {
-          const [newProduct] = await db<StripeProduct>('stripe_products')
+          const [newProduct] = await tenantScopedTable<StripeProduct>(db, 'stripe_products', tenantId)
             .insert({
               tenant: tenantId,
               stripe_product_external_id: baseProduct.id,
@@ -595,7 +599,7 @@ export class StripeService {
         if (!dbBasePrice) {
           const interval = basePrice.recurring?.interval;
           const recurringInterval = (interval === 'month' || interval === 'year') ? interval : null;
-          const [newPrice] = await db<StripePrice>('stripe_prices')
+          const [newPrice] = await tenantScopedTable<StripePrice>(db, 'stripe_prices', tenantId)
             .insert({
               tenant: tenantId,
               stripe_price_external_id: basePrice.id,
@@ -616,7 +620,7 @@ export class StripeService {
       const importedInterval = price.recurring?.interval;
       const billingInterval: 'month' | 'year' = (importedInterval === 'year') ? 'year' : 'month';
 
-      await db<StripeSubscription>('stripe_subscriptions').insert({
+      await tenantDb(db, tenantId).table<StripeSubscription>('stripe_subscriptions').insert({
         tenant: tenantId,
         stripe_subscription_external_id: subscription.id,
         stripe_subscription_item_id: subscriptionItem.id,
@@ -820,7 +824,7 @@ export class StripeService {
         );
 
         // Update database immediately for increases
-        await knex<StripeSubscription>('stripe_subscriptions')
+        await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
           .where({
             stripe_subscription_id: existingSubscription.stripe_subscription_id,
           })
@@ -935,7 +939,7 @@ export class StripeService {
 
         // Don't update database quantity yet - it will be updated by webhook when schedule activates
         // But store the scheduled change in metadata
-        await knex<StripeSubscription>('stripe_subscriptions')
+        await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
           .where({
             stripe_subscription_id: existingSubscription.stripe_subscription_id,
           })
@@ -1079,7 +1083,7 @@ export class StripeService {
     }
 
     // Record event
-    await knex('stripe_webhook_events')
+    await tenantScopedTable(knex, 'stripe_webhook_events', eventTenantId)
       .insert({
         tenant: eventTenantId,
         stripe_event_id: event.id,
@@ -1159,7 +1163,8 @@ export class StripeService {
     // Try to find customer in database and get tenant
     if (data.customer) {
       const knex = await getConnection();
-      const customer = await knex('stripe_customers')
+      const customer = await tenantDb(knex, '__stripe_webhook_customer_tenant_discovery__')
+        .unscoped('stripe_customers', 'Stripe webhook resolves tenant by customer id before tenant context exists')
         .where({ stripe_customer_external_id: data.customer })
         .first();
 
@@ -1187,7 +1192,7 @@ export class StripeService {
   ): Promise<void> {
     const db = knex || (await getConnection(tenantId));
 
-    await db('tenant_addons')
+    await tenantDb(db, tenantId).table('tenant_addons')
       .insert({
         tenant: tenantId,
         addon_key: addOn,
@@ -1601,9 +1606,8 @@ export class StripeService {
     const customer = await this.getOrImportCustomer(tenantId);
 
     // Get existing subscription (active, trialing, or past_due)
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
       })
       .whereIn('status', ['active', 'trialing', 'past_due'])
@@ -1622,7 +1626,7 @@ export class StripeService {
     }
 
     // Get the price per license
-    const price = await knex<StripePrice>('stripe_prices')
+    const price = await tenantScopedTable<StripePrice>(knex, 'stripe_prices', tenantId)
       .where({ stripe_price_id: existingSubscription.stripe_price_id })
       .first();
 
@@ -2230,15 +2234,13 @@ export class StripeService {
     try {
       const knex = await getConnection(tenantId);
       const customer = await this.getOrImportCustomer(tenantId);
-      const tenantRecord = await knex('tenants')
-        .where('tenant', tenantId)
+      const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId)
         .select('plan')
         .first();
       const currentTier: TenantTier | undefined = tenantRecord?.plan;
 
-      const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
         .where({
-          tenant: tenantId,
           stripe_customer_id: customer.stripe_customer_id,
           status: 'active',
         })
@@ -2255,14 +2257,14 @@ export class StripeService {
       let currentMonthly = 0;
       if (existingSubscription) {
         if (existingSubscription.stripe_base_price_id) {
-          const currentBasePrice = await knex<StripePrice>('stripe_prices')
+          const currentBasePrice = await tenantScopedTable<StripePrice>(knex, 'stripe_prices', tenantId)
             .where({ stripe_price_id: existingSubscription.stripe_base_price_id })
             .first();
           currentMonthly = ((currentBasePrice?.unit_amount || 0) / 100);
 
           // Only add per-user cost if the user price is different from the base price (Solo has no per-user price)
           if (existingSubscription.stripe_price_id !== existingSubscription.stripe_base_price_id) {
-            const currentUserPrice = await knex<StripePrice>('stripe_prices')
+            const currentUserPrice = await tenantScopedTable<StripePrice>(knex, 'stripe_prices', tenantId)
               .where({ stripe_price_id: existingSubscription.stripe_price_id })
               .first();
             // Billable portion of the current tier: total minus seats
@@ -2276,7 +2278,7 @@ export class StripeService {
           }
         } else {
           // Single-price mode: price_id is the per-seat price
-          const currentPrice = await knex<StripePrice>('stripe_prices')
+          const currentPrice = await tenantScopedTable<StripePrice>(knex, 'stripe_prices', tenantId)
             .where({ stripe_price_id: existingSubscription.stripe_price_id })
             .first();
           currentMonthly = ((currentPrice?.unit_amount || 0) / 100) * userCount;
@@ -2357,9 +2359,8 @@ export class StripeService {
     const knex = await getConnection(tenantId);
     const customer = await this.getOrImportCustomer(tenantId);
 
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
         status: 'active',
       })
@@ -2374,7 +2375,7 @@ export class StripeService {
     }
 
     // Resolve the target interval's price IDs, preserving early adopters pricing
-    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId).select('plan').first();
     const currentTier: TenantTier = tenantRecord?.plan || 'pro';
     const newPerSeatPriceId = this.isEarlyAdoptersSubscription(existingSubscription)
       ? null
@@ -2424,7 +2425,7 @@ export class StripeService {
       const effectiveDate = new Date((currentPhase.end_date as number) * 1000).toISOString();
 
       // Store the pending interval change in metadata
-      await knex<StripeSubscription>('stripe_subscriptions')
+      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
         .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
         .update({
           metadata: {
@@ -2465,9 +2466,8 @@ export class StripeService {
     const knex = await getConnection(tenantId);
     const customer = await this.getOrImportCustomer(tenantId);
 
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
         status: 'active',
       })
@@ -2477,7 +2477,7 @@ export class StripeService {
       return { success: false, error: 'No active subscription found' };
     }
 
-    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId).select('plan').first();
     const currentTier: TenantTier = tenantRecord?.plan || 'pro';
     const newPerSeatPriceId = this.isEarlyAdoptersSubscription(existingSubscription)
       ? null
@@ -2495,21 +2495,21 @@ export class StripeService {
       // Calculate current total
       let currentTotal = 0;
       if (existingSubscription.stripe_base_price_id) {
-        const currentBasePrice = await knex<StripePrice>('stripe_prices')
+        const currentBasePrice = await tenantScopedTable<StripePrice>(knex, 'stripe_prices', tenantId)
           .where({ stripe_price_id: existingSubscription.stripe_base_price_id })
           .first();
         currentTotal = ((currentBasePrice?.unit_amount || 0) / 100);
 
         // Only add per-user cost if the user price is different from the base price (Solo has no per-user price)
         if (existingSubscription.stripe_price_id !== existingSubscription.stripe_base_price_id) {
-          const currentUserPrice = await knex<StripePrice>('stripe_prices')
+          const currentUserPrice = await tenantScopedTable<StripePrice>(knex, 'stripe_prices', tenantId)
             .where({ stripe_price_id: existingSubscription.stripe_price_id })
             .first();
           currentTotal += ((currentUserPrice?.unit_amount || 0) / 100) * userCount;
         }
       } else {
         // Single-price mode
-        const currentPrice = await knex<StripePrice>('stripe_prices')
+        const currentPrice = await tenantScopedTable<StripePrice>(knex, 'stripe_prices', tenantId)
           .where({ stripe_price_id: existingSubscription.stripe_price_id })
           .first();
         currentTotal = ((currentPrice?.unit_amount || 0) / 100) * userCount;
@@ -2554,7 +2554,7 @@ export class StripeService {
     logger.info(`[StripeService] Starting Solo -> Pro trial for tenant ${tenantId}`);
 
     const knex = await getConnection(tenantId);
-    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId).select('plan').first();
     if (!tenantRecord) {
       return { success: false, error: 'Tenant not found' };
     }
@@ -2563,9 +2563,8 @@ export class StripeService {
     }
 
     const customer = await this.getOrImportCustomer(tenantId);
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
       })
       .whereIn('status', ['active', 'trialing'])
@@ -2608,7 +2607,7 @@ export class StripeService {
         }
       );
 
-      await knex<StripeSubscription>('stripe_subscriptions')
+      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
         .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
         .update({
           metadata: {
@@ -2648,7 +2647,7 @@ export class StripeService {
     const knex = await getConnection(tenantId);
 
     // Validate tenant is on Pro
-    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId).select('plan').first();
     if (!tenantRecord) {
       return { success: false, error: 'Tenant not found' };
     }
@@ -2657,9 +2656,8 @@ export class StripeService {
     }
 
     const customer = await this.getOrImportCustomer(tenantId);
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
       })
       .whereIn('status', ['active', 'trialing'])
@@ -2699,7 +2697,7 @@ export class StripeService {
 
       // Update local subscription record with trial metadata
       const existingMetadata = existingSubscription.metadata || {};
-      await knex<StripeSubscription>('stripe_subscriptions')
+      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
         .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
         .update({
           metadata: {
@@ -2712,8 +2710,7 @@ export class StripeService {
         });
 
       // Update tenant plan to premium (unlocks features)
-      await knex('tenants')
-        .where({ tenant: tenantId })
+      await tenantScopedTable(knex, 'tenants', tenantId)
         .update({
           plan: 'premium',
           updated_at: knex.fn.now(),
@@ -2748,9 +2745,8 @@ export class StripeService {
     }
 
     const customer = await this.getOrImportCustomer(tenantId);
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
       })
       .whereIn('status', ['active', 'trialing'])
@@ -2805,7 +2801,7 @@ export class StripeService {
       // Mark trial as confirmed — prevents auto-revert, but keep premium_trial metadata
       // so the UI knows Premium features should stay active until the schedule kicks in
       const { premium_trial_end, ...remainingMetadata } = metadata;
-      await knex<StripeSubscription>('stripe_subscriptions')
+      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
         .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
         .update({
           metadata: {
@@ -2853,9 +2849,8 @@ export class StripeService {
     const knex = await getConnection(tenantId);
 
     const customer = await this.getOrImportCustomer(tenantId);
-    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
       .where({
-        tenant: tenantId,
         stripe_customer_id: customer.stripe_customer_id,
       })
       .whereIn('status', ['active', 'trialing'])
@@ -2883,7 +2878,7 @@ export class StripeService {
       // Clear trial metadata locally
       const metadata = existingSubscription.metadata || {};
       const { premium_trial, premium_trial_started, premium_trial_end, ...remainingMetadata } = metadata;
-      await knex<StripeSubscription>('stripe_subscriptions')
+      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
         .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
         .update({
           metadata: {
@@ -2894,8 +2889,7 @@ export class StripeService {
         });
 
       // Revert tenant plan to pro
-      await knex('tenants')
-        .where({ tenant: tenantId })
+      await tenantScopedTable(knex, 'tenants', tenantId)
         .update({
           plan: 'pro',
           updated_at: knex.fn.now(),
@@ -2924,7 +2918,8 @@ export class StripeService {
 
     try {
       // Find all subscriptions with an active premium trial that has expired
-      const expiredTrials = await knex('stripe_subscriptions')
+      const expiredTrials = await tenantDb(knex, '__stripe_expired_premium_trial_sweep__')
+        .unscoped('stripe_subscriptions', 'Stripe premium trial cleanup scans expired trials across all tenants')
         .whereIn('status', ['active', 'trialing'])
         .whereRaw("metadata->>'premium_trial' = 'true'")
         .whereRaw("(metadata->>'premium_trial_end')::timestamptz < now()")
@@ -3031,8 +3026,8 @@ export class StripeService {
 
     try {
       const knex = await getConnection(tenantId);
-      const addOnRecord = await knex('tenant_addons')
-        .where({ tenant: tenantId, addon_key: addOn })
+      const addOnRecord = await tenantScopedTable(knex, 'tenant_addons', tenantId)
+        .where({ addon_key: addOn })
         .first();
 
       const subscriptionId = addOnRecord?.metadata?.stripe_subscription_external_id;
@@ -3071,8 +3066,7 @@ export class StripeService {
     tenantId: string,
     knex: Knex,
   ): Promise<{ billingSource: string; iapSub: IapSubscriptionContext | null }> {
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const tenant = await tenantScopedTable(knex, 'tenants', tenantId)
       .first<{ billing_source: string | null }>('billing_source');
 
     const billingSource = tenant?.billing_source ?? 'stripe';
@@ -3081,8 +3075,7 @@ export class StripeService {
       return { billingSource, iapSub: null };
     }
 
-    const iap = await knex('apple_iap_subscriptions')
-      .where({ tenant: tenantId })
+    const iap = await tenantScopedTable(knex, 'apple_iap_subscriptions', tenantId)
       .whereIn('status', ['active', 'grace_period'])
       .orderBy('created_at', 'desc')
       .first<{
@@ -3159,8 +3152,8 @@ export class StripeService {
     const renewalInfo = verifyRenewalInfoJws(renewalJws, config);
     const autoRenewOn = renewalInfo.autoRenewStatus === 1;
 
-    await knex('apple_iap_subscriptions')
-      .where({ tenant: tenantId, original_transaction_id: originalTransactionId })
+    await tenantScopedTable(knex, 'apple_iap_subscriptions', tenantId)
+      .where({ original_transaction_id: originalTransactionId })
       .update({
         auto_renew_status: autoRenewOn,
         auto_renew_status_updated_at: new Date(),
@@ -3343,12 +3336,13 @@ export class StripeService {
     const knex = await getConnection(tenantId);
 
     await knex.transaction(async (trx) => {
-      await trx('tenants')
-        .where({ tenant: tenantId })
+      const txDb = tenantDb(trx, tenantId);
+
+      await txDb.table('tenants')
         .update({ billing_source: 'stripe', updated_at: trx.fn.now() });
 
-      await trx('apple_iap_subscriptions')
-        .where({ tenant: tenantId, original_transaction_id: originalTransactionId })
+      await txDb.table('apple_iap_subscriptions')
+        .where({ original_transaction_id: originalTransactionId })
         .update({
           transition_stripe_subscription_external_id: null,
           updated_at: trx.fn.now(),
@@ -3371,8 +3365,7 @@ export class StripeService {
     await this.ensureInitialized();
     const knex = await getConnection(tenantId);
 
-    const iapSub = await knex('apple_iap_subscriptions')
-      .where({ tenant: tenantId })
+    const iapSub = await tenantScopedTable(knex, 'apple_iap_subscriptions', tenantId)
       .whereNotNull('transition_stripe_subscription_external_id')
       .first<{
         original_transaction_id: string;
@@ -3399,17 +3392,18 @@ export class StripeService {
     }
 
     await knex.transaction(async (trx) => {
-      await trx('apple_iap_subscriptions')
-        .where({ tenant: tenantId, original_transaction_id: iapSub.original_transaction_id })
+      const txDb = tenantDb(trx, tenantId);
+
+      await txDb.table('apple_iap_subscriptions')
+        .where({ original_transaction_id: iapSub.original_transaction_id })
         .update({
           transition_stripe_subscription_external_id: null,
           updated_at: trx.fn.now(),
         });
-      await trx('tenants')
-        .where({ tenant: tenantId })
+      await txDb.table('tenants')
         .update({ plan: 'solo', updated_at: trx.fn.now() });
-      await trx('stripe_subscriptions')
-        .where({ tenant: tenantId, stripe_subscription_external_id: stripeSubId })
+      await txDb.table('stripe_subscriptions')
+        .where({ stripe_subscription_external_id: stripeSubId })
         .update({ status: 'canceled', canceled_at: trx.fn.now(), updated_at: trx.fn.now() });
     });
 

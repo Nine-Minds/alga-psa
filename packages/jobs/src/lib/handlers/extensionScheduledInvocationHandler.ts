@@ -133,7 +133,7 @@ export async function extensionScheduledInvocationHandler(
 
     try {
       const endpointId = safeString((scheduleRow as any).endpoint_id);
-      const endpoint = await trx('extension_api_endpoint')
+      const endpoint = await tenantDb(trx, tenantId).table('extension_api_endpoint')
         .where({ id: endpointId })
         .first(['id', 'version_id', 'method', 'path']);
 

@@ -235,7 +235,7 @@ async function canManageMicrosoftSettings(user: any): Promise<boolean> {
 }
 
 async function getTenantMicrosoftProfiles(knex: any, tenant: string): Promise<MicrosoftProfileRow[]> {
-  const rows = await knex('microsoft_profiles').where({ tenant }).select('*');
+  const rows = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').select('*');
   return [...rows].sort((left: MicrosoftProfileRow, right: MicrosoftProfileRow) => {
     if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
     if (left.is_archived !== right.is_archived) return left.is_archived ? 1 : -1;
@@ -248,7 +248,10 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | undefined> {
-  const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  const row = await tenantDb(knex, tenant)
+    .table<MicrosoftProfileRow>('microsoft_profiles')
+    .where({ profile_id: profileId })
+    .first();
   return row || undefined;
 }
 
@@ -256,7 +259,9 @@ async function getTenantMicrosoftConsumerBindings(
   knex: any,
   tenant: string
 ): Promise<MicrosoftConsumerBindingRow[]> {
-  const rows = await knex('microsoft_profile_consumer_bindings').where({ tenant }).select('*');
+  const rows = await tenantDb(knex, tenant)
+    .table<MicrosoftConsumerBindingRow>('microsoft_profile_consumer_bindings')
+    .select('*');
   return rows as MicrosoftConsumerBindingRow[];
 }
 
@@ -265,8 +270,8 @@ async function getMicrosoftConsumerBindingRow(
   tenant: string,
   consumerType: MicrosoftProfileConsumer
 ): Promise<MicrosoftConsumerBindingRow | undefined> {
-  const row = await knex('microsoft_profile_consumer_bindings')
-    .where({ tenant, consumer_type: consumerType })
+  const row = await tenantDb(knex, tenant).table<MicrosoftConsumerBindingRow>('microsoft_profile_consumer_bindings')
+    .where({ consumer_type: consumerType })
     .first();
 
   return row || undefined;
@@ -277,16 +282,16 @@ async function getTeamsIntegrationSelectionRow(
   tenant: string,
   profileId: string
 ): Promise<TeamsIntegrationSelectionRow | undefined> {
-  const row = await knex('teams_integrations')
-    .where({ tenant, selected_profile_id: profileId })
+  const row = await tenantDb(knex, tenant).table<TeamsIntegrationSelectionRow>('teams_integrations')
+    .where({ selected_profile_id: profileId })
     .first();
 
   return row || undefined;
 }
 
 async function tenantHasTeamsAddOn(knex: any, tenant: string): Promise<boolean> {
-  const row = await knex('tenant_addons')
-    .where({ tenant, addon_key: ADD_ONS.TEAMS })
+  const row = await tenantDb(knex, tenant).table('tenant_addons')
+    .where({ addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
     })
@@ -301,8 +306,8 @@ async function listBlockingMicrosoftProfileConsumers(
 ): Promise<string[]> {
   const labels = new Set<string>();
   const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes());
-  const bindings = await knex('microsoft_profile_consumer_bindings')
-    .where({ tenant, profile_id: profileId })
+  const bindings = await tenantDb(knex, tenant).table('microsoft_profile_consumer_bindings')
+    .where({ profile_id: profileId })
     .select('*');
 
   for (const binding of bindings as MicrosoftConsumerBindingRow[]) {
@@ -331,8 +336,8 @@ async function clearInactiveTeamsProfileSelection(
     return;
   }
 
-  await knex('teams_integrations')
-    .where({ tenant, selected_profile_id: profileId })
+  await tenantDb(knex, tenant).table('teams_integrations')
+    .where({ selected_profile_id: profileId })
     .update({
       selected_profile_id: null,
       app_id: null,
@@ -350,7 +355,7 @@ async function syncTeamsIntegrationBinding(
   profileId: string,
   userId?: string | null
 ): Promise<void> {
-  const existing = await knex('teams_integrations').where({ tenant }).first();
+  const existing = await tenantDb(knex, tenant).table('teams_integrations').first();
   if (!existing) {
     return;
   }
@@ -366,8 +371,7 @@ async function syncTeamsIntegrationBinding(
       ? 'install_pending'
       : existing.install_status;
 
-  await knex('teams_integrations')
-    .where({ tenant })
+  await tenantDb(knex, tenant).table('teams_integrations')
     .update({
       selected_profile_id: profileId,
       install_status: nextInstallStatus,
@@ -448,7 +452,7 @@ async function ensureLegacyMicrosoftProfileBackfill(
     updated_at: new Date(),
   };
 
-  await knex('microsoft_profiles').insert(row);
+  await tenantDb(knex, tenant).table('microsoft_profiles').insert(row);
 
   if ((legacyClientSecret || '').trim()) {
     await secretProvider.setTenantSecret(tenant, clientSecretRef, legacyClientSecret || null);
@@ -458,8 +462,8 @@ async function ensureLegacyMicrosoftProfileBackfill(
 }
 
 async function tenantHasLegacyMspSsoUsage(knex: any, tenant: string): Promise<boolean> {
-  const activeDomain = await knex('msp_sso_tenant_login_domains')
-    .where({ tenant, is_active: true })
+  const activeDomain = await tenantDb(knex, tenant).table('msp_sso_tenant_login_domains')
+    .where({ is_active: true })
     .first();
 
   return Boolean(activeDomain);
@@ -486,8 +490,8 @@ async function tenantHasLegacyMicrosoftEmailClientCredentials(
 }
 
 async function tenantHasLegacyMicrosoftCalendarUsage(knex: any, tenant: string): Promise<boolean> {
-  const provider = await knex('calendar_providers')
-    .where({ tenant, provider_type: 'microsoft' })
+  const provider = await tenantDb(knex, tenant).table('calendar_providers')
+    .where({ provider_type: 'microsoft' })
     .first();
 
   return Boolean(provider);
@@ -552,7 +556,7 @@ async function ensureMicrosoftConsumerBindingMigration(
       updated_at: now,
     };
 
-    await knex('microsoft_profile_consumer_bindings').insert(binding);
+    await tenantDb(knex, tenant).table('microsoft_profile_consumer_bindings').insert(binding);
     existingBindings.push(binding);
   }
 
@@ -786,15 +790,16 @@ async function createMicrosoftProfileInternal(
     };
 
     await knex.transaction(async (trx: any) => {
+      const db = tenantDb(trx, tenant);
       if (shouldBeDefault) {
-        await trx('microsoft_profiles').where({ tenant, is_default: true }).update({
+        await db.table('microsoft_profiles').where({ is_default: true }).update({
           is_default: false,
           updated_by: user?.user_id || null,
           updated_at: now,
         });
       }
 
-      await trx('microsoft_profiles').insert(row);
+      await db.table('microsoft_profiles').insert(row);
     });
 
     await secretProvider.setTenantSecret(tenant, clientSecretRef, clientSecret);
@@ -857,8 +862,8 @@ async function updateMicrosoftProfileInternal(
     }
 
     const now = new Date();
-    await knex('microsoft_profiles')
-      .where({ tenant, profile_id: existing.profile_id })
+    await tenantDb(knex, tenant).table('microsoft_profiles')
+      .where({ profile_id: existing.profile_id })
       .update({
         display_name: nextDisplayName,
         display_name_normalized: normalizeDisplayNameKey(nextDisplayName),
@@ -917,8 +922,8 @@ async function archiveMicrosoftProfileInternal(
       };
     }
 
-    await knex('microsoft_profiles')
-      .where({ tenant, profile_id: profileId })
+    await tenantDb(knex, tenant).table('microsoft_profiles')
+      .where({ profile_id: profileId })
       .update({
         is_archived: true,
         archived_at: new Date(),
@@ -964,8 +969,8 @@ async function deleteMicrosoftProfileInternal(
 
     await clearInactiveTeamsProfileSelection(knex, tenant, profileId, user?.user_id);
 
-    await knex('microsoft_profiles')
-      .where({ tenant, profile_id: profileId })
+    await tenantDb(knex, tenant).table('microsoft_profiles')
+      .where({ profile_id: profileId })
       .delete();
 
     await secretProvider.setTenantSecret(tenant, existing.client_secret_ref, null);
@@ -997,13 +1002,15 @@ async function setDefaultMicrosoftProfileInternal(
 
     const now = new Date();
     await knex.transaction(async (trx: any) => {
-      await trx('microsoft_profiles').where({ tenant, is_default: true }).update({
+      const db = tenantDb(trx, tenant);
+
+      await db.table('microsoft_profiles').where({ is_default: true }).update({
         is_default: false,
         updated_by: user?.user_id || null,
         updated_at: now,
       });
 
-      await trx('microsoft_profiles').where({ tenant, profile_id: profileId }).update({
+      await db.table('microsoft_profiles').where({ profile_id: profileId }).update({
         is_default: true,
         updated_by: user?.user_id || null,
         updated_at: now,
@@ -1147,8 +1154,8 @@ export const setMicrosoftConsumerBinding = withAuth(async (
     const now = new Date();
 
     if (existing) {
-      await knex('microsoft_profile_consumer_bindings')
-        .where({ tenant, consumer_type: input.consumerType })
+      await tenantDb(knex, tenant).table('microsoft_profile_consumer_bindings')
+        .where({ consumer_type: input.consumerType })
         .update({
           profile_id: input.profileId,
           updated_by: (user as any)?.user_id || null,
@@ -1165,7 +1172,7 @@ export const setMicrosoftConsumerBinding = withAuth(async (
         updated_at: now,
       };
 
-      await knex('microsoft_profile_consumer_bindings').insert(binding);
+      await tenantDb(knex, tenant).table('microsoft_profile_consumer_bindings').insert(binding);
     }
 
     if (input.consumerType === 'teams') {
@@ -1382,16 +1389,15 @@ export const resetMicrosoftProvidersToDisconnected = withAuth(async (
         updated_at: knex.fn.now(),
       });
 
-    await knex('calendar_providers')
-      .where({ tenant, provider_type: 'microsoft' })
+    await db.table('calendar_providers')
+      .where({ provider_type: 'microsoft' })
       .update({
         status: 'disconnected',
         error_message: null,
         updated_at: knex.fn.now(),
       });
 
-    await knex('microsoft_calendar_provider_config')
-      .where({ tenant })
+    await db.table('microsoft_calendar_provider_config')
       .update({
         access_token: null,
         refresh_token: null,

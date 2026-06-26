@@ -10,7 +10,8 @@ import type {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { deleteEntityWithValidation, isEnterprise, unparseCSV } from '@alga-psa/core';
+import { isEnterprise, unparseCSV } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';

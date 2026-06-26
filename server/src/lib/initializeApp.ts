@@ -5,6 +5,7 @@ import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import User from '@alga-psa/db/models/user';
+import { tenantDb } from '@alga-psa/db';
 import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
@@ -181,8 +182,7 @@ export async function initializeApp() {
           email: async (tenantId: string): Promise<BucketConfig> => {
             try {
               const knex = await getConnection(tenantId);
-              const settings = await knex('notification_settings')
-                .where({ tenant: tenantId })
+              const settings = await tenantDb(knex, tenantId).table('notification_settings')
                 .first();
 
               const ratePerMinute = settings?.rate_limit_per_minute ?? 60;
@@ -463,7 +463,9 @@ async function initializeJobScheduler(storageService: StorageService) {
     jobScheduler.registerJobHandler('createClientContractLineCycles', async () => {
       // Get all tenants
       const rootKnex = await getConnection(null);
-      const tenants = await rootKnex('tenants').select('tenant');
+      const tenants = await tenantDb(rootKnex, '__billing_cycle_tenant_enumeration__')
+        .unscoped('tenants', 'legacy billing cycle scheduler enumerates all tenants to run per-tenant cycle jobs')
+        .select('tenant');
 
       // Process each tenant
       for (const { tenant } of tenants) {
@@ -472,7 +474,7 @@ async function initializeJobScheduler(storageService: StorageService) {
           const tenantKnex = await getConnection(tenant);
 
           // Get all active clients for this tenant
-          const clients = await tenantKnex('clients')
+          const clients = await tenantDb(tenantKnex, tenant).table('clients')
             .where({ is_inactive: false })
             .select('*');
 
@@ -609,7 +611,9 @@ async function initializeJobScheduler(storageService: StorageService) {
 
   // Schedule the time periods job for each tenant
   const rootKnex = await getConnection(null);
-  const tenants = await rootKnex('tenants').select('tenant');
+  const tenants = await tenantDb(rootKnex, '__time_period_tenant_enumeration__')
+    .unscoped('tenants', 'legacy time period scheduler enumerates all tenants to schedule per-tenant jobs')
+    .select('tenant');
 
   for (const { tenant } of tenants) {
     try {

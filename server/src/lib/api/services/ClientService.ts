@@ -8,7 +8,8 @@ import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } fr
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { createDefaultTaxSettings } from '@alga-psa/billing/actions';
-import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
+import { isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
 import {
   CreateClientData,

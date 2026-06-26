@@ -24,7 +24,7 @@ interface ImapWebhookPayload {
 }
 
 async function assertTenantEmailProductAccess(knex: any, tenantId: string): Promise<void> {
-  const tenant = await knex('tenants').where({ tenant: tenantId }).first('product_code');
+  const tenant = await tenantDb(knex, tenantId).table('tenants').first('product_code');
   const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
   if (productCode !== 'psa' && productCode !== 'algadesk') {
     throw new Error(`Product access denied for tenant ${tenantId}`);

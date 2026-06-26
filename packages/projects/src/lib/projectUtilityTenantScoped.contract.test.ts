@@ -9,7 +9,8 @@ const statusMappingSource = readFileSync(resolve(__dirname, 'projectStatusMappin
 describe('project utility tenant-scoped query contract', () => {
   it('uses structural tenant scoping for custom task type roots', () => {
     expect(taskTypeSource).toContain("tenantScopedTable(knexOrTrx, 'custom_task_types', tenant)");
-    expect(taskTypeSource).toContain("knexOrTrx('standard_task_types')");
+    expect(taskTypeSource).toContain("tenantScopedTable<ITaskType>(knexOrTrx, 'standard_task_types', tenant)");
+    expect(taskTypeSource).not.toContain("knexOrTrx('standard_task_types')");
     expect(taskTypeSource).not.toContain('.where({ tenant, is_active: true })');
     expect(taskTypeSource).not.toContain('.where({ tenant, type_key: typeKey, is_active: true })');
     expect(taskTypeSource).not.toContain('.where({ type_id: typeId, tenant })');

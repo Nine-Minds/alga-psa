@@ -180,7 +180,7 @@ export const updateTenantOnboardingStatus = withAuth(async (
         .update(updateData);
     } else {
       // Insert new settings
-      await knex('tenant_settings')
+      await tenantSettingsQuery(knex, tenant)
         .insert({
           tenant,
           ...updateData,
@@ -226,7 +226,7 @@ export const saveTenantOnboardingProgress = withAuth(async (
         });
     } else {
       // Insert new settings
-      await knex('tenant_settings')
+      await tenantSettingsQuery(knex, tenant)
         .insert({
           tenant,
           onboarding_data: JSON.stringify(mergedData),
@@ -292,7 +292,7 @@ const upsertTenantSettingsJson = async (tenant: string, updatedSettings: Record<
   const { knex } = await createTenantKnex(tenant);
   const now = new Date();
 
-  await knex('tenant_settings')
+  await tenantSettingsQuery(knex, tenant)
     .insert({
       tenant,
       settings: JSON.stringify(updatedSettings),
@@ -410,7 +410,7 @@ export async function initializeTenantSettings(tenantId: string): Promise<void> 
     const now = new Date();
     
     // Initialize tenant settings with both onboarding flags set to false
-    await knex('tenant_settings')
+    await tenantSettingsQuery(knex, tenantId)
       .insert({
         tenant: tenantId,
         onboarding_completed: false,

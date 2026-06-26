@@ -255,7 +255,7 @@ export class EmailNotificationService implements NotificationService {
       throw new Error('Category not found');
     }
 
-    const subtypes = await knex('notification_subtypes as ns')
+    const subtypes = await tenantDb(knex, tenant).table('notification_subtypes as ns')
       .leftJoin('tenant_notification_subtype_settings as tss', function() {
         this.on('tss.subtype_id', 'ns.id')
           .andOn('tss.tenant', knex.raw('?', [tenant]));
@@ -371,7 +371,7 @@ export class EmailNotificationService implements NotificationService {
 
     // Rate limiting is now centralized in TenantEmailService.sendEmail()
 
-    const subtype = await knex('notification_subtypes')
+    const subtype = await tenantDb(knex, params.tenant).table('notification_subtypes')
       .where({ id: params.subtypeId })
       .first();
 

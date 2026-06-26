@@ -8,7 +8,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
 import { hasPermission } from '../lib/rbac';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const policyEngine = new PolicyEngine();
 

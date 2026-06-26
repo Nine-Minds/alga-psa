@@ -109,7 +109,7 @@ export const createBusinessHoursSchedule = withAuth(async (
     }
 
     // Create the schedule
-    const [schedule] = await trx('business_hours_schedules')
+    const [schedule] = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
       .insert({
         tenant,
         schedule_id: scheduleId,
@@ -135,7 +135,7 @@ export const createBusinessHoursSchedule = withAuth(async (
         is_enabled: entry.is_enabled
       }));
 
-      createdEntries = await trx('business_hours_entries')
+      createdEntries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
         .insert(entryRecords)
         .returning('*');
     }
@@ -315,7 +315,7 @@ export const upsertBusinessHoursEntries = withAuth(async (
       is_enabled: entry.is_enabled
     }));
 
-    const createdEntries = await trx('business_hours_entries')
+    const createdEntries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
       .insert(entryRecords)
       .returning('*');
 
@@ -395,7 +395,7 @@ export const createHoliday = withAuth(async (_user, { tenant }, input: IHolidayI
       }
     }
 
-    const [holiday] = await trx('holidays')
+    const [holiday] = await tenantScopedTable(trx, 'holidays', tenant)
       .insert({
         tenant,
         holiday_id: uuidv4(),
@@ -509,7 +509,7 @@ export const bulkCreateHolidays = withAuth(async (_user, { tenant }, holidays: I
       created_at: trx.fn.now()
     }));
 
-    const createdHolidays = await trx('holidays')
+    const createdHolidays = await tenantScopedTable(trx, 'holidays', tenant)
       .insert(holidayRecords)
       .returning('*');
 
@@ -555,7 +555,7 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
       .update({ is_default: false, updated_at: trx.fn.now() });
 
     // Create the schedule
-    const [schedule] = await trx('business_hours_schedules')
+    const [schedule] = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
       .insert({
         tenant,
         schedule_id: scheduleId,
@@ -579,7 +579,7 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
       is_enabled: entry.is_enabled
     }));
 
-    const createdEntries = await trx('business_hours_entries')
+    const createdEntries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
       .insert(entryRecords)
       .returning('*');
 

@@ -285,7 +285,7 @@ export async function getItilCategoriesFromDB(db: any): Promise<any[]> {
  * @returns Promise<Array> of ITIL priority records from standard_priorities table
  */
 export async function getItilPrioritiesFromDB(db: any): Promise<any[]> {
-  return await db('standard_priorities')
+  return await tenantDb(db, '__itil_standard_priority_reference__').table('standard_priorities')
     .where('is_itil_standard', true)
     .orderBy('itil_priority_level', 'asc');
 }
@@ -297,7 +297,7 @@ export async function getItilPrioritiesFromDB(db: any): Promise<any[]> {
  * @returns Promise<Object> ITIL priority record
  */
 export async function getItilPriorityByLevel(db: any, priorityLevel: number): Promise<any> {
-  return await db('standard_priorities')
+  return await tenantDb(db, '__itil_standard_priority_reference__').table('standard_priorities')
     .where('is_itil_standard', true)
     .where('itil_priority_level', priorityLevel)
     .first();

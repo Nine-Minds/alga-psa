@@ -11,6 +11,8 @@
  */
 
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 
 // Report-related events
 export type ReportEventType =
@@ -113,6 +115,10 @@ export class ExtensionAuditService {
     this.masterTenantId = masterTenantId;
   }
 
+  private auditLogs(knex: Knex) {
+    return tenantDb(knex, this.masterTenantId).table<AuditLogEntry>('extension_audit_logs');
+  }
+
   /**
    * Log an audit event
    */
@@ -120,7 +126,7 @@ export class ExtensionAuditService {
     try {
       const knex = await getAdminConnection();
 
-      const [result] = await knex('extension_audit_logs')
+      const [result] = await this.auditLogs(knex)
         .insert({
           tenant: this.masterTenantId,
           event_type: input.eventType,
@@ -167,8 +173,8 @@ export class ExtensionAuditService {
       if (updates.errorMessage) updateData.error_message = updates.errorMessage;
       if (updates.details) updateData.details = JSON.stringify(updates.details);
 
-      await knex('extension_audit_logs')
-        .where({ tenant: this.masterTenantId, log_id: logId })
+      await this.auditLogs(knex)
+        .where({ log_id: logId })
         .update(updateData);
     } catch (error) {
       console.error('[ExtensionAuditService] Failed to update log:', error);
@@ -181,8 +187,7 @@ export class ExtensionAuditService {
   async listLogs(options: ListLogsOptions = {}): Promise<AuditLogEntry[]> {
     const knex = await getAdminConnection();
 
-    let query = knex('extension_audit_logs')
-      .where('tenant', this.masterTenantId)
+    let query = this.auditLogs(knex)
       .select('*')
       .orderBy('created_at', 'desc');
 
@@ -247,13 +252,11 @@ export class ExtensionAuditService {
     const knex = await getAdminConnection();
 
     // Total events
-    const [{ count: totalEvents }] = await knex('extension_audit_logs')
-      .where('tenant', this.masterTenantId)
+    const [{ count: totalEvents }] = await this.auditLogs(knex)
       .count('* as count');
 
     // Events by type
-    const eventsByTypeRows = await knex('extension_audit_logs')
-      .where('tenant', this.masterTenantId)
+    const eventsByTypeRows = await this.auditLogs(knex)
       .select('event_type')
       .count('* as count')
       .groupBy('event_type');
@@ -267,8 +270,7 @@ export class ExtensionAuditService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentUsers = await knex('extension_audit_logs')
-      .where('tenant', this.masterTenantId)
+    const recentUsers = await this.auditLogs(knex)
       .where('created_at', '>=', thirtyDaysAgo)
       .whereNotNull('user_id')
       .select('user_id', 'user_email')

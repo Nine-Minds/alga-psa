@@ -184,7 +184,7 @@ export const getCategoryWithSubtypesAction = withAuth(async (
       throw new Error("Category not found");
     }
 
-    const subtypes = await trx('notification_subtypes as ns')
+    const subtypes = await tenantDb(trx, tenant).table('notification_subtypes as ns')
       .leftJoin('tenant_notification_subtype_settings as tss', function() {
         this.on('tss.subtype_id', 'ns.id')
             .andOn('tss.tenant', trx.raw('?', [tenant]));
@@ -309,7 +309,7 @@ export const updateSubtypeAction = withAuth(async (
     }
 
     // Verify the subtype exists
-    const exists = await trx("notification_subtypes")
+    const exists = await tenantDb(trx, tenant).table("notification_subtypes")
       .where({ id })
       .first();
 
@@ -344,7 +344,7 @@ export const updateSubtypeAction = withAuth(async (
       });
 
     // Return the updated subtype with tenant-specific settings
-    const updated = await trx('notification_subtypes as ns')
+    const updated = await tenantDb(trx, tenant).table('notification_subtypes as ns')
       .leftJoin('tenant_notification_subtype_settings as tss', function() {
         this.on('tss.subtype_id', 'ns.id')
             .andOn('tss.tenant', trx.raw('?', [tenant]));

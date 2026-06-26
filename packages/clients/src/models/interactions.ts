@@ -162,7 +162,7 @@ class InteractionModel {
           }
 
           try {
-            const systemTypes = await db('system_interaction_types')
+            const systemTypes = await tenantScopedTable(db, scopedTenant, 'system_interaction_types')
               .select('type_id', 'type_name', 'icon')
               .whereIn('type_id', typeIds);
             systemTypes.forEach(t => typeMap.set(t.type_id, { type_name: t.type_name, icon: t.icon }));

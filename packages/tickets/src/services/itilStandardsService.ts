@@ -21,7 +21,7 @@ export class ItilStandardsService {
     const db = tenantDb(trx, tenant);
 
     // Get ITIL standard priorities from reference table
-    const itilPriorities = await trx('standard_priorities')
+    const itilPriorities = await db.table('standard_priorities')
       .where('is_itil_standard', true)
       .select('*');
 

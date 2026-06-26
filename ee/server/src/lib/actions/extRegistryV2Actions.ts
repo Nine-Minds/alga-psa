@@ -145,7 +145,8 @@ function normalizePath(path: string): string {
 }
 
 async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: string) {
-  const row = await trx('extension_version').where({ id: versionId }).first(['api_endpoints']);
+  const extensionDb = tenantDb(trx, '__extension_endpoint_materialization__');
+  const row = await extensionDb.table('extension_version').where({ id: versionId }).first(['api_endpoints']);
   if (!row) return;
   const raw = (row as any).api_endpoints;
   let endpoints: any[] = [];
@@ -176,7 +177,7 @@ async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: 
   const uniq = Array.from(deduped.values());
 
   if (uniq.length === 0) return;
-  await trx('extension_api_endpoint')
+  await extensionDb.table('extension_api_endpoint')
     .insert(uniq)
     .onConflict(['version_id', 'method', 'path'])
     .merge({ handler: trx.raw('excluded.handler'), updated_at: trx.raw('excluded.updated_at') });
@@ -202,7 +203,7 @@ export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, c
     }
     const installId = String((install as any).id);
 
-    const ev = await trx('extension_version')
+    const ev = await txDb.table('extension_version')
       .where({ registry_id: registryId, version: targetVersion })
       .first(['id']);
     if (!ev) {
@@ -220,7 +221,7 @@ export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, c
       .select(['s.id as schedule_id', 's.enabled', 'e.method', 'e.path']);
 
     // Build map (method,path) -> endpoint_id for new version.
-    const newEndpoints = await trx('extension_api_endpoint')
+    const newEndpoints = await txDb.table('extension_api_endpoint')
       .where({ version_id: newVersionId })
       .select(['id', 'method', 'path']);
     const map = new Map<string, string>();
@@ -339,7 +340,7 @@ export const uninstallExtensionV2 = withOptionalAuth(async (user, ctx, registryI
       .first(['id', 'version_id']);
     if (install?.version_id) {
       installId = (install as any).id ?? null;
-      const bundle = await knex('extension_bundle')
+      const bundle = await db.table('extension_bundle')
         .where({ version_id: (install as any).version_id })
         .orderBy('created_at', 'desc')
         .first(['content_hash']);
@@ -408,7 +409,7 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
   await assertExtensionPermissionIfUserPresent('write', knex, user);
 
   // Lookup extension version outside transaction (read-only)
-  const ev = await knex('extension_version')
+  const ev = await tenantDb(knex, tenant).table('extension_version')
     .where({ registry_id: params.registryId, version: params.version })
     .first(['id', 'capabilities']);
   if (!ev) throw new Error('Version not found');
@@ -530,7 +531,7 @@ export const getBundleInfoForInstall = withOptionalAuth(async (user, ctx, regist
     .first(['version_id']);
   if (!ti) return null;
 
-  const bundle = await knex('extension_bundle')
+  const bundle = await tenantDb(knex, tenant).table('extension_bundle')
     .where({ version_id: (ti as any).version_id })
     .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }])
     .first(['content_hash']);

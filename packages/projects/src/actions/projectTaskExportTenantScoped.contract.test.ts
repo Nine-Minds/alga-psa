@@ -14,7 +14,8 @@ describe('project task export tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'custom_task_types', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'task_checklist_items', tenant)");
-    expect(source).toContain("trx('standard_task_types')");
+    expect(source).toContain("tenantDb(trx, tenant).table('standard_task_types')");
+    expect(source).not.toContain("trx('standard_task_types')");
     expect(source).toContain(".andOn('psm.tenant', '=', 's.tenant')");
     expect(source).not.toContain(".andWhere('tenant', tenant)");
     expect(source).not.toContain(".andWhere('psm.tenant', tenant)");

@@ -9,7 +9,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IBoard, IPriority, IStatus, IUserWithRoles, DeletionValidationResult } from '@alga-psa/types';
 import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_TRIGGER_TABLE = 'survey_triggers';

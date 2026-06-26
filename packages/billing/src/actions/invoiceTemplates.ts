@@ -21,7 +21,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const GLOBAL_TEMPLATE_LOOKUP = 'global-template-lookup';
 

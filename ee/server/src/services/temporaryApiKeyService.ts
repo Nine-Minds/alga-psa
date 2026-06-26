@@ -177,7 +177,8 @@ export class TemporaryApiKeyService {
   static async cleanupExpiredAiKeys(): Promise<number> {
     return withAdminTransaction(async (trx) => {
       // Intentional admin-wide sweep: there is no single tenant context here.
-      const result = await trx('api_keys')
+      const result = await tenantDb(trx, '__temporary_api_key_cleanup__')
+        .unscoped('api_keys', 'temporary API key cleanup sweeps expired AI session keys across all tenants')
         .where({
           purpose: PURPOSE_AI_SESSION,
           active: true,

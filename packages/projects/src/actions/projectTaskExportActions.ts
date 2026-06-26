@@ -278,7 +278,7 @@ async function resolveNameLookups(
   // Resolve task type names (standard + custom)
   promises.push(
     Promise.all([
-      trx('standard_task_types')
+      tenantDb(trx, tenant).table('standard_task_types')
         .select('type_key', 'type_name')
         .where('is_active', true),
       tenantScopedTable(trx, 'custom_task_types', tenant)
