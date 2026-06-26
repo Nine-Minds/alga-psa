@@ -1207,7 +1207,7 @@
   {
     "id": "F150",
     "description": "[P7] Optional: surface Xero IsTrackedAsInventory awareness alignment (read-only flag)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7",
       "10"

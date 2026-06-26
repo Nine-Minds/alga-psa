@@ -109,7 +109,7 @@
   {
     "id": "T011",
     "description": "[consume] Fulfilling a serialized SO line sets the picked unit\u2192delivered, decrements on_hand, and captures COGS = unit_cost on the movement",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080",
       "F081",
@@ -272,7 +272,7 @@
   {
     "id": "T029",
     "description": "[rma-advance] Advance RMA: replacement received\u2192in_stock\u2192deployed relinks the SAME asset, updates its serial/MAC, and clears the old unit's asset_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124",
       "F125",
@@ -283,7 +283,7 @@
   {
     "id": "T030",
     "description": "[rma-advance] Advance RMA: dead_unit_owed sets dead_unit_due_date; returning the dead unit closes the case; missing the deadline transitions to charged\u2192closed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127",
       "F128",
@@ -293,7 +293,7 @@
   {
     "id": "T031",
     "description": "[rma-advance] Dead-units-owed aging report lists owed units sorted by days remaining",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F131"
     ]
@@ -301,7 +301,7 @@
   {
     "id": "T032",
     "description": "[dropship] Drop-ship SO line creates an is_drop_ship PO to the client; combined receipt+delivery creates a delivered unit + asset + invoice with NO on_hand change at any location",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137",
       "F138"
@@ -327,7 +327,7 @@
   {
     "id": "T035",
     "description": "[invoice] Manual 'Generate invoice' plus on-fulfillment cannot double-bill the same quantity (shared quantity_invoiced guard; invoice_item\u2194so_line link)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092",
       "F093"
@@ -336,7 +336,7 @@
   {
     "id": "T036",
     "description": "[invoice] quantity_invoiced can never exceed quantity_ordered across mixed manual+on-fulfillment triggers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
@@ -344,7 +344,7 @@
   {
     "id": "T037",
     "description": "[perm] Location scoping: a tech can adjust own van/home location but is blocked adjusting another metro's stock; a manager/admin is allowed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F140"
     ]
@@ -369,7 +369,7 @@
   {
     "id": "T040",
     "description": "[search] Units are findable by both serial AND MAC; advisory lookup by a serial/MAC list returns matching in-stock AND deployed units",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F039",
@@ -396,7 +396,7 @@
   {
     "id": "T043",
     "description": "[report] Inventory value = \u03a3(on_hand \u00d7 cost) reconciles after a receipt+consume sequence; margin = sell \u2212 COGS computes correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143",
       "F144"

@@ -17,6 +17,28 @@ async function requireInvRead(user: any): Promise<void> {
   }
 }
 
+/**
+ * Accounting awareness (F150): surface which Alga products are inventory-tracked,
+ * i.e. the Alga-side equivalent of Xero's IsTrackedAsInventory / QBO's "Inventory"
+ * item type. Read-only — Alga never dual-writes stock to the accounting system;
+ * this report lets an MSP reconcile Alga's tracked SKUs against their books.
+ */
+export const getAccountingInventoryAlignment = withAuth(
+  async (user, { tenant }): Promise<Array<{ service_id: string; service_name: string; sku: string | null; track_stock: boolean; is_serialized: boolean; average_cost: number | null }>> => {
+    await requireInvRead(user);
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return trx('product_inventory_settings as pis')
+        .join('service_catalog as sc', function () {
+          this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
+        })
+        .where({ 'pis.tenant': tenant, 'pis.track_stock': true })
+        .select('pis.service_id', 'sc.service_name', 'sc.sku', 'pis.track_stock', 'pis.is_serialized', 'pis.average_cost')
+        .orderBy('sc.service_name', 'asc');
+    });
+  },
+);
+
 export interface InventoryValueLocationRow {
   location_id: string;
   location_name: string;
