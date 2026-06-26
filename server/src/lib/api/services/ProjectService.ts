@@ -84,11 +84,9 @@ async function resolveProjectStatusInfo(
   const db = tenantDb(trx, tenant);
   const query = db.table('project_status_mappings as psm');
   db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
 
   const row = await query
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
       trx.raw(
@@ -1144,6 +1142,13 @@ export class ProjectService extends BaseService<IProject> {
             'project_status_mapping.project_status_mapping_id',
             { type: 'left' }
           );
+          db.tenantJoin(
+            query,
+            'standard_statuses',
+            'project_status_mapping.standard_status_id',
+            'standard_statuses.standard_status_id',
+            { type: 'left' }
+          );
           return query
           .where({
             'project_phases.project_id': projectId
@@ -1154,9 +1159,6 @@ export class ProjectService extends BaseService<IProject> {
             knex.raw('SUM(project_tasks.estimated_hours) as total_estimated_hours'),
             knex.raw('SUM(project_tasks.actual_hours) as total_actual_hours')
           ])
-          .leftJoin('standard_statuses', function joinStandardStatuses(this: Knex.JoinClause) {
-            this.on('project_status_mapping.standard_status_id', '=', 'standard_statuses.standard_status_id');
-          })
           .first();
         })()
       ]);
@@ -1283,11 +1285,9 @@ export class ProjectService extends BaseService<IProject> {
     const query = db.table<IProjectStatusMapping>('project_status_mappings as psm')
       .where({ 'psm.project_id': projectId });
     db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+    db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
 
     query
-      .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-        this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-      })
       .select(
         'psm.*',
         knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),

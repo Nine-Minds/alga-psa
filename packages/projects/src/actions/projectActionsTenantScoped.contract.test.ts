@@ -25,12 +25,13 @@ describe('project actions tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'clients', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'projects', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings as psm', tenant)");
+    expect(source).toContain("db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss'");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'project_tasks', tenantId)");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'project_ticket_links', tenantId)");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'email_reply_tokens', tenantId)");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'user_preferences', tenantId)");
     expect(source).toContain("tenantScopedTable(trx, 'statuses', tenant)");
-    expect(source).toContain("trx<IStandardStatus>('standard_statuses')");
+    expect(source).toContain("tenantDb(trx, tenant).table<IStandardStatus>('standard_statuses')");
     expect(source).not.toContain(".where({ tenant })");
     expect(source).not.toContain(".where('tenant', tenant)");
     expect(source).not.toContain(".andWhere('tenant', tenant)");

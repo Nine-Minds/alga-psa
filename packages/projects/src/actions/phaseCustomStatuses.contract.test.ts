@@ -221,8 +221,8 @@ describe('per-phase custom status scenarios', () => {
       expect(projectStatusMappingUtilsSource).toContain(
         "async function getScopedProjectStatusMappings("
       );
-      expect(projectStatusMappingUtilsSource).toContain("leftJoin('statuses");
-      expect(projectStatusMappingUtilsSource).toContain("leftJoin('standard_statuses");
+      expect(projectStatusMappingUtilsSource).toContain("db.tenantJoin(query, 'statuses as s'");
+      expect(projectStatusMappingUtilsSource).toContain("db.tenantJoin(query, 'standard_statuses as ss'");
     });
 
     it('resolveReplacementStatusMapping finds a matching default status', () => {

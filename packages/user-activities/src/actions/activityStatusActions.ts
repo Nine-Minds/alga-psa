@@ -296,9 +296,13 @@ export const getActivityStatusOptions = withAuth(async (
             "s.status_id",
             { type: "left" }
           );
-        })
-        .leftJoin("standard_statuses as ss", function () {
-          this.on("psm.standard_status_id", "=", "ss.standard_status_id");
+          scopedDb.tenantJoin(
+            queryBuilder,
+            "standard_statuses as ss",
+            "psm.standard_status_id",
+            "ss.standard_status_id",
+            { type: "left" }
+          );
         })
         .where("psm.project_id", task.project_id)
         .where("psm.phase_id", task.phase_id)
@@ -331,9 +335,13 @@ export const getActivityStatusOptions = withAuth(async (
             "s.status_id",
             { type: "left" }
           );
-        })
-        .leftJoin("standard_statuses as ss", function () {
-          this.on("psm.standard_status_id", "=", "ss.standard_status_id");
+          scopedDb.tenantJoin(
+            queryBuilder,
+            "standard_statuses as ss",
+            "psm.standard_status_id",
+            "ss.standard_status_id",
+            { type: "left" }
+          );
         })
         .where("psm.project_id", task.project_id)
         .whereNull("psm.phase_id")

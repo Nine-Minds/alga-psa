@@ -380,9 +380,7 @@ async function fetchProjectTaskWebhookRow(
     type: 'left',
     rootTenantColumn: 'psm.tenant',
   });
-  query.leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-    this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-  });
+  db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   db.tenantJoin(query, 'users as au', 'pt.assigned_to', 'au.user_id', { type: 'left' });
   db.tenantJoin(query, 'priorities as pr', 'pt.priority_id', 'pr.priority_id', { type: 'left' });
 
@@ -482,9 +480,7 @@ export async function fetchProjectTaskCountsForWebhook(
     type: 'left',
     rootTenantColumn: 'psm.tenant',
   });
-  query.leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-    this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-  });
+  db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
 
   const rows = await query
     .select(
@@ -533,9 +529,7 @@ async function fetchProjectStatusName(
     type: 'left',
     rootTenantColumn: 'psm.tenant',
   });
-  mappingQuery.leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-    this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-  });
+  db.tenantJoin(mappingQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
 
   const mapping = await mappingQuery
     .where({

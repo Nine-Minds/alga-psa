@@ -486,10 +486,10 @@ export const getProjectsWithPhases = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
-      const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
-        .leftJoin('standard_statuses as ss', function () {
-          this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-        })
+      const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+      db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+      db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      statusMappingsQuery
         .select(
           'psm.project_status_mapping_id as mapping_id',
           'psm.project_id',
@@ -499,7 +499,6 @@ export const getProjectsWithPhases = withAuth(async (
           'psm.display_order'
         )
         .orderBy('psm.display_order');
-      db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
 
       const [projects, phases, statusMappings] = await Promise.all([
         tenantScopedTable(trx, 'projects', tenant)
@@ -1541,7 +1540,7 @@ async function fetchStatusesForMappings(
 
     const [standardStatusRows, customStatusRows] = await Promise.all([
         standardIds.length > 0
-            ? trx<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
+            ? tenantDb(trx, tenant).table<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
             : [],
         customIds.length > 0
             ? tenantScopedTable(trx, 'statuses', tenant).whereIn('status_id', customIds)

@@ -88,10 +88,8 @@ async function resolveProjectStatusInfo(
 ): Promise<{ status: string; isClosed: boolean }> {
   const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
   tenantDb(trx, tenant).tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  tenantDb(trx, tenant).tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   const row = await query
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
       trx.raw(
@@ -134,10 +132,8 @@ async function getProjectStatusMappingDetails(
 ): Promise<ProjectStatusMappingDetails | null> {
   const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
   tenantDb(trx, tenant).tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  tenantDb(trx, tenant).tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   const row = await query
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
       'psm.*',

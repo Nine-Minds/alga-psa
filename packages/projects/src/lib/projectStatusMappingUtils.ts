@@ -17,9 +17,6 @@ export async function getScopedProjectStatusMappings(
   const db = tenantDb(trx, tenant);
   const query = db
     .table('project_status_mappings as psm')
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
     .where({ 'psm.project_id': projectId })
     .select(
       'psm.*',
@@ -27,6 +24,7 @@ export async function getScopedProjectStatusMappings(
       trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as name'),
       trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
     );
+  db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
 
   if (phaseId) {
@@ -35,5 +33,6 @@ export async function getScopedProjectStatusMappings(
     query.whereNull('psm.phase_id');
   }
 
-  return query.orderBy('psm.display_order');
+  const rows = await query.orderBy('psm.display_order');
+  return rows as unknown as ProjectStatusMappingDetails[];
 }
