@@ -5,6 +5,7 @@
  */
 
 import { createTenantKnex } from '../src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 async function verifyTagMigration() {
   const { knex } = await createTenantKnex();
@@ -119,14 +120,15 @@ async function verifyTagMigration() {
     
     // New system query
     const newStart = Date.now();
-    await knex('tag_mappings as tm')
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
-      .where('tm.tenant', sampleOldTags[0]?.tenant || '')
-      .where('tm.tagged_type', 'ticket')
-      .select('*');
+    const sampleTenant = sampleOldTags[0]?.tenant;
+    if (sampleTenant) {
+      const scopedDb = tenantDb(knex, sampleTenant);
+      const newSystemQuery = scopedDb.table('tag_mappings as tm');
+      scopedDb.tenantJoin(newSystemQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+      await newSystemQuery
+        .where('tm.tagged_type', 'ticket')
+        .select('*');
+    }
     const newTime = Date.now() - newStart;
     
     console.log(`   Old system query time: ${oldTime}ms`);

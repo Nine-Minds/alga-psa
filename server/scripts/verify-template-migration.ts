@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 
 import knexFactory, { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -41,11 +42,12 @@ async function countQuery(query: Knex.QueryBuilder): Promise<number> {
 
 async function summarizeTenant(tenant: string): Promise<SummaryMismatch[]> {
   const mismatches: SummaryMismatch[] = [];
+  const tenantFacade = tenantDb(db, tenant);
 
   const legacyTemplateCount = await countQuery(
-    db('contracts').where({ tenant, is_template: true })
+    tenantFacade.table('contracts').where({ is_template: true })
   );
-  const newTemplateCount = await countQuery(db('contract_templates').where({ tenant }));
+  const newTemplateCount = await countQuery(tenantFacade.table('contract_templates'));
   if (legacyTemplateCount !== newTemplateCount) {
     mismatches.push({
       entity: 'templates',
@@ -55,15 +57,13 @@ async function summarizeTenant(tenant: string): Promise<SummaryMismatch[]> {
     });
   }
 
+  const legacyLineQuery = tenantFacade.table('contract_line_mappings as map');
+  tenantFacade.tenantJoin(legacyLineQuery, 'contracts as c', 'map.contract_id', 'c.contract_id');
   const legacyLineCount = await countQuery(
-    db('contract_line_mappings as map')
-      .join('contracts as c', function joinTemplates() {
-        this.on('map.contract_id', '=', 'c.contract_id').andOn('map.tenant', '=', 'c.tenant');
-      })
-      .where({ 'map.tenant': tenant, 'c.is_template': true })
+    legacyLineQuery.where({ 'c.is_template': true })
   );
   const newLineCount = await countQuery(
-    db('contract_template_line_mappings').where({ tenant })
+    tenantFacade.table('contract_template_line_mappings')
   );
   if (legacyLineCount !== newLineCount) {
     mismatches.push({
@@ -74,31 +74,17 @@ async function summarizeTenant(tenant: string): Promise<SummaryMismatch[]> {
     });
   }
 
+  const legacyServiceQuery = tenantFacade.table('contract_line_services as svc');
+  tenantFacade.tenantJoin(legacyServiceQuery, 'contract_line_mappings as map', 'svc.contract_line_id', 'map.contract_line_id');
+  tenantFacade.tenantJoin(legacyServiceQuery, 'contracts as c', 'map.contract_id', 'c.contract_id');
   const legacyServiceCount = await countQuery(
-    db('contract_line_services as svc')
-      .join('contract_line_mappings as map', function joinMappings() {
-        this.on('svc.contract_line_id', '=', 'map.contract_line_id').andOn(
-          'svc.tenant',
-          '=',
-          'map.tenant'
-        );
-      })
-      .join('contracts as c', function joinTemplates() {
-        this.on('map.contract_id', '=', 'c.contract_id').andOn('map.tenant', '=', 'c.tenant');
-      })
-      .where({ 'svc.tenant': tenant, 'c.is_template': true })
+    legacyServiceQuery.where({ 'c.is_template': true })
   );
 
+  const newServiceQuery = tenantFacade.table('contract_template_line_services as svc');
+  tenantFacade.tenantJoin(newServiceQuery, 'contract_template_line_mappings as map', 'svc.template_line_id', 'map.template_line_id');
   const newServiceCount = await countQuery(
-    db('contract_template_line_services as svc')
-      .join('contract_template_line_mappings as map', function joinMappings() {
-        this.on('svc.template_line_id', '=', 'map.template_line_id').andOn(
-          'svc.tenant',
-          '=',
-          'map.tenant'
-        );
-      })
-      .where({ 'svc.tenant': tenant })
+    newServiceQuery
   );
 
   if (legacyServiceCount !== newServiceCount) {
@@ -110,31 +96,17 @@ async function summarizeTenant(tenant: string): Promise<SummaryMismatch[]> {
     });
   }
 
+  const legacyConfigQuery = tenantFacade.table('contract_line_service_configuration as cfg');
+  tenantFacade.tenantJoin(legacyConfigQuery, 'contract_line_mappings as map', 'cfg.contract_line_id', 'map.contract_line_id');
+  tenantFacade.tenantJoin(legacyConfigQuery, 'contracts as c', 'map.contract_id', 'c.contract_id');
   const legacyConfigCount = await countQuery(
-    db('contract_line_service_configuration as cfg')
-      .join('contract_line_mappings as map', function joinMappings() {
-        this.on('cfg.contract_line_id', '=', 'map.contract_line_id').andOn(
-          'cfg.tenant',
-          '=',
-          'map.tenant'
-        );
-      })
-      .join('contracts as c', function joinTemplates() {
-        this.on('map.contract_id', '=', 'c.contract_id').andOn('map.tenant', '=', 'c.tenant');
-      })
-      .where({ 'cfg.tenant': tenant, 'c.is_template': true })
+    legacyConfigQuery.where({ 'c.is_template': true })
   );
 
+  const newConfigQuery = tenantFacade.table('contract_template_line_service_configuration as cfg');
+  tenantFacade.tenantJoin(newConfigQuery, 'contract_template_line_mappings as map', 'cfg.template_line_id', 'map.template_line_id');
   const newConfigCount = await countQuery(
-    db('contract_template_line_service_configuration as cfg')
-      .join('contract_template_line_mappings as map', function joinMappings() {
-        this.on('cfg.template_line_id', '=', 'map.template_line_id').andOn(
-          'cfg.tenant',
-          '=',
-          'map.tenant'
-        );
-      })
-      .where({ 'cfg.tenant': tenant })
+    newConfigQuery
   );
 
   if (legacyConfigCount !== newConfigCount) {

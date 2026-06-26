@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Local database connection for testing
@@ -168,12 +169,11 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 
     async getUserRoles(userId: string, tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('user_roles as ur')
-          .join('roles as r', function() {
-            this.on('ur.role_id', 'r.role_id')
-                .andOn('ur.tenant', 'r.tenant');
-          })
-          .where({ 'ur.user_id': userId, 'ur.tenant': tenantId })
+        const db = tenantDb(trx, tenantId);
+        const query = db.table('user_roles as ur');
+        db.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id');
+        return await query
+          .where({ 'ur.user_id': userId })
           .select('r.*', 'ur.*');
       });
     },
