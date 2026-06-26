@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "T408A",
+      "title": "Annotate remaining runtime/admin tenant deletion boundary",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "main",
+      "notes": "Inspect ee/temporal-workflows/src/activities/tenant-deletion-activities.ts residual direct tenant root and convert to tenant facade or explicit unscoped admin boundary."
+    },
+    {
+      "id": "T408B",
+      "title": "Migrate billing helper and small script residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Herschel",
+      "notes": "server/test-utils/billingTestHelpers.ts, server/scripts/verify-tag-migration.ts, server/seeds/dev/42_time_entries.cjs."
+    },
+    {
+      "id": "T408C",
+      "title": "Migrate workflow harness raw fixture joins",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Gauss",
+      "notes": "ee/test-data/workflow-harness fixture SQL fragments should use existing tenant SQL helpers where mechanical."
+    },
+    {
+      "id": "T408D",
+      "title": "Migrate Temporal workflow tests to tenant facade helpers",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Erdos",
+      "notes": "ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts and focused simple activity tests."
+    },
+    {
+      "id": "T408E",
+      "title": "Migrate server ticket/email integration test roots",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Epicurus",
+      "notes": "Server-side integration/unit tests with repeated ticket/client/status direct roots."
+    },
+    {
+      "id": "T408F",
+      "title": "Migrate EE server integration test roots",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Beauvoir",
+      "notes": "EE RMM/Huntress/ticket-response/live-update/project-status integration tests."
+    }
+  ]
+}

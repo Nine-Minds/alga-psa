@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 
-const { deleteTenantRows, pickTenantOne, selectTenantRows } = require('../_lib/tenant-sql.cjs');
+const { deleteTenantRows, pickTenantOne, selectTenantRows, tenantJoin } = require('../_lib/tenant-sql.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
@@ -104,7 +104,11 @@ module.exports = async function run(ctx) {
 
   const tasks = await selectTenantRows(ctx, {
     columns: 't.task_id, t.task_name',
-    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    from: tenantJoin('project_tasks t', 'project_phases p', {
+      leftAlias: 't',
+      rightAlias: 'p',
+      on: 'p.phase_id = t.phase_id'
+    }),
     tenantAlias: 'p',
     tenantId,
     where: 'p.project_id = $2',

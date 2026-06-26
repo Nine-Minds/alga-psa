@@ -499,6 +499,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 ];
 
 const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
+const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
 
 type TenantColumnName = 'tenant' | 'tenant_id';
 
@@ -517,7 +518,8 @@ const logger = () => Context.current().log;
 async function getManagementTenantIdInternal(knex: Knex): Promise<string | null> {
   const MANAGEMENT_TENANT_NAME = 'Nine Minds LLC';
 
-  const tenant = await knex('tenants')
+  const tenant = await tenantDb(knex, MANAGEMENT_TENANT_DISCOVERY_CONTEXT)
+    .unscoped('tenants', 'tenant deletion must discover the management tenant before tenant context is known')
     .where('client_name', MANAGEMENT_TENANT_NAME)
     .first();
 

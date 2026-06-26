@@ -83,6 +83,7 @@ import {
 } from '@alga-psa/shared/lib/ticketChecklists';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { updateTicketInTransaction } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
+import { tenantDb } from '@alga-psa/db';
 import {
   createCloseRulesFixture,
   insertTicket,
@@ -93,6 +94,10 @@ const HOOK_TIMEOUT = 240_000;
 
 let db: Knex;
 let fixture: CloseRulesFixture;
+
+function scopedDbFor(tenantId: string) {
+  return tenantDb(db, tenantId);
+}
 
 async function createTemplateWithItems(
   names: Array<{ name: string; required?: boolean }>
@@ -112,7 +117,10 @@ describe('ticket checklists', () => {
     db = await createTestDbConnection();
     dbRef.knex = db;
 
-    const seededUser = await db('users').where({ user_type: 'internal' }).first();
+    const seededUser = await tenantDb(db, '__test_discovery__')
+      .unscoped('users', 'test discovery of seeded internal user for checklist integration')
+      .where({ user_type: 'internal' })
+      .first();
     expect(seededUser).toBeTruthy();
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
@@ -174,8 +182,8 @@ describe('ticket checklists', () => {
     expect(uncompleted.completed_by).toBeNull();
     expect(uncompleted.completed_at).toBeNull();
 
-    const audits = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+    const audits = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+      .where({ ticket_id: ticketId })
       .whereIn('event_type', ['TICKET_CHECKLIST_ITEM_COMPLETED', 'TICKET_CHECKLIST_ITEM_UNCOMPLETED'])
       .orderBy('created_at', 'asc');
     expect(audits.map((a: any) => a.event_type)).toEqual([
@@ -216,8 +224,8 @@ describe('ticket checklists', () => {
     expect(items.every((i) => i.source === 'template')).toBe(true);
     expect(items.filter((i) => i.template_id === templateA).length).toBe(2);
 
-    const applyAudit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' })
+    const applyAudit = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' })
       .select('audit_id');
     expect(applyAudit.length).toBe(2);
   });
@@ -231,8 +239,8 @@ describe('ticket checklists', () => {
     );
     const before = await getTicketChecklistItems(ticketId);
 
-    const templateItems = await db('checklist_template_items')
-      .where({ tenant: fixture.tenantId, template_id: templateId })
+    const templateItems = await scopedDbFor(fixture.tenantId).table('checklist_template_items')
+      .where({ template_id: templateId })
       .orderBy('order_number');
     await updateChecklistTemplateItem(templateItems[0].template_item_id, { item_name: 'Renamed in template' });
     await deleteChecklistTemplateItem(templateItems[1].template_item_id);
@@ -278,8 +286,8 @@ describe('ticket checklists', () => {
 
     // Other tests may register additional board-wide rules (suite order is
     // shuffled), so assert membership rather than the exact list.
-    const items = await db('ticket_checklist_items')
-      .where({ tenant: fixture.tenantId, ticket_id: result.ticket_id })
+    const items = await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+      .where({ ticket_id: result.ticket_id })
       .select('item_name', 'template_id');
     const names = items.map((i: any) => i.item_name);
     expect(names).toContain('Board-scoped step');
@@ -292,7 +300,7 @@ describe('ticket checklists', () => {
     // Dedicated board so apply rules registered by other tests can't match.
     const localFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
     const categoryId = uuidv4();
-    await db('categories').insert({
+    await scopedDbFor(localFixture.tenantId).table('categories').insert({
       tenant: localFixture.tenantId,
       category_id: categoryId,
       category_name: `Close Rules Category ${categoryId.slice(0, 6)}`,

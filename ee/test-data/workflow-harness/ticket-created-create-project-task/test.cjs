@@ -1,9 +1,24 @@
 const { randomUUID } = require('node:crypto');
 
-const { deleteTenantRows, pickTenantOne, selectTenantRows } = require('../_lib/tenant-sql.cjs');
+const {
+  deleteTenantRows,
+  pickTenantOne,
+  selectTenantRows,
+  tenantEquals,
+  tenantJoin,
+  tenantWhere
+} = require('../_lib/tenant-sql.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
+}
+
+function projectTasksWithPhasesFrom() {
+  return tenantJoin('project_tasks t', 'project_phases p', {
+    leftAlias: 't',
+    rightAlias: 'p',
+    on: 'p.phase_id = t.phase_id'
+  });
 }
 
 async function deleteTicketWithDbFallback(ctx, { tenantId, ticketId, apiKey }) {
@@ -36,30 +51,29 @@ async function deleteProjectWithDbFallback(ctx, { tenantId, projectId, apiKey })
   // Remove any ticket links first (FKs to tickets/projects/tasks/phases).
   await deleteTenantRows(ctx, { table: 'project_ticket_links', tenantId, where: 'project_id = $2', params: [projectId] });
 
-  // Remove task dependencies for tasks under this project.
+  // Intentionally raw: helper wrappers do not model DELETE USING/CTE cleanup.
   await ctx.dbWrite.query(
     `
       with project_tasks_in_project as (
         select t.task_id
-        from project_tasks t
-        join project_phases p on p.tenant = t.tenant and p.phase_id = t.phase_id
-        where p.tenant = $1 and p.project_id = $2
+        from ${projectTasksWithPhasesFrom()}
+        where ${tenantWhere('p')} and p.project_id = $2
       )
       delete from project_task_dependencies d
       using project_tasks_in_project pt
-      where d.tenant = $1
+      where ${tenantWhere('d')}
         and (d.predecessor_task_id = pt.task_id or d.successor_task_id = pt.task_id)
     `,
     [tenantId, projectId]
   );
 
-  // Remove project tasks (cascades task_checklist_items/task_resources/task_comments).
+  // Intentionally raw: DELETE USING removes all tasks under project phases in one cleanup query.
   await ctx.dbWrite.query(
     `
       delete from project_tasks t
       using project_phases p
-      where t.tenant = $1
-        and p.tenant = t.tenant
+      where ${tenantWhere('t')}
+        and ${tenantEquals('p', 't')}
         and p.phase_id = t.phase_id
         and p.project_id = $2
     `,
@@ -160,7 +174,7 @@ module.exports = async function run(ctx) {
 
   const tasks = await selectTenantRows(ctx, {
     columns: 't.task_id, t.task_name',
-    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    from: projectTasksWithPhasesFrom(),
     tenantAlias: 'p',
     tenantId,
     where: 'p.project_id = $2',

@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 
-const { deleteTenantRows, pickTenantOne, selectTenantRows } = require('../_lib/tenant-sql.cjs');
+const { deleteTenantRows, pickTenantOne, selectTenantRows, tenantJoin } = require('../_lib/tenant-sql.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
@@ -26,6 +26,7 @@ async function ensureDefaultProjectStatus(ctx, { tenantId, createdByUserId }) {
   const nextOrder = Number(maxRow?.[0]?.max_order ?? 0) + 1;
 
   const name = 'Fixture Project Default';
+  // Intentionally raw: the fixture needs ON CONFLICT while creating a default project status.
   await ctx.dbWrite.query(
     `
       insert into statuses (tenant, name, status_type, order_number, is_closed, item_type, is_default, created_by)
@@ -187,7 +188,11 @@ module.exports = async function run(ctx) {
 
   const tasks = await selectTenantRows(ctx, {
     columns: 't.task_id, t.task_name',
-    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    from: tenantJoin('project_tasks t', 'project_phases p', {
+      leftAlias: 't',
+      rightAlias: 'p',
+      on: 'p.phase_id = t.phase_id'
+    }),
     tenantAlias: 'p',
     tenantId,
     where: 'p.project_id = $2',

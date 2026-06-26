@@ -19,6 +19,20 @@ function tenantWhere(alias, paramIndex = 1) {
   return `${tenantColumn(alias)} = $${paramIndex}`;
 }
 
+function tenantEquals(leftAlias, rightAlias) {
+  return `${tenantColumn(leftAlias)} = ${tenantColumn(rightAlias)}`;
+}
+
+function tenantJoin(leftSource, rightSource, options = {}) {
+  const { leftAlias, rightAlias, on, joinType = 'join' } = options;
+  if (!leftSource || !rightSource || !leftAlias || !rightAlias) {
+    throw new Error('tenantJoin requires leftSource, rightSource, leftAlias, and rightAlias');
+  }
+
+  const clauses = [tenantEquals(rightAlias, leftAlias), ...asArray(on)];
+  return `${leftSource} ${joinType} ${rightSource} on ${clauses.join(' and ')}`;
+}
+
 function tenantParams(ctx, params = [], tenantId) {
   return [requireTenantId(ctx, tenantId), ...params];
 }
@@ -124,6 +138,8 @@ module.exports = {
   pickTenantOne,
   selectTenantOne,
   selectTenantRows,
+  tenantEquals,
+  tenantJoin,
   tenantParams,
   tenantWhere,
   updateTenantRows

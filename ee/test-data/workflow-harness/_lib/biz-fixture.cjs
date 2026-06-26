@@ -5,6 +5,7 @@ const {
   deleteTenantRows,
   pickTenantOne,
   selectTenantRows,
+  tenantJoin,
   updateTenantRows
 } = require('./tenant-sql.cjs');
 
@@ -227,7 +228,11 @@ async function cleanupProjectTasksByMarker(ctx, { tenantId, projectId, marker })
   const titleLike = `%${marker}%`;
   const taskIds = await selectTenantRows(ctx, {
     columns: 't.task_id',
-    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    from: tenantJoin('project_tasks t', 'project_phases p', {
+      leftAlias: 't',
+      rightAlias: 'p',
+      on: 'p.phase_id = t.phase_id'
+    }),
     tenantAlias: 'p',
     tenantId,
     where: ['p.project_id = $2', 't.task_name like $3'],
@@ -299,7 +304,11 @@ async function listTicketComments(ctx, { tenantId, ticketId, limit = 50 }) {
 async function listProjectTasks(ctx, { tenantId, projectId, limit = 50 }) {
   return selectTenantRows(ctx, {
     columns: 't.task_id, t.task_name, t.created_at',
-    from: 'project_tasks t join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant',
+    from: tenantJoin('project_tasks t', 'project_phases p', {
+      leftAlias: 't',
+      rightAlias: 'p',
+      on: 'p.phase_id = t.phase_id'
+    }),
     tenantAlias: 'p',
     tenantId,
     where: 'p.project_id = $2',

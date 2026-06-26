@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 
-const { deleteTenantRows, pickTenantOne, selectTenantRows } = require('../_lib/tenant-sql.cjs');
+const { deleteTenantRows, pickTenantOne, selectTenantRows, tenantJoin } = require('../_lib/tenant-sql.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
@@ -9,7 +9,19 @@ function getApiKey() {
 async function ensureUserWithRole(ctx, { tenantId, roleName, label }) {
   const rows = await selectTenantRows(ctx, {
     columns: 'u.user_id',
-    from: 'users u join user_roles ur on ur.tenant = u.tenant and ur.user_id = u.user_id join roles r on r.tenant = ur.tenant and r.role_id = ur.role_id',
+    from: tenantJoin(
+      tenantJoin('users u', 'user_roles ur', {
+        leftAlias: 'u',
+        rightAlias: 'ur',
+        on: 'ur.user_id = u.user_id'
+      }),
+      'roles r',
+      {
+        leftAlias: 'ur',
+        rightAlias: 'r',
+        on: 'r.role_id = ur.role_id'
+      }
+    ),
     tenantAlias: 'u',
     tenantId,
     where: 'lower(r.role_name) = $2',
@@ -37,6 +49,7 @@ async function ensureUserWithRole(ctx, { tenantId, roleName, label }) {
     orderBy: 'created_at asc'
   });
 
+  // Intentionally raw: the fixture needs idempotent role assignment via ON CONFLICT.
   await ctx.dbWrite.query(
     `
       insert into user_roles (tenant, user_id, role_id)
@@ -154,7 +167,11 @@ module.exports = async function run(ctx) {
 
   const entries = await selectTenantRows(ctx, {
     columns: 'se.entry_id, se.title, se.work_item_type, se.work_item_id, sea.user_id, se.scheduled_start, se.scheduled_end',
-    from: 'schedule_entries as se join schedule_entry_assignees as sea on sea.tenant = se.tenant and sea.entry_id = se.entry_id',
+    from: tenantJoin('schedule_entries as se', 'schedule_entry_assignees as sea', {
+      leftAlias: 'se',
+      rightAlias: 'sea',
+      on: 'sea.entry_id = se.entry_id'
+    }),
     tenantAlias: 'se',
     tenantId,
     where: ['sea.user_id = $2', "se.work_item_type = 'ticket'", 'se.work_item_id = $3'],

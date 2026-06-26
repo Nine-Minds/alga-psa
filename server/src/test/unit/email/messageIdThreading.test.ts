@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { findTicketByEmailThread, type FindTicketByEmailThreadInput } from '@alga-psa/workflows/actions/emailWorkflowActions';
+import { tenantDb } from '@alga-psa/db';
 
 describe('Message-ID Based Email Threading', () => {
   let knex: Knex;
@@ -10,19 +11,29 @@ describe('Message-ID Based Email Threading', () => {
   let testClientId: string;
   const cleanup: (() => Promise<void>)[] = [];
 
+  function scopedDbFor(tenantId: string) {
+    return tenantDb(knex, tenantId);
+  }
+
+  function ticketsTable(tenantId = testTenant) {
+    return scopedDbFor(tenantId).table('tickets');
+  }
+
   beforeAll(async () => {
     // Create test database with migrations and seeds
     knex = await createTestDbConnection();
 
     // Get the tenant that was created by seeds
-    const tenant = await knex('tenants').first('tenant');
+    const tenant = await tenantDb(knex, '__test_discovery__')
+      .unscoped('tenants', 'test discovery of seeded tenant for Message-ID threading')
+      .first('tenant');
     if (!tenant) {
       throw new Error('No tenant found in database after seeds');
     }
     testTenant = tenant.tenant;
 
     // Get or create a test client
-    const client = await knex('clients').where({ tenant: testTenant }).first('client_id');
+    const client = await scopedDbFor(testTenant).table('clients').first('client_id');
     if (!client) {
       throw new Error('No client found in database after seeds');
     }
@@ -52,7 +63,7 @@ describe('Message-ID Based Email Threading', () => {
       const originalMessageId = `<original-${Date.now()}@customer.com>`;
 
       // Create ticket with original inbound email's Message-ID
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -67,7 +78,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Simulate inbound reply with In-Reply-To header
@@ -87,7 +98,7 @@ describe('Message-ID Based Email Threading', () => {
       const outboundMessageId = `<outbound-${Date.now()}@alga-psa.example.com>`;
 
       // Create ticket and add outbound Message-ID to references
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -101,7 +112,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Customer replies to agent's email (In-Reply-To points to outbound Message-ID)
@@ -121,7 +132,7 @@ describe('Message-ID Based Email Threading', () => {
       const ticketId = uuidv4();
       const originalMessageId = `<original-${Date.now()}@customer.com>`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -134,7 +145,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Inbound email has References header (typical for replies to replies)
@@ -156,7 +167,7 @@ describe('Message-ID Based Email Threading', () => {
       const outboundMsg1 = `<outbound-1-${Date.now()}@alga-psa.example.com>`;
       const outboundMsg2 = `<outbound-2-${Date.now() + 1}@alga-psa.example.com>`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -170,7 +181,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Customer reply references the second outbound message
@@ -193,7 +204,7 @@ describe('Message-ID Based Email Threading', () => {
       const ticketId = uuidv4();
       const threadId = `thread-${uuidv4()}`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -207,7 +218,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       const threadInput: FindTicketByEmailThreadInput = {
@@ -225,7 +236,7 @@ describe('Message-ID Based Email Threading', () => {
       const ticketId = uuidv4();
       const threadId = `nested-thread-${uuidv4()}`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -241,7 +252,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       const threadInput: FindTicketByEmailThreadInput = {
@@ -261,7 +272,7 @@ describe('Message-ID Based Email Threading', () => {
       const threadId = `priority-thread-${uuidv4()}`;
       const messageId = `<msg-${Date.now()}@example.com>`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -275,7 +286,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Provide both thread ID and Message-ID
@@ -296,7 +307,7 @@ describe('Message-ID Based Email Threading', () => {
       const ticketId = uuidv4();
       const messageId = `<fallback-msg-${Date.now()}@example.com>`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -309,7 +320,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       const threadInput: FindTicketByEmailThreadInput = {
@@ -327,7 +338,7 @@ describe('Message-ID Based Email Threading', () => {
       const ticketId = uuidv4();
       const messageId = `<ref-msg-${Date.now()}@example.com>`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -340,7 +351,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       const threadInput: FindTicketByEmailThreadInput = {
@@ -374,7 +385,7 @@ describe('Message-ID Based Email Threading', () => {
       const correctTicketId = uuidv4();
       const targetMessageId = `<target-${Date.now()}@example.com>`;
 
-      await knex('tickets').insert([
+      await ticketsTable().insert([
         {
           tenant: testTenant,
           ticket_id: malformedThreadTicketId,
@@ -402,7 +413,7 @@ describe('Message-ID Based Email Threading', () => {
         }
       ]);
       cleanup.push(async () => {
-        await knex('tickets').whereIn('ticket_id', [malformedThreadTicketId, correctTicketId]).andWhere({ tenant: testTenant }).del();
+        await ticketsTable().whereIn('ticket_id', [malformedThreadTicketId, correctTicketId]).del();
       });
 
       const result = await findTicketByEmailThread(
@@ -421,7 +432,7 @@ describe('Message-ID Based Email Threading', () => {
       const ticketId = uuidv4();
       const referencedMessageId = `<ref-single-${Date.now()}@example.com>`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -434,7 +445,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       const result = await findTicketByEmailThread(
@@ -457,16 +468,18 @@ describe('Message-ID Based Email Threading', () => {
       const otherClientId = uuidv4();
 
       // Create other tenant
-      await knex('tenants').insert({
-        tenant: otherTenant,
-        client_name: 'Other Tenant',
-        email: 'other-tenant@example.com',
-        created_at: new Date(),
-        updated_at: new Date()
-      });
+      await tenantDb(knex, '__test_discovery__')
+        .unscoped('tenants', 'test fixture creates cross-tenant isolation tenant')
+        .insert({
+          tenant: otherTenant,
+          client_name: 'Other Tenant',
+          email: 'other-tenant@example.com',
+          created_at: new Date(),
+          updated_at: new Date()
+        });
 
       // Create client for other tenant
-      await knex('clients').insert({
+      await scopedDbFor(otherTenant).table('clients').insert({
         client_id: otherClientId,
         tenant: otherTenant,
         client_name: 'Other Tenant Client',
@@ -475,7 +488,7 @@ describe('Message-ID Based Email Threading', () => {
       });
 
       // Create ticket in different tenant
-      await knex('tickets').insert({
+      await ticketsTable(otherTenant).insert({
         tenant: otherTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -488,9 +501,12 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: otherTenant, ticket_id: ticketId }).del();
-        await knex('clients').where({ tenant: otherTenant, client_id: otherClientId }).del();
-        await knex('tenants').where({ tenant: otherTenant }).del();
+        await ticketsTable(otherTenant).where({ ticket_id: ticketId }).del();
+        await scopedDbFor(otherTenant).table('clients').where({ client_id: otherClientId }).del();
+        await tenantDb(knex, '__test_discovery__')
+          .unscoped('tenants', 'test fixture cleans up cross-tenant isolation tenant')
+          .where({ tenant: otherTenant })
+          .del();
       });
 
       // Try to find from our test tenant
@@ -517,7 +533,7 @@ describe('Message-ID Based Email Threading', () => {
       const messageA = `<customer-initial-${Date.now()}@customer.com>`;
 
       // Step 1: Create ticket from customer email A
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -532,13 +548,13 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Step 2: Agent sends reply B
       const messageB = `<agent-reply-1-${Date.now()}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(email_metadata, '{references}', (email_metadata->'references' || to_jsonb(?::text)))`,
@@ -553,8 +569,8 @@ describe('Message-ID Based Email Threading', () => {
 
       // Step 4: Agent sends reply C
       const messageC = `<agent-reply-2-${Date.now() + 1}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(email_metadata, '{references}', (email_metadata->'references' || to_jsonb(?::text)))`,
@@ -586,7 +602,7 @@ describe('Message-ID Based Email Threading', () => {
       const ticketId = uuidv4();
       const originalMessageId = `<prevent-dup-${Date.now()}@customer.com>`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -599,7 +615,7 @@ describe('Message-ID Based Email Threading', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Simulate workflow: Check for existing thread before creating ticket
@@ -614,8 +630,7 @@ describe('Message-ID Based Email Threading', () => {
       // instead of a new ticket, preventing duplication
 
       // Verify no duplicate tickets exist
-      const allTickets = await knex('tickets')
-        .where('tenant', testTenant)
+      const allTickets = await ticketsTable()
         .whereRaw("email_metadata->>'messageId' = ?", [originalMessageId]);
 
       expect(allTickets).toHaveLength(1);

@@ -1551,11 +1551,15 @@ export async function createBucketOverlayForPlan(
     'billing test helper writes legacy client_contract_service_bucket_config before facade metadata exists'
   );
 
-  const clientServices = await legacyClientContractServicesForOverlay()
-    .join('client_contract_lines as ccl', function () {
-      this.on('ccs.client_contract_line_id', '=', 'ccl.client_contract_line_id')
-        .andOn('ccs.tenant', '=', 'ccl.tenant');
-    })
+  const clientServicesQuery = legacyClientContractServicesForOverlay();
+  tenantDb(context.db, context.tenantId).tenantJoin(
+    clientServicesQuery,
+    'client_contract_lines as ccl',
+    'ccs.client_contract_line_id',
+    'ccl.client_contract_line_id'
+  );
+
+  const clientServices = await clientServicesQuery
     .where({
       'ccl.contract_line_id': planId,
       'ccs.service_id': serviceId
