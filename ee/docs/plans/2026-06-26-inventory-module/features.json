@@ -253,7 +253,7 @@
   {
     "id": "F032",
     "description": "[P1] Inventory nav section + /msp/inventory routing scaffolding (MSP-only)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -261,7 +261,7 @@
   {
     "id": "F033",
     "description": "[P1] Locations management screen (list/create/edit/deactivate, set manager/tech)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]

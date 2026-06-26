@@ -142,6 +142,14 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/assets'
       },
       {
+        name: 'Inventory',
+        translationKey: 'nav.inventory',
+        icon: Package,
+        subItems: [
+          { name: 'Stock Locations', translationKey: 'nav.inventoryLocations', icon: MapPin, href: '/msp/inventory/locations' }
+        ]
+      },
+      {
         name: 'Reports',
         translationKey: 'nav.billing.reports',
         icon: FileBarChart,
