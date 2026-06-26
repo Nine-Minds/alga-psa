@@ -7,7 +7,12 @@
  * This is an EE-only feature for Nine Minds internal use via the tenant management extension.
  */
 
-import { tenantDb, type TenantDb } from '@alga-psa/db';
+import {
+  getTenantTableScope,
+  tenantDb,
+  type TenantDb,
+  type TenantTableScope,
+} from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
 
@@ -47,6 +52,7 @@ interface ColumnMetadataRow {
 }
 
 const TENANT_EXPORT_DISCOVERY_TENANT = '__tenant_export_discovery__';
+type TenantColumnName = 'tenant' | 'tenant_id';
 
 /**
  * Tables to export for tenant data export.
@@ -161,13 +167,36 @@ async function getTableTenantColumn(
  * unscoped boundary explicit, then apply the discovered tenant predicate.
  */
 function dynamicTenantExportTable(
-  db: TenantDb,
-  tableName: string
+  discoveryDb: TenantDb,
+  scopedDb: TenantDb,
+  tableName: string,
+  tenantColumn: TenantColumnName
 ) {
-  return db.unscoped<DynamicExportRow>(
+  const metadataScope = getTenantTableScope(tableName);
+
+  if (metadataScope?.scope === 'tenant') {
+    const expectedTenantColumn = tenantMetadataColumn(metadataScope);
+    if (tenantColumn !== expectedTenantColumn) {
+      throw new Error(
+        `Tenant export metadata/schema mismatch for ${tableName}: metadata expects ${expectedTenantColumn}, information_schema found ${tenantColumn}`
+      );
+    }
+
+    return scopedDb.table<DynamicExportRow>(tableName);
+  }
+
+  if (metadataScope?.scope === 'admin') {
+    throw new Error(`Admin table ${tableName} cannot be exported through tenant export`);
+  }
+
+  return discoveryDb.unscoped<DynamicExportRow>(
     tableName,
     'tenant export reads schema-discovered dynamic tables with an explicit tenant predicate'
-  );
+  ).where({ [tenantColumn]: scopedDb.tenant });
+}
+
+function tenantMetadataColumn(scope: Extract<TenantTableScope, { scope: 'tenant' }>): TenantColumnName {
+  return scope.tenantColumn === 'tenant_id' ? 'tenant_id' : 'tenant';
 }
 
 /**
@@ -193,11 +222,11 @@ export async function exportTenantData(
   try {
     const adminKnex = await getAdminConnection();
     const exportDb = tenantDb(adminKnex, TENANT_EXPORT_DISCOVERY_TENANT);
+    const scopedExportDb = tenantDb(adminKnex, tenantId);
 
     // Get tenant info for the export metadata
-    const tenant = await exportDb
-      .unscoped<TenantExportTenantRow>('tenants', 'tenant export verifies target tenant before export')
-      .where({ tenant: tenantId })
+    const tenant = await scopedExportDb
+      .table<TenantExportTenantRow>('tenants')
       .first();
     if (!tenant) {
       return { success: false, error: 'Tenant not found' };
@@ -225,8 +254,12 @@ export async function exportTenantData(
         const tenantColumn = await getTableTenantColumn(exportDb, tableName);
 
         if (tenantColumn) {
-          const records = await dynamicTenantExportTable(exportDb, tableName)
-            .where({ [tenantColumn]: tenantId })
+          const records = await dynamicTenantExportTable(
+            exportDb,
+            scopedExportDb,
+            tableName,
+            tenantColumn as TenantColumnName
+          )
             .select('*');
 
           if (records.length > 0) {

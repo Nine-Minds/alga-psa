@@ -12,25 +12,36 @@ import { tenantDb } from '@alga-psa/db';
 // shared/ ships only as dist + node_modules (no shared/utils/ source tree).
 import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
 
+type DynamicTenantColumn = 'tenant' | 'tenant_id';
+
+function dynamicTenantCleanupQuery(
+  trx: Knex.Transaction,
+  table: string,
+  tenantId: string,
+  tenantColumn: DynamicTenantColumn
+): Knex.QueryBuilder {
+  return tenantDb(trx, tenantId)
+    .unscoped(
+      table,
+      `test tenant rollback deletes dynamically selected tenant-owned table ${table} using ${tenantColumn}`,
+    )
+    .where(tenantColumn, tenantId);
+}
+
 async function deleteTenantScopedRows(
   trx: Knex.Transaction,
   table: string,
   tenantId: string
 ): Promise<void> {
-  const tableQuery = () =>
-    tenantDb(trx, tenantId).unscoped(
-      table,
-      'test tenant rollback deletes dynamically selected tenant-owned tables',
-    );
   const hasTenantColumn = await trx.schema.hasColumn(table, 'tenant');
   if (hasTenantColumn) {
-    await tableQuery().where('tenant', tenantId).del();
+    await dynamicTenantCleanupQuery(trx, table, tenantId, 'tenant').del();
     return;
   }
 
   const hasTenantIdColumn = await trx.schema.hasColumn(table, 'tenant_id');
   if (hasTenantIdColumn) {
-    await tableQuery().where('tenant_id', tenantId).del();
+    await dynamicTenantCleanupQuery(trx, table, tenantId, 'tenant_id').del();
   }
 }
 
@@ -86,10 +97,7 @@ export async function createTenant(
     // registry-minted id) and the tenant already exists, skip creation and return
     // it — so a re-run of the install bootstrap doesn't error or duplicate.
     if (input.tenantId) {
-      const existing = await bootstrapDb
-        .unscoped('tenants', 'tenant creation bootstrap checks pre-minted tenant before scoped tenant exists')
-        .where({ tenant: input.tenantId })
-        .first();
+      const existing = await tenantDb(trx, input.tenantId).table('tenants').first();
       if (existing) {
         const existingClient = await tenantDb(trx, input.tenantId).table('clients').first();
         return { tenantId: input.tenantId, clientId: existingClient?.client_id };
