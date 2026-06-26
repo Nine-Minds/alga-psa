@@ -71,9 +71,13 @@ function statusVariant(status: string) {
       return 'error' as const;
     case 'received':
       return 'success' as const;
+    // Open = placed, nothing received yet (in flight). Partially received = some stock
+    // landed, balance still owed (mid-fulfillment, watch it). Distinct colors so a glance
+    // tells "waiting" from "in progress" — they used to share one amber badge.
     case 'partially_received':
-    case 'open':
       return 'warning' as const;
+    case 'open':
+      return 'info' as const;
     default:
       return 'secondary' as const;
   }
@@ -311,39 +315,37 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
     { title: 'Currency', dataIndex: 'currency_code' },
     { title: 'Created', dataIndex: 'created_at', render: (v: any) => formatDate(v) },
     {
+      // Width matches the sibling managers (RMA/SO) so the labels never clip to
+      // "Submi"/"Receiv". Only the actions that actually apply to a row's status are
+      // rendered — Submit on drafts, Receive on receivable POs, Cancel until terminal —
+      // instead of painting all three on every row and greying the inapplicable ones.
       title: 'Actions',
       dataIndex: 'po_id',
-      render: (_: any, rec: IPurchaseOrder) => (
-        <div className="flex gap-2">
-          <Button
-            id={`submit-po-${rec.po_id}`}
-            variant="outline"
-            size="sm"
-            disabled={rec.status !== 'draft'}
-            onClick={() => submit(rec)}
-          >
-            Submit
-          </Button>
-          <Button
-            id={`receive-po-${rec.po_id}`}
-            variant="outline"
-            size="sm"
-            disabled={!RECEIVABLE_STATUSES.has(rec.status)}
-            onClick={() => openReceive(rec)}
-          >
-            Receive
-          </Button>
-          <Button
-            id={`cancel-po-${rec.po_id}`}
-            variant="ghost"
-            size="sm"
-            disabled={rec.status === 'cancelled' || rec.status === 'received'}
-            onClick={() => setPendingCancel(rec)}
-          >
-            Cancel
-          </Button>
-        </div>
-      ),
+      width: '230px',
+      render: (_: any, rec: IPurchaseOrder) => {
+        const canSubmit = rec.status === 'draft';
+        const canReceive = RECEIVABLE_STATUSES.has(rec.status);
+        const canCancel = rec.status !== 'cancelled' && rec.status !== 'received';
+        return (
+          <div className="flex gap-2">
+            {canSubmit && (
+              <Button id={`submit-po-${rec.po_id}`} variant="outline" size="sm" onClick={() => submit(rec)}>
+                Submit
+              </Button>
+            )}
+            {canReceive && (
+              <Button id={`receive-po-${rec.po_id}`} variant="outline" size="sm" onClick={() => openReceive(rec)}>
+                Receive
+              </Button>
+            )}
+            {canCancel && (
+              <Button id={`cancel-po-${rec.po_id}`} variant="ghost" size="sm" onClick={() => setPendingCancel(rec)}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
