@@ -183,4 +183,29 @@ describe('EE integrations wave 2 tenant facade contract', () => {
       'users',
     ]);
   });
+
+  it('routes remaining payment provider roots through tenantDb', () => {
+    const paymentActions = read('ee/server/src/lib/actions/payment-actions.ts');
+    const stripeProvider = read('ee/server/src/lib/payments/StripePaymentProvider.ts');
+    const stripeWebhook = read('packages/integrations/src/webhooks/stripe/payments.ts');
+    const alternativeWebhook = read('server/src/app/api/webhooks/alternative-payments/route.ts');
+    const combined = `${paymentActions}\n${stripeProvider}\n${stripeWebhook}\n${alternativeWebhook}`;
+
+    expect(paymentActions).toContain("tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')");
+    expect(stripeProvider).toContain("tenantDb(knex, tenantId).table<IPaymentProviderConfig>('payment_provider_configs')");
+    expect(stripeProvider).toContain("tenantDb(knex, this.tenantId).table<IClientPaymentCustomer>('client_payment_customers')");
+    expect(stripeProvider).toContain("tenantDb(knex, this.tenantId).table<IInvoicePaymentLink>('invoice_payment_links')");
+    expect(stripeWebhook).toContain("tenantDb(knex, tenant).table('payment_webhook_events')");
+    expect(stripeWebhook).toContain('Intentional admin lookup: tenant is derived from the submission');
+    expect(alternativeWebhook).toContain("tenantDb(knex, tenant).table('payment_webhook_events')");
+
+    expectNoDirectRoots(combined, [
+      'client_payment_customers',
+      'invoice_payment_links',
+      'invoice_payments',
+      'invoices',
+      'payment_provider_configs',
+      'payment_webhook_events',
+    ]);
+  });
 });

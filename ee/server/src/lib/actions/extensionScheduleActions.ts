@@ -2,6 +2,7 @@
 
 import crypto from 'node:crypto'
 import { createTenantKnex } from '@/lib/db'
+import { tenantDb } from '@alga-psa/db'
 import type { Knex } from 'knex'
 import logger from '@alga-psa/core/logger'
 import { withAuth, hasPermission } from '@alga-psa/auth'
@@ -153,7 +154,7 @@ async function resolveInstallForTenant(knex: Knex, tenantId: string, extensionId
   if (!config?.installId || !config.versionId) {
     return null
   }
-  const install = await knex('tenant_extension_install')
+  const install = await tenantDb(knex, tenantId).table('tenant_extension_install')
     .where({ id: config.installId, tenant_id: tenantId })
     .first(['is_enabled'])
   return { ...config, isEnabled: install?.is_enabled !== false }
@@ -214,9 +215,9 @@ export const listExtensionSchedules = withAuth(async (user, { tenant }, extensio
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return []
 
-  const rows = await knex('tenant_extension_schedule as s')
+  const rows = await tenantDb(knex, tenant).table('tenant_extension_schedule as s')
     .join('extension_api_endpoint as e', 'e.id', 's.endpoint_id')
-    .where({ 's.tenant_id': tenant, 's.install_id': install.installId })
+    .where({ 's.install_id': install.installId })
     .orderBy([{ column: 's.created_at', order: 'asc' }])
     .select([
       's.id',
@@ -275,6 +276,7 @@ export const createExtensionSchedule = withAuth(async (
   const allowed = await hasPermission(user, 'extension', 'write', knex)
   if (!allowed) throw new Error('Insufficient permissions')
 
+  const db = tenantDb(knex, tenant)
   const userId = getUserId(user)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
@@ -292,7 +294,7 @@ export const createExtensionSchedule = withAuth(async (
     const now = knex.fn.now()
 
     // Guardrail: max schedules per install.
-    const scheduleCountRow = await knex('tenant_extension_schedule')
+    const scheduleCountRow = await db.table('tenant_extension_schedule')
       .where({ tenant_id: tenant, install_id: install.installId })
       .count<{ count: string }[]>({ count: '*' })
       .first()
@@ -329,6 +331,7 @@ export const createExtensionSchedule = withAuth(async (
     // Persist schedule configuration (DB-only).
     try {
       await knex.transaction(async (trx: Knex.Transaction) => {
+        const txDb = tenantDb(trx, tenant)
         const row = {
           id: scheduleId,
           install_id: install.installId,
@@ -346,7 +349,7 @@ export const createExtensionSchedule = withAuth(async (
         }
 
         try {
-          await trx('tenant_extension_schedule').insert(row)
+          await txDb.table('tenant_extension_schedule').insert(row)
         } catch (error) {
           if (isNameUniqueViolation(error)) {
             failField('name', 'Schedule name already in use for this extension')
@@ -355,7 +358,7 @@ export const createExtensionSchedule = withAuth(async (
         }
 
         // Best-effort touch install updated_at to signal config change.
-        await trx('tenant_extension_install')
+        await txDb.table('tenant_extension_install')
           .where({ id: install.installId, tenant_id: tenant })
           .update({ updated_at: trx.fn.now() })
       })
@@ -402,6 +405,7 @@ export const updateExtensionSchedule = withAuth(async (
   const allowed = await hasPermission(user, 'extension', 'write', knex)
   if (!allowed) throw new Error('Insufficient permissions')
 
+  const db = tenantDb(knex, tenant)
   const userId = getUserId(user)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
@@ -417,7 +421,7 @@ export const updateExtensionSchedule = withAuth(async (
 
     const now = knex.fn.now()
 
-    const current = await knex('tenant_extension_schedule')
+    const current = await db.table('tenant_extension_schedule')
       .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
       .first()
 
@@ -490,7 +494,7 @@ export const updateExtensionSchedule = withAuth(async (
 
                 // Keep DB handles consistent with restored runner schedule (job IDs can change after cancel).
                 try {
-                  await knex('tenant_extension_schedule')
+                  await db.table('tenant_extension_schedule')
                     .where({ id: scheduleId, tenant_id: tenant })
                     .update({
                       job_id: restored?.jobId ?? null,
@@ -506,7 +510,7 @@ export const updateExtensionSchedule = withAuth(async (
                   tenant,
                   error: restoreError,
                 })
-                await knex('tenant_extension_schedule')
+                await db.table('tenant_extension_schedule')
                   .where({ id: scheduleId, tenant_id: tenant })
                   .update({
                     enabled: false,
@@ -524,9 +528,10 @@ export const updateExtensionSchedule = withAuth(async (
           const externalId = scheduled?.externalId ?? null
 
           await knex.transaction(async (trx: Knex.Transaction) => {
+            const txDb = tenantDb(trx, tenant)
             // Apply DB updates only after runner scheduling succeeded.
             try {
-              await trx('tenant_extension_schedule')
+              await txDb.table('tenant_extension_schedule')
                 .where({ id: scheduleId, tenant_id: tenant })
                 .update({
                   ...patch,
@@ -541,7 +546,7 @@ export const updateExtensionSchedule = withAuth(async (
               throw error
             }
 
-            await trx('tenant_extension_install')
+            await txDb.table('tenant_extension_install')
               .where({ id: install.installId, tenant_id: tenant })
               .update({ updated_at: trx.fn.now() })
           })
@@ -559,8 +564,9 @@ export const updateExtensionSchedule = withAuth(async (
         }
 
         await knex.transaction(async (trx: Knex.Transaction) => {
+          const txDb = tenantDb(trx, tenant)
           try {
-            await trx('tenant_extension_schedule')
+            await txDb.table('tenant_extension_schedule')
               .where({ id: scheduleId, tenant_id: tenant })
               .update({ ...patch, job_id: null, runner_schedule_id: null, updated_at: now })
           } catch (error) {
@@ -570,7 +576,7 @@ export const updateExtensionSchedule = withAuth(async (
             throw error
           }
 
-          await trx('tenant_extension_install')
+          await txDb.table('tenant_extension_install')
             .where({ id: install.installId, tenant_id: tenant })
             .update({ updated_at: trx.fn.now() })
         })
@@ -581,11 +587,12 @@ export const updateExtensionSchedule = withAuth(async (
     // No reschedule needed: apply DB updates only.
     try {
       await knex.transaction(async (trx: Knex.Transaction) => {
-        await trx('tenant_extension_schedule')
+        const txDb = tenantDb(trx, tenant)
+        await txDb.table('tenant_extension_schedule')
           .where({ id: scheduleId, tenant_id: tenant })
           .update(patch)
 
-        await trx('tenant_extension_install')
+        await txDb.table('tenant_extension_install')
           .where({ id: install.installId, tenant_id: tenant })
           .update({ updated_at: trx.fn.now() })
       })
@@ -629,13 +636,14 @@ export const deleteExtensionSchedule = withAuth(async (
   const allowed = await hasPermission(user, 'extension', 'write', knex)
   if (!allowed) throw new Error('Insufficient permissions')
 
+  const db = tenantDb(knex, tenant)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
 
   try {
     const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
 
-    const current = await knex('tenant_extension_schedule')
+    const current = await db.table('tenant_extension_schedule')
       .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
       .first(['id', 'job_id'])
     if (!current) return { success: false, message: 'Schedule not found' }
@@ -654,11 +662,12 @@ export const deleteExtensionSchedule = withAuth(async (
     }
 
     await knex.transaction(async (trx: Knex.Transaction) => {
-      await trx('tenant_extension_schedule')
+      const txDb = tenantDb(trx, tenant)
+      await txDb.table('tenant_extension_schedule')
         .where({ id: scheduleId, tenant_id: tenant })
         .del()
       // Best-effort touch install updated_at to signal config change.
-      await trx('tenant_extension_install')
+      await txDb.table('tenant_extension_install')
         .where({ id: install.installId, tenant_id: tenant })
         .update({ updated_at: trx.fn.now() })
     })
@@ -685,6 +694,7 @@ export const runExtensionScheduleNow = withAuth(async (
   const allowed = await hasPermission(user, 'extension', 'write', knex)
   if (!allowed) throw new Error('Insufficient permissions')
 
+  const db = tenantDb(knex, tenant)
   const userId = getUserId(user)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
@@ -693,7 +703,7 @@ export const runExtensionScheduleNow = withAuth(async (
   try {
     const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
 
-    const schedule = await knex('tenant_extension_schedule')
+    const schedule = await db.table('tenant_extension_schedule')
       .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
       .first(['id', 'enabled'])
     if (!schedule) return { success: false, message: 'Schedule not found' }

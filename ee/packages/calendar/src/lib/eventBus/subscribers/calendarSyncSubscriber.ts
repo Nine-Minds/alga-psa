@@ -14,7 +14,7 @@ import {
 import { CalendarSyncService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService';
 import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import type { CalendarProviderConfig, IScheduleEntry } from '@alga-psa/types';
 import { isValidEmail } from '@alga-psa/core';
 
@@ -392,8 +392,9 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
       });
 
       const { knex } = await createTenantKnex();
+      const db = tenantDb(knex, tenantId);
 
-      const mapping = await knex('calendar_event_mappings')
+      const mapping = await db.table('calendar_event_mappings')
         .where('id', mappingId)
         .andWhere('tenant', tenantId)
         .first();
@@ -421,7 +422,7 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
         includeSecrets: false
       });
 
-      const scheduleEntry = await knex('schedule_entries')
+      const scheduleEntry = await db.table('schedule_entries')
         .where('entry_id', scheduleEntryId)
         .andWhere('tenant', tenantId)
         .first();
@@ -441,7 +442,7 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
         return;
       }
 
-      const users = await knex('users')
+      const users = await db.table('users')
         .whereIn('user_id', assigneeIds)
         .andWhere('tenant', tenantId)
         .andWhere('is_inactive', false)
@@ -479,7 +480,7 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
         'Conflict detected: both calendars have been modified';
       const updatedMessage = `${baseMessage} (notification recorded ${notifiedAt})`;
 
-      await knex('calendar_event_mappings')
+      await db.table('calendar_event_mappings')
         .where('id', mappingId)
         .andWhere('tenant', tenantId)
         .update({

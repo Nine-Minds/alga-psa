@@ -4,7 +4,7 @@
 
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
 interface DomainStatus {
@@ -28,8 +28,7 @@ export const getEmailDomains = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    const domains = await knex('email_domains')
-      .where({ tenant_id: tenant })
+    const domains = await tenantDb(knex, tenant).table('email_domains')
       .select('*')
       .orderBy('created_at', 'desc');
 
@@ -64,9 +63,11 @@ export const addEmailDomain = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    const db = tenantDb(knex, tenant);
+
     // Check if domain already exists
-    const existing = await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    const existing = await db.table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (existing) {
@@ -82,7 +83,7 @@ export const addEmailDomain = withAuth(async (
       updated_at: new Date()
     };
 
-    await knex('email_domains').insert(domainData);
+    await db.table('email_domains').insert(domainData);
 
     return {
       success: true,
@@ -103,8 +104,8 @@ export const verifyEmailDomain = withAuth(async (
 
   try {
     // Check if domain exists
-    const domain = await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    const domain = await tenantDb(knex, tenant).table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (!domain) {
@@ -129,9 +130,11 @@ export const deleteEmailDomain = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    const db = tenantDb(knex, tenant);
+
     // Check if domain exists
-    const domain = await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    const domain = await db.table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (!domain) {
@@ -151,8 +154,8 @@ export const deleteEmailDomain = withAuth(async (
     }
 
     // Delete from database
-    await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    await db.table('email_domains')
+      .where({ domain_name: domainName })
       .del();
 
     return {

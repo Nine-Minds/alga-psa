@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CalendarWebhookProcessor } from '../../services/calendar/CalendarWebhookProcessor';
-import { getAdminConnection } from '@alga-psa/db';
+import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
 const processor = new CalendarWebhookProcessor();
@@ -147,13 +147,13 @@ export async function POST(request: NextRequest) {
 
             // Update health table for each provider
             for (const provider of providers) {
-              const existing = await knex('calendar_provider_health')
+              const existing = await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                 .where('calendar_provider_id', provider.provider_id)
                 .andWhere('tenant', provider.tenant)
                 .first();
 
               if (existing) {
-                await knex('calendar_provider_health')
+                await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                   .where('calendar_provider_id', provider.provider_id)
                   .andWhere('tenant', provider.tenant)
                   .update({
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
                   });
               } else {
                 // Create health row if it doesn't exist
-                await knex('calendar_provider_health')
+                await tenantDb(knex, provider.tenant).table('calendar_provider_health')
                   .insert({
                     calendar_provider_id: provider.provider_id,
                     tenant: provider.tenant,

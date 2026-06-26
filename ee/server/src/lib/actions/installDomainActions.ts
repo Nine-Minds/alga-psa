@@ -1,6 +1,7 @@
 "use server";
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
@@ -27,7 +28,13 @@ export async function lookupByHost(hostRaw: string): Promise<{ tenant_id: string
 
   const db: Knex = await getAdminConnection();
 
-  const install = await db('tenant_extension_install')
+  // Explicit unscoped lookup: runner host resolution discovers the tenant from
+  // tenant_extension_install.runner_domain before a tenant facade can exist.
+  const install = await tenantDb(db, 'tenant-discovery')
+    .unscoped<{ tenant_id: string; extension_id: string; version_id: string }>(
+      'tenant_extension_install',
+      'discover tenant for extension runner host'
+    )
     .where('runner_domain', host)
     .first(['tenant_id', 'registry_id as extension_id', 'version_id']);
   if (!install) return null;
@@ -54,7 +61,7 @@ export async function validate(params: { tenant: string; extension: string; hash
   await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
 
   const db: Knex = await getAdminConnection();
-  const install = await db('tenant_extension_install')
+  const install = await tenantDb(db, tenant).table('tenant_extension_install')
     .where({ tenant_id: tenant, registry_id: extension })
     .first(['version_id']);
   if (!install) return { valid: false };

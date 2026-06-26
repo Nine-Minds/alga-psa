@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@/lib/db'
 import { withAuth, hasPermission } from '@alga-psa/auth'
+import { tenantDb } from '@alga-psa/db'
 
 export interface ExtensionVersionListItem {
   versionId: string
@@ -49,8 +50,8 @@ export const fetchExtensionVersions = withAuth(async (user, { tenant }, extensio
     }
   }
 
-  const install = await knex('tenant_extension_install')
-    .where({ tenant_id: tenant, registry_id: extensionId })
+  const install = await tenantDb(knex, tenant).table('tenant_extension_install')
+    .where({ registry_id: extensionId })
     .first(['version_id'])
   const installedVersionId = install?.version_id ? String(install.version_id) : null
 

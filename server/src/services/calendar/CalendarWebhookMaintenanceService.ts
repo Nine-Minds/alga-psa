@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/db';
+import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import logger from '@alga-psa/core/logger';
@@ -362,7 +362,7 @@ export class CalendarWebhookMaintenanceService {
         updateData.error_message = status.errorMessage;
       }
 
-      await knex('calendar_providers')
+      await tenantDb(knex, tenant).table('calendar_providers')
         .where('id', providerId)
         .andWhere('tenant', tenant)
         .update(updateData);
@@ -401,7 +401,7 @@ export class CalendarWebhookMaintenanceService {
       const now = new Date().toISOString();
       
       // Check if health row exists, if not create it
-      const existing = await knex('calendar_provider_health')
+      const existing = await tenantDb(knex, tenant).table('calendar_provider_health')
         .where('calendar_provider_id', providerId)
         .andWhere('tenant', tenant)
         .first();
@@ -428,12 +428,12 @@ export class CalendarWebhookMaintenanceService {
       }
 
       if (existing) {
-        await knex('calendar_provider_health')
+        await tenantDb(knex, tenant).table('calendar_provider_health')
           .where('calendar_provider_id', providerId)
           .andWhere('tenant', tenant)
           .update(updateData);
       } else {
-        await knex('calendar_provider_health')
+        await tenantDb(knex, tenant).table('calendar_provider_health')
           .insert({
             calendar_provider_id: providerId,
             tenant: tenant,
@@ -455,7 +455,7 @@ export class CalendarWebhookMaintenanceService {
   } | null> {
     try {
       const knex = await getAdminConnection();
-      const health = await knex('calendar_provider_health')
+      const health = await tenantDb(knex, tenant).table('calendar_provider_health')
         .where('calendar_provider_id', providerId)
         .andWhere('tenant', tenant)
         .first();
@@ -466,4 +466,3 @@ export class CalendarWebhookMaintenanceService {
     }
   }
 }
-

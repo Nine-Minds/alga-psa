@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { assertMspPermission } from '../lib/authHelpers';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,14 +22,13 @@ async function findAliasOwner(
   tenant: string,
   alias: string
 ): Promise<{ client_id: string; client_name: string } | null> {
-  const row = await trx('client_name_aliases as a')
-    .leftJoin('clients as c', function () {
-      this.on('a.client_id', '=', 'c.client_id').andOn('a.tenant', '=', 'c.tenant');
-    })
+  const db = tenantDb(trx, tenant);
+  const query = db.table('client_name_aliases as a')
     .select('a.client_id', 'c.client_name')
-    .where('a.tenant', tenant)
-    .andWhereRaw('lower(a.alias) = ?', [alias.toLowerCase()])
-    .first();
+    .andWhereRaw('lower(a.alias) = ?', [alias.toLowerCase()]);
+  db.tenantJoin(query, 'clients as c', 'a.client_id', 'c.client_id', { type: 'left' });
+
+  const row = await query.first();
 
   const clientId = (row as any)?.client_id;
   const clientName = (row as any)?.client_name;
@@ -49,9 +48,9 @@ export const listClientNameAliases = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const rows = await trx('client_name_aliases')
+    const rows = await tenantDb(trx, tenant).table('client_name_aliases')
       .select('id', 'client_id', 'alias', 'created_at')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .orderBy('alias', 'asc');
     return rows as any;
   });
@@ -78,7 +77,7 @@ export const addClientNameAlias = withAuth(async (
     try {
       const id = uuidv4();
       const now = new Date().toISOString();
-      const [row] = await trx('client_name_aliases')
+      const [row] = await tenantDb(trx, tenant).table('client_name_aliases')
         .insert({
           tenant,
           id,
@@ -113,8 +112,8 @@ export const removeClientNameAlias = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx('client_name_aliases')
-      .where({ tenant, client_id: clientId, id: aliasId })
+    await tenantDb(trx, tenant).table('client_name_aliases')
+      .where({ client_id: clientId, id: aliasId })
       .delete();
     return { success: true as const };
   });

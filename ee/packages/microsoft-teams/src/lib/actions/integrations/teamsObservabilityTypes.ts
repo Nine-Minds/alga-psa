@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 import type {
   TeamsDeliveryErrorCode,
@@ -196,7 +196,7 @@ export async function listTeamsDeliveriesImpl(
   const status = DELIVERY_STATUSES.includes(params.status as TeamsDeliveryStatus) ? params.status : undefined;
   const category = normalizeOptionalString(params.category);
 
-  const query = knex<TeamsDeliveryObservabilityRow>('teams_notification_deliveries')
+  const query = tenantDb(knex, tenant).table<TeamsDeliveryObservabilityRow>('teams_notification_deliveries')
     .where({ tenant })
     .modify((builder: any) => {
       if (status) {
@@ -236,7 +236,7 @@ export async function listTeamsAuditEventsImpl(
   const actionId = normalizeOptionalString(params.action_id);
   const actorUserId = normalizeOptionalString(params.actor_user_id);
 
-  const query = knex<TeamsAuditObservabilityRow>('teams_audit_events')
+  const query = tenantDb(knex, tenant).table<TeamsAuditObservabilityRow>('teams_audit_events')
     .where({ tenant })
     .modify((builder: any) => {
       if (surface) {

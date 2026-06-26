@@ -1,5 +1,6 @@
 // EE-only registry service v2 (Knex-backed)
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { ManifestV2, ManifestEndpoint } from './bundles/manifest';
 import { isValidSemverLike, isWildcardVersion, resolveWildcardVersion } from './bundles/manifest';
 import type { SignatureVerificationResult } from './bundles/verify';
@@ -324,7 +325,7 @@ export class ExtensionRegistryServiceV2 {
       updated_at: now,
     };
 
-    const rows = await this.db('tenant_extension_install')
+    const rows = await tenantDb(this.db, tenantId).table('tenant_extension_install')
       .insert(payload)
       .onConflict(['tenant_id', 'registry_id'])
       .merge({
@@ -377,8 +378,8 @@ export class ExtensionRegistryServiceV2 {
     tenantId: string,
     registryId: string
   ): Promise<{ version_id: string; content_hash: string } | null> {
-    const ti = await this.db('tenant_extension_install')
-      .where({ tenant_id: tenantId, registry_id: registryId })
+    const ti = await tenantDb(this.db, tenantId).table('tenant_extension_install')
+      .where({ registry_id: registryId })
       .first(['version_id']);
     if (!ti) return null;
 

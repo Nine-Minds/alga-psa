@@ -5,6 +5,7 @@
 
 import crypto from 'crypto';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '../../lib/db';
 import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
 import { getSecret } from '../../lib/utils/getSecret';
@@ -457,7 +458,7 @@ export class CalendarProviderService {
       }
 
       // Delete calendar event mappings
-      await db('calendar_event_mappings')
+      await tenantDb(db, provider.tenant).table('calendar_event_mappings')
         .where('calendar_provider_id', providerId)
         .andWhere('tenant', provider.tenant)
         .del();
