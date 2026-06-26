@@ -174,7 +174,7 @@
   {
     "id": "T018",
     "description": "[procure] Over-receipt is allowed with a warning; PO number is unique per tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067",
       "F072"
@@ -379,7 +379,7 @@
   {
     "id": "T041",
     "description": "[reorder] Low-stock fires when available \u2264 per-location reorder override; the alert is routed only to that location's manager_user_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F133",
       "F134"
