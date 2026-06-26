@@ -696,7 +696,7 @@
   {
     "id": "F087",
     "description": "[P4] Materials hook: addTicketMaterial consumes stock for track_stock products (source_doc_type=ticket_material)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7"
     ]
@@ -704,7 +704,7 @@
   {
     "id": "F088",
     "description": "[P4] Materials hook: addProjectMaterial consumes stock (source_doc_type=project_material)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7"
     ]
@@ -720,7 +720,7 @@
   {
     "id": "F090",
     "description": "[P4] Material delete (unbilled) writes compensating movement / reverts unit",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7"
     ]
@@ -785,7 +785,7 @@
   {
     "id": "F098",
     "description": "[P4] Contract seam: recurring contract billing does NOT consume stock (no movement emitted)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7"
     ]
@@ -1142,7 +1142,7 @@
   {
     "id": "F142",
     "description": "[P7] Stock side-effects from billing flows run under billing:create (no double-gate)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -1216,7 +1216,7 @@
   {
     "id": "F151",
     "description": "[P7] Extend product delete guard: block delete when stock_units/levels/movements exist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11"
     ]
@@ -1224,7 +1224,7 @@
   {
     "id": "F152",
     "description": "[P7] Material\u2192stock idempotency (no double-decrement on retry)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11"
     ]
@@ -1240,7 +1240,7 @@
   {
     "id": "F154",
     "description": "[P7] Audit: performed_by stamped on every movement (and surfaced in ledger UI)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -1248,7 +1248,7 @@
   {
     "id": "F155",
     "description": "[P7] Client-portal guard: inventory surfaces are MSP-only (not exposed to client portal)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]

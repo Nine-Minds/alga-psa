@@ -6,6 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { ITicketMaterial, IProjectMaterial } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { recordStockConsumption, reverseStockConsumption } from '@alga-psa/inventory/lib';
 
 export const listTicketMaterials = withAuth(async (user, { tenant }, ticketId: string): Promise<ITicketMaterial[]> => {
   if (!await hasPermission(user, 'billing', 'read')) {
@@ -55,6 +56,14 @@ export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
         is_billed: false
       })
       .returning('*');
+    // Inventory: decrement stock for track_stock (non-serialized) products. No-op otherwise.
+    await recordStockConsumption(trx, tenant, {
+      service_id: row.service_id,
+      quantity: row.quantity,
+      source_doc_type: 'ticket_material',
+      source_doc_id: row.ticket_material_id,
+      performed_by: (user as any)?.user_id ?? null,
+    });
     return row as ITicketMaterial;
   });
 });
@@ -67,13 +76,22 @@ export const deleteTicketMaterial = withAuth(async (user, { tenant }, ticketMate
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const row = await trx('ticket_materials')
       .where({ tenant, ticket_material_id: ticketMaterialId })
-      .select('is_billed')
+      .select('is_billed', 'service_id', 'quantity')
       .first();
 
     if (!row) return;
     if (row.is_billed) {
       throw new Error('Cannot delete a billed material.');
     }
+
+    // Inventory: restore stock that was consumed when this (unbilled) material was added.
+    await reverseStockConsumption(trx, tenant, {
+      service_id: row.service_id,
+      quantity: row.quantity,
+      source_doc_type: 'ticket_material',
+      source_doc_id: ticketMaterialId,
+      performed_by: (user as any)?.user_id ?? null,
+    });
 
     await trx('ticket_materials')
       .where({ tenant, ticket_material_id: ticketMaterialId })
@@ -129,6 +147,14 @@ export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
         is_billed: false
       })
       .returning('*');
+    // Inventory: decrement stock for track_stock (non-serialized) products. No-op otherwise.
+    await recordStockConsumption(trx, tenant, {
+      service_id: row.service_id,
+      quantity: row.quantity,
+      source_doc_type: 'project_material',
+      source_doc_id: row.project_material_id,
+      performed_by: (user as any)?.user_id ?? null,
+    });
     return row as IProjectMaterial;
   });
 });
@@ -141,13 +167,22 @@ export const deleteProjectMaterial = withAuth(async (user, { tenant }, projectMa
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const row = await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId })
-      .select('is_billed')
+      .select('is_billed', 'service_id', 'quantity')
       .first();
 
     if (!row) return;
     if (row.is_billed) {
       throw new Error('Cannot delete a billed material.');
     }
+
+    // Inventory: restore stock that was consumed when this (unbilled) material was added.
+    await reverseStockConsumption(trx, tenant, {
+      service_id: row.service_id,
+      quantity: row.quantity,
+      source_doc_type: 'project_material',
+      source_doc_id: projectMaterialId,
+      performed_by: (user as any)?.user_id ?? null,
+    });
 
     await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId })
