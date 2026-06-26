@@ -195,4 +195,33 @@ describe('workflow tenant facade roots', () => {
     expect(metadataSource).toContain("client_inbound_email_domains: { scope: 'tenant' }");
     expect(metadataSource).toContain("email_client_associations: { scope: 'tenant' }");
   });
+
+  it('routes workflow ticket business action roots through tenantDb', () => {
+    const source = read('shared/workflow/runtime/actions/businessOperations/tickets.ts');
+
+    const directRootPattern =
+      /\btx\.trx\s*(?:<[^>]+>)?\s*\(\s*['`](?:assets|comments|contacts|contracts|document_associations|documents|priorities|projects|project_tasks|statuses|tag_definitions|tag_mappings|team_members|teams|ticket_entity_links|ticket_resources|tickets|users)['`]/;
+
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db'");
+    expect(source).toContain("return tenantDb(tx.trx, tx.tenantId).table(table)");
+    expect(source).toContain("db.tenantJoin(teamMembersQuery, 'users'");
+    expect(source).toContain("db.tenantJoin(attachmentQuery, 'documents as d'");
+    expect(source).not.toMatch(directRootPattern);
+    expect(source).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+    expect(source).not.toMatch(/\.(?:where|andWhere)\(\s*['`][^'`]*tenant['`]/);
+
+    const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
+    const expectedEntries = [
+      "tag_definitions: { scope: 'tenant' }",
+      "tag_mappings: { scope: 'tenant' }",
+      "team_members: { scope: 'tenant' }",
+      "teams: { scope: 'tenant' }",
+      "ticket_entity_links: { scope: 'tenant' }",
+      "ticket_resources: { scope: 'tenant' }",
+    ];
+
+    for (const entry of expectedEntries) {
+      expect(metadataSource).toContain(entry);
+    }
+  });
 });
