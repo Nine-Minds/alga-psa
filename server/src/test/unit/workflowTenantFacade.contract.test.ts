@@ -224,4 +224,37 @@ describe('workflow tenant facade roots', () => {
       expect(metadataSource).toContain(entry);
     }
   });
+
+  it('routes workflow asset and scheduling action roots through tenantDb', () => {
+    const files = [
+      'shared/workflow/runtime/actions/businessOperations/assets.ts',
+      'shared/workflow/runtime/actions/businessOperations/scheduling.ts',
+    ];
+
+    const directRootPattern =
+      /\btx\.trx\s*(?:<[^>]+>)?\s*\(\s*['`](?:asset_associations|assets|roles|schedule_conflicts|schedule_entries|schedule_entry_assignees|tenant_external_entity_mappings|tickets|project_tasks|user_roles|users)['`]/;
+
+    for (const file of files) {
+      const source = read(file);
+
+      expect(source, file).toContain("import { tenantDb } from '@alga-psa/db'");
+      expect(source, file).not.toMatch(directRootPattern);
+      expect(source, file).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+      expect(source, file).not.toMatch(/\.(?:where|andWhere)\(\s*['`][^'`]*tenant['`]/);
+    }
+
+    const assetSource = read('shared/workflow/runtime/actions/businessOperations/assets.ts');
+    expect(assetSource).toContain("db.tenantJoin(associationsQuery, 'tickets as t'");
+
+    const schedulingSource = read('shared/workflow/runtime/actions/businessOperations/scheduling.ts');
+    expect(schedulingSource).toContain("db.tenantJoin(conflictsQuery, 'schedule_entry_assignees as sea'");
+    expect(schedulingSource).toContain("db.tenantJoin(technicianQuery, 'roles as r'");
+    expect(schedulingSource).toContain("db.subquery('schedule_entry_assignees as search_sea')");
+    expect(schedulingSource).toContain("db.subquery('schedule_entry_assignees as sea')");
+
+    const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
+    expect(metadataSource).toContain("asset_associations: { scope: 'tenant' }");
+    expect(metadataSource).toContain("schedule_conflicts: { scope: 'tenant' }");
+    expect(metadataSource).toContain("tenant_external_entity_mappings: { scope: 'tenant' }");
+  });
 });

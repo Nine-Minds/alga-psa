@@ -180,6 +180,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   rmm_alerts: { scope: 'tenant' },
   rmm_integrations: { scope: 'tenant' },
   rmm_organization_mappings: { scope: 'tenant' },
+  schedule_conflicts: { scope: 'tenant' },
   schedule_entries: { scope: 'tenant' },
   schedule_entry_assignees: { scope: 'tenant' },
   server_assets: { scope: 'tenant' },
