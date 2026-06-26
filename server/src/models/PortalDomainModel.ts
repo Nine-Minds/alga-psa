@@ -1,7 +1,11 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
+
+const portalDomainsQuery = (knex: Knex, tenant: string) =>
+  tenantDb(knex, tenant).table<PortalDomainRecord>(PORTAL_DOMAIN_TABLE);
 
 export const PORTAL_DOMAIN_STATUSES = [
   'pending_dns',
@@ -141,9 +145,7 @@ async function getTenantAndKnex(): Promise<{ knex: Knex; tenant: string }>
 }
 
 export async function getPortalDomain(knex: Knex, tenant: string): Promise<PortalDomain | null> {
-  const record = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
-    .where({ tenant })
-    .first();
+  const record = await portalDomainsQuery(knex, tenant).first() as PortalDomainRecord | undefined;
 
   if (!record) {
     return null;
@@ -191,7 +193,7 @@ export async function upsertPortalDomain(
     updated_at: now,
   };
 
-  const [record] = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
+  const [record] = await portalDomainsQuery(knex, tenant)
     .insert(payload)
     .onConflict('tenant')
     .merge({
@@ -261,10 +263,9 @@ export async function updatePortalDomain(
     return getPortalDomain(knex, tenant);
   }
 
-  const [record] = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
-    .where({ tenant })
+  const [record] = await portalDomainsQuery(knex, tenant)
     .update(updates)
-    .returning('*');
+    .returning('*') as PortalDomainRecord[];
 
   return record ? mapRow(record) : null;
 }
@@ -277,9 +278,7 @@ export async function updateCurrentTenantPortalDomain(
 }
 
 export async function deletePortalDomain(knex: Knex, tenant: string): Promise<void> {
-  await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
-    .where({ tenant })
-    .delete();
+  await portalDomainsQuery(knex, tenant).delete();
 }
 
 export async function deleteCurrentTenantPortalDomain(): Promise<void> {

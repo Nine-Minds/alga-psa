@@ -176,9 +176,9 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       const tenantRow = await loadTenant(trx, params.tenantId);
       appendDebug('loaded-tenant', { tenantName: tenantRow?.name });
 
-      const [{ count: previousCountRaw } = { count: 0 }] = (await trx(SURVEY_INVITATION_TABLE)
+      const [{ count: previousCountRaw } = { count: 0 }] = (await tenantDb(trx, params.tenantId)
+        .table(SURVEY_INVITATION_TABLE)
         .where({
-          tenant: params.tenantId,
           ticket_id: ticketRow.ticket_id,
           template_id: templateRow.template_id,
           contact_id: contactRow.contact_name_id,
@@ -188,7 +188,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         typeof previousCountRaw === 'number' ? previousCountRaw : Number.parseInt(String(previousCountRaw), 10) || 0;
       const nextReminderNumber = previousCount + 1;
 
-      const [invitationRow] = await trx<InvitationRow>(SURVEY_INVITATION_TABLE)
+      const [invitationRow] = await tenantDb(trx, params.tenantId)
+        .table<InvitationRow>(SURVEY_INVITATION_TABLE)
         .insert({
           tenant: params.tenantId,
           ticket_id: ticketRow.ticket_id,
@@ -390,8 +391,8 @@ async function loadTemplate(
   templateId?: string
 ): Promise<TemplateRow> {
   if (templateId) {
-    const template = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant: tenantId, template_id: templateId })
+    const template = await tenantDb(knex, tenantId).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+      .where({ template_id: templateId })
       .andWhere({ enabled: true })
       .first();
 
@@ -401,8 +402,8 @@ async function loadTemplate(
     return template;
   }
 
-  const template = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant: tenantId, enabled: true })
+  const template = await tenantDb(knex, tenantId).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+    .where({ enabled: true })
     .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'created_at', order: 'asc' }])
     .first();
 
@@ -419,7 +420,7 @@ async function loadTicket(
   ticketId: string
 ): Promise<TicketRow | null> {
   const db = tenantDb(knex, tenantId);
-  const query = knex<TicketRow>(`${TICKETS_TABLE} as t`);
+  const query = db.table<TicketRow>(`${TICKETS_TABLE} as t`);
 
   db.tenantJoin(query, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
     type: 'left',
@@ -443,7 +444,7 @@ async function loadTicket(
       'u.first_name as technician_first_name',
       'u.last_name as technician_last_name'
     )
-    .where({ 't.tenant': tenantId, 't.ticket_id': ticketId })
+    .where({ 't.ticket_id': ticketId })
     .first();
 }
 
@@ -452,15 +453,15 @@ async function loadContact(
   tenantId: string,
   contactId: string
 ): Promise<ContactRow | null> {
-  const result = await knex<ContactRow>(CONTACTS_TABLE)
+  const result = await tenantDb(knex, tenantId).table<ContactRow>(CONTACTS_TABLE)
     .select('contact_name_id', 'full_name', 'email')
-    .where('tenant', tenantId)
-    .andWhere('contact_name_id', contactId)
+    .where('contact_name_id', contactId)
     .first();
   return result || null;
 }
 
 async function loadTenant(knex: Knex | Knex.Transaction, tenantId: string): Promise<TenantRow | null> {
+  // Intentionally raw: tenants is the tenant registry lookup, not tenant-owned survey data.
   const result = await knex<TenantRow>(TENANTS_TABLE)
     .select('tenant', 'client_name')
     .where('tenant', tenantId)
@@ -471,8 +472,8 @@ async function loadTenant(knex: Knex | Knex.Transaction, tenantId: string): Prom
 async function removeInvitationSafe(tenantId: string, invitationId: string): Promise<void> {
   await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    await knex(SURVEY_INVITATION_TABLE)
-      .where({ tenant: tenantId, invitation_id: invitationId })
+    await tenantDb(knex, tenantId).table(SURVEY_INVITATION_TABLE)
+      .where({ invitation_id: invitationId })
       .del()
       .catch(() => undefined);
   });

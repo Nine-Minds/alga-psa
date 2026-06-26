@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import type { DomainVerificationResult, DnsRecord } from '@alga-psa/types';
 import { ResendEmailProvider } from '../providers/ResendEmailProvider';
 
@@ -36,28 +37,27 @@ function logEmailDomainConflictFallbackOnce(context: { tenantId: string; domain:
 
 async function upsertEmailDomainWithoutConflict(
   knex: Knex,
-  record: Record<string, unknown>,
+  record: Record<string, unknown> & { tenant: string; domain_name: string },
   mergeFields: Record<string, unknown>
 ): Promise<void> {
   await knex.transaction(async (trx) => {
-    const existing = await trx(EMAIL_DOMAINS_TABLE)
+    const db = tenantDb(trx, record.tenant);
+    const existing = await db.table(EMAIL_DOMAINS_TABLE)
       .where({
-        tenant: record.tenant,
         domain_name: record.domain_name,
       })
       .first();
 
     if (existing) {
-      await trx(EMAIL_DOMAINS_TABLE)
+      await db.table(EMAIL_DOMAINS_TABLE)
         .where({
-          tenant: record.tenant,
           domain_name: record.domain_name,
         })
         .update(mergeFields);
       return;
     }
 
-    await trx(EMAIL_DOMAINS_TABLE).insert(record);
+    await db.table(EMAIL_DOMAINS_TABLE).insert(record);
   });
 }
 
@@ -186,7 +186,7 @@ export class ManagedDomainService {
     };
 
     try {
-      await this.knex(EMAIL_DOMAINS_TABLE)
+      await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
         .insert(record)
         .onConflict(['tenant', 'domain_name'])
         .merge(mergeFields);
@@ -216,7 +216,7 @@ export class ManagedDomainService {
       throw new Error('Domain name or provider domain id must be provided');
     }
 
-    const query = this.knex(EMAIL_DOMAINS_TABLE).where({ tenant: this.tenantId });
+    const query = tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE);
 
     if (identifier.domain) {
       query.andWhere({ domain_name: identifier.domain });
@@ -279,8 +279,8 @@ export class ManagedDomainService {
       providerVerification.status === 'verified'
         ? updatedAt
         : existing.verified_at;
-    await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant: this.tenantId, domain_name: domainName })
+    await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
+      .where({ domain_name: domainName })
       .update({
         status: updatedStatus,
         dns_records: JSON.stringify(updatedDnsRecords ?? []),
@@ -302,27 +302,25 @@ export class ManagedDomainService {
   async activateDomain(domain: string): Promise<void> {
     const now = new Date();
 
-    await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant: this.tenantId, domain_name: domain })
+    await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
+      .where({ domain_name: domain })
       .update({
         status: 'verified',
         verified_at: now,
         updated_at: now,
       });
 
-    const existingSettings = await this.knex(TENANT_EMAIL_SETTINGS_TABLE)
-      .where({ tenant: this.tenantId })
+    const existingSettings = await tenantDb(this.knex, this.tenantId).table(TENANT_EMAIL_SETTINGS_TABLE)
       .first();
 
     if (existingSettings) {
-      await this.knex(TENANT_EMAIL_SETTINGS_TABLE)
-        .where({ tenant: this.tenantId })
+      await tenantDb(this.knex, this.tenantId).table(TENANT_EMAIL_SETTINGS_TABLE)
         .update({
           default_from_domain: domain,
           updated_at: now,
         });
     } else {
-      await this.knex(TENANT_EMAIL_SETTINGS_TABLE).insert({
+      await tenantDb(this.knex, this.tenantId).table(TENANT_EMAIL_SETTINGS_TABLE).insert({
         tenant: this.tenantId,
         default_from_domain: domain,
         custom_domains: JSON.stringify([domain]),
@@ -338,8 +336,8 @@ export class ManagedDomainService {
   async deleteDomain(domain: string): Promise<void> {
     const provider = await this.getProvider();
 
-    const existing = await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant: this.tenantId, domain_name: domain })
+    const existing = await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
+      .where({ domain_name: domain })
       .first();
 
     if (!existing) {
@@ -358,8 +356,8 @@ export class ManagedDomainService {
       }
     }
 
-    await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant: this.tenantId, domain_name: domain })
+    await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
+      .where({ domain_name: domain })
       .update({
         status: 'deleted',
         updated_at: new Date(),

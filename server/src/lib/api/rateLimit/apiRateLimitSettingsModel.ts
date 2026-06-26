@@ -1,7 +1,17 @@
 import { getConnection } from '@/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import type { BucketConfig } from '@alga-psa/core/rateLimit';
 
 const TABLE_NAME = 'api_rate_limit_settings';
+
+interface ApiRateLimitSettingsDbRow {
+  tenant: string;
+  api_key_id: string | null;
+  max_tokens: number;
+  refill_per_min: number;
+  created_at: Date;
+  updated_at: Date;
+}
 
 export interface ApiRateLimitSettingsRow {
   tenant: string;
@@ -22,7 +32,7 @@ export const DEFAULT_API_RATE_LIMIT_CONFIG: BucketConfig = {
   refillRate: DEFAULT_API_RATE_LIMIT_SETTINGS.refillPerMin / 60,
 };
 
-function mapRow(row: any): ApiRateLimitSettingsRow {
+function mapRow(row: ApiRateLimitSettingsDbRow): ApiRateLimitSettingsRow {
   return {
     tenant: row.tenant,
     apiKeyId: row.api_key_id ?? null,
@@ -55,9 +65,7 @@ async function loadForKey(
   apiKeyId?: string | null,
 ): Promise<ApiRateLimitSettingsRow | null> {
   const knex = await getConnection(tenant);
-  const query = knex(TABLE_NAME)
-    .where({ tenant })
-    .first();
+  const query = tenantDb(knex, tenant).table<ApiRateLimitSettingsDbRow>(TABLE_NAME);
 
   if (apiKeyId == null) {
     query.whereNull('api_key_id');
@@ -65,7 +73,7 @@ async function loadForKey(
     query.where({ api_key_id: apiKeyId });
   }
 
-  const row = await query;
+  const row = await query.first();
   return row ? mapRow(row) : null;
 }
 
@@ -77,8 +85,7 @@ async function loadForKeys(
   tenantDefault: ApiRateLimitSettingsRow | null;
 }> {
   const knex = await getConnection(tenant);
-  const rows = await knex(TABLE_NAME)
-    .where({ tenant })
+  const rows = await tenantDb(knex, tenant).table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
     .andWhere((builder) => {
       builder.whereNull('api_key_id');
       if (apiKeyIds.length > 0) {
@@ -130,7 +137,7 @@ export async function upsertForKey(
 ): Promise<ApiRateLimitSettingsRow> {
   const knex = await getConnection(tenant);
 
-  const [row] = await knex(TABLE_NAME)
+  const [row] = await tenantDb(knex, tenant).table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
     .insert({
       tenant,
       api_key_id: apiKeyId,
@@ -157,14 +164,13 @@ export async function upsertForTenant(
   const knex = await getConnection(tenant);
 
   return knex.transaction(async (trx) => {
-    const existing = await trx(TABLE_NAME)
-      .where({ tenant })
+    const db = tenantDb(trx, tenant);
+    const existing = await db.table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
       .whereNull('api_key_id')
       .first();
 
     if (existing) {
-      const [updated] = await trx(TABLE_NAME)
-        .where({ tenant })
+      const [updated] = await db.table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
         .whereNull('api_key_id')
         .update({
           max_tokens: input.maxTokens,
@@ -176,7 +182,7 @@ export async function upsertForTenant(
       return mapRow(updated);
     }
 
-    const [created] = await trx(TABLE_NAME)
+    const [created] = await db.table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
       .insert({
         tenant,
         api_key_id: null,
@@ -194,8 +200,8 @@ export async function upsertForTenant(
 export async function clearForKey(tenant: string, apiKeyId: string): Promise<number> {
   const knex = await getConnection(tenant);
 
-  return knex(TABLE_NAME)
-    .where({ tenant, api_key_id: apiKeyId })
+  return tenantDb(knex, tenant).table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
+    .where({ api_key_id: apiKeyId })
     .del();
 }
 

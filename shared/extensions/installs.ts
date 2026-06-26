@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { computeDomain } from './domain';
 import type { InstallInfo } from './types';
@@ -7,8 +8,8 @@ export async function getInstallInfoForTenant(tenantId: string, registryId: stri
   const adminDb: Knex = await getAdminConnection();
   const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
   if (!reg) return null;
-  const install = await adminDb('tenant_extension_install')
-    .where({ tenant_id: tenantId, registry_id: registryId })
+  const install = await tenantDb(adminDb, tenantId).table('tenant_extension_install')
+    .where({ registry_id: registryId })
     .first(['id', 'runner_domain', 'runner_status']);
   if (!install) return null;
   return {
@@ -23,12 +24,12 @@ export async function reprovisionInstallForTenant(tenantId: string, registryId: 
   const adminDb: Knex = await getAdminConnection();
   const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
   if (!reg) throw new Error('Registry not found');
-  const install = await adminDb('tenant_extension_install')
-    .where({ tenant_id: tenantId, registry_id: registryId })
+  const install = await tenantDb(adminDb, tenantId).table('tenant_extension_install')
+    .where({ registry_id: registryId })
     .first(['id']);
   if (!install) throw new Error('Install not found');
   const domain = computeDomain(tenantId, registryId);
-  await adminDb('tenant_extension_install')
+  await tenantDb(adminDb, tenantId).table('tenant_extension_install')
     .where({ id: (install as any).id })
     .update({
       runner_domain: domain,
@@ -37,4 +38,3 @@ export async function reprovisionInstallForTenant(tenantId: string, registryId: 
     });
   return { domain };
 }
-

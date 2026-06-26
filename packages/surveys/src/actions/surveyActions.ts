@@ -132,8 +132,7 @@ export type SurveyTrigger = {
 export const getSurveyTemplates = withAuth(async (_user, { tenant }): Promise<SurveyTemplate[]> => {
   const { knex } = await createTenantKnex();
 
-  const rows = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant })
+  const rows = await tenantDb(knex, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
     .orderBy('template_name', 'asc');
 
   return rows.map(mapTemplateRow);
@@ -142,8 +141,8 @@ export const getSurveyTemplates = withAuth(async (_user, { tenant }): Promise<Su
 export const getSurveyTemplateById = withAuth(async (_user, { tenant }, templateId: string): Promise<SurveyTemplate | null> => {
   const { knex } = await createTenantKnex();
 
-  const row = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant, template_id: templateId })
+  const row = await tenantDb(knex, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+    .where({ template_id: templateId })
     .first();
 
   return row ? mapTemplateRow(row) : null;
@@ -155,13 +154,12 @@ export const createSurveyTemplate = withAuth(async (_user, { tenant }, input: Cr
 
   const inserted = await withTransaction(knex, async (trx) => {
     if (parsed.isDefault) {
-      await trx(SURVEY_TEMPLATE_TABLE)
-        .where({ tenant })
+      await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
         .update({ is_default: false, updated_at: trx.fn.now() });
     }
 
     const payload = buildTemplateInsertPayload(trx, tenant, parsed);
-    const [row] = await trx<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+    const [row] = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
       .insert(payload)
       .returning('*');
 
@@ -180,8 +178,8 @@ export const updateSurveyTemplate = withAuth(async (_user, { tenant }, templateI
   const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx) => {
-    const current = await trx<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant, template_id: templateId })
+    const current = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+      .where({ template_id: templateId })
       .first()
       .forUpdate();
 
@@ -190,18 +188,17 @@ export const updateSurveyTemplate = withAuth(async (_user, { tenant }, templateI
     }
 
     if (parsed.isDefault) {
-      await trx(SURVEY_TEMPLATE_TABLE)
-        .where({ tenant })
+      await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
         .update({ is_default: false, updated_at: trx.fn.now() });
     }
 
     const updatePayload = buildTemplateUpdatePayload(trx, parsed);
-    await trx(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant, template_id: templateId })
+    await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
+      .where({ template_id: templateId })
       .update(updatePayload);
 
-    const refreshed = await trx<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant, template_id: templateId })
+    const refreshed = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+      .where({ template_id: templateId })
       .first();
 
     if (!refreshed) {
@@ -222,8 +219,8 @@ export const deleteSurveyTemplate = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const result = await deleteEntityWithValidation('survey_template', templateId, knex, tenant, async (trx, tenantId) => {
-      const deleted = await trx(SURVEY_TEMPLATE_TABLE)
-        .where({ tenant: tenantId, template_id: templateId })
+      const deleted = await tenantDb(trx, tenantId).table(SURVEY_TEMPLATE_TABLE)
+        .where({ template_id: templateId })
         .del();
 
       if (deleted === 0) {
@@ -252,8 +249,7 @@ export const deleteSurveyTemplate = withAuth(async (
 export const getSurveyTriggers = withAuth(async (_user, { tenant }): Promise<SurveyTrigger[]> => {
   const { knex } = await createTenantKnex();
 
-  const rows = await knex<TriggerRow>(SURVEY_TRIGGER_TABLE)
-    .where({ tenant })
+  const rows = await tenantDb(knex, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
     .orderBy('created_at', 'asc');
 
   return rows.map(mapTriggerRow);
@@ -265,8 +261,7 @@ export async function getSurveyTriggersForTenant(
 ): Promise<SurveyTrigger[]> {
   return runWithTenant(tenantId, async () => {
     const knex = connection ?? (await createTenantKnex()).knex;
-    const rows = await knex<TriggerRow>(SURVEY_TRIGGER_TABLE)
-      .where({ tenant: tenantId })
+    const rows = await tenantDb(knex, tenantId).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
       .orderBy('created_at', 'asc');
 
     return rows.map(mapTriggerRow);
@@ -281,7 +276,7 @@ export const createSurveyTrigger = withAuth(async (_user, { tenant }, input: Cre
   const row = await withTransaction(knex, async (trx) => {
     await assertTemplateBelongsToTenant(trx, tenant, parsed.templateId);
 
-    const [created] = await trx<TriggerRow>(SURVEY_TRIGGER_TABLE)
+    const [created] = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
       .insert({
         tenant,
         template_id: parsed.templateId,
@@ -306,8 +301,8 @@ export const updateSurveyTrigger = withAuth(async (_user, { tenant }, triggerId:
   const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx) => {
-    const current = await trx<TriggerRow>(SURVEY_TRIGGER_TABLE)
-      .where({ tenant, trigger_id: triggerId })
+    const current = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
+      .where({ trigger_id: triggerId })
       .first()
       .forUpdate();
 
@@ -349,12 +344,12 @@ export const updateSurveyTrigger = withAuth(async (_user, { tenant }, triggerId:
       updatePayload.enabled = parsed.enabled;
     }
 
-    await trx(SURVEY_TRIGGER_TABLE)
-      .where({ tenant, trigger_id: triggerId })
+    await tenantDb(trx, tenant).table(SURVEY_TRIGGER_TABLE)
+      .where({ trigger_id: triggerId })
       .update(updatePayload);
 
-    const refreshed = await trx<TriggerRow>(SURVEY_TRIGGER_TABLE)
-      .where({ tenant, trigger_id: triggerId })
+    const refreshed = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
+      .where({ trigger_id: triggerId })
       .first();
 
     if (!refreshed) {
@@ -370,8 +365,8 @@ export const updateSurveyTrigger = withAuth(async (_user, { tenant }, triggerId:
 export const deleteSurveyTrigger = withAuth(async (_user, { tenant }, triggerId: string): Promise<void> => {
   const { knex } = await createTenantKnex();
 
-  const deleted = await knex(SURVEY_TRIGGER_TABLE)
-    .where({ tenant, trigger_id: triggerId })
+  const deleted = await tenantDb(knex, tenant).table(SURVEY_TRIGGER_TABLE)
+    .where({ trigger_id: triggerId })
     .del();
 
   if (deleted === 0) {
@@ -620,8 +615,8 @@ async function assertTemplateBelongsToTenant(
   tenantId: string,
   templateId: string
 ): Promise<void> {
-  const exists = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant: tenantId, template_id: templateId })
+  const exists = await tenantDb(knex, tenantId).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+    .where({ template_id: templateId })
     .first();
 
   if (!exists) {

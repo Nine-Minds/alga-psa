@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { resolveTxt } from 'node:dns/promises';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
@@ -159,7 +159,7 @@ async function listActiveTenantDomains(knex: Knex, tenant: string): Promise<stri
 async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise<MspSsoDomainClaim[]> {
   const hasChallengeTable = await knex.schema.hasTable(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE);
 
-  const rows = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
+  const rows = await tenantDb(knex, tenant).table(MSP_SSO_LOGIN_DOMAIN_TABLE)
     .select(
       'id',
       'domain',
@@ -171,7 +171,7 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
       'rejected_at',
       'revoked_at'
     )
-    .where({ tenant, is_active: true })
+    .where({ is_active: true })
     .orderByRaw('lower(domain) asc');
 
   const claims = rows
@@ -233,9 +233,9 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
   }
 
   const claimIds = dedupedClaims.map((claim) => claim.id);
-  const challengeRows = await knex(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+  const challengeRows = await tenantDb(knex, tenant).table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
     .select('claim_id', 'challenge_label', 'challenge_value', 'created_at')
-    .where({ tenant, is_active: true })
+    .where({ is_active: true })
     .whereIn('claim_id', claimIds)
     .orderBy('created_at', 'desc');
 
@@ -264,7 +264,7 @@ async function toDomainClaim(
   tenant: string,
   claimId: string
 ): Promise<MspSsoDomainClaim | null> {
-  const row = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
+  const row = await tenantDb(knex, tenant).table(MSP_SSO_LOGIN_DOMAIN_TABLE)
     .select(
       'id',
       'domain',
@@ -276,7 +276,7 @@ async function toDomainClaim(
       'rejected_at',
       'revoked_at'
     )
-    .where({ tenant, id: claimId })
+    .where({ id: claimId })
     .first();
 
   if (!row) return null;
@@ -303,7 +303,7 @@ async function toVerificationChallenge(
   tenant: string,
   claimId: string
 ): Promise<MspSsoDomainVerificationChallenge | null> {
-  const row = await knex(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+  const row = await tenantDb(knex, tenant).table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
     .select(
       'id',
       'claim_id',
@@ -318,7 +318,7 @@ async function toVerificationChallenge(
       'created_at',
       'updated_at'
     )
-    .where({ tenant, claim_id: claimId, is_active: true })
+    .where({ claim_id: claimId, is_active: true })
     .orderBy('created_at', 'desc')
     .first();
 
@@ -399,12 +399,12 @@ export const requestMspSsoDomainClaim = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const now = trx.fn.now();
       const actorId = (user as { user_id?: string })?.user_id ?? null;
 
-      let claimRow = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      let claimRow = await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
         .select('id', 'domain', 'is_active', 'claim_status')
-        .where({ tenant })
         .whereRaw('lower(domain) = ?', [normalizedDomain])
         .first();
 
@@ -415,7 +415,7 @@ export const requestMspSsoDomainClaim = withAuth(async (
 
       if (!claimId) {
         claimId = uuidv4();
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
           tenant,
           id: claimId,
           domain: normalizedDomain,
@@ -430,8 +430,8 @@ export const requestMspSsoDomainClaim = withAuth(async (
           updated_at: now,
         });
       } else if (existingClaimStatus !== 'pending') {
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-          .where({ tenant, id: claimId })
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+          .where({ id: claimId })
           .update({
             domain: normalizedDomain,
             is_active: true,
@@ -456,8 +456,8 @@ export const requestMspSsoDomainClaim = withAuth(async (
         };
       }
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, claim_id: claimId, is_active: true })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ claim_id: claimId, is_active: true })
         .update({
           is_active: false,
           invalidated_at: now,
@@ -467,7 +467,7 @@ export const requestMspSsoDomainClaim = withAuth(async (
 
       const challenge = buildDnsTxtChallenge(normalizedDomain);
       const challengeId = uuidv4();
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
         tenant,
         id: challengeId,
         claim_id: claimId,
@@ -530,12 +530,13 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const now = trx.fn.now();
       const actorId = (user as { user_id?: string })?.user_id ?? null;
 
-      const claimRow = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      const claimRow = await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
         .select('id', 'domain')
-        .where({ tenant, id: claimId, is_active: true })
+        .where({ id: claimId, is_active: true })
         .first();
 
       if (!claimRow) {
@@ -547,8 +548,8 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
         return { claim: null, challenge: null };
       }
 
-      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .where({ tenant, id: claimId })
+      await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ id: claimId })
         .update({
           claim_status: 'pending',
           claim_status_updated_at: now,
@@ -560,8 +561,8 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
           updated_at: now,
         });
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, claim_id: claimId, is_active: true })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ claim_id: claimId, is_active: true })
         .update({
           is_active: false,
           invalidated_at: now,
@@ -570,7 +571,7 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
         });
 
       const challenge = buildDnsTxtChallenge(domain);
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
         tenant,
         id: uuidv4(),
         claim_id: claimId,
@@ -628,6 +629,7 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
     const actorId = (user as { user_id?: string })?.user_id ?? null;
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const claim = await toDomainClaim(trx, tenant, claimId);
       if (!claim || !claim.is_active) {
         return { claim: null, verified: false, reason: 'missing_claim' as const };
@@ -662,8 +664,8 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
       }
 
       const now = trx.fn.now();
-      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .where({ tenant, id: claimId })
+      await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ id: claimId })
         .update({
           claim_status: 'verified',
           claim_status_updated_at: now,
@@ -675,8 +677,8 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
           updated_at: now,
         });
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, id: challenge.id })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ id: challenge.id })
         .update({
           verified_at: now,
           is_active: false,
@@ -737,14 +739,15 @@ export const revokeMspSsoDomainClaim = withAuth(async (
     const actorId = (user as { user_id?: string })?.user_id ?? null;
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const existingClaim = await toDomainClaim(trx, tenant, claimId);
       if (!existingClaim || !existingClaim.is_active) {
         return null;
       }
 
       const now = trx.fn.now();
-      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .where({ tenant, id: claimId })
+      await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ id: claimId })
         .update({
           claim_status: 'revoked',
           claim_status_updated_at: now,
@@ -754,8 +757,8 @@ export const revokeMspSsoDomainClaim = withAuth(async (
           updated_at: now,
         });
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, claim_id: claimId, is_active: true })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ claim_id: claimId, is_active: true })
         .update({
           is_active: false,
           invalidated_at: now,
@@ -832,9 +835,10 @@ export const saveMspSsoLoginDomains = withAuth(async (
     }
 
     await knex.transaction(async (trx: Knex.Transaction) => {
-      const existingRows = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .select('id', 'domain', 'is_active')
-        .where({ tenant });
+      const db = tenantDb(trx, tenant);
+
+      const existingRows = await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .select('id', 'domain', 'is_active');
 
       const existingByDomain = new Map<string, MspSsoLoginDomain>();
       for (const row of existingRows as MspSsoLoginDomain[]) {
@@ -842,8 +846,8 @@ export const saveMspSsoLoginDomains = withAuth(async (
       }
 
       if (desiredDomains.length > 0) {
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-          .where({ tenant, is_active: true })
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+          .where({ is_active: true })
           .whereNotIn(trx.raw('lower(domain)') as unknown as string, desiredDomains)
           .update({
             is_active: false,
@@ -851,8 +855,8 @@ export const saveMspSsoLoginDomains = withAuth(async (
             updated_at: trx.fn.now(),
           });
       } else {
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-          .where({ tenant, is_active: true })
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+          .where({ is_active: true })
           .update({
             is_active: false,
             updated_by: (user as { user_id?: string })?.user_id ?? null,
@@ -863,8 +867,8 @@ export const saveMspSsoLoginDomains = withAuth(async (
       for (const domain of desiredDomains) {
         const existing = existingByDomain.get(domain);
         if (existing) {
-          await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-            .where({ tenant, id: existing.id })
+          await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+            .where({ id: existing.id })
             .update({
               domain,
               is_active: true,
@@ -879,7 +883,7 @@ export const saveMspSsoLoginDomains = withAuth(async (
           continue;
         }
 
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
           tenant,
           id: uuidv4(),
           domain,
