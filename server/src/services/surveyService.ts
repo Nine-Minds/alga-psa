@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { appendFileSync } from 'node:fs';
 import process from 'node:process';
 import type { Knex } from 'knex';
@@ -418,13 +418,19 @@ async function loadTicket(
   tenantId: string,
   ticketId: string
 ): Promise<TicketRow | null> {
-  return knex<TicketRow>(`${TICKETS_TABLE} as t`)
-    .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-      this.on('t.client_id', '=', 'c.client_id').andOn('t.tenant', '=', 'c.tenant');
-    })
-    .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
-      this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = knex<TicketRow>(`${TICKETS_TABLE} as t`);
+
+  db.tenantJoin(query, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+  });
+  db.tenantJoin(query, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+  });
+
+  return query
     .select(
       't.ticket_id',
       't.ticket_number',

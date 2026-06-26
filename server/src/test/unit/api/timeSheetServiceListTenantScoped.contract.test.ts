@@ -21,12 +21,15 @@ describe('time sheet service list tenant-scoped query contract', () => {
 
     expect(source).not.toContain('createTenantScopedQuery');
     expect(listSection).toContain('this.buildTenantScopedQuery(knex, context)');
-    expect(listSection).toContain('tenantDb(');
+    expect(listSection).toContain('const db = tenantDb(knex, context.tenant);');
     expect(listSection).toContain(".table('time_entries')");
-    expect(listSection).toContain(".andOn('time_sheets.tenant', '=', 'time_periods.tenant')");
-    expect(listSection).toContain(".andOn('time_sheets.tenant', '=', 'users.tenant')");
+    expect(listSection).toContain("db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')");
+    expect(listSection).toContain("db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' })");
+    expect(listSection).toContain("db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' })");
+    expect(listSection).toContain("db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' })");
 
     expect(listSection).not.toMatch(/knex\(this\.tableName\)\s*[\r\n]+\s*\.where\(`\$\{this\.tableName\}\.tenant`, context\.tenant\)/);
     expect(listSection).not.toMatch(/knex\('time_entries'\)\s*\./);
+    expect(listSection).not.toMatch(/\.andOn\([^)]*tenant/);
   });
 });

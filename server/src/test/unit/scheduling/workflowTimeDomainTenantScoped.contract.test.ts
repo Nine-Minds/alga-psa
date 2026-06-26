@@ -43,9 +43,11 @@ describe('workflow time domain tenant-scoped query contract', () => {
     expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
     expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).toContain('function tenantJoin(');
     expect(source).not.toContain('createTenantScopedQuery');
 
     expect(managerSection).toContain("tenantScopedTable(trx, 'teams', tenantId)");
+    expect(managerSection).toContain("tenantJoin(trx, tenantId, teamManagerQuery, 'team_members'");
     expect(managerSection).toContain("tenantScopedTable(trx, 'users', tenantId)");
     expect(managerSection).not.toContain("'teams.tenant': tenantId");
     expect(managerSection).not.toContain('.where({ tenant: tenantId, user_id: subjectUserId, reports_to: actorUserId })');
@@ -53,6 +55,8 @@ describe('workflow time domain tenant-scoped query contract', () => {
     expect(approvalRuleSection).toContain("tenantScopedTable(trx, 'user_roles', tenantId)");
     expect(approvalRuleSection).toContain("tenantScopedTable(trx, 'team_members', tenantId)");
     expect(approvalRuleSection).toContain("tenantScopedTable(trx, 'authorization_bundle_assignments as a', tenantId)");
+    expect(approvalRuleSection).toContain("tenantJoin(trx, tenantId, ruleQuery, 'authorization_bundles as b'");
+    expect(approvalRuleSection).toContain("tenantJoin(trx, tenantId, ruleQuery, 'authorization_bundle_rules as r'");
     expect(approvalRuleSection).not.toContain(".where('a.tenant', tenantId)");
     expect(approvalRuleSection).not.toContain('.where({ tenant: tenantId, user_id: actorUserId })');
 
@@ -63,6 +67,8 @@ describe('workflow time domain tenant-scoped query contract', () => {
 
     expect(workItemSection).toContain("tenantScopedTable(trx, 'tickets', tenantId)");
     expect(workItemSection).toContain("tenantScopedTable(trx, 'project_tasks as pt', tenantId)");
+    expect(workItemSection).toContain("tenantJoin(trx, tenantId, taskQuery, 'project_phases as pp'");
+    expect(workItemSection).toContain("tenantJoin(trx, tenantId, taskQuery, 'projects as p'");
     expect(workItemSection).toContain("tenantScopedTable(trx, 'projects', tenantId)");
     expect(workItemSection).toContain("tenantScopedTable(trx, 'interactions', tenantId)");
     expect(workItemSection).toContain("tenantScopedTable(trx, 'schedule_entries', tenantId)");
@@ -143,9 +149,15 @@ describe('workflow time domain tenant-scoped query contract', () => {
     const summarySection = sectionBetween('async function summarizeTimeSheet', 'export async function findOrCreateWorkflowTimeSheet');
 
     expect(filtersSection).not.toContain("query.where('te.tenant', tenantId)");
+    expect(filtersSection).toContain("const db = tenantDb(trx, tenantId)");
+    expect(filtersSection).toContain("db.tenantJoin(taskClientQuery, 'project_phases as pp'");
+    expect(filtersSection).not.toContain("whereRaw('t.tenant = te.tenant')");
+    expect(filtersSection).not.toContain("whereRaw('pt.tenant = te.tenant')");
+    expect(filtersSection).not.toContain("whereRaw('p.tenant = te.tenant')");
+    expect(filtersSection).not.toContain("whereRaw('i.tenant = te.tenant')");
     expect(findEntriesSection).toContain("tenantScopedTable(trx, 'time_entries as te', tenantId)");
-    expect(findEntriesSection).toContain('applyFindEntriesFilters(listQuery, input)');
-    expect(findEntriesSection).toContain('applyFindEntriesFilters(aggregateQuery, input)');
+    expect(findEntriesSection).toContain('applyFindEntriesFilters(listQuery, trx, tenantId, input)');
+    expect(findEntriesSection).toContain('applyFindEntriesFilters(aggregateQuery, trx, tenantId, input)');
     expect(findEntriesSection).not.toContain("trx('time_entries as te')");
     expect(findEntriesSection).not.toContain('applyFindEntriesFilters(listQuery, tenantId, input)');
     expect(source).not.toContain('applyFindEntriesFilters(query, tenantId,');

@@ -80,12 +80,23 @@ export class EmailWebhookMaintenanceService {
 
     let query = providerRoot;
     if (tenantId) {
-      tenantDb(knex, tenantId).tenantJoin(query, 'microsoft_email_provider_config as mpc', 'ep.id', 'mpc.email_provider_id');
+      tenantDb(knex, tenantId).tenantJoin(
+        query,
+        'microsoft_email_provider_config as mpc',
+        'ep.id',
+        'mpc.email_provider_id',
+        {
+          rootTenantColumn: 'ep.tenant',
+        }
+      );
     } else {
-      query = query.join('microsoft_email_provider_config as mpc', function() {
-        this.on('ep.id', '=', 'mpc.email_provider_id')
-          .andOn('ep.tenant', '=', 'mpc.tenant');
-      });
+      query = tenantDb(knex, PROVIDER_TENANT_DISCOVERY).tenantJoin(
+        query,
+        'microsoft_email_provider_config as mpc',
+        'ep.id',
+        'mpc.email_provider_id',
+        { rootTenantColumn: 'ep.tenant' }
+      );
     }
     query = query
       .where('ep.provider_type', 'microsoft')

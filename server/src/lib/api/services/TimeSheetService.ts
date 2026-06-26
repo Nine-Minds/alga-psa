@@ -50,6 +50,7 @@ export class TimeSheetService extends BaseService<any> {
 
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
       
       let query = this.buildTenantScopedQuery(knex, context);
   
@@ -80,36 +81,24 @@ export class TimeSheetService extends BaseService<any> {
           query.where(`${this.tableName}.approved_by`, filters.approved_by);
         }
         if (filters.period_start_from) {
-          query.join('time_periods', function() {
-            this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-              .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-          })
+          db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')
             .where('time_periods.start_date', '>=', filters.period_start_from);
         }
         if (filters.period_start_to) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', function() {
-              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-            });
+            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
           }
           query.where('time_periods.start_date', '<=', filters.period_start_to);
         }
         if (filters.period_end_from) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', function() {
-              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-            });
+            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
           }
           query.where('time_periods.end_date', '>=', filters.period_end_from);
         }
         if (filters.period_end_to) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', function() {
-              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-            });
+            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
           }
           query.where('time_periods.end_date', '<=', filters.period_end_to);
         }
@@ -128,25 +117,17 @@ export class TimeSheetService extends BaseService<any> {
       }
   
       // Add joins for additional data
-      query.leftJoin('users', function() {
-        this.on('time_sheets.user_id', '=', 'users.user_id')
-          .andOn('time_sheets.tenant', '=', 'users.tenant');
-      })
-        .leftJoin('users as approvers', function() {
-          this.on('time_sheets.approved_by', '=', 'approvers.user_id')
-            .andOn('time_sheets.tenant', '=', 'approvers.tenant');
-        })
-        .leftJoin('time_periods', function() {
-          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-        })
-        .select(
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
+      query.select(
           `${this.tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
           knex.raw(`CONCAT(approvers.first_name, ' ', approvers.last_name) as approver_name`),
           'time_periods.start_date as period_start',
           'time_periods.end_date as period_end'
-        );
+      );
   
       // Add computed fields
       const timeEntrySubquery = tenantDb(knex, context.tenant).table('time_entries')
@@ -193,20 +174,14 @@ export class TimeSheetService extends BaseService<any> {
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const query = this.buildTenantScopedQuery(knex, context);
+
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
       
-      const timeSheet = await this.buildTenantScopedQuery(knex, context)
-        .leftJoin('users', function() {
-          this.on('time_sheets.user_id', '=', 'users.user_id')
-            .andOn('time_sheets.tenant', '=', 'users.tenant');
-        })
-        .leftJoin('users as approvers', function() {
-          this.on('time_sheets.approved_by', '=', 'approvers.user_id')
-            .andOn('time_sheets.tenant', '=', 'approvers.tenant');
-        })
-        .leftJoin('time_periods', function() {
-          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-        })
+      const timeSheet = await query
         .where(`${this.tableName}.${this.primaryKey}`, id)
         .select(
           `${this.tableName}.*`,
@@ -643,12 +618,12 @@ export class TimeSheetService extends BaseService<any> {
 
   async getTimeSheetComments(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const query = db.table('time_sheet_comments');
       
-      const comments = await tenantDb(knex, context.tenant).table('time_sheet_comments')
-        .leftJoin('users', function() {
-          this.on('time_sheet_comments.user_id', '=', 'users.user_id')
-            .andOn('time_sheet_comments.tenant', '=', 'users.tenant');
-        })
+      db.tenantJoin(query, 'users', 'time_sheet_comments.user_id', 'users.user_id', { type: 'left' });
+
+      const comments = await query
         .where({ 'time_sheet_comments.time_sheet_id': timeSheetId })
         .select(
           'time_sheet_comments.*',
@@ -870,8 +845,9 @@ export class TimeSheetService extends BaseService<any> {
   // Schedule entries
   async getScheduleEntries(context: ServiceContext, filters?: any): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
       
-      let query = tenantDb(knex, context.tenant).table('schedule_entries');
+      let query = db.table('schedule_entries');
   
       // Apply date filters if provided
       if (filters?.start_date) {
@@ -881,10 +857,7 @@ export class TimeSheetService extends BaseService<any> {
         query = query.where('scheduled_end', '<=', filters.end_date);
       }
       if (filters?.user_id) {
-        query = query.join('schedule_entry_assignees', function() {
-          this.on('schedule_entries.entry_id', '=', 'schedule_entry_assignees.entry_id')
-            .andOn('schedule_entries.tenant', '=', 'schedule_entry_assignees.tenant');
-        })
+        query = db.tenantJoin(query, 'schedule_entry_assignees', 'schedule_entries.entry_id', 'schedule_entry_assignees.entry_id')
           .where('schedule_entry_assignees.user_id', filters.user_id);
       }
   
@@ -894,7 +867,6 @@ export class TimeSheetService extends BaseService<any> {
         const assigneeVisibilityQuery = tenantDb(knex, context.tenant).table('schedule_entry_assignees as sea')
           .select('sea.user_id')
           .whereRaw('sea.entry_id = schedule_entries.entry_id')
-          .whereRaw('sea.tenant = schedule_entries.tenant')
           .where('sea.user_id', userId);
 
         query = query.where(function() {
@@ -1137,6 +1109,7 @@ export class TimeSheetService extends BaseService<any> {
   // Search and statistics
   async search(searchData: TimeSheetSearchData, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
       const tableName = this.tableName; // Capture tableName to use in callbacks
       
       const query = this.buildTenantScopedQuery(knex, context);
@@ -1168,28 +1141,20 @@ export class TimeSheetService extends BaseService<any> {
         query.whereIn(`${tableName}.period_id`, searchData.period_ids);
       }
       if (searchData.date_from) {
-        query.join('time_periods', function() {
-          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-        })
+        db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')
           .where('time_periods.start_date', '>=', searchData.date_from);
       }
       if (searchData.date_to) {
         if (!query.toString().includes('time_periods')) {
-          query.join('time_periods', function() {
-            this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-              .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-          });
+          db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
         }
         query.where('time_periods.end_date', '<=', searchData.date_to);
       }
   
       // Add joins
-      query.leftJoin('users', function() {
-        this.on('time_sheets.user_id', '=', 'users.user_id')
-          .andOn('time_sheets.tenant', '=', 'users.tenant');
-      })
-        .select(
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+
+      query.select(
           `${tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
         )
@@ -1337,12 +1302,12 @@ export class TimeSheetService extends BaseService<any> {
 
   private async getScheduleAssignees(entryId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const query = db.table('schedule_entry_assignees');
       
-      return tenantDb(knex, context.tenant).table('schedule_entry_assignees')
-        .join('users', function() {
-          this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
-            .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
-        })
+      db.tenantJoin(query, 'users', 'schedule_entry_assignees.user_id', 'users.user_id');
+
+      return query
         .where({ 'schedule_entry_assignees.entry_id': entryId })
         .select('users.user_id', 'users.first_name', 'users.last_name', 'users.email');
     }

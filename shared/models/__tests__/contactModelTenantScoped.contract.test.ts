@@ -31,10 +31,14 @@ describe('contact model tenant-scoped query contract', () => {
     expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string)');
     expect(source).toContain('tenantDb(trx, tenant).table(table)');
+    expect(source).toContain('function tenantJoin(');
+    expect(source).toContain('tenantDb(trx, tenant).tenantJoin(query, table, left, right, options)');
     expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toMatch(/\.where\(\{[^}]*tenant[^}]*\}/s);
     expect(source).not.toMatch(/\.where\(['"][^'"]*tenant['"],\s*tenant\)/);
     expect(source).not.toMatch(/\.where\(['"][^'"]*\.tenant['"],\s*tenant\)/);
+    expect(source).not.toMatch(/\.andOn\(['"][^'"]*tenant['"]/);
+    expect(source).not.toMatch(/\.andOn\(['"][^'"]*\.tenant['"]/);
   });
 
   it('uses structural tenant scoping for create/update roots', () => {
@@ -54,6 +58,8 @@ describe('contact model tenant-scoped query contract', () => {
     expect(hydrationSearchSection).toContain("tenantScopedTable(trx, 'contact_email_type_definitions', tenant)");
     expect(hydrationSearchSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
     expect(hydrationSearchSection).toContain("tenantScopedTable(trx, 'contacts as c', tenant)");
+    expect(hydrationSearchSection).toContain("tenantJoin(\n      trx,\n      tenant,\n      query,\n      'contact_email_type_definitions as cecd'");
+    expect(hydrationSearchSection).toContain("tenantJoin(\n      trx,\n      tenant,\n      query,\n      'contact_phone_type_definitions as cptd'");
     expect(hydrationSearchSection).not.toContain(".where('cea.tenant', tenant)");
     expect(hydrationSearchSection).not.toContain(".where('cpn.tenant', tenant)");
     expect(hydrationSearchSection).not.toContain(".where('c.tenant', tenant)");
@@ -67,6 +73,8 @@ describe('contact model tenant-scoped query contract', () => {
     expect(typeDefinitionSection).toContain("tenantScopedTable(trx, 'contact_phone_numbers', tenant)");
     expect(typeDefinitionSection).toContain("tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)");
     expect(typeDefinitionSection).toContain("tenantScopedTable(trx, 'contact_phone_type_definitions as cptd', tenant)");
+    expect(typeDefinitionSection).toContain("tenantJoin(\n      trx,\n      tenant,\n      query,\n      'contact_phone_type_definitions as cptd'");
+    expect(typeDefinitionSection).toContain("tenantJoin(\n      trx,\n      tenant,\n      query,\n      'contact_phone_numbers as cpn'");
     expect(typeDefinitionSection).not.toContain(".where('tenant', tenant)");
     expect(typeDefinitionSection).not.toContain(".where('cpn.tenant', tenant)");
     expect(typeDefinitionSection).not.toContain(".where('cptd.tenant', tenant)");

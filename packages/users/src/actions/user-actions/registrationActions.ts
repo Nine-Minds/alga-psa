@@ -46,14 +46,16 @@ export async function initiateRegistration(
     
     if (contactVerification.exists) {
       // Get contact's client and tenant
-      const contact = await tenantDb(adminDb, REGISTRATION_TENANT_DISCOVERY)
-        .unscoped('contacts', 'tenant discovery for contact-based registration')
-        .join('clients', function() {
-          this.on('contacts.client_id', '=', 'clients.client_id')
-              .andOn('contacts.tenant', '=', 'clients.tenant');
-        })
+      const discoveryDb = tenantDb(adminDb, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = discoveryDb.unscoped('contacts', 'tenant discovery for contact-based registration');
+      discoveryDb.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id');
+
+      const contact = await contactQuery
         .where('contacts.email', email)
-        .select('clients.client_id', 'clients.tenant')
+        .select({
+          client_id: 'clients.client_id',
+          tenant: 'clients.tenant',
+        })
         .first();
       
       if (!contact?.tenant) {
@@ -125,14 +127,19 @@ async function registerContactUser(
   try {
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
       // Get contact details and tenant
-      const contact = await tenantDb(trx, REGISTRATION_TENANT_DISCOVERY)
-        .unscoped('contacts', 'tenant discovery for contact-based registration')
-        .join('clients', function() {
-          this.on('contacts.client_id', '=', 'clients.client_id')
-              .andOn('contacts.tenant', '=', 'clients.tenant');
-        })
+      const discoveryDb = tenantDb(trx, REGISTRATION_TENANT_DISCOVERY);
+      const contactQuery = discoveryDb.unscoped('contacts', 'tenant discovery for contact-based registration');
+      discoveryDb.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id');
+
+      const contact = await contactQuery
         .where({ 'contacts.email': email })
-        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.full_name', 'clients.tenant')
+        .select({
+          contact_name_id: 'contacts.contact_name_id',
+          client_id: 'contacts.client_id',
+          is_inactive: 'contacts.is_inactive',
+          full_name: 'contacts.full_name',
+          tenant: 'clients.tenant',
+        })
         .first();
 
       if (!contact) {

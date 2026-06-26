@@ -27,15 +27,12 @@ export const getUsersClientInfo = withAuth(async (
       throw new Error('Permission denied: Cannot read user client info');
     }
 
-    const rows = await tenantDb(trx, tenant).table('users as u')
-      .leftJoin('contacts as c', function () {
-        this.on('u.contact_id', '=', 'c.contact_name_id')
-            .andOn('u.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('clients as co', function () {
-        this.on('c.client_id', '=', 'co.client_id')
-            .andOn('c.tenant', '=', 'co.tenant');
-      })
+    const scopedDb = tenantDb(trx, tenant);
+    const usersQuery = scopedDb.table('users as u');
+    scopedDb.tenantJoin(usersQuery, 'contacts as c', 'u.contact_id', 'c.contact_name_id', { type: 'left' });
+    scopedDb.tenantJoin(usersQuery, 'clients as co', 'c.client_id', 'co.client_id', { type: 'left' });
+
+    const rows = await usersQuery
       .whereIn('u.user_id', userIds)
       .select(
         'u.user_id as user_id',

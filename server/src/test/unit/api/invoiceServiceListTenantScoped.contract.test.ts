@@ -16,7 +16,7 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 }
 
 describe('invoice service list tenant-scoped query contract', () => {
-  it('uses structural tenant scoping and tenant-equal joins for invoice listing', () => {
+  it('uses structural tenant scoping and tenant facade joins for invoice listing', () => {
     const listSection = sectionBetween('async list(', 'async getById');
     const baseQuerySection = sectionBetween('protected buildBaseQuery', 'private applyInvoiceFilters');
 
@@ -27,11 +27,13 @@ describe('invoice service list tenant-scoped query contract', () => {
 
     expect(listSection).toContain('tenantDb(');
     expect(listSection).toContain(".table('client_locations as cl')");
-    expect(listSection).toContain(".andOn('invoices.tenant', '=', 'clients.tenant')");
-    expect(listSection).toContain(".andOn('invoices.tenant', '=', 'client_billing_cycles.tenant')");
-    expect(listSection).toContain(".andOn('invoices.tenant', '=', 'tax_rates.tenant')");
+    expect(listSection).toContain("db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })");
+    expect(listSection).toMatch(/db\.tenantJoin\(\s*query,\s*'client_billing_cycles',\s*'invoices\.billing_cycle_id',\s*'client_billing_cycles\.billing_cycle_id',\s*\{\s*type: 'left'\s*\}\s*\)/);
+    expect(listSection).toMatch(/db\.tenantJoin\(\s*query,\s*'tax_rates',\s*'invoices\.tax_rate_id',\s*'tax_rates\.tax_rate_id',\s*\{\s*type: 'left'\s*\}\s*\)/);
+    expect(listSection).toContain(".leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')");
 
     expect(listSection).not.toMatch(/trx\('client_locations as cl'\)\s*\./);
+    expect(listSection).not.toMatch(/\.andOn\([^)]*tenant/);
     expect(listSection).not.toContain(".leftJoin('clients', 'invoices.client_id', 'clients.client_id')");
     expect(listSection).not.toContain(".leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.billing_cycle_id')");
     expect(listSection).not.toContain(".leftJoin('tax_rates', 'invoices.tax_rate_id', 'tax_rates.tax_rate_id')");

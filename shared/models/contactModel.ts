@@ -227,6 +227,18 @@ function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string)
   return tenantDb(trx, tenant).table(table);
 }
 
+function tenantJoin(
+  trx: Knex.Transaction,
+  tenant: string,
+  query: Knex.QueryBuilder,
+  table: string,
+  left: string,
+  right: string,
+  options?: Parameters<ReturnType<typeof tenantDb>['tenantJoin']>[4]
+): Knex.QueryBuilder {
+  return tenantDb(trx, tenant).tenantJoin(query, table, left, right, options);
+}
+
 // =============================================================================
 // VALIDATION HELPER FUNCTIONS
 // =============================================================================
@@ -1060,11 +1072,18 @@ export class ContactModel {
       return emailMap;
     }
 
-    const rows = await tenantScopedTable(trx, 'contact_additional_email_addresses as cea', tenant)
-      .leftJoin('contact_email_type_definitions as cecd', function joinCustomType() {
-        this.on('cea.custom_email_type_id', '=', 'cecd.contact_email_type_id')
-          .andOn('cea.tenant', '=', 'cecd.tenant');
-      })
+    const query = tenantScopedTable(trx, 'contact_additional_email_addresses as cea', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_email_type_definitions as cecd',
+      'cea.custom_email_type_id',
+      'cecd.contact_email_type_id',
+      { type: 'left' }
+    );
+
+    const rows = await query
       .select(
         'cea.contact_additional_email_address_id',
         'cea.contact_name_id',
@@ -1120,11 +1139,18 @@ export class ContactModel {
       return phoneMap;
     }
 
-    const rows = await tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant)
-      .leftJoin('contact_phone_type_definitions as cptd', function joinCustomType() {
-        this.on('cpn.custom_phone_type_id', '=', 'cptd.contact_phone_type_id')
-          .andOn('cpn.tenant', '=', 'cptd.tenant');
-      })
+    const query = tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_phone_type_definitions as cptd',
+      'cpn.custom_phone_type_id',
+      'cptd.contact_phone_type_id',
+      { type: 'left' }
+    );
+
+    const rows = await query
       .select(
         'cpn.contact_phone_number_id',
         'cpn.contact_name_id',
@@ -1512,11 +1538,17 @@ export class ContactModel {
   ): Promise<{ label: string; usageCount: number }> {
     const normalized = customTypeLabel.trim().replace(/\s+/g, ' ').toLowerCase();
 
-    const result = await tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant)
-      .join('contact_phone_type_definitions as cptd', function joinType() {
-        this.on('cpn.custom_phone_type_id', '=', 'cptd.contact_phone_type_id')
-          .andOn('cpn.tenant', '=', 'cptd.tenant');
-      })
+    const query = tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_phone_type_definitions as cptd',
+      'cpn.custom_phone_type_id',
+      'cptd.contact_phone_type_id'
+    );
+
+    const result = await query
       .where('cptd.normalized_label', normalized)
       .count<{ count: string }>('* as count')
       .first();
@@ -1568,11 +1600,18 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<Array<{ contact_phone_type_id: string; label: string }>> {
-    return tenantScopedTable(trx, 'contact_phone_type_definitions as cptd', tenant)
-      .leftJoin('contact_phone_numbers as cpn', function joinPhones() {
-        this.on('cptd.contact_phone_type_id', '=', 'cpn.custom_phone_type_id')
-          .andOn('cptd.tenant', '=', 'cpn.tenant');
-      })
+    const query = tenantScopedTable(trx, 'contact_phone_type_definitions as cptd', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_phone_numbers as cpn',
+      'cptd.contact_phone_type_id',
+      'cpn.custom_phone_type_id',
+      { type: 'left' }
+    );
+
+    return query
       .whereNull('cpn.contact_phone_number_id')
       .select('cptd.contact_phone_type_id', 'cptd.label');
   }

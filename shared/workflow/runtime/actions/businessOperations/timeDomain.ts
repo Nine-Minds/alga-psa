@@ -209,6 +209,18 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+function tenantJoin(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  query: Knex.QueryBuilder,
+  table: string,
+  left: string,
+  right: string,
+  options?: Parameters<ReturnType<typeof tenantDb>['tenantJoin']>[4]
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).tenantJoin(query, table, left, right, options);
+}
+
 function ensureValidDate(value: string, field: string): Date {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -239,11 +251,10 @@ async function isManagerOfSubject(
   actorUserId: string,
   subjectUserId: string
 ): Promise<boolean> {
-  const teamManagerRow = await tenantScopedTable(trx, 'teams', tenantId)
-    .join('team_members', function joinTeamMembers() {
-      this.on('teams.team_id', '=', 'team_members.team_id')
-        .andOn('teams.tenant', '=', 'team_members.tenant');
-    })
+  const teamManagerQuery = tenantScopedTable(trx, 'teams', tenantId);
+  tenantJoin(trx, tenantId, teamManagerQuery, 'team_members', 'teams.team_id', 'team_members.team_id');
+
+  const teamManagerRow = await teamManagerQuery
     .where({
       'teams.manager_id': actorUserId,
       'team_members.user_id': subjectUserId,
@@ -278,15 +289,16 @@ async function hasAssignedNotSelfApproverBundleRuleForWorkflowTime(
   const roleIds = roleRows.map((row) => row.role_id).filter(Boolean);
   const teamIds = teamRows.map((row) => row.team_id).filter(Boolean);
 
-  const rule = await tenantScopedTable(trx, 'authorization_bundle_assignments as a', tenantId)
-    .join('authorization_bundles as b', function joinBundles() {
-      this.on('b.tenant', '=', 'a.tenant').andOn('b.bundle_id', '=', 'a.bundle_id');
-    })
-    .join('authorization_bundle_rules as r', function joinRules() {
-      this.on('r.tenant', '=', 'b.tenant')
-        .andOn('r.bundle_id', '=', 'b.bundle_id')
-        .andOn('r.revision_id', '=', 'b.published_revision_id');
-    })
+  const ruleQuery = tenantScopedTable(trx, 'authorization_bundle_assignments as a', tenantId);
+  tenantJoin(trx, tenantId, ruleQuery, 'authorization_bundles as b', 'b.bundle_id', 'a.bundle_id');
+  tenantJoin(trx, tenantId, ruleQuery, 'authorization_bundle_rules as r', 'r.bundle_id', 'b.bundle_id', {
+    rootTenantColumn: 'b.tenant',
+    on: (join) => {
+      join.andOn('r.revision_id', '=', 'b.published_revision_id');
+    },
+  });
+
+  const rule = await ruleQuery
     .andWhere('a.status', 'active')
     .andWhere('b.status', 'active')
     .whereNotNull('b.published_revision_id')
@@ -465,13 +477,11 @@ async function getWorkItemClientContext(
       };
     }
     case 'project_task': {
-      const task = await tenantScopedTable(trx, 'project_tasks as pt', tenantId)
-        .join('project_phases as pp', function joinPhases() {
-          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-        })
-        .join('projects as p', function joinProjects() {
-          this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-        })
+      const taskQuery = tenantScopedTable(trx, 'project_tasks as pt', tenantId);
+      tenantJoin(trx, tenantId, taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      tenantJoin(trx, tenantId, taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+
+      const task = await taskQuery
         .where({ 'pt.task_id': link.id })
         .select('pt.task_id', 'pt.assigned_to', 'p.client_id')
         .first();
@@ -584,25 +594,20 @@ async function determineDefaultContractLineForWorkflow(params: {
   const rangeStart = `${effectiveDate}T00:00:00.000Z`;
   const rangeEnd = `${effectiveDate}T23:59:59.999Z`;
 
-  const rows = await tenantScopedTable(trx, 'client_contracts', tenantId)
-    .join('contracts', function joinContracts() {
-      this.on('client_contracts.contract_id', '=', 'contracts.contract_id')
-        .andOn('contracts.tenant', '=', 'client_contracts.tenant');
-    })
-    .join('contract_lines', function joinContractLines() {
-      this.on('contracts.contract_id', '=', 'contract_lines.contract_id')
-        .andOn('contract_lines.tenant', '=', 'contracts.tenant');
-    })
-    .join('contract_line_services', function joinContractLineServices() {
-      this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id')
-        .andOn('contract_line_services.tenant', '=', 'contract_lines.tenant');
-    })
-    .leftJoin('contract_line_service_configuration as bucket_config', function joinBucketConfig() {
-      this.on('bucket_config.contract_line_id', '=', 'contract_lines.contract_line_id')
-        .andOn('bucket_config.tenant', '=', 'contract_lines.tenant')
+  const contractQuery = tenantScopedTable(trx, 'client_contracts', tenantId);
+  tenantJoin(trx, tenantId, contractQuery, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
+  tenantJoin(trx, tenantId, contractQuery, 'contract_lines', 'contracts.contract_id', 'contract_lines.contract_id');
+  tenantJoin(trx, tenantId, contractQuery, 'contract_line_services', 'contract_lines.contract_line_id', 'contract_line_services.contract_line_id');
+  tenantJoin(trx, tenantId, contractQuery, 'contract_line_service_configuration as bucket_config', 'bucket_config.contract_line_id', 'contract_lines.contract_line_id', {
+    type: 'left',
+    on: (join) => {
+      join
         .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
         .andOnVal('bucket_config.configuration_type', 'Bucket');
-    })
+    },
+  });
+
+  const rows = await contractQuery
     .where({
       'client_contracts.client_id': clientId,
       'client_contracts.is_active': true,
@@ -700,10 +705,10 @@ async function resolveBucketUsagePeriod(params: {
     };
   }
 
-  const contractAssignment = await tenantScopedTable(trx, 'client_contract_lines as ccl', tenantId)
-    .join('contract_lines as cl', function joinContractLines() {
-      this.on('ccl.contract_line_id', '=', 'cl.contract_line_id').andOn('ccl.tenant', '=', 'cl.tenant');
-    })
+  const contractAssignmentQuery = tenantScopedTable(trx, 'client_contract_lines as ccl', tenantId);
+  tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl', 'ccl.contract_line_id', 'cl.contract_line_id');
+
+  const contractAssignment = await contractAssignmentQuery
     .where({
       'ccl.client_id': clientId,
       'ccl.contract_line_id': contractLineId,
@@ -811,10 +816,10 @@ async function applyBucketUsageDeltaForEntry(params: {
     return;
   }
 
-  const overlayConfig = await tenantScopedTable(trx, 'contract_line_service_configuration as cfg', tenantId)
-    .join('contract_line_service_bucket_config as bucket_cfg', function joinBucketConfig() {
-      this.on('cfg.config_id', '=', 'bucket_cfg.config_id').andOn('cfg.tenant', '=', 'bucket_cfg.tenant');
-    })
+  const overlayConfigQuery = tenantScopedTable(trx, 'contract_line_service_configuration as cfg', tenantId);
+  tenantJoin(trx, tenantId, overlayConfigQuery, 'contract_line_service_bucket_config as bucket_cfg', 'cfg.config_id', 'bucket_cfg.config_id');
+
+  const overlayConfig = await overlayConfigQuery
     .where({
       'cfg.contract_line_id': contractLineId,
       'cfg.service_id': serviceId,
@@ -885,10 +890,10 @@ async function resolveOrCreateTimeSheet(params: {
   } = params;
 
   if (providedTimeSheetId) {
-    const timeSheet = await tenantScopedTable(trx, 'time_sheets as ts', tenantId)
-      .join('time_periods as tp', function joinTimePeriods() {
-        this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
-      })
+    const timeSheetQuery = tenantScopedTable(trx, 'time_sheets as ts', tenantId);
+    tenantJoin(trx, tenantId, timeSheetQuery, 'time_periods as tp', 'ts.period_id', 'tp.period_id');
+
+    const timeSheet = await timeSheetQuery
       .where({ 'ts.id': providedTimeSheetId })
       .select('ts.id', 'ts.user_id', 'tp.start_date', 'tp.end_date')
       .first();
@@ -1756,6 +1761,8 @@ export async function getWorkflowTimeEntry(params: {
 
 function applyFindEntriesFilters(
   query: Knex.QueryBuilder,
+  trx: Knex.Transaction,
+  tenantId: string,
   filters: WorkflowTimeFindEntriesInput
 ): void {
   if (filters.user_id) {
@@ -1808,46 +1815,39 @@ function applyFindEntriesFilters(
   }
 
   if (filters.client_id) {
+    const db = tenantDb(trx, tenantId);
     query.andWhere((builder) => {
+      const ticketClientQuery = db.subquery('tickets as t')
+        .select(trx.raw('1'))
+        .whereRaw('t.ticket_id = te.work_item_id')
+        .where('te.work_item_type', 'ticket')
+        .andWhere('t.client_id', filters.client_id as string);
+
+      const taskClientQuery = db.subquery('project_tasks as pt')
+        .select(trx.raw('1'))
+        .whereRaw('pt.task_id = te.work_item_id')
+        .where('te.work_item_type', 'project_task')
+        .andWhere('p.client_id', filters.client_id as string);
+      db.tenantJoin(taskClientQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      db.tenantJoin(taskClientQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+
+      const projectClientQuery = db.subquery('projects as p')
+        .select(trx.raw('1'))
+        .whereRaw('p.project_id = te.work_item_id')
+        .where('te.work_item_type', 'project')
+        .andWhere('p.client_id', filters.client_id as string);
+
+      const interactionClientQuery = db.subquery('interactions as i')
+        .select(trx.raw('1'))
+        .whereRaw('i.interaction_id = te.work_item_id')
+        .where('te.work_item_type', 'interaction')
+        .andWhere('i.client_id', filters.client_id as string);
+
       builder
-        .whereExists(function ticketClientFilter() {
-          this.select(1)
-            .from('tickets as t')
-            .whereRaw('t.tenant = te.tenant')
-            .whereRaw('t.ticket_id = te.work_item_id')
-            .where('te.work_item_type', 'ticket')
-            .andWhere('t.client_id', filters.client_id as string);
-        })
-        .orWhereExists(function taskClientFilter() {
-          this.select(1)
-            .from('project_tasks as pt')
-            .join('project_phases as pp', function joinPhases() {
-              this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-            })
-            .join('projects as p', function joinProjects() {
-              this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-            })
-            .whereRaw('pt.tenant = te.tenant')
-            .whereRaw('pt.task_id = te.work_item_id')
-            .where('te.work_item_type', 'project_task')
-            .andWhere('p.client_id', filters.client_id as string);
-        })
-        .orWhereExists(function projectClientFilter() {
-          this.select(1)
-            .from('projects as p')
-            .whereRaw('p.tenant = te.tenant')
-            .whereRaw('p.project_id = te.work_item_id')
-            .where('te.work_item_type', 'project')
-            .andWhere('p.client_id', filters.client_id as string);
-        })
-        .orWhereExists(function interactionClientFilter() {
-          this.select(1)
-            .from('interactions as i')
-            .whereRaw('i.tenant = te.tenant')
-            .whereRaw('i.interaction_id = te.work_item_id')
-            .where('te.work_item_type', 'interaction')
-            .andWhere('i.client_id', filters.client_id as string);
-        });
+        .whereExists(ticketClientQuery)
+        .orWhereExists(taskClientQuery)
+        .orWhereExists(projectClientQuery)
+        .orWhereExists(interactionClientQuery);
     });
   }
 }
@@ -1884,7 +1884,7 @@ export async function findWorkflowTimeEntries(params: {
     .orderBy('te.start_time', 'desc')
     .limit(limit);
 
-  applyFindEntriesFilters(listQuery, input);
+  applyFindEntriesFilters(listQuery, trx, tenantId, input);
 
   const aggregateQuery = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .count<{ count: string }[]>('* as count')
@@ -1893,7 +1893,7 @@ export async function findWorkflowTimeEntries(params: {
     })
     .sum<{ billable_minutes: string | null }[]>('te.billable_duration as billable_minutes');
 
-  applyFindEntriesFilters(aggregateQuery, input);
+  applyFindEntriesFilters(aggregateQuery, trx, tenantId, input);
 
   const [rows, aggregateRows] = await Promise.all([listQuery, aggregateQuery]);
   const aggregate = (Array.isArray(aggregateRows) ? aggregateRows[0] : aggregateRows) as unknown as {
@@ -2051,10 +2051,10 @@ async function summarizeTimeSheet(
   tenantId: string,
   timeSheetId: string
 ): Promise<WorkflowTimeSheetSummary> {
-  const row = await tenantScopedTable(trx, 'time_sheets as ts', tenantId)
-    .join('time_periods as tp', function joinPeriods() {
-      this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
-    })
+  const summaryQuery = tenantScopedTable(trx, 'time_sheets as ts', tenantId);
+  tenantJoin(trx, tenantId, summaryQuery, 'time_periods as tp', 'ts.period_id', 'tp.period_id');
+
+  const row = await summaryQuery
     .where({
       'ts.id': timeSheetId,
     })
@@ -2231,10 +2231,8 @@ export async function findWorkflowTimeSheets(params: {
   const input = await scopeFindTimeSheetsInputForActor(trx, tenantId, actorUserId, params.input);
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
 
-  const base = tenantScopedTable(trx, 'time_sheets as ts', tenantId)
-    .join('time_periods as tp', function joinPeriods() {
-      this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
-    });
+  const base = tenantScopedTable(trx, 'time_sheets as ts', tenantId);
+  tenantJoin(trx, tenantId, base, 'time_periods as tp', 'ts.period_id', 'tp.period_id');
 
   if (input.user_ids?.length) {
     base.whereIn('ts.user_id', input.user_ids);
@@ -2635,7 +2633,7 @@ export async function summarizeWorkflowTimeEntries(params: {
     .orderBy('te.start_time', 'desc')
     .limit(limit);
 
-  applyFindEntriesFilters(query, input);
+  applyFindEntriesFilters(query, trx, tenantId, input);
 
   const rows = await query;
   const cache = new Map<string, string | null>();
@@ -2752,7 +2750,7 @@ async function findBillingBlockersInternal(params: {
     )
     .limit(limit);
 
-  applyFindEntriesFilters(query, filters);
+  applyFindEntriesFilters(query, trx, tenantId, filters);
   if (entryIds?.length) {
     query.whereIn('te.entry_id', entryIds);
   }

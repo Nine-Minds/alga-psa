@@ -61,6 +61,9 @@ describe('project workflow business operations tenant-scoped query contract', ()
     expect(source).toContain("import { tenantDb } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(tx: TenantTxContext, table: string)');
     expect(source).toContain('tenantDb(tx.trx, tx.tenantId).table(table)');
+    expect(source).toContain('function tenantJoin(');
+    expect(helperSection).toContain("tenantJoin(tx, taskQuery, 'project_phases as pp'");
+    expect(helperSection).toContain("tenantJoin(tx, query, 'statuses as s'");
     expect(source).not.toContain('createTenantScopedQuery');
     expect(helperSection).toContain("tenantScopedTable(tx, 'projects')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'project_phases')");

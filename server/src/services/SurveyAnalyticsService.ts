@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import type {
   SurveyDashboardFilters,
@@ -140,16 +141,23 @@ const SurveyAnalyticsService = {
     filters?: SurveyDashboardFilters,
     limit = 5
   ): Promise<SurveyIssueSummary[]> {
-    const rows = await baseResponseQuery(knex, tenantId, filters)
-      .leftJoin(`${TICKETS_TABLE} as t`, function joinTickets() {
-        this.on('sr.ticket_id', '=', 't.ticket_id').andOn('sr.tenant', '=', 't.tenant');
-      })
-      .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-        this.on('sr.client_id', '=', 'c.client_id').andOn('sr.tenant', '=', 'c.tenant');
-      })
-      .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
-        this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-      })
+    const db = tenantDb(knex, tenantId);
+    const query = baseResponseQuery(knex, tenantId, filters);
+
+    db.tenantJoin(query, `${TICKETS_TABLE} as t`, 'sr.ticket_id', 't.ticket_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(query, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(query, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+      type: 'left',
+      rootTenantColumn: 't.tenant',
+    });
+
+    const rows = await query
       .where('sr.rating', '<=', NEGATIVE_RATING_THRESHOLD)
       .select([
         'sr.response_id',
@@ -205,20 +213,27 @@ const SurveyAnalyticsService = {
 
     const baseQuery = baseResponseQuery(knex, tenantId, filters);
 
-    const responsesQuery = baseQuery
-      .clone()
-      .leftJoin(`${TICKETS_TABLE} as t`, function joinTickets() {
-        this.on('sr.ticket_id', '=', 't.ticket_id').andOn('sr.tenant', '=', 't.tenant');
-      })
-      .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-        this.on('sr.client_id', '=', 'c.client_id').andOn('sr.tenant', '=', 'c.tenant');
-      })
-      .leftJoin(`${CONTACTS_TABLE} as ct`, function joinContacts() {
-        this.on('sr.contact_id', '=', 'ct.contact_name_id').andOn('sr.tenant', '=', 'ct.tenant');
-      })
-      .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
-        this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-      })
+    const db = tenantDb(knex, tenantId);
+    const responsesQuery = baseQuery.clone();
+
+    db.tenantJoin(responsesQuery, `${TICKETS_TABLE} as t`, 'sr.ticket_id', 't.ticket_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(responsesQuery, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(responsesQuery, `${CONTACTS_TABLE} as ct`, 'sr.contact_id', 'ct.contact_name_id', {
+      type: 'left',
+      rootTenantColumn: 'sr.tenant',
+    });
+    db.tenantJoin(responsesQuery, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+      type: 'left',
+      rootTenantColumn: 't.tenant',
+    });
+
+    responsesQuery
       .select([
         'sr.response_id',
         'sr.rating',
@@ -425,9 +440,16 @@ function baseResponseQuery(knex: Knex, tenantId: string, filters?: SurveyDashboa
     query.andWhere('sr.template_id', filters.templateId);
   }
   if (filters?.technicianId) {
-    query.leftJoin(`${TICKETS_TABLE} as t_filter`, function joinTickets() {
-      this.on('sr.ticket_id', '=', 't_filter.ticket_id').andOn('sr.tenant', '=', 't_filter.tenant');
-    });
+    tenantDb(knex, tenantId).tenantJoin(
+      query,
+      `${TICKETS_TABLE} as t_filter`,
+      'sr.ticket_id',
+      't_filter.ticket_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'sr.tenant',
+      }
+    );
     query.andWhere('t_filter.assigned_to', filters.technicianId);
   }
 

@@ -247,6 +247,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, context.tenant);
       let query = this.buildBaseQuery(trx, context);
 
       // Apply filters
@@ -257,7 +258,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Add joins based on include options
       if ((options as any).include_client) {
         // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = tenantDb(trx, context.tenant).table('client_locations as cl')
+        const billingAddressSubquery = db.table('client_locations as cl')
           .select(
             'cl.client_id',
             'cl.tenant',
@@ -278,15 +279,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           .limit(1)
           .as('billing_loc');
 
-        query = query
-          .leftJoin('clients', function() {
-            this.on('invoices.client_id', '=', 'clients.client_id')
-              .andOn('invoices.tenant', '=', 'clients.tenant');
-          })
-          .leftJoin(billingAddressSubquery, function() {
-            this.on('clients.client_id', '=', 'billing_loc.client_id')
-                .andOn('clients.tenant', '=', 'billing_loc.tenant');
-          })
+        query = db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })
+          .leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')
           .select(
             'clients.client_name',
             trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
@@ -294,11 +288,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_billing_cycle) {
-        query = query
-          .leftJoin('client_billing_cycles', function() {
-            this.on('invoices.billing_cycle_id', '=', 'client_billing_cycles.billing_cycle_id')
-              .andOn('invoices.tenant', '=', 'client_billing_cycles.tenant');
-          })
+        query = db.tenantJoin(
+          query,
+          'client_billing_cycles',
+          'invoices.billing_cycle_id',
+          'client_billing_cycles.billing_cycle_id',
+          { type: 'left' }
+        )
           .select(
             'client_billing_cycles.period_start_date as period_start',
             'client_billing_cycles.period_end_date as period_end',
@@ -306,10 +302,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_tax_details) {
-        query = query.leftJoin('tax_rates', function() {
-          this.on('invoices.tax_rate_id', '=', 'tax_rates.tax_rate_id')
-            .andOn('invoices.tenant', '=', 'tax_rates.tenant');
-        })
+        query = db.tenantJoin(
+          query,
+          'tax_rates',
+          'invoices.tax_rate_id',
+          'tax_rates.tax_rate_id',
+          { type: 'left' }
+        )
           .select('tax_rates.rate_percentage', 'tax_rates.tax_name');
       }
 
@@ -1768,7 +1767,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const [statusStats, monthlyStats, topClients] = await Promise.all([
         this.getStatusStatistics(baseQuery.clone(), trx),
         this.getMonthlyStatistics(baseQuery.clone(), trx),
-        this.getTopClientsByRevenue(baseQuery.clone(), trx)
+        this.getTopClientsByRevenue(baseQuery.clone(), trx, context.tenant)
       ]);
 
       return {
@@ -2180,15 +2179,23 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return tenantDb(trx, context.tenant).table('clients as c')
-      .leftJoin('client_locations as cl', function() {
-        this.on('c.client_id', '=', 'cl.client_id')
-          .andOn('c.tenant', '=', 'cl.tenant')
-          .andOn(function() {
+    const db = tenantDb(trx, context.tenant);
+
+    return db.tenantJoin(
+      db.table('clients as c'),
+      'client_locations as cl',
+      'c.client_id',
+      'cl.client_id',
+      {
+        type: 'left',
+        on(join) {
+          join.andOn(function() {
             this.on('cl.is_billing_address', '=', trx.raw('true'))
               .orOn('cl.is_default', '=', trx.raw('true'));
           });
-      })
+        },
+      }
+    )
       .where({ 'c.client_id': clientId })
       .select(
         'c.client_id',
@@ -2345,12 +2352,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       .limit(12);
   }
 
-  private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction): Promise<any[]> {
-    return query
-      .join('clients', function() {
-        this.on('invoices.client_id', '=', 'clients.client_id')
-          .andOn('invoices.tenant', '=', 'clients.tenant');
-      })
+  private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string): Promise<any[]> {
+    return tenantDb(trx, tenant).tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id')
       .groupBy('clients.client_id', 'clients.client_name')
       .select(
         'clients.client_id',

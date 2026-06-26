@@ -14,10 +14,16 @@ function sectionFrom(startMarker: string): string {
 }
 
 describe('registration actions tenant-scoped query contract', () => {
+  it('uses facade tenant joins for contact-based tenant discovery', () => {
+    expect(source).toContain("discoveryDb.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id')");
+    expect(source).not.toContain(".andOn('contacts.tenant', '=', 'clients.tenant')");
+  });
+
   it('uses structural tenant scoping after contact tenant resolution', () => {
     const section = sectionFrom('async function registerContactUser');
 
     expect(section).toContain('tenantDb(trx, ');
+    expect(section).toContain("discoveryDb.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id')");
     expect(section).toContain(".table('users");
     expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');

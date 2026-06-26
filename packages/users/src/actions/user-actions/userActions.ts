@@ -772,14 +772,18 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
   try {
     // Email suffix functionality removed for security - only check contacts
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      return await tenantDb(trx, USER_TENANT_DISCOVERY)
-        .unscoped('contacts', 'tenant discovery for client portal registration contact lookup')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'contacts.client_id')
-              .andOn('clients.tenant', '=', 'contacts.tenant');
-        })
+      const discoveryDb = tenantDb(trx, USER_TENANT_DISCOVERY);
+      const contactQuery = discoveryDb.unscoped('contacts', 'tenant discovery for client portal registration contact lookup');
+      discoveryDb.tenantJoin(contactQuery, 'clients', 'clients.client_id', 'contacts.client_id');
+
+      return await contactQuery
         .where({ 'contacts.email': email.toLowerCase() })
-        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant')
+        .select({
+          contact_name_id: 'contacts.contact_name_id',
+          client_id: 'contacts.client_id',
+          is_inactive: 'contacts.is_inactive',
+          tenant: 'contacts.tenant',
+        })
         .first();
     });
 
@@ -814,20 +818,19 @@ export const registerClientUser = withAuth(async (
       }
 
       // First verify the contact exists and get their tenant
-      const contact = await tenantDb(trx, USER_TENANT_DISCOVERY)
-        .unscoped('contacts', 'tenant discovery for client portal registration contact lookup')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'contacts.client_id')
-              .andOn('clients.tenant', '=', 'contacts.tenant');
-        })
+      const discoveryDb = tenantDb(trx, USER_TENANT_DISCOVERY);
+      const contactQuery = discoveryDb.unscoped('contacts', 'tenant discovery for client portal registration contact lookup');
+      discoveryDb.tenantJoin(contactQuery, 'clients', 'clients.client_id', 'contacts.client_id');
+
+      const contact = await contactQuery
         .where({ 'contacts.email': email.toLowerCase() })
-        .select(
-          'contacts.contact_name_id',
-          'contacts.client_id',
-          'contacts.tenant',
-          'contacts.is_inactive',
-          'contacts.full_name'
-        )
+        .select({
+          contact_name_id: 'contacts.contact_name_id',
+          client_id: 'contacts.client_id',
+          tenant: 'contacts.tenant',
+          is_inactive: 'contacts.is_inactive',
+          full_name: 'contacts.full_name',
+        })
         .first();
 
       if (!contact) {
