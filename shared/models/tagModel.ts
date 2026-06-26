@@ -5,6 +5,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import {
@@ -200,12 +201,12 @@ export class TagModel {
       text_color?: string | null;
     }
   ): Promise<TagDefinition> {
+    const db = tenantDb(trx, tenant);
     // Check if definition already exists
-    const existing = await trx('tag_definitions')
+    const existing = await db.table<TagDefinition>('tag_definitions')
       .where({
         tag_text: tagText,
         tagged_type: taggedType,
-        tenant
       })
       .first();
 
@@ -238,7 +239,7 @@ export class TagModel {
       created_at: now
     };
 
-    await trx('tag_definitions').insert(definition);
+    await db.table('tag_definitions').insert(definition);
 
     return definition;
   }
@@ -254,6 +255,7 @@ export class TagModel {
     trx: Knex.Transaction,
     createdBy?: string
   ): Promise<TagMapping> {
+    const db = tenantDb(trx, tenant);
     const mappingId = uuidv4();
     const now = new Date().toISOString();
 
@@ -267,7 +269,7 @@ export class TagModel {
       created_at: now
     };
 
-    await trx('tag_mappings').insert(mapping);
+    await db.table('tag_mappings').insert(mapping);
 
     return mapping;
   }
@@ -302,12 +304,11 @@ export class TagModel {
     );
 
     // Check if mapping already exists
-    const existingMapping = await trx('tag_mappings')
+    const existingMapping = await tenantDb(trx, tenant).table('tag_mappings')
       .where({
         tag_id: definition.tag_id,
         tagged_id: tagData.tagged_id,
         tagged_type: tagData.tagged_type,
-        tenant
       })
       .first();
 
@@ -352,10 +353,9 @@ export class TagModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<TagDefinition[]> {
-    return await trx('tag_definitions')
+    return await tenantDb(trx, tenant).table<TagDefinition>('tag_definitions')
       .where({
         tagged_type: taggedType,
-        tenant
       })
       .orderBy('tag_text', 'asc');
   }
@@ -369,15 +369,13 @@ export class TagModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<any[]> {
-    return await trx('tag_mappings as tm')
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
+    const db = tenantDb(trx, tenant);
+    const query = db.table('tag_mappings as tm');
+    db.tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+    return await query
       .where({
         'tm.tagged_id': entityId,
         'tm.tagged_type': entityType,
-        'tm.tenant': tenant
       })
       .select(
         'tm.mapping_id',
@@ -401,10 +399,9 @@ export class TagModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<void> {
-    await trx('tag_mappings')
+    await tenantDb(trx, tenant).table('tag_mappings')
       .where({
         mapping_id: mappingId,
-        tenant
       })
       .delete();
   }
@@ -425,10 +422,9 @@ export class TagModel {
   ): Promise<void> {
     const now = new Date().toISOString();
 
-    await trx('tag_definitions')
+    await tenantDb(trx, tenant).table('tag_definitions')
       .where({
         tag_id: tagId,
-        tenant
       })
       .update({
         ...updates,
@@ -446,16 +442,14 @@ export class TagModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<boolean> {
-    const result = await trx('tag_mappings as tm')
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
+    const db = tenantDb(trx, tenant);
+    const query = db.table('tag_mappings as tm');
+    db.tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+    const result = await query
       .where({
         'td.tag_text': tagText,
         'tm.tagged_id': entityId,
         'tm.tagged_type': entityType,
-        'tm.tenant': tenant
       })
       .count('* as count')
       .first();

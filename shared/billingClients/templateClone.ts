@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IContractTemplateLine } from '@alga-psa/types';
 
@@ -33,8 +34,8 @@ export async function cloneTemplateContractLine(
     throw new Error('contractLineId is required');
   }
 
-  const templateLine = await trx<IContractTemplateLine>('contract_template_lines')
-    .where('tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const templateLine = await db.table<IContractTemplateLine>('contract_template_lines')
     .where('template_line_id', templateContractLineId)
     .first();
 
@@ -48,8 +49,8 @@ export async function cloneTemplateContractLine(
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
   if (appliedCustomRate !== null) {
-    await trx('contract_lines')
-      .where({ tenant, contract_line_id: contractLineId })
+    await db.table('contract_lines')
+      .where({ contract_line_id: contractLineId })
       .update({
         custom_rate: appliedCustomRate,
         updated_at: trx.fn.now()
@@ -66,13 +67,13 @@ async function cloneServices(trx: Knex.Transaction, tenant: string, templateCont
     custom_rate: number | string | null;
   };
 
-  const services = await trx<TemplateServiceRow>('contract_template_line_services')
-    .where('tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const services = await db.table<TemplateServiceRow>('contract_template_line_services')
     .where('template_line_id', templateContractLineId)
     .select('service_id', 'quantity', 'custom_rate');
 
   for (const service of services) {
-    await trx('contract_line_services')
+    await db.table('contract_line_services')
       .insert({
         tenant,
         contract_line_id: contractLineId,
@@ -107,8 +108,8 @@ async function cloneServiceConfiguration(
   contractLineId: string,
   serviceId: string
 ) {
-  const configurations = await trx<TemplateServiceConfigurationRow>('contract_template_line_service_configuration')
-    .where('tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const configurations = await db.table<TemplateServiceConfigurationRow>('contract_template_line_service_configuration')
     .where('template_line_id', templateContractLineId)
     .where('service_id', serviceId)
     .select('config_id', 'configuration_type', 'custom_rate', 'quantity');
@@ -116,7 +117,7 @@ async function cloneServiceConfiguration(
   for (const configuration of configurations) {
     const newConfigId = uuidv4();
 
-    await trx('contract_line_service_configuration').insert({
+    await db.table('contract_line_service_configuration').insert({
       tenant,
       config_id: newConfigId,
       contract_line_id: contractLineId,
@@ -154,14 +155,14 @@ type TemplateBucketConfigRow = {
 };
 
 async function cloneBucketConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string) {
-  const bucketConfig = await trx<TemplateBucketConfigRow>('contract_template_line_service_bucket_config')
-    .where('tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const bucketConfig = await db.table<TemplateBucketConfigRow>('contract_template_line_service_bucket_config')
     .where('config_id', sourceConfigId)
     .first('total_minutes', 'billing_period', 'overage_rate', 'allow_rollover');
 
   if (!bucketConfig) return;
 
-  await trx('contract_line_service_bucket_config').insert({
+  await db.table('contract_line_service_bucket_config').insert({
     tenant,
     config_id: targetConfigId,
     total_minutes: bucketConfig.total_minutes,
@@ -186,14 +187,14 @@ async function cloneHourlyConfig(
   targetConfigId: string,
   configuration: TemplateServiceConfigurationRow
 ) {
-  const hourlyConfig = await trx<TemplateHourlyConfigRow>('contract_template_line_service_hourly_config')
-    .where('tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const hourlyConfig = await db.table<TemplateHourlyConfigRow>('contract_template_line_service_hourly_config')
     .where('config_id', sourceConfigId)
     .first('billing_period', 'hourly_rate', 'user_type_rates');
 
   if (!hourlyConfig) return;
 
-  await trx('contract_line_service_hourly_config').insert({
+  await db.table('contract_line_service_hourly_config').insert({
     tenant,
     config_id: targetConfigId,
     billing_period: hourlyConfig.billing_period,
@@ -212,14 +213,14 @@ type TemplateUsageConfigRow = {
 };
 
 async function cloneUsageConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string, configuration: TemplateServiceConfigurationRow) {
-  const usageConfig = await trx<TemplateUsageConfigRow>('contract_template_line_service_usage_config')
-    .where('tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const usageConfig = await db.table<TemplateUsageConfigRow>('contract_template_line_service_usage_config')
     .where('config_id', sourceConfigId)
     .first('billing_period', 'unit_name', 'included_units', 'overage_rate');
 
   if (!usageConfig) return;
 
-  await trx('contract_line_service_usage_config').insert({
+  await db.table('contract_line_service_usage_config').insert({
     tenant,
     config_id: targetConfigId,
     billing_period: usageConfig.billing_period,
@@ -232,14 +233,14 @@ async function cloneUsageConfig(trx: Knex.Transaction, tenant: string, sourceCon
 }
 
 async function cloneFixedConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string) {
-  const fixedConfig = await trx('contract_template_line_service_fixed_config')
-    .where('tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const fixedConfig = await db.table('contract_template_line_service_fixed_config')
     .where('config_id', sourceConfigId)
     .first();
 
   if (!fixedConfig) return;
 
-  await trx('contract_line_service_fixed_config').insert({
+  await db.table('contract_line_service_fixed_config').insert({
     ...fixedConfig,
     tenant,
     config_id: targetConfigId,
@@ -260,8 +261,7 @@ async function resolveTemplateCustomRate(
 
   type CustomRateRow = { custom_rate: number | string | null };
 
-  const templateLine = await trx<CustomRateRow>('contract_template_lines')
-    .where('tenant', tenant)
+  const templateLine = await tenantDb(trx, tenant).table<CustomRateRow>('contract_template_lines')
     .where('template_id', templateContractId)
     .where('template_line_id', templateContractLineId)
     .first('custom_rate');

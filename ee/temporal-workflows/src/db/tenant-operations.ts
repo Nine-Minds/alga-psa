@@ -1,4 +1,5 @@
 import { Context, ApplicationFailure } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import type {
@@ -37,10 +38,10 @@ export async function insertStripeSubscriptionForTenant(
     throw new Error('MASTER_BILLING_TENANT_ID not configured');
   }
 
-  const price = await trx('stripe_prices')
+  const masterBillingDb = tenantDb(trx, MASTER_TENANT_ID);
+  const price = await masterBillingDb.table('stripe_prices')
     .where({
       stripe_price_external_id: input.stripePriceId,
-      tenant: MASTER_TENANT_ID
     })
     .first();
 
@@ -68,10 +69,9 @@ export async function insertStripeSubscriptionForTenant(
     subscriptionData.stripe_base_item_id = input.stripeBaseItemId;
 
     if (input.stripeBasePriceId) {
-      const basePrice = await trx('stripe_prices')
+      const basePrice = await masterBillingDb.table('stripe_prices')
         .where({
           stripe_price_external_id: input.stripeBasePriceId,
-          tenant: MASTER_TENANT_ID
         })
         .first();
 
@@ -83,7 +83,7 @@ export async function insertStripeSubscriptionForTenant(
     }
   }
 
-  await trx('stripe_subscriptions')
+  await tenantDb(trx, input.tenantId).table('stripe_subscriptions')
     .insert(subscriptionData)
     .returning('*');
 
@@ -159,17 +159,15 @@ export async function createTenantInDB(
           const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
           if (MASTER_TENANT_ID) {
             // Join stripe_prices → stripe_products to get product name
-            const priceWithProduct = await trx('stripe_prices as p')
-              .join('stripe_products as prod', function() {
-                this.on('p.stripe_product_id', '=', 'prod.stripe_product_id')
-                    .andOn('p.tenant', '=', 'prod.tenant');
-              })
+            const masterBillingDb = tenantDb(trx, MASTER_TENANT_ID);
+            const priceQuery = masterBillingDb.table('stripe_prices as p');
+            masterBillingDb.tenantJoin(priceQuery, 'stripe_products as prod', 'p.stripe_product_id', 'prod.stripe_product_id');
+            const priceWithProduct = await priceQuery
               .where({
                 'p.stripe_price_external_id': input.stripePriceId,
-                'p.tenant': MASTER_TENANT_ID
               })
               .select('prod.name as product_name')
-              .first();
+              .first() as unknown as { product_name?: string } | undefined;
 
             if (priceWithProduct?.product_name) {
               tenantData.plan = tierFromStripeProduct(priceWithProduct.product_name);
@@ -204,6 +202,7 @@ export async function createTenantInDB(
 
       // Insert Stripe customer and subscription if provided
       if (input.stripeCustomerId) {
+        const tenantScopedDb = tenantDb(trx, tenantId);
         const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
 
         if (!MASTER_TENANT_ID) {
@@ -215,7 +214,7 @@ export async function createTenantInDB(
           stripeCustomerId: input.stripeCustomerId
         });
 
-        const [stripeCustomer] = await trx('stripe_customers')
+        const [stripeCustomer] = await tenantScopedDb.table('stripe_customers')
           .insert({
             tenant: tenantId,
             stripe_customer_id: trx.raw('gen_random_uuid()'), // Internal UUID
@@ -268,7 +267,7 @@ export async function createTenantInDB(
           productId: input.appleIap.productId,
         });
 
-        await trx('apple_iap_subscriptions').insert({
+        await tenantDb(trx, tenantId).table('apple_iap_subscriptions').insert({
           tenant: tenantId,
           original_transaction_id: input.appleIap.originalTransactionId,
           app_account_token: input.appleIap.appAccountToken ?? null,
@@ -286,7 +285,7 @@ export async function createTenantInDB(
 
       // Insert add-ons if provided
       if (input.addons && input.addons.length > 0) {
-        await trx('tenant_addons')
+        await tenantDb(trx, tenantId).table('tenant_addons')
           .insert(input.addons.map(addon => ({
             tenant: tenantId,
             addon_key: addon,
@@ -301,7 +300,8 @@ export async function createTenantInDB(
       const clientName = input.clientName ?? input.companyName;
 
       if (clientName) {
-        const clientResult = await trx('clients')
+        const tenantScopedDb = tenantDb(trx, tenantId);
+        const clientResult = await tenantScopedDb.table('clients')
           .insert({
             client_name: clientName,
             tenant: tenantId,
@@ -321,7 +321,7 @@ export async function createTenantInDB(
         
         // Create default location for the MSP client with email from the tenant setup
         // Insert minimal required fields to satisfy NOT NULL constraints
-        await trx('client_locations')
+        await tenantScopedDb.table('client_locations')
           .insert({
             location_id: knex.raw('gen_random_uuid()'),
             client_id: clientId,
@@ -406,9 +406,10 @@ export async function setupTenantDataInDB(
     const setupSteps: string[] = [];
 
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, input.tenantId);
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {
-        await trx('tenant_email_settings')
+        await db.table('tenant_email_settings')
           .insert({
             tenant: input.tenantId,
             email_provider: 'resend',
@@ -428,7 +429,7 @@ export async function setupTenantDataInDB(
 
       // Initialize tenant settings with onboarding flags set to false
       try {
-        await trx('tenant_settings')
+        await db.table('tenant_settings')
           .insert({
             tenant: input.tenantId,
             onboarding_completed: false,
@@ -452,7 +453,7 @@ export async function setupTenantDataInDB(
       // Create tenant-client association if we have a client/company id
       if (input.clientId) {
         try {
-          await trx('tenant_companies')
+          await db.table('tenant_companies')
             .insert({
               tenant: input.tenantId,
               client_id: input.clientId,
@@ -478,7 +479,7 @@ export async function setupTenantDataInDB(
           .select('id', 'is_enabled', 'is_default_enabled');
 
         if (categories.length > 0) {
-          await trx('tenant_notification_category_settings')
+          await db.table('tenant_notification_category_settings')
             .insert(categories.map(category => ({
               tenant: input.tenantId,
               tenant_notification_category_setting_id: trx.raw('gen_random_uuid()'),
@@ -495,7 +496,7 @@ export async function setupTenantDataInDB(
           .select('id', 'is_enabled', 'is_default_enabled');
 
         if (subtypes.length > 0) {
-          await trx('tenant_notification_subtype_settings')
+          await db.table('tenant_notification_subtype_settings')
             .insert(subtypes.map(subtype => ({
               tenant: input.tenantId,
               tenant_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
@@ -512,7 +513,7 @@ export async function setupTenantDataInDB(
           .select('internal_notification_category_id', 'is_enabled', 'is_default_enabled');
 
         if (internalCategories.length > 0) {
-          await trx('tenant_internal_notification_category_settings')
+          await db.table('tenant_internal_notification_category_settings')
             .insert(internalCategories.map(category => ({
               tenant: input.tenantId,
               tenant_internal_notification_category_setting_id: trx.raw('gen_random_uuid()'),
@@ -529,7 +530,7 @@ export async function setupTenantDataInDB(
           .select('internal_notification_subtype_id', 'is_enabled', 'is_default_enabled');
 
         if (internalSubtypes.length > 0) {
-          await trx('tenant_internal_notification_subtype_settings')
+          await db.table('tenant_internal_notification_subtype_settings')
             .insert(internalSubtypes.map(subtype => ({
               tenant: input.tenantId,
               tenant_internal_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
@@ -580,37 +581,38 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
 
   try {
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenantId);
       // Delete in proper order to avoid foreign key violations
 
       // Delete user roles first (references users)
-      await trx('user_roles').where({ tenant: tenantId }).delete();
+      await db.table('user_roles').delete();
 
       // Delete users (references tenant)
-      await trx('users').where({ tenant: tenantId }).delete();
+      await db.table('users').delete();
 
       // Delete tenant_companies associations (references tenant and clients)
-      await trx('tenant_companies').where({ tenant: tenantId }).delete();
+      await db.table('tenant_companies').delete();
 
       // Delete tenant_email_settings (references tenant indirectly)
-      await trx('tenant_email_settings').where({ tenant: tenantId }).delete();
+      await db.table('tenant_email_settings').delete();
 
       // Delete tenant_settings (references tenant)
-      await trx('tenant_settings').where({ tenant: tenantId }).delete();
+      await db.table('tenant_settings').delete();
 
       // Delete tenant add-ons
-      await trx('tenant_addons').where({ tenant: tenantId }).delete();
+      await db.table('tenant_addons').delete();
 
       // Delete tenant notification settings
-      await trx('tenant_notification_category_settings').where({ tenant: tenantId }).delete();
-      await trx('tenant_notification_subtype_settings').where({ tenant: tenantId }).delete();
-      await trx('tenant_internal_notification_category_settings').where({ tenant: tenantId }).delete();
-      await trx('tenant_internal_notification_subtype_settings').where({ tenant: tenantId }).delete();
+      await db.table('tenant_notification_category_settings').delete();
+      await db.table('tenant_notification_subtype_settings').delete();
+      await db.table('tenant_internal_notification_category_settings').delete();
+      await db.table('tenant_internal_notification_subtype_settings').delete();
 
       // Delete clients (references tenant)
-      await trx('clients').where({ tenant: tenantId }).delete();
+      await db.table('clients').delete();
 
       // Delete the tenant last
-      await trx('tenants').where({ tenant: tenantId }).delete();
+      await db.table('tenants').delete();
     });
 
     log.info('Tenant rollback completed', { tenantId });

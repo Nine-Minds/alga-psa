@@ -212,15 +212,16 @@ async function processTriggered(
       .andWhere('s.is_closed', false)
       // Oldest sibling = the row that created the ticket; it carries the
       // authoritative occurrence_count (newer siblings are absorbed copies).
-      .orderBy('a.created_at', 'asc')
-      .first(
-        'a.alert_id as sibling_alert_id',
-        'a.ticket_id as ticket_id',
-        'a.occurrence_count as occurrence_count'
-      );
+      .orderBy('a.created_at', 'asc');
     db.tenantJoin(siblingQuery, 'tickets as t', 't.ticket_id', 'a.ticket_id');
     db.tenantJoin(siblingQuery, 'statuses as s', 's.status_id', 't.status_id');
-    const sibling = (await siblingQuery) as
+    const sibling = (await siblingQuery
+      .select({
+        sibling_alert_id: 'a.alert_id',
+        ticket_id: 'a.ticket_id',
+        occurrence_count: 'a.occurrence_count',
+      })
+      .first()) as unknown as
       | {
           sibling_alert_id: string;
           ticket_id: string;

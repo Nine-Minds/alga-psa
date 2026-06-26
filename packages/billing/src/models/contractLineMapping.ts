@@ -1,6 +1,7 @@
 // server/src/lib/models/contractLineMapping.ts
 import type { IContractLineMapping } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
@@ -11,6 +12,14 @@ function normalizeContractLineMapping<T extends Partial<IContractLineMapping>>(
   line: T,
 ): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
   return normalizeLiveRecurringStorage(line);
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
 }
 
 const ContractLineMapping = {
@@ -26,14 +35,14 @@ const ContractLineMapping = {
     }
 
     try {
-      const templateRecord = await db('contract_templates')
-        .where({ tenant, template_id: contractId })
+      const templateRecord = await tenantScopedTable(db, tenant, 'contract_templates')
+        .where({ template_id: contractId })
         .first('template_id');
 
       if (templateRecord) {
         // Query contract_template_lines directly (mapping data now inlined)
-        const templateLines = await db('contract_template_lines')
-          .where({ tenant, template_id: contractId })
+        const templateLines = await tenantScopedTable(db, tenant, 'contract_template_lines')
+          .where({ template_id: contractId })
           .select(
             'tenant',
             'template_id as contract_id',
@@ -45,12 +54,12 @@ const ContractLineMapping = {
             'created_at'
           );
 
-        return templateLines.map((line) => normalizeContractLineMapping(line as IContractLineMapping));
+        return (templateLines as any[]).map((line: any) => normalizeContractLineMapping(line as IContractLineMapping));
       }
 
       // Query contract_lines directly (mapping data now inlined via contract_id column)
-      const contractLines = await db('contract_lines')
-        .where({ contract_id: contractId, tenant })
+      const contractLines = await tenantScopedTable(db, tenant, 'contract_lines')
+        .where({ contract_id: contractId })
         .select(
           'tenant',
           'contract_id',
@@ -82,11 +91,10 @@ const ContractLineMapping = {
 
     try {
       // Check contract_lines directly (contract_id column indicates association)
-      const result = await db('contract_lines')
+      const result = await tenantScopedTable(db, tenant, 'contract_lines')
         .where({
           contract_id: contractId,
           contract_line_id: contractLineId,
-          tenant
         })
         .first();
 
@@ -95,11 +103,10 @@ const ContractLineMapping = {
       }
 
       // Check contract_template_lines directly
-      const templateResult = await db('contract_template_lines')
+      const templateResult = await tenantScopedTable(db, tenant, 'contract_template_lines')
         .where({
           template_id: contractId,
           template_line_id: contractLineId,
-          tenant,
         })
         .first();
 
@@ -122,10 +129,9 @@ const ContractLineMapping = {
     }
 
     try {
-      const contract = await db('contracts')
+      const contract = await tenantScopedTable(db, tenant, 'contracts')
         .where({
           contract_id: contractId,
-          tenant
         })
         .first();
 
@@ -133,10 +139,9 @@ const ContractLineMapping = {
         throw new Error(`Contract ${contractId} not found`);
       }
 
-      const contractLine = await db('contract_lines')
+      const contractLine = await tenantScopedTable(db, tenant, 'contract_lines')
         .where({
           contract_line_id: contractLineId,
-          tenant
         })
         .first();
 
@@ -156,10 +161,9 @@ const ContractLineMapping = {
       }
 
       // Update contract_lines directly to link it to the contract
-      const [updatedLine] = await db('contract_lines')
+      const [updatedLine] = await tenantScopedTable(db, tenant, 'contract_lines')
         .where({
           contract_line_id: contractLineId,
-          tenant
         })
         .update({
           contract_id: contractId,
@@ -205,15 +209,12 @@ const ContractLineMapping = {
 
       // Check if any invoice items exist that reference client_contracts for this specific contract
       // This ensures we only prevent removal if invoices were actually generated from THIS contract
-      const result = await db('invoice_items as ii')
-        .join('client_contracts as cc', function() {
-          this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
-              .andOn('ii.tenant', '=', 'cc.tenant');
-        })
-        .where({
-          'cc.contract_id': contractId,
-          'cc.tenant': tenant
-        })
+      const facade = tenantDb(db, tenant);
+      const invoiceItemsQuery = facade.table('invoice_items as ii');
+      facade.tenantJoin(invoiceItemsQuery, 'client_contracts as cc', 'ii.client_contract_id', 'cc.client_contract_id');
+
+      const result = await invoiceItemsQuery
+        .where('cc.contract_id', contractId)
         .count('ii.item_id as count')
         .first() as { count?: string };
 
@@ -224,11 +225,10 @@ const ContractLineMapping = {
       }
 
       // Unlink by setting contract_id to NULL in contract_lines
-      const updatedCount = await db('contract_lines')
+      const updatedCount = await tenantScopedTable(db, tenant, 'contract_lines')
         .where({
           contract_id: contractId,
           contract_line_id: contractLineId,
-          tenant
         })
         .update({
           contract_id: null,
@@ -274,11 +274,10 @@ const ContractLineMapping = {
         ...dataToUpdate
       } = updateData;
 
-      const existingLine = await db('contract_lines')
+      const existingLine = await tenantScopedTable(db, tenant, 'contract_lines')
         .where({
           contract_id: contractId,
           contract_line_id: contractLineId,
-          tenant
         })
         .first(['cadence_owner', 'billing_timing']);
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
@@ -289,11 +288,10 @@ const ContractLineMapping = {
       });
 
       // Try updating contract_lines directly
-      const [updatedLine] = await db('contract_lines')
+      const [updatedLine] = await tenantScopedTable(db, tenant, 'contract_lines')
         .where({
           contract_id: contractId,
           contract_line_id: contractLineId,
-          tenant
         })
         .update({
           ...dataToUpdate,
@@ -333,11 +331,10 @@ const ContractLineMapping = {
         templateUpdatePayload.billing_timing = recurringAuthoringPolicy.billingTiming;
       }
 
-      const [updatedTemplateLine] = await db('contract_template_lines')
+      const [updatedTemplateLine] = await tenantScopedTable(db, tenant, 'contract_template_lines')
         .where({
           template_id: contractId,
           template_line_id: contractLineId,
-          tenant,
         })
         .update(templateUpdatePayload)
         .returning([
@@ -374,20 +371,19 @@ const ContractLineMapping = {
     }
 
     try {
-      const templateRecord = await db('contract_templates')
-        .where({ tenant, template_id: contractId })
+      const templateRecord = await tenantScopedTable(db, tenant, 'contract_templates')
+        .where({ template_id: contractId })
         .first('template_id');
 
       if (templateRecord) {
         // Query contract_template_lines directly (mapping data now inlined)
-        return await db('contract_template_lines as lines')
-          .leftJoin('contract_template_line_fixed_config as tfc', function joinTemplateFixedConfig() {
-            this.on('lines.template_line_id', '=', 'tfc.template_line_id')
-              .andOn('lines.tenant', '=', 'tfc.tenant');
-          })
+        const facade = tenantDb(db, tenant);
+        const query = facade.table('contract_template_lines as lines');
+        facade.tenantJoin(query, 'contract_template_line_fixed_config as tfc', 'lines.template_line_id', 'tfc.template_line_id', { type: 'left' });
+
+        return await query
           .where({
             'lines.template_id': contractId,
-            'lines.tenant': tenant,
           })
           .select(
             'lines.tenant as tenant',
@@ -412,10 +408,9 @@ const ContractLineMapping = {
 
       // Query contract_lines directly (mapping data now inlined via contract_id column)
       // After migration 20251028120000, contract_line_fixed_config was merged into contract_lines
-      return await db('contract_lines as cl')
+      return await tenantScopedTable(db, tenant, 'contract_lines as cl')
         .where({
           'cl.contract_id': contractId,
-          'cl.tenant': tenant
         })
         .select(
           'cl.tenant',

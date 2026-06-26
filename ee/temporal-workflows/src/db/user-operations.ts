@@ -1,4 +1,5 @@
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import { hashPassword, generateSecurePassword } from '@alga-psa/core/encryption';
@@ -23,6 +24,7 @@ export async function createAdminUserInDB(
 
   try {
     const result = await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, input.tenantId);
       // Check if an internal user with this email already exists in ANY tenant
       // This prevents duplicate MSP users across tenants which causes SSO issues
       const existingInternalUser = await trx('users')
@@ -38,7 +40,7 @@ export async function createAdminUserInDB(
       const temporaryPassword = generateSecurePassword();
       
       // Create user (matching actual Alga schema)
-      const userResult = await trx('users')
+      const userResult = await db.table('users')
         .insert({
           first_name: input.firstName,
           last_name: input.lastName,
@@ -53,11 +55,10 @@ export async function createAdminUserInDB(
       const userId = userResult[0].user_id;
 
       // Find Admin role (should already exist from onboarding seeds)
-      const adminRole = await trx('roles')
+      const adminRole = await db.table('roles')
         .select('role_id')
         .where({ 
           role_name: 'Admin', 
-          tenant: input.tenantId,
           msp: true,  // MSP Admin role, not client portal
           client: false 
         })
@@ -71,7 +72,7 @@ export async function createAdminUserInDB(
       log.info('Using existing Admin role', { roleId, tenantId: input.tenantId });
 
       // Associate user with tenant and role (using correct table name)
-      await trx('user_roles')
+      await db.table('user_roles')
         .insert({
           user_id: userId,
           tenant: input.tenantId,
@@ -111,19 +112,20 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
 
   try {
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenantId);
       // Delete user associations in reverse order
-      await trx('mobile_push_tokens')
-        .where({ user_id: userId, tenant: tenantId })
+      await db.table('mobile_push_tokens')
+        .where({ user_id: userId })
         .delete();
 
       // Delete from user_roles first (references users)
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: tenantId })
+      await db.table('user_roles')
+        .where({ user_id: userId })
         .delete();
 
       // Delete the user
-      await trx('users')
-        .where({ user_id: userId, tenant: tenantId })
+      await db.table('users')
+        .where({ user_id: userId })
         .delete();
     });
 

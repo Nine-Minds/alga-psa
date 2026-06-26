@@ -1196,17 +1196,17 @@ export class TicketModel {
 
     if (parentCommentId) {
       const parentQuery = db.table('comments as parent')
-        .select(
-          'parent.comment_id as comment_id',
-          'parent.ticket_id as ticket_id',
-          'parent.thread_id as thread_id',
-          'parent.deleted_at as deleted_at',
-          'thread.is_internal as thread_is_internal'
-        )
-        .where('parent.comment_id', parentCommentId)
-        .first();
+        .where('parent.comment_id', parentCommentId);
       db.tenantJoin(parentQuery, 'comment_threads as thread', 'parent.thread_id', 'thread.thread_id');
-      const parent = (await parentQuery) as
+      const parent = (await parentQuery
+        .select({
+          comment_id: 'parent.comment_id',
+          ticket_id: 'parent.ticket_id',
+          thread_id: 'parent.thread_id',
+          deleted_at: 'parent.deleted_at',
+          thread_is_internal: 'thread.is_internal',
+        })
+        .first()) as unknown as
         | {
             ticket_id: string;
             deleted_at?: Date | string | null;

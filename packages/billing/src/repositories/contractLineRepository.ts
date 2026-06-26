@@ -100,10 +100,13 @@ export async function fetchDetailedContractLines(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
-    const rows = await tenantScopedTable(knex, tenant, 'contract_template_lines as lines')
-      .leftJoin('contract_template_line_fixed_config as fixed', function joinTemplateFixed() {
-        this.on('fixed.template_line_id', '=', 'lines.template_line_id').andOn('fixed.tenant', '=', 'lines.tenant');
-      })
+    const db = tenantDb(knex, tenant);
+    const query = db.table('contract_template_lines as lines');
+    db.tenantJoin(query, 'contract_template_line_fixed_config as fixed', 'fixed.template_line_id', 'lines.template_line_id', {
+      type: 'left',
+    });
+
+    const rows = await query
       .where('lines.template_id', contractId)
       .select([
         'lines.tenant',
@@ -245,7 +248,7 @@ export async function ensureTemplateLineSnapshot(
   const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
   const baseRecurringStorage = normalizeLiveRecurringStorage(baseLine);
 
-  await knex('contract_template_lines').insert({
+  await tenantScopedTable(knex, tenant, 'contract_template_lines').insert({
     tenant,
     template_line_id: targetTemplateLineId,
     template_id: templateId,
@@ -310,7 +313,7 @@ async function cloneTemplateLineToContract(
   // Template-derived live lines copy recurring timing at clone time.
   // Later template edits are provenance only and must not retroactively rewrite
   // cadence_owner or billing_timing on already-created contract lines.
-  await trx('contract_lines').insert({
+  await tenantScopedTable(trx, tenant, 'contract_lines').insert({
     tenant,
     contract_line_id: newContractLineId,
     contract_id: contractId,
@@ -343,7 +346,7 @@ async function cloneTemplateLineToContract(
     .where('template_line_id', templateLineId);
 
   for (const service of templateServices) {
-    await trx('contract_line_services')
+    await tenantScopedTable(trx, tenant, 'contract_line_services')
       .insert({
         tenant,
         contract_line_id: newContractLineId,
@@ -363,7 +366,7 @@ async function cloneTemplateLineToContract(
     for (const configuration of configurations) {
       const newConfigId = uuidv4();
 
-      await trx('contract_line_service_configuration').insert({
+      await tenantScopedTable(trx, tenant, 'contract_line_service_configuration').insert({
         tenant,
         config_id: newConfigId,
         contract_line_id: newContractLineId,
@@ -380,7 +383,7 @@ async function cloneTemplateLineToContract(
         .first();
 
       if (bucketConfig) {
-        await trx('contract_line_service_bucket_config').insert({
+        await tenantScopedTable(trx, tenant, 'contract_line_service_bucket_config').insert({
           tenant,
           config_id: newConfigId,
           total_minutes: bucketConfig.total_minutes,
@@ -397,7 +400,7 @@ async function cloneTemplateLineToContract(
         .first();
 
       if (hourlyConfig) {
-        await trx('contract_line_service_hourly_config').insert({
+        await tenantScopedTable(trx, tenant, 'contract_line_service_hourly_config').insert({
           tenant,
           config_id: newConfigId,
           minimum_billable_time: hourlyConfig.minimum_billable_time,
@@ -417,7 +420,7 @@ async function cloneTemplateLineToContract(
         .first();
 
       if (usageConfig) {
-        await trx('contract_line_service_usage_config').insert({
+        await tenantScopedTable(trx, tenant, 'contract_line_service_usage_config').insert({
           tenant,
           config_id: newConfigId,
           unit_of_measure: usageConfig.unit_of_measure,
@@ -433,7 +436,7 @@ async function cloneTemplateLineToContract(
     .where('template_line_id', templateLineId);
 
   for (const def of templateDefaults) {
-    await trx('contract_line_service_defaults').insert({
+    await tenantScopedTable(trx, tenant, 'contract_line_service_defaults').insert({
       tenant,
       default_id: def.default_id,
       contract_line_id: newContractLineId,

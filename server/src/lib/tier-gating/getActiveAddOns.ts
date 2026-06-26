@@ -22,9 +22,9 @@ export async function getActiveAddOns(tenantId?: string): Promise<AddOnKey[]> {
   }
 
   try {
-    const rows = await tenantDb(knex, effectiveTenantId).table<TenantAddOnRow>('tenant_addons')
+    const rows = (await tenantDb(knex, effectiveTenantId).table<TenantAddOnRow>('tenant_addons')
       .select('addon_key', 'expires_at')
-      as TenantAddOnRow[];
+    ) as TenantAddOnRow[];
 
     const now = Date.now();
 

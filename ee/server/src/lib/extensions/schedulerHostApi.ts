@@ -15,6 +15,7 @@ import crypto from 'node:crypto'
 import type { Knex } from 'knex'
 import { metrics } from '@opentelemetry/api'
 import logger from '@alga-psa/core/logger'
+import { tenantDb } from '@alga-psa/db'
 import { getConnection } from '@/lib/db/db'
 
 import { getInstallConfigByInstallId } from './installConfig'
@@ -285,10 +286,11 @@ export async function listSchedules(ctx: InstallContext): Promise<ScheduleInfo[]
 
   try {
     const knex = await getConnection(ctx.tenantId)
+    const db = tenantDb(knex, ctx.tenantId)
 
-    const rows = await knex('tenant_extension_schedule as s')
+    const rows = await db.table('tenant_extension_schedule as s')
     .join('extension_api_endpoint as e', 'e.id', 's.endpoint_id')
-    .where({ 's.tenant_id': ctx.tenantId, 's.install_id': ctx.installId })
+    .where({ 's.install_id': ctx.installId })
     .orderBy([{ column: 's.created_at', order: 'asc' }])
     .select([
       's.id',
@@ -333,11 +335,12 @@ export async function getSchedule(ctx: InstallContext, scheduleId: string): Prom
 
   try {
     const knex = await getConnection(ctx.tenantId)
+    const db = tenantDb(knex, ctx.tenantId)
     const id = validateUuid(scheduleId, 'scheduleId')
 
-    const row = await knex('tenant_extension_schedule as s')
+    const row = await db.table('tenant_extension_schedule as s')
       .join('extension_api_endpoint as e', 'e.id', 's.endpoint_id')
-      .where({ 's.id': id, 's.tenant_id': ctx.tenantId, 's.install_id': ctx.installId })
+      .where({ 's.id': id, 's.install_id': ctx.installId })
       .first([
         's.id',
         's.name',
@@ -387,6 +390,7 @@ export async function createSchedule(
 
   try {
     const knex = await getConnection(ctx.tenantId)
+    const db = tenantDb(knex, ctx.tenantId)
     // Validate input
     const cron = validateCronExpression(input.cron)
     const timezone = validateTimezone(input.timezone)
@@ -401,8 +405,8 @@ export async function createSchedule(
     }
 
     // Check quota
-    const countRow = await knex('tenant_extension_schedule')
-      .where({ tenant_id: ctx.tenantId, install_id: ctx.installId })
+    const countRow = await db.table('tenant_extension_schedule')
+      .where({ install_id: ctx.installId })
       .count<{ count: string }[]>({ count: '*' })
       .first()
     const count = Number((countRow as any)?.count ?? 0)
@@ -434,6 +438,7 @@ export async function createSchedule(
     // Persist to database
     try {
       await knex.transaction(async (trx: Knex.Transaction) => {
+        const txDb = tenantDb(trx, ctx.tenantId)
         const row = {
           id: scheduleId,
           install_id: ctx.installId,
@@ -451,7 +456,7 @@ export async function createSchedule(
         }
 
         try {
-          await trx('tenant_extension_schedule').insert(row)
+          await txDb.table('tenant_extension_schedule').insert(row)
         } catch (error) {
           if (isNameUniqueViolation(error)) {
             failField('name', 'Schedule name already in use for this extension')
@@ -459,8 +464,8 @@ export async function createSchedule(
           throw error
         }
 
-        await trx('tenant_extension_install')
-          .where({ id: ctx.installId, tenant_id: ctx.tenantId })
+        await txDb.table('tenant_extension_install')
+          .where({ id: ctx.installId })
           .update({ updated_at: trx.fn.now() })
       })
     } catch (e) {
@@ -513,6 +518,7 @@ export async function updateSchedule(
 
   try {
     const knex = await getConnection(ctx.tenantId)
+    const db = tenantDb(knex, ctx.tenantId)
     const id = validateUuid(scheduleId, 'scheduleId')
     const nextCron = input.cron ? validateCronExpression(input.cron) : undefined
     const nextTimezone = input.timezone ? validateTimezone(input.timezone) : undefined
@@ -523,8 +529,8 @@ export async function updateSchedule(
     const now = knex.fn.now()
 
     // Get current schedule
-    const current = await knex('tenant_extension_schedule')
-      .where({ id, tenant_id: ctx.tenantId, install_id: ctx.installId })
+    const current = await db.table('tenant_extension_schedule')
+      .where({ id, install_id: ctx.installId })
       .first()
 
     if (!current) {
@@ -600,12 +606,13 @@ export async function updateSchedule(
     // Update database
     try {
       await knex.transaction(async (trx: Knex.Transaction) => {
-        await trx('tenant_extension_schedule')
-          .where({ id, tenant_id: ctx.tenantId })
+        const txDb = tenantDb(trx, ctx.tenantId)
+        await txDb.table('tenant_extension_schedule')
+          .where({ id, install_id: ctx.installId })
           .update(patch)
 
-        await trx('tenant_extension_install')
-          .where({ id: ctx.installId, tenant_id: ctx.tenantId })
+        await txDb.table('tenant_extension_install')
+          .where({ id: ctx.installId })
           .update({ updated_at: trx.fn.now() })
       })
     } catch (error) {
@@ -654,10 +661,11 @@ export async function deleteSchedule(
 
   try {
     const knex = await getConnection(ctx.tenantId)
+    const db = tenantDb(knex, ctx.tenantId)
     const id = validateUuid(scheduleId, 'scheduleId')
 
-    const current = await knex('tenant_extension_schedule')
-      .where({ id, tenant_id: ctx.tenantId, install_id: ctx.installId })
+    const current = await db.table('tenant_extension_schedule')
+      .where({ id, install_id: ctx.installId })
       .first(['id', 'job_id'])
 
     if (!current) {
@@ -680,12 +688,13 @@ export async function deleteSchedule(
 
     // Delete from database
     await knex.transaction(async (trx: Knex.Transaction) => {
-      await trx('tenant_extension_schedule')
-        .where({ id, tenant_id: ctx.tenantId })
+      const txDb = tenantDb(trx, ctx.tenantId)
+      await txDb.table('tenant_extension_schedule')
+        .where({ id, install_id: ctx.installId })
         .del()
 
-      await trx('tenant_extension_install')
-        .where({ id: ctx.installId, tenant_id: ctx.tenantId })
+      await txDb.table('tenant_extension_install')
+        .where({ id: ctx.installId })
         .update({ updated_at: trx.fn.now() })
     })
 

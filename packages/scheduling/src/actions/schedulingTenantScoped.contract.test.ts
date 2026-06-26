@@ -6,6 +6,7 @@ const timePeriodSource = readFileSync(resolve(__dirname, '../models/timePeriod.t
 const timePeriodSettingsSource = readFileSync(resolve(__dirname, './time-period-settings-actions/timePeriodSettingsActions.ts'), 'utf8');
 const projectTaskLookupSource = readFileSync(resolve(__dirname, './projectTaskLookupActions.ts'), 'utf8');
 const capacityThresholdSource = readFileSync(resolve(__dirname, '../lib/capacityThresholdWorkflowEvents.ts'), 'utf8');
+const timeSheetOperationsSource = readFileSync(resolve(__dirname, './timeSheetOperations.ts'), 'utf8');
 
 describe('scheduling tenant-scoped query contract', () => {
   it('uses tenantDb roots for time period models and settings actions', () => {
@@ -35,5 +36,20 @@ describe('scheduling tenant-scoped query contract', () => {
     expect(capacityThresholdSource).toContain("facade.tenantJoin(bookedQuery, 'schedule_entries as se'");
     expect(capacityThresholdSource).toContain("facade.tenantJoin(bookedQuery, 'team_members as tm'");
     expect(capacityThresholdSource).toContain(".leftJoin('resources as r'");
+  });
+
+  it('uses tenantDb roots and tenant joins for time sheet operations', () => {
+    expect(timeSheetOperationsSource).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db'");
+    expect(timeSheetOperationsSource).toContain("tenantScopedTable(trx, 'time_sheets', tenant)");
+    expect(timeSheetOperationsSource).toContain("tenantScopedTable(trx, 'time_entries', tenant)");
+    expect(timeSheetOperationsSource).toContain("tenantScopedTable(trx, 'time_sheet_comments', tenant)");
+    expect(timeSheetOperationsSource).toContain("facade.table('time_sheets')");
+    expect(timeSheetOperationsSource).toContain("facade.table('time_periods as tp')");
+    expect(timeSheetOperationsSource).toContain("facade.tenantJoin(query, 'time_periods'");
+    expect(timeSheetOperationsSource).toContain("facade.tenantJoin(timeEntrySummaries, 'time_periods as summary_tp'");
+    expect(timeSheetOperationsSource).toContain("facade.tenantJoin(timeEntrySummaries, 'time_entries as te'");
+    expect(timeSheetOperationsSource).toContain("facade.tenantJoin(periodsQuery, 'time_sheets as ts'");
+    expect(timeSheetOperationsSource).not.toContain("'time_sheets.tenant': tenant");
+    expect(timeSheetOperationsSource).not.toContain(".where('time_sheets.tenant', tenant)");
   });
 });

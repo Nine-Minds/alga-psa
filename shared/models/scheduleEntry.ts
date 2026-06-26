@@ -66,13 +66,15 @@ const ScheduleEntry = {
       throw new Error(`Schedule entries ${invalidEntryIds.join(', ')} not found in tenant ${tenant}`);
     }
 
-    const assignments = await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
-      .whereIn('entry_id', validEntryIds)
-      .join('users', function () {
-        this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
-          .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
-      })
-      .select('entry_id', 'schedule_entry_assignees.user_id');
+    const db = tenantDb(knexOrTrx, tenant);
+    const assignmentsQuery = db.table('schedule_entry_assignees')
+      .whereIn('entry_id', validEntryIds);
+    db.tenantJoin(assignmentsQuery, 'users', 'schedule_entry_assignees.user_id', 'users.user_id');
+    const assignments = await assignmentsQuery
+      .select({
+        entry_id: 'schedule_entry_assignees.entry_id',
+        user_id: 'schedule_entry_assignees.user_id',
+      });
 
     // Group by entry_id
     return assignments.reduce(
@@ -135,7 +137,7 @@ const ScheduleEntry = {
           user_id,
         })
       );
-      await knexOrTrx('schedule_entry_assignees').insert(assignments);
+      await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant).insert(assignments);
     }
   },
 
@@ -428,7 +430,7 @@ const ScheduleEntry = {
     };
 
     // Create main entry
-    const [createdEntry] = await knexOrTrx('schedule_entries')
+    const [createdEntry] = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .insert(entryData)
       .returning('*');
 
@@ -492,7 +494,7 @@ const ScheduleEntry = {
             );
 
             const standaloneId = uuidv4();
-            await knexOrTrx('schedule_entries').insert({
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert({
               entry_id: standaloneId,
               title: entry.title || originalEntry.title,
               scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
@@ -613,7 +615,7 @@ const ScheduleEntry = {
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
             };
 
-            await knexOrTrx('schedule_entries').insert(newMasterEntry);
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert(newMasterEntry);
 
             const masterAssignees = await ScheduleEntry.getAssignedUserIds(
               knexOrTrx,
@@ -841,7 +843,7 @@ const ScheduleEntry = {
                   exceptions: [...(originalPattern.exceptions || []), exceptionDate],
                 };
 
-                await knexOrTrx('schedule_entries').insert({
+                await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert({
                   entry_id: newMasterId,
                   title: originalEntry.title,
                   scheduled_start: nextOccurrence,

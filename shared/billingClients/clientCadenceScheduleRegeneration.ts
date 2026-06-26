@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   BillingCycleType,
@@ -260,15 +261,14 @@ async function loadLastInvoicedClientBillingBoundary(
   trx: Knex.Transaction,
   params: { tenant: string; clientId: string },
 ) {
-  const lastInvoiced = await trx('client_billing_cycles as cbc')
-    .join('invoices as i', function () {
-      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-    })
-    .where('cbc.tenant', params.tenant)
+  const db = tenantDb(trx, params.tenant);
+  const query = db.table('client_billing_cycles as cbc');
+  db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+  const lastInvoiced = await query
     .andWhere('cbc.client_id', params.clientId)
     .orderBy('cbc.period_end_date', 'desc')
     .first()
-    .select('cbc.period_end_date');
+    .select({ period_end_date: 'cbc.period_end_date' });
 
   return lastInvoiced?.period_end_date
     ? normalizeDateOnlyValue(lastInvoiced.period_end_date)
@@ -279,18 +279,13 @@ async function loadClientCadenceRecurringObligations(
   trx: Knex.Transaction,
   params: { tenant: string; clientId: string },
 ): Promise<ClientCadenceRecurringObligationRow[]> {
-  return trx('client_contracts as cc')
-    .join('contracts as ct', function () {
-      // template_contract_id is provenance only; regeneration must read the
-      // client-owned contract that owns the live cloned lines.
-      this.on('ct.contract_id', '=', 'cc.contract_id')
-        .andOn('ct.tenant', '=', 'cc.tenant');
-    })
-    .join('contract_lines as cl', function () {
-      this.on('cl.contract_id', '=', 'ct.contract_id')
-        .andOn('cl.tenant', '=', 'ct.tenant');
-    })
-    .where('cc.tenant', params.tenant)
+  const db = tenantDb(trx, params.tenant);
+  const query = db.table('client_contracts as cc');
+  // template_contract_id is provenance only; regeneration must read the
+  // client-owned contract that owns the live cloned lines.
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+  return query
     .andWhere('cc.client_id', params.clientId)
     .where('cc.is_active', true)
     .where((builder) =>
@@ -311,9 +306,8 @@ async function loadExistingRecurringServicePeriodRecords(
   trx: Knex.Transaction,
   params: { tenant: string; obligationId: string },
 ): Promise<IRecurringServicePeriodRecord[]> {
-  const rows = await trx('recurring_service_periods')
+  const rows = await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
-      tenant: params.tenant,
       obligation_id: params.obligationId,
       obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
       cadence_owner: 'client',
@@ -363,9 +357,10 @@ async function persistRecurringServicePeriodRegeneration(
     recordsToInsert: IRecurringServicePeriodRecord[];
   },
 ) {
+  const db = tenantDb(trx, params.tenant);
   for (const record of params.recordsToSupersede) {
-    await trx('recurring_service_periods')
-      .where({ tenant: params.tenant, record_id: record.recordId })
+    await db.table('recurring_service_periods')
+      .where({ record_id: record.recordId })
       .update({
         lifecycle_state: record.lifecycleState,
         updated_at: record.updatedAt,
@@ -373,7 +368,7 @@ async function persistRecurringServicePeriodRegeneration(
   }
 
   if (params.recordsToInsert.length > 0) {
-    await trx('recurring_service_periods').insert(
+    await db.table('recurring_service_periods').insert(
       params.recordsToInsert.map(serializeRecurringServicePeriodRecord),
     );
   }
@@ -595,9 +590,8 @@ export async function retireFutureClientCadenceRowsForLine(
     retiredAt: string;
   },
 ): Promise<void> {
-  await trx('recurring_service_periods')
+  await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
-      tenant: params.tenant,
       obligation_id: params.contractLineId,
       obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
       cadence_owner: 'client',
@@ -613,14 +607,11 @@ async function loadClientsWithClientCadenceObligations(
   trx: Knex.Transaction,
   tenant: string,
 ): Promise<string[]> {
-  const ids = await trx('client_contracts as cc')
-    .join('contracts as ct', function () {
-      this.on('ct.contract_id', '=', 'cc.contract_id').andOn('ct.tenant', '=', 'cc.tenant');
-    })
-    .join('contract_lines as cl', function () {
-      this.on('cl.contract_id', '=', 'ct.contract_id').andOn('cl.tenant', '=', 'ct.tenant');
-    })
-    .where('cc.tenant', tenant)
+  const db = tenantDb(trx, tenant);
+  const query = db.table('client_contracts as cc');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+  const ids = await query
     .where('cc.is_active', true)
     .where((builder) =>
       builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
