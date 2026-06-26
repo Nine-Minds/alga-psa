@@ -5,6 +5,9 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import type {
   ColumnDefinition,
@@ -19,8 +22,24 @@ import {
   cancelSalesOrder,
 } from '../actions';
 
-const INVOICE_MODES: SalesOrderInvoiceMode[] = ['on_fulfillment', 'manual'];
-const ALLOCATION_MODES: SalesOrderAllocationMode[] = ['soft', 'hard'];
+const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
+  { value: 'on_fulfillment', label: 'On fulfillment' },
+  { value: 'manual', label: 'Manual' },
+];
+const ALLOCATION_MODE_OPTIONS: { value: SalesOrderAllocationMode; label: string }[] = [
+  { value: 'soft', label: 'Soft' },
+  { value: 'hard', label: 'Hard' },
+];
+
+const STATUS_BADGES: Record<string, { label: string; variant: BadgeVariant }> = {
+  draft: { label: 'Draft', variant: 'secondary' },
+  confirmed: { label: 'Confirmed', variant: 'warning' },
+  partially_fulfilled: { label: 'Partially fulfilled', variant: 'warning' },
+  fulfilled: { label: 'Fulfilled', variant: 'success' },
+  invoiced: { label: 'Invoiced', variant: 'success' },
+  closed: { label: 'Closed', variant: 'success' },
+  cancelled: { label: 'Cancelled', variant: 'error' },
+};
 
 interface LineForm {
   service_id: string;
@@ -51,6 +70,7 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<ISalesOrder | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -136,13 +156,29 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
       await reload();
     } catch (e: any) {
       toast.error(e?.message || 'Cancel failed');
+    } finally {
+      setCancelTarget(null);
     }
   };
 
   const columns: ColumnDefinition<ISalesOrder>[] = [
     { title: 'SO Number', dataIndex: 'so_number' },
     { title: 'Client', dataIndex: 'client_id' },
-    { title: 'Status', dataIndex: 'status' },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      render: (value: any) => {
+        const meta = STATUS_BADGES[value] ?? {
+          label: String(value),
+          variant: 'secondary' as BadgeVariant,
+        };
+        return (
+          <Badge variant={meta.variant} size="sm">
+            {meta.label}
+          </Badge>
+        );
+      },
+    },
     { title: 'Invoice Mode', dataIndex: 'invoice_mode' },
     { title: 'Currency', dataIndex: 'currency_code' },
     {
@@ -163,7 +199,7 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
             id={`cancel-so-${rec.so_id}`}
             variant="ghost"
             size="sm"
-            onClick={() => cancel(rec)}
+            onClick={() => setCancelTarget(rec)}
             disabled={rec.status === 'cancelled'}
           >
             Cancel
@@ -191,56 +227,38 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
         id="sales-order-dialog"
       >
         <div className="space-y-4 p-1">
-          <div>
-            <label className="block text-sm font-medium mb-1">Client ID *</label>
-            <Input
-              id="sales-order-client-id"
-              value={form.client_id}
-              onChange={(e) => setForm({ ...form, client_id: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Currency Code *</label>
-            <Input
-              id="sales-order-currency-code"
-              value={form.currency_code}
-              onChange={(e) => setForm({ ...form, currency_code: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Invoice Mode</label>
-            <select
-              id="sales-order-invoice-mode"
-              className="border rounded px-2 py-2 w-full"
-              value={form.invoice_mode}
-              onChange={(e) =>
-                setForm({ ...form, invoice_mode: e.target.value as SalesOrderInvoiceMode })
-              }
-            >
-              {INVOICE_MODES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Allocation Mode</label>
-            <select
-              id="sales-order-allocation-mode"
-              className="border rounded px-2 py-2 w-full"
-              value={form.allocation_mode}
-              onChange={(e) =>
-                setForm({ ...form, allocation_mode: e.target.value as SalesOrderAllocationMode })
-              }
-            >
-              {ALLOCATION_MODES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Input
+            id="sales-order-client-id"
+            label="Client ID"
+            required
+            value={form.client_id}
+            onChange={(e) => setForm({ ...form, client_id: e.target.value })}
+          />
+          <Input
+            id="sales-order-currency-code"
+            label="Currency code"
+            required
+            value={form.currency_code}
+            onChange={(e) => setForm({ ...form, currency_code: e.target.value })}
+          />
+          <CustomSelect
+            id="sales-order-invoice-mode"
+            label="Invoice mode"
+            options={INVOICE_MODE_OPTIONS}
+            value={form.invoice_mode}
+            onValueChange={(value) =>
+              setForm({ ...form, invoice_mode: value as SalesOrderInvoiceMode })
+            }
+          />
+          <CustomSelect
+            id="sales-order-allocation-mode"
+            label="Allocation mode"
+            options={ALLOCATION_MODE_OPTIONS}
+            value={form.allocation_mode}
+            onValueChange={(value) =>
+              setForm({ ...form, allocation_mode: value as SalesOrderAllocationMode })
+            }
+          />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -285,7 +303,7 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
                     onClick={() => removeLine(idx)}
                     disabled={form.lines.length <= 1}
                   >
-                    ×
+                    Remove
                   </Button>
                 </div>
               </div>
@@ -302,6 +320,21 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
           </div>
         </div>
       </Dialog>
+
+      <ConfirmationDialog
+        id="cancel-so-confirm"
+        isOpen={cancelTarget !== null}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={() => (cancelTarget ? cancel(cancelTarget) : undefined)}
+        title="Cancel sales order"
+        message={
+          cancelTarget
+            ? `Cancel sales order ${cancelTarget.so_number}? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Cancel sales order"
+        cancelLabel="Keep order"
+      />
     </div>
   );
 }

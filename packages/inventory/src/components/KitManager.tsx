@@ -4,6 +4,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IKitComponent } from '@alga-psa/types';
 import {
@@ -30,6 +32,7 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
   const [componentServiceId, setComponentServiceId] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [saving, setSaving] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<ComponentRow | null>(null);
 
   const reloadKits = useCallback(async () => {
     try {
@@ -108,6 +111,8 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
       await loadComponents(selectedKit.service_id);
     } catch (e: any) {
       toast.error(e?.message || 'Remove failed');
+    } finally {
+      setPendingRemove(null);
     }
   };
 
@@ -133,7 +138,7 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
       title: 'Actions',
       dataIndex: 'component_service_id',
       render: (_: any, rec: ComponentRow) => (
-        <Button id={`remove-component-${rec.component_service_id}`} variant="ghost" size="sm" onClick={() => remove(rec)}>
+        <Button id={`remove-component-${rec.component_service_id}`} variant="ghost" size="sm" onClick={() => setPendingRemove(rec)}>
           Remove
         </Button>
       ),
@@ -156,30 +161,28 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
 
           <div className="flex gap-2 items-end" id="kit-add-component-row">
             <div className="flex-1">
-              <label className="block text-sm font-medium mb-1">Component</label>
-              <select
+              <CustomSelect
                 id="kit-component-service"
-                className="border rounded px-2 py-2 w-full"
+                label="Component"
+                required
                 value={componentServiceId}
-                onChange={(e) => setComponentServiceId(e.target.value)}
-              >
-                <option value="">Select a product…</option>
-                {componentCandidates.map((p) => (
-                  <option key={p.service_id} value={p.service_id}>
-                    {p.service_name || p.service_id}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="w-28">
-              <label className="block text-sm font-medium mb-1">Quantity</label>
-              <Input
-                id="kit-component-quantity"
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="Select a product…"
+                options={componentCandidates.map((p) => ({
+                  value: p.service_id,
+                  label: p.service_name || p.service_id,
+                }))}
+                onValueChange={(v: string) => setComponentServiceId(v)}
               />
             </div>
+            <Input
+              id="kit-component-quantity"
+              label="Quantity"
+              required
+              containerClassName="w-28"
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
             <Button id="kit-add-component-button" onClick={add} disabled={saving}>
               {saving ? 'Saving…' : 'Add Component'}
             </Button>
@@ -188,6 +191,24 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
           <DataTable id="kit-components-table" data={components} columns={componentColumns} />
         </div>
       )}
+
+      <ConfirmationDialog
+        id="kit-remove-component-confirm"
+        isOpen={pendingRemove !== null}
+        onClose={() => setPendingRemove(null)}
+        onConfirm={() => {
+          if (pendingRemove) {
+            return remove(pendingRemove);
+          }
+        }}
+        title="Remove component"
+        message={
+          pendingRemove
+            ? `Remove ${pendingRemove.service_name || productName(pendingRemove.component_service_id)} from this kit?`
+            : ''
+        }
+        confirmLabel="Remove"
+      />
     </div>
   );
 }

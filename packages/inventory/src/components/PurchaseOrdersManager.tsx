@@ -5,6 +5,9 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import type {
   ColumnDefinition,
@@ -55,12 +58,34 @@ function formatDate(value?: string | Date | null): string {
   return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString();
 }
 
+/** Turn a raw enum value ("partially_received") into a sentence-case label ("Partially received"). */
+function humanize(value?: string | null): string {
+  if (!value) return '';
+  const spaced = value.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function statusVariant(status: string) {
+  switch (status) {
+    case 'cancelled':
+      return 'error' as const;
+    case 'received':
+      return 'success' as const;
+    case 'partially_received':
+    case 'open':
+      return 'warning' as const;
+    default:
+      return 'secondary' as const;
+  }
+}
+
 export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrder[] }) {
   const [pos, setPos] = useState<IPurchaseOrder[]>(initialPos || []);
   const [vendors, setVendors] = useState<IVendor[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [pendingCancel, setPendingCancel] = useState<IPurchaseOrder | null>(null);
 
   // Receive flow state.
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -274,7 +299,15 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
   const columns: ColumnDefinition<IPurchaseOrder>[] = [
     { title: 'PO Number', dataIndex: 'po_number' },
     { title: 'Vendor', dataIndex: 'vendor_id', render: (v: any) => vendorName(v) },
-    { title: 'Status', dataIndex: 'status' },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      render: (v: any) => (
+        <Badge variant={statusVariant(v)} size="sm">
+          {humanize(v)}
+        </Badge>
+      ),
+    },
     { title: 'Currency', dataIndex: 'currency_code' },
     { title: 'Created', dataIndex: 'created_at', render: (v: any) => formatDate(v) },
     {
@@ -305,7 +338,7 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
             variant="ghost"
             size="sm"
             disabled={rec.status === 'cancelled' || rec.status === 'received'}
-            onClick={() => cancel(rec)}
+            onClick={() => setPendingCancel(rec)}
           >
             Cancel
           </Button>
@@ -332,31 +365,23 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
         id="purchase-order-dialog"
       >
         <div className="space-y-4 p-1">
-          <div>
-            <label className="block text-sm font-medium mb-1">Vendor *</label>
-            <select
-              id="purchase-order-vendor"
-              className="border rounded px-2 py-2 w-full"
-              value={form.vendor_id}
-              onChange={(e) => setForm({ ...form, vendor_id: e.target.value })}
-            >
-              <option value="">Select a vendor…</option>
-              {vendors.map((v) => (
-                <option key={v.vendor_id} value={v.vendor_id}>
-                  {v.vendor_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            id="purchase-order-vendor"
+            label="Vendor"
+            required
+            placeholder="Select a vendor…"
+            value={form.vendor_id}
+            onValueChange={(value) => setForm({ ...form, vendor_id: value })}
+            options={vendors.map((v) => ({ value: v.vendor_id, label: v.vendor_name }))}
+          />
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Currency Code *</label>
-            <Input
-              id="purchase-order-currency"
-              value={form.currency_code}
-              onChange={(e) => setForm({ ...form, currency_code: e.target.value.toUpperCase() })}
-            />
-          </div>
+          <Input
+            id="purchase-order-currency"
+            label="Currency code"
+            required
+            value={form.currency_code}
+            onChange={(e) => setForm({ ...form, currency_code: e.target.value.toUpperCase() })}
+          />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -448,19 +473,13 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
                   <div className="flex gap-2 items-end">
                     <div className="flex-1">
                       <label className="block text-xs mb-1">Location</label>
-                      <select
+                      <CustomSelect
                         id={`receive-line-location-${line.po_line_id}`}
-                        className="border rounded px-2 py-2 w-full"
+                        placeholder="Select a location…"
                         value={rf?.location_id ?? ''}
-                        onChange={(e) => updateReceiveLine(line.po_line_id, { location_id: e.target.value })}
-                      >
-                        <option value="">Select a location…</option>
-                        {locations.map((loc) => (
-                          <option key={loc.location_id} value={loc.location_id}>
-                            {loc.name}
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={(value) => updateReceiveLine(line.po_line_id, { location_id: value })}
+                        options={locations.map((loc) => ({ value: loc.location_id, label: loc.name }))}
+                      />
                     </div>
                     <div className="w-24">
                       <label className="block text-xs mb-1">Qty</label>
@@ -506,6 +525,26 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
           </div>
         </div>
       </Dialog>
+
+      <ConfirmationDialog
+        id="cancel-po-confirm"
+        isOpen={!!pendingCancel}
+        onClose={() => setPendingCancel(null)}
+        title="Cancel purchase order"
+        message={
+          pendingCancel
+            ? `Are you sure you want to cancel purchase order ${pendingCancel.po_number}? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Cancel purchase order"
+        cancelLabel="Keep purchase order"
+        onConfirm={async () => {
+          if (pendingCancel) {
+            await cancel(pendingCancel);
+          }
+          setPendingCancel(null);
+        }}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation } from '@alga-psa/types';
@@ -63,6 +64,7 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
       setLocations(await listStockLocations({ includeInactive: false }));
     } catch (e: any) {
       console.error(e);
+      toast.error(e?.message || "Couldn't load stock locations");
     }
   }, []);
 
@@ -210,31 +212,27 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
       {/* Loan out */}
       <Dialog isOpen={loanOpen} onClose={() => setLoanOpen(false)} title="Loan out unit" id="loaner-loan-dialog">
         <div className="space-y-4 p-1">
-          <div>
-            <label className="block text-sm font-medium mb-1">Unit ID *</label>
-            <Input
-              id="loaner-loan-unit-id"
-              value={loanForm.unit_id}
-              onChange={(e) => setLoanForm({ ...loanForm, unit_id: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Client ID *</label>
-            <Input
-              id="loaner-loan-client-id"
-              value={loanForm.client_id}
-              onChange={(e) => setLoanForm({ ...loanForm, client_id: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Due date</label>
-            <Input
-              id="loaner-loan-due-at"
-              type="date"
-              value={loanForm.loan_due_at}
-              onChange={(e) => setLoanForm({ ...loanForm, loan_due_at: e.target.value })}
-            />
-          </div>
+          <Input
+            id="loaner-loan-unit-id"
+            label="Unit ID"
+            required
+            value={loanForm.unit_id}
+            onChange={(e) => setLoanForm({ ...loanForm, unit_id: e.target.value })}
+          />
+          <Input
+            id="loaner-loan-client-id"
+            label="Client ID"
+            required
+            value={loanForm.client_id}
+            onChange={(e) => setLoanForm({ ...loanForm, client_id: e.target.value })}
+          />
+          <Input
+            id="loaner-loan-due-at"
+            label="Due date"
+            type="date"
+            value={loanForm.loan_due_at}
+            onChange={(e) => setLoanForm({ ...loanForm, loan_due_at: e.target.value })}
+          />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-loan-cancel" variant="outline" onClick={() => setLoanOpen(false)}>
               Cancel
@@ -252,22 +250,15 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
           <p className="text-sm text-gray-600">
             Returning <span className="font-medium">{returnUnit?.serial_number}</span>
           </p>
-          <div>
-            <label className="block text-sm font-medium mb-1">Return to location *</label>
-            <select
-              id="loaner-return-location"
-              className="border rounded px-2 py-2 w-full"
-              value={returnLocationId}
-              onChange={(e) => setReturnLocationId(e.target.value)}
-            >
-              <option value="">Select a location…</option>
-              {locations.map((loc) => (
-                <option key={loc.location_id} value={loc.location_id}>
-                  {loc.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            id="loaner-return-location"
+            label="Return to location"
+            required
+            value={returnLocationId}
+            placeholder="Select a location…"
+            options={locations.map((loc) => ({ value: loc.location_id, label: loc.name }))}
+            onValueChange={(v: string) => setReturnLocationId(v)}
+          />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-return-cancel" variant="outline" onClick={() => setReturnOpen(false)}>
               Cancel
@@ -287,41 +278,32 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
         id="loaner-restock-dialog"
       >
         <div className="space-y-4 p-1">
-          <div>
-            <label className="block text-sm font-medium mb-1">Unit ID *</label>
-            <Input
-              id="loaner-restock-unit-id"
-              value={restockForm.unit_id}
-              onChange={(e) => setRestockForm({ ...restockForm, unit_id: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Restock to location</label>
-            <select
-              id="loaner-restock-location"
-              className="border rounded px-2 py-2 w-full"
-              value={restockForm.location_id}
-              onChange={(e) => setRestockForm({ ...restockForm, location_id: e.target.value })}
-            >
-              <option value="">Use unit's current location</option>
-              {locations.map((loc) => (
-                <option key={loc.location_id} value={loc.location_id}>
-                  {loc.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Restocking fee (optional)</label>
-            <Input
-              id="loaner-restock-fee"
-              type="number"
-              min="0"
-              step="0.01"
-              value={restockForm.restocking_fee}
-              onChange={(e) => setRestockForm({ ...restockForm, restocking_fee: e.target.value })}
-            />
-          </div>
+          <Input
+            id="loaner-restock-unit-id"
+            label="Unit ID"
+            required
+            value={restockForm.unit_id}
+            onChange={(e) => setRestockForm({ ...restockForm, unit_id: e.target.value })}
+          />
+          <CustomSelect
+            id="loaner-restock-location"
+            label="Restock to location"
+            value={restockForm.location_id}
+            options={[
+              { value: '', label: "Use unit's current location" },
+              ...locations.map((loc) => ({ value: loc.location_id, label: loc.name })),
+            ]}
+            onValueChange={(v: string) => setRestockForm({ ...restockForm, location_id: v })}
+          />
+          <Input
+            id="loaner-restock-fee"
+            label="Restocking fee (optional)"
+            type="number"
+            min="0"
+            step="0.01"
+            value={restockForm.restocking_fee}
+            onChange={(e) => setRestockForm({ ...restockForm, restocking_fee: e.target.value })}
+          />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-restock-cancel" variant="outline" onClick={() => setRestockOpen(false)}>
               Cancel

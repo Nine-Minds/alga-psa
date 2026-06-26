@@ -4,7 +4,10 @@ import React, { useState, useCallback } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockTransfer, IStockLocation } from '@alga-psa/types';
 import {
@@ -38,6 +41,16 @@ function formatDate(value?: string | Date | null): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
 }
 
+/** Humanize a snake_case enum for display. */
+const humanize = (s?: string | null): string =>
+  s ? s.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : '—';
+
+const STATUS_VARIANT: Record<string, 'secondary' | 'info' | 'warning' | 'success' | 'error'> = {
+  dispatched: 'warning',
+  received: 'success',
+  cancelled: 'error',
+};
+
 export function TransfersManager({
   initialTransfers,
   initialLocations,
@@ -50,6 +63,8 @@ export function TransfersManager({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<IStockTransfer | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const locationName = useCallback(
     (id: string) => locations.find((l) => l.location_id === id)?.name || id,
@@ -72,6 +87,7 @@ export function TransfersManager({
       setLocations(await listStockLocations({ includeInactive: false }));
     } catch (e) {
       console.error(e);
+      toast.error('Failed to load locations');
     }
   };
 
@@ -130,20 +146,33 @@ export function TransfersManager({
     }
   };
 
-  const cancel = async (rec: IStockTransfer) => {
+  const confirmCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
     try {
-      await cancelTransfer(rec.transfer_id);
+      await cancelTransfer(cancelTarget.transfer_id);
       toast.success('Transfer cancelled');
+      setCancelTarget(null);
       await reload();
     } catch (e: any) {
       toast.error(e?.message || 'Cancel failed');
+    } finally {
+      setCancelling(false);
     }
   };
 
   const columns: ColumnDefinition<IStockTransfer>[] = [
     { title: 'From', dataIndex: 'from_location_id', render: (v: any) => locationName(v) },
     { title: 'To', dataIndex: 'to_location_id', render: (v: any) => locationName(v) },
-    { title: 'Status', dataIndex: 'status' },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      render: (v: any) => (
+        <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">
+          {humanize(v)}
+        </Badge>
+      ),
+    },
     { title: 'Dispatched', dataIndex: 'dispatched_at', render: (v: any) => formatDate(v) },
     { title: 'Received', dataIndex: 'received_at', render: (v: any) => formatDate(v) },
     {
@@ -166,7 +195,7 @@ export function TransfersManager({
               id={`cancel-transfer-${rec.transfer_id}`}
               variant="ghost"
               size="sm"
-              onClick={() => cancel(rec)}
+              onClick={() => setCancelTarget(rec)}
             >
               Cancel
             </Button>
@@ -194,38 +223,24 @@ export function TransfersManager({
         id="transfer-dialog"
       >
         <div className="space-y-4 p-1">
-          <div>
-            <label className="block text-sm font-medium mb-1">From Location *</label>
-            <select
-              id="transfer-from-location"
-              className="border rounded px-2 py-2 w-full"
-              value={form.from_location_id}
-              onChange={(e) => setForm({ ...form, from_location_id: e.target.value })}
-            >
-              <option value="">Select a location…</option>
-              {locations.map((l) => (
-                <option key={l.location_id} value={l.location_id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">To Location *</label>
-            <select
-              id="transfer-to-location"
-              className="border rounded px-2 py-2 w-full"
-              value={form.to_location_id}
-              onChange={(e) => setForm({ ...form, to_location_id: e.target.value })}
-            >
-              <option value="">Select a location…</option>
-              {locations.map((l) => (
-                <option key={l.location_id} value={l.location_id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            id="transfer-from-location"
+            label="From location"
+            required
+            placeholder="Select a location…"
+            value={form.from_location_id}
+            onValueChange={(value) => setForm({ ...form, from_location_id: value })}
+            options={locations.map((l) => ({ value: l.location_id, label: l.name }))}
+          />
+          <CustomSelect
+            id="transfer-to-location"
+            label="To location"
+            required
+            placeholder="Select a location…"
+            value={form.to_location_id}
+            onValueChange={(value) => setForm({ ...form, to_location_id: value })}
+            options={locations.map((l) => ({ value: l.location_id, label: l.name }))}
+          />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -276,6 +291,18 @@ export function TransfersManager({
           </div>
         </div>
       </Dialog>
+
+      <ConfirmationDialog
+        id="cancel-transfer-dialog"
+        isOpen={cancelTarget !== null}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={confirmCancel}
+        isConfirming={cancelling}
+        title="Cancel transfer"
+        message="Are you sure you want to cancel this transfer? This cannot be undone."
+        confirmLabel="Cancel transfer"
+        cancelLabel="Keep transfer"
+      />
     </div>
   );
 }

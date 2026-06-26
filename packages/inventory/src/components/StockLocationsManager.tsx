@@ -4,6 +4,9 @@ import React, { useState, useCallback } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, StockLocationType } from '@alga-psa/types';
@@ -14,7 +17,19 @@ import {
   deactivateStockLocation,
 } from '../actions';
 
+const LOCATION_TYPE_LABELS: Record<StockLocationType, string> = {
+  warehouse: 'Warehouse',
+  van: 'Van',
+  office: 'Office',
+  other: 'Other',
+};
+
 const LOCATION_TYPES: StockLocationType[] = ['warehouse', 'van', 'office', 'other'];
+
+const LOCATION_TYPE_OPTIONS = LOCATION_TYPES.map((t) => ({
+  value: t,
+  label: LOCATION_TYPE_LABELS[t],
+}));
 
 interface FormState {
   name: string;
@@ -28,6 +43,7 @@ export function StockLocationsManager({ initialLocations }: { initialLocations: 
   const [editing, setEditing] = useState<IStockLocation | null>(null);
   const [form, setForm] = useState<FormState>({ name: '', location_type: 'warehouse', is_default: false });
   const [saving, setSaving] = useState(false);
+  const [pendingDeactivate, setPendingDeactivate] = useState<IStockLocation | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -96,7 +112,7 @@ export function StockLocationsManager({ initialLocations }: { initialLocations: 
           <Button id={`edit-location-${rec.location_id}`} variant="outline" size="sm" onClick={() => openEdit(rec)}>
             Edit
           </Button>
-          <Button id={`deactivate-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => deactivate(rec)}>
+          <Button id={`deactivate-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => setPendingDeactivate(rec)}>
             Deactivate
           </Button>
         </div>
@@ -122,38 +138,27 @@ export function StockLocationsManager({ initialLocations }: { initialLocations: 
         id="stock-location-dialog"
       >
         <div className="space-y-4 p-1">
-          <div>
-            <label className="block text-sm font-medium mb-1">Name *</label>
-            <Input
-              id="stock-location-name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Type</label>
-            <select
-              id="stock-location-type"
-              className="border rounded px-2 py-2 w-full"
-              value={form.location_type}
-              onChange={(e) => setForm({ ...form, location_type: e.target.value as StockLocationType })}
-            >
-              {LOCATION_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="flex items-center gap-2">
-            <input
-              id="stock-location-default"
-              type="checkbox"
-              checked={form.is_default}
-              onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
-            />
-            <span className="text-sm">Default location</span>
-          </label>
+          <Input
+            id="stock-location-name"
+            label="Name"
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          <CustomSelect
+            id="stock-location-type"
+            label="Type"
+            value={form.location_type}
+            placeholder="Select type…"
+            options={LOCATION_TYPE_OPTIONS}
+            onValueChange={(val: string) => setForm({ ...form, location_type: val as StockLocationType })}
+          />
+          <Checkbox
+            id="stock-location-default"
+            label="Default location"
+            checked={form.is_default}
+            onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
+          />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="stock-location-cancel" variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
@@ -164,6 +169,25 @@ export function StockLocationsManager({ initialLocations }: { initialLocations: 
           </div>
         </div>
       </Dialog>
+
+      <ConfirmationDialog
+        id="deactivate-location-confirm"
+        isOpen={!!pendingDeactivate}
+        onClose={() => setPendingDeactivate(null)}
+        title="Deactivate location"
+        message={
+          pendingDeactivate
+            ? `Are you sure you want to deactivate "${pendingDeactivate.name}"?`
+            : ''
+        }
+        confirmLabel="Deactivate"
+        onConfirm={async () => {
+          if (pendingDeactivate) {
+            await deactivate(pendingDeactivate);
+          }
+          setPendingDeactivate(null);
+        }}
+      />
     </div>
   );
 }

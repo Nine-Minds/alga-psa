@@ -4,16 +4,43 @@ import React, { useState, useCallback } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockUnit } from '@alga-psa/types';
 import { listStockUnits, searchUnitsBySerial, searchUnitsByMac } from '../actions';
 
 type SearchMode = 'serial' | 'mac';
 
+const SEARCH_MODE_OPTIONS = [
+  { value: 'serial', label: 'Serial number' },
+  { value: 'mac', label: 'MAC address' },
+];
+
 function fmtDate(v?: string | Date | null): string {
   if (!v) return '';
   const d = new Date(v);
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+}
+
+function humanizeStatus(v?: string | null): string {
+  if (!v) return '—';
+  return v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+}
+
+function statusVariant(v?: string | null) {
+  switch (v) {
+    case 'retired':
+      return 'secondary' as const;
+    case 'in_rma':
+      return 'warning' as const;
+    case 'delivered':
+      return 'success' as const;
+    case 'in_stock':
+      return 'info' as const;
+    default:
+      return 'secondary' as const;
+  }
 }
 
 export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[] }) {
@@ -63,7 +90,15 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   const columns: ColumnDefinition<IStockUnit>[] = [
     { title: 'Serial Number', dataIndex: 'serial_number' },
     { title: 'MAC Address', dataIndex: 'mac_address', render: (v: any) => v || '' },
-    { title: 'Status', dataIndex: 'status' },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      render: (v: any) => (
+        <Badge variant={statusVariant(v)} size="sm">
+          {humanizeStatus(v)}
+        </Badge>
+      ),
+    },
     { title: 'Location', dataIndex: 'location_id', render: (v: any) => v || '' },
     { title: 'Client', dataIndex: 'client_id', render: (v: any) => v || '' },
     {
@@ -84,21 +119,18 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
 
       <div className="flex items-end gap-2">
         <div>
-          <label className="block text-sm font-medium mb-1">Search by</label>
-          <select
+          <CustomSelect
             id="stock-units-search-mode"
-            className="border rounded px-2 py-2 w-full"
+            label="Search by"
+            options={SEARCH_MODE_OPTIONS}
             value={searchMode}
-            onChange={(e) => setSearchMode(e.target.value as SearchMode)}
-          >
-            <option value="serial">Serial Number</option>
-            <option value="mac">MAC Address</option>
-          </select>
+            onValueChange={(value) => setSearchMode(value as SearchMode)}
+          />
         </div>
         <div className="flex-1">
-          <label className="block text-sm font-medium mb-1">Search term</label>
           <Input
             id="stock-units-search-input"
+            label="Search term"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {

@@ -5,6 +5,8 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IVendor } from '@alga-psa/types';
 import { listVendors, createVendor, updateVendor, deactivateVendor } from '../actions';
@@ -33,6 +35,7 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
   const [editing, setEditing] = useState<IVendor | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [pendingDeactivation, setPendingDeactivation] = useState<IVendor | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -100,6 +103,8 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
       await reload();
     } catch (e: any) {
       toast.error(e?.message || 'Deactivate failed');
+    } finally {
+      setPendingDeactivation(null);
     }
   };
 
@@ -108,7 +113,15 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
     { title: 'Contact', dataIndex: 'contact_name', render: (v: any) => v || '—' },
     { title: 'Email', dataIndex: 'email', render: (v: any) => v || '—' },
     { title: 'Payment Terms', dataIndex: 'payment_terms', render: (v: any) => v || '—' },
-    { title: 'Status', dataIndex: 'is_active', render: (v: any) => (v ? 'Active' : 'Inactive') },
+    {
+      title: 'Status',
+      dataIndex: 'is_active',
+      render: (v: any) => (
+        <Badge variant={v ? 'success' : 'secondary'} size="sm">
+          {v ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
     {
       title: 'Actions',
       dataIndex: 'vendor_id',
@@ -122,7 +135,7 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
             variant="ghost"
             size="sm"
             disabled={!rec.is_active}
-            onClick={() => deactivate(rec)}
+            onClick={() => setPendingDeactivation(rec)}
           >
             Deactivate
           </Button>
@@ -149,54 +162,43 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
         id="vendor-dialog"
       >
         <div className="space-y-4 p-1">
-          <div>
-            <label className="block text-sm font-medium mb-1">Vendor Name *</label>
-            <Input
-              id="vendor-name"
-              value={form.vendor_name}
-              onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Contact Name</label>
-            <Input
-              id="vendor-contact-name"
-              value={form.contact_name}
-              onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <Input
-              id="vendor-email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Phone</label>
-            <Input
-              id="vendor-phone"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Payment Terms</label>
-            <Input
-              id="vendor-payment-terms"
-              value={form.payment_terms}
-              onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Account Number</label>
-            <Input
-              id="vendor-account-number"
-              value={form.account_number}
-              onChange={(e) => setForm({ ...form, account_number: e.target.value })}
-            />
-          </div>
+          <Input
+            id="vendor-name"
+            label="Vendor name"
+            required
+            value={form.vendor_name}
+            onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
+          />
+          <Input
+            id="vendor-contact-name"
+            label="Contact name"
+            value={form.contact_name}
+            onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
+          />
+          <Input
+            id="vendor-email"
+            label="Email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+          <Input
+            id="vendor-phone"
+            label="Phone"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+          <Input
+            id="vendor-payment-terms"
+            label="Payment terms"
+            value={form.payment_terms}
+            onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
+          />
+          <Input
+            id="vendor-account-number"
+            label="Account number"
+            value={form.account_number}
+            onChange={(e) => setForm({ ...form, account_number: e.target.value })}
+          />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="vendor-cancel" variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
@@ -207,6 +209,24 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
           </div>
         </div>
       </Dialog>
+
+      <ConfirmationDialog
+        id="vendor-deactivate-confirm"
+        isOpen={pendingDeactivation !== null}
+        onClose={() => setPendingDeactivation(null)}
+        onConfirm={() => {
+          if (pendingDeactivation) {
+            return deactivate(pendingDeactivation);
+          }
+        }}
+        title="Deactivate vendor"
+        message={
+          pendingDeactivation
+            ? `Are you sure you want to deactivate ${pendingDeactivation.vendor_name}? This vendor will no longer be available for new purchase orders.`
+            : ''
+        }
+        confirmLabel="Deactivate"
+      />
     </div>
   );
 }
