@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { promises as fs } from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,6 +16,7 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+const TEST_DISCOVERY_TENANT = '__document_entity_associations_test__';
 
 const TEST_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAYSURBVChTY/hPAAwEFDJQAaMKRxUOXYUAcJ4E/VIDMyoAAAAASUVORK5CYII=';
@@ -448,6 +450,14 @@ test.describe('Document entity associations', () => {
   let context: E2ETestContext;
   let sharedDocument: { document_id: string; document_name: string } | null = null;
 
+  function tenantTable(tenantId: string, table: string) {
+    return tenantDb(context.db, tenantId).table(table);
+  }
+
+  function unscopedTestTable(table: string, reason: string) {
+    return tenantDb(context.db, TEST_DISCOVERY_TENANT).unscoped(table, reason);
+  }
+
   test.beforeAll(async () => {
     context = new E2ETestContext({
       baseUrl: TEST_CONFIG.baseUrl,
@@ -486,7 +496,7 @@ test.describe('Document entity associations', () => {
     const storagePath = `/test/${fileId}.png`;
 
     // First create the external file record
-    await context.db('external_files').insert({
+    await tenantTable(tenantId, 'external_files').insert({
       file_id: fileId,
       tenant: tenantId,
       file_name: documentName,
@@ -499,12 +509,15 @@ test.describe('Document entity associations', () => {
     });
 
     // Get the shared document type for image/png
-    const pngType = await context.db('shared_document_types')
+    const pngType = await unscopedTestTable(
+      'shared_document_types',
+      'document entity association test reads global shared document type metadata'
+    )
       .where({ type_name: 'image/png' })
       .first();
 
     // Then create the document with reference to the file
-    await context.db('documents').insert({
+    await tenantTable(tenantId, 'documents').insert({
       document_id: documentId,
       document_name: documentName,
       tenant: tenantId,
@@ -561,7 +574,7 @@ test.describe('Document entity associations', () => {
     const storagePath = `/test/${fileId}.png`;
 
     // First create the external file record
-    await context.db('external_files').insert({
+    await tenantTable(tenantId, 'external_files').insert({
       file_id: fileId,
       tenant: tenantId,
       file_name: documentName,
@@ -574,12 +587,15 @@ test.describe('Document entity associations', () => {
     });
 
     // Get the shared document type for image/png
-    const pngType = await context.db('shared_document_types')
+    const pngType = await unscopedTestTable(
+      'shared_document_types',
+      'document entity association test reads global shared document type metadata'
+    )
       .where({ type_name: 'image/png' })
       .first();
 
     // Then create the document with reference to the file
-    await context.db('documents').insert({
+    await tenantTable(tenantId, 'documents').insert({
       document_id: documentId,
       document_name: documentName,
       tenant: tenantId,
@@ -627,7 +643,7 @@ test.describe('Document entity associations', () => {
         updated_at: new Date(),
       };
 
-      await context.db('clients').insert(testClient);
+      await tenantTable(tenantId, 'clients').insert(testClient);
       console.log('[Ticket Link Test] Created client:', testClient.client_id);
 
       // Create a board first (required for ticket)
@@ -637,7 +653,7 @@ test.describe('Document entity associations', () => {
         board_name: 'Test Board',
       };
 
-      await context.db('boards').insert(testBoard);
+      await tenantTable(tenantId, 'boards').insert(testBoard);
       console.log('[Ticket Link Test] Created board:', testBoard.board_id);
 
       // Create a test ticket with all required fields
@@ -653,7 +669,7 @@ test.describe('Document entity associations', () => {
         board_id: testBoard.board_id,
       };
 
-      await context.db('tickets').insert(testTicket);
+      await tenantTable(tenantId, 'tickets').insert(testTicket);
       console.log('[Ticket Link Test] Created ticket:', testTicket.ticket_id);
 
       // STEP 1: Get or upload a test document
@@ -684,7 +700,7 @@ test.describe('Document entity associations', () => {
 
         await page.waitForTimeout(3000);
 
-        const uploadedDoc = await context.db('documents')
+        const uploadedDoc = await tenantTable(tenantId, 'documents')
           .where({
             tenant: tenantId,
             document_name: fileName,
@@ -712,7 +728,7 @@ test.describe('Document entity associations', () => {
 
       // STEP 3: Verify association was created in database
       console.log('[Ticket Link Test] Verifying association in database...');
-      const association = await context.db('document_associations')
+      const association = await tenantTable(tenantId, 'document_associations')
         .where({
           tenant: tenantId,
           entity_type: 'ticket',
@@ -762,7 +778,7 @@ test.describe('Document entity associations', () => {
       updated_at: new Date(),
     };
 
-    await context.db('clients').insert(testClient);
+    await tenantTable(tenantId, 'clients').insert(testClient);
     console.log('[Client Upload Test] Created client:', testClient.client_id);
 
     await setupAuthenticatedSession(page, tenantData, {
@@ -1111,7 +1127,7 @@ test.describe('Document entity associations', () => {
       // Use Playwright's expect with toPass for automatic retry
       let uploadedDoc = null;
       await expect(async () => {
-        uploadedDoc = await context.db('documents')
+        uploadedDoc = await tenantTable(tenantId, 'documents')
           .where({
             tenant: tenantId,
             document_name: fileName,
@@ -1131,7 +1147,7 @@ test.describe('Document entity associations', () => {
       console.log('[Client Upload Test] Waiting for association to be created...');
       let association = null;
       await expect(async () => {
-        association = await context.db('document_associations')
+        association = await tenantTable(tenantId, 'document_associations')
           .where({
             tenant: tenantId,
             entity_type: 'client',
@@ -1268,7 +1284,7 @@ test.describe('Document entity associations', () => {
 
         // Verify in-app document was created and associated with client
         if (docName) {
-          const inAppDoc = await context.db('documents')
+          const inAppDoc = await tenantTable(tenantId, 'documents')
             .where({
               tenant: tenantId,
               document_name: docName,
@@ -1279,7 +1295,7 @@ test.describe('Document entity associations', () => {
             console.log('[Client Test] ✓ In-app document created:', inAppDoc.document_id);
 
             // Verify it's associated with the client
-            const inAppAssociation = await context.db('document_associations')
+            const inAppAssociation = await tenantTable(tenantId, 'document_associations')
               .where({
                 tenant: tenantId,
                 entity_type: 'client',

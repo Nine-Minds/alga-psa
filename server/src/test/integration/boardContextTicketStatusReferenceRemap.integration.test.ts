@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
@@ -49,24 +50,38 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenantId: string): Promise<void> {
   if (hasColumn(clientContractsColumns, 'tenant')) {
-    await db('client_contracts').where({ tenant: tenantId }).del();
+    await tenantTable(tenantId, 'client_contracts').del();
   }
 
   if (hasColumn(billingSettingsColumns, 'tenant')) {
-    await db('default_billing_settings').where({ tenant: tenantId }).del();
+    await tenantTable(tenantId, 'default_billing_settings').del();
   }
 
   if (hasColumn(inboundDefaultsColumns, 'tenant')) {
-    await db('inbound_ticket_defaults').where({ tenant: tenantId }).del();
+    await tenantTable(tenantId, 'inbound_ticket_defaults').del();
   }
 
-  await db('tickets').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'tickets').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function createReferenceFixture(): Promise<ReferenceFixture> {
@@ -81,7 +96,7 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -91,7 +106,7 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -102,7 +117,7 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert([
+  await tenantTable(tenantId, 'boards').insert([
     {
       tenant: tenantId,
       board_id: boardA,
@@ -133,7 +148,7 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     },
   ]);
 
-  await db('statuses').insert([
+  await tenantTable(tenantId, 'statuses').insert([
     {
       tenant: tenantId,
       status_id: legacyOpenStatusId,
@@ -172,7 +187,7 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     },
   ]);
 
-  await db('inbound_ticket_defaults').insert({
+  await tenantTable(tenantId, 'inbound_ticket_defaults').insert({
     id: inboundDefaultsId,
     tenant: tenantId,
     short_name: `defaults-${tenantId.slice(0, 8)}`,
@@ -188,7 +203,7 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     ...(hasColumn(inboundDefaultsColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('default_billing_settings')
+  await tenantTable(tenantId, 'default_billing_settings')
     .insert({
       tenant: tenantId,
       ...(hasColumn(billingSettingsColumns, 'renewal_ticket_board_id')
@@ -203,7 +218,7 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     .onConflict('tenant')
     .merge();
 
-  await db('client_contracts').insert({
+  await tenantTable(tenantId, 'client_contracts').insert({
     tenant: tenantId,
     ...(hasColumn(clientContractsColumns, 'client_contract_id') ? { client_contract_id: contractId } : {}),
     ...(hasColumn(clientContractsColumns, 'client_id') ? { client_id: uuidv4() } : {}),
@@ -247,13 +262,13 @@ describe('board-context ticket status reference remap migration (integration)', 
     process.env.DB_PORT = process.env.DB_PORT || '5432';
 
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
-    inboundDefaultsColumns = await db('inbound_ticket_defaults').columnInfo();
-    billingSettingsColumns = await db('default_billing_settings').columnInfo();
-    clientContractsColumns = await db('client_contracts').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
+    inboundDefaultsColumns = await schemaTable('inbound_ticket_defaults').columnInfo();
+    billingSettingsColumns = await schemaTable('default_billing_settings').columnInfo();
+    clientContractsColumns = await schemaTable('client_contracts').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -270,16 +285,15 @@ describe('board-context ticket status reference remap migration (integration)', 
   it('T007: inbound ticket defaults are remapped to the board-owned status for their stored board', async () => {
     const fixture = await runReferenceRemapForFixture();
 
-    const inboundDefaults = await db('inbound_ticket_defaults')
-      .where({ tenant: fixture.tenantId, id: fixture.inboundDefaultsId })
+    const inboundDefaults = await tenantTable(fixture.tenantId, 'inbound_ticket_defaults')
+      .where({ id: fixture.inboundDefaultsId })
       .first();
 
     expect(inboundDefaults?.status_id).toBeTruthy();
     expect(inboundDefaults?.status_id).not.toBe(fixture.legacyStatusIds.open);
 
-    const clonedStatus = await db('statuses')
+    const clonedStatus = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: fixture.boardIds[0],
         name: 'Open',
       })
@@ -291,16 +305,14 @@ describe('board-context ticket status reference remap migration (integration)', 
   it('T008: tenant billing renewal defaults are remapped using renewal_ticket_board_id', async () => {
     const fixture = await runReferenceRemapForFixture();
 
-    const billingSettings = await db('default_billing_settings')
-      .where({ tenant: fixture.tenantId })
+    const billingSettings = await tenantTable(fixture.tenantId, 'default_billing_settings')
       .first();
 
     expect(billingSettings?.renewal_ticket_status_id).toBeTruthy();
     expect(billingSettings?.renewal_ticket_status_id).not.toBe(fixture.legacyStatusIds.closed);
 
-    const clonedStatus = await db('statuses')
+    const clonedStatus = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: fixture.billingBoardId,
         name: 'Closed',
       })
@@ -312,16 +324,15 @@ describe('board-context ticket status reference remap migration (integration)', 
   it('T009: contract-level renewal defaults are remapped using renewal_ticket_board_id', async () => {
     const fixture = await runReferenceRemapForFixture();
 
-    const clientContract = await db('client_contracts')
-      .where({ tenant: fixture.tenantId, client_contract_id: fixture.contractId })
+    const clientContract = await tenantTable(fixture.tenantId, 'client_contracts')
+      .where({ client_contract_id: fixture.contractId })
       .first();
 
     expect(clientContract?.renewal_ticket_status_id).toBeTruthy();
     expect(clientContract?.renewal_ticket_status_id).not.toBe(fixture.legacyStatusIds.closed);
 
-    const clonedStatus = await db('statuses')
+    const clonedStatus = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: fixture.contractBoardId,
         name: 'Closed',
       })

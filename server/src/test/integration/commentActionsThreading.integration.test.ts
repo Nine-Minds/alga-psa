@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { tenantDb } from '@alga-psa/db';
 
 const dbRef = vi.hoisted(() => ({
   knex: null as Knex | null,
@@ -50,12 +51,21 @@ const blockNote = (text: string) => JSON.stringify([
 describe('ticket comment threading actions', () => {
   let knex: Knex;
 
+  function scopedDb(tenant = dbRef.tenant) {
+    return tenantDb(knex, tenant);
+  }
+
   beforeAll(async () => {
     knex = await createTestDbConnection();
-    const context = await knex('tickets as t')
-      .join('users as u', function() {
-        this.on('u.tenant', 't.tenant').andOnVal('u.user_type', 'internal');
-      })
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const contextQuery = discoveryDb.unscoped(
+      'tickets as t',
+      'test discovery of seeded ticket/user context for comment threading actions'
+    );
+    discoveryDb.tenantJoin(contextQuery, 'users as u', 'u.tenant', 't.tenant', {
+      on: (join) => join.andOnVal('u.user_type', 'internal'),
+    });
+    const context = await contextQuery
       .select('t.tenant', 'u.user_id', 'u.first_name', 'u.last_name')
       .first();
     expect(context).toBeTruthy();
@@ -74,9 +84,8 @@ describe('ticket comment threading actions', () => {
   });
 
   it('T027: createComment accepts parent_comment_id and forwards it to the model', async () => {
-    const context = await knex('tickets')
+    const context = await scopedDb().table('tickets')
       .select('tenant', 'ticket_id')
-      .where({ tenant: dbRef.tenant })
       .first();
     expect(context).toBeTruthy();
 
@@ -92,9 +101,9 @@ describe('ticket comment threading actions', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('comments')
+      const root = await scopedDb(context.tenant).table('comments')
         .select('thread_id')
-        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .where({ comment_id: rootCommentId })
         .first();
       threadId = root.thread_id;
 
@@ -107,9 +116,9 @@ describe('ticket comment threading actions', () => {
         parent_comment_id: rootCommentId,
       });
 
-      const reply = await knex('comments')
+      const reply = await scopedDb(context.tenant).table('comments')
         .select('thread_id', 'parent_comment_id')
-        .where({ tenant: context.tenant, comment_id: replyCommentId })
+        .where({ comment_id: replyCommentId })
         .first();
       expect(reply).toMatchObject({
         thread_id: threadId,
@@ -117,19 +126,18 @@ describe('ticket comment threading actions', () => {
       });
     } finally {
       if (replyCommentId) {
-        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+        await scopedDb(context.tenant).table('comments').where({ comment_id: replyCommentId }).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await scopedDb(context.tenant).table('comments').where({ comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await scopedDb(context.tenant).table('comment_threads').where({ thread_id: threadId }).delete();
       }
     }
   });
 
   it('T028: TICKET_COMMENT_ADDED payload includes reply threading fields', async () => {
-    const context = await knex('tickets')
+    const context = await scopedDb().table('tickets')
       .select('tenant', 'ticket_id')
-      .where({ tenant: dbRef.tenant })
       .first();
     expect(context).toBeTruthy();
 
@@ -145,9 +153,9 @@ describe('ticket comment threading actions', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('comments')
+      const root = await scopedDb(context.tenant).table('comments')
         .select('thread_id')
-        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .where({ comment_id: rootCommentId })
         .first();
       threadId = root.thread_id;
 
@@ -181,30 +189,29 @@ describe('ticket comment threading actions', () => {
       });
     } finally {
       if (replyCommentId) {
-        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+        await scopedDb(context.tenant).table('comments').where({ comment_id: replyCommentId }).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await scopedDb(context.tenant).table('comments').where({ comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await scopedDb(context.tenant).table('comment_threads').where({ thread_id: threadId }).delete();
       }
     }
   });
 
   it('T029: client users cannot create internal replies', async () => {
-    const context = await knex('tickets')
+    const context = await scopedDb().table('tickets')
       .select('tenant', 'ticket_id')
-      .where({ tenant: dbRef.tenant })
       .first();
     expect(context).toBeTruthy();
 
-    let clientUser = await knex('users')
+    let clientUser = await scopedDb(context.tenant).table('users')
       .select('user_id')
-      .where({ tenant: context.tenant, user_type: 'client' })
+      .where({ user_type: 'client' })
       .first();
 
     let createdClientUserId: string | undefined;
     if (!clientUser) {
-      const [createdClientUser] = await knex('users')
+      const [createdClientUser] = await scopedDb(context.tenant).table('users')
         .insert({
           tenant: context.tenant,
           username: `thread-client-${Date.now()}`,
@@ -230,9 +237,9 @@ describe('ticket comment threading actions', () => {
     let threadId: string | undefined;
 
     try {
-      const root = await knex('comments')
+      const root = await scopedDb(context.tenant).table('comments')
         .select('thread_id')
-        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .where({ comment_id: rootCommentId })
         .first();
       threadId = root.thread_id;
 
@@ -245,10 +252,9 @@ describe('ticket comment threading actions', () => {
         parent_comment_id: rootCommentId,
       })).rejects.toThrow('Failed to create comment');
 
-      const invalidReply = await knex('comments')
+      const invalidReply = await scopedDb(context.tenant).table('comments')
         .select('comment_id')
         .where({
-          tenant: context.tenant,
           ticket_id: context.ticket_id,
           user_id: clientUser.user_id,
           parent_comment_id: rootCommentId,
@@ -257,22 +263,24 @@ describe('ticket comment threading actions', () => {
         .first();
       expect(invalidReply).toBeUndefined();
     } finally {
-      await knex('comments').where({ tenant: context.tenant, parent_comment_id: rootCommentId }).delete();
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await scopedDb(context.tenant).table('comments').where({ parent_comment_id: rootCommentId }).delete();
+      await scopedDb(context.tenant).table('comments').where({ comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await scopedDb(context.tenant).table('comment_threads').where({ thread_id: threadId }).delete();
       }
       if (createdClientUserId) {
-        await knex('users').where({ tenant: context.tenant, user_id: createdClientUserId }).delete();
+        await scopedDb(context.tenant).table('users').where({ user_id: createdClientUserId }).delete();
       }
     }
   });
 
   it('T078: client reply RBAC allows own client-visible thread and rejects internal or inaccessible threads', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', function() {
-        this.on('u.tenant', 't.tenant').andOnVal('u.user_type', 'internal');
-      })
+    const tenantScoped = scopedDb();
+    const contextQuery = tenantScoped.table('tickets as t');
+    tenantScoped.tenantJoin(contextQuery, 'users as u', 'u.tenant', 't.tenant', {
+      on: (join) => join.andOnVal('u.user_type', 'internal'),
+    });
+    const context = await contextQuery
       .select(
         't.tenant',
         't.ticket_id',
@@ -282,7 +290,6 @@ describe('ticket comment threading actions', () => {
         't.board_id',
         'u.user_id as internal_user_id'
       )
-      .where({ 't.tenant': dbRef.tenant })
       .whereNotNull('t.client_id')
       .first();
     expect(context).toBeTruthy();
@@ -300,14 +307,14 @@ describe('ticket comment threading actions', () => {
     let inaccessibleRootId: string | undefined;
     let allowedReplyId: string | undefined;
 
-    await knex('clients').insert({
+    await scopedDb(context.tenant).table('clients').insert({
       tenant: context.tenant,
       client_id: ids.other_client_id,
       client_name: `T078 Other Client ${Date.now()}`,
       billing_cycle: 'monthly',
     });
 
-    await knex('tickets').insert({
+    await scopedDb(context.tenant).table('tickets').insert({
       tenant: context.tenant,
       ticket_id: ids.other_ticket_id,
       ticket_number: `T078-${Date.now()}`,
@@ -320,7 +327,7 @@ describe('ticket comment threading actions', () => {
       updated_at: new Date(),
     });
 
-    await knex('users').insert({
+    await scopedDb(context.tenant).table('users').insert({
       tenant: context.tenant,
       user_id: ids.client_user_id,
       username: `t078-client-${Date.now()}`,
@@ -373,9 +380,9 @@ describe('ticket comment threading actions', () => {
         parent_comment_id: clientVisibleRootId,
       });
 
-      const allowedReply = await knex('comments')
+      const allowedReply = await scopedDb(context.tenant).table('comments')
         .select('comment_id', 'author_type', 'is_internal', 'parent_comment_id')
-        .where({ tenant: context.tenant, comment_id: allowedReplyId })
+        .where({ comment_id: allowedReplyId })
         .first();
       expect(allowedReply).toMatchObject({
         comment_id: allowedReplyId,
@@ -403,21 +410,18 @@ describe('ticket comment threading actions', () => {
       })).rejects.toThrow('Failed to create comment');
     } finally {
       userRef.user = originalUser;
-      await knex('comments')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('comments')
         .whereIn('parent_comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
         .delete();
-      await knex('comments')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('comments')
         .whereIn('comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
         .delete();
-      await knex('comment_threads')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('comment_threads')
         .whereIn('root_comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
         .delete();
-      await knex('users').where({ tenant: context.tenant, user_id: ids.client_user_id }).delete();
-      await knex('tickets').where({ tenant: context.tenant, ticket_id: ids.other_ticket_id }).delete();
-      await knex('clients').where({ tenant: context.tenant, client_id: ids.other_client_id }).delete();
+      await scopedDb(context.tenant).table('users').where({ user_id: ids.client_user_id }).delete();
+      await scopedDb(context.tenant).table('tickets').where({ ticket_id: ids.other_ticket_id }).delete();
+      await scopedDb(context.tenant).table('clients').where({ client_id: ids.other_client_id }).delete();
     }
   });
 });

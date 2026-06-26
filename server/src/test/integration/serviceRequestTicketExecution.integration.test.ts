@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { submitPortalServiceRequest } from '../../lib/service-requests/submissionService';
 import { getClientServiceRequestSubmissionDetail } from '../../lib/service-requests/submissionHistory';
@@ -29,19 +30,33 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenant: string): Promise<void> {
-  await db('service_request_submission_attachments').where({ tenant }).del();
-  await db('service_request_submissions').where({ tenant }).del();
-  await db('service_request_definition_versions').where({ tenant }).del();
-  await db('service_request_definitions').where({ tenant }).del();
-  await db('tickets').where({ tenant }).del();
-  await db('next_number').where({ tenant }).del();
-  await db('statuses').where({ tenant }).del();
-  await db('priorities').where({ tenant }).del();
-  await db('boards').where({ tenant }).del();
-  await db('clients').where({ tenant }).del();
-  await db('users').where({ tenant }).del();
-  await db('tenants').where({ tenant }).del();
+  await tenantTable(tenant, 'service_request_submission_attachments').del();
+  await tenantTable(tenant, 'service_request_submissions').del();
+  await tenantTable(tenant, 'service_request_definition_versions').del();
+  await tenantTable(tenant, 'service_request_definitions').del();
+  await tenantTable(tenant, 'tickets').del();
+  await tenantTable(tenant, 'next_number').del();
+  await tenantTable(tenant, 'statuses').del();
+  await tenantTable(tenant, 'priorities').del();
+  await tenantTable(tenant, 'boards').del();
+  await tenantTable(tenant, 'clients').del();
+  await tenantTable(tenant, 'users').del();
+  await tenantRows().where({ tenant }).del();
 }
 
 async function createTicketFixture(): Promise<TicketFixture> {
@@ -54,7 +69,7 @@ async function createTicketFixture(): Promise<TicketFixture> {
 
   tenantsToCleanup.add(tenant);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenant.slice(0, 8)}` }
@@ -64,7 +79,7 @@ async function createTicketFixture(): Promise<TicketFixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenant, 'users').insert({
     tenant,
     user_id: requesterUserId,
     username: `requester-${tenant.slice(0, 8)}`,
@@ -75,7 +90,7 @@ async function createTicketFixture(): Promise<TicketFixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('clients').insert({
+  await tenantTable(tenant, 'clients').insert({
     tenant,
     client_id: clientId,
     client_name: `Client ${tenant.slice(0, 8)}`,
@@ -86,7 +101,7 @@ async function createTicketFixture(): Promise<TicketFixture> {
     ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert({
+  await tenantTable(tenant, 'boards').insert({
     tenant,
     board_id: boardId,
     board_name: `Support ${tenant.slice(0, 8)}`,
@@ -101,7 +116,7 @@ async function createTicketFixture(): Promise<TicketFixture> {
     ...(hasColumn(boardColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('priorities').insert({
+  await tenantTable(tenant, 'priorities').insert({
     tenant,
     priority_id: priorityId,
     priority_name: 'High',
@@ -114,7 +129,7 @@ async function createTicketFixture(): Promise<TicketFixture> {
     ...(hasColumn(priorityColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('statuses').insert({
+  await tenantTable(tenant, 'statuses').insert({
     tenant,
     status_id: statusId,
     ...(hasColumn(statusColumns, 'board_id') ? { board_id: boardId } : {}),
@@ -141,7 +156,7 @@ async function createPublishedDefinition(args: {
   executionConfig: Record<string, unknown>;
   linkedServiceId?: string | null;
 }) {
-  await db('service_request_definitions').insert({
+  await tenantTable(args.tenant, 'service_request_definitions').insert({
     tenant: args.tenant,
     definition_id: args.definitionId,
     name: 'Employee Onboarding',
@@ -156,7 +171,7 @@ async function createPublishedDefinition(args: {
     lifecycle_state: 'published',
   });
 
-  await db('service_request_definition_versions').insert({
+  await tenantTable(args.tenant, 'service_request_definition_versions').insert({
     tenant: args.tenant,
     version_id: args.versionId,
     definition_id: args.definitionId,
@@ -185,7 +200,7 @@ async function createItilPriority(
   orderNumber: number
 ): Promise<string> {
   const priorityId = uuidv4();
-  await db('priorities').insert({
+  await tenantTable(tenant, 'priorities').insert({
     tenant,
     priority_id: priorityId,
     priority_name: priorityName,
@@ -205,12 +220,12 @@ async function createItilPriority(
 describe('service request ticket-only execution', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    clientColumns = await db('clients').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
-    priorityColumns = await db('priorities').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
+    priorityColumns = await schemaTable('priorities').columnInfo();
   });
 
   afterEach(async () => {
@@ -259,16 +274,16 @@ describe('service request ticket-only execution', () => {
     expect(result.executionStatus).toBe('succeeded');
     expect(result.createdTicketId).toBeTruthy();
 
-    const submission = await db('service_request_submissions')
-      .where({ tenant: fixture.tenant, submission_id: result.submissionId })
+    const submission = await tenantTable(fixture.tenant, 'service_request_submissions')
+      .where({ submission_id: result.submissionId })
       .first();
     expect(submission).toMatchObject({
       execution_status: 'succeeded',
       created_ticket_id: result.createdTicketId,
     });
 
-    const createdTicket = await db('tickets')
-      .where({ tenant: fixture.tenant, ticket_id: result.createdTicketId })
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
       .first();
     expect(createdTicket).toBeTruthy();
     expect(createdTicket.title).toBe('New Hire Laptop');
@@ -309,8 +324,8 @@ describe('service request ticket-only execution', () => {
     });
 
     expect(result.executionStatus).toBe('failed');
-    const submission = await db('service_request_submissions')
-      .where({ tenant: fixture.tenant, submission_id: result.submissionId })
+    const submission = await tenantTable(fixture.tenant, 'service_request_submissions')
+      .where({ submission_id: result.submissionId })
       .first();
     expect(submission).toBeTruthy();
     expect(submission.execution_status).toBe('failed');
@@ -397,8 +412,8 @@ describe('service request ticket-only execution', () => {
       1
     );
 
-    await db('boards')
-      .where({ tenant: fixture.tenant, board_id: fixture.boardId })
+    await tenantTable(fixture.tenant, 'boards')
+      .where({ board_id: fixture.boardId })
       .update({ priority_type: 'itil' });
 
     await createPublishedDefinition({
@@ -429,8 +444,8 @@ describe('service request ticket-only execution', () => {
     expect(result.executionStatus).toBe('succeeded');
     expect(result.createdTicketId).toBeTruthy();
 
-    const createdTicket = await db('tickets')
-      .where({ tenant: fixture.tenant, ticket_id: result.createdTicketId })
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
       .first();
     expect(createdTicket).toBeTruthy();
     expect(createdTicket.priority_id).toBe(itilPriorityId);
@@ -472,8 +487,8 @@ describe('service request ticket-only execution', () => {
     expect(result.executionStatus).toBe('succeeded');
     expect(result.createdTicketId).toBeTruthy();
 
-    const createdTicket = await db('tickets')
-      .where({ tenant: fixture.tenant, ticket_id: result.createdTicketId })
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
       .first();
     expect(createdTicket).toBeTruthy();
     expect(createdTicket.title).toBe('New Hire Setup: Laptop Provisioning');

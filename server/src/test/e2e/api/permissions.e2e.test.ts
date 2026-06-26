@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import { 
   setupE2ETestEnvironment,
   E2ETestEnvironment
@@ -16,6 +17,14 @@ describe('Permissions API E2E Tests', () => {
   let createdPermissionIds: string[] = [];
   let testRoleId: string;
 
+  function tenantTable(table: string) {
+    return tenantDb(env.db, env.tenant).table(table);
+  }
+
+  function tenantTableFor(tenant: string, table: string) {
+    return tenantDb(env.db, tenant).table(table);
+  }
+
   beforeAll(async () => {
     // Setup test environment
     env = await setupE2ETestEnvironment({
@@ -24,7 +33,7 @@ describe('Permissions API E2E Tests', () => {
     });
 
     // Create a test role for permission assignment tests
-    const role = await env.db('roles').insert({
+    const role = await tenantTable('roles').insert({
       role_id: uuidv4(),
       role_name: `Test Role ${Date.now()}`,
       description: 'Role for permission tests',
@@ -39,8 +48,8 @@ describe('Permissions API E2E Tests', () => {
     // Clean up any created permissions
     for (const permissionId of createdPermissionIds) {
       try {
-        await env.db('role_permissions').where('permission_id', permissionId).delete();
-        await env.db('permissions').where('permission_id', permissionId).delete();
+        await tenantTable('role_permissions').where('permission_id', permissionId).delete();
+        await tenantTable('permissions').where('permission_id', permissionId).delete();
       } catch (error) {
         // Ignore errors during cleanup
       }
@@ -48,9 +57,9 @@ describe('Permissions API E2E Tests', () => {
     
     // Clean up test role
     if (testRoleId) {
-      await env.db('role_permissions').where('role_id', testRoleId).delete();
-      await env.db('user_roles').where('role_id', testRoleId).delete();
-      await env.db('roles').where('role_id', testRoleId).delete();
+      await tenantTable('role_permissions').where('role_id', testRoleId).delete();
+      await tenantTable('user_roles').where('role_id', testRoleId).delete();
+      await tenantTable('roles').where('role_id', testRoleId).delete();
     }
     
     // Clean up test environment
@@ -103,7 +112,7 @@ describe('Permissions API E2E Tests', () => {
 
     it('should get a specific permission', async () => {
       // Create a test permission
-      const permission = await env.db('permissions').insert({
+      const permission = await tenantTable('permissions').insert({
         permission_id: uuidv4(),
         resource: 'specific_resource',
         action: 'write',
@@ -126,7 +135,7 @@ describe('Permissions API E2E Tests', () => {
 
     it('should delete a permission', async () => {
       // Create a test permission
-      const permission = await env.db('permissions').insert({
+      const permission = await tenantTable('permissions').insert({
         permission_id: uuidv4(),
         resource: 'delete_resource',
         action: 'delete',
@@ -137,7 +146,7 @@ describe('Permissions API E2E Tests', () => {
       assertSuccess(response, 204);
 
       // Verify permission is deleted
-      const checkPermission = await env.db('permissions')
+      const checkPermission = await tenantTable('permissions')
         .where('permission_id', permission[0].permission_id)
         .where('tenant', env.tenant)
         .first();
@@ -162,7 +171,7 @@ describe('Permissions API E2E Tests', () => {
   describe('Permission Assignment', () => {
     it('should get roles using a specific permission', async () => {
       // Create a permission
-      const permission = await env.db('permissions').insert({
+      const permission = await tenantTable('permissions').insert({
         permission_id: uuidv4(),
         resource: 'role_test',
         action: 'read',
@@ -171,7 +180,7 @@ describe('Permissions API E2E Tests', () => {
       createdPermissionIds.push(permission[0].permission_id);
 
       // Assign permission to test role
-      await env.db('role_permissions').insert({
+      await tenantTable('role_permissions').insert({
         role_id: testRoleId,
         permission_id: permission[0].permission_id,
         tenant: env.tenant,
@@ -199,7 +208,7 @@ describe('Permissions API E2E Tests', () => {
 
     it('should return 403 without permission', async () => {
       // Create a user without permission permissions
-      const restrictedUser = await env.db('users').insert({
+      const restrictedUser = await tenantTable('users').insert({
         user_id: uuidv4(),
         tenant: env.tenant,
         username: `restricted-perm-${Date.now()}`,
@@ -214,7 +223,7 @@ describe('Permissions API E2E Tests', () => {
       const plaintextKey = 'restricted-key-' + Date.now();
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
-      const restrictedKey = await env.db('api_keys').insert({
+      const restrictedKey = await tenantTable('api_keys').insert({
         api_key_id: uuidv4(),
         api_key: hashedKey,
         user_id: restrictedUser[0].user_id,
@@ -237,8 +246,8 @@ describe('Permissions API E2E Tests', () => {
       assertError(response, 403);
 
       // Cleanup
-      await env.db('api_keys').where('api_key_id', restrictedKey[0].api_key_id).delete();
-      await env.db('users').where('user_id', restrictedUser[0].user_id).delete();
+      await tenantTable('api_keys').where('api_key_id', restrictedKey[0].api_key_id).delete();
+      await tenantTable('users').where('user_id', restrictedUser[0].user_id).delete();
     });
 
     it('should return 400 for invalid data', async () => {
@@ -258,7 +267,7 @@ describe('Permissions API E2E Tests', () => {
 
     it('should prevent duplicate permissions', async () => {
       // Create first permission
-      const firstPermission = await env.db('permissions').insert({
+      const firstPermission = await tenantTable('permissions').insert({
         permission_id: uuidv4(),
         resource: 'duplicate_test',
         action: 'read',
@@ -279,7 +288,7 @@ describe('Permissions API E2E Tests', () => {
     it('should not access permissions from other tenants', async () => {
       // Create another tenant
       const otherTenant = uuidv4();
-      await env.db('tenants').insert({
+      await tenantTableFor(otherTenant, 'tenants').insert({
         tenant: otherTenant,
         client_name: 'Other Company',
         email: 'other@client.com',
@@ -288,7 +297,7 @@ describe('Permissions API E2E Tests', () => {
       });
 
       // Create permission in other tenant
-      const otherPermission = await env.db('permissions').insert({
+      const otherPermission = await tenantTableFor(otherTenant, 'permissions').insert({
         permission_id: uuidv4(),
         resource: 'other_tenant_resource',
         action: 'read',
@@ -300,8 +309,8 @@ describe('Permissions API E2E Tests', () => {
       assertError(response, 404);
 
       // Cleanup
-      await env.db('permissions').where('permission_id', otherPermission[0].permission_id).delete();
-      await env.db('tenants').where('tenant', otherTenant).delete();
+      await tenantTableFor(otherTenant, 'permissions').where('permission_id', otherPermission[0].permission_id).delete();
+      await tenantTableFor(otherTenant, 'tenants').where('tenant', otherTenant).delete();
     });
   });
 
@@ -310,7 +319,7 @@ describe('Permissions API E2E Tests', () => {
       // Create permissions with different resources
       const resources = ['filter_user', 'filter_role', 'filter_client'];
       for (const resource of resources) {
-        const permission = await env.db('permissions').insert({
+        const permission = await tenantTable('permissions').insert({
           permission_id: uuidv4(),
           resource,
           action: 'read',
@@ -330,7 +339,7 @@ describe('Permissions API E2E Tests', () => {
       // Create permissions with different actions
       const actions = ['create', 'update', 'delete'];
       for (const action of actions) {
-        const permission = await env.db('permissions').insert({
+        const permission = await tenantTable('permissions').insert({
           permission_id: uuidv4(),
           resource: 'action_test',
           action,

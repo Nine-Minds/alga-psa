@@ -1,23 +1,34 @@
-exports.seed = async function (knex) {
-    // Get the tenant ID
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
-    return knex('team_members').insert([
+exports.seed = async function (knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+    const teamId = (teamName) => db.table('teams')
+        .where({ team_name: teamName })
+        .select('team_id')
+        .first();
+    const userId = (username) => db.table('users')
+        .where({ username })
+        .select('user_id')
+        .first();
+
+    return db.table('team_members').insert([
         {
-            tenant: tenant.tenant,
-            team_id: knex('teams').where({ tenant: tenant.tenant, team_name: 'Wonderland Team' }).select('team_id').first(),
-            user_id: knex('users').where({ tenant: tenant.tenant, username: 'glinda' }).select('user_id').first()
+            tenant: tenantId,
+            team_id: teamId('Wonderland Team'),
+            user_id: userId('glinda')
         },
         {
-            tenant: tenant.tenant,
-            team_id: knex('teams').where({ tenant: tenant.tenant, team_name: 'Oz Team' }).select('team_id').first(),
-            user_id: knex('users').where({ tenant: tenant.tenant, username: 'dorothy' }).select('user_id').first()
+            tenant: tenantId,
+            team_id: teamId('Oz Team'),
+            user_id: userId('dorothy')
         },
         {
-            tenant: tenant.tenant,
-            team_id: knex('teams').where({ tenant: tenant.tenant, team_name: 'Oz Team' }).select('team_id').first(),
-            user_id: knex('users').where({ tenant: tenant.tenant, username: 'scarecrow' }).select('user_id').first()
+            tenant: tenantId,
+            team_id: teamId('Oz Team'),
+            user_id: userId('scarecrow')
         }
     ]);
 };

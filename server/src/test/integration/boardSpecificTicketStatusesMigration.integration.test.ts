@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
@@ -57,6 +58,25 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
+function cleanupUnscoped(table: string) {
+  return tenantDb(db, '__test_cleanup__')
+    .unscoped(table, 'test cleanup generated workflow rows by workflow id');
+}
+
 function projectComparableStatus(status: Record<string, unknown>) {
   return {
     name: status.name,
@@ -76,23 +96,23 @@ function projectComparableStatus(status: Record<string, unknown>) {
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('tickets').where({ tenant: tenantId }).del();
-  await db('status_sla_pause_config').where({ tenant: tenantId }).del();
-  await db('survey_triggers').where({ tenant: tenantId }).del();
-  await db('survey_templates').where({ tenant: tenantId }).del();
-  await db('client_contracts').where({ tenant: tenantId }).del();
-  await db('default_billing_settings').where({ tenant: tenantId }).del();
-  await db('inbound_ticket_defaults').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'tickets').del();
+  await tenantTable(tenantId, 'status_sla_pause_config').del();
+  await tenantTable(tenantId, 'survey_triggers').del();
+  await tenantTable(tenantId, 'survey_templates').del();
+  await tenantTable(tenantId, 'client_contracts').del();
+  await tenantTable(tenantId, 'default_billing_settings').del();
+  await tenantTable(tenantId, 'inbound_ticket_defaults').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function cleanupWorkflow(workflowId: string): Promise<void> {
-  await db('workflow_definition_versions').where({ workflow_id: workflowId }).del();
-  await db('workflow_definitions').where({ workflow_id: workflowId }).del();
+  await cleanupUnscoped('workflow_definition_versions').where({ workflow_id: workflowId }).del();
+  await cleanupUnscoped('workflow_definitions').where({ workflow_id: workflowId }).del();
 }
 
 async function createLegacyFixture(): Promise<LegacyFixture> {
@@ -106,7 +126,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -116,7 +136,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -127,7 +147,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert([
+  await tenantTable(tenantId, 'boards').insert([
     {
       tenant: tenantId,
       board_id: boardA,
@@ -158,7 +178,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     },
   ]);
 
-  await db('clients').insert({
+  await tenantTable(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Client ${tenantId.slice(0, 8)}`,
@@ -216,7 +236,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     },
   ];
 
-  await db('statuses').insert(legacyStatuses);
+  await tenantTable(tenantId, 'statuses').insert(legacyStatuses);
 
   const tickets = [
     {
@@ -243,7 +263,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     },
   ];
 
-  await db('tickets').insert(tickets);
+  await tenantTable(tenantId, 'tickets').insert(tickets);
 
   return {
     tenantId,
@@ -274,7 +294,7 @@ async function seedBoardContextStatusReferences(fixture: LegacyFixture) {
   const inboundDefaultsId = uuidv4();
   const clientContractId = uuidv4();
 
-  await db('inbound_ticket_defaults').insert({
+  await tenantTable(fixture.tenantId, 'inbound_ticket_defaults').insert({
     id: inboundDefaultsId,
     tenant: fixture.tenantId,
     short_name: `defaults-${fixture.tenantId.slice(0, 8)}`,
@@ -286,7 +306,7 @@ async function seedBoardContextStatusReferences(fixture: LegacyFixture) {
     ...(hasColumn(inboundDefaultsColumns, 'is_active') ? { is_active: true } : {}),
   });
 
-  await db('default_billing_settings').insert({
+  await tenantTable(fixture.tenantId, 'default_billing_settings').insert({
     tenant: fixture.tenantId,
     renewal_ticket_board_id: boardB,
     renewal_ticket_status_id: legacyOpenStatusId,
@@ -294,7 +314,7 @@ async function seedBoardContextStatusReferences(fixture: LegacyFixture) {
     ...(hasColumn(defaultBillingSettingsColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('client_contracts').insert({
+  await tenantTable(fixture.tenantId, 'client_contracts').insert({
     tenant: fixture.tenantId,
     client_contract_id: clientContractId,
     client_id: fixture.clientId,
@@ -324,7 +344,7 @@ async function runBoardContextRemapForFixture() {
 async function seedLegacySlaPauseConfig(fixture: LegacyFixture) {
   const legacyOpenStatusId = fixture.legacyStatuses.find((status) => status.name === 'Open')?.status_id as string;
 
-  await db('status_sla_pause_config').insert({
+  await tenantTable(fixture.tenantId, 'status_sla_pause_config').insert({
     tenant: fixture.tenantId,
     status_id: legacyOpenStatusId,
     pauses_sla: true,
@@ -337,7 +357,7 @@ async function seedLegacySurveyTriggerReference(fixture: LegacyFixture) {
   const templateId = uuidv4();
   const triggerId = uuidv4();
 
-  await db('survey_templates').insert({
+  await tenantTable(fixture.tenantId, 'survey_templates').insert({
     tenant: fixture.tenantId,
     template_id: templateId,
     template_name: `Survey ${templateId.slice(0, 8)}`,
@@ -353,7 +373,7 @@ async function seedLegacySurveyTriggerReference(fixture: LegacyFixture) {
     updated_at: db.fn.now(),
   });
 
-  await db('survey_triggers').insert({
+  await tenantTable(fixture.tenantId, 'survey_triggers').insert({
     tenant: fixture.tenantId,
     trigger_id: triggerId,
     template_id: templateId,
@@ -458,7 +478,7 @@ async function seedWorkflowStatusReferences(fixture: LegacyFixture) {
     ],
   };
 
-  await db('workflow_definitions').insert({
+  await tenantTable(fixture.tenantId, 'workflow_definitions').insert({
     workflow_id: workflowId,
     tenant: fixture.tenantId,
     name: definition.name,
@@ -471,7 +491,7 @@ async function seedWorkflowStatusReferences(fixture: LegacyFixture) {
     updated_at: db.fn.now(),
   });
 
-  await db('workflow_definition_versions').insert({
+  await tenantTable(fixture.tenantId, 'workflow_definition_versions').insert({
     workflow_id: workflowId,
     version: definition.version,
     definition_json: definition,
@@ -522,7 +542,7 @@ async function seedUnresolvedWorkflowStatusReference(fixture: LegacyFixture) {
     ],
   };
 
-  await db('workflow_definitions').insert({
+  await tenantTable(fixture.tenantId, 'workflow_definitions').insert({
     workflow_id: workflowId,
     tenant: fixture.tenantId,
     name: definition.name,
@@ -543,15 +563,15 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    clientColumns = await db('clients').columnInfo();
-    ticketColumns = await db('tickets').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
-    inboundDefaultsColumns = await db('inbound_ticket_defaults').columnInfo();
-    defaultBillingSettingsColumns = await db('default_billing_settings').columnInfo();
-    clientContractsColumns = await db('client_contracts').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
+    ticketColumns = await schemaTable('tickets').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
+    inboundDefaultsColumns = await schemaTable('inbound_ticket_defaults').columnInfo();
+    defaultBillingSettingsColumns = await schemaTable('default_billing_settings').columnInfo();
+    clientContractsColumns = await schemaTable('client_contracts').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -573,8 +593,8 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
   it('T003: clones every legacy tenant ticket status to every board and preserves metadata', async () => {
     const fixture = await runMigrationForFixture();
 
-    const clonedStatuses = await db('statuses')
-      .where({ tenant: fixture.tenantId, status_type: 'ticket' })
+    const clonedStatuses = await tenantTable(fixture.tenantId, 'statuses')
+      .where({ status_type: 'ticket' })
       .whereNotNull('board_id')
       .orderBy('board_id', 'asc')
       .orderBy('order_number', 'asc');
@@ -597,8 +617,8 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     const fixture = await runMigrationForFixture();
 
     const legacyStatusIds = new Set(fixture.legacyStatuses.map((status) => status.status_id));
-    const clonedStatuses = await db('statuses')
-      .where({ tenant: fixture.tenantId, status_type: 'ticket' })
+    const clonedStatuses = await tenantTable(fixture.tenantId, 'statuses')
+      .where({ status_type: 'ticket' })
       .whereNotNull('board_id')
       .select('status_id', 'board_id', 'name', 'order_number', 'is_default', 'is_closed')
       .orderBy('board_id', 'asc')
@@ -622,16 +642,14 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     const legacyOpenStatusId = fixture.legacyStatuses.find((status) => status.name === 'Open')?.status_id;
     expect(legacyOpenStatusId).toBeTruthy();
 
-    const boardAOpen = await db('statuses')
+    const boardAOpen = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: boardA,
         name: 'Open',
       })
       .first();
-    const boardBOpen = await db('statuses')
+    const boardBOpen = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: boardB,
         name: 'Open',
       })
@@ -647,8 +665,7 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
   it('T006: ticket rows are rewritten to the cloned board-owned status for their current board', async () => {
     const fixture = await runMigrationForFixture();
 
-    const migratedTickets = await db('tickets')
-      .where({ tenant: fixture.tenantId })
+    const migratedTickets = await tenantTable(fixture.tenantId, 'tickets')
       .select('ticket_id', 'board_id', 'status_id')
       .orderBy('ticket_number', 'asc');
 
@@ -659,9 +676,8 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
       expect(originalTicket).toBeTruthy();
       expect(ticket.status_id).not.toBe(originalTicket?.original_status_id);
 
-      const clonedStatus = await db('statuses')
+      const clonedStatus = await tenantTable(fixture.tenantId, 'statuses')
         .where({
-          tenant: fixture.tenantId,
           board_id: ticket.board_id,
           status_id: ticket.status_id,
         })
@@ -676,13 +692,12 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     const { fixture, references } = await runBoardContextRemapForFixture();
     const [boardA] = fixture.boardIds;
 
-    const remappedDefaults = await db('inbound_ticket_defaults')
-      .where({ tenant: fixture.tenantId, id: references.inboundDefaultsId })
+    const remappedDefaults = await tenantTable(fixture.tenantId, 'inbound_ticket_defaults')
+      .where({ id: references.inboundDefaultsId })
       .first();
 
-    const expectedStatus = await db('statuses')
+    const expectedStatus = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: boardA,
         name: 'Open',
       })
@@ -695,13 +710,11 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     const { fixture } = await runBoardContextRemapForFixture();
     const [, boardB] = fixture.boardIds;
 
-    const remappedDefaults = await db('default_billing_settings')
-      .where({ tenant: fixture.tenantId })
+    const remappedDefaults = await tenantTable(fixture.tenantId, 'default_billing_settings')
       .first();
 
-    const expectedStatus = await db('statuses')
+    const expectedStatus = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: boardB,
         name: 'Open',
       })
@@ -714,13 +727,12 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     const { fixture, references } = await runBoardContextRemapForFixture();
     const [boardA] = fixture.boardIds;
 
-    const remappedContract = await db('client_contracts')
-      .where({ tenant: fixture.tenantId, client_contract_id: references.clientContractId })
+    const remappedContract = await tenantTable(fixture.tenantId, 'client_contracts')
+      .where({ client_contract_id: references.clientContractId })
       .first();
 
-    const expectedStatus = await db('statuses')
+    const expectedStatus = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: boardA,
         name: 'Closed',
       })
@@ -736,14 +748,13 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     await cloneMigration.up(db);
     await slaPauseConfigRemapMigration.up(db);
 
-    const clonedOpenStatuses = await db('statuses')
-      .where({ tenant: fixture.tenantId, status_type: 'ticket', name: 'Open' })
+    const clonedOpenStatuses = await tenantTable(fixture.tenantId, 'statuses')
+      .where({ status_type: 'ticket', name: 'Open' })
       .whereNotNull('board_id')
       .select('status_id')
       .orderBy('status_id');
 
-    const remappedConfigs = await db('status_sla_pause_config')
-      .where({ tenant: fixture.tenantId })
+    const remappedConfigs = await tenantTable(fixture.tenantId, 'status_sla_pause_config')
       .select('status_id', 'pauses_sla')
       .orderBy('status_id');
 
@@ -758,21 +769,21 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     const { fixture, references } = await runWorkflowStatusRemapForFixture();
     const [boardA, boardB] = fixture.boardIds;
 
-    const remappedDraft = await db('workflow_definitions')
+    const remappedDraft = await tenantTable(fixture.tenantId, 'workflow_definitions')
       .where({ workflow_id: references.workflowId })
       .first('draft_definition');
-    const remappedVersion = await db('workflow_definition_versions')
+    const remappedVersion = await tenantTable(fixture.tenantId, 'workflow_definition_versions')
       .where({ workflow_id: references.workflowId, version: 1 })
       .first('definition_json');
 
-    const expectedBoardAOpen = await db('statuses')
-      .where({ tenant: fixture.tenantId, board_id: boardA, name: 'Open' })
+    const expectedBoardAOpen = await tenantTable(fixture.tenantId, 'statuses')
+      .where({ board_id: boardA, name: 'Open' })
       .first('status_id');
-    const expectedBoardBOpen = await db('statuses')
-      .where({ tenant: fixture.tenantId, board_id: boardB, name: 'Open' })
+    const expectedBoardBOpen = await tenantTable(fixture.tenantId, 'statuses')
+      .where({ board_id: boardB, name: 'Open' })
       .first('status_id');
-    const expectedBoardAClosed = await db('statuses')
-      .where({ tenant: fixture.tenantId, board_id: boardA, name: 'Closed' })
+    const expectedBoardAClosed = await tenantTable(fixture.tenantId, 'statuses')
+      .where({ board_id: boardA, name: 'Closed' })
       .first('status_id');
 
     const draftSteps = (remappedDraft?.draft_definition as any)?.steps;
@@ -798,7 +809,7 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
       new RegExp(`${references.workflowId}.*tickets\\.update_fields.*patch\\.status_id`, 's')
     );
 
-    const unresolvedDraft = await db('workflow_definitions')
+    const unresolvedDraft = await tenantTable(fixture.tenantId, 'workflow_definitions')
       .where({ workflow_id: references.workflowId })
       .first('draft_definition');
 
@@ -812,8 +823,8 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
 
     await surveyTriggerStatusRemapMigration.up(db);
 
-    const remappedTrigger = await db('survey_triggers')
-      .where({ tenant: fixture.tenantId, trigger_id: references.triggerId })
+    const remappedTrigger = await tenantTable(fixture.tenantId, 'survey_triggers')
+      .where({ trigger_id: references.triggerId })
       .first<{ trigger_conditions: Record<string, unknown> | string | null }>('trigger_conditions');
 
     const remappedConditions =
@@ -824,9 +835,8 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
       ? (remappedConditions as any).status_id
       : [];
 
-    const expectedClosedStatus = await db('statuses')
+    const expectedClosedStatus = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: fixture.boardIds[0],
         name: 'Closed',
         status_type: 'ticket',

@@ -48,6 +48,54 @@
       "dependsOn": [],
       "owner": "Beauvoir",
       "notes": "EE RMM/Huntress/ticket-response/live-update/project-status integration tests."
+    },
+    {
+      "id": "T409A",
+      "title": "Migrate inbound email integration residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Kierkegaard",
+      "notes": "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts"
+    },
+    {
+      "id": "T409B",
+      "title": "Migrate SLA integration residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Dewey",
+      "notes": "server/src/test/integration/sla/* high-volume tenant roots."
+    },
+    {
+      "id": "T409C",
+      "title": "Migrate document/comment/attachment test residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Newton",
+      "notes": "document permissions, document folders/e2e, comments, attachments, reply-token threading."
+    },
+    {
+      "id": "T409D",
+      "title": "Migrate service-request and ticket-status/API test residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Nash",
+      "notes": "service request tests, board/status migration/read surfaces, Algadesk/API status/category tests."
+    },
+    {
+      "id": "T409E",
+      "title": "Migrate dev seed residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Pasteur",
+      "notes": "Top residual server/seeds/dev files should use _tenant.cjs and tenant facade helpers."
+    },
+    {
+      "id": "T409F",
+      "title": "Migrate remaining EE/e2e browser test residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Dirac",
+      "notes": "EE project task/document/portal/email attachment Playwright tests plus server e2e API fixtures."
     }
   ]
 }

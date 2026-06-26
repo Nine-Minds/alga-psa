@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { tenantDb } from '@alga-psa/db';
 
 const dbRef = vi.hoisted(() => ({
   knex: null as Knex | null,
@@ -42,17 +43,29 @@ const blockNote = (text: string) => JSON.stringify([
 describe('project task comment threading model', () => {
   let knex: Knex;
 
+  function scopedDb(tenant = dbRef.tenant) {
+    return tenantDb(knex, tenant);
+  }
+
+  function taskContextQuery(tenant = dbRef.tenant) {
+    const db = scopedDb(tenant);
+    const query = db.table('project_tasks as pt');
+    db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+    return query;
+  }
+
   beforeAll(async () => {
     knex = await createTestDbConnection();
-    const context = await knex('project_tasks as pt')
-      .join('project_phases as pp', function() {
-        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-      })
-      .join('users as u', function() {
-        this.on('u.tenant', 'pt.tenant').andOnVal('u.user_type', 'internal');
-      })
-      .select('pt.tenant', 'u.user_id')
-      .first();
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const contextQuery = discoveryDb.unscoped(
+      'project_tasks as pt',
+      'test discovery of seeded project task/user context for comment threading'
+    );
+    discoveryDb.tenantJoin(contextQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+    discoveryDb.tenantJoin(contextQuery, 'users as u', 'u.tenant', 'pt.tenant', {
+      on: (join) => join.andOnVal('u.user_type', 'internal'),
+    });
+    const context = await contextQuery.select('pt.tenant', 'u.user_id').first();
     expect(context).toBeTruthy();
     dbRef.knex = knex;
     dbRef.tenant = context.tenant;
@@ -64,12 +77,8 @@ describe('project task comment threading model', () => {
   });
 
   it('T023: creates a new comment thread for a top-level project task comment', async () => {
-    const context = await knex('project_tasks as pt')
-      .join('project_phases as pp', function() {
-        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-      })
+    const context = await taskContextQuery()
       .select('pt.tenant', 'pt.task_id')
-      .where('pt.tenant', dbRef.tenant)
       .first();
     expect(context).toBeTruthy();
 
@@ -79,16 +88,16 @@ describe('project task comment threading model', () => {
     });
 
     try {
-      const comment = await knex('project_task_comments')
+      const comment = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id', 'thread_id', 'parent_comment_id')
-        .where({ tenant: context.tenant, task_comment_id: taskCommentId })
+        .where({ task_comment_id: taskCommentId })
         .first();
       expect(comment?.thread_id).toBeTruthy();
       expect(comment?.parent_comment_id).toBeNull();
 
-      const thread = await knex('comment_threads')
+      const thread = await scopedDb(context.tenant).table('comment_threads')
         .select('thread_id', 'ticket_id', 'project_task_id', 'root_comment_id', 'is_internal', 'reply_count')
-        .where({ tenant: context.tenant, thread_id: comment.thread_id })
+        .where({ thread_id: comment.thread_id })
         .first();
       expect(thread).toMatchObject({
         thread_id: comment.thread_id,
@@ -99,28 +108,24 @@ describe('project task comment threading model', () => {
         reply_count: 0,
       });
     } finally {
-      const comment = await knex('project_task_comments')
+      const comment = await scopedDb(context.tenant).table('project_task_comments')
         .select('thread_id')
-        .where({ tenant: context.tenant, task_comment_id: taskCommentId })
+        .where({ task_comment_id: taskCommentId })
         .first();
-      await knex('project_task_comments')
-        .where({ tenant: context.tenant, task_comment_id: taskCommentId })
+      await scopedDb(context.tenant).table('project_task_comments')
+        .where({ task_comment_id: taskCommentId })
         .delete();
       if (comment?.thread_id) {
-        await knex('comment_threads')
-          .where({ tenant: context.tenant, thread_id: comment.thread_id })
+        await scopedDb(context.tenant).table('comment_threads')
+          .where({ thread_id: comment.thread_id })
           .delete();
       }
     }
   });
 
   it('T024: task replies inherit thread_id and increment reply_count', async () => {
-    const context = await knex('project_tasks as pt')
-      .join('project_phases as pp', function() {
-        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-      })
+    const context = await taskContextQuery()
       .select('pt.tenant', 'pt.task_id')
-      .where('pt.tenant', dbRef.tenant)
       .first();
     expect(context).toBeTruthy();
 
@@ -133,15 +138,15 @@ describe('project task comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('project_task_comments')
+      const root = await scopedDb(context.tenant).table('project_task_comments')
         .select('thread_id')
-        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .where({ task_comment_id: rootCommentId })
         .first();
       threadId = root.thread_id;
 
-      const before = await knex('comment_threads')
+      const before = await scopedDb(context.tenant).table('comment_threads')
         .select('reply_count', 'last_activity_at')
-        .where({ tenant: context.tenant, thread_id: threadId })
+        .where({ thread_id: threadId })
         .first();
 
       replyCommentId = await createTaskComment({
@@ -150,18 +155,18 @@ describe('project task comment threading model', () => {
         parent_comment_id: rootCommentId,
       });
 
-      const reply = await knex('project_task_comments')
+      const reply = await scopedDb(context.tenant).table('project_task_comments')
         .select('thread_id', 'parent_comment_id')
-        .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+        .where({ task_comment_id: replyCommentId })
         .first();
       expect(reply).toMatchObject({
         thread_id: threadId,
         parent_comment_id: rootCommentId,
       });
 
-      const after = await knex('comment_threads')
+      const after = await scopedDb(context.tenant).table('comment_threads')
         .select('reply_count', 'last_activity_at')
-        .where({ tenant: context.tenant, thread_id: threadId })
+        .where({ thread_id: threadId })
         .first();
       expect(after.reply_count).toBe(Number(before.reply_count) + 1);
       expect(new Date(after.last_activity_at).getTime()).toBeGreaterThanOrEqual(
@@ -169,28 +174,24 @@ describe('project task comment threading model', () => {
       );
     } finally {
       if (replyCommentId) {
-        await knex('project_task_comments')
-          .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+        await scopedDb(context.tenant).table('project_task_comments')
+          .where({ task_comment_id: replyCommentId })
           .delete();
       }
-      await knex('project_task_comments')
-        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+      await scopedDb(context.tenant).table('project_task_comments')
+        .where({ task_comment_id: rootCommentId })
         .delete();
       if (threadId) {
-        await knex('comment_threads')
-          .where({ tenant: context.tenant, thread_id: threadId })
+        await scopedDb(context.tenant).table('comment_threads')
+          .where({ thread_id: threadId })
           .delete();
       }
     }
   });
 
   it('T025: deleteTaskComment hard-deletes leaf replies and soft-deletes roots with children', async () => {
-    const context = await knex('project_tasks as pt')
-      .join('project_phases as pp', function() {
-        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-      })
+    const context = await taskContextQuery()
       .select('pt.tenant', 'pt.task_id')
-      .where('pt.tenant', dbRef.tenant)
       .first();
     expect(context).toBeTruthy();
 
@@ -209,9 +210,8 @@ describe('project task comment threading model', () => {
     let softDeleteReplyId: string | undefined;
 
     try {
-      const roots = await knex('project_task_comments')
+      const roots = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id', 'thread_id')
-        .where({ tenant: context.tenant })
         .whereIn('task_comment_id', [leafRootId, softDeleteRootId]);
       leafThreadId = roots.find((root) => root.task_comment_id === leafRootId)?.thread_id;
       softDeleteThreadId = roots.find((root) => root.task_comment_id === softDeleteRootId)?.thread_id;
@@ -229,23 +229,23 @@ describe('project task comment threading model', () => {
 
       await deleteTaskComment(leafReplyId);
 
-      const deletedLeaf = await knex('project_task_comments')
+      const deletedLeaf = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id')
-        .where({ tenant: context.tenant, task_comment_id: leafReplyId })
+        .where({ task_comment_id: leafReplyId })
         .first();
       expect(deletedLeaf).toBeUndefined();
 
-      const leafThread = await knex('comment_threads')
+      const leafThread = await scopedDb(context.tenant).table('comment_threads')
         .select('reply_count')
-        .where({ tenant: context.tenant, thread_id: leafThreadId })
+        .where({ thread_id: leafThreadId })
         .first();
       expect(leafThread.reply_count).toBe(0);
 
       await deleteTaskComment(softDeleteRootId);
 
-      const deletedRoot = await knex('project_task_comments')
+      const deletedRoot = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id', 'note', 'markdown_content', 'deleted_at')
-        .where({ tenant: context.tenant, task_comment_id: softDeleteRootId })
+        .where({ task_comment_id: softDeleteRootId })
         .first();
       expect(deletedRoot).toMatchObject({
         task_comment_id: softDeleteRootId,
@@ -254,37 +254,30 @@ describe('project task comment threading model', () => {
       });
       expect(deletedRoot.deleted_at).toBeTruthy();
 
-      const child = await knex('project_task_comments')
+      const child = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id', 'parent_comment_id')
-        .where({ tenant: context.tenant, task_comment_id: softDeleteReplyId })
+        .where({ task_comment_id: softDeleteReplyId })
         .first();
       expect(child).toMatchObject({
         task_comment_id: softDeleteReplyId,
         parent_comment_id: softDeleteRootId,
       });
     } finally {
-      await knex('project_task_comments')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('project_task_comments')
         .whereIn('task_comment_id', [leafReplyId, softDeleteReplyId].filter(Boolean))
         .delete();
-      await knex('project_task_comments')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('project_task_comments')
         .whereIn('task_comment_id', [leafRootId, softDeleteRootId])
         .delete();
-      await knex('comment_threads')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('comment_threads')
         .whereIn('thread_id', [leafThreadId, softDeleteThreadId].filter(Boolean))
         .delete();
     }
   });
 
   it('T026: getTaskComments returns threading fields including soft-deleted roots', async () => {
-    const context = await knex('project_tasks as pt')
-      .join('project_phases as pp', function() {
-        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-      })
+    const context = await taskContextQuery()
       .select('pt.tenant', 'pt.task_id')
-      .where('pt.tenant', dbRef.tenant)
       .first();
     expect(context).toBeTruthy();
 
@@ -297,9 +290,9 @@ describe('project task comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('project_task_comments')
+      const root = await scopedDb(context.tenant).table('project_task_comments')
         .select('thread_id')
-        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .where({ task_comment_id: rootCommentId })
         .first();
       threadId = root.thread_id;
 
@@ -330,28 +323,24 @@ describe('project task comment threading model', () => {
       expect(readReply?.deletedAt ?? null).toBeNull();
     } finally {
       if (replyCommentId) {
-        await knex('project_task_comments')
-          .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+        await scopedDb(context.tenant).table('project_task_comments')
+          .where({ task_comment_id: replyCommentId })
           .delete();
       }
-      await knex('project_task_comments')
-        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+      await scopedDb(context.tenant).table('project_task_comments')
+        .where({ task_comment_id: rootCommentId })
         .delete();
       if (threadId) {
-        await knex('comment_threads')
-          .where({ tenant: context.tenant, thread_id: threadId })
+        await scopedDb(context.tenant).table('comment_threads')
+          .where({ thread_id: threadId })
           .delete();
       }
     }
   });
 
   it('T031: TASK_COMMENT_ADDED payload includes reply threading fields', async () => {
-    const context = await knex('project_tasks as pt')
-      .join('project_phases as pp', function() {
-        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-      })
+    const context = await taskContextQuery()
       .select('pt.tenant', 'pt.task_id')
-      .where('pt.tenant', dbRef.tenant)
       .first();
     expect(context).toBeTruthy();
 
@@ -364,9 +353,9 @@ describe('project task comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('project_task_comments')
+      const root = await scopedDb(context.tenant).table('project_task_comments')
         .select('thread_id')
-        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .where({ task_comment_id: rootCommentId })
         .first();
       threadId = root.thread_id;
 
@@ -395,28 +384,24 @@ describe('project task comment threading model', () => {
       });
     } finally {
       if (replyCommentId) {
-        await knex('project_task_comments')
-          .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+        await scopedDb(context.tenant).table('project_task_comments')
+          .where({ task_comment_id: replyCommentId })
           .delete();
       }
-      await knex('project_task_comments')
-        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+      await scopedDb(context.tenant).table('project_task_comments')
+        .where({ task_comment_id: rootCommentId })
         .delete();
       if (threadId) {
-        await knex('comment_threads')
-          .where({ tenant: context.tenant, thread_id: threadId })
+        await scopedDb(context.tenant).table('comment_threads')
+          .where({ thread_id: threadId })
           .delete();
       }
     }
   });
 
   it('T032: client users can delete own task replies but not another client reply', async () => {
-    const context = await knex('project_tasks as pt')
-      .join('project_phases as pp', function() {
-        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-      })
+    const context = await taskContextQuery()
       .select('pt.tenant', 'pt.task_id')
-      .where('pt.tenant', dbRef.tenant)
       .first();
     expect(context).toBeTruthy();
 
@@ -434,7 +419,7 @@ describe('project task comment threading model', () => {
     const originalUser = userRef.user;
 
     try {
-      await knex('users').insert([
+      await scopedDb(context.tenant).table('users').insert([
         {
           tenant: context.tenant,
           user_id: generated.client_user_id,
@@ -457,7 +442,7 @@ describe('project task comment threading model', () => {
         },
       ]);
 
-      await knex('comment_threads').insert({
+      await scopedDb(context.tenant).table('comment_threads').insert({
         tenant: context.tenant,
         thread_id: generated.thread_id,
         ticket_id: null,
@@ -470,7 +455,7 @@ describe('project task comment threading model', () => {
         created_by: originalUser?.user_id,
       });
 
-      await knex('project_task_comments').insert([
+      await scopedDb(context.tenant).table('project_task_comments').insert([
         {
           tenant: context.tenant,
           task_comment_id: generated.root_comment_id,
@@ -512,31 +497,29 @@ describe('project task comment threading model', () => {
       userRef.user = { user_id: generated.client_user_id, user_type: 'client' };
       await deleteTaskComment(generated.own_reply_id);
 
-      const ownReply = await knex('project_task_comments')
+      const ownReply = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id')
-        .where({ tenant: context.tenant, task_comment_id: generated.own_reply_id })
+        .where({ task_comment_id: generated.own_reply_id })
         .first();
       expect(ownReply).toBeUndefined();
 
       await expect(deleteTaskComment(generated.other_reply_id))
         .rejects.toThrow('You can only delete your own comments');
 
-      const otherReply = await knex('project_task_comments')
+      const otherReply = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id')
-        .where({ tenant: context.tenant, task_comment_id: generated.other_reply_id })
+        .where({ task_comment_id: generated.other_reply_id })
         .first();
       expect(otherReply).toBeTruthy();
     } finally {
       userRef.user = originalUser;
-      await knex('project_task_comments')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('project_task_comments')
         .whereIn('task_comment_id', [generated.own_reply_id, generated.other_reply_id, generated.root_comment_id])
         .delete();
-      await knex('comment_threads')
-        .where({ tenant: context.tenant, thread_id: generated.thread_id })
+      await scopedDb(context.tenant).table('comment_threads')
+        .where({ thread_id: generated.thread_id })
         .delete();
-      await knex('users')
-        .where({ tenant: context.tenant })
+      await scopedDb(context.tenant).table('users')
         .whereIn('user_id', [generated.client_user_id, generated.other_client_user_id])
         .delete();
     }

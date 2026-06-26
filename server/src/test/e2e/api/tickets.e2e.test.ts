@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import { 
   setupE2ETestEnvironment, 
   E2ETestEnvironment 
@@ -27,14 +28,16 @@ describe('Ticket API E2E Tests', () => {
   let priorityIds: { low: string; medium: string; high: string };
   let boardId: string;
 
+  function tenantTable(table: string) {
+    return tenantDb(env.db, env.tenant).table(table);
+  }
+
   beforeAll(async () => {
     env = await setupE2ETestEnvironment();
 
     // Set up test data - create necessary entities
-    const db = env.db;
-    
     // Get the default board created by setupE2ETestEnvironment
-    const existingBoard = await db('boards')
+    const existingBoard = await tenantTable('boards')
       .where({ tenant: env.tenant, is_default: true })
       .first();
     
@@ -43,7 +46,7 @@ describe('Ticket API E2E Tests', () => {
     } else {
       // Create a test board if none exists
       boardId = uuidv4();
-      await db('boards').insert({
+      await tenantTable('boards').insert({
         board_id: boardId,
         board_name: 'Test Board',
         tenant: env.tenant,
@@ -52,13 +55,13 @@ describe('Ticket API E2E Tests', () => {
     }
 
     // Get existing statuses created by setupE2ETestEnvironment
-    const newStatus = await db('statuses')
+    const newStatus = await tenantTable('statuses')
       .where({ tenant: env.tenant, board_id: boardId, name: 'New', status_type: 'ticket' })
       .first();
-    const inProgressStatus = await db('statuses')
+    const inProgressStatus = await tenantTable('statuses')
       .where({ tenant: env.tenant, board_id: boardId, name: 'In Progress', status_type: 'ticket' })
       .first();
-    const closedStatus = await db('statuses')
+    const closedStatus = await tenantTable('statuses')
       .where({ tenant: env.tenant, board_id: boardId, name: 'Closed', status_type: 'ticket' })
       .first();
 
@@ -69,13 +72,13 @@ describe('Ticket API E2E Tests', () => {
     };
 
     // Get existing priorities created by setupE2ETestEnvironment
-    const lowPriority = await db('priorities')
+    const lowPriority = await tenantTable('priorities')
       .where({ tenant: env.tenant, priority_name: 'Low' })
       .first();
-    const mediumPriority = await db('priorities')
+    const mediumPriority = await tenantTable('priorities')
       .where({ tenant: env.tenant, priority_name: 'Medium' })
       .first();
-    const highPriority = await db('priorities')
+    const highPriority = await tenantTable('priorities')
       .where({ tenant: env.tenant, priority_name: 'High' })
       .first();
 
@@ -91,8 +94,8 @@ describe('Ticket API E2E Tests', () => {
   afterAll(async () => {
     if (env) {
       // Clean up any remaining test data - delete in order to respect foreign keys
-      await env.db('comments').where('tenant', env.tenant).delete();
-      await env.db('tickets').where('tenant', env.tenant).delete();
+      await tenantTable('comments').where('tenant', env.tenant).delete();
+      await tenantTable('tickets').where('tenant', env.tenant).delete();
       await env.cleanup();
     }
   });
@@ -160,7 +163,7 @@ describe('Ticket API E2E Tests', () => {
       it('should create ticket with all optional fields', async () => {
         // First create a contact for the ticket
         const contactId = uuidv4();
-        await env.db('contacts').insert({
+        await tenantTable('contacts').insert({
           contact_name_id: contactId,
           tenant: env.tenant,
           client_id: env.clientId,
@@ -488,7 +491,7 @@ describe('Ticket API E2E Tests', () => {
     afterEach(async () => {
       // Clean up created tickets
       for (const ticket of searchableTickets) {
-        await env.db('tickets').where('ticket_id', ticket.ticket_id).delete();
+        await tenantTable('tickets').where('ticket_id', ticket.ticket_id).delete();
       }
     });
 

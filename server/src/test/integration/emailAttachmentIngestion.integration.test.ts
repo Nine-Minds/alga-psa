@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import process from 'node:process';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
@@ -14,6 +15,10 @@ let microsoftDownloadUnsupported = false;
 let gmailDownloadShouldFail = false;
 let microsoftSourceShouldFail = false;
 let gmailSourceShouldFail = false;
+
+function scopedDb(connection: Knex, tenant: string) {
+  return tenantDb(connection, tenant);
+}
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
@@ -134,13 +139,14 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     microsoftSourceShouldFail = false;
     gmailSourceShouldFail = false;
 
-    await db('document_associations').where({ tenant: tenantId, entity_type: 'ticket' }).delete();
-    await db('documents').where({ tenant: tenantId }).delete();
-    await db('external_files').where({ tenant: tenantId }).delete();
-    await db('email_processed_attachments').where({ tenant: tenantId }).delete();
-    await db('microsoft_email_provider_config').where({ tenant: tenantId }).delete();
-    await db('google_email_provider_config').where({ tenant: tenantId }).delete();
-    await db('email_providers').where({ tenant: tenantId }).delete();
+    const tenantScoped = scopedDb(db, tenantId);
+    await tenantScoped.table('document_associations').where({ entity_type: 'ticket' }).delete();
+    await tenantScoped.table('documents').delete();
+    await tenantScoped.table('external_files').delete();
+    await tenantScoped.table('email_processed_attachments').delete();
+    await tenantScoped.table('microsoft_email_provider_config').delete();
+    await tenantScoped.table('google_email_provider_config').delete();
+    await tenantScoped.table('email_providers').delete();
   });
 
   it('skips inline/CID attachments (no documents/files created)', async () => {
@@ -175,10 +181,10 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 
     expect(res).toMatchObject({ success: true, skipped: true, reason: 'inline' });
 
-    const processed = await db('email_processed_attachments').where({ tenant: tenantId }).first();
+    const processed = await scopedDb(db, tenantId).table('email_processed_attachments').first();
     expect(processed?.processing_status).toBe('skipped');
 
-    const docs = await db('documents').where({ tenant: tenantId, document_name: 'email-att-inline.png' });
+    const docs = await scopedDb(db, tenantId).table('documents').where({ document_name: 'email-att-inline.png' });
     expect(docs.length).toBe(0);
   });
 
@@ -213,7 +219,7 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 
     expect(res).toMatchObject({ success: true, skipped: true, reason: 'too_large' });
 
-    const docs = await db('documents').where({ tenant: tenantId, document_name: 'email-att-too-large.bin' });
+    const docs = await scopedDb(db, tenantId).table('documents').where({ document_name: 'email-att-too-large.bin' });
     expect(docs.length).toBe(0);
   });
 
@@ -252,11 +258,11 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     const second = await action.execute(params, context);
     expect(second).toMatchObject({ success: true, duplicate: true });
 
-    const files = await db('external_files')
-      .where({ tenant: tenantId, original_name: 'email-att-idempotent.txt' })
+    const files = await scopedDb(db, tenantId).table('external_files')
+      .where({ original_name: 'email-att-idempotent.txt' })
       .select('file_id');
-    const docs = await db('documents')
-      .where({ tenant: tenantId, document_name: 'email-att-idempotent.txt' })
+    const docs = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: 'email-att-idempotent.txt' })
       .select('document_id');
 
     expect(files.length).toBe(1);
@@ -294,12 +300,12 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 
     expect(res).toMatchObject({ success: true, skipped: true, reason: 'unsupported_attachment' });
 
-    const processed = await db('email_processed_attachments')
-      .where({ tenant: tenantId, email_id: 'msg-unsupported', attachment_id: 'att-unsupported' })
+    const processed = await scopedDb(db, tenantId).table('email_processed_attachments')
+      .where({ email_id: 'msg-unsupported', attachment_id: 'att-unsupported' })
       .first();
     expect(processed?.processing_status).toBe('skipped');
 
-    const docs = await db('documents').where({ tenant: tenantId, document_name: 'email-att-unsupported.msg' });
+    const docs = await scopedDb(db, tenantId).table('documents').where({ document_name: 'email-att-unsupported.msg' });
     expect(docs.length).toBe(0);
   });
 
@@ -348,23 +354,22 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(uploads).toHaveLength(1);
     expect(uploads[0]).toMatchObject({ size: payloadBytes.length, mime_type: 'text/plain' });
 
-    const fileRow = await db('external_files')
-      .where({ tenant: tenantId, original_name: fileName })
+    const fileRow = await scopedDb(db, tenantId).table('external_files')
+      .where({ original_name: fileName })
       .first();
     expect(fileRow).toBeTruthy();
     expect(fileRow?.mime_type).toBe('text/plain');
     expect(Number(fileRow?.file_size ?? 0)).toBe(payloadBytes.length);
 
-    const docRow = await db('documents')
-      .where({ tenant: tenantId, document_name: fileName })
+    const docRow = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: fileName })
       .first();
     expect(docRow).toBeTruthy();
     expect(docRow?.mime_type).toBe('text/plain');
     expect(Number(docRow?.file_size ?? 0)).toBe(payloadBytes.length);
 
-    const assoc = await db('document_associations')
+    const assoc = await scopedDb(db, tenantId).table('document_associations')
       .where({
-        tenant: tenantId,
         entity_type: 'ticket',
         entity_id: ticketId,
         document_id: docRow?.document_id,
@@ -448,19 +453,18 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
       expect(result).toMatchObject({ success: true });
     }
 
-    const persistedDocs = await db('documents')
-      .where({ tenant: tenantId })
+    const persistedDocs = await scopedDb(db, tenantId).table('documents')
       .whereIn('document_name', ['embedded-image-1.png', 'cid-referenced.png'])
       .select('document_name');
     expect(persistedDocs).toHaveLength(2);
 
-    const unreferencedDoc = await db('documents')
-      .where({ tenant: tenantId, document_name: 'cid-unreferenced.png' })
+    const unreferencedDoc = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: 'cid-unreferenced.png' })
       .first();
     expect(unreferencedDoc).toBeUndefined();
 
-    const assocs = await db('document_associations')
-      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId });
+    const assocs = await scopedDb(db, tenantId).table('document_associations')
+      .where({ entity_type: 'ticket', entity_id: ticketId });
     expect(assocs).toHaveLength(2);
   });
 
@@ -494,8 +498,8 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     const first = await action.execute(params, context);
     expect(first).toMatchObject({ success: false });
 
-    const failed = await db('email_processed_attachments')
-      .where({ tenant: tenantId, email_id: 'msg-4', attachment_id: 'att-4' })
+    const failed = await scopedDb(db, tenantId).table('email_processed_attachments')
+      .where({ email_id: 'msg-4', attachment_id: 'att-4' })
       .first();
     expect(failed?.processing_status).toBe('failed');
 
@@ -504,15 +508,15 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(second).toMatchObject({ success: true });
     expect(uploads.length).toBe(1);
 
-    const processed = await db('email_processed_attachments')
-      .where({ tenant: tenantId, email_id: 'msg-4', attachment_id: 'att-4' })
+    const processed = await scopedDb(db, tenantId).table('email_processed_attachments')
+      .where({ email_id: 'msg-4', attachment_id: 'att-4' })
       .first();
     expect(processed?.processing_status).toBe('success');
     expect(processed?.file_id).toBeTruthy();
     expect(processed?.document_id).toBeTruthy();
 
-    const docs = await db('documents')
-      .where({ tenant: tenantId, document_name: 'email-att-retry.txt' })
+    const docs = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: 'email-att-retry.txt' })
       .select('document_id');
     expect(docs.length).toBe(1);
   });
@@ -550,21 +554,21 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(uploads.length).toBe(1);
     expect(uploads[0]).toMatchObject({ size: 7, mime_type: 'application/zip' });
 
-    const file = await db('external_files')
-      .where({ tenant: tenantId, original_name: 'email-att-gmail.zip' })
+    const file = await scopedDb(db, tenantId).table('external_files')
+      .where({ original_name: 'email-att-gmail.zip' })
       .first();
     expect(file).toBeTruthy();
     expect(file?.uploaded_by_id).toBe(systemUserId);
 
-    const doc = await db('documents')
-      .where({ tenant: tenantId, document_name: 'email-att-gmail.zip' })
+    const doc = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: 'email-att-gmail.zip' })
       .first();
     expect(doc).toBeTruthy();
     expect(doc?.created_by).toBe(systemUserId);
     expect(doc?.user_id).toBe(systemUserId);
 
-    const assoc = await db('document_associations')
-      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
+    const assoc = await scopedDb(db, tenantId).table('document_associations')
+      .where({ entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
       .first();
     expect(assoc).toBeTruthy();
   });
@@ -628,24 +632,24 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     );
 
     expect(res).toMatchObject({ success: true, contentType: 'image/png' });
-    const file = await db('external_files')
-      .where({ tenant: tenantId, original_name: 'embedded-image-1.png' })
+    const file = await scopedDb(db, tenantId).table('external_files')
+      .where({ original_name: 'embedded-image-1.png' })
       .first();
     expect(file).toBeTruthy();
     expect(file?.mime_type).toBe('image/png');
     expect(Number(file?.file_size)).toBe(5);
     expect(file?.uploaded_by_id).toBe(systemUserId);
 
-    const doc = await db('documents')
-      .where({ tenant: tenantId, document_name: 'embedded-image-1.png' })
+    const doc = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: 'embedded-image-1.png' })
       .first();
     expect(doc).toBeTruthy();
     expect(doc?.mime_type).toBe('image/png');
     expect(Number(doc?.file_size)).toBe(5);
     expect(doc?.created_by).toBe(systemUserId);
 
-    const assoc = await db('document_associations')
-      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
+    const assoc = await scopedDb(db, tenantId).table('document_associations')
+      .where({ entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
       .first();
     expect(assoc).toBeTruthy();
   });
@@ -684,14 +688,14 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(first).toMatchObject({ success: true });
     expect(second).toMatchObject({ success: true, duplicate: true });
 
-    const files = await db('external_files')
-      .where({ tenant: tenantId, original_name: 'embedded-image-idempotent.png' })
+    const files = await scopedDb(db, tenantId).table('external_files')
+      .where({ original_name: 'embedded-image-idempotent.png' })
       .select('file_id');
-    const docs = await db('documents')
-      .where({ tenant: tenantId, document_name: 'embedded-image-idempotent.png' })
+    const docs = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: 'embedded-image-idempotent.png' })
       .select('document_id');
-    const assocs = await db('document_associations')
-      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId });
+    const assocs = await scopedDb(db, tenantId).table('document_associations')
+      .where({ entity_type: 'ticket', entity_id: ticketId });
 
     expect(files).toHaveLength(1);
     expect(docs).toHaveLength(1);
@@ -731,16 +735,15 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(res).toMatchObject({ success: true, contentType: 'message/rfc822' });
     expect(String(res.fileName || '')).toContain('original-email-source-msg-1-example.com.eml');
 
-    const doc = await db('documents')
-      .where({ tenant: tenantId })
+    const doc = await scopedDb(db, tenantId).table('documents')
       .andWhere('document_name', 'like', 'original-email-%')
       .first();
     expect(doc).toBeTruthy();
     expect(doc?.mime_type).toBe('message/rfc822');
     expect(doc?.created_by).toBe(systemUserId);
 
-    const assoc = await db('document_associations')
-      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
+    const assoc = await scopedDb(db, tenantId).table('document_associations')
+      .where({ entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
       .first();
     expect(assoc).toBeTruthy();
   });
@@ -778,8 +781,7 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(first).toMatchObject({ success: true });
     expect(second).toMatchObject({ success: true, duplicate: true });
 
-    const docs = await db('documents')
-      .where({ tenant: tenantId })
+    const docs = await scopedDb(db, tenantId).table('documents')
       .andWhere('document_name', 'like', 'original-email-source-msg-2-example.com.eml')
       .select('document_id');
     expect(docs).toHaveLength(1);
@@ -817,9 +819,8 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 
     expect(res).toMatchObject({ success: false });
 
-    const failed = await db('email_processed_attachments')
+    const failed = await scopedDb(db, tenantId).table('email_processed_attachments')
       .where({
-        tenant: tenantId,
         provider_id: providerId,
         email_id: 'source-msg-fail@example.com',
       })
@@ -870,9 +871,8 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(res).toMatchObject({ success: true, skipped: true, reason: 'raw_mime_over_max_bytes' });
     expect(uploads).toHaveLength(0);
 
-    const row = await db('email_processed_attachments')
+    const row = await scopedDb(db, tenantId).table('email_processed_attachments')
       .where({
-        tenant: tenantId,
         provider_id: providerId,
         email_id: emailId,
         attachment_id: '__original_email_source__',
@@ -882,8 +882,7 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(row?.processing_status).toBe('skipped');
     expect(String(row?.error_message || '')).toContain('Raw MIME source exceeds ingress cap');
 
-    const docs = await db('documents')
-      .where({ tenant: tenantId })
+    const docs = await scopedDb(db, tenantId).table('documents')
       .andWhere('document_name', 'like', 'original-email-%');
     expect(docs).toHaveLength(0);
   });
@@ -940,13 +939,13 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(uploads).toHaveLength(1);
     expect(uploads[0]).toMatchObject({ size: mime.length, mime_type: 'message/rfc822' });
 
-    const docs = await db('documents')
-      .where({ tenant: tenantId, document_name: 'original-email-imap-source-1-example.com.eml' })
+    const docs = await scopedDb(db, tenantId).table('documents')
+      .where({ document_name: 'original-email-imap-source-1-example.com.eml' })
       .select('document_id');
     expect(docs).toHaveLength(1);
 
-    const assoc = await db('document_associations')
-      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId, document_id: docs[0].document_id })
+    const assoc = await scopedDb(db, tenantId).table('document_associations')
+      .where({ entity_type: 'ticket', entity_id: ticketId, document_id: docs[0].document_id })
       .first();
     expect(assoc).toBeTruthy();
   });
@@ -1000,11 +999,16 @@ async function createEmbeddedExtractionAction(): Promise<{ action: { execute: (p
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const row = await connection('tenants').first<{ tenant: string }>('tenant');
+  const row = await tenantDb(connection, '__test_discovery__')
+    .unscoped<{ tenant: string }>(
+      'tenants',
+      'test discovery of seeded tenant for email attachment ingestion integration'
+    )
+    .first('tenant');
   if (row?.tenant) return row.tenant;
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await scopedDb(connection, newTenantId).table('tenants').insert({
     tenant: newTenantId,
     client_name: 'Email Attachment Test Tenant',
     email: 'email-attachment@test.co',
@@ -1015,7 +1019,7 @@ async function ensureTenant(connection: Knex): Promise<string> {
 }
 
 async function ensureSystemUserId(connection: Knex, tenant: string): Promise<string> {
-  const user = await connection('users').where({ tenant }).first<{ user_id: string }>('user_id');
+  const user = await scopedDb(connection, tenant).table('users').first<{ user_id: string }>('user_id');
   if (!user?.user_id) {
     throw new Error('No seeded user found for tenant');
   }
@@ -1023,13 +1027,13 @@ async function ensureSystemUserId(connection: Knex, tenant: string): Promise<str
 }
 
 async function ensureInboundTicketDefaults(connection: Knex, tenant: string, userId: string): Promise<void> {
-  const existing = await connection('inbound_ticket_defaults')
-    .where({ tenant })
+  const tenantScoped = scopedDb(connection, tenant);
+  const existing = await tenantScoped.table('inbound_ticket_defaults')
     .andWhere('short_name', 'email-default')
     .first();
   if (existing) return;
 
-  await connection('inbound_ticket_defaults').insert({
+  await tenantScoped.table('inbound_ticket_defaults').insert({
     id: uuidv4(),
     tenant,
     short_name: 'email-default',
@@ -1043,7 +1047,8 @@ async function ensureInboundTicketDefaults(connection: Knex, tenant: string, use
 }
 
 async function insertMicrosoftProvider(connection: Knex, tenant: string, providerId: string): Promise<void> {
-  await connection('email_providers').insert({
+  const tenantScoped = scopedDb(connection, tenant);
+  await tenantScoped.table('email_providers').insert({
     id: providerId,
     tenant,
     provider_type: 'microsoft',
@@ -1055,7 +1060,7 @@ async function insertMicrosoftProvider(connection: Knex, tenant: string, provide
     updated_at: connection.fn.now(),
   });
 
-  await connection('microsoft_email_provider_config').insert({
+  await tenantScoped.table('microsoft_email_provider_config').insert({
     tenant,
     email_provider_id: providerId,
     client_id: 'client-id',
@@ -1071,7 +1076,8 @@ async function insertMicrosoftProvider(connection: Knex, tenant: string, provide
 }
 
 async function insertGoogleProvider(connection: Knex, tenant: string, providerId: string): Promise<void> {
-  await connection('email_providers').insert({
+  const tenantScoped = scopedDb(connection, tenant);
+  await tenantScoped.table('email_providers').insert({
     id: providerId,
     tenant,
     provider_type: 'google',
@@ -1083,7 +1089,7 @@ async function insertGoogleProvider(connection: Knex, tenant: string, providerId
     updated_at: connection.fn.now(),
   });
 
-  await connection('google_email_provider_config').insert({
+  await tenantScoped.table('google_email_provider_config').insert({
     tenant,
     email_provider_id: providerId,
     client_id: 'client-id',
@@ -1099,7 +1105,7 @@ async function insertGoogleProvider(connection: Knex, tenant: string, providerId
 }
 
 async function insertImapProvider(connection: Knex, tenant: string, providerId: string): Promise<void> {
-  await connection('email_providers').insert({
+  await scopedDb(connection, tenant).table('email_providers').insert({
     id: providerId,
     tenant,
     provider_type: 'imap',

@@ -1,11 +1,22 @@
 import { test, expect } from '@playwright/test';
-import { knex as createKnex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import { knex as createKnex, type Knex } from 'knex';
 import { webcrypto } from 'crypto';
 import { PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';
 
 // Polyfill for Web Crypto API
 if (!globalThis.crypto) {
   (globalThis as any).crypto = webcrypto;
+}
+
+const TEST_DISCOVERY_TENANT = '__client_portal_tenant_isolation_test__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTestTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, TEST_DISCOVERY_TENANT).unscoped(table, reason);
 }
 
 // Dynamic import for ES module
@@ -31,32 +42,44 @@ function adminDb() {
 /**
  * Creates or finds a client user for testing
  */
-async function ensureClientUser(db: any, email?: string): Promise<any> {
+async function ensureClientUser(db: Knex, email?: string): Promise<any> {
   // If email provided, try to find that specific user
   if (email) {
-    const existing = await db('users').where({ email: email.toLowerCase() }).first();
+    const existing = await unscopedTestTable(
+      db,
+      'users',
+      'client portal tenant isolation test locates seeded user by email before tenant context exists'
+    ).where({ email: email.toLowerCase() }).first();
     if (existing) return existing;
   }
 
   // Otherwise find or create a client user
-  const existing = await db('users')
+  const existing = await unscopedTestTable(
+    db,
+    'users',
+    'client portal tenant isolation test locates any client portal user before tenant context exists'
+  )
     .where({ user_type: 'client' })
     .whereNotNull('contact_id')
     .first();
   if (existing) return existing;
 
   // Create a new client user
-  const contact = await db('contacts').select(['tenant', 'contact_name_id']).first();
+  const contact = await unscopedTestTable(
+    db,
+    'contacts',
+    'client portal tenant isolation test locates any seeded contact before tenant context exists'
+  ).select(['tenant', 'contact_name_id']).first();
   if (!contact) throw new Error('No contacts seeded; cannot prepare client portal user.');
 
-  const user = await db('users').where({ tenant: contact.tenant }).first();
+  const user = await tenantTable(db, contact.tenant, 'users').where({ tenant: contact.tenant }).first();
   if (!user) throw new Error('No users found in tenant to convert to client portal user.');
 
-  await db('users')
+  await tenantTable(db, contact.tenant, 'users')
     .where({ user_id: user.user_id, tenant: contact.tenant })
     .update({ user_type: 'client', contact_id: contact.contact_name_id });
 
-  const updated = await db('users')
+  const updated = await tenantTable(db, contact.tenant, 'users')
     .where({ user_id: user.user_id, tenant: contact.tenant })
     .first();
   return updated;
@@ -105,7 +128,7 @@ function decodeJWT(token: string): any {
 test.describe('Client Portal Tenant Isolation', () => {
   test.setTimeout(180_000); // Allow time for first-run migrations
 
-  let db: any;
+  let db: Knex;
 
   test.beforeAll(async () => {
     db = adminDb();
@@ -206,7 +229,11 @@ test.describe('Client Portal Tenant Isolation', () => {
 
     test('should prevent cross-tenant access via session manipulation', async ({ page }) => {
       // Get two different tenants
-      const [tenant1, tenant2] = await db('tenants').select('tenant').limit(2);
+      const [tenant1, tenant2] = await unscopedTestTable(
+        db,
+        'tenants',
+        'client portal tenant isolation test needs two seeded tenants before choosing session tenant'
+      ).select('tenant').limit(2);
 
       if (!tenant1 || !tenant2 || tenant1.tenant === tenant2.tenant) {
         test.skip(true, 'Need at least 2 different tenants for this test');
@@ -266,7 +293,11 @@ test.describe('Client Portal Tenant Isolation', () => {
   test.describe('Vanity Domain Login Flow', () => {
     test('should lookup tenant from portal_domains for vanity domain access', async ({ page }) => {
       // Find or create a portal domain entry
-      let portalDomain = await db('portal_domains')
+      let portalDomain = await unscopedTestTable(
+        db,
+        'portal_domains',
+        'client portal vanity domain test discovers active portal domain before tenant context exists'
+      )
         .where({ status: 'active' })
         .first();
 
