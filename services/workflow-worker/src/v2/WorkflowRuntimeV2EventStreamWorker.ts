@@ -24,6 +24,7 @@ import {
   signalWorkflowRuntimeV2HumanTask,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import { resolveWorkflowEventCorrelation } from '@alga-psa/workflows/lib/workflowEventCorrelation';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
 
@@ -447,15 +448,16 @@ export class WorkflowRuntimeV2EventStreamWorker {
     knexOrTrx: Knex | Knex.Transaction,
     opts: { tenantId: string; eventType: string }
   ): Promise<string | null> {
-    const tenantRow = await knexOrTrx('event_catalog')
-      .where({ tenant: opts.tenantId, event_type: opts.eventType })
+    const db = tenantDb(knexOrTrx, opts.tenantId);
+    const tenantRow = await db.table('event_catalog')
+      .where({ event_type: opts.eventType })
       .first(['payload_schema_ref'])
       .catch(() => null);
 
     const tenantRef = tenantRow && typeof (tenantRow as any).payload_schema_ref === 'string' ? String((tenantRow as any).payload_schema_ref) : null;
     if (tenantRef) return tenantRef;
 
-    const systemRow = await knexOrTrx('system_event_catalog')
+    const systemRow = await db.table('system_event_catalog')
       .where({ event_type: opts.eventType })
       .first(['payload_schema_ref'])
       .catch(() => null);

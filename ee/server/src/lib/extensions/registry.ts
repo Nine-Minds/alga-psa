@@ -3,7 +3,7 @@
  * 
  * This service manages extension registration, initialization, and lifecycle.
  */
-import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { ExtensionStorageService } from './storage/storageService';
 import {
@@ -37,6 +37,10 @@ export class ExtensionRegistry implements IExtensionRegistry {
     this.knex = knexInstance;
   }
 
+  private tenantTable(tenantId: string, table: 'extensions' | 'extension_settings') {
+    return tenantDb(this.knex, tenantId).table(table);
+  }
+
   /**
    * Register a new extension with the system
    */
@@ -61,7 +65,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
 
     if (existingExtension) {
       // Update existing extension
-      const [updated] = await this.knex('extensions')
+      const [updated] = await this.tenantTable(options.tenant_id, 'extensions')
         .where({
           id: existingExtension.id,
           tenant_id: options.tenant_id
@@ -85,7 +89,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     }
 
     // Create new extension
-    const [extension] = await this.knex('extensions')
+    const [extension] = await this.tenantTable(options.tenant_id, 'extensions')
       .insert({
         tenant_id: options.tenant_id,
         name: manifest.name,
@@ -115,7 +119,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     id: string,
     options: ExtensionInitOptions
   ): Promise<Extension | null> {
-    const extension = await this.knex('extensions')
+    const extension = await this.tenantTable(options.tenant_id, 'extensions')
       .where({
         id,
         tenant_id: options.tenant_id
@@ -139,7 +143,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     name: string,
     options: ExtensionInitOptions
   ): Promise<Extension | null> {
-    const extension = await this.knex('extensions')
+    const extension = await this.tenantTable(options.tenant_id, 'extensions')
       .where({
         name,
         tenant_id: options.tenant_id
@@ -162,7 +166,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
   async listExtensions(
     options: ExtensionInitOptions
   ): Promise<Extension[]> {
-    const extensions = await this.knex('extensions')
+    const extensions = await this.tenantTable(options.tenant_id, 'extensions')
       .where({
         tenant_id: options.tenant_id
       })
@@ -206,7 +210,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     }
 
     // Enable the extension
-    await this.knex('extensions')
+    await this.tenantTable(options.tenant_id, 'extensions')
       .where({
         id,
         tenant_id: options.tenant_id
@@ -249,7 +253,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     }
 
     // Disable the extension
-    await this.knex('extensions')
+    await this.tenantTable(options.tenant_id, 'extensions')
       .where({
         id,
         tenant_id: options.tenant_id
@@ -293,7 +297,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
 
     // Delete the extension and related data
     // This will cascade to permissions, files, storage, and settings
-    await this.knex('extensions')
+    await this.tenantTable(options.tenant_id, 'extensions')
       .where({
         id,
         tenant_id: options.tenant_id
@@ -335,7 +339,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
       tenantId: options.tenant_id,
       getStorage: () => storageService,
       getSettings: async () => {
-        const settings = await this.knex('extension_settings')
+        const settings = await this.tenantTable(options.tenant_id, 'extension_settings')
           .where({
             extension_id: id,
             tenant_id: options.tenant_id
@@ -345,7 +349,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
         return settings ? settings.settings : {};
       },
       updateSettings: async (settings: Record<string, any>) => {
-        await this.knex('extension_settings')
+        await this.tenantTable(options.tenant_id, 'extension_settings')
           .insert({
             extension_id: id,
             tenant_id: options.tenant_id,
@@ -358,6 +362,8 @@ export class ExtensionRegistry implements IExtensionRegistry {
           });
       },
       hasPermission: async (permission: string) => {
+        // extension_permissions is parent-scoped by extension_id and has no
+        // tenant column; keep this raw after resolving the tenant extension.
         const permissionExists = await this.knex('extension_permissions')
           .where({
             extension_id: id,
@@ -461,7 +467,8 @@ export class ExtensionRegistry implements IExtensionRegistry {
     extensionId: string,
     permissions: string[]
   ): Promise<void> {
-    // Delete existing permissions
+    // extension_permissions is parent-scoped by extension_id and has no tenant
+    // column, so it intentionally remains raw instead of tenantDb-routed.
     await this.knex('extension_permissions')
       .where({ extension_id: extensionId })
       .delete();
@@ -483,7 +490,10 @@ export class ExtensionRegistry implements IExtensionRegistry {
 
   // Add methods expected by extension actions
   async getAllExtensions(tenantId?: string): Promise<Extension[]> {
-    let query = this.knex('extensions');
+    let query = tenantId
+      ? this.tenantTable(tenantId, 'extensions')
+      : tenantDb(this.knex, '__extension_registry_all_extensions__')
+        .unscoped('extensions', 'getAllExtensions supports tenantless extension listing');
     
     if (tenantId) {
       query = query.where({ tenant_id: tenantId });

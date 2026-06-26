@@ -2,6 +2,8 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
+const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
+
 export interface EmailTemplateContent {
   subject: string;
   html: string;
@@ -101,6 +103,11 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     return tenantDb(this.knex, tenantId).table<EmailTemplateRecord>('tenant_email_templates');
   }
 
+  private systemTemplatesQuery(tenantId?: string) {
+    return tenantDb(this.knex, tenantId ?? SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT)
+      .table<EmailTemplateRecord>('system_email_templates');
+  }
+
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
     const { tenantId, templateData, locale } = options;
     const requestedLocale = (locale || 'en').toLowerCase();
@@ -149,7 +156,7 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     }
 
     for (const language of locales) {
-      const systemTemplate = await this.knex('system_email_templates')
+      const systemTemplate = await this.systemTemplatesQuery(tenantId)
         .where({ name: this.templateName, language_code: language })
         .first();
 

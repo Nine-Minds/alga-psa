@@ -10,6 +10,10 @@ function workflowFormDefinitions(knex: Knex, tenant: string): Knex.QueryBuilder<
   return tenantDb(knex, tenant).table<IFormDefinition>('workflow_form_definitions');
 }
 
+function systemWorkflowFormDefinitions(knex: Knex, tenant?: string): Knex.QueryBuilder<any, any> {
+  return tenantDb(knex, tenant || '__system_workflow_form_definitions__').table('system_workflow_form_definitions');
+}
+
 export default class FormDefinitionModel {
   private static readonly TABLE_NAME = 'workflow_form_definitions';
 
@@ -39,7 +43,7 @@ export default class FormDefinitionModel {
     tenant?: string // Required if formType is 'tenant'
   ): Promise<IFormDefinition | null> {
     if (formType === 'system') {
-      const systemFormRecord = await knex('system_workflow_form_definitions')
+      const systemFormRecord = await systemWorkflowFormDefinitions(knex, tenant)
         .where({ name: formId, version })
         .first();
       if (systemFormRecord) {
@@ -119,7 +123,7 @@ export default class FormDefinitionModel {
     tenant?: string // Required if formType is 'tenant'
   ): Promise<IFormDefinition | null> {
     if (formType === 'system') {
-      const systemFormRecord = await knex('system_workflow_form_definitions')
+      const systemFormRecord = await systemWorkflowFormDefinitions(knex, tenant)
         .where({ name: formId })
         // System forms might use 'version' string or 'created_at' for latest.
         // Using created_at as a robust way if versions aren't strictly semver.

@@ -21,6 +21,8 @@ import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '../lib/locale
 import { resolveEmailLocale } from '../emailLocaleResolver';
 import Handlebars from 'handlebars';
 
+const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
+
 // Extend BaseEmailParams for system-specific parameters
 export interface SystemEmailParams extends BaseEmailParams {
   subject?: string;
@@ -118,9 +120,11 @@ export class SystemEmailService extends BaseEmailService {
       // Without tenant context, we can only check system templates
       try {
         const knex = await getConnection();
+        const systemTemplatesQuery = () =>
+          tenantDb(knex, SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT).table('system_email_templates');
 
         // Try system template in requested language
-        const systemTemplate = await knex('system_email_templates')
+        const systemTemplate = await systemTemplatesQuery()
           .where({ name: templateName, language_code: locale })
           .first();
 
@@ -134,7 +138,7 @@ export class SystemEmailService extends BaseEmailService {
 
         // Fallback to English for system
         if (locale !== 'en') {
-          const systemTemplateEn = await knex('system_email_templates')
+          const systemTemplateEn = await systemTemplatesQuery()
             .where({ name: templateName, language_code: 'en' })
             .first();
 
@@ -157,6 +161,7 @@ export class SystemEmailService extends BaseEmailService {
     try {
       const knex = await getConnection(tenantId);
       const tenantTemplatesQuery = () => tenantDb(knex, tenantId).table('tenant_email_templates');
+      const systemTemplatesQuery = () => tenantDb(knex, tenantId).table('system_email_templates');
 
       // Try tenant-specific template in requested language
       const tenantTemplate = await tenantTemplatesQuery()
@@ -187,7 +192,7 @@ export class SystemEmailService extends BaseEmailService {
       }
 
       // Try system template in requested language
-      const systemTemplate = await knex('system_email_templates')
+      const systemTemplate = await systemTemplatesQuery()
         .where({ name: templateName, language_code: locale })
         .first();
 
@@ -201,7 +206,7 @@ export class SystemEmailService extends BaseEmailService {
 
       // Fallback to English for system
       if (locale !== 'en') {
-        const systemTemplateEn = await knex('system_email_templates')
+        const systemTemplateEn = await systemTemplatesQuery()
           .where({ name: templateName, language_code: 'en' })
           .first();
 

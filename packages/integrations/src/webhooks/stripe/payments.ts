@@ -293,6 +293,7 @@ async function handleLicenseOrderWebhook(
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const knex = await getAdminConnection();
 
+    // Intentional admin lookup: tenant is derived from the submission.
     const submission = await tenantDb(knex, '__license_order_submission_discovery__')
       .unscoped(
         'service_request_submissions',

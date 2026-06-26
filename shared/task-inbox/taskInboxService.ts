@@ -56,7 +56,7 @@ export class TaskInboxService {
       } else {
         // 2. If tenantTaskDef not found, attempt to find systemTaskDef
         // System workflow task definitions are global task catalogs; tenant definitions are resolved first above.
-        const systemTaskDef = await knex('system_workflow_task_definitions')
+        const systemTaskDef = await tenantScopedTable(knex, tenant, 'system_workflow_task_definitions')
           .where({
             task_type: params.taskType,
           })

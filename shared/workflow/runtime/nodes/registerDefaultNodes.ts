@@ -471,14 +471,15 @@ async function resolveTaskFormSchema(
   taskType: string
 ): Promise<{ formId: string; formType: string; schema: Record<string, unknown> | null } | null> {
   if (!taskType) return null;
-  const systemTask = await knex('system_workflow_task_definitions')
+  const systemCatalogDb = tenantDb(knex, tenantId || '__workflow_system_task_catalog__');
+  const systemTask = await systemCatalogDb.table('system_workflow_task_definitions')
     .where({ task_type: taskType })
     .first();
   if (systemTask) {
     const formId = systemTask.form_id as string;
     const formType = systemTask.form_type ?? 'system';
     if (formType === 'system') {
-      const form = await knex('system_workflow_form_definitions')
+      const form = await systemCatalogDb.table('system_workflow_form_definitions')
         .where({ name: formId })
         .first();
       return {

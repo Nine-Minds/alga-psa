@@ -3,6 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { SupportedLocale } from './lib/localeConfig';
 
+const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
+
 export interface EmailTemplateContent {
   subject: string;
   html: string;
@@ -94,6 +96,11 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     return tenantDb(this.knex, tenantId).table('tenant_email_templates');
   }
 
+  private systemTemplatesQuery(tenantId?: string) {
+    return tenantDb(this.knex, tenantId ?? SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT)
+      .table('system_email_templates');
+  }
+
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
     const { tenantId, templateData, locale = 'en' } = options;
 
@@ -132,7 +139,7 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
       logger.debug(`[DatabaseTemplateProcessor] Looking for template '${this.templateName}' with locale '${locale}'`);
 
       // Try to get template in requested language
-      template = await this.knex('system_email_templates')
+      template = await this.systemTemplatesQuery(tenantId)
         .where({ name: this.templateName, language_code: locale })
         .first();
 
@@ -145,7 +152,7 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
       // If requested language not found, fall back to English
       if (!template && locale !== 'en') {
         logger.warn(`[DatabaseTemplateProcessor] Template '${this.templateName}' not found for locale '${locale}', falling back to English`);
-        template = await this.knex('system_email_templates')
+        template = await this.systemTemplatesQuery(tenantId)
           .where({ name: this.templateName, language_code: 'en' })
           .first();
 

@@ -41,14 +41,15 @@ export async function getTemplatesAction(tenant: string): Promise<{
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
   
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const systemTemplates = await trx("system_email_templates as t")
+    const db = tenantDb(trx, tenant);
+    let systemTemplatesQuery = tenantScopedTable(trx, "system_email_templates as t", tenant)
       .select(
         "t.*",
         "c.name as category"
-      )
-      .join("notification_subtypes as s", "t.notification_subtype_id", "s.id")
-      .join("notification_categories as c", "s.category_id", "c.id")
-      .orderBy(["c.name", "t.name"]);
+      );
+    systemTemplatesQuery = db.tenantJoin(systemTemplatesQuery, "notification_subtypes as s", "t.notification_subtype_id", "s.id");
+    systemTemplatesQuery = db.tenantJoin(systemTemplatesQuery, "notification_categories as c", "s.category_id", "c.id");
+    const systemTemplates = await systemTemplatesQuery.orderBy(["c.name", "t.name"]);
       
     const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant)
       .orderBy("name");
@@ -75,7 +76,7 @@ export async function cloneSystemTemplateAction(
   
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the system template
-    const systemTemplate = await trx("system_email_templates")
+    const systemTemplate = await tenantScopedTable(trx, "system_email_templates", tenant)
       .where({ id: systemTemplateId })
       .first();
       
@@ -131,7 +132,7 @@ export const getCategoriesAction = withAuth(async (_user, { tenant }): Promise<N
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const categories = await trx('notification_categories as nc')
+    const categories = await tenantScopedTable(trx, 'notification_categories as nc', tenant)
       .leftJoin('tenant_notification_category_settings as tcs', function() {
         this.on('tcs.category_id', 'nc.id')
             .andOn('tcs.tenant', trx.raw('?', [tenant]));
@@ -148,7 +149,7 @@ export const getCategoriesAction = withAuth(async (_user, { tenant }): Promise<N
       .orderBy('nc.name');
 
     // Add is_locked flag based on category name
-    return categories.map(cat => ({
+    return categories.map((cat: NotificationCategory) => ({
       ...cat,
       is_locked: isLockedCategory(cat.name)
     }));
@@ -163,7 +164,7 @@ export const getCategoryWithSubtypesAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const category = await trx('notification_categories as nc')
+    const category = await tenantScopedTable(trx, 'notification_categories as nc', tenant)
       .leftJoin('tenant_notification_category_settings as tcs', function() {
         this.on('tcs.category_id', 'nc.id')
             .andOn('tcs.tenant', trx.raw('?', [tenant]));
@@ -223,7 +224,7 @@ export const updateCategoryAction = withAuth(async (
     }
 
     // Verify the category exists
-    const exists = await trx("notification_categories")
+    const exists = await tenantScopedTable(trx, "notification_categories", tenant)
       .where({ id })
       .first();
 
@@ -266,7 +267,7 @@ export const updateCategoryAction = withAuth(async (
       });
 
     // Return the updated category with tenant-specific settings
-    const updated = await trx('notification_categories as nc')
+    const updated = await tenantScopedTable(trx, 'notification_categories as nc', tenant)
       .leftJoin('tenant_notification_category_settings as tcs', function() {
         this.on('tcs.category_id', 'nc.id')
             .andOn('tcs.tenant', trx.raw('?', [tenant]));
@@ -408,7 +409,7 @@ export const sendTestEmailAction = withAuth(async (
 
     // 3. Load the template
     const template = templateType === 'system'
-      ? await trx('system_email_templates').where({ id: templateId }).first()
+      ? await tenantScopedTable(trx, 'system_email_templates', tenant).where({ id: templateId }).first()
       : await tenantScopedTable(trx, 'tenant_email_templates', tenant).where({ id: templateId }).first();
     if (!template) {
       return { success: false, error: 'Template not found.' };

@@ -99,7 +99,8 @@ export class EmailNotificationService implements NotificationService {
 
   async getSystemTemplate(name: string): Promise<SystemEmailTemplate> {
     const knex = await this.getTenantKnex();
-    const template = await knex('system_email_templates')
+    const template = await tenantDb(knex, '__email_system_template_lookup__')
+      .table<SystemEmailTemplate>('system_email_templates')
       .where({ name })
       .first();
 
@@ -146,7 +147,7 @@ export class EmailNotificationService implements NotificationService {
     const knex = await this.getTenantKnex();
 
     if (!template.system_template_id) {
-      const systemTemplate = await knex('system_email_templates')
+      const systemTemplate = await this.tenantScopedTable(knex, 'system_email_templates', tenant)
         .where({ name: template.name })
         .first();
 
@@ -191,14 +192,14 @@ export class EmailNotificationService implements NotificationService {
     const knex = await this.getTenantKnex();
 
     if (locale) {
-      let systemTemplate = await knex('system_email_templates')
+      let systemTemplate = await this.tenantScopedTable(knex, 'system_email_templates', tenant)
         .where({ name, language_code: locale })
         .first();
 
       if (systemTemplate) return systemTemplate;
 
       if (locale !== 'en') {
-        systemTemplate = await knex('system_email_templates')
+        systemTemplate = await this.tenantScopedTable(knex, 'system_email_templates', tenant)
           .where({ name, language_code: 'en' })
           .first();
 
@@ -211,7 +212,7 @@ export class EmailNotificationService implements NotificationService {
 
   async getCategories(tenant: string): Promise<NotificationCategory[]> {
     const knex = await this.getTenantKnex();
-    return knex('notification_categories as nc')
+    return this.tenantScopedTable(knex, 'notification_categories as nc', tenant)
       .leftJoin('tenant_notification_category_settings as tcs', function() {
         this.on('tcs.category_id', 'nc.id')
           .andOn('tcs.tenant', knex.raw('?', [tenant]));
@@ -234,7 +235,7 @@ export class EmailNotificationService implements NotificationService {
   ): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }> {
     const knex = await this.getTenantKnex();
 
-    const category = await knex('notification_categories as nc')
+    const category = await this.tenantScopedTable(knex, 'notification_categories as nc', tenant)
       .leftJoin('tenant_notification_category_settings as tcs', function() {
         this.on('tcs.category_id', 'nc.id')
           .andOn('tcs.tenant', knex.raw('?', [tenant]));
@@ -297,7 +298,7 @@ export class EmailNotificationService implements NotificationService {
         updated_at: new Date().toISOString()
       });
 
-    const result = await knex('notification_categories as nc')
+    const result = await this.tenantScopedTable(knex, 'notification_categories as nc', tenant)
       .leftJoin('tenant_notification_category_settings as tcs', function() {
         this.on('tcs.category_id', 'nc.id')
           .andOn('tcs.tenant', knex.raw('?', [tenant]));

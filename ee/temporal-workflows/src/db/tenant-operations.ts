@@ -475,7 +475,7 @@ export async function setupTenantDataInDB(
       // Initialize tenant notification settings from global defaults
       try {
         // Seed email notification category settings
-        const categories = await trx('notification_categories')
+        const categories = await db.table('notification_categories')
           .select('id', 'is_enabled', 'is_default_enabled');
 
         if (categories.length > 0) {
@@ -492,7 +492,7 @@ export async function setupTenantDataInDB(
         }
 
         // Seed email notification subtype settings
-        const subtypes = await trx('notification_subtypes')
+        const subtypes = await db.table('notification_subtypes')
           .select('id', 'is_enabled', 'is_default_enabled');
 
         if (subtypes.length > 0) {
@@ -509,7 +509,7 @@ export async function setupTenantDataInDB(
         }
 
         // Seed internal notification category settings
-        const internalCategories = await trx('internal_notification_categories')
+        const internalCategories = await db.table('internal_notification_categories')
           .select('internal_notification_category_id', 'is_enabled', 'is_default_enabled');
 
         if (internalCategories.length > 0) {
@@ -526,7 +526,7 @@ export async function setupTenantDataInDB(
         }
 
         // Seed internal notification subtype settings
-        const internalSubtypes = await trx('internal_notification_subtypes')
+        const internalSubtypes = await db.table('internal_notification_subtypes')
           .select('internal_notification_subtype_id', 'is_enabled', 'is_default_enabled');
 
         if (internalSubtypes.length > 0) {

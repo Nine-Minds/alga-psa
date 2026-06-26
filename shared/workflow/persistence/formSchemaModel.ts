@@ -10,6 +10,10 @@ function workflowFormSchemas(knex: Knex, tenant: string): Knex.QueryBuilder<IFor
   return tenantDb(knex, tenant).table<IFormSchema>('workflow_form_schemas');
 }
 
+function systemWorkflowFormDefinitions(knex: Knex, tenant?: string): Knex.QueryBuilder<any, any> {
+  return tenantDb(knex, tenant || '__system_workflow_form_schema_catalog__').table('system_workflow_form_definitions');
+}
+
 export default class FormSchemaModel {
   private static readonly TABLE_NAME = 'workflow_form_schemas';
 
@@ -40,7 +44,7 @@ export default class FormSchemaModel {
   ): Promise<IFormSchema | null> {
     if (formType === 'system') {
       // Fetch from system_workflow_form_definitions
-      const systemFormRecord = await knex('system_workflow_form_definitions')
+      const systemFormRecord = await systemWorkflowFormDefinitions(knex, tenant)
         .where({ name: formId }) // In system table, formId is the 'name'
         .modify((queryBuilder) => {
           if (version) {

@@ -290,7 +290,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         logger.debug('[SendEventEmail] Tenant template not found, falling back to system template');
 
         // Fall back to system template in recipient's language
-        let systemTemplateQuery = knex('system_email_templates')
+        let systemTemplateQuery = db.table('system_email_templates')
           .where({
             name: params.template,
             language_code: recipientLocale
@@ -308,7 +308,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         // If no template found for recipient's locale, try English fallback
         if (!systemTemplate && recipientLocale !== 'en') {
           logger.debug('[SendEventEmail] No system template found for locale, trying English fallback');
-          systemTemplateQuery = knex('system_email_templates')
+          systemTemplateQuery = db.table('system_email_templates')
             .where({
               name: params.template,
               language_code: 'en'
@@ -321,7 +321,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         // If still no template, try without language filter (legacy templates)
         if (!systemTemplate) {
           logger.debug('[SendEventEmail] No language-specific system template, trying legacy template');
-          systemTemplateQuery = knex('system_email_templates')
+          systemTemplateQuery = db.table('system_email_templates')
             .where({ name: params.template })
             .whereNull('language_code')
             .first();

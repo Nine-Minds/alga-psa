@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex, auditLog } from '@alga-psa/db';
+import { createTenantKnex, auditLog, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { EventCatalogModel } from '../models/eventCatalog';
 import { workflowTenantTable } from '../lib/workflowTenantDb';
@@ -159,7 +159,7 @@ export const listEventCatalogCategoriesV2Action = withAuth(async (user, { tenant
     .orderBy('category', 'asc');
 
   // system_event_catalog is a global workflow event catalog; tenant event categories are loaded above.
-  const systemRows = await knex('system_event_catalog')
+  const systemRows = await tenantDb(knex, tenant).table('system_event_catalog')
     .distinct('category')
     .whereNotNull('category')
     .orderBy('category', 'asc');

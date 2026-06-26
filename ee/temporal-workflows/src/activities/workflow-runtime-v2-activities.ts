@@ -34,6 +34,13 @@ import {
 } from '@alga-psa/workflows/persistence';
 import { workflowStepQuotaService } from '@alga-psa/workflows/runtime/core';
 
+const WORKFLOW_RUNTIME_SYSTEM_CATALOG_TENANT = '__workflow_runtime_system_catalog__';
+
+const systemCatalogTenant = (tenantId: string | null | undefined): string => {
+  const tenant = String(tenantId ?? '').trim();
+  return tenant || WORKFLOW_RUNTIME_SYSTEM_CATALOG_TENANT;
+};
+
 export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
   runId: string;
   workflowId: string;
@@ -732,14 +739,15 @@ async function resolveTaskFormSchema(
   if (!taskType) return null;
 
   // System workflow task and form definitions are global catalogs; tenant-specific definitions are resolved below.
-  const systemTask = await knex('system_workflow_task_definitions')
+  const systemCatalogDb = tenantDb(knex, systemCatalogTenant(tenantId));
+  const systemTask = await systemCatalogDb.table('system_workflow_task_definitions')
     .where({ task_type: taskType })
     .first();
   if (systemTask) {
     const formId = systemTask.form_id as string;
     const formType = systemTask.form_type ?? 'system';
     if (formType === 'system') {
-      const form = await knex('system_workflow_form_definitions')
+      const form = await systemCatalogDb.table('system_workflow_form_definitions')
         .where({ name: formId })
         .first();
       return {

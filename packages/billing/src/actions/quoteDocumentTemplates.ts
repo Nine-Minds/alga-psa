@@ -19,6 +19,14 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+function standardQuoteDocumentTemplates(
+  conn: Knex | Knex.Transaction,
+  tenant?: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant || '__standard_quote_document_templates_catalog__')
+    .table('standard_quote_document_templates');
+}
+
 export const getQuoteDocumentTemplate = withAuth(async (
   user,
   { tenant },
@@ -177,7 +185,7 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
             templateId: fallbackCustom.template_id,
           });
         } else {
-          const fallbackStandard = await trx('standard_quote_document_templates')
+          const fallbackStandard = await standardQuoteDocumentTemplates(trx, tenant)
             .select('standard_quote_document_template_code')
             .orderByRaw("CASE WHEN standard_quote_document_template_code = 'standard-quote-default' THEN 0 ELSE 1 END")
             .orderBy('name')

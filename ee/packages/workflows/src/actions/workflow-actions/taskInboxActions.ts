@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { getFormRegistry } from '@shared/task-inbox';
@@ -12,10 +12,21 @@ import {
   type TaskQueryResult,
   type TaskSubmissionParams,
 } from '@alga-psa/workflows/persistence';
-import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from "next/cache";
 import { workflowTenantTable } from '../../lib/workflowTenantDb';
+
+const SYSTEM_WORKFLOW_CATALOG_TENANT = '__workflow_system_catalog__';
+
+const systemCatalogTenant = (tenant: string | null | undefined): string => {
+  const value = String(tenant ?? '').trim();
+  return value || SYSTEM_WORKFLOW_CATALOG_TENANT;
+};
+
+const systemWorkflowTaskDefinitions = (
+  conn: Knex | Knex.Transaction,
+  tenant: string | null | undefined
+) => tenantDb(conn, systemCatalogTenant(tenant)).table('system_workflow_task_definitions');
 
 //TODO: we need to fix withTransaction to work with passed knex instances
 
@@ -46,7 +57,7 @@ export const submitTaskForm = withAuth(async (user, { tenant }, params: TaskSubm
         if (!task.system_task_definition_task_type) {
           throw new Error(`System task ${taskId} is missing system_task_definition_task_type.`);
         }
-        taskDefinition = await trx('system_workflow_task_definitions')
+        taskDefinition = await systemWorkflowTaskDefinitions(trx, tenant)
           .where({
             task_type: task.system_task_definition_task_type,
           })
@@ -256,7 +267,7 @@ export const getTaskDetails = withAuth(async (_user, { tenant }, taskId: string)
         throw new Error(`System task ${taskId} is missing system_task_definition_task_type.`);
       }
       taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('system_workflow_task_definitions')
+        return await systemWorkflowTaskDefinitions(trx, tenant)
           .where({
             task_type: task.system_task_definition_task_type,
           })

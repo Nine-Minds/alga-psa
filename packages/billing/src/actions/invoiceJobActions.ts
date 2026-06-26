@@ -331,7 +331,7 @@ async function getInvoiceEmailTemplate(
 
   // Fall back to system template in requested locale
   if (!template) {
-    template = await knex('system_email_templates')
+    template = await db.table('system_email_templates')
       .where({
         name: 'invoice-email',
         language_code: locale,
@@ -341,7 +341,7 @@ async function getInvoiceEmailTemplate(
 
   // Fall back to system English template
   if (!template && locale !== 'en') {
-    template = await knex('system_email_templates')
+    template = await db.table('system_email_templates')
       .where({
         name: 'invoice-email',
         language_code: 'en',

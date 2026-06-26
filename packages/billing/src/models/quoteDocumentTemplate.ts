@@ -9,6 +9,13 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table<IQuoteDocumentTemplate>('quote_document_templates');
 }
 
+function standardQuoteDocumentTemplates(
+  conn: Knex | Knex.Transaction
+): Knex.QueryBuilder<IQuoteDocumentTemplate, IQuoteDocumentTemplate[]> {
+  return tenantDb(conn, '__standard_quote_document_template_catalog__')
+    .table<IQuoteDocumentTemplate>('standard_quote_document_templates');
+}
+
 interface QuoteTemplateAssignmentRow {
   template_source?: 'standard' | 'custom';
   standard_quote_document_template_code?: string | null;
@@ -30,7 +37,7 @@ const QuoteDocumentTemplate = {
   async getStandardTemplates(
     knexOrTrx: Knex | Knex.Transaction
   ): Promise<IQuoteDocumentTemplate[]> {
-    const records = await knexOrTrx('standard_quote_document_templates')
+    const records = await standardQuoteDocumentTemplates(knexOrTrx)
       .select(
         'template_id',
         'name',

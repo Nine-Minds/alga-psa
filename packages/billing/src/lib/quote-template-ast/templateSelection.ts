@@ -26,6 +26,9 @@ function countDistinctItemLocations(quote: IQuote): number {
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
+const standardQuoteTemplates = (knexOrTrx: Knex | Knex.Transaction) =>
+  tenantDb(knexOrTrx, '__standard_quote_template_ast_catalog__').table('standard_quote_document_templates');
+
 const getCustomTemplateAst = async (
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -43,7 +46,7 @@ const getStandardTemplateAst = async (
   knexOrTrx: Knex | Knex.Transaction,
   code: string
 ): Promise<TemplateAst | null> => {
-  const record = await knexOrTrx('standard_quote_document_templates')
+  const record = await standardQuoteTemplates(knexOrTrx)
     .select('templateAst')
     .where({ standard_quote_document_template_code: code })
     .first<{ templateAst?: TemplateAst | null }>();
@@ -59,7 +62,7 @@ const getStandardTemplateAstByTemplateId = async (
   knexOrTrx: Knex | Knex.Transaction,
   templateId: string
 ): Promise<{ templateAst: TemplateAst; standardCode: string } | null> => {
-  const record = await knexOrTrx('standard_quote_document_templates')
+  const record = await standardQuoteTemplates(knexOrTrx)
     .select('templateAst', 'standard_quote_document_template_code')
     .where({ template_id: templateId })
     .first<{ templateAst?: TemplateAst | null; standard_quote_document_template_code?: string }>();

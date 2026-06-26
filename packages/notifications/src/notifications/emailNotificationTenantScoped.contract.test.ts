@@ -15,10 +15,13 @@ describe('email notification service tenant-scoped query contract', () => {
     expect(source).toContain("'tenant_notification_subtype_settings', params.tenant");
     expect(source).toContain("'tenant_notification_category_settings', params.tenant");
     expect(source).toContain("tenantDb(knex, params.tenant).table('notification_logs')");
-    expect(source).toContain("knex('system_email_templates')");
-    expect(source).toContain("knex('notification_subtypes')");
+    expect(source).toContain("tenantDb(knex, '__email_system_template_lookup__')");
+    expect(source).toContain("this.tenantScopedTable(knex, 'system_email_templates', tenant)");
+    expect(source).toContain("this.tenantScopedTable(knex, 'notification_categories as nc', tenant)");
+    expect(source).toContain("tenantDb(knex, tenant).table('notification_subtypes as ns')");
 
     expect(source).not.toContain('createTenantScopedQuery');
+    expect(source).not.toMatch(/\bknex\(['"](system_email_templates|notification_categories)(\s+as\s+[^'"]*)?['"]\)/);
     expect(source).not.toMatch(/\bknex\('(tenant_email_settings|notification_settings|tenant_email_templates|user_notification_preferences|tenant_notification_subtype_settings|tenant_notification_category_settings|notification_logs)'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
     expect(source).not.toMatch(/\bknex\('(tenant_email_settings|notification_settings|tenant_email_templates|user_notification_preferences|tenant_notification_subtype_settings|tenant_notification_category_settings|notification_logs)'\)\.where\(\{[^}]*tenant/);
   });

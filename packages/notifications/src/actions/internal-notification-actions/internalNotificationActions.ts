@@ -124,14 +124,14 @@ async function getNotificationTemplate(
   locale: string
 ): Promise<InternalNotificationTemplate | null> {
   // 1. Try the requested language (from getUserLocale hierarchy)
-  let template = await trx('internal_notification_templates')
+  let template = await tenantScopedTable(trx, 'internal_notification_templates', tenant)
     .where({ name: templateName, language_code: locale })
     .first();
 
   if (template) return template;
 
   // 2. Try English as final fallback
-  template = await trx('internal_notification_templates')
+  template = await tenantScopedTable(trx, 'internal_notification_templates', tenant)
     .where({ name: templateName, language_code: 'en' })
     .first();
 
@@ -349,7 +349,7 @@ async function checkInternalNotificationEnabled(
   subtypeId: number
 ): Promise<boolean> {
   // 1. Get subtype info
-  const subtype = await trx('internal_notification_subtypes')
+  const subtype = await tenantScopedTable(trx, 'internal_notification_subtypes', tenant)
     .where({ internal_notification_subtype_id: subtypeId })
     .first();
 
@@ -368,7 +368,7 @@ async function checkInternalNotificationEnabled(
   }
 
   // 3. Verify category exists
-  const category = await trx('internal_notification_categories')
+  const category = await tenantScopedTable(trx, 'internal_notification_categories', tenant)
     .where({ internal_notification_category_id: subtype.internal_category_id })
     .first();
 
@@ -671,7 +671,7 @@ export const getInternalNotificationCategoriesAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = trx('internal_notification_categories as inc')
+    let query = tenantScopedTable(trx, 'internal_notification_categories as inc', tenant)
       .leftJoin('tenant_internal_notification_category_settings as tics', function() {
         this.on('tics.category_id', 'inc.internal_notification_category_id')
             .andOn('tics.tenant', trx.raw('?', [tenant]));
@@ -713,7 +713,7 @@ export const getSubtypesAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = trx('internal_notification_subtypes as ins')
+    let query = tenantScopedTable(trx, 'internal_notification_subtypes as ins', tenant)
       .leftJoin('tenant_internal_notification_subtype_settings as tiss', function() {
         this.on('tiss.subtype_id', 'ins.internal_notification_subtype_id')
             .andOn('tiss.tenant', trx.raw('?', [tenant]));
@@ -735,7 +735,13 @@ export const getSubtypesAction = withAuth(async (
     // (multiple templates can exist for the same subtype_id + language_code)
     if (locale) {
       query = query
-        .select(trx.raw('(SELECT title FROM internal_notification_templates WHERE subtype_id = ins.internal_notification_subtype_id AND language_code = ? LIMIT 1) as display_title', [locale]));
+        .select({
+          display_title: tenantScopedTable(trx, 'internal_notification_templates', tenant)
+            .select('title')
+            .whereRaw('subtype_id = ins.internal_notification_subtype_id')
+            .andWhere('language_code', locale)
+            .limit(1)
+        });
     }
 
     if (forClientPortal === true) {
@@ -755,7 +761,8 @@ export async function getTemplatesForNameAction(
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('internal_notification_templates')
+    return await tenantDb(trx, '__internal_notification_template_name_lookup__')
+      .table<InternalNotificationTemplate>('internal_notification_templates')
       .where({ name: templateName })
       .orderBy('language_code');
   });
@@ -849,7 +856,7 @@ export async function isInternalNotificationEnabledAction(
     }
 
     // Get the category for this subtype
-    const subtype = await trx('internal_notification_subtypes')
+    const subtype = await tenantScopedTable(trx, 'internal_notification_subtypes', tenant)
       .where({ internal_notification_subtype_id: subtypeId })
       .first();
 
@@ -895,7 +902,7 @@ export const updateInternalCategoryAction = withAuth(async (
     }
 
     // Verify category exists
-    const category = await trx('internal_notification_categories')
+    const category = await tenantScopedTable(trx, 'internal_notification_categories', tenant)
       .where({ internal_notification_category_id: categoryId })
       .first();
 
@@ -957,7 +964,7 @@ export const updateInternalSubtypeAction = withAuth(async (
     }
 
     // Verify subtype exists
-    const subtype = await trx('internal_notification_subtypes')
+    const subtype = await tenantScopedTable(trx, 'internal_notification_subtypes', tenant)
       .where({ internal_notification_subtype_id: subtypeId })
       .first();
 

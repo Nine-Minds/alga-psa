@@ -1,7 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { getFormRegistry, getFormValidationService } from '@shared/task-inbox';
@@ -16,6 +15,19 @@ import {
 import { createTag, findTagsByEntityId, findAllTagsByType, deleteTag } from '@alga-psa/tags/actions';
 import type { ITag } from '@alga-psa/types';
 import { workflowTenantTable } from '../../lib/workflowTenantDb';
+
+const SYSTEM_WORKFLOW_CATALOG_TENANT = '__workflow_system_catalog__';
+
+const systemCatalogTenant = (tenant: string | null | undefined): string => {
+  const value = String(tenant ?? '').trim();
+  return value || SYSTEM_WORKFLOW_CATALOG_TENANT;
+};
+
+const systemWorkflowFormDefinitions = (
+  conn: Knex | Knex.Transaction,
+  tenant: string | null | undefined
+): Knex.QueryBuilder<any, any[]> =>
+  tenantDb(conn, systemCatalogTenant(tenant)).table('system_workflow_form_definitions');
 
 /**
  * Register a new form
@@ -81,7 +93,7 @@ export const registerSystemWorkflowFormDefinitionAction = withAuth(async (
     // Register the system form
     // System forms are stored in a separate table and are not tenant-specific
     const [formId] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('system_workflow_form_definitions').insert({
+      return await systemWorkflowFormDefinitions(trx, tenant).insert({
         form_id: params.formId || formRegistry.generateFormId(),
         name: params.name,
         description: params.description,
@@ -157,7 +169,7 @@ export const getFormAction = withAuth(async (
     if (formType === 'system') {
       // Query system forms table using the retrieved actualFormId
       const systemForm = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('system_workflow_form_definitions')
+        return await systemWorkflowFormDefinitions(trx, tenant)
           .where({ form_id: actualFormId })
           .modify(queryBuilder => {
             if (version) {
