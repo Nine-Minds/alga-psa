@@ -693,19 +693,19 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get tag definitions that have at least one mapping (filter out orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
-      const result = await trx.raw(`
-        SELECT DISTINCT ON (td.tag_text) td.*
-        FROM tag_definitions td
-        WHERE td.tenant = ?
-          AND td.tagged_type = ?
-          AND EXISTS (
-            SELECT 1 FROM tag_mappings tm
-            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
-          )
-        ORDER BY td.tag_text ASC, td.created_at ASC
-      `, [tenant, entityType]);
+      const scopedDb = tenantDb(trx, tenant);
+      const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(tagMappingsQuery, 'tm.tenant', 'td.tenant');
 
-      const definitions = result.rows || [];
+      const definitions = await scopedDb.table('tag_definitions as td')
+        .distinctOn('td.tag_text')
+        .select('td.*')
+        .where('td.tagged_type', entityType)
+        .whereExists(tagMappingsQuery)
+        .orderBy('td.tag_text', 'asc')
+        .orderBy('td.created_at', 'asc');
 
       // Convert to ITag format (use definition ID as tag_id since these are unique)
       return definitions.map((def: any) => ({

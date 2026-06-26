@@ -20,9 +20,11 @@ describe('team service statistics tenant-scoped query contract', () => {
     const section = sectionBetween('// Statistics and Reporting', '// HATEOAS Link Generation');
 
     expect(section).toContain('tenantDb(');
-    expect(section).toContain(".table('teams')");
-    expect(section).toContain(".table('team_members')");
-    expect(section).toContain("activeMemberCountSubquery(knex, context.tenant, 'teams')");
+    expect(section).toContain(".table('teams as t')");
+    expect(section).toContain('joinActiveMemberCounts(totalStatsQuery, knex, context.tenant, \'t\'');
+    expect(section).toContain('joinActiveMemberCounts(largestTeamQuery, knex, context.tenant, \'t\'');
+    expect(source).toContain("tenantDb(knex, tenant).tenantJoinSubquery(");
+    expect(source).toContain(".table('team_members as tm')");
 
     expect(section).not.toMatch(/knex\('(?:teams|team_members)'\)\s*\./);
     expect(section).not.toContain('JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant');

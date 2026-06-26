@@ -2040,6 +2040,12 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
     try {
 
     // Fetch all options in parallel
+    const scopedDb = tenantDb(trx, tenant);
+    const ticketTagMappingsQuery = scopedDb.table('tag_mappings as tm')
+      .select(trx.raw('1'))
+      .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+    scopedDb.tenantWhereColumn(ticketTagMappingsQuery, 'tm.tenant', 'td.tenant');
+
     const [
       statuses,
       priorities,
@@ -2079,17 +2085,13 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
-      trx.raw(`
-        SELECT DISTINCT ON (td.tag_text) td.tag_id, td.tag_text, td.background_color, td.text_color
-        FROM tag_definitions td
-        WHERE td.tenant = ?
-          AND td.tagged_type = 'ticket'
-          AND EXISTS (
-            SELECT 1 FROM tag_mappings tm
-            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
-          )
-        ORDER BY td.tag_text ASC, td.created_at ASC
-      `, [tenant])
+      scopedDb.table('tag_definitions as td')
+        .distinctOn('td.tag_text')
+        .select('td.tag_id', 'td.tag_text', 'td.background_color', 'td.text_color')
+        .where('td.tagged_type', 'ticket')
+        .whereExists(ticketTagMappingsQuery)
+        .orderBy('td.tag_text', 'asc')
+        .orderBy('td.created_at', 'asc')
     ]);
 
     // Format options for dropdowns
@@ -2149,8 +2151,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       categories,
       clients: clientsWithLogos, // Return clients with logos
       users,
-      // Handle raw query result format (tags comes from trx.raw which returns { rows: [...] })
-      tags: (tags?.rows || []).map((tag: any) => ({
+      tags: (tags || []).map((tag: any) => ({
         tag_id: tag.tag_id,
         tag_text: tag.tag_text,
         tagged_id: '',

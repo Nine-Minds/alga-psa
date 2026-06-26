@@ -1423,6 +1423,12 @@ export class TeamService extends BaseService<ITeam> {
   async getTeamStats(context: ServiceContext): Promise<TeamStatsResponse> {
     const { knex } = await this.getKnex();
 
+    const totalStatsQuery = tenantDb(knex, context.tenant).table('teams as t');
+    this.joinActiveMemberCounts(totalStatsQuery, knex, context.tenant, 't', 'amc', 'left');
+
+    const largestTeamQuery = tenantDb(knex, context.tenant).table('teams as t');
+    this.joinActiveMemberCounts(largestTeamQuery, knex, context.tenant, 't', 'amc', 'left');
+
     const [
       totalStats,
       largestTeamData,
@@ -1431,20 +1437,19 @@ export class TeamService extends BaseService<ITeam> {
       performanceStats
     ] = await Promise.all([
       // Total and active team counts
-      tenantDb(knex, context.tenant).table('teams')
+      totalStatsQuery
         .select(
           knex.raw('COUNT(*) as total_teams'),
-          knex.raw('COUNT(CASE WHEN manager_id IS NOT NULL THEN 1 END) as teams_with_managers'),
-          knex.raw('AVG((?)) as average_team_size', [this.activeMemberCountSubquery(knex, context.tenant, 'teams')]),
-          knex.raw('SUM((?)) as total_members', [this.activeMemberCountSubquery(knex, context.tenant, 'teams')])
+          knex.raw('COUNT(CASE WHEN t.manager_id IS NOT NULL THEN 1 END) as teams_with_managers'),
+          knex.raw('AVG(COALESCE(amc.member_count, 0)) as average_team_size'),
+          knex.raw('SUM(COALESCE(amc.member_count, 0)) as total_members')
         )
         .first(),
 
       // Get largest team size
-      tenantDb(knex, context.tenant).table('team_members')
-        .select('team_id')
-        .count('* as size')
-        .groupBy('team_id')
+      largestTeamQuery
+        .select('t.team_id')
+        .select(knex.raw('COALESCE(amc.member_count, 0) as size'))
         .orderBy('size', 'desc')
         .first(),
 
@@ -1502,8 +1507,46 @@ export class TeamService extends BaseService<ITeam> {
   // ============================================================================
 
   /**
-   * Apply team-specific filters
+   * Build active team member count queries.
    */
+  private activeMemberCountsByTeamQuery(knex: Knex, tenant: string, countAlias = 'member_count'): Knex.QueryBuilder {
+    const scopedDb = tenantDb(knex, tenant);
+    const query = scopedDb.table('team_members as tm')
+      .select('tm.team_id', 'tm.tenant')
+      .count(`* as ${countAlias}`)
+      .where('u.is_inactive', false)
+      .groupBy('tm.team_id', 'tm.tenant');
+
+    scopedDb.tenantJoin(query, 'users as u', 'tm.user_id', 'u.user_id');
+
+    return query;
+  }
+
+  private activeMemberCountsByTeamSubquery(knex: Knex, tenant: string, alias = 'amc'): Knex.QueryBuilder {
+    return this.activeMemberCountsByTeamQuery(knex, tenant).as(alias);
+  }
+
+  private joinActiveMemberCounts(
+    query: Knex.QueryBuilder,
+    knex: Knex,
+    tenant: string,
+    teamAlias: string,
+    countsAlias = 'amc',
+    type: 'inner' | 'left' = 'inner'
+  ): Knex.QueryBuilder {
+    return tenantDb(knex, tenant).tenantJoinSubquery(
+      query,
+      this.activeMemberCountsByTeamSubquery(knex, tenant, countsAlias),
+      `${teamAlias}.team_id`,
+      `${countsAlias}.team_id`,
+      {
+        type,
+        rootTenantColumn: `${teamAlias}.tenant`,
+        joinedTenantColumn: `${countsAlias}.tenant`,
+      }
+    );
+  }
+
   private activeMemberCountSubquery(knex: Knex, tenant: string, teamAlias: string): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
     const subquery = scopedDb.table('team_members as tm')
@@ -1517,6 +1560,9 @@ export class TeamService extends BaseService<ITeam> {
     return subquery;
   }
 
+  /**
+   * Apply team-specific filters.
+   */
   private applyTeamFilters(query: Knex.QueryBuilder, filters: TeamFilterData, knex: Knex, tenant: string, hasManagerJoin: boolean = false): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
     Object.entries(filters).forEach(([key, value]) => {
@@ -1868,12 +1914,13 @@ export class TeamService extends BaseService<ITeam> {
    */
   async getTeamStatistics(context: ServiceContext): Promise<TeamStatsResponse> {
     const { knex } = await this.getKnex();
+    const teamsWithMembersQuery = tenantDb(knex, context.tenant).table('teams as t');
+    this.joinActiveMemberCounts(teamsWithMembersQuery, knex, context.tenant, 't');
 
     const [
       totalTeams,
       teamsWithMembers,
-      teamSizes,
-      largestTeam
+      teamSizes
     ] = await Promise.all([
       // Total teams
       tenantDb(knex, context.tenant).table('teams')
@@ -1881,29 +1928,21 @@ export class TeamService extends BaseService<ITeam> {
         .first(),
       
       // Teams with members
-      tenantDb(knex, context.tenant).table('teams as t')
-        .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'team_members as tm', 't.team_id', 'tm.team_id'))
+      teamsWithMembersQuery
         .countDistinct('t.team_id as count')
         .first(),
       
       // Average team size
-      tenantDb(knex, context.tenant).table('team_members')
-        .select('team_id')
-        .count('* as size')
-        .groupBy('team_id'),
-      
-      // Largest team
-      tenantDb(knex, context.tenant).table('team_members')
-        .select('team_id')
-        .count('* as size')
-        .groupBy('team_id')
-        .orderBy('size', 'desc')
-        .first()
+      this.activeMemberCountsByTeamQuery(knex, context.tenant, 'size')
     ]);
 
     const avgTeamSize = teamSizes.length > 0
       ? teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0) / teamSizes.length
       : 0;
+    const largestTeamSize = teamSizes.reduce(
+      (largest, t) => Math.max(largest, parseInt(t.size as string)),
+      0
+    );
 
     return {
       total_teams: parseInt(totalTeams?.count as string || '0'),
@@ -1911,7 +1950,7 @@ export class TeamService extends BaseService<ITeam> {
       teams_with_managers: parseInt(teamsWithMembers?.count as string || '0'),
       teams_with_members: parseInt(teamsWithMembers?.count as string || '0'),
       average_team_size: Math.round(avgTeamSize * 10) / 10,
-      largest_team_size: largestTeam ? parseInt(largestTeam.size as string) : 0,
+      largest_team_size: largestTeamSize,
       total_members: teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0),
       teams_by_department: {},
       teams_by_location: {},

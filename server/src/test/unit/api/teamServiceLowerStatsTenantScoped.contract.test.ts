@@ -22,7 +22,10 @@ describe('team service lower statistics tenant-scoped query contract', () => {
     expect(section).toContain('tenantDb(');
     expect(section).toContain(".table('teams')");
     expect(section).toContain(".table('teams as t')");
-    expect(section).toContain(".table('team_members')");
+    expect(section).toContain('joinActiveMemberCounts(teamsWithMembersQuery, knex, context.tenant, \'t\')');
+    expect(section).toContain("activeMemberCountsByTeamQuery(knex, context.tenant, 'size')");
+    expect(source).toContain(".table('team_members as tm')");
+    expect(source).toContain("tenantDb(knex, tenant).tenantJoinSubquery(");
 
     expect(section).not.toMatch(/knex\('(?:teams|teams as t|team_members)'\)\s*\./);
     expect(section).not.toMatch(/\.where\('t\.tenant', context\.tenant\)/);

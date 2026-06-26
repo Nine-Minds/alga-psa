@@ -119,17 +119,13 @@ export async function GET(req: NextRequest) {
 
     const tenantIds = tenants.map((tenant) => tenant.tenant);
 
+    const subscriptionQuery = adminDb
+      .unscoped('stripe_subscriptions as s', 'tenant management admin listing aggregates subscriptions across tenants');
+    adminDb.tenantJoin(subscriptionQuery, 'stripe_prices as p', 's.stripe_price_id', 'p.stripe_price_id', { type: 'left' });
+    adminDb.tenantJoin(subscriptionQuery, 'stripe_products as pr', 'p.stripe_product_id', 'pr.stripe_product_id', { type: 'left' });
+
     const subscriptionRows = tenantIds.length > 0
-      ? await adminDb
-          .unscoped('stripe_subscriptions as s', 'tenant management admin listing aggregates subscriptions across tenants')
-          .leftJoin('stripe_prices as p', function () {
-            this.on('s.tenant', '=', 'p.tenant')
-              .andOn('s.stripe_price_id', '=', 'p.stripe_price_id');
-          })
-          .leftJoin('stripe_products as pr', function () {
-            this.on('p.tenant', '=', 'pr.tenant')
-              .andOn('p.stripe_product_id', '=', 'pr.stripe_product_id');
-          })
+      ? await subscriptionQuery
           .whereIn('s.tenant', tenantIds)
           .whereIn('s.status', ['active', 'trialing', 'past_due', 'unpaid'])
           .select([

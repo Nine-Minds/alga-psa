@@ -24,10 +24,8 @@ async function isEmailAContact(email: string): Promise<boolean> {
   try {
     const contact = await tenantDb(db, TENANT_RECOVERY_DISCOVERY_CONTEXT)
       .unscoped('contacts', 'tenant discovery for client portal recovery contact email lookup')
-      .where({
-        'contacts.email': email.toLowerCase(),
-        'contacts.is_inactive': false
-      })
+      .where('contacts.email', email.toLowerCase())
+      .andWhere('contacts.is_inactive', false)
       .first();
 
     return !!contact;
@@ -43,24 +41,19 @@ async function isEmailAContact(email: string): Promise<boolean> {
 async function findClientUsersByEmail(email: string): Promise<Array<IUser & { client_name?: string }>> {
   const db = await getAdminConnection();
   try {
-    const users = await tenantDb(db, TENANT_RECOVERY_DISCOVERY_CONTEXT)
-      .unscoped<IUser>('users', 'tenant discovery for client portal recovery user email lookup')
-      .leftJoin(
-        tenantDb(db, TENANT_RECOVERY_DISCOVERY_CONTEXT)
-          .unscoped('tenants', 'tenant discovery for client portal recovery tenant name lookup')
-          .as('tenants'),
-        'users.tenant',
-        'tenants.tenant'
-      )
+    const discoveryDb = tenantDb(db, TENANT_RECOVERY_DISCOVERY_CONTEXT);
+    const usersQuery = discoveryDb
+      .unscoped<IUser>('users', 'tenant discovery for client portal recovery user email lookup');
+    discoveryDb.tenantJoin(usersQuery, 'tenants', 'users.tenant', 'tenants.tenant', { type: 'left' });
+
+    const users = await usersQuery
+      .where('users.email', email.toLowerCase())
+      .andWhere('users.user_type', 'client')
+      .andWhere('users.is_inactive', false)
       .select(
         'users.*',
         'tenants.client_name'
-      )
-      .where({
-        'users.email': email.toLowerCase(),
-        'users.user_type': 'client',
-        'users.is_inactive': false
-      });
+      ) as Array<IUser & { client_name?: string }>;
 
     return users;
   } catch (error) {

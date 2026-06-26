@@ -88,9 +88,11 @@ export async function GET(req: NextRequest) {
 
     const knex = await getAdminConnection();
 
-    let query = tenantDb(knex, '__tenant_deletion_admin_listing__')
-      .unscoped('pending_tenant_deletions as pd', 'tenant deletion admin listing spans all pending deletion rows')
-      .leftJoin('tenants as t', 'pd.tenant', 't.tenant')
+    const deletionDb = tenantDb(knex, '__tenant_deletion_admin_listing__');
+    let query = deletionDb
+      .unscoped('pending_tenant_deletions as pd', 'tenant deletion admin listing spans all pending deletion rows');
+    deletionDb.tenantJoin(query, 'tenants as t', 'pd.tenant', 't.tenant', { type: 'left' });
+    query = query
       .select([
         'pd.deletion_id',
         'pd.tenant',
