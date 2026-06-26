@@ -53,3 +53,11 @@ Working memory for the inventory-module build. Append continuously.
 - Returned/in-RMA/in-transit/on-loan units must be EXCLUDED from `quantity_on_hand` — easy to get wrong; covered by T007.
 - Materials already auto-bill; the stock hook must be idempotent on retry (T014/T152) and must reverse on unbilled-material delete.
 - Recurring contract billing must NOT decrement stock (T045) — stock is event-driven only.
+
+
+## Wave 1 (action layer) — risks to verify under test (DB-backed, wave 3)
+- **createAsset transaction boundary**: fulfillment/dropship call the `@alga-psa/assets` `createAsset` server action from INSIDE the inventory txn; it runs in its OWN txn, so an inventory rollback may leave an orphan asset. Revisit when testing asset linkage (T015/T016) — may need a trx-aware createAsset or compensating delete.
+- **Non-serialized allocation location attribution**: SO allocation doesn't persist which location it drew from; release drains reserved/held largest-first. Net counter correct (clamped at 0) but per-location attribution can drift under concurrency. Verify T009.
+- **Placeholder serials for "found" serialized adjustments** (`ADJ-<ts>-<i>`): uniqueness only checked at receive; low collision risk. Revisit if adjust-found is exercised.
+- **createAsset import path inconsistency**: fulfillment imports from `@alga-psa/assets/actions`, dropship from `@alga-psa/assets` — both typecheck; normalize later.
+- Whole wave is **typecheck-clean but behaviorally unverified** (no DB run yet). Wave 3 (45 pareto tests on the test-DB bootstrap) is the behavioral gate.
