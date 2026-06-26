@@ -63,4 +63,18 @@ describe('queryActions tenant-scoped query contract', () => {
     expect(createOrFindSection).not.toContain("trx('clients')");
     expect(createOrFindSection).not.toContain('tenant })');
   });
+
+  it('uses facade-derived tables for contact list indexed search joins', () => {
+    const searchSection = sectionBetween('export const searchContactListIds', 'export const getAllContacts');
+
+    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');");
+    expect(searchSection).toContain("const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'interaction_match');");
+    expect(searchSection).toContain("const noteContacts = tenantScopedDerivedTableSql(trx, tenant, 'contacts', 'note_contact');");
+    expect(searchSection).toContain("const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'document_contact_match');");
+    expect(searchSection).toContain('interaction_match.tenant = si.tenant');
+    expect(searchSection).toContain('note_contact.tenant = si.tenant');
+    expect(searchSection).toContain('document_contact_match.tenant = si.tenant');
+    expect(searchSection).not.toContain('FROM app_search_index si');
+    expect(searchSection).not.toContain('WHERE si.tenant = ?');
+  });
 });

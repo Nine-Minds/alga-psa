@@ -1,4 +1,6 @@
 exports.seed = async function(knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     // Use provided tenantId or seed all tenants
     let tenants;
     if (tenantId) {
@@ -247,8 +249,10 @@ exports.seed = async function(knex, tenantId) {
 
     // Process each tenant
     for (const { tenant } of tenants) {
+        const db = tenantDb(knex, tenant);
+
         // Check which permissions already exist
-        const existingPermissions = await knex('permissions').where({ tenant });
+        const existingPermissions = await db.table('permissions');
         const existingPermMap = new Map();
         existingPermissions.forEach(p => {
             const key = `${p.resource}:${p.action}:${p.msp ? 'msp' : 'client'}`;
@@ -272,7 +276,7 @@ exports.seed = async function(knex, tenantId) {
         }
 
         if (permissionsToInsert.length > 0) {
-            await knex('permissions').insert(permissionsToInsert);
+            await db.table('permissions').insert(permissionsToInsert);
             console.log(`Inserted ${permissionsToInsert.length} new permissions for tenant ${tenant}`);
         } else {
             console.log(`All permissions already exist for tenant ${tenant}`);

@@ -106,4 +106,19 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(deleteSection).not.toContain("trx('client_tax_settings')");
     expect(deleteSection).not.toContain("trx('document_block_content')");
   });
+
+  it('uses facade-derived tables for paginated client indexed search joins', () => {
+    const searchSection = sectionBetween('function applyClientListIndexedSearchFilter', 'function buildDefaultClientLocationSubquery');
+
+    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');");
+    expect(searchSection).toContain("const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'im');");
+    expect(searchSection).toContain("const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'da');");
+    expect(searchSection).toContain("const titleSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'clients', 'c2');");
+    expect(searchSection).toContain("const locationSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'client_locations', 'cl_search');");
+    expect(searchSection).toContain('ON im.tenant = si.tenant');
+    expect(searchSection).toContain('ON da.tenant = si.tenant');
+    expect(searchSection).toContain('sm.client_id = c.client_id AND sm.tenant = c.tenant');
+    expect(searchSection).not.toContain('FROM app_search_index si');
+    expect(searchSection).not.toContain('WHERE si.tenant = ?');
+  });
 });

@@ -6,6 +6,7 @@
  */
 
 import knex from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { parse } from 'ts-command-line-args';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -74,18 +75,21 @@ async function main() {
   try {
     console.log('🔍 Checking tenant_settings table...\n');
 
-    // Build query conditions
-    let query = db('tenant_settings');
-    
+    // Single-tenant mode uses the tenant facade. All-tenant mode intentionally remains
+    // a direct admin query because it updates every tenant_settings row.
+    const tenantSettingsTable = () =>
+      args.tenant
+        ? tenantDb(db, args.tenant).table('tenant_settings')
+        : db('tenant_settings');
+
     if (args.tenant) {
-      query = query.where('tenant', args.tenant);
       console.log(`📋 Targeting specific tenant: ${args.tenant}`);
     } else {
       console.log('📋 Targeting all tenants');
     }
 
     // Get current state
-    const currentRecords = await query.select('tenant', 'onboarding_skipped', 'onboarding_completed');
+    const currentRecords = await tenantSettingsTable().select('tenant', 'onboarding_skipped', 'onboarding_completed');
     
     if (currentRecords.length === 0) {
       console.log('⚠️  No tenant_settings records found');
@@ -131,15 +135,11 @@ async function main() {
     // Apply updates
     console.log('\n🔧 Updating tenant_settings records...');
     
-    const updateQuery = db('tenant_settings')
+    const updateQuery = tenantSettingsTable()
       .update({
         onboarding_skipped: true,
         updated_at: db.fn.now()
       });
-
-    if (args.tenant) {
-      updateQuery.where('tenant', args.tenant);
-    }
 
     // Only update records where onboarding_skipped is currently false
     updateQuery.where('onboarding_skipped', false);
@@ -150,9 +150,8 @@ async function main() {
     console.log('   All targeted tenants now have onboarding_skipped=true');
 
     // Verify the changes
-    const verifyRecords = await db('tenant_settings')
+    const verifyRecords = await tenantSettingsTable()
       .select('tenant', 'onboarding_skipped', 'updated_at')
-      .where(args.tenant ? { tenant: args.tenant } : {})
       .orderBy('updated_at', 'desc');
 
     console.log('\n📋 Final state verification:');

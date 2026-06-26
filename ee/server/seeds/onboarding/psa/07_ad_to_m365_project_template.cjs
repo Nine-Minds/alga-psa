@@ -387,7 +387,7 @@ function buildTemplateData(tenant, templateId, statusMappingsByName) {
  * Statuses are created by 06_project_task_statuses.cjs seed
  * @returns {Promise<{mappings: Array, mappingsByName: Map<string, string>}>}
  */
-async function getStatusMappings(knex, tenant, templateId) {
+async function getStatusMappings(db, tenant, templateId) {
   const statusMappings = [];
   const statusMappingsByName = new Map();
 
@@ -396,8 +396,8 @@ async function getStatusMappings(knex, tenant, templateId) {
     const statusColor = STATUS_COLORS[statusName];
 
     // Look up existing status by name (case-insensitive)
-    const status = await knex('statuses')
-      .where({ tenant, status_type: 'project_task' })
+    const status = await db.table('statuses')
+      .where({ status_type: 'project_task' })
       .whereRaw('LOWER(name) = LOWER(?)', [statusName])
       .first();
 
@@ -424,6 +424,8 @@ async function getStatusMappings(knex, tenant, templateId) {
 }
 
 exports.seed = async function (knex, tenantId) {
+  const { tenantDb } = await import('@alga-psa/db');
+
   // Use provided tenantId or fall back to first tenant
   if (!tenantId) {
     const tenant = await knex('tenants').select('tenant').first();
@@ -434,10 +436,11 @@ exports.seed = async function (knex, tenantId) {
     tenantId = tenant.tenant;
   }
 
+  const db = tenantDb(knex, tenantId);
+
   // Check if this template already exists for the tenant
-  const existing = await knex('project_templates')
+  const existing = await db.table('project_templates')
     .where({
-      tenant: tenantId,
       template_name: TEMPLATE_NAME
     })
     .first();
@@ -452,10 +455,10 @@ exports.seed = async function (knex, tenantId) {
 
   // Get status mappings (statuses created by 06_project_task_statuses.cjs)
   const { mappings: statusMappings, mappingsByName: statusMappingsByName } =
-    await getStatusMappings(knex, tenantId, templateId);
+    await getStatusMappings(db, tenantId, templateId);
 
   // Insert in correct order: template first, then status mappings, then phases, then tasks, then checklists
-  await knex('project_templates').insert({
+  await db.table('project_templates').insert({
     tenant: tenantId,
     template_id: templateId,
     template_name: TEMPLATE_NAME,
@@ -465,15 +468,15 @@ exports.seed = async function (knex, tenantId) {
     use_count: 0
   });
 
-  await knex('project_template_status_mappings').insert(statusMappings);
+  await db.table('project_template_status_mappings').insert(statusMappings);
 
   // Build and insert phases, tasks, and checklists
   const data = buildTemplateData(tenantId, templateId, statusMappingsByName);
 
-  await knex('project_template_phases').insert(data.phases);
-  await knex('project_template_tasks').insert(data.tasks);
+  await db.table('project_template_phases').insert(data.phases);
+  await db.table('project_template_tasks').insert(data.tasks);
   if (data.checklistItems && data.checklistItems.length > 0) {
-    await knex('project_template_checklist_items').insert(data.checklistItems);
+    await db.table('project_template_checklist_items').insert(data.checklistItems);
   }
 
   console.log(`Created AD to M365 project template for tenant ${tenantId}`);

@@ -123,17 +123,17 @@ async function summarizeTenant(tenant: string): Promise<SummaryMismatch[]> {
 
 async function collectNameDifferences(tenant: string): Promise<TemplateDiff[]> {
   const diffs: TemplateDiff[] = [];
+  const tenantFacade = tenantDb(db, tenant);
 
-  const legacyTemplates = await db('contracts')
-    .where({ tenant, is_template: true })
+  const legacyTemplates = await tenantFacade.table('contracts')
+    .where({ is_template: true })
     .select('contract_id', 'contract_name');
 
   const templateMap = new Map(
     legacyTemplates.map((tpl) => [tpl.contract_id, tpl.contract_name ?? null])
   );
 
-  const newTemplates = await db('contract_templates')
-    .where({ tenant })
+  const newTemplates = await tenantFacade.table('contract_templates')
     .select('template_id', 'template_name');
 
   for (const legacy of legacyTemplates) {

@@ -6,6 +6,7 @@ import type {
   EntityDependencyConfig,
   DeletionAlternative
 } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 
 function pluralizeLabel(label: string, count: number): string {
   if (count === 1) {
@@ -74,10 +75,8 @@ async function countDependency(
     return 0;
   }
 
-  // @alga-psa/core cannot import @alga-psa/db; callers can pass countQuery
-  // when a dependency check needs tenantDb-specific scoping.
-  const result = await trx(config.table)
-    .where({ tenant })
+  const result = await tenantDb(trx, tenant)
+    .table(config.table)
     .andWhere(config.foreignKey, entityId)
     .count<{ count: string }>('* as count')
     .first();

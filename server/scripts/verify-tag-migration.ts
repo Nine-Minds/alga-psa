@@ -112,15 +112,18 @@ async function verifyTagMigration() {
     
     // Old system query
     const oldStart = Date.now();
-    await knex('tags')
-      .where('tenant', sampleOldTags[0]?.tenant || '')
-      .where('tagged_type', 'ticket')
-      .select('*');
+    const sampleTenant = sampleOldTags[0]?.tenant;
+    if (sampleTenant) {
+      await tenantDb(knex, sampleTenant)
+        .unscoped('tags', 'legacy tag migration verification reads retired tags table')
+        .where('tenant', sampleTenant)
+        .where('tagged_type', 'ticket')
+        .select('*');
+    }
     const oldTime = Date.now() - oldStart;
     
     // New system query
     const newStart = Date.now();
-    const sampleTenant = sampleOldTags[0]?.tenant;
     if (sampleTenant) {
       const scopedDb = tenantDb(knex, sampleTenant);
       const newSystemQuery = scopedDb.table('tag_mappings as tm');

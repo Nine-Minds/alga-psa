@@ -19,6 +19,12 @@ interface IUserRoleWithOptionalTenant extends Omit<IUserRole, 'tenant'> {
   tenant?: string | null;
 }
 
+const USER_MODEL_DISCOVERY_TENANT = '__user_model_discovery__';
+const USER_DISCOVERY_BY_EMAIL_REASON = 'user discovery by email before tenant context exists';
+const USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON = 'user discovery by email and type before tenant context exists';
+const USER_PASSWORD_VERIFY_REASON = 'password verification by user id before tenant context exists';
+const USER_REGISTRATION_LOOKUP_REASON = 'registration lookup by user id before tenant context exists';
+
 const User = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive = false): Promise<IUser[]> => {
     const tenant = await requireTenantId(knexOrTrx);
@@ -43,7 +49,11 @@ const User = {
   findUserByEmail: async (email: string): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('*').where({ email: email.toLowerCase() }).first();
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_REASON)
+        .select('*')
+        .where({ email: email.toLowerCase() })
+        .first();
       return user;
     } catch (error) {
       logger.error(`Error finding user with email ${email}:`, error);
@@ -54,7 +64,8 @@ const User = {
   findUserByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users')
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON)
         .select('*')
         .where({ email: email.toLowerCase(), user_type: userType })
         .first();
@@ -281,7 +292,11 @@ const User = {
   verifyPassword: async (user_id: string, password: string): Promise<boolean> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('hashed_password').where({ user_id }).first();
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_PASSWORD_VERIFY_REASON)
+        .select('hashed_password')
+        .where({ user_id })
+        .first();
       if (!user?.hashed_password) {
         return false;
       }
@@ -437,7 +452,11 @@ const User = {
   getForRegistration: async (user_id: string): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('*').where('user_id', user_id).first();
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_REGISTRATION_LOOKUP_REASON)
+        .select('*')
+        .where('user_id', user_id)
+        .first();
       return user;
     } catch (error) {
       logger.error(`Error getting user for registration with id ${user_id}:`, error);
