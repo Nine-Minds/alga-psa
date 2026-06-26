@@ -1,12 +1,19 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ITicketCategory, DeletionDependency, DeletionValidationResult } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 async function orderCategoriesHierarchically(categories: ITicketCategory[]): Promise<ITicketCategory[]> {
   // First separate parent categories and subcategories
@@ -45,9 +52,8 @@ export const getTicketCategories = withAuth(async (user, { tenant }) => {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get all categories ordered by name
-      const categories = await trx<ITicketCategory>('categories')
+      const categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
         .select('*')
-        .where('tenant', tenant!)
         .orderBy('category_name');
 
       // Order them hierarchically
@@ -72,9 +78,8 @@ export const createTicketCategory = withAuth(async (user, { tenant }, categoryNa
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if category with same name exists in the board
-    const existingCategory = await trx('categories')
+    const existingCategory = await tenantScopedTable(trx, 'categories', tenant)
       .where({
-        tenant,
         category_name: categoryName,
         board_id: boardId
       })
@@ -88,7 +93,7 @@ export const createTicketCategory = withAuth(async (user, { tenant }, categoryNa
       throw new Error("user is not logged in");
     }
 
-    const [newCategory] = await trx<ITicketCategory>('categories')
+    const [newCategory] = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
       .insert({
         tenant,
         category_name: categoryName.trim(),
@@ -141,11 +146,13 @@ export const updateTicketCategory = withAuth(async (user, { tenant }, categoryId
     try {
     // Check if new name conflicts with existing category in the same board
     if (categoryData.category_name) {
-      const existingCategory = await trx('categories')
+      const categoryForBoard = await tenantScopedTable(trx, 'categories', tenant)
+        .where({ category_id: categoryId })
+        .first();
+      const existingCategory = await tenantScopedTable(trx, 'categories', tenant)
         .where({
-          tenant,
           category_name: categoryData.category_name,
-          board_id: categoryData.board_id || (await trx('categories').where({ category_id: categoryId }).first()).board_id
+          board_id: categoryData.board_id || categoryForBoard?.board_id
         })
         .whereNot('category_id', categoryId)
         .first();
@@ -159,9 +166,8 @@ export const updateTicketCategory = withAuth(async (user, { tenant }, categoryId
       throw new Error("user is not logged in");
     }
 
-    const [updatedCategory] = await trx<ITicketCategory>('categories')
+    const [updatedCategory] = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
       .where({
-        tenant,
         category_id: categoryId
       })
       .update(categoryData)
@@ -192,6 +198,17 @@ export interface BoardCategoryData {
   };
 }
 
+type BoardCategoryConfigRow = {
+  category_type?: 'custom' | 'itil' | null;
+  priority_type?: 'custom' | 'itil' | null;
+  display_itil_impact?: boolean | null;
+  display_itil_urgency?: boolean | null;
+};
+
+type MaxDisplayOrderRow = {
+  max: number | string | null;
+};
+
 export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boardId: string): Promise<BoardCategoryData> => {
   if (!boardId) {
     throw new Error('Board ID is required');
@@ -201,8 +218,7 @@ export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boa
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get board configuration
-      const board = await trx('boards')
-        .where('tenant', tenant!)
+      const board = await tenantScopedTable<BoardCategoryConfigRow>(trx, 'boards', tenant)
         .where('board_id', boardId)
         .select('category_type', 'priority_type', 'display_itil_impact', 'display_itil_urgency')
         .first();
@@ -220,18 +236,16 @@ export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boa
 
       // Fetch categories for this board from tenant's categories table
       // (ITIL categories are copied to tenant table when board is configured for ITIL)
-      let categories;
+      let categories: ITicketCategory[];
 
       if (boardConfig.category_type === 'itil') {
         // For ITIL boards, get all ITIL categories regardless of which board they were created for
-        categories = await trx('categories')
-          .where('tenant', tenant!)
+        categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
           .where('is_from_itil_standard', true)
           .orderBy('category_name');
       } else {
         // For custom boards, get categories specific to this board
-        categories = await trx('categories')
-          .where('tenant', tenant!)
+        categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
           .where('board_id', boardId)
           .orderBy('category_name');
       }
@@ -254,8 +268,7 @@ export const getAllCategories = withAuth(async (_user, { tenant }): Promise<ITic
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const categories = await trx<ITicketCategory>('categories')
-        .where('tenant', tenant!)
+      const categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
         .select('category_id', 'category_name', 'display_order', 'parent_category', 'board_id')
         .orderBy('display_order', 'asc');
 
@@ -285,23 +298,22 @@ export const createCategory = withAuth(async (user, { tenant }, data: {
       if (displayOrder === undefined || displayOrder === 0) {
         if (data.parent_category) {
           // For subcategories, get max order within the parent
-          const maxOrder = await trx('categories')
-            .where({ tenant, parent_category: data.parent_category })
+          const maxOrder = await tenantScopedTable(trx, 'categories', tenant)
+            .where({ parent_category: data.parent_category })
             .max('display_order as max')
-            .first();
-          displayOrder = (maxOrder?.max || 0) + 1;
+            .first() as MaxDisplayOrderRow | undefined;
+          displayOrder = Number(maxOrder?.max || 0) + 1;
         } else {
           // For parent categories
-          const maxOrder = await trx('categories')
-            .where({ tenant })
+          const maxOrder = await tenantScopedTable(trx, 'categories', tenant)
             .whereNull('parent_category')
             .max('display_order as max')
-            .first();
-          displayOrder = (maxOrder?.max || 0) + 1;
+            .first() as MaxDisplayOrderRow | undefined;
+          displayOrder = Number(maxOrder?.max || 0) + 1;
         }
       }
 
-      const [newCategory] = await trx('categories')
+      const [newCategory] = await tenantScopedTable(trx, 'categories', tenant)
         .insert({
           category_name: data.category_name,
           display_order: displayOrder,
@@ -310,7 +322,7 @@ export const createCategory = withAuth(async (user, { tenant }, data: {
           tenant,
           created_by: user.user_id
         })
-        .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']);
+        .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']) as ITicketCategory[];
 
       await publishEvent({
         eventType: 'CATEGORY_CREATED',
@@ -346,8 +358,8 @@ export const updateCategory = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if this is a parent category and board is being changed
-      const currentCategory = await trx('categories')
-        .where({ category_id: categoryId, tenant })
+      const currentCategory = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
+        .where({ category_id: categoryId })
         .first();
 
       if (!currentCategory) {
@@ -355,15 +367,15 @@ export const updateCategory = withAuth(async (
       }
 
       // Update the category
-      const [updatedCategory] = await trx('categories')
-        .where({ category_id: categoryId, tenant })
+      const [updatedCategory] = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
+        .where({ category_id: categoryId })
         .update(data)
         .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']);
 
       // If this is a parent category and board_id was changed, update all subcategories
       if (!currentCategory.parent_category && data.board_id && data.board_id !== currentCategory.board_id) {
-        await trx('categories')
-          .where({ parent_category: categoryId, tenant })
+        await tenantScopedTable(trx, 'categories', tenant)
+          .where({ parent_category: categoryId })
           .update({ board_id: data.board_id });
       }
 
@@ -396,11 +408,11 @@ async function collectAllSubcategoryIds(
   parentId: string,
   tenant: string
 ): Promise<string[]> {
-  const directChildren = await trx('categories')
-    .where({ tenant, parent_category: parentId })
-    .select('category_id');
+  const directChildren = await tenantScopedTable(trx, 'categories', tenant)
+    .where({ parent_category: parentId })
+    .select('category_id') as Array<{ category_id: string }>;
 
-  const childIds = directChildren.map((c: { category_id: string }) => c.category_id);
+  const childIds = directChildren.map((c) => c.category_id);
 
   // Recursively collect grandchildren
   const allDescendantIds: string[] = [];
@@ -431,8 +443,8 @@ async function validateCategoryDeletionInternal(
   tenant: string,
   categoryId: string
 ): Promise<DeletionValidationResult> {
-  const category = await trx('categories')
-    .where({ tenant, category_id: categoryId })
+  const category = await tenantScopedTable(trx, 'categories', tenant)
+    .where({ category_id: categoryId })
     .first();
 
   if (!category) {
@@ -446,8 +458,7 @@ async function validateCategoryDeletionInternal(
   }
 
   if (category.is_from_itil_standard) {
-    const itilBoardsResult = await trx('boards')
-      .where({ tenant })
+    const itilBoardsResult = await tenantScopedTable(trx, 'boards', tenant)
       .where('category_type', 'itil')
       .count('* as count')
       .first();
@@ -467,8 +478,7 @@ async function validateCategoryDeletionInternal(
   const allSubcategoryIds = await collectAllSubcategoryIds(trx, categoryId, tenant);
   const allCategoryIds = [categoryId, ...allSubcategoryIds];
 
-  const ticketCount = await trx('tickets')
-    .where({ tenant })
+  const ticketCount = await tenantScopedTable(trx, 'tickets', tenant)
     .where(function () {
       this.whereIn('category_id', allCategoryIds)
         .orWhereIn('subcategory_id', allCategoryIds);
@@ -567,14 +577,13 @@ export const deleteCategory = withAuth(async (
       const allSubcategoryIds = await collectAllSubcategoryIds(trx, categoryId, tenant);
 
       if (allSubcategoryIds.length > 0) {
-        await trx('categories')
-          .where({ tenant })
+        await tenantScopedTable(trx, 'categories', tenant)
           .whereIn('category_id', allSubcategoryIds)
           .delete();
       }
 
-      const deletedCount = await trx('categories')
-        .where({ tenant, category_id: categoryId })
+      const deletedCount = await tenantScopedTable(trx, 'categories', tenant)
+        .where({ category_id: categoryId })
         .delete();
 
       if (deletedCount === 0) {
@@ -610,8 +619,8 @@ export const deleteCategory = withAuth(async (
   }
 
   const result = await deleteEntityWithValidation('category', categoryId, db, tenant, async (trx, tenantId) => {
-    const deletedCount = await trx('categories')
-      .where({ tenant: tenantId, category_id: categoryId })
+    const deletedCount = await tenantScopedTable(trx, 'categories', tenantId)
+      .where({ category_id: categoryId })
       .delete();
 
     if (deletedCount === 0) {
