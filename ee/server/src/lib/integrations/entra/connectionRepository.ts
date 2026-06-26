@@ -16,7 +16,7 @@ export async function getActiveEntraPartnerConnection(
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
     const row = await tenantDb(knex, tenant).table('entra_partner_connections')
-      .where({ tenant, is_active: true })
+      .where({ is_active: true })
       .orderBy('updated_at', 'desc')
       .first();
 
@@ -43,7 +43,6 @@ export async function updateEntraConnectionValidation(
     const snapshot = params.snapshot || {};
     await db.table('entra_partner_connections')
       .where({
-        tenant: params.tenant,
         is_active: true,
         connection_type: params.connectionType,
       })
@@ -66,7 +65,6 @@ export async function disconnectActiveEntraConnection(
     const { knex } = await createTenantKnex();
     await tenantDb(knex, params.tenant).table('entra_partner_connections')
       .where({
-        tenant: params.tenant,
         is_active: true,
       })
       .update({

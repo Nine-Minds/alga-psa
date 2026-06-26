@@ -31,7 +31,7 @@ export const initiateEmailOAuth = withAuth(async (
     if (params.providerId) {
       const { knex } = await createTenantKnex();
       const exists = await tenantDb(knex, tenant).table('email_providers')
-        .where({ id: params.providerId, tenant })
+        .where({ id: params.providerId })
         .first();
       if (!exists) {
         return { success: false, error: 'Invalid providerId for tenant' };

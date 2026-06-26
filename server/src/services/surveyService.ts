@@ -444,7 +444,7 @@ async function loadTicket(
       'u.first_name as technician_first_name',
       'u.last_name as technician_last_name'
     )
-    .where({ 't.ticket_id': ticketId })
+    .where('t.ticket_id', ticketId)
     .first();
 }
 
@@ -461,10 +461,8 @@ async function loadContact(
 }
 
 async function loadTenant(knex: Knex | Knex.Transaction, tenantId: string): Promise<TenantRow | null> {
-  // Intentionally raw: tenants is the tenant registry lookup, not tenant-owned survey data.
-  const result = await knex<TenantRow>(TENANTS_TABLE)
+  const result = await tenantDb(knex, tenantId).table<TenantRow>(TENANTS_TABLE)
     .select('tenant', 'client_name')
-    .where('tenant', tenantId)
     .first();
   return result || null;
 }

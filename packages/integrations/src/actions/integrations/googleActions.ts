@@ -221,7 +221,7 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
 
     // Email providers: mark disconnected + clear tokens
     await db.table('email_providers')
-      .where({ tenant, provider_type: 'google' })
+      .where({ provider_type: 'google' })
       .update({
         status: 'disconnected',
         error_message: null,
@@ -229,7 +229,6 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
       });
 
     await db.table('google_email_provider_config')
-      .where({ tenant })
       .update({
         access_token: null,
         refresh_token: null,

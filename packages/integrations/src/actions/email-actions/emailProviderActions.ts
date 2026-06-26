@@ -140,7 +140,7 @@ async function getOrCreateProvider(
   if (providerId) {
     // Update existing provider by ID
     const providerRows = await providerTable()
-      .where({ id: providerId, tenant })
+      .where({ id: providerId })
       .update({
         provider_type: data.providerType,
         provider_name: data.providerName,
@@ -160,13 +160,13 @@ async function getOrCreateProvider(
   } else {
     // Check if provider already exists by mailbox
     const existingProvider = await providerTable()
-      .where({ tenant, mailbox: data.mailbox })
+      .where({ mailbox: data.mailbox })
       .first();
 
     if (existingProvider) {
       // Update existing provider
       const providerRows = await providerTable()
-        .where({ tenant, mailbox: data.mailbox })
+        .where({ mailbox: data.mailbox })
         .update({
           provider_type: data.providerType,
           provider_name: data.providerName,
@@ -570,7 +570,6 @@ export const getEmailProviders = withAuth(async (
   
   try {
     const providers = await db.table('email_providers')
-      .where({ tenant })
       .orderBy('created_at', 'desc')
       .select(PROVIDER_COLUMNS) as unknown as ProviderRow[];
 
@@ -578,7 +577,7 @@ export const getEmailProviders = withAuth(async (
     const providersWithConfig = await Promise.all(providers.map(async (provider): Promise<EmailProvider> => {
       if (provider.providerType === 'microsoft') {
         const msConfig = await db.table('microsoft_email_provider_config')
-          .where({ email_provider_id: provider.id, tenant })
+          .where({ email_provider_id: provider.id })
           .select(
             'email_provider_id',
             'tenant',
@@ -607,7 +606,7 @@ export const getEmailProviders = withAuth(async (
         }
       } else if (provider.providerType === 'google') {
         const googleConfig = await db.table('google_email_provider_config')
-          .where({ email_provider_id: provider.id, tenant })
+          .where({ email_provider_id: provider.id })
           .select(
             'email_provider_id',
             'tenant',
@@ -636,7 +635,7 @@ export const getEmailProviders = withAuth(async (
         }
       } else if (provider.providerType === 'imap') {
         const imapConfig = await db.table('imap_email_provider_config')
-          .where({ email_provider_id: provider.id, tenant })
+          .where({ email_provider_id: provider.id })
           .select(
             'email_provider_id',
             'tenant',
@@ -941,7 +940,7 @@ export const deleteEmailProvider = withAuth(async (
   
   try {
     const result = await db.table('email_providers')
-      .where({ id: providerId, tenant })
+      .where({ id: providerId })
       .delete();
 
     if (result === 0) {
@@ -963,7 +962,7 @@ export const resyncImapProvider = withAuth(async (
 
   try {
     const provider = await db.table('email_providers')
-      .where({ id: providerId, tenant, provider_type: 'imap' })
+      .where({ id: providerId, provider_type: 'imap' })
       .first();
 
     if (!provider) {
@@ -971,7 +970,7 @@ export const resyncImapProvider = withAuth(async (
     }
 
     await db.table('imap_email_provider_config')
-      .where({ email_provider_id: providerId, tenant })
+      .where({ email_provider_id: providerId })
       .update({
         uid_validity: null,
         last_uid: null,
@@ -984,7 +983,7 @@ export const resyncImapProvider = withAuth(async (
       });
 
     await db.table('email_providers')
-      .where({ id: providerId, tenant })
+      .where({ id: providerId })
       .update({
         status: 'disconnected',
         error_message: null,
@@ -1012,7 +1011,7 @@ export const testEmailProviderConnection = withAuth(async (
   
   try {
     const provider = await db.table('email_providers')
-      .where({ id: providerId, tenant })
+      .where({ id: providerId })
       .first();
 
     if (!provider) {
@@ -1021,7 +1020,7 @@ export const testEmailProviderConnection = withAuth(async (
 
     if (provider.provider_type === 'imap') {
       const config = await db.table('imap_email_provider_config')
-        .where({ email_provider_id: providerId, tenant })
+        .where({ email_provider_id: providerId })
         .first();
 
       if (!config) {
@@ -1064,7 +1063,7 @@ export const testEmailProviderConnection = withAuth(async (
           const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
           await db.table('imap_email_provider_config')
-            .where({ email_provider_id: providerId, tenant })
+            .where({ email_provider_id: providerId })
             .update({
               access_token: accessToken,
               token_expires_at: expiresAt,
@@ -1107,7 +1106,7 @@ export const testEmailProviderConnection = withAuth(async (
     }
 
     await db.table('email_providers')
-      .where({ id: providerId, tenant })
+      .where({ id: providerId })
       .update({
         status: 'connected',
         last_sync_at: knex.fn.now(),
@@ -1171,7 +1170,7 @@ export const runMicrosoft365Diagnostics = withAuth(async (
     }
 
     const provider = await db.table('email_providers')
-      .where({ id: providerId, tenant })
+      .where({ id: providerId })
       .first();
 
     if (!provider) {
@@ -1183,7 +1182,7 @@ export const runMicrosoft365Diagnostics = withAuth(async (
     }
 
     const vendorConfig = await db.table('microsoft_email_provider_config')
-      .where({ email_provider_id: providerId, tenant })
+      .where({ email_provider_id: providerId })
       .first();
 
     const baseUrl = getWebhookBaseUrl();

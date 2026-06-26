@@ -98,7 +98,6 @@ async function calculatePeriod(
 
     const clientPlan = await clientPlanQuery
         .where('cc.client_id', clientId)
-        .andWhere('cc.tenant', tenant)
         .andWhere('cc.is_active', true)
         .andWhere('cc.start_date', '<=', targetDateISO) // Plan must start on or before the target date
         .andWhere(function() {
@@ -141,7 +140,6 @@ async function calculatePeriod(
 
     const conflictingClientPlan = await conflictingClientPlanQuery
         .where('cc.client_id', clientId)
-        .andWhere('cc.tenant', tenant)
         .andWhere('cc.is_active', true)
         .andWhere('cc.start_date', '<=', targetDateISO)
         .andWhere(function() {
@@ -175,7 +173,6 @@ async function calculatePeriod(
 
     const matchingRecurringServicePeriod = await db.table('recurring_service_periods')
         .where({
-            tenant,
             obligation_type: recurringObligation.obligationType,
             obligation_id: recurringObligation.obligationId,
         })
@@ -312,7 +309,6 @@ export async function findOrCreateCurrentBucketUsageRecord(
     // 2. Find Existing Record for the Calculated Period
     const existingRecord = await db.table('bucket_usage')
         .where({
-            tenant: tenant,
             client_id: clientId,
             service_catalog_id: serviceCatalogId,
             period_start: periodStartISO,
@@ -330,7 +326,6 @@ export async function findOrCreateCurrentBucketUsageRecord(
     // First, get the contract_line_service_configuration to find the config_id
     const planServiceConfig = await db.table('contract_line_service_configuration')
         .where({
-            tenant: tenant,
             contract_line_id: planId,
             service_id: serviceCatalogId,
         })
@@ -342,7 +337,6 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     const bucketConfig = await db.table('contract_line_service_bucket_config')
         .where({
-            tenant: tenant,
             config_id: planServiceConfig.config_id,
         })
         .first<IContractLineServiceBucketConfigLocal | undefined>();
@@ -364,7 +358,6 @@ export async function findOrCreateCurrentBucketUsageRecord(
             if (source === 'recurring_service_period' && recurringScheduleKey) {
                 const previousRecurringServicePeriod = await db.table('recurring_service_periods')
                     .where({
-                        tenant,
                         schedule_key: recurringScheduleKey,
                     })
                     .whereNotNull('service_period_start')
@@ -431,7 +424,6 @@ export async function findOrCreateCurrentBucketUsageRecord(
         // Find the usage record for the previous period
         const previousRecord = await db.table('bucket_usage')
             .where({
-                tenant: tenant,
                 client_id: clientId,
                 service_catalog_id: serviceCatalogId,
                 period_start: prevPeriodStartISO,
@@ -519,7 +511,6 @@ export async function updateBucketUsageMinutes(
 
     const currentUsage = await currentUsageQuery
         .where('bu.usage_id', bucketUsageId)
-        .andWhere('bu.tenant', tenant)
         .select(
             'bu.minutes_used',
             'bu.rolled_over_minutes',
@@ -540,7 +531,6 @@ export async function updateBucketUsageMinutes(
     const updateCount = await db.table('bucket_usage')
         .where({
             usage_id: bucketUsageId,
-            tenant: tenant,
         })
         .update({
             minutes_used: newMinutesUsed,
@@ -588,7 +578,6 @@ export async function reconcileBucketUsageRecord(
 
    const usageRecord = await usageRecordQuery
        .where('bu.usage_id', bucketUsageId)
-       .andWhere('bu.tenant', tenant)
        .select(
            'bu.client_id',
            'bu.service_catalog_id',
@@ -615,7 +604,6 @@ export async function reconcileBucketUsageRecord(
    // 3. Sum Billable Time Entries (billable_duration is in minutes)
    const timeEntrySumResult = await db.table('time_entries')
        .where({
-           tenant: tenant,
            client_id: client_id,
            service_id: service_catalog_id,
            is_billable: true,
@@ -631,7 +619,6 @@ export async function reconcileBucketUsageRecord(
    // 4. Sum Billable Usage Tracking (assuming 1 quantity = 1 minute)
    const usageTrackingSumResult = await db.table('usage_tracking')
        .where({
-           tenant: tenant,
            client_id: client_id,
            service_id: service_catalog_id,
            is_billable: true,
@@ -655,7 +642,6 @@ export async function reconcileBucketUsageRecord(
    const updateCount = await db.table('bucket_usage')
        .where({
            usage_id: bucketUsageId,
-           tenant: tenant,
        })
        .update({
            minutes_used: totalMinutesUsed,

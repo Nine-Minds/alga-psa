@@ -74,6 +74,8 @@ async function countDependency(
     return 0;
   }
 
+  // @alga-psa/core cannot import @alga-psa/db; callers can pass countQuery
+  // when a dependency check needs tenantDb-specific scoping.
   const result = await trx(config.table)
     .where({ tenant })
     .andWhere(config.foreignKey, entityId)

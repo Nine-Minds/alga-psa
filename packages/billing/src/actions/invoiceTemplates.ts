@@ -45,8 +45,7 @@ export const getInvoiceTemplate = withAuth(async (
           'updated_at'
         )
         .where({
-          template_id: templateId,
-          tenant
+          template_id: templateId
         })
         .first();
 
@@ -178,8 +177,7 @@ export const setClientTemplate = withAuth(async (
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await tenantDb(trx, tenant).table('clients')
           .where({
-              client_id: clientId,
-              tenant
+              client_id: clientId
           })
           .update({ invoice_template_id: templateId });
     });
@@ -400,7 +398,6 @@ export const deleteInvoiceTemplate = withAuth(async (
             const tenantAssignment = await db.table('invoice_template_assignments')
                 .select('assignment_id')
                 .where({
-                    tenant,
                     scope_type: 'tenant',
                     template_source: 'custom',
                     invoice_template_id: templateId
@@ -412,7 +409,6 @@ export const deleteInvoiceTemplate = withAuth(async (
 
             await db.table('invoice_template_assignments')
                 .where({
-                    tenant,
                     template_source: 'custom',
                     invoice_template_id: templateId
                 })

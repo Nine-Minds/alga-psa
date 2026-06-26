@@ -64,7 +64,7 @@ export class AccountingMappingResolver {
 
     const serviceRow = await tenantDb(this.knex, tenantId).table('service_catalog')
       .select('category_id')
-      .where({ service_id: params.serviceId, tenant: tenantId })
+      .where({ service_id: params.serviceId })
       .first();
 
     if (serviceRow?.category_id) {
@@ -213,7 +213,6 @@ export class AccountingMappingResolver {
   ) {
     const query = tenantDb(this.knex, tenantId).table('tenant_external_entity_mappings')
       .where({
-        tenant: tenantId,
         integration_type: adapterType,
         alga_entity_type: entityType,
         alga_entity_id: entityId

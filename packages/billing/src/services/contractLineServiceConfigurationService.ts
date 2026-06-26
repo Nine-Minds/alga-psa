@@ -193,7 +193,7 @@ export class ContractLineServiceConfigurationService {
         case 'Bucket':
           // Fetch service default rate for defaulting
           const service = await tenantDb(trx, this.tenant).table('service_catalog')
-            .where({ service_id: baseConfig.service_id, tenant: this.tenant })
+            .where({ service_id: baseConfig.service_id })
             .select('default_rate')
             .first();
           const serviceDefaultRate = service?.default_rate;

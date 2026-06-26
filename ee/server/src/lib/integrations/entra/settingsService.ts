@@ -37,7 +37,6 @@ export async function getEntraUserFilterSettings(
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
     const row = await tenantDb(knex, tenant).table('entra_sync_settings')
-      .where({ tenant })
       .first(['user_filter_config']);
 
     return {

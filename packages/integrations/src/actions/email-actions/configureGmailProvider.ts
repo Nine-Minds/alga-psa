@@ -72,7 +72,6 @@ export async function configureGmailProvider({
         const config = await db.table('google_email_provider_config')
           .select('pubsub_initialised_at')
           .where('email_provider_id', providerId)
-          .andWhere('tenant', tenant)
           .first() as GoogleEmailProviderConfig | undefined;
 
         if (config?.pubsub_initialised_at) {
@@ -126,7 +125,6 @@ export async function configureGmailProvider({
       const db = tenantDb(knex, tenant);
       await db.table('google_email_provider_config')
         .where('email_provider_id', providerId)
-        .andWhere('tenant', tenant)
         .update({
           pubsub_initialised_at: knex.fn.now()
         });
@@ -139,13 +137,11 @@ export async function configureGmailProvider({
         const baseProvider = await db.table('email_providers')
           .select('*')
           .where('id', providerId)
-          .andWhere('tenant', tenant)
           .first();
 
         const googleConfig = await db.table('google_email_provider_config')
           .select('*')
           .where('email_provider_id', providerId)
-          .andWhere('tenant', tenant)
           .first() as GoogleEmailProviderConfig;
 
         if (!baseProvider || !googleConfig) {
@@ -213,7 +209,6 @@ export async function configureGmailProvider({
         // Update the main provider's last_sync_at to reflect successful configuration
         await db.table('email_providers')
           .where('id', providerId)
-          .andWhere('tenant', tenant)
           .update({
             last_sync_at: knex.fn.now(),
             updated_at: knex.fn.now()

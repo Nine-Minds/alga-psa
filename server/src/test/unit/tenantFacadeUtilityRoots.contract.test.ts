@@ -41,4 +41,28 @@ describe('utility and API tenant facade roots', () => {
 
     expect(metadataSource).toContain("online_meetings: { scope: 'tenant' }");
   });
+
+  it('routes outbound webhook model roots through tenantDb', () => {
+    const source = read('server/src/lib/webhooks/webhookModel.ts');
+
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
+    expect(source).toContain('tenantDb(knex, tenant).table(WEBHOOKS_TABLE)');
+    expect(source).toContain('tenantDb(knex, input.tenant).table(WEBHOOKS_TABLE)');
+    expect(source).toContain('tenantDb(knex, input.tenant).table(WEBHOOK_DELIVERIES_TABLE)');
+    expect(source).toContain('const db = tenantDb(knex, tenant);');
+    expect(source).not.toContain('knex(WEBHOOKS_TABLE)');
+    expect(source).not.toContain('knex(WEBHOOK_DELIVERIES_TABLE)');
+  });
+
+  it('routes extension gateway registry roots through tenantDb', () => {
+    const source = read('server/src/lib/extensions/gateway/registry.ts');
+
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
+    expect(source).toContain('tenantDb(knex, tenantId)');
+    expect(source).toContain(".table('tenant_extension_install as ti')");
+    expect(source).toContain('tenantDb(knex, install.tenant_id)');
+    expect(source).toContain(".table('extension_bundle as eb')");
+    expect(source).not.toContain(".from({ ti: 'tenant_extension_install' })");
+    expect(source).not.toContain(".from({ eb: 'extension_bundle' })");
+  });
 });

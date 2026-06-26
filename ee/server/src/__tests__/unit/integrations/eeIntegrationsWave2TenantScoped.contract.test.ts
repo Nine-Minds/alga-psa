@@ -185,6 +185,23 @@ describe('EE integrations wave 2 tenant facade contract', () => {
     ]);
   });
 
+  it('routes legacy extension registry tenant roots through tenantDb', () => {
+    const registry = read('ee/server/src/lib/extensions/registry.ts');
+
+    expect(registry).toContain("return tenantDb(this.knex, tenantId).table(table);");
+    expect(registry).toContain("this.tenantTable(options.tenant_id, 'extensions')");
+    expect(registry).toContain("this.tenantTable(options.tenant_id, 'extension_settings')");
+    expect(registry).toContain("unscoped('extensions', 'getAllExtensions supports tenantless extension listing')");
+    expect(registry).toContain('extension_permissions is parent-scoped by extension_id and has no');
+    expect(registry).not.toMatch(/\.where\(\{[\s\S]{0,160}tenant_id:\s*options\.tenant_id/);
+    expect(registry).not.toMatch(/\.where\(\{[\s\S]{0,160}tenant_id:\s*tenantId/);
+    expectNoDirectRoots(registry, [
+      'extensions',
+      'extension_settings',
+      'extension_storage',
+    ]);
+  });
+
   it('routes remaining payment provider roots through tenantDb', () => {
     const paymentActions = read('ee/server/src/lib/actions/payment-actions.ts');
     const stripeProvider = read('ee/server/src/lib/payments/StripePaymentProvider.ts');

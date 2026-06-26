@@ -9,11 +9,17 @@ describe('search ACL visibility verifier tenant-scoped query contract', () => {
     expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedRoot<Row extends object>');
     expect(source).toContain('tenantDb(knex, user.tenant).table<Row>(tableExpression)');
-    expect(source).toContain("tenantDb(knex, user.tenant).tenantJoin(query, 'project_phases as pp'");
+    expect(source).toContain('.unscoped<Row>(tableExpression, SEARCH_ACL_MISSING_TENANT_REASON)');
+    expect(source).toContain("db.table<{ project_id: string }>('project_tasks as pt')");
+    expect(source).toContain("db.table<{ project_id: string }>('project_task_comments as ptc')");
     expect(source).toContain("db.tenantJoin(query, 'project_tasks as pt'");
     expect(source).toContain("db.tenantJoin(query, 'project_phases as pp'");
     expect(source).not.toContain("query.andWhere('tenant', user.tenant)");
     expect(source).not.toContain("query.andWhere('pt.tenant', user.tenant)");
     expect(source).not.toContain("query.andWhere('ptc.tenant', user.tenant)");
+    expect(source).not.toContain("knex.ref('pt.tenant')");
+    expect(source).not.toContain("knex.ref('ptc.tenant')");
+    expect(source).not.toContain(".join('project_tasks as pt'");
+    expect(source).not.toContain(".join('project_phases as pp'");
   });
 });

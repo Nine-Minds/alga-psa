@@ -92,9 +92,8 @@ export async function getSurveyInvitationForToken(token: string): Promise<Survey
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
 
-    await knex(SURVEY_INVITATIONS_TABLE)
+    await tenantDb(knex, tenant).table(SURVEY_INVITATIONS_TABLE)
       .where({
-        tenant,
         invitation_id: invitation.invitationId,
       })
       .whereNull('opened_at')
@@ -130,9 +129,9 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
     const { knex } = await createTenantKnex();
 
     return withTransaction(knex, async (trx) => {
-      const invitationRow = await trx<InvitationRow>(SURVEY_INVITATIONS_TABLE)
+      const db = tenantDb(trx, tenant);
+      const invitationRow = await db.table<InvitationRow>(SURVEY_INVITATIONS_TABLE)
         .where({
-          tenant,
           invitation_id: invitation.invitationId,
           survey_token_hash: hashedToken,
         })
@@ -150,7 +149,7 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
       const sentAt = invitationRow.sent_at ? toDate(invitationRow.sent_at) : null;
       const responseTimeSeconds = sentAt ? calculateSecondsBetween(sentAt, new Date()) : null;
 
-      const [responseRow] = await trx<ResponseRow>(SURVEY_RESPONSES_TABLE)
+      const [responseRow] = await db.table<ResponseRow>(SURVEY_RESPONSES_TABLE)
         .insert({
           tenant,
           template_id: invitation.templateId,
@@ -169,14 +168,13 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
         throw new Error('Failed to save survey response');
       }
 
-      await trx(SURVEY_INVITATIONS_TABLE)
-        .where({ tenant, invitation_id: invitation.invitationId })
+      await db.table(SURVEY_INVITATIONS_TABLE)
+        .where({ invitation_id: invitation.invitationId })
         .update({
           responded: true,
           responded_at: trx.fn.now(),
         });
 
-      const db = tenantDb(trx, tenant);
       const ticketQuery = db.table<TicketRow>(`${TICKETS_TABLE} as t`);
       db.tenantJoin(ticketQuery, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
         type: 'left',

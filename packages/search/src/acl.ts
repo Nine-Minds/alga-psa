@@ -66,6 +66,9 @@ export type SearchVisibilityVerifier<TRow extends SearchVisibilityRow = SearchVi
 ) => Promise<boolean>;
 
 const visibilityVerifiers = new Map<SearchObjectType, SearchVisibilityVerifier>();
+const SEARCH_ACL_MISSING_TENANT = '__search_acl_missing_tenant__';
+const SEARCH_ACL_MISSING_TENANT_REASON =
+  'search ACL verifier has no tenant principal and must fail closed';
 
 function emitAclDrift(row: SearchVisibilityRow, user: SearchAclPrincipal): void {
   const payload = {
@@ -231,7 +234,9 @@ function tenantScopedRoot<Row extends object>(
   tableExpression: string,
 ): Knex.QueryBuilder<Row, Row[]> {
   if (!user.tenant) {
-    return knex<Row, Row[]>(tableExpression);
+    return tenantDb(knex, SEARCH_ACL_MISSING_TENANT)
+      .unscoped<Row>(tableExpression, SEARCH_ACL_MISSING_TENANT_REASON)
+      .whereRaw('1 = 0');
   }
 
   return tenantDb(knex, user.tenant).table<Row>(tableExpression);
@@ -291,17 +296,15 @@ registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
 });
 
 registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
-  const query = tenantScopedRoot<{ project_id: string }>(knex, user, 'project_tasks as pt')
+  if (!user.tenant) return false;
+
+  const db = tenantDb(knex, user.tenant);
+  const query = db.table<{ project_id: string }>('project_tasks as pt')
     .select('pp.project_id')
     .where('pt.task_id', row.id)
     .first();
-  if (user.tenant) {
-    tenantDb(knex, user.tenant).tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
-  } else {
-    query
-      .join('project_phases as pp', 'pp.phase_id', 'pt.phase_id')
-      .where('pp.tenant', knex.ref('pt.tenant'));
-  }
+  db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+
   const task = await query;
   if (!task) return false;
   const clientId = await projectClientIdForProject(knex, user, task.project_id);
@@ -309,21 +312,16 @@ registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
 });
 
 registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row) => {
-  const query = tenantScopedRoot<{ project_id: string }>(knex, user, 'project_task_comments as ptc')
+  if (!user.tenant) return false;
+
+  const db = tenantDb(knex, user.tenant);
+  const query = db.table<{ project_id: string }>('project_task_comments as ptc')
     .select('pp.project_id')
     .where('ptc.task_comment_id', row.id)
     .first();
-  if (user.tenant) {
-    const db = tenantDb(knex, user.tenant);
-    db.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'ptc.task_id');
-    db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
-  } else {
-    query
-      .join('project_tasks as pt', 'pt.task_id', 'ptc.task_id')
-      .join('project_phases as pp', 'pp.phase_id', 'pt.phase_id')
-      .where('pt.tenant', knex.ref('ptc.tenant'))
-      .where('pp.tenant', knex.ref('pt.tenant'));
-  }
+  db.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'ptc.task_id');
+  db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+
   const comment = await query;
   if (!comment) return false;
   const clientId = await projectClientIdForProject(knex, user, comment.project_id);

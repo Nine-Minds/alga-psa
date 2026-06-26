@@ -24,7 +24,6 @@ export async function expandTeamsToUserIds(
   }
 
   const members = await tenantDb(trx, tenant).table('team_members')
-    .where({ tenant })
     .whereIn('team_id', teamIds)
     .select('user_id');
 
@@ -54,7 +53,7 @@ export async function resolveAppointmentApproverUserIds(
   const scopedDb = tenantDb(trx, tenant);
   if (preferredTechnicianId) {
     const userSetting = await scopedDb.table('availability_settings')
-      .where({ tenant, setting_type: 'user_hours', user_id: preferredTechnicianId })
+      .where({ setting_type: 'user_hours', user_id: preferredTechnicianId })
       .whereNotNull('config_json')
       .first();
 
@@ -68,7 +67,7 @@ export async function resolveAppointmentApproverUserIds(
   // Company-wide fallback.
   if (!config) {
     const generalSetting = await scopedDb.table('availability_settings')
-      .where({ tenant, setting_type: 'general_settings' })
+      .where({ setting_type: 'general_settings' })
       .whereNotNull('config_json')
       .first();
     config = (generalSetting?.config_json as ApproverConfigJson | undefined) ?? null;
@@ -83,7 +82,7 @@ export async function resolveAppointmentApproverUserIds(
   }
 
   const activeUsers = await scopedDb.table('users')
-    .where({ tenant, user_type: 'internal' })
+    .where({ user_type: 'internal' })
     .whereIn('user_id', candidateIds)
     .where(function (this: Knex.QueryBuilder) {
       this.where('is_inactive', false).orWhereNull('is_inactive');

@@ -230,8 +230,7 @@ const Invoice = {
     try {
       const invoice = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .first();
 
@@ -263,8 +262,7 @@ const Invoice = {
     try {
       const [updatedInvoice] = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .update(updateData)
         .returning('*');
@@ -403,8 +401,7 @@ const Invoice = {
         knexOrTrx.raw('CAST(credit_applied AS BIGINT) as credit_applied')
       )
       .where({
-        invoice_id: invoiceId,
-        tenant
+        invoice_id: invoiceId
       })
       .first();
 
@@ -452,8 +449,7 @@ const Invoice = {
           ) as location_address`)
         )
         .where({
-          'c.client_id': invoice.client_id,
-          'c.tenant': tenant
+          'c.client_id': invoice.client_id
         })
         .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
         .first() as unknown as Promise<InvoiceClientDetailsRow | undefined>,
@@ -476,7 +472,6 @@ const Invoice = {
           ) as location_address`)
         )
         .where({
-          'tc.tenant': tenant,
           'tc.is_default': true
         })
         .whereNull('tc.deleted_at')
@@ -748,8 +743,7 @@ const Invoice = {
     try {
       const [updatedItem] = await tenantScopedTable<IInvoiceCharge>(knexOrTrx, tenant, 'invoice_charges')
         .where({
-          item_id: itemId,
-          tenant
+          item_id: itemId
         })
         .update(updateData)
         .returning('*');
@@ -791,8 +785,7 @@ const Invoice = {
     try {
       const deleted = await tenantScopedTable(knexOrTrx, tenant, 'invoice_charges')
         .where({
-          item_id: itemId,
-          tenant
+          item_id: itemId
         })
         .del();
 
@@ -1081,7 +1074,6 @@ const Invoice = {
     const [updatedAnnotation] = await tenantScopedTable<InvoiceAnnotationRow>(knexOrTrx, tenant, 'invoice_annotations')
       .where({
         annotation_id: annotationId,
-        tenant,
       })
       .update(updateData)
       .returning('*');
@@ -1136,8 +1128,7 @@ const Invoice = {
     try {
       const [updatedInvoice] = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .update({
           status: 'sent',

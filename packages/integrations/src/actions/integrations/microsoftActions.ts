@@ -471,7 +471,7 @@ async function tenantHasLegacyMspSsoUsage(knex: any, tenant: string): Promise<bo
 
 async function tenantHasLegacyMicrosoftEmailUsage(knex: any, tenant: string): Promise<boolean> {
   const provider = await tenantDb(knex, tenant).table('email_providers')
-    .where({ tenant, provider_type: 'microsoft' })
+    .where({ provider_type: 'microsoft' })
     .first();
 
   return Boolean(provider);
@@ -1369,7 +1369,7 @@ export const resetMicrosoftProvidersToDisconnected = withAuth(async (
     const db = tenantDb(knex, tenant);
 
     await db.table('email_providers')
-      .where({ tenant, provider_type: 'microsoft' })
+      .where({ provider_type: 'microsoft' })
       .update({
         status: 'disconnected',
         error_message: null,
@@ -1377,7 +1377,6 @@ export const resetMicrosoftProvidersToDisconnected = withAuth(async (
       });
 
     await db.table('microsoft_email_provider_config')
-      .where({ tenant })
       .update({
         access_token: null,
         refresh_token: null,

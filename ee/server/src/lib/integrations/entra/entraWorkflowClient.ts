@@ -252,7 +252,6 @@ export async function getEntraSyncRunProgress(
     if (UUID_RE.test(runId)) {
       runRow = await db.table('entra_sync_runs')
         .where({
-          tenant: tenantId,
           run_id: runId,
         })
         .first();
@@ -260,7 +259,6 @@ export async function getEntraSyncRunProgress(
     if (!runRow) {
       runRow = await db.table('entra_sync_runs')
         .where({
-          tenant: tenantId,
           workflow_id: runId,
         })
         .orderBy('created_at', 'desc')
@@ -326,7 +324,6 @@ export async function getEntraSyncRunHistory(
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
     const rows = await tenantDb(knex, tenantId).table('entra_sync_runs')
-      .where({ tenant: tenantId })
       .orderBy('started_at', 'desc')
       .limit(Math.max(1, Math.min(50, Math.floor(limit || 10))))
       .select('*');

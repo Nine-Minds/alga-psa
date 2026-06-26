@@ -656,7 +656,13 @@ export class ContactService extends BaseService<IContact> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    await trx('contact_tags')
+    const contactTags = () =>
+      tenantDb(trx, context.tenant).unscoped(
+        'contact_tags',
+        'legacy contact tags table is not schema-backed tenant metadata'
+      );
+
+    await contactTags()
       .where({ contact_name_id: contactId, tenant: context.tenant })
       .delete();
 
@@ -664,7 +670,7 @@ export class ContactService extends BaseService<IContact> {
       return;
     }
 
-    await trx('contact_tags').insert(
+    await contactTags().insert(
       tags.map((tag) => ({
         contact_name_id: contactId,
         tag_name: tag,

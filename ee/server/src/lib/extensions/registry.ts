@@ -67,8 +67,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
       // Update existing extension
       const [updated] = await this.tenantTable(options.tenant_id, 'extensions')
         .where({
-          id: existingExtension.id,
-          tenant_id: options.tenant_id
+          id: existingExtension.id
         })
         .update({
           version: manifest.version,
@@ -121,8 +120,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
   ): Promise<Extension | null> {
     const extension = await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .first();
 
@@ -145,8 +143,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
   ): Promise<Extension | null> {
     const extension = await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        name,
-        tenant_id: options.tenant_id
+        name
       })
       .first();
 
@@ -167,9 +164,6 @@ export class ExtensionRegistry implements IExtensionRegistry {
     options: ExtensionInitOptions
   ): Promise<Extension[]> {
     const extensions = await this.tenantTable(options.tenant_id, 'extensions')
-      .where({
-        tenant_id: options.tenant_id
-      })
       .orderBy('name');
 
     return extensions.map((extension: any) => ({
@@ -212,8 +206,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     // Enable the extension
     await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .update({
         is_enabled: true,
@@ -255,8 +248,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     // Disable the extension
     await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .update({
         is_enabled: false,
@@ -299,8 +291,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     // This will cascade to permissions, files, storage, and settings
     await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .delete();
 
@@ -341,8 +332,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
       getSettings: async () => {
         const settings = await this.tenantTable(options.tenant_id, 'extension_settings')
           .where({
-            extension_id: id,
-            tenant_id: options.tenant_id
+            extension_id: id
           })
           .first();
 
@@ -494,10 +484,6 @@ export class ExtensionRegistry implements IExtensionRegistry {
       ? this.tenantTable(tenantId, 'extensions')
       : tenantDb(this.knex, '__extension_registry_all_extensions__')
         .unscoped('extensions', 'getAllExtensions supports tenantless extension listing');
-    
-    if (tenantId) {
-      query = query.where({ tenant_id: tenantId });
-    }
     
     const extensions = await query.orderBy('name');
     

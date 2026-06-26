@@ -1810,11 +1810,13 @@ export class PermissionRoleService extends BaseService<IRole> {
       // Check if audit log table exists first
       const tableExists = await trx.schema.hasTable('access_control_audit_log');
       if (tableExists) {
-        await trx('access_control_audit_log').insert({
-          audit_id: trx.raw('gen_random_uuid()'),
-          ...event,
-          timestamp: new Date().toISOString()
-        });
+        await tenantDb(trx, event.tenant)
+          .unscoped('access_control_audit_log', 'optional legacy RBAC audit table is not schema-backed tenant metadata')
+          .insert({
+            audit_id: trx.raw('gen_random_uuid()'),
+            ...event,
+            timestamp: new Date().toISOString()
+          });
       }
     } catch (error) {
       logger.error('Error logging audit event:', error);

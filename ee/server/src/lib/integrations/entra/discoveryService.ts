@@ -70,7 +70,6 @@ export async function discoverManagedTenantsForTenant(
       });
 
     return db.table('entra_managed_tenants')
-      .where({ tenant })
       .whereIn('entra_tenant_id', discoveredTenantIds)
       .orderBy('display_name', 'asc')
       .select('*');

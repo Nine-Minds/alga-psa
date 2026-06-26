@@ -124,7 +124,6 @@ export async function buildEntraMappingPreview(
 
     const [managedTenantRows, clientRows, inboundDomainRows] = await Promise.all([
       db.table('entra_managed_tenants')
-        .where({ tenant })
         .orderByRaw('coalesce(display_name, entra_tenant_id) asc')
         .select('*'),
       db.table('clients')

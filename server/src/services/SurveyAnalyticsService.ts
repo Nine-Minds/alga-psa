@@ -27,7 +27,7 @@ const SurveyAnalyticsService = {
     tenantId: string,
     filters?: SurveyDashboardFilters
   ): Promise<SurveyDashboardMetrics> {
-    const invitationsQuery = knex(`${INVITATIONS_TABLE} as si`).where('si.tenant', tenantId);
+    const invitationsQuery = tenantDb(knex, tenantId).table(`${INVITATIONS_TABLE} as si`);
     if (filters?.startDate) {
       invitationsQuery.andWhere('si.sent_at', '>=', filters.startDate);
     }
@@ -285,36 +285,37 @@ const SurveyAnalyticsService = {
     tenantId: string,
     clientId: string
   ): Promise<SurveyClientSatisfactionSummary | null> {
+    const db = tenantDb(knex, tenantId);
     const [clientRow, invitationCounts, responseCounts, averageRatingRow, lastResponseRow, trendRows] =
       await Promise.all([
-        knex(`${CLIENTS_TABLE} as c`)
+        db.table(`${CLIENTS_TABLE} as c`)
           .select('c.client_id', 'c.client_name')
-          .where({ 'c.tenant': tenantId, 'c.client_id': clientId })
+          .where('c.client_id', clientId)
           .first(),
-        knex(`${INVITATIONS_TABLE} as si`)
+        db.table(`${INVITATIONS_TABLE} as si`)
           .count<{ count: string }>('si.invitation_id as count')
-          .where({ 'si.tenant': tenantId, 'si.client_id': clientId })
+          .where('si.client_id', clientId)
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .count<{ count: string }>('sr.response_id as count')
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .avg<{ avg: string }>('sr.rating as avg')
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .select('sr.submitted_at')
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .orderBy('sr.submitted_at', 'desc')
           .first(),
-        knex(`${RESPONSES_TABLE} as sr`)
+        db.table(`${RESPONSES_TABLE} as sr`)
           .select(
             knex.raw("date_trunc('month', sr.submitted_at)::date as date"),
             knex.raw('AVG(sr.rating)::numeric as average_rating'),
             knex.raw('COUNT(sr.response_id) as response_count')
           )
-          .where({ 'sr.tenant': tenantId, 'sr.client_id': clientId })
+          .where('sr.client_id', clientId)
           .groupBy('date')
           .orderBy('date', 'asc'),
       ]);
@@ -347,9 +348,10 @@ const SurveyAnalyticsService = {
     tenantId: string,
     ticketId: string
   ): Promise<SurveyTicketSatisfactionSummary | null> {
-    const ticketRow = await knex(`${TICKETS_TABLE} as t`)
+    const db = tenantDb(knex, tenantId);
+    const ticketRow = await db.table(`${TICKETS_TABLE} as t`)
       .select('t.ticket_id', 't.ticket_number')
-      .where({ 't.tenant': tenantId, 't.ticket_id': ticketId })
+      .where('t.ticket_id', ticketId)
       .first();
 
     if (!ticketRow) {
@@ -357,14 +359,14 @@ const SurveyAnalyticsService = {
     }
 
     const [latestResponseRow, responseCountRow] = await Promise.all([
-      knex(`${RESPONSES_TABLE} as sr`)
+      db.table(`${RESPONSES_TABLE} as sr`)
         .select('sr.rating', 'sr.comment', 'sr.submitted_at')
-        .where({ 'sr.tenant': tenantId, 'sr.ticket_id': ticketId })
+        .where('sr.ticket_id', ticketId)
         .orderBy('sr.submitted_at', 'desc')
         .first(),
-      knex(`${RESPONSES_TABLE} as sr`)
+      db.table(`${RESPONSES_TABLE} as sr`)
         .count<{ count: string }>('sr.response_id as count')
-        .where({ 'sr.tenant': tenantId, 'sr.ticket_id': ticketId })
+        .where('sr.ticket_id', ticketId)
         .first(),
     ]);
 
@@ -425,7 +427,7 @@ function formatDateTime(value: unknown): string {
 }
 
 function baseResponseQuery(knex: Knex, tenantId: string, filters?: SurveyDashboardFilters) {
-  const query = knex(`${RESPONSES_TABLE} as sr`).where('sr.tenant', tenantId);
+  const query = tenantDb(knex, tenantId).table(`${RESPONSES_TABLE} as sr`);
 
   if (filters?.startDate) {
     query.andWhere('sr.submitted_at', '>=', filters.startDate);
