@@ -7,6 +7,8 @@ import { createTenant, createClient, createUser } from './testDataFactory';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
 
+const TEST_TENANT_DISCOVERY_FACADE_TENANT = '00000000-0000-0000-0000-000000000000';
+
 /**
  * Options for initializing test context
  */
@@ -165,7 +167,9 @@ export class TestContext {
       throw new Error('Test database connection not initialized');
     }
 
-    const tenantRecord = await this.rootDb('tenants').first();
+    const tenantRecord = await tenantDb(this.rootDb, TEST_TENANT_DISCOVERY_FACADE_TENANT)
+      .unscoped('tenants', 'test context base tenant discovery')
+      .first();
 
     if (tenantRecord?.tenant) {
       this.baseTenantId = tenantRecord.tenant as string;
@@ -280,7 +284,9 @@ export class TestContext {
 
   private async ensureBaseEntities(): Promise<void> {
     if (!this.tenantId) {
-      const tenant = await this.db('tenants').first();
+      const tenant = await tenantDb(this.db, TEST_TENANT_DISCOVERY_FACADE_TENANT)
+        .unscoped('tenants', 'test context transactional tenant discovery')
+        .first();
       this.tenantId = tenant?.tenant;
       TestContext.currentTenantId = this.tenantId;
     }

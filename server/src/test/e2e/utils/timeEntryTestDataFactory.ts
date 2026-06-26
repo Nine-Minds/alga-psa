@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { faker } from '@faker-js/faker';
+import { tenantDb } from '@alga-psa/db';
 import { computeWorkDateFields } from 'server/src/lib/utils/workDate';
 
 function toDateOnly(value: Date | string): string {
@@ -56,6 +57,10 @@ export interface TimePeriod {
 
 // TrackingSession interface removed - table doesn't exist
 
+function tenantTable(db: Knex, tenantId: string, table: string): Knex.QueryBuilder {
+  return tenantDb(db, tenantId).table(table);
+}
+
 export async function createTestTimeEntry(
   db: Knex, 
   tenantId: string,
@@ -92,7 +97,7 @@ export async function createTestTimeEntry(
     updated_at: overrides.updated_at || now
   };
 
-  const [entry] = await db('time_entries').insert(entryData).returning('*');
+  const [entry] = await tenantTable(db, tenantId, 'time_entries').insert(entryData).returning('*');
   return entry;
 }
 
@@ -105,8 +110,7 @@ export async function createTestService(
   let serviceTypeId = overrides.custom_service_type_id;
   if (!serviceTypeId) {
     // Check if a service type exists for this tenant
-    const existingType = await db('service_types')
-      .where({ tenant: tenantId })
+    const existingType = await tenantTable(db, tenantId, 'service_types')
       .first();
     
     if (existingType) {
@@ -121,7 +125,7 @@ export async function createTestService(
         is_active: true,
         order_number: 1
       };
-      await db('service_types').insert(typeData);
+      await tenantTable(db, tenantId, 'service_types').insert(typeData);
       serviceTypeId = typeData.id;
     }
   }
@@ -139,7 +143,7 @@ export async function createTestService(
     tax_rate_id: overrides.tax_rate_id || null
   };
 
-  const [service] = await db('service_catalog').insert(serviceData).returning('*');
+  const [service] = await tenantTable(db, tenantId, 'service_catalog').insert(serviceData).returning('*');
   return service;
 }
 
@@ -162,15 +166,15 @@ export async function createTestTimePeriod(
     updated_at: overrides.updated_at || now
   };
 
-  const [period] = await db('time_periods').insert(periodData).returning('*');
+  const [period] = await tenantTable(db, tenantId, 'time_periods').insert(periodData).returning('*');
   return period;
 }
 
 // createTestTrackingSession function removed - table doesn't exist
 
 export async function cleanupTestTimeEntries(db: Knex, tenantId: string): Promise<void> {
-  await db('time_entries').where({ tenant: tenantId }).delete();
-  await db('time_periods').where({ tenant: tenantId }).delete();
-  await db('service_catalog').where({ tenant: tenantId }).delete();
-  await db('service_types').where({ tenant: tenantId }).delete();
+  await tenantTable(db, tenantId, 'time_entries').delete();
+  await tenantTable(db, tenantId, 'time_periods').delete();
+  await tenantTable(db, tenantId, 'service_catalog').delete();
+  await tenantTable(db, tenantId, 'service_types').delete();
 }

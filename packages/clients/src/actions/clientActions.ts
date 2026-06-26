@@ -50,19 +50,52 @@ function tenantScopedTable(
 }
 
 function tenantScopedDerivedTableSql(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
+  facade: ReturnType<typeof tenantDb>,
   tableName: string,
   alias: string
-): { sql: string; bindings: Knex.RawBinding[] } {
-  const scoped = tenantDb(conn, tenant)
-    .table(tableName)
+): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
+  const subquery = facade
+    .subquery(tableName)
     .select('*')
-    .toSQL();
+    .as(alias);
+  const scoped = subquery.toSQL();
 
   return {
-    sql: `(${scoped.sql}) ${alias}`,
+    subquery,
+    sql: scoped.sql,
     bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: Knex | Knex.Transaction,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant join subquery SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
   };
 }
 
@@ -598,11 +631,37 @@ function applyClientListIndexedSearchFilter(
       : 'si.client_scope_id IS NULL';
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
   const ilikePattern = `%${rawSearch}%`;
-  const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
-  const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'im');
-  const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'da');
-  const titleSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'clients', 'c2');
-  const locationSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'client_locations', 'cl_search');
+  const scopedDb = tenantDb(trx, tenant);
+  const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
+  const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'im');
+  const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'da');
+  const titleSearchClients = tenantScopedDerivedTableSql(scopedDb, 'clients', 'c2');
+  const locationSearchClients = tenantScopedDerivedTableSql(scopedDb, 'client_locations', 'cl_search');
+  const interactionJoin = tenantJoinSubquerySql(
+    scopedDb,
+    trx,
+    interactions.subquery,
+    trx.raw('??::text', ['im.interaction_id']),
+    'si.object_id',
+    {
+      rootTenantColumn: 'si.tenant',
+      joinedTenantColumn: 'im.tenant',
+    }
+  );
+  const documentAssociationJoin = tenantJoinSubquerySql(
+    scopedDb,
+    trx,
+    documentAssociations.subquery,
+    trx.raw('??::text', ['da.document_id']),
+    'si.object_id',
+    {
+      rootTenantColumn: 'si.tenant',
+      joinedTenantColumn: 'da.tenant',
+      on: (join) => {
+        join.andOn('da.entity_type', '=', trx.raw("'client'"));
+      },
+    }
+  );
 
   // Citus cannot push down an OR that mixes correlated EXISTS across multiple
   // distributed tables (app_search_index, interactions, document_associations,
@@ -663,16 +722,14 @@ function applyClientListIndexedSearchFilter(
     SELECT im.client_id AS client_id, im.tenant
     FROM ${searchIndex.sql}
     ${qCte}
-    JOIN ${interactions.sql}
-      ON im.tenant = si.tenant
-     AND im.interaction_id::text = si.object_id
+    ${interactionJoin.sql}
     WHERE si.object_type = 'interaction'
       ${siFilters}
   `;
   const legBBindings: Knex.RawBinding[] = [
     ...searchIndex.bindings,
     ...qBindings,
-    ...interactions.bindings,
+    ...interactionJoin.bindings,
     ...siFilterBindings,
   ];
 
@@ -680,17 +737,14 @@ function applyClientListIndexedSearchFilter(
     SELECT da.entity_id::uuid AS client_id, da.tenant
     FROM ${searchIndex.sql}
     ${qCte}
-    JOIN ${documentAssociations.sql}
-      ON da.tenant = si.tenant
-     AND da.document_id::text = si.object_id
-     AND da.entity_type = 'client'
+    ${documentAssociationJoin.sql}
     WHERE si.object_type = 'document'
       ${siFilters}
   `;
   const legCBindings: Knex.RawBinding[] = [
     ...searchIndex.bindings,
     ...qBindings,
-    ...documentAssociations.bindings,
+    ...documentAssociationJoin.bindings,
     ...siFilterBindings,
   ];
 
@@ -732,8 +786,8 @@ function applyClientListIndexedSearchFilter(
     ilikePattern, ilikePattern, ilikePattern, ilikePattern,
   ];
 
-  const unionSql = `
-    INNER JOIN (
+  const searchMatchesSql = `
+    (
       SELECT DISTINCT client_id, tenant FROM (
         ${legA}
         UNION ALL
@@ -745,16 +799,28 @@ function applyClientListIndexedSearchFilter(
         UNION ALL
         ${legE}
       ) u
-    ) as sm ON sm.client_id = c.client_id AND sm.tenant = c.tenant
+    ) as sm
   `;
-
-  return baseQuery.joinRaw(unionSql, [
+  const searchMatchesBindings: Knex.RawBinding[] = [
     ...legABindings,
     ...legBBindings,
     ...legCBindings,
     ...legDBindings,
     ...legEBindings,
-  ] as unknown as Knex.Value[]);
+  ];
+  const searchMatchesJoin = tenantJoinSubquerySql(
+    scopedDb,
+    trx,
+    trx.raw(searchMatchesSql, searchMatchesBindings),
+    'sm.client_id',
+    'c.client_id',
+    {
+      rootTenantColumn: 'c.tenant',
+      joinedTenantColumn: 'sm.tenant',
+    }
+  );
+
+  return baseQuery.joinRaw(searchMatchesJoin.sql, searchMatchesJoin.bindings as unknown as Knex.Value[]);
 }
 
 function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {

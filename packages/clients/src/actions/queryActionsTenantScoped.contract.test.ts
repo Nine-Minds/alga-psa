@@ -67,13 +67,20 @@ describe('queryActions tenant-scoped query contract', () => {
   it('uses facade-derived tables for contact list indexed search joins', () => {
     const searchSection = sectionBetween('export const searchContactListIds', 'export const getAllContacts');
 
-    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');");
-    expect(searchSection).toContain("const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'interaction_match');");
-    expect(searchSection).toContain("const noteContacts = tenantScopedDerivedTableSql(trx, tenant, 'contacts', 'note_contact');");
-    expect(searchSection).toContain("const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'document_contact_match');");
-    expect(searchSection).toContain('interaction_match.tenant = si.tenant');
-    expect(searchSection).toContain('note_contact.tenant = si.tenant');
-    expect(searchSection).toContain('document_contact_match.tenant = si.tenant');
+    expect(searchSection).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');");
+    expect(searchSection).toContain("const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'interaction_match');");
+    expect(searchSection).toContain("const noteContacts = tenantScopedDerivedTableSql(scopedDb, 'contacts', 'note_contact');");
+    expect(searchSection).toContain("const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'document_contact_match');");
+    expect(searchSection).toContain('const interactionJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain('const noteContactJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain('const documentAssociationJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain("joinedTenantColumn: 'interaction_match.tenant'");
+    expect(searchSection).toContain("joinedTenantColumn: 'note_contact.tenant'");
+    expect(searchSection).toContain("joinedTenantColumn: 'document_contact_match.tenant'");
+    expect(searchSection).not.toMatch(/interaction_match\.tenant\s*=\s*si\.tenant/);
+    expect(searchSection).not.toMatch(/note_contact\.tenant\s*=\s*si\.tenant/);
+    expect(searchSection).not.toMatch(/document_contact_match\.tenant\s*=\s*si\.tenant/);
     expect(searchSection).not.toContain('FROM app_search_index si');
     expect(searchSection).not.toContain('WHERE si.tenant = ?');
   });

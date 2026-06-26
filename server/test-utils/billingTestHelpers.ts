@@ -357,7 +357,7 @@ async function ensureServiceType(
     return serviceTypeCache.get(cacheKey)!;
   }
 
-  const columns = await context.db('service_types').columnInfo();
+  const columns = await tenantTable(context, 'service_types').columnInfo();
   const tenantColumn = columns.tenant ? 'tenant' : columns.tenant_id ? 'tenant_id' : null;
   // Newer schemas dropped billing_method from service_types; key off the
   // generated name instead so the helper works on both shapes.
@@ -475,14 +475,14 @@ export async function createTestService(
     }
   }
 
-  const serviceCatalogColumns = await context.db('service_catalog').columnInfo();
+  const serviceCatalogColumns = await tenantTable(context, 'service_catalog').columnInfo();
 
   const hasCustomServiceTypeColumn = 'custom_service_type_id' in serviceCatalogColumns;
   const hasStandardServiceTypeColumn = 'standard_service_type_id' in serviceCatalogColumns;
 
   let resolvedCustomServiceTypeId: string | null = serviceTypeId;
   if (hasCustomServiceTypeColumn && resolvedCustomServiceTypeId) {
-    const typeExists = await context.db('service_types')
+    const typeExists = await tenantTable(context, 'service_types')
       .where({ id: resolvedCustomServiceTypeId })
       .first('id')
       .catch(() => null);
@@ -500,7 +500,7 @@ export async function createTestService(
 
   if (process.env.DEBUG_SERVICE_TYPES === 'true' && debugFlags.createServiceLogCount < 5) {
     const hasServiceTypesTable = await context.db.schema.hasTable('service_types');
-    const serviceTypesColumns = hasServiceTypesTable ? await context.db('service_types').columnInfo() : null;
+    const serviceTypesColumns = hasServiceTypesTable ? await tenantTable(context, 'service_types').columnInfo() : null;
     const hasStandardTable = await context.db.schema.hasTable('standard_service_types');
     const standardColumns = hasStandardTable ? await context.db('standard_service_types').columnInfo() : null;
     console.log('service_catalog columns', serviceCatalogColumns);

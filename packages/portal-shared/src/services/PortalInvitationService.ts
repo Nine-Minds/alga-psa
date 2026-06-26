@@ -417,7 +417,7 @@ export class PortalInvitationService {
           console.log(`Cleaned up ${deletedCount} expired portal invitation tokens for tenant ${tenant}`);
           
           // Log to audit_logs if needed
-          await tx('audit_logs').insert({
+          await tenantDb(tx, tenant).table('audit_logs').insert({
             audit_id: tx.raw('gen_random_uuid()'),
             tenant: tenant || '00000000-0000-0000-0000-000000000000',
             table_name: 'portal_invitations',

@@ -36,19 +36,52 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
 }
 
 function tenantScopedDerivedTableSql(
-  conn: DbConnection,
-  tenant: string,
+  facade: ReturnType<typeof tenantDb>,
   tableName: string,
   alias: string
-): { sql: string; bindings: Knex.RawBinding[] } {
-  const scoped = tenantDb(conn, tenant)
-    .table(tableName)
+): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
+  const subquery = facade
+    .subquery(tableName)
     .select('*')
-    .toSQL();
+    .as(alias);
+  const scoped = subquery.toSQL();
 
   return {
-    sql: `(${scoped.sql}) ${alias}`,
+    subquery,
+    sql: scoped.sql,
     bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: DbConnection,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant join subquery SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
   };
 }
 
@@ -421,10 +454,57 @@ export const searchContactListIds = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
-    const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'interaction_match');
-    const noteContacts = tenantScopedDerivedTableSql(trx, tenant, 'contacts', 'note_contact');
-    const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'document_contact_match');
+    const scopedDb = tenantDb(trx, tenant);
+    const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
+    const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'interaction_match');
+    const noteContacts = tenantScopedDerivedTableSql(scopedDb, 'contacts', 'note_contact');
+    const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'document_contact_match');
+    const interactionJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      interactions.subquery,
+      trx.raw('??::text', ['interaction_match.interaction_id']),
+      'si.object_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'si.tenant',
+        joinedTenantColumn: 'interaction_match.tenant',
+        on: (join) => {
+          join.andOn('si.object_type', '=', trx.raw("'interaction'"));
+        },
+      }
+    );
+    const noteContactJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      noteContacts.subquery,
+      trx.raw('??::text', ['note_contact.notes_document_id']),
+      'si.object_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'si.tenant',
+        joinedTenantColumn: 'note_contact.tenant',
+        on: (join) => {
+          join.andOn('si.object_type', '=', trx.raw("'document'"));
+        },
+      }
+    );
+    const documentAssociationJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      documentAssociations.subquery,
+      trx.raw('??::text', ['document_contact_match.document_id']),
+      'si.object_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'si.tenant',
+        joinedTenantColumn: 'document_contact_match.tenant',
+        on: (join) => {
+          join.andOn('si.object_type', '=', trx.raw("'document'"));
+          join.andOn('document_contact_match.entity_type', '=', trx.raw("'contact'"));
+        },
+      }
+    );
     const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(
       `
         WITH q AS (
@@ -443,19 +523,9 @@ export const searchContactListIds = withAuth(async (
             END AS contact_id
           FROM ${searchIndex.sql}
           CROSS JOIN q
-          LEFT JOIN ${interactions.sql}
-            ON si.object_type = 'interaction'
-            AND interaction_match.tenant = si.tenant
-            AND interaction_match.interaction_id::text = si.object_id
-          LEFT JOIN ${noteContacts.sql}
-            ON si.object_type = 'document'
-            AND note_contact.tenant = si.tenant
-            AND note_contact.notes_document_id::text = si.object_id
-          LEFT JOIN ${documentAssociations.sql}
-            ON si.object_type = 'document'
-            AND document_contact_match.tenant = si.tenant
-            AND document_contact_match.document_id::text = si.object_id
-            AND document_contact_match.entity_type = 'contact'
+          ${interactionJoin.sql}
+          ${noteContactJoin.sql}
+          ${documentAssociationJoin.sql}
           WHERE si.object_type = ANY(?::text[])
             AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
@@ -489,9 +559,9 @@ export const searchContactListIds = withAuth(async (
         rawSearch,
         identifier,
         ...searchIndex.bindings,
-        ...interactions.bindings,
-        ...noteContacts.bindings,
-        ...documentAssociations.bindings,
+        ...interactionJoin.bindings,
+        ...noteContactJoin.bindings,
+        ...documentAssociationJoin.bindings,
         [...CONTACT_LIST_SEARCH_TYPES],
         permissions,
         user.user_id,

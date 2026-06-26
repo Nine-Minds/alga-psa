@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 type BillingMethod = 'fixed' | 'hourly' | 'usage';
 
@@ -32,9 +33,10 @@ export async function ensureServiceType(
   }> = {}
 ): Promise<string> {
   const schemaBillingMethod = billingMethod === 'fixed' ? 'fixed' : 'usage';
+  const serviceTypes = () => tenantDb(db, tenantId).table('service_types');
 
-  const existing = await db<{ id: string }>('service_types')
-    .where({ tenant: tenantId, billing_method: schemaBillingMethod })
+  const existing = await serviceTypes()
+    .where({ billing_method: schemaBillingMethod })
     .first();
 
   if (existing?.id) {
@@ -42,8 +44,7 @@ export async function ensureServiceType(
   }
 
   const serviceTypeId = overrides.id ?? uuidv4();
-  const { max: existingMaxOrder } = (await db<{ max: number | null }>('service_types')
-    .where({ tenant: tenantId })
+  const { max: existingMaxOrder } = (await serviceTypes()
     .max('order_number as max')
     .first()) ?? { max: null };
 
@@ -62,7 +63,7 @@ export async function ensureServiceType(
     insertData.description = overrides.description;
   }
 
-  await db('service_types').insert(insertData);
+  await serviceTypes().insert(insertData);
   return serviceTypeId;
 }
 

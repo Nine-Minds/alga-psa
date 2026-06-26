@@ -110,14 +110,21 @@ describe('clientActions tenant-scoped query contract', () => {
   it('uses facade-derived tables for paginated client indexed search joins', () => {
     const searchSection = sectionBetween('function applyClientListIndexedSearchFilter', 'function buildDefaultClientLocationSubquery');
 
-    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');");
-    expect(searchSection).toContain("const interactions = tenantScopedDerivedTableSql(trx, tenant, 'interactions', 'im');");
-    expect(searchSection).toContain("const documentAssociations = tenantScopedDerivedTableSql(trx, tenant, 'document_associations', 'da');");
-    expect(searchSection).toContain("const titleSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'clients', 'c2');");
-    expect(searchSection).toContain("const locationSearchClients = tenantScopedDerivedTableSql(trx, tenant, 'client_locations', 'cl_search');");
-    expect(searchSection).toContain('ON im.tenant = si.tenant');
-    expect(searchSection).toContain('ON da.tenant = si.tenant');
-    expect(searchSection).toContain('sm.client_id = c.client_id AND sm.tenant = c.tenant');
+    expect(searchSection).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(searchSection).toContain("const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');");
+    expect(searchSection).toContain("const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'im');");
+    expect(searchSection).toContain("const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'da');");
+    expect(searchSection).toContain("const titleSearchClients = tenantScopedDerivedTableSql(scopedDb, 'clients', 'c2');");
+    expect(searchSection).toContain("const locationSearchClients = tenantScopedDerivedTableSql(scopedDb, 'client_locations', 'cl_search');");
+    expect(searchSection).toContain('const interactionJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain('const documentAssociationJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain('const searchMatchesJoin = tenantJoinSubquerySql(');
+    expect(searchSection).toContain("joinedTenantColumn: 'im.tenant'");
+    expect(searchSection).toContain("joinedTenantColumn: 'da.tenant'");
+    expect(searchSection).toContain("joinedTenantColumn: 'sm.tenant'");
+    expect(searchSection).not.toMatch(/im\.tenant\s*=\s*si\.tenant/);
+    expect(searchSection).not.toMatch(/da\.tenant\s*=\s*si\.tenant/);
+    expect(searchSection).not.toMatch(/sm\.client_id\s*=\s*c\.client_id\s+AND\s+sm\.tenant\s*=\s*c\.tenant/);
     expect(searchSection).not.toContain('FROM app_search_index si');
     expect(searchSection).not.toContain('WHERE si.tenant = ?');
   });

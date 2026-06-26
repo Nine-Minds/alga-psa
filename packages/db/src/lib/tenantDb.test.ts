@@ -33,6 +33,44 @@ describe('tenantDb facade', () => {
     );
   });
 
+  it('registers tenant deletion helper tables in metadata', () => {
+    for (const table of [
+      'vectors',
+      'gmail_processed_history',
+      'kb_article_relations',
+      'stripe_accounts',
+      'storage_configurations',
+      'provider_events',
+      'storage_providers',
+      'approval_thresholds',
+      'approval_levels',
+      'attribute_definitions',
+      'tenant_time_period_settings',
+      'time_period_types',
+      'email_rate_limits',
+      'email_templates',
+    ]) {
+      expect(tenantTableMetadata[table], table).toEqual({ scope: 'tenant' });
+    }
+
+    for (const table of [
+      'extension_event_subscription',
+      'extension_execution_log',
+      'extension_quota_usage',
+    ]) {
+      expect(tenantTableMetadata[table], table).toEqual({ scope: 'tenant', tenantColumn: 'tenant_id' });
+    }
+  });
+
+  it('scopes tenant_id table roots through metadata', () => {
+    const db = tenantDb(knex, 'tenant-1');
+    const query = db.table('extension_execution_log as eel').where('eel.request_id', 'request-1');
+
+    expect(query.toString()).toBe(
+      `select * from "extension_execution_log" as "eel" where "eel"."tenant_id" = 'tenant-1' and "eel"."request_id" = 'request-1'`
+    );
+  });
+
   it('returns a branded scoped query for safety-sensitive engines', () => {
     const db = tenantDb(knex, 'tenant-1');
     const query = db.scoped('tickets as t');

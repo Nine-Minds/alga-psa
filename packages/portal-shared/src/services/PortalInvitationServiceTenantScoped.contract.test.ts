@@ -50,7 +50,8 @@ describe('portal invitation service tenant-scoped query contract', () => {
   it('keeps token tenant discovery explicit and scopes tenant-known token work structurally', () => {
     const section = sectionBetween('static async verifyToken', 'static async markTokenAsUsed');
 
-    expect(section).toContain("const tokenInfo = await trx('portal_invitations')");
+    expect(section).toContain('const tokenInfo = await tenantDb(trx, PORTAL_INVITATION_TENANT_DISCOVERY)');
+    expect(section).toContain(".unscoped('portal_invitations', 'tenant discovery from portal invitation token')");
     expect(section).toContain("tenantDb(trx, tokenTenant).table('portal_invitations");
     expect(section).toContain(".table('portal_invitations as pi");
     expect(section).not.toContain(".where('pi.tenant', tokenTenant)");
@@ -63,9 +64,13 @@ describe('portal invitation service tenant-scoped query contract', () => {
     expect(section).toContain('tenantDb(knex, ');
     expect(section).toContain('tenantDb(tx, ');
     expect(section).toContain(".table('portal_invitations");
+    expect(section).toContain("tenantDb(tx, tenant).table('audit_logs').insert({");
+    expect(section).toContain("tenant: tenant || '00000000-0000-0000-0000-000000000000'");
 
     expect(section).not.toMatch(/trx\('portal_invitations'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('portal_invitations'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/tx\('portal_invitations'\)\s*[\r\n]+\s*\.where\('tenant', tenant\)/);
+    expect(section).not.toMatch(/\b(?:tx|trx|knex)\('audit_logs'\)/);
+    expect(section).not.toMatch(/\b(?:tx|trx|knex)\.raw\(\s*['"`][^'"`]*\baudit_logs\b/i);
   });
 });
