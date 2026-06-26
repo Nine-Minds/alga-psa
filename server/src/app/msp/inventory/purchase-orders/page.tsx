@@ -1,8 +1,8 @@
 import { listPurchaseOrders } from '@alga-psa/inventory/actions';
+import type { PurchaseOrderListRow } from '@alga-psa/inventory/actions';
 import { PurchaseOrdersManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
-import type { IPurchaseOrder } from '@alga-psa/types';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -21,7 +21,7 @@ export default async function PurchaseOrdersPage() {
     redirect('/auth/msp/signin');
   }
 
-  let initialPos: IPurchaseOrder[] = [];
+  let initialPos: PurchaseOrderListRow[] = [];
   try {
     initialPos = await listPurchaseOrders({});
   } catch (error) {

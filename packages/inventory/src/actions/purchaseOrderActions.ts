@@ -73,15 +73,57 @@ export const getPurchaseOrder = withAuth(
   },
 );
 
+/**
+ * A purchase order plus the per-PO line aggregates the list view needs — committed
+ * amount (the defining number of a PO), receive progress, and line count — so the grid
+ * can answer "how much money / how much still owed" without an N+1 drill-in per row.
+ */
+export type PurchaseOrderListRow = IPurchaseOrder & {
+  /** Σ(unit_cost × quantity_ordered) across lines, in integer cents (PO currency). */
+  total_amount: number;
+  qty_ordered: number;
+  qty_received: number;
+  line_count: number;
+};
+
 export const listPurchaseOrders = withAuth(
-  async (user, { tenant }, opts?: { status?: PurchaseOrderStatus; vendor_id?: string }): Promise<IPurchaseOrder[]> => {
+  async (user, { tenant }, opts?: { status?: PurchaseOrderStatus; vendor_id?: string }): Promise<PurchaseOrderListRow[]> => {
     await requirePoPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = trx('purchase_orders').where({ tenant });
-      if (opts?.status) q.andWhere({ status: opts.status });
-      if (opts?.vendor_id) q.andWhere({ vendor_id: opts.vendor_id });
-      return (await q.orderBy('order_date', 'desc')) as IPurchaseOrder[];
+      // Per-PO line rollup: committed dollar total and received/ordered progress.
+      const lineAgg = trx('purchase_order_lines')
+        .where({ tenant })
+        .groupBy('po_id')
+        .select('po_id')
+        .select(trx.raw('COALESCE(SUM(unit_cost * quantity_ordered), 0) as total_amount'))
+        .select(trx.raw('COALESCE(SUM(quantity_ordered), 0) as qty_ordered'))
+        .select(trx.raw('COALESCE(SUM(quantity_received), 0) as qty_received'))
+        .select(trx.raw('COUNT(*) as line_count'))
+        .as('la');
+
+      const q = trx('purchase_orders as po')
+        .leftJoin(lineAgg, 'la.po_id', 'po.po_id')
+        .where({ 'po.tenant': tenant });
+      if (opts?.status) q.andWhere({ 'po.status': opts.status });
+      if (opts?.vendor_id) q.andWhere({ 'po.vendor_id': opts.vendor_id });
+
+      const rows = await q
+        .select('po.*')
+        .select(trx.raw('COALESCE(la.total_amount, 0)::bigint as total_amount'))
+        .select(trx.raw('COALESCE(la.qty_ordered, 0)::int as qty_ordered'))
+        .select(trx.raw('COALESCE(la.qty_received, 0)::int as qty_received'))
+        .select(trx.raw('COALESCE(la.line_count, 0)::int as line_count'))
+        .orderBy('po.order_date', 'desc');
+
+      // pg returns bigint as a string; coerce the money/count fields to numbers.
+      return rows.map((r: any) => ({
+        ...r,
+        total_amount: Number(r.total_amount),
+        qty_ordered: Number(r.qty_ordered),
+        qty_received: Number(r.qty_received),
+        line_count: Number(r.line_count),
+      })) as PurchaseOrderListRow[];
     });
   },
 );

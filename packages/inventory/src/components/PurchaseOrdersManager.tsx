@@ -25,6 +25,7 @@ import {
   receivePoLine,
   listStockLocations,
   listVendors,
+  type PurchaseOrderListRow,
 } from '../actions';
 
 interface LineForm {
@@ -58,6 +59,18 @@ function formatDate(value?: string | Date | null): string {
   return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString();
 }
 
+/** Integer cents → a localized currency string in the PO's currency. */
+function money(cents: number, currency = 'USD'): string {
+  try {
+    return (cents / 100).toLocaleString('en-US', { style: 'currency', currency });
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`;
+  }
+}
+
+const NUM_HEADER = 'text-right';
+const NUM_CELL = 'text-right tabular-nums';
+
 /** Turn a raw enum value ("partially_received") into a sentence-case label ("Partially received"). */
 function humanize(value?: string | null): string {
   if (!value) return '';
@@ -83,8 +96,8 @@ function statusVariant(status: string) {
   }
 }
 
-export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrder[] }) {
-  const [pos, setPos] = useState<IPurchaseOrder[]>(initialPos || []);
+export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrderListRow[] }) {
+  const [pos, setPos] = useState<PurchaseOrderListRow[]>(initialPos || []);
   const [vendors, setVendors] = useState<IVendor[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -300,9 +313,24 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
     }
   };
 
-  const columns: ColumnDefinition<IPurchaseOrder>[] = [
-    { title: 'PO Number', dataIndex: 'po_number' },
+  const columns: ColumnDefinition<PurchaseOrderListRow>[] = [
+    {
+      // The row's identity — the string operators say out loud and search for. Give it
+      // weight so it out-ranks the data around it.
+      title: 'PO Number',
+      dataIndex: 'po_number',
+      render: (v: any) => <span className="font-medium text-gray-900">{v}</span>,
+    },
     { title: 'Vendor', dataIndex: 'vendor_id', render: (v: any) => vendorName(v) },
+    {
+      // The defining number of a purchase order: Σ(unit_cost × qty_ordered) across lines,
+      // in the PO's own currency (which is why there's no separate constant "Currency" column).
+      title: 'Amount',
+      dataIndex: 'total_amount',
+      headerClassName: NUM_HEADER,
+      cellClassName: `${NUM_CELL} font-medium text-gray-900`,
+      render: (v: any, rec: PurchaseOrderListRow) => money(Number(v ?? 0), rec.currency_code),
+    },
     {
       title: 'Status',
       dataIndex: 'status',
@@ -312,8 +340,22 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
         </Badge>
       ),
     },
-    { title: 'Currency', dataIndex: 'currency_code' },
-    { title: 'Created', dataIndex: 'created_at', render: (v: any) => formatDate(v) },
+    {
+      // The magnitude the "Partially received" badge omits: how much of the order has landed.
+      title: 'Received',
+      dataIndex: 'qty_received',
+      headerClassName: NUM_HEADER,
+      cellClassName: NUM_CELL,
+      sortable: false,
+      render: (_: any, rec: PurchaseOrderListRow) =>
+        rec.line_count === 0 ? '—' : `${rec.qty_received} / ${rec.qty_ordered}`,
+    },
+    {
+      // "When is it arriving" — the question an open PO exists to answer.
+      title: 'Expected',
+      dataIndex: 'expected_date',
+      render: (v: any) => formatDate(v) || '—',
+    },
     {
       // Width matches the sibling managers (RMA/SO) so the labels never clip to
       // "Submi"/"Receiv". Only the actions that actually apply to a row's status are
