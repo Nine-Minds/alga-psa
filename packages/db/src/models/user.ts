@@ -201,26 +201,34 @@ const User = {
     employeeUserId: string
   ): Promise<boolean> => {
     const tenant = await requireTenantId(knexOrTrx);
+    const db = tenantDb(knexOrTrx, tenant);
+    const chainRoot = db.table('users as u')
+      .select('u.reports_to')
+      .where('u.user_id', employeeUserId)
+      .toSQL();
+    const chainStep = db.table('users as u2')
+      .select('u2.reports_to')
+      .join('chain as c', 'u2.user_id', 'c.reports_to')
+      .whereNotNull('c.reports_to')
+      .toSQL();
+
     const { rows } = await knexOrTrx.raw(
       `
         WITH RECURSIVE chain AS (
-          SELECT u.reports_to
-          FROM users u
-          WHERE u.user_id = ?
-            AND u.tenant = ?
+          ${chainRoot.sql}
           UNION ALL
-          SELECT u2.reports_to
-          FROM users u2
-          JOIN chain c ON u2.user_id = c.reports_to
-          WHERE u2.tenant = ?
-            AND c.reports_to IS NOT NULL
+          ${chainStep.sql}
         )
         SELECT 1
         FROM chain
         WHERE reports_to = ?
         LIMIT 1
       `,
-      [employeeUserId, tenant, tenant, managerUserId]
+      [
+        ...(chainRoot.bindings ?? []),
+        ...(chainStep.bindings ?? []),
+        managerUserId,
+      ]
     );
 
     return rows.length > 0;
@@ -231,23 +239,30 @@ const User = {
     managerUserId: string
   ): Promise<string[]> => {
     const tenant = await requireTenantId(knexOrTrx);
+    const db = tenantDb(knexOrTrx, tenant);
+    const subordinateRoot = db.table('users as u')
+      .select('u.user_id', knexOrTrx.raw('1 AS depth'))
+      .where('u.reports_to', managerUserId)
+      .toSQL();
+    const subordinateStep = db.table('users as u2')
+      .select('u2.user_id', knexOrTrx.raw('rtc.depth + 1 AS depth'))
+      .join('reports_to_chain as rtc', 'u2.reports_to', 'rtc.user_id')
+      .where('rtc.depth', '<', 20)
+      .toSQL();
+
     const { rows } = await knexOrTrx.raw(
       `
         WITH RECURSIVE reports_to_chain AS (
-          SELECT u.user_id, 1 AS depth
-          FROM users u
-          WHERE u.reports_to = ?
-            AND u.tenant = ?
+          ${subordinateRoot.sql}
           UNION ALL
-          SELECT u2.user_id, rtc.depth + 1
-          FROM users u2
-          JOIN reports_to_chain rtc ON u2.reports_to = rtc.user_id
-          WHERE u2.tenant = ?
-            AND rtc.depth < 20
+          ${subordinateStep.sql}
         )
         SELECT user_id FROM reports_to_chain
       `,
-      [managerUserId, tenant, tenant]
+      [
+        ...(subordinateRoot.bindings ?? []),
+        ...(subordinateStep.bindings ?? []),
+      ]
     );
     return rows.map((row: { user_id: string }) => row.user_id);
   },

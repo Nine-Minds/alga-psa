@@ -56,7 +56,7 @@ describe('ticket peripheral action tenant-scoped query contract', () => {
   });
 
   it('keeps board schema/reference access outside the tenant facade', () => {
-    expect(boardActions).toContain("trx('standard_statuses')");
-    expect(boardActions.match(/trx\('statuses'\)\.columnInfo\(\)/g)).toHaveLength(2);
+    expect(boardActions).toContain("tenantDb(trx, tenant).table('standard_statuses')");
+    expect(boardActions.match(/tenantDb\(trx, tenant\)\.table\('statuses'\)\.columnInfo\(\)/g)).toHaveLength(2);
   });
 });

@@ -94,8 +94,11 @@ describe('invoiceQueries recurring detail reads', () => {
       'utf8',
     );
 
-    expect(invoiceQueriesSource).toContain('FROM invoice_charges ic');
-    expect(invoiceQueriesSource).toContain('JOIN invoice_charge_details iid');
+    expect(invoiceQueriesSource).toContain("db.subquery('invoice_charges as ic')");
+    expect(invoiceQueriesSource).toContain("db.tenantJoin(subquery, 'invoice_charge_details as iid'");
+    expect(invoiceQueriesSource).toContain("db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`)");
+    expect(invoiceQueriesSource).not.toContain('FROM invoice_charges ic');
+    expect(invoiceQueriesSource).not.toContain('JOIN invoice_charge_details iid');
     expect(invoiceQueriesSource).not.toContain('FROM invoice_charge_details iid\n            WHERE iid.invoice_id = invoices.invoice_id');
     expect(invoiceQueriesSource).not.toContain('compatibility summary range');
   });

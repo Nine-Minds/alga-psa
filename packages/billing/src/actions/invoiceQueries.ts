@@ -34,6 +34,28 @@ export interface PaginatedInvoicesResult {
   totalPages: number;
 }
 
+function buildInvoiceDetailServicePeriodSubquery(
+  db: ReturnType<typeof tenantDb>,
+  aggregate: 'min' | 'max',
+  outerInvoiceAlias: string,
+): Knex.QueryBuilder {
+  const servicePeriodColumn = aggregate === 'min'
+    ? 'iid.service_period_start'
+    : 'iid.service_period_end';
+  const subquery = db.subquery('invoice_charges as ic')
+    .whereRaw('?? = ??', ['ic.invoice_id', `${outerInvoiceAlias}.invoice_id`]);
+
+  if (aggregate === 'min') {
+    subquery.min(servicePeriodColumn);
+  } else {
+    subquery.max(servicePeriodColumn);
+  }
+
+  db.tenantJoin(subquery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id');
+
+  return db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`);
+}
+
 // Helper function to create basic invoice view model
 async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise<InvoiceViewModel> {
   // Debug the invoice data, especially for the problematic invoice
@@ -260,24 +282,10 @@ export const fetchInvoicesPaginated = withAuth(async (
           // Invoice list and summary surfaces flatten canonical recurring detail rows to one
           // summary range. Full rerender or preview-refresh flows must use the
           // detail-aware reader below rather than relying on these list projections alone.
-          trx.raw(`(
-            SELECT MIN(iid.service_period_start)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_start`),
-          trx.raw(`(
-            SELECT MAX(iid.service_period_end)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_end`),
+          {
+            service_period_start: buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices'),
+            service_period_end: buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices'),
+          },
           'clients.client_name',
           'clients.properties',
           'client_locations.address_line1',
@@ -410,24 +418,10 @@ export const fetchInvoicesByClient = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-          trx.raw(`(
-            SELECT MIN(iid.service_period_start)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_start`),
-          trx.raw(`(
-            SELECT MAX(iid.service_period_end)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_end`),
+          {
+            service_period_start: buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices'),
+            service_period_end: buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices'),
+          },
           'clients.client_name',
           'clients.properties',
           // Location fields
@@ -519,24 +513,10 @@ export const fetchInvoicesByContract = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-          trx.raw(`(
-            SELECT MIN(iid.service_period_start)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_start`),
-          trx.raw(`(
-            SELECT MAX(iid.service_period_end)
-            FROM invoice_charges ic
-            JOIN invoice_charge_details iid
-              ON ic.item_id = iid.item_id
-             AND ic.tenant = iid.tenant
-            WHERE ic.invoice_id = invoices.invoice_id
-              AND ic.tenant = invoices.tenant
-          ) as service_period_end`),
+          {
+            service_period_start: buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices'),
+            service_period_end: buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices'),
+          },
           'clients.client_name',
           'clients.properties'
         )

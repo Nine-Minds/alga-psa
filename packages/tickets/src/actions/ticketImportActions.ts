@@ -30,6 +30,23 @@ import {
   ICategoryResolution,
 } from '@alga-psa/types';
 
+function tenantScopedTicketBatchUpdateScopeSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  ticketIds: string[]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const scoped = tenantDb(conn, tenant)
+    .table('tickets')
+    .select('ticket_id', 'tenant')
+    .whereIn('ticket_id', ticketIds)
+    .toSQL();
+
+  return {
+    sql: `(${scoped.sql}) scoped_tickets`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // CSV template
 // ---------------------------------------------------------------------------
@@ -736,9 +753,18 @@ export const importTickets = withAuth(async (
       const values = batch.map(() => '(?::uuid, ?::timestamptz)').join(', ');
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.entered_at); }
+      const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
       await trx.raw(
-        `UPDATE tickets t SET entered_at = v.entered_at FROM (VALUES ${values}) AS v(tid, entered_at) WHERE t.ticket_id = v.tid AND t.tenant = ?`,
-        [...params, tenant]
+        `
+          UPDATE tickets AS target
+          SET entered_at = v.entered_at
+          FROM ${ticketScope.sql}
+          JOIN (VALUES ${values}) AS v(tid, entered_at)
+            ON scoped_tickets.ticket_id = v.tid
+          WHERE target.ticket_id = scoped_tickets.ticket_id
+            AND target.tenant = scoped_tickets.tenant
+        `,
+        [...ticketScope.bindings, ...params]
       );
     }
     for (let i = 0; i < closedUpdates.length; i += BATCH_SIZE) {
@@ -746,9 +772,19 @@ export const importTickets = withAuth(async (
       const values = batch.map(() => '(?::uuid, ?::timestamptz, ?::uuid)').join(', ');
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.closed_at, u.closed_by); }
+      const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
       await trx.raw(
-        `UPDATE tickets t SET closed_at = v.closed_at, closed_by = v.closed_by FROM (VALUES ${values}) AS v(tid, closed_at, closed_by) WHERE t.ticket_id = v.tid AND t.tenant = ?`,
-        [...params, tenant]
+        `
+          UPDATE tickets AS target
+          SET closed_at = v.closed_at,
+              closed_by = v.closed_by
+          FROM ${ticketScope.sql}
+          JOIN (VALUES ${values}) AS v(tid, closed_at, closed_by)
+            ON scoped_tickets.ticket_id = v.tid
+          WHERE target.ticket_id = scoped_tickets.ticket_id
+            AND target.tenant = scoped_tickets.tenant
+        `,
+        [...ticketScope.bindings, ...params]
       );
     }
 

@@ -30,6 +30,70 @@ const messagesTable = <Row extends object>(
     ? tenantDb(db, tenant).table<Row>('messages')
     : tenantDb(db, CHAT_MODEL_NO_TENANT_CONTEXT).unscoped<Row>('messages', LEGACY_NO_TENANT_REASON);
 
+const correlatedMessagesTable = <Row extends object>(
+  db: TenantDbConnection,
+  tenant: string | null | undefined,
+  alias: string
+): { facade: ReturnType<typeof tenantDb>; query: Knex.QueryBuilder<Row, Row[]> } => {
+  const facade = tenantDb(db, tenant ?? CHAT_MODEL_NO_TENANT_CONTEXT);
+  const tableExpression = `messages as ${alias}`;
+  const query = tenant
+    ? facade.table<Row>(tableExpression)
+    : facade.unscoped<Row>(tableExpression, LEGACY_NO_TENANT_REASON);
+
+  return { facade, query };
+};
+
+const correlateMessagesToChats = (
+  db: TenantDbConnection,
+  tenant: string | null | undefined,
+  alias: string
+): Knex.QueryBuilder => {
+  const { facade, query } = correlatedMessagesTable(db, tenant, alias);
+  query.whereRaw('?? = ??', [`${alias}.chat_id`, 'chats.id']);
+  return facade.tenantWhereColumn(query, `${alias}.tenant`, 'chats.tenant');
+};
+
+const latestMessageContentQuery = (
+  db: TenantDbConnection,
+  tenant: string | null | undefined,
+  alias: string
+): Knex.QueryBuilder =>
+  correlateMessagesToChats(db, tenant, alias)
+    .select(`${alias}.content`)
+    .orderByRaw(`${alias}.message_order desc nulls last, ${alias}.id desc`)
+    .limit(1);
+
+const aggregateMessageIndexQuery = (
+  db: TenantDbConnection,
+  tenant: string | null | undefined,
+  alias: string
+): Knex.QueryBuilder =>
+  correlateMessagesToChats(db, tenant, alias)
+    .select(
+      db.raw(
+        `process_large_lexemes(
+          string_agg(
+            coalesce(${alias}.content, ''),
+            ' '
+            order by ${alias}.message_order asc nulls last, ${alias}.id asc
+          )
+        )`
+      )
+    );
+
+const rawSubqueryAs = (
+  db: TenantDbConnection,
+  query: Knex.QueryBuilder,
+  alias: string
+): Knex.Raw => {
+  const sql = query.toSQL();
+  const wrappedSql = `(${sql.sql}) as ${alias}`;
+  return sql.bindings && sql.bindings.length > 0
+    ? db.raw(wrappedSql, sql.bindings)
+    : db.raw(wrappedSql);
+};
+
 const requireTenantForInsert = (tenant: string | null | undefined): string => {
   if (!tenant) {
     throw new Error('Missing tenant for chat insert');
@@ -66,19 +130,11 @@ const Chat = {
       const chatsRoot = tenant
         ? tenantDb(db, tenant).table<IChatHistoryItem>('chats')
         : chatsTable<IChatHistoryItem>(db, undefined);
+      const previewText = rawSubqueryAs(db, latestMessageContentQuery(db, tenant, 'm'), 'preview_text');
       const chats = await chatsRoot
         .select(
           'chats.*',
-          db.raw(
-            `(
-              select m.content
-              from messages m
-              where m.chat_id = chats.id
-              and m.tenant = chats.tenant
-              order by m.message_order desc nulls last, m.id desc
-              limit 1
-            ) as preview_text`
-          )
+          previewText
         )
         .where({ user_id: userId })
         .orderByRaw('coalesce(chats.updated_at, chats.created_at) desc nulls last')
@@ -102,6 +158,8 @@ const Chat = {
         .select('chats.*')
         .where({ user_id: userId })
         .toSQL();
+      const latestMessageSql = latestMessageContentQuery(db, tenant, 'm_latest').toSQL();
+      const aggregateMessagesSql = aggregateMessageIndexQuery(db, tenant, 'm_aggregate').toSQL();
 
       // Search at the chat scope so multi-term queries can match across the title
       // and multiple persisted messages, not just within a single indexed field.
@@ -113,30 +171,12 @@ const Chat = {
           chat_documents as (
             select
               chats.*,
-              (
-                select m_latest.content
-                from messages m_latest
-                where m_latest.chat_id = chats.id
-                  and m_latest.tenant = chats.tenant
-                order by m_latest.message_order desc nulls last, m_latest.id desc
-                limit 1
-              ) as preview_text,
+              (${latestMessageSql.sql}) as preview_text,
               (
                 setweight(chats.title_index, 'A')
                 ||
                 coalesce(
-                  (
-                    select process_large_lexemes(
-                      string_agg(
-                        coalesce(m_aggregate.content, ''),
-                        ' '
-                        order by m_aggregate.message_order asc nulls last, m_aggregate.id asc
-                      )
-                    )
-                    from messages m_aggregate
-                    where m_aggregate.chat_id = chats.id
-                      and m_aggregate.tenant = chats.tenant
-                  ),
+                  (${aggregateMessagesSql.sql}),
                   ''::tsvector
                 )
               ) as conversation_index
@@ -154,7 +194,13 @@ const Chat = {
             chat_documents.id desc
           limit ?
         `,
-        [query, ...(chatsRootSql.bindings ?? []), limit]
+        [
+          query,
+          ...(latestMessageSql.bindings ?? []),
+          ...(aggregateMessagesSql.bindings ?? []),
+          ...(chatsRootSql.bindings ?? []),
+          limit,
+        ]
       );
 
       return Array.isArray(rawResult)

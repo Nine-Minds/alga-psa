@@ -11,7 +11,7 @@
 import { Context } from '@temporalio/activity';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
-import { retryOnReadOnly, tenantDb } from '@alga-psa/db';
+import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -497,6 +497,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tenant_addons',
   'tenant_settings',
 ];
+
+const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
+
+type TenantColumnName = 'tenant' | 'tenant_id';
+
+interface TenantDeletionTableBoundary {
+  tableName: string;
+  tenantColumn: TenantColumnName;
+  metadataScope: TenantTableScope | undefined;
+  reason: string;
+}
 
 const logger = () => Context.current().log;
 
@@ -1216,7 +1227,7 @@ export async function updateDeletionStatus(
 async function getTableTenantColumn(
   knex: Knex,
   tableName: string
-): Promise<string | null> {
+): Promise<TenantColumnName | null> {
   try {
     const result = await knex.raw(`
       SELECT column_name
@@ -1224,16 +1235,89 @@ async function getTableTenantColumn(
       WHERE table_name = ?
         AND column_name IN ('tenant', 'tenant_id')
         AND table_schema = 'public'
+      ORDER BY CASE column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END
       LIMIT 1
     `, [tableName]);
 
     if (result.rows && result.rows.length > 0) {
-      return result.rows[0].column_name;
+      return result.rows[0].column_name as TenantColumnName;
     }
     return null;
   } catch {
     return null;
   }
+}
+
+function requireTenantDeletionBoundaryReason(reason: string): void {
+  if (!reason || !reason.trim()) {
+    throw new Error('Tenant deletion dynamic table boundary requires a reason');
+  }
+}
+
+function tenantDeletionBoundaryReason(tableName: string): string {
+  return `tenant deletion dynamic cleanup for schema-verified table ${tableName} from TENANT_TABLES_DELETION_ORDER`;
+}
+
+function tenantMetadataColumn(scope: Extract<TenantTableScope, { scope: 'tenant' }>): TenantColumnName {
+  const column = scope.tenantColumn ?? 'tenant';
+  if (column !== 'tenant' && column !== 'tenant_id') {
+    throw new Error(`Unsupported tenant metadata column ${column}`);
+  }
+  return column;
+}
+
+async function resolveTenantDeletionTableBoundary(
+  knex: Knex,
+  tableName: string,
+  reason: string
+): Promise<TenantDeletionTableBoundary | null> {
+  requireTenantDeletionBoundaryReason(reason);
+
+  if (!TENANT_TABLES_DELETION_SET.has(tableName)) {
+    throw new Error(`Table ${tableName} is not in TENANT_TABLES_DELETION_ORDER`);
+  }
+
+  const tenantColumn = await getTableTenantColumn(knex, tableName);
+  if (!tenantColumn) {
+    return null;
+  }
+
+  const metadataScope = getTenantTableScope(tableName);
+  if (metadataScope?.scope === 'tenant') {
+    const expectedTenantColumn = tenantMetadataColumn(metadataScope);
+    if (tenantColumn !== expectedTenantColumn) {
+      throw new Error(
+        `Tenant deletion metadata/schema mismatch for ${tableName}: metadata expects ${expectedTenantColumn}, information_schema found ${tenantColumn}`
+      );
+    }
+  }
+
+  return {
+    tableName,
+    tenantColumn,
+    metadataScope,
+    reason,
+  };
+}
+
+function explicitTenantDeletionTableQuery(
+  knex: Knex,
+  tenantId: string,
+  boundary: TenantDeletionTableBoundary
+) {
+  const scopedDb = tenantDb(knex, tenantId);
+
+  if (boundary.metadataScope?.scope === 'tenant') {
+    return scopedDb.table(boundary.tableName);
+  }
+
+  if (boundary.metadataScope?.scope === 'admin') {
+    throw new Error(`Admin table ${boundary.tableName} cannot be deleted through tenant deletion`);
+  }
+
+  return scopedDb
+    .unscoped(boundary.tableName, boundary.reason)
+    .where({ [boundary.tenantColumn]: tenantId });
 }
 
 /**
@@ -1439,12 +1523,15 @@ export async function deleteTenantData(
     // Step 2: Delete from each table in order
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
-        const tenantColumn = await getTableTenantColumn(adminKnex, tableName);
+        const tableBoundary = await resolveTenantDeletionTableBoundary(
+          adminKnex,
+          tableName,
+          tenantDeletionBoundaryReason(tableName)
+        );
 
-        if (tenantColumn) {
+        if (tableBoundary) {
           // Count records first - with explicit tenant check
-          const countResult = await adminKnex(tableName)
-            .where({ [tenantColumn]: tenantId })
+          const countResult = await explicitTenantDeletionTableQuery(adminKnex, tenantId, tableBoundary)
             .count('* as count')
             .first();
 
@@ -1459,7 +1546,7 @@ export async function deleteTenantData(
               // Log what we're about to delete for audit trail
               log.info(`Pre-deletion check: ${tableName}`, {
                 tableName,
-                tenantColumn,
+                tenantColumn: tableBoundary.tenantColumn,
                 tenantId,
                 managementTenantId,
                 recordCount: count,
@@ -1469,7 +1556,7 @@ export async function deleteTenantData(
 
             // Delete records with explicit tenant filter
             const deleted = await withReadOnlyRetry(
-              (k) => k(tableName).where({ [tenantColumn]: tenantId }).delete(),
+              (k) => explicitTenantDeletionTableQuery(k, tenantId, tableBoundary).delete(),
               `delete:${tableName}`
             );
 
@@ -1494,8 +1581,7 @@ export async function deleteTenantData(
     try {
       const deletedPending = await withReadOnlyRetry(
         (k) =>
-          k('pending_tenant_deletions')
-            .where({ tenant: tenantId })
+          tenantDb(k, tenantId).table('pending_tenant_deletions')
             .whereNot({ deletion_id: deletionId })
             .delete(),
         'delete:pending_tenant_deletions'
@@ -1519,7 +1605,7 @@ export async function deleteTenantData(
       }
 
       await withReadOnlyRetry(
-        (k) => k('tenants').where({ tenant: tenantId }).delete(),
+        (k) => tenantDb(k, tenantId).table('tenants').delete(),
         'delete:tenants'
       );
 

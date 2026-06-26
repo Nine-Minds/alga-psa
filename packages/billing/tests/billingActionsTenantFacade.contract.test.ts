@@ -77,6 +77,32 @@ describe('billing action tenant facade migration contract', () => {
     expectNoDirectRoots(billingSchedule, ['client_billing_settings', 'clients']);
   });
 
+  it('uses tenantDb facade helpers for billing action scalar subqueries', () => {
+    const serviceActions = readSource('packages/billing/src/actions/serviceActions.ts');
+    const invoiceQueries = readSource('packages/billing/src/actions/invoiceQueries.ts');
+    const billingCycleActions = readSource('packages/billing/src/actions/billingCycleActions.ts');
+
+    expect(serviceActions).toContain("facade.subquery('service_prices as sp2')");
+    expect(serviceActions).toContain("facade.tenantWhereColumn(subquery, 'sp2.tenant', 'sc.tenant')");
+    expect(serviceActions).toContain("trx.raw('EXISTS ?', [buildHasCurrencyPricesSubquery(facade)])");
+    expect(serviceActions).not.toContain('EXISTS (SELECT 1 FROM service_prices sp2');
+
+    expect(invoiceQueries).toContain("db.subquery('invoice_charges as ic')");
+    expect(invoiceQueries).toContain("db.tenantJoin(subquery, 'invoice_charge_details as iid'");
+    expect(invoiceQueries).toContain("db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`)");
+    expect(invoiceQueries).not.toContain('FROM invoice_charges ic');
+    expect(invoiceQueries).not.toContain('AND ic.tenant = invoices.tenant');
+
+    expect(billingCycleActions).toContain("db.tenantJoinSubquery(query, recurringSummaryQuery");
+    expect(billingCycleActions).toContain('buildAssignmentContractIdsSubquery(db, trx,');
+    expect(billingCycleActions).toContain("db.tenantJoin(subquery, 'client_contracts as cc'");
+    expect(billingCycleActions).toContain("db.tenantJoin(subquery, 'contracts as ct'");
+    expect(billingCycleActions).not.toContain('detailServicePeriodStartSql');
+    expect(billingCycleActions).not.toContain('and ic.tenant = i.tenant');
+    expect(billingCycleActions).not.toContain('and cc.tenant = ic.tenant');
+    expect(billingCycleActions).not.toContain('and ct.tenant = cc.tenant');
+  });
+
   it('uses tenantDb for contract line service action roots and joins', () => {
     const source = readSource('packages/billing/src/actions/contractLineServiceActions.ts');
 

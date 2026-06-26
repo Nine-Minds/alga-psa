@@ -1,6 +1,7 @@
 // QueryBuilder utility for constructing database queries from report definitions
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { 
   QueryDefinition, 
   ReportParameters, 
@@ -33,12 +34,12 @@ export class QueryBuilder {
         return this.buildParameterizedRawSql(trx, rawSql, parameters);
       }
 
-      let query = trx(queryDef.table);
+      let query = this.buildRootQuery(trx, queryDef, parameters);
       
       // Add joins
       if (queryDef.joins && queryDef.joins.length > 0) {
         for (const join of queryDef.joins) {
-          query = this.applyJoin(query, join);
+          query = this.applyJoin(trx, query, join, parameters);
         }
       }
       
@@ -110,11 +111,51 @@ export class QueryBuilder {
   /**
    * Apply a join to the query
    */
-  private static applyJoin(
-    query: Knex.QueryBuilder,
-    join: JoinDefinition
+  private static buildRootQuery(
+    trx: Knex.Transaction,
+    queryDef: QueryDefinition,
+    parameters: ReportParameters
   ): Knex.QueryBuilder {
-    
+    const tenant = this.reportTenant(parameters);
+
+    if (!tenant) {
+      return trx(queryDef.table);
+    }
+
+    return tenantDb(trx, tenant).table(queryDef.table);
+  }
+
+  private static applyJoin(
+    trx: Knex.Transaction,
+    query: Knex.QueryBuilder,
+    join: JoinDefinition,
+    parameters: ReportParameters
+  ): Knex.QueryBuilder {
+    const tenant = this.reportTenant(parameters);
+    const nonTenantConditions = join.on.filter(condition => !this.isTenantEqualityJoinCondition(condition));
+
+    if (tenant && nonTenantConditions.length > 0 && (join.type === 'inner' || join.type === 'left')) {
+      const [primaryCondition, ...additionalConditions] = nonTenantConditions;
+      const operator = primaryCondition.operator || '=';
+
+      if (operator === '=') {
+        return tenantDb(trx, tenant).tenantJoin(
+          query,
+          join.table,
+          primaryCondition.left,
+          primaryCondition.right,
+          {
+            type: join.type,
+            on: (builder) => {
+              for (const condition of additionalConditions) {
+                builder.on(condition.left, condition.operator || '=', condition.right);
+              }
+            },
+          }
+        );
+      }
+    }
+
     const joinMethod = this.getJoinMethod(join.type);
     
     return (query as any)[joinMethod](join.table, (builder: any) => {
@@ -156,6 +197,10 @@ export class QueryBuilder {
 
     if (rawField) {
       this.assertSafeSqlExpression(rawField, 'raw filter field');
+    }
+
+    if (this.isTenantScopeFilter(filter, value, parameters)) {
+      return query;
     }
 
     // Skip filters with empty/null/undefined values (except for is_null/is_not_null operators)
@@ -336,6 +381,35 @@ export class QueryBuilder {
     }
 
     return value;
+  }
+
+  private static reportTenant(parameters: ReportParameters): string | null {
+    const tenant = parameters.tenant;
+    return typeof tenant === 'string' && tenant.trim() ? tenant : null;
+  }
+
+  private static isTenantScopeFilter(
+    filter: FilterDefinition,
+    resolvedValue: unknown,
+    parameters: ReportParameters
+  ): boolean {
+    const tenant = this.reportTenant(parameters);
+    return Boolean(
+      tenant
+        && filter.operator === 'eq'
+        && resolvedValue === tenant
+        && this.isTenantColumn(filter.field)
+    );
+  }
+
+  private static isTenantEqualityJoinCondition(condition: { left: string; right: string; operator?: string }): boolean {
+    return (condition.operator || '=') === '='
+      && this.isTenantColumn(condition.left)
+      && this.isTenantColumn(condition.right);
+  }
+
+  private static isTenantColumn(column: string): boolean {
+    return column === 'tenant' || column.endsWith('.tenant');
   }
 
   /**

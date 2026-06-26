@@ -20,6 +20,16 @@ type ServiceCatalogSearchEventType =
   | 'SERVICE_CATALOG_UPDATED'
   | 'SERVICE_CATALOG_DELETED';
 
+function buildHasCurrencyPricesSubquery(
+  facade: ReturnType<typeof tenantDb>,
+): Knex.QueryBuilder {
+  const subquery = facade.subquery('service_prices as sp2')
+    .select('sp2.service_id')
+    .whereRaw('?? = ??', ['sp2.service_id', 'sc.service_id']);
+
+  return facade.tenantWhereColumn(subquery, 'sp2.tenant', 'sc.tenant');
+}
+
 async function publishServiceCatalogSearchEvent(
   eventType: ServiceCatalogSearchEventType,
   tenant: string,
@@ -168,9 +178,9 @@ export const searchServiceCatalogForPicker = withAuth(async (
           });
         })
         .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'))
-        .select(trx.raw(
-          '(EXISTS (SELECT 1 FROM service_prices sp2 WHERE sp2.service_id = sc.service_id AND sp2.tenant = sc.tenant)) as has_currency_prices'
-        ));
+        .select({
+          has_currency_prices: trx.raw('EXISTS ?', [buildHasCurrencyPricesSubquery(facade)]),
+        });
     }
 
     const rows = await query

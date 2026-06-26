@@ -568,6 +568,61 @@ function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
   };
 }
 
+function buildInvoiceDetailServicePeriodSubquery(
+  db: ReturnType<typeof tenantDb>,
+  aggregate: 'min' | 'max',
+  outerInvoiceAlias: string,
+): Knex.QueryBuilder {
+  const servicePeriodColumn = aggregate === 'min'
+    ? 'iid.service_period_start'
+    : 'iid.service_period_end';
+  const subquery = db.subquery('invoice_charges as ic')
+    .whereRaw('?? = ??', ['ic.invoice_id', `${outerInvoiceAlias}.invoice_id`]);
+
+  if (aggregate === 'min') {
+    subquery.min(servicePeriodColumn);
+  } else {
+    subquery.max(servicePeriodColumn);
+  }
+
+  db.tenantJoin(subquery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id');
+
+  return db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`);
+}
+
+function buildAssignmentContractIdsSubquery(
+  db: ReturnType<typeof tenantDb>,
+  trx: Knex.Transaction,
+  outerInvoiceAlias: string,
+  assignmentType?: 'default' | 'explicit',
+): Knex.QueryBuilder {
+  const subquery = db.subquery('invoice_charges as ic')
+    .select(trx.raw('array_agg(distinct ic.client_contract_id)'))
+    .whereRaw('?? = ??', ['ic.invoice_id', `${outerInvoiceAlias}.invoice_id`])
+    .whereNotNull('ic.client_contract_id');
+
+  db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`);
+
+  if (!assignmentType) {
+    return subquery;
+  }
+
+  db.tenantJoin(subquery, 'client_contracts as cc', 'cc.client_contract_id', 'ic.client_contract_id');
+  db.tenantJoin(subquery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+
+  if (assignmentType === 'default') {
+    subquery.where('ct.is_system_managed_default', true);
+  } else {
+    subquery.where((builder) => {
+      builder
+        .whereNull('ct.is_system_managed_default')
+        .orWhere('ct.is_system_managed_default', false);
+    });
+  }
+
+  return subquery;
+}
+
 export const reverseRecurringInvoice = withAuth(async (
   user,
   { tenant },
@@ -669,43 +724,35 @@ async function fetchRecurringInvoiceHistoryPage(
   } = options;
 
   const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    const detailServicePeriodStartSql = `
-      SELECT MIN(iid.service_period_start)
-      FROM invoice_charges ic
-      JOIN invoice_charge_details iid
-        ON iid.item_id = ic.item_id
-       AND iid.tenant = ic.tenant
-      WHERE ic.invoice_id = i.invoice_id
-        AND ic.tenant = i.tenant
-    `;
-    const detailServicePeriodEndSql = `
-      SELECT MAX(iid.service_period_end)
-      FROM invoice_charges ic
-      JOIN invoice_charge_details iid
-        ON iid.item_id = ic.item_id
-       AND iid.tenant = ic.tenant
-      WHERE ic.invoice_id = i.invoice_id
-        AND ic.tenant = i.tenant
-    `;
     const db = tenantDb(trx, tenant);
+    const detailServicePeriodStartSubquery = () =>
+      buildInvoiceDetailServicePeriodSubquery(db, 'min', 'i');
+    const detailServicePeriodEndSubquery = () =>
+      buildInvoiceDetailServicePeriodSubquery(db, 'max', 'i');
     const recurringSummaryQuery = db.table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
+      .select('rsp.tenant')
       .select('rsp.invoice_id')
       .min('rsp.service_period_start as service_period_start')
       .max('rsp.service_period_end as service_period_end')
       .min('rsp.invoice_window_start as invoice_window_start')
       .max('rsp.invoice_window_end as invoice_window_end')
       .max('rsp.cadence_owner as cadence_owner')
-      .groupBy('rsp.invoice_id')
+      .groupBy('rsp.tenant', 'rsp.invoice_id')
       .as('rsp_summary');
 
     const buildBaseQuery = () => {
       const query = db.table('invoices as i');
       db.tenantJoin(query, 'clients as c', 'c.client_id', 'i.client_id');
+      db.tenantJoinSubquery(query, recurringSummaryQuery, 'rsp_summary.invoice_id', 'i.invoice_id', {
+        type: 'left',
+        rootTenantColumn: 'i.tenant',
+        joinedTenantColumn: 'rsp_summary.tenant',
+      });
       query
-        .leftJoin(recurringSummaryQuery, 'rsp_summary.invoice_id', 'i.invoice_id')
         .whereRaw(
-          `coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) is not null`,
+          'coalesce(rsp_summary.service_period_start, ?) is not null',
+          [detailServicePeriodStartSubquery()],
         );
 
       if (searchTerm.trim()) {
@@ -747,49 +794,23 @@ async function fetchRecurringInvoiceHistoryPage(
         'i.client_id',
         'i.client_contract_id',
         'c.client_name',
-        trx.raw(`coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) as service_period_start`),
-        trx.raw(`coalesce(rsp_summary.service_period_end, (${detailServicePeriodEndSql})) as service_period_end`),
+        trx.raw('coalesce(rsp_summary.service_period_start, ?) as service_period_start', [detailServicePeriodStartSubquery()]),
+        trx.raw('coalesce(rsp_summary.service_period_end, ?) as service_period_end', [detailServicePeriodEndSubquery()]),
         // `i.billing_period_start/end` is the legacy misnamed invoice window; newer rows have the
         // canonical window in `recurring_service_periods`. Coalesce both into `invoice_window_*`.
         // Column rename on `invoices` to `invoice_window_*` is pending.
         trx.raw(`coalesce(rsp_summary.invoice_window_start, i.billing_period_start) as invoice_window_start`),
         trx.raw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end) as invoice_window_end`),
         trx.raw(`coalesce(rsp_summary.cadence_owner, 'client') as cadence_owner`),
-        trx.raw(`coalesce((
-          select array_agg(distinct ic.client_contract_id)
-          from invoice_charges ic
-          where ic.invoice_id = i.invoice_id
-            and ic.tenant = i.tenant
-            and ic.client_contract_id is not null
-        ), ARRAY[]::uuid[]) as assignment_contract_ids`),
-        trx.raw(`coalesce((
-          select array_agg(distinct ic.client_contract_id)
-          from invoice_charges ic
-          join client_contracts cc
-            on cc.client_contract_id = ic.client_contract_id
-           and cc.tenant = ic.tenant
-          join contracts ct
-            on ct.contract_id = cc.contract_id
-           and ct.tenant = cc.tenant
-          where ic.invoice_id = i.invoice_id
-            and ic.tenant = i.tenant
-            and ic.client_contract_id is not null
-            and ct.is_system_managed_default = true
-        ), ARRAY[]::uuid[]) as assignment_default_contract_ids`),
-        trx.raw(`coalesce((
-          select array_agg(distinct ic.client_contract_id)
-          from invoice_charges ic
-          join client_contracts cc
-            on cc.client_contract_id = ic.client_contract_id
-           and cc.tenant = ic.tenant
-          join contracts ct
-            on ct.contract_id = cc.contract_id
-           and ct.tenant = cc.tenant
-          where ic.invoice_id = i.invoice_id
-            and ic.tenant = i.tenant
-            and ic.client_contract_id is not null
-            and (ct.is_system_managed_default is null or ct.is_system_managed_default = false)
-        ), ARRAY[]::uuid[]) as assignment_explicit_contract_ids`)
+        trx.raw('coalesce(?, ARRAY[]::uuid[]) as assignment_contract_ids', [
+          buildAssignmentContractIdsSubquery(db, trx, 'i'),
+        ]),
+        trx.raw('coalesce(?, ARRAY[]::uuid[]) as assignment_default_contract_ids', [
+          buildAssignmentContractIdsSubquery(db, trx, 'i', 'default'),
+        ]),
+        trx.raw('coalesce(?, ARRAY[]::uuid[]) as assignment_explicit_contract_ids', [
+          buildAssignmentContractIdsSubquery(db, trx, 'i', 'explicit'),
+        ])
       )
       .orderByRaw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end, i.invoice_date) desc`)
       .orderBy('i.invoice_id', 'desc')
