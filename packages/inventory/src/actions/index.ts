@@ -17,3 +17,4 @@ export * from './rmaActions';
 export * from './reorderActions';
 export * from './dropShipActions';
 export * from './inventoryReportingActions';
+export * from './inventoryDashboardActions';
