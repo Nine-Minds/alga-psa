@@ -24,9 +24,19 @@ type InventoryProduct = IProductInventorySettings & {
   available: number;
   needs_reorder: boolean;
   any_out: boolean;
+  out_locations: number;
+  low_locations: number;
 };
 
 type StockStatus = 'out' | 'low' | 'ok';
+
+/** "Out · 1 site" / "Low · 2 sites" — per-location scope so a summed total never
+ *  silently contradicts the pill (e.g. 8 available, but out at one location). */
+function statusLabel(p: InventoryProduct, s: Exclude<StockStatus, 'ok'>): string {
+  const n = s === 'out' ? p.out_locations : p.low_locations;
+  const word = s === 'out' ? 'Out' : 'Low';
+  return n > 0 ? `${word} · ${n} site${n === 1 ? '' : 's'}` : word;
+}
 
 const stockStatus = (p: InventoryProduct): StockStatus =>
   p.any_out ? 'out' : p.needs_reorder ? 'low' : 'ok';
@@ -187,8 +197,10 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
     },
     { title: 'SKU', dataIndex: 'sku', render: (v: any) => v || '—' },
     {
-      title: 'On hand',
-      dataIndex: 'on_hand',
+      // Lead with Available — the sellable number every judgment (status pill,
+      // filter, reorder) is computed from. Physical on-hand lives in the levels dialog.
+      title: 'Available',
+      dataIndex: 'available',
       headerClassName: NUM_HEADER,
       cellClassName: `${NUM_CELL} font-semibold text-gray-900`,
       render: (v: any) => Number(v ?? 0).toLocaleString(),
@@ -202,7 +214,7 @@ export function StockOverview({ initialProducts }: { initialProducts: InventoryP
         if (s === 'ok') return null;
         return (
           <Badge variant={s === 'out' ? 'error' : 'warning'} size="sm">
-            {s === 'out' ? 'Out' : 'Low'}
+            {statusLabel(rec, s)}
           </Badge>
         );
       },

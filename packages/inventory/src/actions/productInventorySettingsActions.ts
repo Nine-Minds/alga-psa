@@ -64,6 +64,8 @@ export const listInventoryProducts = withAuth(async (user, { tenant }): Promise<
       .select('sl.service_id')
       .select(trx.raw(`bool_or(${REORDER} IS NOT NULL AND ${AVAIL} <= ${REORDER}) as needs_reorder`))
       .select(trx.raw(`bool_or(${REORDER} IS NOT NULL AND ${AVAIL} <= 0) as any_out`))
+      .select(trx.raw(`count(*) FILTER (WHERE ${REORDER} IS NOT NULL AND ${AVAIL} <= 0) as out_locations`))
+      .select(trx.raw(`count(*) FILTER (WHERE ${REORDER} IS NOT NULL AND ${AVAIL} > 0 AND ${AVAIL} <= ${REORDER}) as low_locations`))
       .as('st');
 
     return trx('product_inventory_settings as pis')
@@ -81,6 +83,8 @@ export const listInventoryProducts = withAuth(async (user, { tenant }): Promise<
         trx.raw('COALESCE(lv.available, 0)::int as available'),
         trx.raw('COALESCE(st.needs_reorder, false) as needs_reorder'),
         trx.raw('COALESCE(st.any_out, false) as any_out'),
+        trx.raw('COALESCE(st.out_locations, 0)::int as out_locations'),
+        trx.raw('COALESCE(st.low_locations, 0)::int as low_locations'),
       )
       .orderBy('sc.service_name', 'asc');
   });

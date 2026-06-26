@@ -1,3 +1,5 @@
+// Stock screen: lists inventory-tracked products with summed availability and
+// per-location reorder status. See StockOverview for the grid/dialogs.
 import { listInventoryProducts } from '@alga-psa/inventory/actions';
 import { StockOverview } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
