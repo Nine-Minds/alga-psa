@@ -107,4 +107,31 @@ describe('workflow tenant facade roots', () => {
     const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
     expect(metadataSource).toContain("teams_conversation_references: { scope: 'tenant' }");
   });
+
+  it('routes workflow action-layer tenant roots through the workflow tenant facade', () => {
+    const files = [
+      'ee/packages/workflows/src/models/eventCatalog.ts',
+      'ee/packages/workflows/src/actions/event-catalog-actions.ts',
+      'ee/packages/workflows/src/actions/workflow-event-catalog-v2-actions.ts',
+      'ee/packages/workflows/src/actions/workflow-schedule-v2-actions.ts',
+      'ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts',
+    ];
+
+    const directRootPattern =
+      /\b(?:knex|knexOrTrx)\s*(?:<[^>]+>)?\s*\(\s*['`](?:audit_logs|business_hours_schedules|event_catalog|tenant_extension_install|tenant_workflow_schedule|workflow_definition_versions|workflow_definitions|workflow_run_steps|workflow_runs|workflow_runtime_events)['`]/;
+
+    for (const file of files) {
+      const source = read(file);
+
+      expect(source, file).toMatch(/(?:workflowTenantTable|tenantDb)(?:<[^>]+>)?\(/);
+      expect(source, file).not.toMatch(directRootPattern);
+      expect(source, file).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+    }
+
+    const auditCsvSource = read('ee/packages/workflows/src/actions/workflow-audit-csv.ts');
+    expect(auditCsvSource).toContain("workflowTenantTable<ActorUserRow>(knex, tenant, 'users')");
+
+    const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
+    expect(metadataSource).toContain("event_catalog: { scope: 'tenant' }");
+  });
 });

@@ -89,6 +89,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   entra_contact_reconciliation_queue: { scope: 'tenant' },
   entra_sync_run_tenants: { scope: 'tenant' },
   escalation_managers: { scope: 'tenant' },
+  event_catalog: { scope: 'tenant' },
   external_files: { scope: 'tenant' },
   external_entity_mappings: { scope: 'tenant' },
   external_tax_imports: { scope: 'tenant' },

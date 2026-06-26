@@ -187,9 +187,8 @@ const loadAvailableWorkflowDesignerAppKeys = async (
     return new Set();
   }
 
-  const rows = await knex('tenant_extension_install as install')
+  const rows = await tenantDb(knex, tenantId).table('tenant_extension_install as install')
     .innerJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
-    .where('install.tenant_id', tenantId)
     .andWhere((builder) => {
       builder.where('install.is_enabled', true).orWhere('install.status', 'enabled');
     })
@@ -2436,13 +2435,7 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
-  const query = knex('workflow_runs as runs')
-    .leftJoin('workflow_definitions as defs', function () {
-      this.on('runs.workflow_id', 'defs.workflow_id').andOn('runs.tenant', 'defs.tenant');
-    })
-    .leftJoin('workflow_run_steps as steps', function () {
-      this.on('runs.run_id', 'steps.run_id').andOn('runs.tenant', 'steps.tenant');
-    })
+  const query = workflowTenantTable(knex, tenant, 'workflow_runs as runs')
     .where('runs.status', 'FAILED')
     .select(
       'runs.run_id',
@@ -2471,7 +2464,23 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
     .havingRaw('max(steps.attempt) >= ?', [parsed.minRetries]);
 
   if (tenant) {
-    query.where('runs.tenant', tenant);
+    const db = tenantDb(knex, tenant);
+    db.tenantJoin(query, 'workflow_definitions as defs', 'runs.workflow_id', 'defs.workflow_id', {
+      type: 'left',
+      rootTenantColumn: 'runs.tenant'
+    });
+    db.tenantJoin(query, 'workflow_run_steps as steps', 'runs.run_id', 'steps.run_id', {
+      type: 'left',
+      rootTenantColumn: 'runs.tenant'
+    });
+  } else {
+    query
+      .leftJoin('workflow_definitions as defs', function () {
+        this.on('runs.workflow_id', 'defs.workflow_id').andOn('runs.tenant', 'defs.tenant');
+      })
+      .leftJoin('workflow_run_steps as steps', function () {
+        this.on('runs.run_id', 'steps.run_id').andOn('runs.tenant', 'steps.tenant');
+      });
   }
 
   const rows = await query
@@ -2711,7 +2720,7 @@ export const listWorkflowAuditLogsAction = withAuth(async (user, { tenant }, inp
     }
   }
 
-  const rows = await knex('audit_logs')
+  const rows = await workflowTenantTable(knex, tenant, 'audit_logs')
     .where({ table_name: parsed.tableName, record_id: parsed.recordId })
     .orderBy('timestamp', 'desc')
     .orderBy('audit_id', 'desc')
