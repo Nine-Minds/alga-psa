@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import knexFactory, { type Knex } from 'knex';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   decodeSearchCursor,
@@ -8,6 +9,26 @@ import {
   sanitizeHeadline,
   SearchQueryError,
 } from '@alga-psa/search/query';
+
+type SearchTestKnex = Knex & { raw: ReturnType<typeof vi.fn> };
+
+const createdKnex: Knex[] = [];
+
+function createSearchKnex(
+  rawImplementation: (...args: any[]) => any = async () => ({ rows: [] }),
+): SearchTestKnex {
+  const knex = knexFactory({ client: 'pg' }) as SearchTestKnex;
+  Object.defineProperty(knex, 'raw', {
+    value: vi.fn(rawImplementation),
+    configurable: true,
+  });
+  createdKnex.push(knex);
+  return knex;
+}
+
+afterEach(async () => {
+  await Promise.all(createdKnex.splice(0).map((knex) => knex.destroy()));
+});
 
 describe('search query parsing', () => {
   it('T089 rejects queries longer than 200 characters with a typed error', () => {
@@ -41,9 +62,7 @@ describe('search query parsing', () => {
   });
 
   it('T091 builds the FTS branch with websearch_to_tsquery and search_vector match', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -58,9 +77,7 @@ describe('search query parsing', () => {
   });
 
   it('T092 orders relevance results by the score containing ts_rank_cd descending', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -76,9 +93,7 @@ describe('search query parsing', () => {
   });
 
   it('T138 orders recent results by source_updated_at only, ignoring relevance score ordering', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -95,8 +110,7 @@ describe('search query parsing', () => {
   });
 
   it('T093 returns rows from the pg_trgm fallback branch', async () => {
-    const knex = {
-      raw: vi.fn(async (sql: string) => {
+    const knex = createSearchKnex(async (sql: string) => {
         expect(sql).toContain('s.title % q.raw');
         expect(sql).toContain("coalesce(s.subtitle, '') % q.raw");
         return {
@@ -114,8 +128,7 @@ describe('search query parsing', () => {
             snippet: null,
           }],
         };
-      }),
-    };
+      });
 
     const results = await runSearchQuery({
       knex: knex as never,
@@ -134,8 +147,7 @@ describe('search query parsing', () => {
   });
 
   it('T169 ranks Exchange as the top result for the misspelled query exhcange', async () => {
-    const knex = {
-      raw: vi.fn(async (sql: string) => {
+    const knex = createSearchKnex(async (sql: string) => {
         expect(sql).toContain('s.title % q.raw');
         return {
           rows: [
@@ -167,8 +179,7 @@ describe('search query parsing', () => {
             },
           ],
         };
-      }),
-    };
+      });
 
     const results = await runSearchQuery({
       knex: knex as never,
@@ -186,9 +197,7 @@ describe('search query parsing', () => {
   });
 
   it('T094 includes pg_trgm similarity in the composite score', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -204,8 +213,7 @@ describe('search query parsing', () => {
   });
 
   it('T095 pins an exact ticket identifier match at the top', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({
+    const knex = createSearchKnex(async () => ({
         rows: [{
           object_type: 'ticket',
           object_id: 'ticket-1023',
@@ -219,8 +227,7 @@ describe('search query parsing', () => {
           metadata: { identifier: 'TIC-1023' },
           snippet: null,
         }],
-      })),
-    };
+      }));
 
     const results = await runSearchQuery({
       knex: knex as never,
@@ -241,8 +248,7 @@ describe('search query parsing', () => {
   });
 
   it('T096 pins an exact asset-tag style identifier match', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({
+    const knex = createSearchKnex(async () => ({
         rows: [{
           object_type: 'asset',
           object_id: 'asset-42',
@@ -256,8 +262,7 @@ describe('search query parsing', () => {
           metadata: { identifier: 'LAP-0042' },
           snippet: null,
         }],
-      })),
-    };
+      }));
 
     const results = await runSearchQuery({
       knex: knex as never,
@@ -278,8 +283,7 @@ describe('search query parsing', () => {
   });
 
   it('T186 ranks an exact identifier row first when the query also has free text', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({
+    const knex = createSearchKnex(async () => ({
         rows: [
           {
             object_type: 'ticket',
@@ -308,8 +312,7 @@ describe('search query parsing', () => {
             snippet: null,
           },
         ],
-      })),
-    };
+      }));
 
     const results = await runSearchQuery({
       knex: knex as never,
@@ -330,8 +333,7 @@ describe('search query parsing', () => {
   });
 
   it('T163 matches both full and shortened ticket identifiers through metadata identifier branches', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({
+    const knex = createSearchKnex(async () => ({
         rows: [{
           object_type: 'ticket',
           object_id: 'ticket-1023',
@@ -345,8 +347,7 @@ describe('search query parsing', () => {
           metadata: { identifier: 'TIC-1023' },
           snippet: null,
         }],
-      })),
-    };
+      }));
 
     const results = await runSearchQuery({
       knex: knex as never,
@@ -369,9 +370,7 @@ describe('search query parsing', () => {
   });
 
   it('T097 applies time decay so newer equivalent rows rank higher', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -386,9 +385,7 @@ describe('search query parsing', () => {
   });
 
   it('T098 floors the time decay multiplier at 0.05', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -418,9 +415,7 @@ describe('search query parsing', () => {
   });
 
   it('T100 uses strict cursor predicates so page two does not repeat page one rows', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
     const updatedAt = new Date('2026-05-13T12:34:56.789Z');
     const cursor = encodeSearchCursor({
       score: 3.14,
@@ -454,9 +449,7 @@ describe('search query parsing', () => {
   });
 
   it('T101 configures ts_headline with controlled sentinel tokens', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -473,9 +466,7 @@ describe('search query parsing', () => {
   });
 
   it('T104 omits ts_headline from typeahead SQL when snippets are disabled', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -516,9 +507,9 @@ describe('search query parsing', () => {
       `00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`
     ));
     const leakedRows: string[] = [];
-    const knex = {
-      raw: vi.fn(async (sql: string, bindings: unknown[]) => {
-        expect(sql).toContain('s.tenant = ?::uuid');
+    const knex = createSearchKnex(async (sql: string, bindings: unknown[]) => {
+        expect(sql).toContain('from "app_search_index" where "app_search_index"."tenant" = ?');
+        expect(sql).not.toContain('WHERE s.tenant = ?::uuid');
         const tenant = bindings[5] as string;
         if (!tenants.includes(tenant)) {
           leakedRows.push(`unknown:${tenant}`);
@@ -538,8 +529,7 @@ describe('search query parsing', () => {
             snippet: null,
           }],
         };
-      }),
-    };
+      });
 
     for (let index = 0; index < 500; index += 1) {
       const tenant = tenants[index % tenants.length]!;
@@ -561,9 +551,7 @@ describe('search query parsing', () => {
   });
 
   it('T180 always emits a tenant predicate and tenant binding in search SQL', async () => {
-    const knex = {
-      raw: vi.fn(async () => ({ rows: [] })),
-    };
+    const knex = createSearchKnex();
 
     await runSearchQuery({
       knex: knex as never,
@@ -574,7 +562,8 @@ describe('search query parsing', () => {
     });
 
     const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
-    expect(sql).toContain('WHERE s.tenant = ?::uuid');
+    expect(sql).toContain('from "app_search_index" where "app_search_index"."tenant" = ?');
+    expect(sql).not.toContain('WHERE s.tenant = ?::uuid');
     expect(bindings[5]).toBe('00000000-0000-4000-8000-000000000123');
   });
 });

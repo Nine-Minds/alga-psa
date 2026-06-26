@@ -72,12 +72,11 @@ const User = {
   ): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users')
+      const user = await tenantDb(db, tenantId).table<IUser>('users')
         .select('*')
         .where({
           email: email.toLowerCase(),
           user_type: userType,
-          tenant: tenantId,
         })
         .first();
       return user;

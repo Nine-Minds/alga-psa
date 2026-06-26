@@ -17,6 +17,7 @@ import type { Knex } from 'knex';
 const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
 const MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE =
   'msp_sso_domain_verification_challenges';
+const MSP_SSO_DOMAIN_CONFLICT_DISCOVERY_CONTEXT = 'msp-sso-domain-conflict-discovery';
 
 export interface MspSsoLoginDomain {
   id: string;
@@ -652,7 +653,12 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
         `msp_sso_verified_domain_owner:${claim.domain}`,
       ]);
 
-      const conflictingOwner = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      const conflictDiscoveryDb = tenantDb(trx, MSP_SSO_DOMAIN_CONFLICT_DISCOVERY_CONTEXT);
+      const conflictingOwner = await conflictDiscoveryDb
+        .unscoped(
+          MSP_SSO_LOGIN_DOMAIN_TABLE,
+          'cross-tenant MSP SSO verified-domain conflict check'
+        )
         .select('tenant')
         .whereNot({ tenant })
         .where({ is_active: true })
@@ -813,7 +819,12 @@ export const saveMspSsoLoginDomains = withAuth(async (
     const { knex } = await createTenantKnex();
 
     if (desiredDomains.length > 0) {
-      const conflicts = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      const conflictDiscoveryDb = tenantDb(knex, MSP_SSO_DOMAIN_CONFLICT_DISCOVERY_CONTEXT);
+      const conflicts = await conflictDiscoveryDb
+        .unscoped(
+          MSP_SSO_LOGIN_DOMAIN_TABLE,
+          'cross-tenant MSP SSO login-domain conflict check'
+        )
         .select('domain')
         .where({ is_active: true })
         .whereNot({ tenant })

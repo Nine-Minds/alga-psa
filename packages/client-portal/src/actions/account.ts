@@ -19,8 +19,7 @@ async function getClientIdFromUser(
 
   const contact = await tenantDb(knex, tenant).table('contacts')
     .where({
-      contact_name_id: user.contact_id,
-      tenant
+      contact_name_id: user.contact_id
     })
     .select('client_id')
     .first();
@@ -216,8 +215,7 @@ export const getClientProfile = withAuth(async (user, { tenant }): Promise<IClie
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: user.contact_id,
-          tenant
+          contact_name_id: user.contact_id
         })
         .first();
     });
@@ -243,8 +241,7 @@ export const getClientProfile = withAuth(async (user, { tenant }): Promise<IClie
           'cl.address_line1 as location_address'
         )
         .where({
-          'c.client_id': contact.client_id,
-          'c.tenant': tenant
+          'c.client_id': contact.client_id
         })
         .first<ClientProfileRow>();
     });
@@ -281,8 +278,7 @@ export const getClientProfile = withAuth(async (user, { tenant }): Promise<IClie
           'cl.address_line1 as location_address'
         )
         .where({
-          'c.client_id': clientId,
-          'c.tenant': tenant
+          'c.client_id': clientId
         })
         .first<ClientProfileRow>();
     });
@@ -308,8 +304,7 @@ export const updateClientProfile = withAuth(async (user, { tenant }, profile: IC
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await tenantDb(trx, tenant).table('clients')
       .where({
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
       .update({
         client_name: profile.name,
@@ -334,7 +329,6 @@ export const getPaymentMethods = withAuth(async (user, { tenant }): Promise<Paym
     return await tenantDb(trx, tenant).table('payment_methods')
       .where({
         client_id: clientId,
-        tenant,
         is_deleted: false
       })
       .orderBy('is_default', 'desc')
@@ -368,7 +362,6 @@ export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
       await tenantDb(trx, tenant).table('payment_methods')
         .where({
           client_id: clientId,
-          tenant,
           is_deleted: false
         })
         .update({ is_default: false });
@@ -404,8 +397,7 @@ export const removePaymentMethod = withAuth(async (user, { tenant }, id: string)
     return await tenantDb(trx, tenant).table('payment_methods')
       .where({
         payment_method_id: id,
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
       .update({
         is_deleted: true,
@@ -427,7 +419,6 @@ export const setDefaultPaymentMethod = withAuth(async (user, { tenant }, id: str
     await tenantDb(trx, tenant).table('payment_methods')
       .where({
         client_id: clientId,
-        tenant,
         is_deleted: false
       })
       .update({ is_default: false });
@@ -437,7 +428,6 @@ export const setDefaultPaymentMethod = withAuth(async (user, { tenant }, id: str
       .where({
         payment_method_id: id,
         client_id: clientId,
-        tenant,
         is_deleted: false
       })
       .update({ is_default: true });
@@ -473,8 +463,7 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[]>
   const invoices = await withTransaction(knex, async (trx: Knex.Transaction): Promise<InvoiceRow[]> => {
     return await tenantDb(trx, tenant).table('invoices')
       .where({
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
       .orderBy('created_at', 'desc')
       .limit(10)
@@ -510,7 +499,6 @@ export const getBillingCycles = withAuth(async (user, { tenant }): Promise<Billi
     return await tenantDb(trx, tenant).table('client_contracts')
       .where({
         client_id: clientId,
-        tenant,
         is_active: true,
       })
       .orderBy('start_date', 'desc')
@@ -557,11 +545,7 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
     return await servicesQuery
       .where({
         'cc.client_id': clientId,
-        'cc.is_active': true,
-        'cc.tenant': tenant,
-        'cl.tenant': tenant,
-        'ps.tenant': tenant,
-        'sc.tenant': tenant
+        'cc.is_active': true
       })
       .whereIn('cl.contract_line_type', ['Fixed', 'Hourly', 'Usage'])
       .andWhere('cc.start_date', '<=', now)
@@ -729,7 +713,6 @@ export const getServiceUpgrades = withAuth(async (user, { tenant }, serviceId: s
       .where({
         'ps.service_id': serviceId,
         'cc.client_id': clientId,
-        'cc.tenant': tenant,
         'cc.is_active': true,
       })
       .first();
@@ -747,7 +730,6 @@ export const getServiceUpgrades = withAuth(async (user, { tenant }, serviceId: s
     return await plansQuery
       .where({
         'ps.service_id': serviceId,
-        'cl.tenant': tenant,
         'cl.is_active': true
       })
       .select(

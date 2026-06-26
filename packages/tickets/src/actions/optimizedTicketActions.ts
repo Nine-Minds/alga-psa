@@ -1618,34 +1618,50 @@ function buildTicketListItemsQuery(
   tenant: string,
   baseQuery: Knex.QueryBuilder
 ): Knex.QueryBuilder {
-  return baseQuery
-    .clone()
-    .joinRaw(`LEFT JOIN (
-      SELECT
-        tc.master_ticket_id,
-        tc.tenant,
-        COUNT(*)::int as bundle_child_count,
-        array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids
-      FROM tickets tc
-      WHERE tc.master_ticket_id IS NOT NULL AND tc.tenant = ?
-      GROUP BY tc.master_ticket_id, tc.tenant
-    ) as bs ON bs.master_ticket_id = t.ticket_id AND bs.tenant = t.tenant`, [tenant])
-    .joinRaw(`LEFT JOIN (
-      SELECT
-        tr.ticket_id,
-        tr.tenant,
-        COUNT(*) FILTER (WHERE tr.additional_user_id IS NOT NULL)::int as additional_agent_count,
-        COALESCE(
-          json_agg(
-            json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))
-          ) FILTER (WHERE uu.user_id IS NOT NULL),
-          '[]'::json
-        ) as additional_agents
-      FROM ticket_resources tr
-      LEFT JOIN users uu ON tr.additional_user_id = uu.user_id AND tr.tenant = uu.tenant
-      WHERE tr.tenant = ?
-      GROUP BY tr.ticket_id, tr.tenant
-    ) as ags ON ags.ticket_id = t.ticket_id AND ags.tenant = t.tenant`, [tenant])
+  const db = tenantDb(trx, tenant);
+  const bundleStats = db.table('tickets as tc')
+    .select(
+      'tc.master_ticket_id',
+      'tc.tenant',
+      trx.raw('COUNT(*)::int as bundle_child_count'),
+      trx.raw('array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids')
+    )
+    .whereNotNull('tc.master_ticket_id')
+    .groupBy('tc.master_ticket_id', 'tc.tenant')
+    .as('bs');
+  const additionalAgents = db.table('ticket_resources as tr')
+    .select(
+      'tr.ticket_id',
+      'tr.tenant',
+      trx.raw('COUNT(*) FILTER (WHERE tr.additional_user_id IS NOT NULL)::int as additional_agent_count'),
+      trx.raw(`COALESCE(
+        json_agg(
+          json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))
+        ) FILTER (WHERE uu.user_id IS NOT NULL),
+        '[]'::json
+      ) as additional_agents`)
+    )
+    .groupBy('tr.ticket_id', 'tr.tenant')
+    .as('ags');
+
+  db.tenantJoin(additionalAgents, 'users as uu', 'tr.additional_user_id', 'uu.user_id', {
+    type: 'left',
+    rootTenantColumn: 'tr.tenant',
+  });
+
+  const query = baseQuery.clone();
+  db.tenantJoinSubquery(query, bundleStats, 'bs.master_ticket_id', 't.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'bs.tenant',
+  });
+  db.tenantJoinSubquery(query, additionalAgents, 'ags.ticket_id', 't.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'ags.tenant',
+  });
+
+  return query
     .select(
       // Ticket columns (explicit list avoids fetching large unused columns)
       't.ticket_id', 't.ticket_number', 't.title', 't.url',

@@ -51,8 +51,7 @@ async function resolvePortalVisibility(
 ) {
   const userRecord = await tenantDb(trx, tenant).table('users')
     .where({
-      user_id: userId,
-      tenant
+      user_id: userId
     })
     .first();
 
@@ -498,8 +497,7 @@ export const addClientTicketComment = withAuth(async (
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: user.user_id
         })
         .first();
 
@@ -564,7 +562,6 @@ export const addClientTicketComment = withAuth(async (
         await tenantDb(trx, tenant).table('tickets')
           .where({
             ticket_id: ticketId,
-            tenant,
           })
           .update({ response_state: 'awaiting_internal' });
 
@@ -641,8 +638,7 @@ export const updateClientTicketComment = withAuth(async (
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: user.user_id
         })
         .first();
 
@@ -654,7 +650,6 @@ export const updateClientTicketComment = withAuth(async (
       const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          tenant,
           user_id: user.user_id
         })
         .first();
@@ -679,8 +674,7 @@ export const updateClientTicketComment = withAuth(async (
 
       await tenantDb(trx, tenant).table('comments')
         .where({
-          comment_id: commentId,
-          tenant: tenant
+          comment_id: commentId
         })
         .update({
           ...updatesWithMarkdown,
@@ -740,8 +734,7 @@ export const updateTicketStatus = withAuth(async (
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: user.user_id
         })
         .first();
 
@@ -816,8 +809,7 @@ export const updateTicketStatus = withAuth(async (
       // update paths.
       await tenantDb(trx, tenant).table('tickets')
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          ticket_id: ticketId
         })
         .update({
           status_id: newStatusId,
@@ -944,8 +936,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: user.user_id
         })
         .first();
 
@@ -957,7 +948,6 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          tenant,
           user_id: user.user_id
         })
         .first();
@@ -970,8 +960,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
 
       await tenantDb(trx, tenant).table('comments')
         .where({
-          comment_id: commentId,
-          tenant: tenant
+          comment_id: commentId
         })
         .del();
 
@@ -1024,7 +1013,6 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       const ticket = await tenantDb(trx, tenant).table('tickets')
         .where({
           ticket_id: ticketId,
-          tenant: tenant,
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
@@ -1117,14 +1105,12 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       const resolvedBoard = !assignedBoardId
         ? await tenantDb(trx, tenant).table('boards')
             .where({
-              tenant,
               is_default: true,
               is_inactive: false
             })
             .first()
         : await tenantDb(trx, tenant).table('boards')
             .where({
-              tenant,
               board_id: assignedBoardId,
               is_inactive: false
             })
@@ -1188,7 +1174,6 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       if (validatedData.asset_id) {
         const asset = await tenantDb(trx, tenant).table('assets')
           .where({
-            tenant,
             asset_id: validatedData.asset_id,
             client_id: visibility.clientId,
           })

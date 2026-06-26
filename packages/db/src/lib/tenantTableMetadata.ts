@@ -164,6 +164,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   feature_toggles: { scope: 'tenant' },
   google_email_provider_config: { scope: 'tenant' },
   holidays: { scope: 'tenant' },
+  hudu_integrations: { scope: 'tenant' },
   impacts: { scope: 'tenant' },
   import_jobs: { scope: 'tenant' },
   import_job_items: { scope: 'tenant' },

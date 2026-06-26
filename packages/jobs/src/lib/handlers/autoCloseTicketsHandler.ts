@@ -76,51 +76,65 @@ function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant:
 }
 
 async function computePendingCloses(
-  knex: Knex,
+  conn: Knex | Knex.Transaction,
   tenant: string,
   ticketId?: string
 ): Promise<PendingClose[]> {
-  const bindings: Record<string, unknown> = { tenant };
-  let ticketFilter = '';
+  const db = tenantDb(conn, tenant);
+  const commentActivity = db.table('comments as c')
+    .select('c.tenant', 'c.ticket_id')
+    .max('c.created_at as last_comment_at')
+    .groupBy('c.tenant', 'c.ticket_id')
+    .as('comment_activity');
+  const auditActivity = db.table('ticket_audit_logs as a')
+    .select('a.tenant', 'a.ticket_id')
+    .max('a.occurred_at as last_audit_at')
+    .whereNotIn('a.event_type', NON_ACTIVITY_AUDIT_EVENTS)
+    .groupBy('a.tenant', 'a.ticket_id')
+    .as('audit_activity');
+
+  const pendingQuery = db.table('tickets as t');
+  db.tenantJoin(pendingQuery, 'board_auto_close_rules as r', 'r.board_id', 't.board_id', {
+    on(join) {
+      join
+        .andOn('r.trigger_status_id', '=', 't.status_id')
+        .andOnVal('r.is_enabled', '=', true);
+    },
+  });
+  db.tenantJoinSubquery(pendingQuery, commentActivity, 't.ticket_id', 'comment_activity.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'comment_activity.tenant',
+  });
+  db.tenantJoinSubquery(pendingQuery, auditActivity, 't.ticket_id', 'audit_activity.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'audit_activity.tenant',
+  });
+
   if (ticketId) {
-    ticketFilter = 'AND t.ticket_id = :ticketId';
-    bindings.ticketId = ticketId;
+    pendingQuery.where('t.ticket_id', ticketId);
   }
 
-  // NON_ACTIVITY_AUDIT_EVENTS are compile-time constants, safe to inline.
-  const nonActivityEventList = NON_ACTIVITY_AUDIT_EVENTS.map((e) => `'${e}'`).join(', ');
+  const rows = (await pendingQuery
+    .whereNull('t.closed_at')
+    .whereNull('t.master_ticket_id')
+    .select(
+      't.ticket_id',
+      'r.rule_id',
+      'r.inactivity_days',
+      'r.warning_days_before',
+      'r.close_to_status_id',
+      conn.raw(
+        `GREATEST(
+          COALESCE(comment_activity.last_comment_at, to_timestamp(0)),
+          COALESCE(audit_activity.last_audit_at, to_timestamp(0)),
+          COALESCE(t.entered_at, t.updated_at, now())
+        ) AS last_activity_at`
+      )
+    )) as Array<Record<string, any>>;
 
-  const result = await knex.raw(
-    `
-    SELECT
-      t.ticket_id,
-      r.rule_id,
-      r.inactivity_days,
-      r.warning_days_before,
-      r.close_to_status_id,
-      GREATEST(
-        COALESCE((SELECT MAX(c.created_at) FROM comments c
-                  WHERE c.tenant = t.tenant AND c.ticket_id = t.ticket_id), to_timestamp(0)),
-        COALESCE((SELECT MAX(a.occurred_at) FROM ticket_audit_logs a
-                  WHERE a.tenant = t.tenant AND a.ticket_id = t.ticket_id
-                    AND a.event_type NOT IN (${nonActivityEventList})), to_timestamp(0)),
-        COALESCE(t.entered_at, t.updated_at, now())
-      ) AS last_activity_at
-    FROM tickets t
-    JOIN board_auto_close_rules r
-      ON r.tenant = t.tenant
-     AND r.board_id = t.board_id
-     AND r.trigger_status_id = t.status_id
-     AND r.is_enabled = true
-    WHERE t.tenant = :tenant
-      AND t.closed_at IS NULL
-      AND t.master_ticket_id IS NULL
-      ${ticketFilter}
-    `,
-    bindings
-  );
-
-  return result.rows.map((row: Record<string, any>) => {
+  return rows.map((row: Record<string, any>) => {
     const lastActivity = new Date(row.last_activity_at);
     return {
       ticket_id: row.ticket_id,
