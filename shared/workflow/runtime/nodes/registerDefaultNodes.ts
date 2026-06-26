@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { exprSchema, inputMappingSchema, eventWaitConfigSchema, timeWaitConfigSchema } from '../types';
 import { resolveExpressions } from '../utils/expressionResolver';
@@ -464,7 +466,7 @@ function ctxToExpr(env: Envelope) {
 }
 
 async function resolveTaskFormSchema(
-  knex: any,
+  knex: Knex | Knex.Transaction,
   tenantId: string | null,
   taskType: string
 ): Promise<{ formId: string; formType: string; schema: Record<string, unknown> | null } | null> {
@@ -488,15 +490,16 @@ async function resolveTaskFormSchema(
   }
 
   if (tenantId) {
-    const tenantTask = await knex('workflow_task_definitions')
-      .where({ tenant: tenantId, name: taskType })
+    const db = tenantDb(knex, tenantId);
+    const tenantTask = await db.table('workflow_task_definitions')
+      .where({ name: taskType })
       .first();
     if (tenantTask) {
       const formId = tenantTask.form_id as string;
       const formType = tenantTask.form_type ?? 'tenant';
       if (formType === 'tenant') {
-        const formSchema = await knex('workflow_form_schemas')
-          .where({ tenant: tenantId, form_id: formId })
+        const formSchema = await db.table('workflow_form_schemas')
+          .where({ form_id: formId })
           .first();
         return {
           formId,

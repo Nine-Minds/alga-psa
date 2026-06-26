@@ -65,7 +65,7 @@ describe('workflow shared helper actor resolution', () => {
       updated_at: new Date().toISOString(),
     });
 
-    const leakedActor = await resolveRunActorUserId(db as any, crossTenantRunId);
+    const leakedActor = await resolveRunActorUserId(db as any, tenantA, crossTenantRunId);
     expect(leakedActor).toBeNull();
 
     const scopedWorkflowId = uuidv4();
@@ -96,7 +96,7 @@ describe('workflow shared helper actor resolution', () => {
       updated_at: new Date().toISOString(),
     });
 
-    const resolvedActor = await resolveRunActorUserId(db as any, scopedRunId);
+    const resolvedActor = await resolveRunActorUserId(db as any, tenantA, scopedRunId);
     expect(resolvedActor).toBe(actorA);
   });
 });

@@ -134,4 +134,29 @@ describe('workflow tenant facade roots', () => {
     const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
     expect(metadataSource).toContain("event_catalog: { scope: 'tenant' }");
   });
+
+  it('routes workflow runtime support tenant roots through tenantDb', () => {
+    const files = [
+      'shared/workflow/secrets/tenantSecretProvider.ts',
+      'shared/workflow/runtime/actions/businessOperations/shared.ts',
+      'shared/workflow/runtime/nodes/registerDefaultNodes.ts',
+      'shared/workflow/runtime/actions/businessOperations/notifications.ts',
+      'shared/workflow/runtime/actions/businessOperations/email.ts',
+    ];
+
+    const directRootPattern =
+      /\b(?:this\.knex|knex|trx|tx\.trx)\s*(?:<[^>]+>)?\s*\(\s*['`](?:audit_logs|document_associations|documents|external_files|internal_notifications|permissions|role_permissions|roles|tenant_secrets|tenant_secrets_audit_log|tickets|user_roles|users|workflow_definition_versions|workflow_definitions|workflow_form_schemas|workflow_runs|workflow_task_definitions)['`]/;
+
+    for (const file of files) {
+      const source = read(file);
+
+      expect(source, file).toContain("tenantDb");
+      expect(source, file).not.toMatch(directRootPattern);
+      expect(source, file).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+    }
+
+    const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
+    expect(metadataSource).toContain("tenant_secrets: { scope: 'tenant' }");
+    expect(metadataSource).toContain("tenant_secrets_audit_log: { scope: 'tenant' }");
+  });
 });

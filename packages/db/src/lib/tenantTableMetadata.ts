@@ -218,6 +218,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   tenant_companies: { scope: 'tenant' },
   tenant_email_settings: { scope: 'tenant' },
   tenant_email_templates: { scope: 'tenant' },
+  tenant_secrets: { scope: 'tenant' },
+  tenant_secrets_audit_log: { scope: 'tenant' },
   tenant_extension_install: { scope: 'tenant', tenantColumn: 'tenant_id' },
   tenant_extension_schedule: { scope: 'tenant', tenantColumn: 'tenant_id' },
   tenant_settings: { scope: 'tenant' },
