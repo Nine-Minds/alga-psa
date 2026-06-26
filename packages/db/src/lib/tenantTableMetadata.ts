@@ -239,6 +239,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   telemetry_consent_log: { scope: 'tenant' },
   template_services: { scope: 'tenant' },
   tickets: { scope: 'tenant' },
+  ticket_audit_logs: { scope: 'tenant' },
   ticket_auto_close_state: { scope: 'tenant' },
   ticket_bundle_mirrors: { scope: 'tenant' },
   ticket_bundle_settings: { scope: 'tenant' },

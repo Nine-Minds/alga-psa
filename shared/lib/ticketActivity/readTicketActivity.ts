@@ -13,6 +13,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import type {
   TicketActivityChanges,
@@ -45,6 +46,14 @@ export interface ReadTicketActivityOptions {
   eventTypes?: string[];
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 export async function readTicketActivity(
   knex: Knex | Knex.Transaction,
   tenant: string,
@@ -54,8 +63,8 @@ export async function readTicketActivity(
   if (!tenant) throw new Error('readTicketActivity requires tenant');
   if (!ticketId) throw new Error('readTicketActivity requires ticketId');
 
-  let q = (knex as Knex)('ticket_audit_logs')
-    .where({ tenant, ticket_id: ticketId })
+  let q = tenantScopedTable(knex, 'ticket_audit_logs', tenant)
+    .where({ ticket_id: ticketId })
     .orderBy([
       { column: 'occurred_at', order: 'desc' },
       { column: 'audit_id', order: 'desc' },
@@ -134,8 +143,8 @@ export async function buildUnifiedTicketTimeline(
 
   const activityRows = await readTicketActivity(knex, tenant, ticketId);
 
-  let commentQuery = (knex as Knex)('comments')
-    .where({ tenant, ticket_id: ticketId });
+  let commentQuery = tenantScopedTable(knex, 'comments', tenant)
+    .where({ ticket_id: ticketId });
   if (!includeInternal) {
     commentQuery = commentQuery.where((qb) =>
       qb.where('is_internal', false).orWhereNull('is_internal'),

@@ -1,10 +1,18 @@
 'use server';
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 export const assignTeamToTicket = withAuth(async (
   user,
@@ -18,16 +26,16 @@ export const assignTeamToTicket = withAuth(async (
       throw new Error('Permission denied: Cannot assign team to ticket');
     }
 
-    const ticket = await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .first();
 
     if (!ticket) {
       throw new Error('Ticket not found');
     }
 
-    const team = await trx('teams')
-      .where({ team_id: teamId, tenant })
+    const team = await tenantScopedTable(trx, 'teams', tenant)
+      .where({ team_id: teamId })
       .first();
 
     if (!team) {
@@ -38,21 +46,23 @@ export const assignTeamToTicket = withAuth(async (
       throw new Error('Team lead not found');
     }
 
-    const teamMembers = await trx('team_members')
-      .join('users', function() {
-        this.on('team_members.user_id', 'users.user_id')
-          .andOn('team_members.tenant', 'users.tenant');
-      })
-      .where({ 'team_members.team_id': teamId, 'team_members.tenant': tenant })
+    const teamMembers = await tenantDb(trx, tenant)
+      .tenantJoin(
+        tenantScopedTable(trx, 'team_members', tenant),
+        'users',
+        'team_members.user_id',
+        'users.user_id'
+      )
+      .where({ 'team_members.team_id': teamId })
       .andWhere('users.is_inactive', false)
-      .select('team_members.user_id');
+      .select('team_members.user_id') as Array<{ user_id: string }>;
 
     // assigned_to is guaranteed non-null: either the ticket already has one,
     // or we fall back to team.manager_id (validated above).
     const resolvedAssignedTo: string = (ticket.assigned_to as string | null) || team.manager_id;
 
-    await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .update({
         assigned_team_id: teamId,
         assigned_to: resolvedAssignedTo,
@@ -65,8 +75,8 @@ export const assignTeamToTicket = withAuth(async (
       .filter((userId: string) => userId && userId !== resolvedAssignedTo);
 
     if (memberIds.length > 0) {
-      const existingResources = await trx('ticket_resources')
-        .where({ ticket_id: ticketId, tenant })
+      const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
+        .where({ ticket_id: ticketId })
         .whereIn('additional_user_id', memberIds)
         .select('additional_user_id');
 
@@ -74,7 +84,7 @@ export const assignTeamToTicket = withAuth(async (
       const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
 
       if (toInsert.length > 0) {
-        await trx('ticket_resources').insert(
+        await tenantScopedTable(trx, 'ticket_resources', tenant).insert(
           toInsert.map((userId) => ({
             ticket_id: ticketId,
             assigned_to: resolvedAssignedTo,
@@ -125,8 +135,8 @@ export const removeTeamFromTicket = withAuth(async (
       throw new Error('Permission denied: Cannot remove team from ticket');
     }
 
-    const ticket = await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .first();
 
     if (!ticket) {
@@ -135,21 +145,21 @@ export const removeTeamFromTicket = withAuth(async (
 
     const mode = options.mode;
     if (mode === 'remove_all') {
-      await trx('ticket_resources')
-        .where({ ticket_id: ticketId, tenant, role: 'team_member' })
+      await tenantScopedTable(trx, 'ticket_resources', tenant)
+        .where({ ticket_id: ticketId, role: 'team_member' })
         .delete();
     }
 
     if (mode === 'selective') {
       const keepIds = new Set(options.keepUserIds ?? []);
-      await trx('ticket_resources')
-        .where({ ticket_id: ticketId, tenant, role: 'team_member' })
+      await tenantScopedTable(trx, 'ticket_resources', tenant)
+        .where({ ticket_id: ticketId, role: 'team_member' })
         .whereNotIn('additional_user_id', Array.from(keepIds))
         .delete();
     }
 
-    await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .update({
         assigned_team_id: null,
         updated_by: user.user_id,
