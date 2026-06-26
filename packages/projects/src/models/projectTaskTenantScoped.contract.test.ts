@@ -16,9 +16,9 @@ describe('project task model tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(knexOrTrx, 'task_resources', tenant)");
     expect(source).toContain("tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant)");
     expect(source).toContain("tenantScopedTable(knexOrTrx, 'project_phases', tenant)");
-    expect(source).toContain(".andOn('project_tasks.tenant', 'project_phases.tenant')");
-    expect(source).toContain(".andOn('project_ticket_links.tenant', 'tickets.tenant')");
-    expect(source).toContain(".andOn('tickets.tenant', 'statuses.tenant')");
+    expect(source).toContain("db.tenantJoin(tasksQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')");
+    expect(source).toContain("db.tenantJoin(linksQuery, 'tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id', { type: 'left' })");
+    expect(source).toContain("db.tenantJoin(linksQuery, 'statuses', 'tickets.status_id', 'statuses.status_id', { type: 'left' })");
     expect(source).not.toContain(".andWhere('tenant', tenant)");
     expect(source).not.toContain(".where('tenant', tenant)");
     expect(source).not.toContain(".where({ checklist_item_id: checklistItemId, tenant })");

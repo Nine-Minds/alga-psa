@@ -32,6 +32,12 @@ const tagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
 const aliasedTagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
   tenantDb(knexOrTrx, tenant).table('tag_mappings as tm');
 
+const joinTagDefinitions = (
+  query: Knex.QueryBuilder,
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string
+) => tenantDb(knexOrTrx, tenant).tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+
 const TagMapping = {
   getByEntity: async (
     knexOrTrx: Knex | Knex.Transaction,
@@ -40,10 +46,7 @@ const TagMapping = {
     tagged_type: TaggedEntityType
   ): Promise<ITagWithDefinition[]> => {
     const tags = await aliasedTagMappingsQuery(knexOrTrx, tenant)
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-          .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
+      .modify((query) => joinTagDefinitions(query, knexOrTrx, tenant))
       .where('tm.tagged_id', tagged_id)
       .where('tm.tagged_type', tagged_type)
       .select(
@@ -74,10 +77,7 @@ const TagMapping = {
     }
 
     const tags = await aliasedTagMappingsQuery(knexOrTrx, tenant)
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-          .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
+      .modify((query) => joinTagDefinitions(query, knexOrTrx, tenant))
       .whereIn('tm.tagged_id', tagged_ids)
       .where('tm.tagged_type', tagged_type)
       .select(

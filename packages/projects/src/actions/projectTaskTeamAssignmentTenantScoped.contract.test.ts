@@ -15,7 +15,7 @@ describe('project task team assignment tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable(trx, 'teams', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'team_members', tenant)");
-    expect(section).toContain(".andOn('team_members.tenant', 'users.tenant')");
+    expect(section).toContain("tenantDb(trx, tenant).tenantJoin(teamMembersQuery, 'users', 'team_members.user_id', 'users.user_id')");
     expect(section).not.toContain(".where({ task_id: taskId, tenant })");
     expect(section).not.toContain(".where({ team_id: teamId, tenant })");
     expect(section).not.toContain(".where({ phase_id: task.phase_id, tenant })");

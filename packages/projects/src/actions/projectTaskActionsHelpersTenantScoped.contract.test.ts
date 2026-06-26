@@ -19,7 +19,7 @@ describe('project task action helper tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'task_checklist_items as tci', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'task_resources as tr', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_ticket_links', tenant)");
-    expect(source).toContain(".andOn('pt.tenant', '=', 'pp.tenant')");
+    expect(source).toContain("tenantDb(trx, tenant).tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id')");
     expect(source).not.toContain(".where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })");
     expect(source).not.toContain(".where({ tenant, user_id: user.user_id })");
     expect(source).not.toContain(".where({ tenant, phase_id: phaseId })");

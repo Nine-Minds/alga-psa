@@ -20,7 +20,7 @@ describe('project model tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'task_checklist_items', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_ticket_links', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'projects', tenant)");
-    expect(source).toContain("knexOrTrx<IStandardStatus>('standard_statuses')");
+    expect(source).toContain("tenantScopedTable<IStandardStatus>(knexOrTrx, 'standard_statuses', tenant)");
     expect(source).not.toContain(".where('projects.tenant', tenant)");
     expect(source).not.toContain(".andWhere('tenant', tenant)");
     expect(source).not.toContain(".where({ project_id: phaseData.project_id, tenant })");

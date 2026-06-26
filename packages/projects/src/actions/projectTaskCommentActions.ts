@@ -239,12 +239,10 @@ export const getTaskComments = withAuth(async (
 ): Promise<IProjectTaskCommentWithUser[]> => {
   const { knex: db } = await createTenantKnex();
 
-  const comments = await tenantScopedTable(db, 'project_task_comments', tenant)
+  const commentsQuery = tenantScopedTable(db, 'project_task_comments', tenant);
+  tenantDb(db, tenant).tenantJoin(commentsQuery, 'users', 'project_task_comments.user_id', 'users.user_id', { type: 'left' });
+  const comments = await commentsQuery
     .where({ 'project_task_comments.task_id': taskId })
-    .leftJoin('users', function() {
-      this.on('project_task_comments.user_id', 'users.user_id')
-        .andOn('project_task_comments.tenant', 'users.tenant');
-    })
     .select(
       'project_task_comments.*',
       'users.first_name',
@@ -321,11 +319,9 @@ export const updateTaskComment = withAuth(async (
       });
 
     // Get task and project context for notifications
-    const task = await tenantScopedTable(trx, 'project_tasks', tenant)
-      .join('project_phases', function() {
-        this.on('project_tasks.phase_id', 'project_phases.phase_id')
-          .andOn('project_tasks.tenant', 'project_phases.tenant');
-      })
+    const taskQuery = tenantScopedTable(trx, 'project_tasks', tenant);
+    tenantDb(trx, tenant).tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+    const task = await taskQuery
       .where('project_tasks.task_id', existingComment.task_id)
       .select('project_phases.project_id', 'project_tasks.task_name')
       .first();
@@ -390,11 +386,9 @@ export const deleteTaskComment = withAuth(async (
 
     await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'delete');
 
-    const task = await tenantScopedTable(trx, 'project_tasks', tenant)
-      .join('project_phases', function() {
-        this.on('project_tasks.phase_id', 'project_phases.phase_id')
-          .andOn('project_tasks.tenant', 'project_phases.tenant');
-      })
+    const taskQuery = tenantScopedTable(trx, 'project_tasks', tenant);
+    tenantDb(trx, tenant).tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+    const task = await taskQuery
       .where('project_tasks.task_id', existingComment.task_id)
       .select('project_phases.project_id', 'project_tasks.task_name')
       .first();

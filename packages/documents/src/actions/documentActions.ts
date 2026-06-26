@@ -197,10 +197,11 @@ export const getDocumentAssociationContactsForPicker = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const contacts = await tenantScopedTable(trx, 'contacts as c', tenant)
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
-      })
+    const db = tenantDb(trx, tenant);
+    const contactsQuery = tenantScopedTable(trx, 'contacts as c', tenant);
+    db.tenantJoin(contactsQuery, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
+
+    const contacts = await contactsQuery
       .select('c.*', 'cl.client_name')
       .andWhere('c.is_inactive', false)
       .orderBy('c.full_name', 'asc');
@@ -407,6 +408,7 @@ async function resolveDocumentAuthorizationRecords(
   const projectTaskIds = new Set<string>();
   const contractIds = new Set<string>();
 
+  const scopedDb = tenantDb(trx, tenant);
   for (const association of associations) {
     if (association.entity_type === 'contact') {
       contactIds.add(association.entity_id);
@@ -435,11 +437,9 @@ async function resolveDocumentAuthorizationRecords(
       : Promise.resolve([]),
     projectTaskIds.size > 0
       ? tenantScopedTable(trx, 'project_tasks as pt', tenant)
-          .join('project_phases as pp', function joinPhases() {
-            this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-          })
-          .join('projects as p', function joinProjects() {
-            this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
+          .modify((builder) => {
+            scopedDb.tenantJoin(builder, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+            scopedDb.tenantJoin(builder, 'projects as p', 'pp.project_id', 'p.project_id');
           })
           .whereIn('pt.task_id', Array.from(projectTaskIds))
           .select<{ task_id: string; client_id: string | null }[]>('pt.task_id', 'p.client_id')
@@ -1070,7 +1070,8 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
 
     // Use direct query to join with users table
     const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await tenantScopedTable(trx, 'documents', tenant)
+      const db = tenantDb(trx, tenant);
+      const documentQuery = tenantScopedTable(trx, 'documents', tenant)
         .select(
           'documents.*',
           'users.first_name',
@@ -1080,15 +1081,11 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
           `)
-        )
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
+        );
+      db.tenantJoin(documentQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+      return await documentQuery
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({ 'documents.document_id': documentId })
         .first();
@@ -1150,16 +1147,10 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
       const db = tenantDb(trx, tenant);
       const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
       db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+      db.tenantJoin(documentsQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentsQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
 
       const documents = await documentsQuery
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': ticketId,
@@ -1198,16 +1189,10 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
       const db = tenantDb(trx, tenant);
       const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
       db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+      db.tenantJoin(documentsQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentsQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
 
       const documents = await documentsQuery
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': clientId,
@@ -1306,16 +1291,10 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
       const db = tenantDb(trx, tenant);
       const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
       db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+      db.tenantJoin(documentsQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentsQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
 
       const documents = await documentsQuery
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': contactNameId,
@@ -1580,18 +1559,18 @@ export const getDocumentPreview = withAuth(async (
 
     // Check if the identifier is a document ID
     let document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await tenantScopedTable(trx, 'documents', tenant)
+      const db = tenantDb(trx, tenant);
+      const documentQuery = tenantScopedTable(trx, 'documents', tenant)
         .select(
           'documents.*',
           trx.raw(`
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
           `)
-        )
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
+        );
+      db.tenantJoin(documentQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+      return await documentQuery
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({ 'documents.document_id': identifier })
         .first();
@@ -1948,16 +1927,10 @@ export const getDocumentsByEntity = withAuth(async (
         const db = tenantDb(trx, tenant);
         let query = tenantScopedTable(trx, 'documents', tenant);
         db.tenantJoin(query, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+        db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+        db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
 
         query = query
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
           .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
           .where('document_associations.entity_id', entity_id)
           .andWhere('document_associations.entity_type', entity_type)
@@ -2043,16 +2016,13 @@ export const getAllDocuments = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-        let query = tenantScopedTable(trx, 'documents', tenant)
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
+        const db = tenantDb(trx, tenant);
+        let query = tenantScopedTable(trx, 'documents', tenant);
+        db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+        db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+
+        query = query
           .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
           .select(
             'documents.*',
             'users.first_name',
@@ -2249,6 +2219,8 @@ export const searchDocumentAssociationEntities = withAuth(async (
       return Number(row?.count ?? 0);
     };
 
+    const db = tenantDb(trx, tenant);
+
     if (entityType === 'client') {
       let query = tenantScopedTable(trx, 'clients', tenant)
         .select('client_id as value', 'client_name as label')
@@ -2260,10 +2232,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'contact') {
-      let query = tenantScopedTable(trx, 'contacts as c', tenant)
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
-        })
+      let query = tenantScopedTable(trx, 'contacts as c', tenant);
+      db.tenantJoin(query, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'c.contact_name_id as value',
           trx.raw(`
@@ -2282,10 +2253,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'ticket') {
-      let query = tenantScopedTable(trx, 'tickets as t', tenant)
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('t.client_id', '=', 'cl.client_id').andOn('t.tenant', '=', 'cl.tenant');
-        })
+      let query = tenantScopedTable(trx, 'tickets as t', tenant);
+      db.tenantJoin(query, 'clients as cl', 't.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           't.ticket_id as value',
           trx.raw(`
@@ -2309,10 +2279,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'asset') {
-      let query = tenantScopedTable(trx, 'assets as a', tenant)
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('a.client_id', '=', 'cl.client_id').andOn('a.tenant', '=', 'cl.tenant');
-        })
+      let query = tenantScopedTable(trx, 'assets as a', tenant);
+      db.tenantJoin(query, 'clients as cl', 'a.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'a.asset_id as value',
           trx.raw(`
@@ -2339,16 +2308,11 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'project_task') {
-      let query = tenantScopedTable(trx, 'project_tasks as pt', tenant)
-        .leftJoin('project_phases as pp', function joinPhases() {
-          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-        })
-        .leftJoin('projects as p', function joinProjects() {
-          this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-        })
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('p.client_id', '=', 'cl.client_id').andOn('p.tenant', '=', 'cl.tenant');
-        })
+      let query = tenantScopedTable(trx, 'project_tasks as pt', tenant);
+      db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id', { type: 'left' });
+      db.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as cl', 'p.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'pt.task_id as value',
           trx.raw(`
@@ -2375,13 +2339,10 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'contract') {
-      let query = tenantScopedTable(trx, 'contracts as c', tenant)
-        .leftJoin('client_contracts as cc', function joinClientContracts() {
-          this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
-        })
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-        })
+      let query = tenantScopedTable(trx, 'contracts as c', tenant);
+      db.tenantJoin(query, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'c.contract_id as value',
           trx.raw("COALESCE(c.contract_name, 'Unnamed contract') as label")
@@ -2394,10 +2355,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
       return { options: rows, total };
     }
 
-    let quoteQuery = tenantScopedTable(trx, 'quotes as q', tenant)
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('q.client_id', '=', 'cl.client_id').andOn('q.tenant', '=', 'cl.tenant');
-      })
+    let quoteQuery = tenantScopedTable(trx, 'quotes as q', tenant);
+    db.tenantJoin(quoteQuery, 'clients as cl', 'q.client_id', 'cl.client_id', { type: 'left' });
+    quoteQuery = quoteQuery
       .select(
         'q.quote_id as value',
         trx.raw(`
@@ -3309,6 +3269,7 @@ export const getDocumentsByFolder = withAuth(async (
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const fetchPage = async (sourcePage: number, sourceLimit: number) => {
       let query = tenantScopedTable(trx, 'documents as d', tenant);
+      const db = tenantDb(trx, tenant);
 
       const associationExistsQuery = () =>
         tenantScopedTable(trx, 'document_associations as da', tenant)
@@ -3341,11 +3302,8 @@ export const getDocumentsByFolder = withAuth(async (
         query = query.whereNull('d.folder_path');
       }
 
+      db.tenantJoin(query, 'document_types as dt', 'd.type_id', 'dt.type_id', { type: 'left' });
       query = query
-        .leftJoin('document_types as dt', function() {
-          this.on('d.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
         .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id');
 
       if (filters?.searchTerm) {
@@ -3441,11 +3399,8 @@ export const getDocumentsByFolder = withAuth(async (
         });
       }
 
+      db.tenantJoin(query, 'users', 'd.created_by', 'users.user_id', { type: 'left' });
       query = query
-        .leftJoin('users', function() {
-          this.on('d.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
         .select(
           'd.*',
           trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
@@ -4087,11 +4042,11 @@ async function enrichFolderTreeWithCounts(
   }
 
   // Gather candidate documents first, then apply kernel authorization before counting.
-  let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant)
-    .leftJoin('document_types as dt', function joinDocumentTypes() {
-      this.on('d.type_id', '=', 'dt.type_id')
-        .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-    })
+  const db = tenantDb(knex, tenant);
+  let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant);
+  db.tenantJoin(documentsQuery, 'document_types as dt', 'd.type_id', 'dt.type_id', { type: 'left' });
+
+  documentsQuery = documentsQuery
     .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
     .whereIn('d.folder_path', allPaths);
 

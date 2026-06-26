@@ -11,7 +11,7 @@ const section = source.slice(
 describe('project task detail and reorder tenant-scoped query contract', () => {
   it('uses structural tenant scoping for task detail and reorder roots', () => {
     expect(section).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
-    expect(section).toContain(".andOn('project_tasks.tenant', '=', 'project_phases.tenant')");
+    expect(section).toContain("db.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' })");
     expect(section).not.toContain(".andWhere('project_tasks.tenant', tenant)");
     expect(section).not.toContain(".where({ task_id: taskId, tenant })");
     expect(section).not.toContain(".where({ task_id: beforeTaskId, tenant })");

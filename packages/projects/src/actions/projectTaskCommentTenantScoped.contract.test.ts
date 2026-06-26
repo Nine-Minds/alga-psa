@@ -12,8 +12,8 @@ describe('project task comment tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'comment_threads', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_task_comment_reactions', tenant)");
     expect(source).toContain("tenantScopedTable(db, 'project_task_comments', tenant)");
-    expect(source).toContain(".andOn('project_tasks.tenant', 'project_phases.tenant')");
-    expect(source).toContain(".andOn('project_task_comments.tenant', 'users.tenant')");
+    expect(source).toContain("tenantDb(trx, tenant).tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')");
+    expect(source).toContain("tenantDb(db, tenant).tenantJoin(commentsQuery, 'users', 'project_task_comments.user_id', 'users.user_id', { type: 'left' })");
     expect(source).not.toContain(".where('project_tasks.tenant', tenant)");
     expect(source).not.toContain(".where({ task_comment_id: taskCommentId, tenant })");
     expect(source).not.toContain(".where({ tenant, thread_id:");

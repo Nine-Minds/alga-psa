@@ -149,10 +149,9 @@ const updateProjectTaskStatusByExternalIdAction: InboundActionDefinition<UpdateP
         return null;
       }
 
-      const task = await tenantScopedTable(trx, 'project_tasks as pt', ctx.tenant)
-        .join('project_phases as pp', function joinPhase(this: any) {
-          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-        })
+      const taskQuery = tenantScopedTable(trx, 'project_tasks as pt', ctx.tenant);
+      tenantDb(trx, ctx.tenant).tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      const task = await taskQuery
         .where({ 'pt.task_id': lookup.algaEntityId })
         .first<{
           task_id: string;

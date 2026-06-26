@@ -464,6 +464,22 @@ export const getProjectsWithPhases = withAuth(async (
     if (denied) return denied;
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
+        .leftJoin('standard_statuses as ss', function () {
+          this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
+        })
+        .select(
+          'psm.project_status_mapping_id as mapping_id',
+          'psm.project_id',
+          'psm.phase_id',
+          trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
+          trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
+          'psm.display_order'
+        )
+        .orderBy('psm.display_order');
+      db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+
       const [projects, phases, statusMappings] = await Promise.all([
         tenantScopedTable(trx, 'projects', tenant)
           .select('project_id', 'project_name', 'is_inactive', 'client_id', 'assigned_to')
@@ -472,22 +488,7 @@ export const getProjectsWithPhases = withAuth(async (
           .select('phase_id', 'project_id', 'phase_name', 'wbs_code')
           .orderBy('wbs_code'),
         // Fetch all project status mappings with resolved names
-        tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
-          .leftJoin('statuses as s', function () {
-            this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-          })
-          .leftJoin('standard_statuses as ss', function () {
-            this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-          })
-          .select(
-            'psm.project_status_mapping_id as mapping_id',
-            'psm.project_id',
-            'psm.phase_id',
-            trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
-            trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
-            'psm.display_order'
-          )
-          .orderBy('psm.display_order'),
+        statusMappingsQuery,
       ]);
 
       // Group phases by project

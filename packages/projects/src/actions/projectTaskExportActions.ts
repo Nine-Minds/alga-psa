@@ -236,20 +236,21 @@ async function resolveNameLookups(
 
   // Resolve status names via project_status_mappings
   if (statusMappingIds.size > 0) {
+    const db = tenantDb(trx, tenant);
+    const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
+      .leftJoin('standard_statuses as ss', function (this: Knex.JoinClause) {
+        this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
+      })
+      .whereIn('psm.project_status_mapping_id', Array.from(statusMappingIds))
+      .select(
+        'psm.project_status_mapping_id',
+        trx.raw("COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name"),
+        trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
+      );
+    db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+
     promises.push(
-      tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
-        .leftJoin('statuses as s', function (this: Knex.JoinClause) {
-          this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-        })
-        .leftJoin('standard_statuses as ss', function (this: Knex.JoinClause) {
-          this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-        })
-        .whereIn('psm.project_status_mapping_id', Array.from(statusMappingIds))
-        .select(
-          'psm.project_status_mapping_id',
-          trx.raw("COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name"),
-          trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
-        )
+      statusMappingsQuery
         .then((rows: Array<{ project_status_mapping_id: string; status_name?: string | null; is_closed?: boolean | null }>) => {
           for (const r of rows) {
             lookups.statuses[r.project_status_mapping_id] = {

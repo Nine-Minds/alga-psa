@@ -88,7 +88,7 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_tasks', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_checklist_items', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_task_resources', tenant)");
-    expect(actionSource).toContain("knex('standard_statuses')");
+    expect(actionSource).toContain("tenantDb(knex, tenant).table('standard_statuses')");
     expect(actionSource).not.toContain(".where({ tenant })");
     expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
     expect(actionSource).not.toContain('.where({ status_id: mapping.status_id, tenant })');
@@ -123,7 +123,8 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_dependencies', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_dependencies', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)");
-    expect(actionSource).toContain(".andOn('ptd.tenant', '=', 'ptt.tenant')");
+    expect(actionSource).toContain("db.tenantJoin(predecessorsQuery, 'project_template_tasks as ptt', 'ptd.predecessor_task_id', 'ptt.template_task_id', { type: 'left' })");
+    expect(actionSource).toContain("db.tenantJoin(successorsQuery, 'project_template_tasks as ptt', 'ptd.successor_task_id', 'ptt.template_task_id', { type: 'left' })");
     expect(actionSource).not.toContain(".where('tenant', tenant)");
     expect(actionSource).not.toContain('.where({ template_dependency_id: dependencyId, tenant })');
     expect(actionSource).not.toContain(".where({ template_id: templateId, tenant })");

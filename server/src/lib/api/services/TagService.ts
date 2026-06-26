@@ -57,6 +57,12 @@ export interface BulkTagResult {
   }>;
 }
 
+const joinTagDefinitions = (
+  query: Knex.QueryBuilder,
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string
+) => tenantDb(knexOrTrx, tenant).tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+
 // ============================================================================
 // TAG SERVICE CLASS
 // ============================================================================
@@ -145,10 +151,7 @@ export class TagService extends BaseService {
     
     // id is actually mapping_id in the new system
     const tag = await tenantDb(knex, tenant).table('tag_mappings as tm')
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
+      .modify((query) => joinTagDefinitions(query, knex, tenant))
       .where('tm.mapping_id', id)
       .select(
         'tm.mapping_id as tag_id',
@@ -211,10 +214,7 @@ export class TagService extends BaseService {
 
           // Get the created tag for return
           const created = await tenantDb(trx, tenant).table('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
+            .modify((query) => joinTagDefinitions(query, trx, tenant))
             .where('tm.mapping_id', mapping.mapping_id)
             .select(
               'tm.mapping_id as tag_id',
@@ -281,10 +281,7 @@ export class TagService extends BaseService {
 
       // Get updated tag
       const updated = await tenantDb(trx, tenant).table('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', id)
         .select(
           'tm.mapping_id as tag_id',
@@ -460,10 +457,7 @@ export class TagService extends BaseService {
           tagged_type: tagData.tagged_type
         }, context.userId);
         const created = await tenantDb(trx, tenant).table('tag_mappings as tm')
-          .join('tag_definitions as td', function() {
-            this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-          })
+          .modify((query) => joinTagDefinitions(query, trx, tenant))
           .where('tm.mapping_id', mapping.mapping_id)
           .select(
             'tm.mapping_id as tag_id',
@@ -577,10 +571,7 @@ export class TagService extends BaseService {
       const sourceTags: any[] = [];
       for (const tagId of sourceTagIds) {
         const tag = await tenantDb(trx, tenant).table('tag_mappings as tm')
-          .join('tag_definitions as td', function() {
-            this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-          })
+          .modify((query) => joinTagDefinitions(query, trx, tenant))
           .where('tm.mapping_id', tagId)
           .select(
             'tm.mapping_id as tag_id',
@@ -760,10 +751,7 @@ export class TagService extends BaseService {
 
       // Get the original tag (tagId is actually mapping_id)
       const tag = await tenantDb(trx, tenant).table('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
         .select(
           'tm.mapping_id as tag_id',
@@ -915,10 +903,7 @@ export class TagService extends BaseService {
     
     return withTransaction(knex, async (trx) => {
       let query = tenantDb(trx, context.tenant).table('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        });
+        .modify((builder) => joinTagDefinitions(builder, trx, context.tenant));
 
       // Apply search
       if (searchTerm) {
@@ -1005,10 +990,7 @@ export class TagService extends BaseService {
     
     return withTransaction(knex, async (trx) => {
       let baseQuery = tenantDb(trx, context.tenant).table('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        });
+        .modify((builder) => joinTagDefinitions(builder, trx, context.tenant));
 
       // Apply filters
       if (filters.entity_type) {
@@ -1039,10 +1021,7 @@ export class TagService extends BaseService {
       const mostUsedTagsWithTypes = await Promise.all(
         mostUsedTags.map(async (tag: any) => {
           const entityTypes = await tenantDb(trx, context.tenant).table('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
+            .modify((query) => joinTagDefinitions(query, trx, context.tenant))
             .where('td.tag_text', tag.tag_text)
             .distinct('tm.tagged_type')
             .pluck('tm.tagged_type');
@@ -1098,10 +1077,7 @@ export class TagService extends BaseService {
     
     return withTransaction(knex, async (trx) => {
       let query = tenantDb(trx, context.tenant).table('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        });
+        .modify((builder) => joinTagDefinitions(builder, trx, context.tenant));
 
       if (entityType) {
         query = query.where('tm.tagged_type', entityType);

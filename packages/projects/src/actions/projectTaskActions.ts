@@ -70,6 +70,16 @@ function tenantScopedTable(
     return tenantDb(conn, tenant).table(table);
 }
 
+function projectTaskDependencyTaskQuery(
+    trx: Knex.Transaction,
+    tenant: string,
+    taskColumn: 'predecessor_task_id' | 'successor_task_id'
+): Knex.QueryBuilder {
+    const query = tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant);
+    tenantDb(trx, tenant).tenantJoin(query, 'project_tasks as pt', `ptd.${taskColumn}`, 'pt.task_id', { type: 'left' });
+    return query;
+}
+
 // Helper functions for workflow events
 async function resolveProjectStatusInfo(
   trx: Knex.Transaction,
@@ -122,10 +132,9 @@ async function getProjectStatusMappingDetails(
   tenant: string,
   projectStatusMappingId: string
 ): Promise<ProjectStatusMappingDetails | null> {
-  const row = await tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
-    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
+  const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+  tenantDb(trx, tenant).tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  const row = await query
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
@@ -501,11 +510,9 @@ async function resolveProjectIdForTask(
     tenant: string,
     taskId: string
 ): Promise<string | null> {
-    const row = await tenantScopedTable(trx, 'project_tasks as pt', tenant)
-        .join('project_phases as pp', function() {
-            this.on('pt.phase_id', '=', 'pp.phase_id')
-                .andOn('pt.tenant', '=', 'pp.tenant');
-        })
+    const query = tenantScopedTable(trx, 'project_tasks as pt', tenant);
+    tenantDb(trx, tenant).tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+    const row = await query
         .where({ 'pt.task_id': taskId })
         .first<{ project_id: string }>('pp.project_id');
 
@@ -517,15 +524,11 @@ async function resolveProjectIdForChecklistItem(
     tenant: string,
     checklistItemId: string
 ): Promise<string | null> {
-    const row = await tenantScopedTable(trx, 'task_checklist_items as tci', tenant)
-        .join('project_tasks as pt', function() {
-            this.on('tci.task_id', '=', 'pt.task_id')
-                .andOn('tci.tenant', '=', 'pt.tenant');
-        })
-        .join('project_phases as pp', function() {
-            this.on('pt.phase_id', '=', 'pp.phase_id')
-                .andOn('pt.tenant', '=', 'pp.tenant');
-        })
+    const query = tenantScopedTable(trx, 'task_checklist_items as tci', tenant);
+    const db = tenantDb(trx, tenant);
+    db.tenantJoin(query, 'project_tasks as pt', 'tci.task_id', 'pt.task_id');
+    db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+    const row = await query
         .where({ 'tci.checklist_item_id': checklistItemId })
         .first<{ project_id: string }>('pp.project_id');
 
@@ -537,15 +540,11 @@ async function resolveProjectIdForTaskResourceAssignment(
     tenant: string,
     assignmentId: string
 ): Promise<string | null> {
-    const row = await tenantScopedTable(trx, 'task_resources as tr', tenant)
-        .join('project_tasks as pt', function() {
-            this.on('tr.task_id', '=', 'pt.task_id')
-                .andOn('tr.tenant', '=', 'pt.tenant');
-        })
-        .join('project_phases as pp', function() {
-            this.on('pt.phase_id', '=', 'pp.phase_id')
-                .andOn('pt.tenant', '=', 'pp.tenant');
-        })
+    const query = tenantScopedTable(trx, 'task_resources as tr', tenant);
+    const db = tenantDb(trx, tenant);
+    db.tenantJoin(query, 'project_tasks as pt', 'tr.task_id', 'pt.task_id');
+    db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+    const row = await query
         .where({ 'tr.assignment_id': assignmentId })
         .first<{ project_id: string }>('pp.project_id');
 
@@ -1223,25 +1222,17 @@ export const getTasksForPhase = withAuth(async (
                     : [],
                 taskIds.length > 0
                     ? findTagsByEntityIds(taskIds, 'project_task').catch(() => [])
-                    : [],
+                : [],
                 // Fetch dependencies where task is the successor (predecessors of task)
                 taskIds.length > 0
-                    ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
+                    ? projectTaskDependencyTaskQuery(trx, tenant, 'predecessor_task_id')
                         .whereIn('ptd.successor_task_id', taskIds)
-                        .leftJoin('project_tasks as pt', function() {
-                            this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
-                                .andOn('ptd.tenant', '=', 'pt.tenant');
-                        })
                         .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code', 'pt.task_type_key as predecessor_task_type_key')
                     : [],
                 // Fetch dependencies where task is the predecessor (successors of task)
                 taskIds.length > 0
-                    ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
+                    ? projectTaskDependencyTaskQuery(trx, tenant, 'successor_task_id')
                         .whereIn('ptd.predecessor_task_id', taskIds)
-                        .leftJoin('project_tasks as pt', function() {
-                            this.on('ptd.successor_task_id', '=', 'pt.task_id')
-                                .andOn('ptd.tenant', '=', 'pt.tenant');
-                        })
                         .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code', 'pt.task_type_key as successor_task_type_key')
                     : []
             ]);
@@ -1506,11 +1497,9 @@ export const assignTeamToProjectTask = withAuth(async (
                     .first()
                 : null;
 
-            const teamMembers = await tenantScopedTable(trx, 'team_members', tenant)
-                .join('users', function() {
-                    this.on('team_members.user_id', 'users.user_id')
-                        .andOn('team_members.tenant', 'users.tenant');
-                })
+            const teamMembersQuery = tenantScopedTable(trx, 'team_members', tenant);
+            tenantDb(trx, tenant).tenantJoin(teamMembersQuery, 'users', 'team_members.user_id', 'users.user_id');
+            const teamMembers = await teamMembersQuery
                 .where({ 'team_members.team_id': teamId })
                 .andWhere('users.is_inactive', false)
                 .select('team_members.user_id') as Array<{ user_id: string }>;
@@ -2273,20 +2262,19 @@ export const getTaskWithDetails = withAuth(async (
             // Example of proper tenant handling in JOINs:
             // Each JOIN includes an andOn clause to match tenants across tables,
             // ensuring data isolation between tenants even in complex queries
-            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
+            const taskQuery = tenantScopedTable(trx, 'project_tasks', tenant);
+            const db = tenantDb(trx, tenant);
+            db.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
+            db.tenantJoin(
+                taskQuery,
+                'project_status_mappings',
+                'project_tasks.project_status_mapping_id',
+                'project_status_mappings.project_status_mapping_id',
+                { type: 'left' }
+            );
+            db.tenantJoin(taskQuery, 'users as assigned_user', 'project_tasks.assigned_to', 'assigned_user.user_id', { type: 'left' });
+            const task = await taskQuery
                 .where('project_tasks.task_id', taskId)
-                .leftJoin('project_phases', function() { // Changed to leftJoin
-                    this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-                        .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-                })
-                .leftJoin('project_status_mappings', function() { // Changed to leftJoin
-                    this.on('project_tasks.project_status_mapping_id', '=', 'project_status_mappings.project_status_mapping_id')
-                        .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
-                })
-                .leftJoin('users as assigned_user', function() {
-                    this.on('project_tasks.assigned_to', '=', 'assigned_user.user_id')
-                        .andOn('project_tasks.tenant', '=', 'assigned_user.tenant');
-                })
                 .select(
                     'project_tasks.*',
                     'project_phases.phase_name',
@@ -2823,22 +2811,14 @@ export const getAllProjectTasksForListView = withAuth(async (
                 : [],
             // Fetch dependencies where task is the successor (predecessors of task)
             taskIds.length > 0
-                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
+                ? projectTaskDependencyTaskQuery(trx, tenant, 'predecessor_task_id')
                     .whereIn('ptd.successor_task_id', taskIds)
-                    .leftJoin('project_tasks as pt', function() {
-                        this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
-                            .andOn('ptd.tenant', '=', 'pt.tenant');
-                    })
                     .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
                 : [],
             // Fetch dependencies where task is the predecessor (successors of task)
             taskIds.length > 0
-                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
+                ? projectTaskDependencyTaskQuery(trx, tenant, 'successor_task_id')
                     .whereIn('ptd.predecessor_task_id', taskIds)
-                    .leftJoin('project_tasks as pt', function() {
-                        this.on('ptd.successor_task_id', '=', 'pt.task_id')
-                            .andOn('ptd.tenant', '=', 'pt.tenant');
-                    })
                     .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
                 : []
         ]);
@@ -2927,10 +2907,9 @@ export const getPhaseTaskCounts = withAuth(async (
         await checkPermission(user, 'project', 'read', trx);
         await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-        const counts = await tenantScopedTable(trx, 'project_tasks as pt', tenant)
-            .join('project_phases as pp', function() {
-                this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-            })
+        const countsQuery = tenantScopedTable(trx, 'project_tasks as pt', tenant);
+        tenantDb(trx, tenant).tenantJoin(countsQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+        const counts = await countsQuery
             .where('pp.project_id', projectId)
             .groupBy('pt.phase_id')
             .select('pt.phase_id')
@@ -2991,21 +2970,13 @@ export const getProjectTaskData = withAuth(async (
                 ? findTagsByEntityIds(taskIds, 'project_task').catch(() => [])
                 : [],
             taskIds.length > 0
-                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
+                ? projectTaskDependencyTaskQuery(trx, tenant, 'predecessor_task_id')
                     .whereIn('ptd.successor_task_id', taskIds)
-                    .leftJoin('project_tasks as pt', function() {
-                        this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
-                            .andOn('ptd.tenant', '=', 'pt.tenant');
-                    })
                     .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
                 : [],
             taskIds.length > 0
-                ? tenantScopedTable(trx, 'project_task_dependencies as ptd', tenant)
+                ? projectTaskDependencyTaskQuery(trx, tenant, 'successor_task_id')
                     .whereIn('ptd.predecessor_task_id', taskIds)
-                    .leftJoin('project_tasks as pt', function() {
-                        this.on('ptd.successor_task_id', '=', 'pt.task_id')
-                            .andOn('ptd.tenant', '=', 'pt.tenant');
-                    })
                     .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
                 : []
         ]);
@@ -3139,11 +3110,9 @@ export const bulkAddTagsToTasks = withAuth(async (
       // task IDs from projects the caller can't read. Authorize each task's
       // project (resolved once per distinct project, not per task) the same way
       // every other task mutation here does, and drop tasks that fail.
-      const taskProjectRows = await tenantScopedTable(trx, 'project_tasks as pt', tenant)
-        .join('project_phases as pp', function joinPhases() {
-          this.on('pt.phase_id', '=', 'pp.phase_id')
-            .andOn('pt.tenant', '=', 'pp.tenant');
-        })
+      const taskProjectQuery = tenantScopedTable(trx, 'project_tasks as pt', tenant);
+      tenantDb(trx, tenant).tenantJoin(taskProjectQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      const taskProjectRows = await taskProjectQuery
         .whereIn('pt.task_id', validIds)
         .select<Array<{ task_id: string; project_id: string }>>('pt.task_id', 'pp.project_id');
       const projectIdByTask = new Map(taskProjectRows.map((row) => [row.task_id, row.project_id]));

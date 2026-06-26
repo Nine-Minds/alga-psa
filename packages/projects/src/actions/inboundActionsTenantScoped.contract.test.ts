@@ -10,7 +10,7 @@ describe('project inbound actions tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'project_tasks as pt', ctx.tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings', tenant)");
-    expect(source).toContain(".andOn('pt.tenant', '=', 'pp.tenant')");
+    expect(source).toContain("tenantDb(trx, ctx.tenant).tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id')");
     expect(source).not.toContain('.where({ tenant: ctx.tenant, project_id: projectId })');
     expect(source).not.toContain("'pt.tenant': ctx.tenant");
     expect(source).not.toContain('.where({ tenant, project_id: projectId, phase_id: phaseId })');

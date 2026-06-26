@@ -12,7 +12,7 @@ describe('document action retrieval tenant-scoped query contract', () => {
   it('uses structural tenant scoping for document and association retrieval roots', () => {
     expect(retrievalSection).toContain("tenantScopedTable(trx, 'documents', tenant)");
     expect(retrievalSection).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
-    expect(retrievalSection).toContain(".andOn('documents.tenant', '=', 'document_associations.tenant')");
+    expect(retrievalSection).toContain("db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id')");
     expect(retrievalSection).not.toContain("trx('documents')");
     expect(retrievalSection).not.toContain("trx('document_associations')");
     expect(retrievalSection).not.toContain("'documents.tenant': tenant");

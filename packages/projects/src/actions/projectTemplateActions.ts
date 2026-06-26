@@ -1422,21 +1422,20 @@ export const getTaskTemplateDependencies = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
+  const db = tenantDb(knex, tenant);
+  const predecessorsQuery = tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
+    .where({ 'ptd.successor_task_id': taskId })
+    .select('ptd.*', 'ptt.task_name as predecessor_task_name');
+  db.tenantJoin(predecessorsQuery, 'project_template_tasks as ptt', 'ptd.predecessor_task_id', 'ptt.template_task_id', { type: 'left' });
+
+  const successorsQuery = tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
+    .where({ 'ptd.predecessor_task_id': taskId })
+    .select('ptd.*', 'ptt.task_name as successor_task_name');
+  db.tenantJoin(successorsQuery, 'project_template_tasks as ptt', 'ptd.successor_task_id', 'ptt.template_task_id', { type: 'left' });
+
   const [predecessors, successors] = await Promise.all([
-    tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
-      .where({ 'ptd.successor_task_id': taskId })
-      .leftJoin('project_template_tasks as ptt', function() {
-        this.on('ptd.predecessor_task_id', '=', 'ptt.template_task_id')
-            .andOn('ptd.tenant', '=', 'ptt.tenant');
-      })
-      .select('ptd.*', 'ptt.task_name as predecessor_task_name'),
-    tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
-      .where({ 'ptd.predecessor_task_id': taskId })
-      .leftJoin('project_template_tasks as ptt', function() {
-        this.on('ptd.successor_task_id', '=', 'ptt.template_task_id')
-            .andOn('ptd.tenant', '=', 'ptt.tenant');
-      })
-      .select('ptd.*', 'ptt.task_name as successor_task_name')
+    predecessorsQuery,
+    successorsQuery
   ]);
 
   return { predecessors, successors };

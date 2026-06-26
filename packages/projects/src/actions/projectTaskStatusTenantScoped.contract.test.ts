@@ -16,8 +16,8 @@ describe('project task status tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
     expect(source).toContain("tenantScopedTable(knex, 'project_tasks', tenant)");
     expect(source).toContain("tenantScopedTable(knex, 'statuses', tenant)");
-    expect(source).toContain("knex('standard_statuses')");
-    expect(source).toContain(".andOn('psm.tenant', '=', 'p.tenant')");
+    expect(source).toContain("tenantDb(knex, tenant).table('standard_statuses')");
+    expect(source).toContain("tenantDb(trx, tenant).tenantJoin(usageQuery, 'projects as p', 'psm.project_id', 'p.project_id', { type: 'left' })");
     expect(source).not.toContain(".where({ tenant,");
     expect(source).not.toContain(".where({ project_status_mapping_id: mappingId, tenant })");
     expect(source).not.toContain(".where({ project_status_mapping_id: mappingId, tenant })");

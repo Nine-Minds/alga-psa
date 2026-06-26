@@ -137,15 +137,14 @@ export class KbArticleService extends BaseService<any> {
       dataQuery = dataQuery.where(function () {
         this.whereILike('d.document_name', term).orWhereILike('ka.slug', term);
       });
-      countQuery = countQuery.whereExists(function () {
-        this.select('*')
-          .from('documents as d2')
+      countQuery = countQuery.whereExists(
+        db.table('documents as d2')
+          .select('*')
           .whereRaw('d2.document_id = kb_articles.document_id')
-          .andWhereRaw('d2.tenant = kb_articles.tenant')
           .andWhere(function () {
             this.whereILike('d2.document_name', term);
-          });
-      });
+          })
+      );
     }
 
     // Sorting
@@ -430,11 +429,12 @@ export class KbArticleService extends BaseService<any> {
   async getContent(id: string, context: ServiceContext): Promise<{ content: string; format: string } | null> {
     const { knex } = await this.getKnex();
 
-    const article = await tenantDb(knex, context.tenant).table('kb_articles as ka')
-      .select('dbc.block_data')
-      .leftJoin('document_block_content as dbc', function () {
-        this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
-      })
+    const db = tenantDb(knex, context.tenant);
+    const articleQuery = db.table('kb_articles as ka')
+      .select('dbc.block_data');
+    db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+
+    const article = await articleQuery
       .andWhere('ka.article_id', id)
       .first();
 

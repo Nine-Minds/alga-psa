@@ -720,10 +720,11 @@ export const getKnowledgeBaseCategories = withAuth(
       return permissionError('Permission denied');
     }
 
-    const rows = await tenantScopedTable(knex, 'categories as c', tenant)
-      .leftJoin('categories as p', function () {
-        this.on('p.category_id', '=', 'c.parent_category').andOn('p.tenant', '=', 'c.tenant');
-      })
+    const db = tenantDb(knex, tenant);
+    const categoriesQuery = tenantScopedTable(knex, 'categories as c', tenant);
+    db.tenantJoin(categoriesQuery, 'categories as p', 'p.category_id', 'c.parent_category', { type: 'left' });
+
+    const rows = await categoriesQuery
       .select(
         'c.category_id as id',
         'c.category_name as name',
@@ -794,7 +795,6 @@ export const getArticles = withAuth(
       const tagIdSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
         .select(knex.raw('1'))
         .whereRaw('tm.tagged_id = ka.article_id')
-        .whereRaw('tm.tenant = ka.tenant')
         .where('tm.tagged_type', 'knowledge_base_article')
         .whereIn('tm.tag_id', filters.tagIds as string[]);
 
@@ -803,14 +803,12 @@ export const getArticles = withAuth(
 
     // Filter by tag text (used by TagFilter component)
     if (filters.tags && filters.tags.length > 0) {
-      const tagTextSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
+      const tagDb = tenantDb(knex, tenant);
+      const tagTextSubquery = tagDb.table('tag_mappings as tm')
         .select('tm.tagged_id')
-        .join('tag_definitions as td', function () {
-          this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
-        })
         .where('tm.tagged_type', 'knowledge_base_article')
-        .whereRaw('tm.tenant = ka.tenant')
         .whereIn('td.tag_text', filters.tags as string[]);
+      tagDb.tenantJoin(tagTextSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
 
       query = query.whereIn('ka.article_id', tagTextSubquery);
     }
@@ -843,10 +841,11 @@ async function reconcileOrphanedKBDocuments(
   tenant: string,
   userId: string
 ): Promise<void> {
-  const orphaned = await tenantScopedTable(knex, 'documents as d', tenant)
-    .leftJoin('kb_articles as ka', function () {
-      this.on('ka.document_id', '=', 'd.document_id').andOn('ka.tenant', '=', 'd.tenant');
-    })
+  const db = tenantDb(knex, tenant);
+  const orphanedQuery = tenantScopedTable(knex, 'documents as d', tenant);
+  db.tenantJoin(orphanedQuery, 'kb_articles as ka', 'ka.document_id', 'd.document_id', { type: 'left' });
+
+  const orphaned = await orphanedQuery
     .where('d.folder_path', '/Knowledge Base')
     .whereNull('ka.article_id')
     .select('d.document_id', 'd.document_name');
@@ -940,21 +939,18 @@ export const getArticlesWithTags = withAuth(
       const tagIdSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
         .select(knex.raw('1'))
         .whereRaw('tm.tagged_id = ka.article_id')
-        .whereRaw('tm.tenant = ka.tenant')
         .where('tm.tagged_type', 'knowledge_base_article')
         .whereIn('tm.tag_id', filters.tagIds as string[]);
 
       query = query.whereExists(tagIdSubquery);
     }
     if (filters.tags && filters.tags.length > 0) {
-      const tagTextSubquery = tenantDb(knex, tenant).table('tag_mappings as tm')
+      const tagDb = tenantDb(knex, tenant);
+      const tagTextSubquery = tagDb.table('tag_mappings as tm')
         .select('tm.tagged_id')
-        .join('tag_definitions as td', function () {
-          this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
-        })
         .where('tm.tagged_type', 'knowledge_base_article')
-        .whereRaw('tm.tenant = ka.tenant')
         .whereIn('td.tag_text', filters.tags as string[]);
+      tagDb.tenantJoin(tagTextSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
 
       query = query.whereIn('ka.article_id', tagTextSubquery);
     }
@@ -973,10 +969,8 @@ export const getArticlesWithTags = withAuth(
     const articleTags: Record<string, ITag[]> = {};
 
     if (articleIds.length > 0) {
-      const tagRows = await tenantScopedTable(knex, 'tag_mappings as tm', tenant)
-        .join('tag_definitions as td', function () {
-          this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const tagDb = tenantDb(knex, tenant);
+      const tagRowsQuery = tenantScopedTable(knex, 'tag_mappings as tm', tenant)
         .where('tm.tagged_type', 'knowledge_base_article')
         .whereIn('tm.tagged_id', articleIds)
         .select(
@@ -989,6 +983,9 @@ export const getArticlesWithTags = withAuth(
           'td.text_color',
           'tm.tenant'
         );
+      tagDb.tenantJoin(tagRowsQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+
+      const tagRows = await tagRowsQuery;
 
       for (const tag of tagRows) {
         if (!articleTags[tag.tagged_id]) {
@@ -1006,7 +1003,6 @@ export const getArticlesWithTags = withAuth(
       .whereExists(
         tenantDb(knex, tenant).table('tag_mappings as tm')
           .select(knex.raw('1'))
-          .whereRaw('tm.tenant = td.tenant')
           .whereRaw('tm.tag_id = td.tag_id')
       )
       .orderBy('td.tag_text', 'asc')

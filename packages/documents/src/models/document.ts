@@ -18,17 +18,17 @@ const Document = {
         try {
             const tenant = await requireTenantId(knexOrTrx);
 
-            return await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+            const db = tenantDb(knexOrTrx, tenant);
+            const query = db.table<IDocument>('documents')
                 .select(
                     'documents.*',
                     'users.first_name',
                     'users.last_name',
                     knexOrTrx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                )
-                .leftJoin('users', function() {
-                    this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', knexOrTrx.raw('?', [tenant]));
-                })
+                );
+            db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+
+            return await query;
         } catch (error) {
             console.error('Error getting all documents:', error);
             throw error;
@@ -39,7 +39,8 @@ const Document = {
         try {
             const tenant = await requireTenantId(knexOrTrx);
 
-            return await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+            const db = tenantDb(knexOrTrx, tenant);
+            const query = db.table<IDocument>('documents')
                     .select(
                         'documents.*',
                         'users.first_name as created_by_first_name',
@@ -47,15 +48,11 @@ const Document = {
                         knexOrTrx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
                         knexOrTrx.raw("COALESCE(dt.type_name, sdt.type_name) as type_name"),
                         knexOrTrx.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
-                    )
-                    .leftJoin('users', function() {
-                        this.on('documents.created_by', '=', 'users.user_id')
-                            .andOn('users.tenant', '=', 'documents.tenant');
-                    })
-                    .leftJoin('document_types as dt', function() {
-                        this.on('documents.type_id', '=', 'dt.type_id')
-                            .andOn('documents.tenant', '=', 'dt.tenant');
-                    })
+                    );
+            db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+            db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+            return await query
                     .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
                     .where('documents.document_id', document_id)
                     .first();

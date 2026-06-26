@@ -17,12 +17,12 @@ import { tenantDb } from '@alga-psa/db';
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
 export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
 
-function tenantScopedTable(
+function tenantScopedTable<Row extends object = Record<string, any>>(
   conn: Knex | Knex.Transaction,
   table: string,
   tenant: string,
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
+): Knex.QueryBuilder<Row, any[]> {
+  return tenantDb(conn, tenant).table<Row>(table) as Knex.QueryBuilder<Row, any[]>;
 }
 
 /**
@@ -43,6 +43,7 @@ const ProjectModel = {
     }
 
     try {
+      const db = tenantDb(knexOrTrx, tenant);
       let query = tenantScopedTable(knexOrTrx, 'projects', tenant)
         .select(
           'projects.*',
@@ -52,23 +53,11 @@ const ProjectModel = {
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
-        )
-        .leftJoin('clients', function () {
-          this.on('projects.client_id', 'clients.client_id')
-            .andOn('projects.tenant', 'clients.tenant');
-        })
-        .leftJoin('users', function () {
-          this.on('projects.assigned_to', 'users.user_id')
-            .andOn('projects.tenant', 'users.tenant');
-        })
-        .leftJoin('contacts', function () {
-          this.on('projects.contact_name_id', 'contacts.contact_name_id')
-            .andOn('projects.tenant', 'contacts.tenant');
-        })
-        .leftJoin('statuses as s', function () {
-          this.on('projects.status', 's.status_id')
-            .andOn('projects.tenant', 's.tenant');
-        });
+        );
+      db.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id', { type: 'left' });
+      db.tenantJoin(query, 'users', 'projects.assigned_to', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
 
       if (!includeInactive) {
         query = query.where('projects.is_inactive', false);
@@ -98,7 +87,8 @@ const ProjectModel = {
     }
 
     try {
-      const project = await tenantScopedTable(knexOrTrx, 'projects', tenant)
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = tenantScopedTable(knexOrTrx, 'projects', tenant)
         .select(
           'projects.*',
           'clients.client_name as client_name',
@@ -107,23 +97,12 @@ const ProjectModel = {
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
-        )
-        .leftJoin('clients', function () {
-          this.on('projects.client_id', 'clients.client_id')
-            .andOn('projects.tenant', 'clients.tenant');
-        })
-        .leftJoin('users', function () {
-          this.on('projects.assigned_to', 'users.user_id')
-            .andOn('projects.tenant', 'users.tenant');
-        })
-        .leftJoin('contacts', function () {
-          this.on('projects.contact_name_id', 'contacts.contact_name_id')
-            .andOn('projects.tenant', 'contacts.tenant');
-        })
-        .leftJoin('statuses as s', function () {
-          this.on('projects.status', 's.status_id')
-            .andOn('projects.tenant', 's.tenant');
-        })
+        );
+      db.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id', { type: 'left' });
+      db.tenantJoin(query, 'users', 'projects.assigned_to', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
+      const project = await query
         .where('projects.project_id', projectId)
         .first() as IProject | undefined;
 
@@ -168,7 +147,7 @@ const ProjectModel = {
         finalInsertData.client_portal_config = JSON.stringify(client_portal_config);
       }
 
-      const [newProject] = await knexOrTrx<IProject>('projects')
+      const [newProject] = await tenantScopedTable<IProject>(knexOrTrx, 'projects', tenant)
         .insert(finalInsertData)
         .returning('*');
 
@@ -219,7 +198,7 @@ const ProjectModel = {
         finalUpdateData.client_portal_config = JSON.stringify(client_portal_config);
       }
 
-      const [updatedProject] = await tenantScopedTable(knexOrTrx, 'projects', tenant)
+      const [updatedProject] = await tenantScopedTable<IProject>(knexOrTrx, 'projects', tenant)
         .where('project_id', projectId)
         .update(finalUpdateData)
         .returning('*');
@@ -423,7 +402,7 @@ const ProjectModel = {
         .first();
       const orderKey = generateKeyBetween(lastPhase?.order_key || null, null);
 
-      const [newPhase] = await knexOrTrx<IProjectPhase>('project_phases')
+      const [newPhase] = await tenantScopedTable<IProjectPhase>(knexOrTrx, 'project_phases', tenant)
         .insert({
           ...phaseData,
           phase_id: uuidv4(),
@@ -455,7 +434,7 @@ const ProjectModel = {
     }
 
     try {
-      const [updatedPhase] = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
+      const [updatedPhase] = await tenantScopedTable<IProjectPhase>(knexOrTrx, 'project_phases', tenant)
         .where('phase_id', phaseId)
         .update({
           ...phaseData,
@@ -665,7 +644,7 @@ const ProjectModel = {
     }
 
     try {
-      const standardStatuses = await knexOrTrx<IStandardStatus>('standard_statuses')
+      const standardStatuses = await tenantScopedTable<IStandardStatus>(knexOrTrx, 'standard_statuses', tenant)
         .where('item_type', itemType)
         .orderBy('display_order');
       return standardStatuses;
@@ -686,7 +665,7 @@ const ProjectModel = {
     }
 
     try {
-      const [newMapping] = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
+      const [newMapping] = await tenantScopedTable<IProjectStatusMapping>(knexOrTrx, 'project_status_mappings', tenant)
         .insert({
           ...mappingData,
           project_id: projectId,
@@ -707,7 +686,7 @@ const ProjectModel = {
     }
 
     try {
-      const standardStatus = await knexOrTrx<IStandardStatus>('standard_statuses')
+      const standardStatus = await tenantScopedTable<IStandardStatus>(knexOrTrx, 'standard_statuses', tenant)
         .where('standard_status_id', standardStatusId)
         .first();
       return standardStatus || null;
@@ -753,7 +732,7 @@ const ProjectModel = {
 
       const [standardStatusRows, customStatusRows] = await Promise.all([
         standardIds.length > 0
-          ? knexOrTrx<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
+          ? tenantScopedTable<IStandardStatus>(knexOrTrx, 'standard_statuses', tenant).whereIn('standard_status_id', standardIds)
           : [],
         customIds.length > 0
           ? tenantScopedTable(knexOrTrx, 'statuses', tenant).whereIn('status_id', customIds)
@@ -816,7 +795,7 @@ const ProjectModel = {
     const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
 
     try {
-      const [newStatus] = await trx<IStatus>('statuses')
+      const [newStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant)
         .insert({
           ...statusData,
           status_id: uuidv4(),
@@ -824,7 +803,7 @@ const ProjectModel = {
         })
         .returning('*');
 
-      await trx<IProjectStatusMapping>('project_status_mappings').insert({
+      await tenantScopedTable<IProjectStatusMapping>(trx, 'project_status_mappings', tenant).insert({
         project_id: projectId,
         status_id: newStatus.status_id,
         is_standard: false,
@@ -864,7 +843,7 @@ const ProjectModel = {
     const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
 
     try {
-      const [updatedStatus] = await tenantScopedTable(trx, 'statuses', tenant).where('status_id', statusId).update({ ...statusData }).returning('*');
+      const [updatedStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant).where('status_id', statusId).update({ ...statusData }).returning('*');
 
       if (mappingData) {
         await tenantScopedTable(trx, 'project_status_mappings', tenant)

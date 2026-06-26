@@ -25,7 +25,7 @@ describe('project utility tenant-scoped query contract', () => {
 
   it('uses structural tenant scoping for project status mapping roots', () => {
     expect(statusMappingSource).toContain(".table('project_status_mappings as psm')");
-    expect(statusMappingSource).toContain(".andOn('psm.tenant', '=', 's.tenant')");
+    expect(statusMappingSource).toContain("db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' })");
     expect(statusMappingSource).not.toContain("'psm.tenant': tenant");
   });
 });

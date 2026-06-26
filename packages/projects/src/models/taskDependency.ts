@@ -89,23 +89,20 @@ const TaskDependencyModel = {
     }> => {
         if (!tenant) throw new Error('Tenant context is required for dependency operations');
         
-        const predecessors = await tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant)
+        const db = tenantDb(knexOrTrx, tenant);
+        const predecessorsQuery = tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant);
+        db.tenantJoin(predecessorsQuery, 'project_tasks as pt_pred', 'ptd.predecessor_task_id', 'pt_pred.task_id', { type: 'left' });
+        const predecessors = await predecessorsQuery
             .where({ 'ptd.successor_task_id': taskId })
-            .leftJoin('project_tasks as pt_pred', function() {
-                this.on('ptd.predecessor_task_id', '=', 'pt_pred.task_id')
-                    .andOn('ptd.tenant', '=', 'pt_pred.tenant');
-            })
             .select('ptd.*', 
                     'pt_pred.task_name as predecessor_task_name', 
                     'pt_pred.wbs_code as predecessor_task_wbs_code',
                     'pt_pred.task_type_key as predecessor_task_type_key') as DependencyWithTaskDetails[];
             
-        const successors = await tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant)
+        const successorsQuery = tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant);
+        db.tenantJoin(successorsQuery, 'project_tasks as pt_succ', 'ptd.successor_task_id', 'pt_succ.task_id', { type: 'left' });
+        const successors = await successorsQuery
             .where({ 'ptd.predecessor_task_id': taskId })
-            .leftJoin('project_tasks as pt_succ', function() {
-                this.on('ptd.successor_task_id', '=', 'pt_succ.task_id')
-                    .andOn('ptd.tenant', '=', 'pt_succ.tenant');
-            })
             .select('ptd.*', 
                     'pt_succ.task_name as successor_task_name', 
                     'pt_succ.wbs_code as successor_task_wbs_code',

@@ -14,7 +14,7 @@ describe('document action list/count tenant-scoped query contract', () => {
     expect(listSection).toContain("tenantScopedTable(trx, 'documents', tenant)");
     expect(listSection).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
     expect(listSection).toContain("tenantScopedTable(trx, 'document_associations as filter_da', tenant)");
-    expect(listSection).toContain(".andOn('documents.tenant', '=', 'document_associations.tenant')");
+    expect(listSection).toContain("db.tenantJoin(query, 'document_associations', 'documents.document_id', 'document_associations.document_id')");
     expect(listSection).not.toContain("trx('document_associations as da')");
     expect(listSection).not.toContain("trx('documents')");
     expect(listSection).not.toContain(".where('da.tenant', tenant)");

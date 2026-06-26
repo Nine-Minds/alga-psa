@@ -56,6 +56,12 @@ const projectTasksQuery = (trx: Knex.Transaction, tenant: string) =>
 const tagMappingsWithDefinitionsQuery = (trx: Knex.Transaction, tenant: string) =>
   tenantDb(trx, tenant).table('tag_mappings as tm');
 
+const joinProjectPhases = (query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+
+const joinTagDefinitions = (query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+
 async function getTagTextSnapshot(
   trx: Knex.Transaction,
   tenant: string,
@@ -76,10 +82,7 @@ async function resolveProjectTaskTagContext(
   taskId: string
 ): Promise<{ projectId: string; phaseId: string } | null> {
   const row = await projectTasksQuery(trx, tenant)
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id')
-        .andOn('pt.tenant', '=', 'pp.tenant');
-    })
+    .modify((query) => joinProjectPhases(query, trx, tenant))
     .where({ 'pt.task_id': taskId })
     .first('pp.project_id', 'pt.phase_id') as { project_id: string; phase_id: string } | undefined;
 
@@ -108,10 +111,7 @@ async function resolveProjectTaskTagContexts(
   }
 
   const rows = await projectTasksQuery(trx, tenant)
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id')
-        .andOn('pt.tenant', '=', 'pp.tenant');
-    })
+    .modify((query) => joinProjectPhases(query, trx, tenant))
     .whereIn('pt.task_id', taskIds)
     .select(
       'pt.task_id',
@@ -216,10 +216,7 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
       const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
         .select(
           'tm.mapping_id as tag_id',
@@ -421,10 +418,7 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
     try {
       // Get existing tag to check entity type (id is mapping_id)
       const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', id)
         .select(
           'tm.mapping_id as tag_id',
@@ -496,10 +490,7 @@ export const getTagMappingUsageCount = withAuth(async (_user: IUserWithRoles, { 
   const { knex: db } = await createTenantKnex();
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const mapping = await tagMappingsWithDefinitionsQuery(trx, tenant)
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
+      .modify((query) => joinTagDefinitions(query, trx, tenant))
       .where('tm.mapping_id', mappingId)
       .select('td.tag_id', 'td.tag_text')
       .first() as { tag_id: string; tag_text: string } | undefined;
@@ -525,10 +516,7 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
     try {
       // Get existing tag to check entity type and creator (id is mapping_id)
       const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', id)
         .select(
           'tm.mapping_id as tag_id',
@@ -673,10 +661,7 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Join mappings with definitions to create ITag structure
       const tags = await tagMappingsWithDefinitionsQuery(trx, tenant)
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .select(
           'tm.mapping_id as tag_id', // Use mapping_id as tag_id for backward compatibility
           'td.board_id',
@@ -1153,10 +1138,7 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
       const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
         .select(
           'tm.mapping_id as tag_id',
@@ -1239,10 +1221,7 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
       const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
         .select(
           'tm.mapping_id as tag_id',
