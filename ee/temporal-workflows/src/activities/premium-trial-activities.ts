@@ -7,6 +7,7 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
 
 const logger = () => Context.current().log;
@@ -48,14 +49,14 @@ export async function checkExpiredPremiumTrialsActivity(): Promise<CheckExpiredP
         await retryOnAdminReadOnly(
           async () => {
             const k = await getAdminConnection();
+            const db = tenantDb(k, sub.tenant);
 
             // Revert tenant plan to pro
-            await k('tenants')
-              .where({ tenant: sub.tenant })
+            await db.table('tenants')
               .update({ plan: 'pro', updated_at: k.fn.now() });
 
             // Clear trial metadata on the subscription
-            const currentSub = await k('stripe_subscriptions')
+            const currentSub = await db.table('stripe_subscriptions')
               .where({ stripe_subscription_id: sub.stripe_subscription_id })
               .select('metadata')
               .first();
@@ -63,7 +64,7 @@ export async function checkExpiredPremiumTrialsActivity(): Promise<CheckExpiredP
             const metadata = currentSub?.metadata || {};
             const { premium_trial, premium_trial_started, premium_trial_end, ...remainingMetadata } = metadata;
 
-            await k('stripe_subscriptions')
+            await db.table('stripe_subscriptions')
               .where({ stripe_subscription_id: sub.stripe_subscription_id })
               .update({
                 metadata: {

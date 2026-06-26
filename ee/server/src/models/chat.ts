@@ -1,4 +1,5 @@
 import { createTenantKnex } from '../lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { IChat } from '../interfaces/chat.interface';
 
 export interface IChatHistoryItem extends IChat {
@@ -30,10 +31,13 @@ const Chat = {
     }
   },
 
-  getRecentByUser: async (userId: string, limit = 20): Promise<IChatHistoryItem[]> => {
+  getRecentByUser: async (userId: string, limit = 20, tenant?: string): Promise<IChatHistoryItem[]> => {
     try {
       const { knex: db } = await createTenantKnex();
-      const chats = await db<IChatHistoryItem>('chats')
+      const chatsRoot = tenant
+        ? tenantDb(db, tenant).table<IChatHistoryItem>('chats')
+        : db<IChatHistoryItem>('chats');
+      const chats = await chatsRoot
         .select(
           'chats.*',
           db.raw(
@@ -59,9 +63,17 @@ const Chat = {
     }
   },
 
-  searchByUser: async (userId: string, query: string, limit = 20): Promise<IChatHistoryItem[]> => {
+  searchByUser: async (userId: string, query: string, limit = 20, tenant?: string): Promise<IChatHistoryItem[]> => {
     try {
       const { knex: db } = await createTenantKnex();
+      const chatsRoot = tenant
+        ? tenantDb(db, tenant).table<IChat>('chats')
+        : db<IChat>('chats');
+      const chatsRootSql = chatsRoot
+        .select('chats.*')
+        .where({ user_id: userId })
+        .toSQL();
+
       // Search at the chat scope so multi-term queries can match across the title
       // and multiple persisted messages, not just within a single indexed field.
       const rawResult = await db.raw(
@@ -99,8 +111,7 @@ const Chat = {
                   ''::tsvector
                 )
               ) as conversation_index
-            from chats
-            where chats.user_id = ?
+            from (${chatsRootSql.sql}) as chats
           )
           select
             chat_documents.*,
@@ -114,7 +125,7 @@ const Chat = {
             chat_documents.id desc
           limit ?
         `,
-        [query, userId, limit]
+        [query, ...(chatsRootSql.bindings ?? []), limit]
       );
 
       return Array.isArray(rawResult)

@@ -187,7 +187,7 @@ export async function listCurrentUserChatsAction(limit = 20): Promise<ChatHistor
   }
 
   try {
-    return await Chat.getRecentByUser(user.user_id, limit);
+    return await Chat.getRecentByUser(user.user_id, limit, user.tenant);
   } catch (error) {
     if (isMissingRelationError(error)) {
       markPersistenceStatus(false);
@@ -220,7 +220,7 @@ export async function searchCurrentUserChatsAction(
   }
 
   try {
-    return await Chat.searchByUser(user.user_id, trimmedQuery, limit);
+    return await Chat.searchByUser(user.user_id, trimmedQuery, limit, user.tenant);
   } catch (error) {
     if (isMissingRelationError(error) || isMissingColumnError(error)) {
       if (isMissingRelationError(error)) {

@@ -192,13 +192,12 @@ async function syncAutoCloseState(
 
 async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
   const now = new Date();
-  const due = await tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant)
-    .join('board_auto_close_rules as r', function joinRules() {
-      this.on('r.tenant', 's.tenant').andOn('r.rule_id', 's.rule_id');
-    })
-    .join('tickets as t', function joinTickets() {
-      this.on('t.tenant', 's.tenant').andOn('t.ticket_id', 's.ticket_id');
-    })
+  const db = tenantDb(knex, tenant);
+  const dueQuery = tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant);
+  db.tenantJoin(dueQuery, 'board_auto_close_rules as r', 'r.rule_id', 's.rule_id');
+  db.tenantJoin(dueQuery, 'tickets as t', 't.ticket_id', 's.ticket_id');
+
+  const due = (await dueQuery
     .whereNull('s.warning_sent_at')
     .whereNotNull('r.warning_days_before')
     .whereRaw("s.scheduled_close_at - (r.warning_days_before * interval '1 day') <= now()")
@@ -212,7 +211,7 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
       't.contact_name_id',
       't.assigned_to',
       't.entered_by'
-    );
+    )) as Array<Record<string, any>>;
 
   if (!due.length) return;
 
@@ -264,13 +263,19 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
 }
 
 async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: number; skipped: number }> {
-  const due = await tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant)
-    .join('board_auto_close_rules as r', function joinRules() {
-      this.on('r.tenant', 's.tenant').andOn('r.rule_id', 's.rule_id');
-    })
+  const db = tenantDb(knex, tenant);
+  const dueQuery = tenantScopedTable(knex, 'ticket_auto_close_state as s', tenant);
+  db.tenantJoin(dueQuery, 'board_auto_close_rules as r', 'r.rule_id', 's.rule_id');
+
+  const due = (await dueQuery
     .where('s.scheduled_close_at', '<=', knex.fn.now())
     .where('r.is_enabled', true)
-    .select('s.ticket_id', 's.rule_id', 'r.inactivity_days', 'r.close_to_status_id');
+    .select(
+      's.ticket_id',
+      's.rule_id',
+      'r.inactivity_days',
+      'r.close_to_status_id'
+    )) as Array<Record<string, any>>;
 
   let closed = 0;
   let skipped = 0;

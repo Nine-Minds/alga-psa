@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   deleteSearchDoc: vi.fn(),
 }));
 
-vi.mock('../../lib/search/upsert', () => ({
+vi.mock('@alga-psa/search/upsert', () => ({
   upsertSearchDoc: mocks.upsertSearchDoc,
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));
@@ -18,6 +18,8 @@ import {
   reindexRowsAfterWatermark,
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+
+const repoRoot = resolve(__dirname, '../../../..');
 
 describe('search reconciliation', () => {
   beforeEach(() => {
@@ -45,11 +47,15 @@ describe('search reconciliation', () => {
       acl: { requiredPermission: 'client:read' },
       sourceUpdatedAt: new Date('2026-05-13T13:00:00.000Z'),
     };
-    const knex = {
-      raw: vi.fn(async () => ({
-        rows: [{ max_source_updated_at: '2026-05-13T12:00:00.000Z' }],
-      })),
+    const query = {
+      where: vi.fn(() => query),
+      max: vi.fn(() => query),
+      first: vi.fn(async () => ({ max_source_updated_at: '2026-05-13T12:00:00.000Z' })),
     };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('app_search_index');
+      return query;
+    });
     const indexer: EntityIndexer = {
       objectType: 'client',
       sourceEvents: [],
@@ -59,10 +65,9 @@ describe('search reconciliation', () => {
 
     const result = await reindexRowsAfterWatermark(knex as never, 'tenant-1', indexer);
 
-    expect(knex.raw).toHaveBeenCalledWith(expect.stringContaining('max(source_updated_at)'), [
-      'tenant-1',
-      'client',
-    ]);
+    expect(query.where).toHaveBeenNthCalledWith(1, 'app_search_index.tenant', 'tenant-1');
+    expect(query.where).toHaveBeenNthCalledWith(2, { object_type: 'client' });
+    expect(query.max).toHaveBeenCalledWith({ max_source_updated_at: 'source_updated_at' });
     expect(result).toEqual({ scanned: 2, reindexed: 1 });
     expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(1);
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, newerDoc);
@@ -108,7 +113,7 @@ describe('search reconciliation', () => {
 
     const result = await deleteRowsMissingFromSource(knex as never, 'tenant-1', indexer);
 
-    expect(query.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(query.where).toHaveBeenCalledWith('app_search_index.tenant', 'tenant-1');
     expect(query.andWhere).toHaveBeenCalledWith('object_type', 'client');
     expect(indexer.loadOne).toHaveBeenNthCalledWith(1, knex, 'tenant-1', 'client-present');
     expect(indexer.loadOne).toHaveBeenNthCalledWith(2, knex, 'tenant-1', 'client-missing');
@@ -165,7 +170,7 @@ describe('search reconciliation', () => {
 
     const result = await insertRowsMissingFromIndex(knex as never, 'tenant-1', indexer);
 
-    expect(query.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(query.where).toHaveBeenCalledWith('app_search_index.tenant', 'tenant-1');
     expect(query.andWhere).toHaveBeenCalledWith('object_type', 'client');
     expect(query.whereIn).toHaveBeenCalledWith('object_id', ['client-present', 'client-missing']);
     expect(result).toEqual({ scanned: 2, inserted: 1 });
@@ -175,16 +180,16 @@ describe('search reconciliation', () => {
 
   it('T088 registers and schedules the search reconciliation job daily', () => {
     const registerAllHandlers = readFileSync(
-      resolve(process.cwd(), 'src/lib/jobs/registerAllHandlers.ts'),
+      resolve(repoRoot, 'server/src/lib/jobs/registerAllHandlers.ts'),
       'utf8',
     );
     const initializeScheduledJobs = readFileSync(
-      resolve(process.cwd(), 'src/lib/jobs/initializeScheduledJobs.ts'),
+      resolve(repoRoot, 'server/src/lib/jobs/initializeScheduledJobs.ts'),
       'utf8',
     );
-    const jobsIndex = readFileSync(resolve(process.cwd(), 'src/lib/jobs/index.ts'), 'utf8');
+    const jobsIndex = readFileSync(resolve(repoRoot, 'server/src/lib/jobs/index.ts'), 'utf8');
     const reconcileHandler = readFileSync(
-      resolve(process.cwd(), '../packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
+      resolve(repoRoot, 'packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
       'utf8',
     );
 
@@ -232,7 +237,7 @@ describe('search reconciliation', () => {
 
     const result = await insertRowsMissingFromIndex(knex as never, 'tenant-1', indexer);
 
-    expect(query.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(query.where).toHaveBeenCalledWith('app_search_index.tenant', 'tenant-1');
     expect(query.andWhere).toHaveBeenCalledWith('object_type', 'client');
     expect(query.whereIn).toHaveBeenCalledWith('object_id', ['client-deleted-from-index']);
     expect(result).toEqual({ scanned: 1, inserted: 1 });
@@ -241,7 +246,7 @@ describe('search reconciliation', () => {
 
   it('T195 emits per-run reconciliation summary counts', () => {
     const reconcileHandler = readFileSync(
-      resolve(process.cwd(), '../packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
+      resolve(repoRoot, 'packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
       'utf8',
     );
 
@@ -255,7 +260,7 @@ describe('search reconciliation', () => {
 
   it('T205 skips unregistered orphan object types during reconciliation', () => {
     const reconcileHandler = readFileSync(
-      resolve(process.cwd(), '../packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
+      resolve(repoRoot, 'packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
       'utf8',
     );
 

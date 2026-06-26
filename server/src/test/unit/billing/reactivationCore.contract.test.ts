@@ -48,16 +48,38 @@ describe('reactivation core contract', () => {
     expect(tenantOps).toContain('billing_tenant: MASTER_TENANT_ID');
   });
 
+  it('management-tenant customer lookup uses facade roots for tenant-owned tables', () => {
+    const activities = read('ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
+    const lookupSectionStart = activities.indexOf('async function findCustomerClientInManagementTenant(');
+    const lookupSectionEnd = activities.indexOf('export async function validateTenantDeletion', lookupSectionStart);
+    expect(lookupSectionStart).toBeGreaterThanOrEqual(0);
+    expect(lookupSectionEnd).toBeGreaterThan(lookupSectionStart);
+
+    const lookupSection = activities.slice(lookupSectionStart, lookupSectionEnd);
+    expect(lookupSection).toContain('const tenantScopedDb = tenantDb(knex, tenantId);');
+    expect(lookupSection).toContain('const managementDb = tenantDb(knex, managementTenantId);');
+    expect(lookupSection).toContain("managementDb.table<ClientLookupRow>('clients')");
+    expect(lookupSection).toContain("managementDb.table<ContactLookupRow>('contacts')");
+    expect(lookupSection).toContain("tenantScopedDb.table<UserLookupRow>('users')");
+    expect(lookupSection).toContain("tenantScopedDb.table('user_roles')");
+    expect(lookupSection).toContain("tenantScopedDb.table('roles')");
+    expect(lookupSection).not.toContain("knex('clients')");
+    expect(lookupSection).not.toContain("knex('contacts')");
+    expect(lookupSection).not.toContain("knex('users')");
+    expect(lookupSection).not.toContain("knex('user_roles')");
+    expect(lookupSection).not.toContain("knex('roles')");
+  });
+
   it('T055/T056/T063/T074: refused or failed paid reactivation writes refund ledger and sends ops email', () => {
     const route = read('ee/server/src/app/api/billing/complete-reactivation/route.ts');
     const activities = read('ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
     const workflow = read('ee/temporal-workflows/src/workflows/tenant-deletion-workflow.ts');
 
-    expect(route).toContain("knex('pending_reactivation_refunds').insert");
+    expect(route).toContain("tenantDb(knex, input.tenantId).table('pending_reactivation_refunds').insert");
     expect(route).toContain('getSystemEmailService');
     expect(route).toContain("'past_window'");
     expect(route).toContain("'duplicate_payment'");
-    expect(activities).toContain("knex('pending_reactivation_refunds').insert");
+    expect(activities).toContain("tenantDb(knex, input.tenantId).table('pending_reactivation_refunds').insert");
     expect(read('ee/temporal-workflows/src/types/tenant-deletion-types.ts')).toContain("'reactivated_unbilled'");
     expect(workflow).toContain("reason: 'reactivated_unbilled'");
   });

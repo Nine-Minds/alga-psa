@@ -279,27 +279,20 @@ const WorkflowDataStoreModel = {
   },
 
   deleteExpired: async (knex: Knex, tenant: string, limit = 1000): Promise<number> => {
-    const result = await knex.raw(
-      `
-        WITH expired AS (
-          SELECT tenant, store_id
-            FROM workflow_data_store
-           WHERE tenant = ?
-             AND expires_at IS NOT NULL
-             AND expires_at <= ?
-           ORDER BY expires_at ASC, store_id ASC
-           LIMIT ?
-        )
-        DELETE FROM workflow_data_store s
-         USING expired e
-         WHERE s.tenant = e.tenant
-           AND s.store_id = e.store_id
-        RETURNING s.store_id
-      `,
-      [tenant, nowIso(), Math.max(1, Math.trunc(limit))]
-    );
+    const expired = workflowDataStore(knex, tenant)
+      .select('store_id')
+      .whereNotNull('expires_at')
+      .where('expires_at', '<=', nowIso())
+      .orderBy('expires_at', 'asc')
+      .orderBy('store_id', 'asc')
+      .limit(Math.max(1, Math.trunc(limit)));
 
-    return result.rows?.length ?? 0;
+    const deletedRows = await workflowDataStore(knex, tenant)
+      .whereIn('store_id', expired)
+      .delete()
+      .returning('store_id');
+
+    return Array.isArray(deletedRows) ? deletedRows.length : Number(deletedRows ?? 0);
   },
 };
 

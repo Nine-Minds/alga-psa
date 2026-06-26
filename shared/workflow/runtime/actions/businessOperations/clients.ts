@@ -1093,13 +1093,10 @@ export function registerClientActions(): void {
         base = base.andWhereRaw(`client_name ILIKE ? ESCAPE '\\\\'`, [pattern]);
 
         if (filters.tags?.length) {
+          const db = tenantDb(tx.trx, tx.tenantId);
+          db.tenantJoin(base, 'tag_mappings as tm', 'tm.tagged_id', 'clients.client_id');
+          db.tenantJoin(base, 'tag_definitions as td', 'td.tag_id', 'tm.tag_id');
           base = base
-            .join('tag_mappings as tm', function joinTagMappings() {
-              this.on('tm.tenant', 'clients.tenant').andOn('tm.tagged_id', 'clients.client_id');
-            })
-            .join('tag_definitions as td', function joinTagDefs() {
-              this.on('td.tenant', 'tm.tenant').andOn('td.tag_id', 'tm.tag_id');
-            })
             .where('tm.tagged_type', 'client')
             .whereIn('td.tag_text', filters.tags);
         }
@@ -1660,10 +1657,13 @@ export function registerClientActions(): void {
 
         let copiedTags = 0;
         if (input.copy_tags) {
-          const sourceTags = await tenantScopedTable(tx, 'tag_mappings as tm')
-            .join('tag_definitions as td', function joinTagDefs() {
-              this.on('tm.tenant', 'td.tenant').andOn('tm.tag_id', 'td.tag_id');
-            })
+          const db = tenantDb(tx.trx, tx.tenantId);
+          const sourceTags = await db.tenantJoin(
+            db.table('tag_mappings as tm'),
+            'tag_definitions as td',
+            'tm.tag_id',
+            'td.tag_id'
+          )
             .where({
               'tm.tagged_type': 'client',
               'tm.tagged_id': input.source_client_id,

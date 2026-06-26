@@ -166,8 +166,8 @@ export async function upsertLicenseContract(
 
   if (existing) {
     // Update end date + status on renewal
-    await knex('client_contracts')
-      .where({ client_contract_id: existing.client_contract_id, tenant: input.tenant })
+    await db.table('client_contracts')
+      .where({ client_contract_id: existing.client_contract_id })
       .update({
         end_date: endDate,
         renewal_mode: renewalMode,
@@ -182,7 +182,7 @@ export async function upsertLicenseContract(
 
   // Create new contract + assignment
   const contractId = uuidv4();
-  await knex('contracts').insert({
+  await db.table('contracts').insert({
     contract_id: contractId,
     tenant: input.tenant,
     contract_name: `Alga Appliance License — ${input.tier}`,
@@ -197,7 +197,7 @@ export async function upsertLicenseContract(
   });
 
   const clientContractId = uuidv4();
-  await knex('client_contracts').insert({
+  await db.table('client_contracts').insert({
     client_contract_id: clientContractId,
     tenant: input.tenant,
     client_id: input.clientId,
@@ -213,7 +213,7 @@ export async function upsertLicenseContract(
 
   // Insert a license contract_line (informational — tier + seats)
   const lineId = uuidv4();
-  await knex('contract_lines').insert({
+  await db.table('contract_lines').insert({
     contract_line_id: lineId,
     tenant: input.tenant,
     contract_id: contractId,
@@ -234,16 +234,16 @@ export async function upsertLicenseContract(
  * prefer inbound_ticket_defaults.entered_by, else the tenant's first user.
  */
 async function resolveSystemUserId(knex: Knex, tenant: string): Promise<string | null> {
-  const inbound = await knex('inbound_ticket_defaults')
-    .where({ tenant, is_active: true })
+  const db = tenantDb(knex, tenant);
+  const inbound = await db.table('inbound_ticket_defaults')
+    .where({ is_active: true })
     .whereNotNull('entered_by')
     .orderBy('updated_at', 'desc')
     .first('entered_by')
     .catch(() => undefined);
   if (inbound?.entered_by) return inbound.entered_by as string;
 
-  const user = await knex('users')
-    .where({ tenant })
+  const user = await db.table('users')
     .orderBy('created_at', 'asc')
     .first('user_id');
   return (user?.user_id as string) ?? null;
@@ -257,6 +257,7 @@ export async function storeLicenseDocument(
   log.info('storeLicenseDocument', { clientId: input.clientId });
 
   const knex = await getAdminConnection();
+  const db = tenantDb(knex, input.tenant);
   const documentId = uuidv4();
   const expDate = new Date(input.exp * 1000).toISOString().split('T')[0];
 
@@ -267,7 +268,7 @@ export async function storeLicenseDocument(
 
   // documents requires user_id + created_by (real users); content is inline text;
   // the timestamp column is entered_at (there is no created_at on documents).
-  await knex('documents').insert({
+  await db.table('documents').insert({
     document_id: documentId,
     tenant: input.tenant,
     document_name: `Alga Appliance License — ${input.tier} (expires ${expDate})`,
@@ -280,7 +281,7 @@ export async function storeLicenseDocument(
   });
 
   // Associate to client (so it shows in portal Documents). No created_by column.
-  await knex('document_associations').insert({
+  await db.table('document_associations').insert({
     association_id: uuidv4(),
     tenant: input.tenant,
     document_id: documentId,
@@ -291,7 +292,7 @@ export async function storeLicenseDocument(
 
   // Also associate to contract (for bookkeeping)
   if (input.contractId) {
-    await knex('document_associations').insert({
+    await db.table('document_associations').insert({
       association_id: uuidv4(),
       tenant: input.tenant,
       document_id: documentId,
@@ -327,13 +328,14 @@ export async function deliverLicenseEmail(
 
   // Record delivery on the submission
   const knex = await getAdminConnection();
+  const db = tenantDb(knex, input.tenant);
   const licenseExpiry = new Date(input.exp * 1000).toISOString().split('T')[0];
   const notes = input.transport.startsWith('connected')
     ? `License claim code: ${input.claimCode} (paste into /msp/licenses → Connect this appliance)`
     : `License JWT delivered. Paste into /msp/licenses → Enter license key. Expires: ${licenseExpiry}`;
 
-  await knex('service_request_submissions')
-    .where({ submission_id: input.submissionId, tenant: input.tenant })
+  await db.table('service_request_submissions')
+    .where({ submission_id: input.submissionId })
     .update({
       workflow_execution_id: input.claimCode
         ? `license-issued-connected:${input.claimCode}`
@@ -358,20 +360,19 @@ export async function revokeLicenseEntitlement(
   // Mark the contract terminated. PG can't UPDATE two tables at once, so resolve
   // the matching contract(s) first, then update each table separately.
   const knex = await getAdminConnection();
-  const matches = await knex('contracts')
-    .where({ tenant: input.tenant, owner_client_id: input.clientId })
+  const db = tenantDb(knex, input.tenant);
+  const matches = await db.table('contracts')
+    .where({ owner_client_id: input.clientId })
     .whereRaw('contract_description LIKE ?', [`%stripe_sub:${input.stripeSubId}%`])
     .select('contract_id');
   const contractIds = matches.map((m: { contract_id: string }) => m.contract_id);
   if (contractIds.length === 0) return;
 
-  await knex('contracts')
-    .where({ tenant: input.tenant })
+  await db.table('contracts')
     .whereIn('contract_id', contractIds)
     .update({ status: 'terminated', updated_at: knex.fn.now() });
 
-  await knex('client_contracts')
-    .where({ tenant: input.tenant })
+  await db.table('client_contracts')
     .whereIn('contract_id', contractIds)
     .update({ is_active: false, updated_at: knex.fn.now() });
 }

@@ -63,17 +63,12 @@ async function getIndexedWatermark(
   tenant: string,
   indexer: EntityIndexer,
 ): Promise<Date | null> {
-  const result = await knex.raw<{ rows: WatermarkRow[] }>(
-    `
-      SELECT max(source_updated_at) AS max_source_updated_at
-      FROM app_search_index
-      WHERE tenant = ?::uuid
-        AND object_type = ?
-    `,
-    [tenant, indexer.objectType],
-  );
+  const row = await searchIndexQuery(knex, tenant)
+    .where({ object_type: indexer.objectType })
+    .max({ max_source_updated_at: 'source_updated_at' })
+    .first() as WatermarkRow | undefined;
 
-  const value = result.rows[0]?.max_source_updated_at;
+  const value = row?.max_source_updated_at;
   return value ? new Date(value) : null;
 }
 

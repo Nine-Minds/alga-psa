@@ -5,6 +5,7 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import { ClientModel } from '@alga-psa/shared/models/clientModel.js';
 import { ContactModel } from '@alga-psa/shared/models/contactModel.js';
@@ -128,8 +129,8 @@ export async function createCustomerContactActivity(input: {
     });
     
     // Debug: Verify the client exists before creating contact
-    const clientCheck = await adminKnex('clients')
-      .where({ client_id: input.clientId, tenant: ninemindsTenant })
+    const clientCheck = await tenantDb(adminKnex, ninemindsTenant).table('clients')
+      .where({ client_id: input.clientId })
       .first();
     
     log.info('Client check result', {
@@ -235,10 +236,9 @@ export async function deleteCustomerClientActivity(input: {
     
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction<any, any[]>) => {
       // Delete client (contacts and tags will cascade)
-      await trx('clients')
+      await tenantDb(trx, ninemindsTenant).table('clients')
         .where({
-          client_id: input.clientId,
-          tenant: ninemindsTenant
+          client_id: input.clientId
         })
         .delete();
     });
@@ -273,10 +273,9 @@ export async function deleteCustomerContactActivity(input: {
     });
     
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction<any, any[]>) => {
-      await trx('contacts')
+      await tenantDb(trx, ninemindsTenant).table('contacts')
         .where({
-          contact_name_id: input.contactId,
-          tenant: ninemindsTenant
+          contact_name_id: input.contactId
         })
         .delete();
     });

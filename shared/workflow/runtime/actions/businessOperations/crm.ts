@@ -609,25 +609,16 @@ async function fetchActivityDetailRow(
   tenantId: string,
   activityId: string
 ): Promise<Record<string, unknown> | null> {
-  return await tenantScopedTableForTenant(trx, tenantId, 'interactions as i')
-    .leftJoin('clients as c', function joinClients() {
-      this.on('i.tenant', 'c.tenant').andOn('i.client_id', 'c.client_id');
-    })
-    .leftJoin('contacts as ct', function joinContacts() {
-      this.on('i.tenant', 'ct.tenant').andOn('i.contact_name_id', 'ct.contact_name_id');
-    })
-    .leftJoin('tickets as tk', function joinTickets() {
-      this.on('i.tenant', 'tk.tenant').andOn('i.ticket_id', 'tk.ticket_id');
-    })
-    .leftJoin('users as u', function joinUsers() {
-      this.on('i.tenant', 'u.tenant').andOn('i.user_id', 'u.user_id');
-    })
-    .leftJoin('statuses as st', function joinStatuses() {
-      this.on('i.tenant', 'st.tenant').andOn('i.status_id', 'st.status_id');
-    })
-    .leftJoin('interaction_types as it', function joinInteractionTypes() {
-      this.on('i.tenant', 'it.tenant').andOn('i.type_id', 'it.type_id');
-    })
+  const db = tenantDb(trx, tenantId);
+  const query = db.table('interactions as i');
+  db.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'contacts as ct', 'i.contact_name_id', 'ct.contact_name_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'tickets as tk', 'i.ticket_id', 'tk.ticket_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'users as u', 'i.user_id', 'u.user_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'statuses as st', 'i.status_id', 'st.status_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+
+  return await query
     .leftJoin('system_interaction_types as sit', 'i.type_id', 'sit.type_id')
     .where('i.interaction_id', activityId)
     .select(

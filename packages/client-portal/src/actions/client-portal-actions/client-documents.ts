@@ -73,6 +73,7 @@ export const getClientDocuments = withAuth(
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Build source-type-specific EXISTS clauses based on filter
       const sourceType = filters.sourceType || 'all';
@@ -141,16 +142,10 @@ export const getClientDocuments = withAuth(
         ? `(${sourceClauses.join(' OR ')})`
         : 'FALSE';
 
-      const baseQuery = trx.raw(
-        `
-        SELECT DISTINCT d.*
-        FROM documents d
-        WHERE d.tenant = ?
-          AND d.is_client_visible = true
-          AND ${sourceFilter}
-        `,
-        [tenant, ...sourceParams]
-      );
+      const baseQuery = scopedDb.table('documents as d')
+        .distinct('d.*')
+        .where('d.is_client_visible', true)
+        .whereRaw(sourceFilter, sourceParams);
 
       // Wrap in subquery for filtering and pagination
       let query = trx
@@ -228,16 +223,16 @@ export const getClientDocumentFolders = withAuth(
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Get folder paths from client-visible documents belonging to this client
-      const docFolderPaths = await trx.raw(
-        `
-        SELECT DISTINCT d.folder_path
-        FROM documents d
-        WHERE d.tenant = ?
-          AND d.is_client_visible = true
-          AND d.folder_path IS NOT NULL
-          AND (
+      const docFolderPaths = await scopedDb.table<{ folder_path: string }>('documents as d')
+        .distinct('folder_path')
+        .where('d.is_client_visible', true)
+        .whereNotNull('d.folder_path')
+        .whereRaw(
+          `
+          (
             EXISTS (
               SELECT 1 FROM document_associations da
               WHERE da.document_id = d.document_id
@@ -274,18 +269,17 @@ export const getClientDocumentFolders = withAuth(
             )
           )
         `,
-        [tenant, clientId, clientId, clientId, clientId]
-      );
+          [clientId, clientId, clientId, clientId]
+        );
 
       // Also get explicitly client-visible folders scoped to this client or one of the
       // client's owned contracts so portal navigation matches document visibility rules.
-      const explicitFolders = await trx.raw(
-        `
-        SELECT DISTINCT folder_path
-        FROM document_folders
-        WHERE tenant = ?
-          AND is_client_visible = true
-          AND (
+      const explicitFolders = await scopedDb.table<{ folder_path: string }>('document_folders')
+        .distinct('folder_path')
+        .where('is_client_visible', true)
+        .whereRaw(
+          `
+          (
             (entity_id = ? AND entity_type = 'client')
             OR EXISTS (
               SELECT 1
@@ -298,11 +292,11 @@ export const getClientDocumentFolders = withAuth(
             )
           )
         `,
-        [tenant, clientId, clientId]
-      );
+          [clientId, clientId]
+        );
 
-      const docPaths = (docFolderPaths.rows || []).map((r: { folder_path: string }) => r.folder_path);
-      const explicitPaths = (explicitFolders.rows || []).map((r: { folder_path: string }) => r.folder_path);
+      const docPaths = docFolderPaths.map((r) => r.folder_path);
+      const explicitPaths = explicitFolders.map((r) => r.folder_path);
       const allPaths = Array.from(new Set([...docPaths, ...explicitPaths])).filter(Boolean).sort();
 
       return buildFolderTreeFromPaths(allPaths);

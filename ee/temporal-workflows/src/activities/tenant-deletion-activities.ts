@@ -11,7 +11,7 @@
 import { Context } from '@temporalio/activity';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
-import { retryOnReadOnly } from '@alga-psa/db';
+import { retryOnReadOnly, tenantDb } from '@alga-psa/db';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -526,9 +526,16 @@ async function findCustomerClientInManagementTenant(
   managementTenantId: string,
   log: ReturnType<typeof logger>
 ): Promise<{ client_id: string; client_name: string } | null> {
+  type ClientLookupRow = { client_id: string; client_name: string };
+  type ContactLookupRow = { client_id: string | null; email: string | null };
+  type UserLookupRow = { user_id: string; email: string | null };
+
+  const tenantScopedDb = tenantDb(knex, tenantId);
+  const managementDb = tenantDb(knex, managementTenantId);
+
   // Strategy 1: Look for client with tenant_id in properties matching the tenantId
-  let customerClient = await knex('clients')
-    .where({ tenant: managementTenantId })
+  let customerClient = await managementDb.table<ClientLookupRow>('clients')
+    .select('client_id', 'client_name')
     .whereRaw("properties->>'tenant_id' = ?", [tenantId])
     .first();
 
@@ -543,8 +550,9 @@ async function findCustomerClientInManagementTenant(
   // Strategy 2: Look for client by exact name match
   const tenant = await knex('tenants').where({ tenant: tenantId }).first();
   if (tenant) {
-    customerClient = await knex('clients')
-      .where({ tenant: managementTenantId, client_name: tenant.client_name })
+    customerClient = await managementDb.table<ClientLookupRow>('clients')
+      .select('client_id', 'client_name')
+      .where({ client_name: tenant.client_name })
       .first();
 
     if (customerClient) {
@@ -558,32 +566,30 @@ async function findCustomerClientInManagementTenant(
 
   // Strategy 3: Find by tenant admin user's email
   // Get the admin user's email from the tenant being deleted
-  const adminUser = await knex('users')
-    .where({ tenant: tenantId })
-    .whereIn('user_id', function() {
-      this.select('user_id')
-        .from('user_roles')
-        .where({ tenant: tenantId })
-        .whereIn('role_id', function() {
-          this.select('role_id')
-            .from('roles')
-            .where({ tenant: tenantId, role_name: 'Admin' });
-        });
-    })
+  const adminUserIds = tenantScopedDb.table('user_roles')
+    .select('user_id')
+    .whereIn('role_id', tenantScopedDb.table('roles')
+      .select('role_id')
+      .where({ role_name: 'Admin' }));
+  const adminUser = await tenantScopedDb.table<UserLookupRow>('users')
+    .select('email')
+    .whereIn('user_id', adminUserIds)
     .first();
 
   if (adminUser?.email) {
     log.info('Trying email-based lookup', { email: adminUser.email });
 
     // Find a contact in the management tenant with this email
-    const contact = await knex('contacts')
-      .where({ tenant: managementTenantId, email: adminUser.email })
+    const contact = await managementDb.table<ContactLookupRow>('contacts')
+      .select('client_id')
+      .where({ email: adminUser.email })
       .whereNotNull('client_id')
       .first();
 
     if (contact?.client_id) {
-      customerClient = await knex('clients')
-        .where({ tenant: managementTenantId, client_id: contact.client_id })
+      customerClient = await managementDb.table<ClientLookupRow>('clients')
+        .select('client_id', 'client_name')
+        .where({ client_id: contact.client_id })
         .first();
 
       if (customerClient) {
@@ -598,22 +604,24 @@ async function findCustomerClientInManagementTenant(
   }
 
   // Strategy 4: Try any user email from the tenant (fallback)
-  const anyUser = await knex('users')
-    .where({ tenant: tenantId })
+  const anyUser = await tenantScopedDb.table<UserLookupRow>('users')
+    .select('email')
     .whereNotNull('email')
     .first();
 
   if (anyUser?.email) {
     log.info('Trying email-based lookup with any user', { email: anyUser.email });
 
-    const contact = await knex('contacts')
-      .where({ tenant: managementTenantId, email: anyUser.email })
+    const contact = await managementDb.table<ContactLookupRow>('contacts')
+      .select('client_id')
+      .where({ email: anyUser.email })
       .whereNotNull('client_id')
       .first();
 
     if (contact?.client_id) {
-      customerClient = await knex('clients')
-        .where({ tenant: managementTenantId, client_id: contact.client_id })
+      customerClient = await managementDb.table<ClientLookupRow>('clients')
+        .select('client_id', 'client_name')
+        .where({ client_id: contact.client_id })
         .first();
 
       if (customerClient) {
@@ -2031,7 +2039,7 @@ export async function recordReactivationPaymentAlert(
   const log = Context.current().log;
   const knex = await getAdminConnection();
 
-  await knex('pending_reactivation_refunds').insert({
+  await tenantDb(knex, input.tenantId).table('pending_reactivation_refunds').insert({
     tenant: input.tenantId,
     stripe_checkout_session_id: input.stripeCheckoutSessionId ?? null,
     stripe_payment_intent_id: input.stripePaymentIntentId ?? null,
