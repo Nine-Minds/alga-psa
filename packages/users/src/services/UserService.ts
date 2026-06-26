@@ -143,8 +143,8 @@ export class UserService extends BaseService<IUser> {
     let countQuery = this.buildBaseQuery(knex, context);
 
     // Apply filters
-    dataQuery = this.applyUserFilters(dataQuery, filters);
-    countQuery = this.applyUserFilters(countQuery, filters);
+    dataQuery = this.applyUserFilters(knex, dataQuery, filters, context);
+    countQuery = this.applyUserFilters(knex, countQuery, filters, context);
 
     // Apply sorting and pagination
     dataQuery = this.applySorting(dataQuery, sort, order);
@@ -737,11 +737,11 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const teams = await tenantDb(knex, context.tenant).table('teams as t')
-      .join('team_members as tm', function() {
-        this.on('t.team_id', '=', 'tm.team_id')
-            .andOn('t.tenant', '=', 'tm.tenant');
-      })
+    const db = tenantDb(knex, context.tenant);
+    const teamsQuery = db.table('teams as t');
+    db.tenantJoin(teamsQuery, 'team_members as tm', 't.team_id', 'tm.team_id');
+
+    const teams = await teamsQuery
       .where({ 'tm.user_id': userId })
       .select('t.*', knex.raw('tm.user_id = t.manager_id as is_manager'))
       .orderBy('t.team_name');
@@ -886,6 +886,7 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     let query = this.buildEnhancedUserQuery(knex, context);
+    const db = tenantDb(knex, context.tenant);
 
     // Apply search across specified fields
     if (searchData.query) {
@@ -908,17 +909,13 @@ export class UserService extends BaseService<IUser> {
     }
 
     if (searchData.role_id) {
-      query = query.join('user_roles as ur_search', function() {
-        this.on('users.user_id', '=', 'ur_search.user_id')
-            .andOn('users.tenant', '=', 'ur_search.tenant');
-      }).where('ur_search.role_id', searchData.role_id);
+      db.tenantJoin(query, 'user_roles as ur_search', 'users.user_id', 'ur_search.user_id');
+      query = query.where('ur_search.role_id', searchData.role_id);
     }
 
     if (searchData.team_id) {
-      query = query.join('team_members as tm_search', function() {
-        this.on('users.user_id', '=', 'tm_search.user_id')
-            .andOn('users.tenant', '=', 'tm_search.tenant');
-      }).where('tm_search.team_id', searchData.team_id);
+      db.tenantJoin(query, 'team_members as tm_search', 'users.user_id', 'tm_search.user_id');
+      query = query.where('tm_search.team_id', searchData.team_id);
     }
 
     if (!searchData.include_inactive) {
@@ -1072,6 +1069,11 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
+    const db = tenantDb(knex, context.tenant);
+    const usersByRoleQuery = db.table('users as u');
+    db.tenantJoin(usersByRoleQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+    db.tenantJoin(usersByRoleQuery, 'roles as r', 'ur.role_id', 'r.role_id');
+
     const [
       totalStats,
       typeStats,
@@ -1094,15 +1096,7 @@ export class UserService extends BaseService<IUser> {
         .select('user_type', knex.raw('COUNT(*) as count')),
 
       // Users by role
-      tenantDb(knex, context.tenant).table('users as u')
-        .join('user_roles as ur', function() {
-          this.on('u.user_id', '=', 'ur.user_id')
-              .andOn('u.tenant', '=', 'ur.tenant');
-        })
-        .join('roles as r', function() {
-          this.on('ur.role_id', '=', 'r.role_id')
-              .andOn('ur.tenant', '=', 'r.tenant');
-        })
+      usersByRoleQuery
         .groupBy('r.role_name')
         .select('r.role_name', knex.raw('COUNT(DISTINCT u.user_id) as count')),
 
@@ -1277,7 +1271,14 @@ export class UserService extends BaseService<IUser> {
   /**
    * Apply user-specific filters
    */
-  private applyUserFilters(query: Knex.QueryBuilder, filters: UserFilterData): Knex.QueryBuilder {
+  private applyUserFilters(
+    knex: Knex,
+    query: Knex.QueryBuilder,
+    filters: UserFilterData,
+    context: ServiceContext
+  ): Knex.QueryBuilder {
+    const db = tenantDb(knex, context.tenant);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -1323,31 +1324,21 @@ export class UserService extends BaseService<IUser> {
           query.where('contact_id', value);
           break;
         case 'client_id':
-          query.join('contacts', function() {
-            this.on('users.contact_id', '=', 'contacts.contact_name_id')
-                .andOn('users.tenant', '=', 'contacts.tenant');
-          }).where('contacts.client_id', value);
+          db.tenantJoin(query, 'contacts', 'users.contact_id', 'contacts.contact_name_id');
+          query.where('contacts.client_id', value);
           break;
         case 'role_id':
-          query.join('user_roles', function() {
-            this.on('users.user_id', '=', 'user_roles.user_id')
-                .andOn('users.tenant', '=', 'user_roles.tenant');
-          }).where('user_roles.role_id', value);
+          db.tenantJoin(query, 'user_roles', 'users.user_id', 'user_roles.user_id');
+          query.where('user_roles.role_id', value);
           break;
         case 'role_name':
-          query.join('user_roles', function() {
-            this.on('users.user_id', '=', 'user_roles.user_id')
-                .andOn('users.tenant', '=', 'user_roles.tenant');
-          }).join('roles', function() {
-            this.on('user_roles.role_id', '=', 'roles.role_id')
-                .andOn('user_roles.tenant', '=', 'roles.tenant');
-          }).where('roles.role_name', value);
+          db.tenantJoin(query, 'user_roles', 'users.user_id', 'user_roles.user_id');
+          db.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+          query.where('roles.role_name', value);
           break;
         case 'team_id':
-          query.join('team_members', function() {
-            this.on('users.user_id', '=', 'team_members.user_id')
-                .andOn('users.tenant', '=', 'team_members.tenant');
-          }).where('team_members.team_id', value);
+          db.tenantJoin(query, 'team_members', 'users.user_id', 'team_members.user_id');
+          query.where('team_members.team_id', value);
           break;
         case 'search':
           query.where(subQuery => {

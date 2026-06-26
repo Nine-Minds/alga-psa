@@ -255,11 +255,11 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
 export const getUserRoles = withAuth(async (_user, { tenant }, userId: string): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await tenantScopedTable(trx, 'user_roles', tenant)
-            .join('roles', function() {
-                this.on('user_roles.role_id', '=', 'roles.role_id')
-                    .andOn('user_roles.tenant', '=', 'roles.tenant');
-            })
+        const scopedDb = tenantDb(trx, tenant);
+        const query = scopedDb.table('user_roles');
+        scopedDb.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+
+        return await query
             .where({
                 'user_roles.user_id': userId
             })
@@ -277,11 +277,11 @@ export const getUserRolesBatch = withAuth(
         const { knex: db } = await createTenantKnex();
 
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const rows = await tenantScopedTable(trx, 'user_roles', tenant)
-                .join('roles', function() {
-                    this.on('user_roles.role_id', '=', 'roles.role_id')
-                        .andOn('user_roles.tenant', '=', 'roles.tenant');
-                })
+            const scopedDb = tenantDb(trx, tenant);
+            const query = scopedDb.table('user_roles');
+            scopedDb.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+
+            const rows = await query
                 .whereIn('user_roles.user_id', uniqueUserIds)
                 .select<Array<IRole & { user_id: string }>>('roles.*', 'user_roles.user_id');
 
@@ -403,11 +403,11 @@ export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: str
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            return await tenantScopedTable(trx, 'role_permissions', tenant)
-                .join('permissions', function() {
-                    this.on('role_permissions.permission_id', '=', 'permissions.permission_id')
-                        .andOn('role_permissions.tenant', '=', 'permissions.tenant');
-                })
+            const scopedDb = tenantDb(trx, tenant);
+            const query = scopedDb.table('role_permissions');
+            scopedDb.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id');
+
+            return await query
                 .where({
                     'role_permissions.role_id': roleId
                 })

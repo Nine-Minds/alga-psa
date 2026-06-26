@@ -492,17 +492,14 @@ export const getClientUsersForClient = withAuth(async (
         throw new Error('Permission denied: Cannot read client users for client');
       }
 
-      const users = await tenantDb(trx, tenant)
-        .table('users')
-        .join('contacts', function() {
-          this.on('users.contact_id', '=', 'contacts.contact_name_id')
-              .andOn('contacts.tenant', '=', 'users.tenant');
-        })
-        .where({
-          'contacts.client_id': clientId,
-          'users.user_type': 'client'
-        })
-        .select('users.*');
+      const db = tenantDb(trx, tenant);
+      const usersQuery = db.table<IUser>('users');
+      db.tenantJoin(usersQuery, 'contacts', 'users.contact_id', 'contacts.contact_name_id');
+
+      const users = await usersQuery
+        .where('contacts.client_id', clientId)
+        .where('users.user_type', 'client')
+        .select<IUser[]>('users.*');
 
       return users;
     });

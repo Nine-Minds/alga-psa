@@ -11,7 +11,7 @@ describe('user query actions tenant-scoped query contract', () => {
     expect(source).toContain(".table('users')");
     expect(source).toContain(".table<IRole>('roles')");
     expect(source).toContain(".table('contacts')");
-    expect(source).toContain(".andOn('contacts.tenant', '=', 'users.tenant')");
+    expect(source).toContain("db.tenantJoin(usersQuery, 'contacts', 'users.contact_id', 'contacts.contact_name_id')");
     expect(source).not.toContain('createTenantScopedQuery');
 
     expect(source).not.toContain('tenant: tenant || undefined');
@@ -19,5 +19,6 @@ describe('user query actions tenant-scoped query contract', () => {
     expect(source).not.toMatch(/trx\('roles'\)\s*[\r\n]+\s*\.where/);
     expect(source).not.toMatch(/trx\('contacts'\)\s*[\r\n]+\s*\.where/);
     expect(source).not.toContain("'users.tenant': tenant");
+    expect(source).not.toContain(".andOn('contacts.tenant', '=', 'users.tenant')");
   });
 });

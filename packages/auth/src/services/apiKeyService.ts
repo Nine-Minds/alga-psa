@@ -229,12 +229,12 @@ export class ApiKeyService {
     }
 
     try {
-      return await this.apiKeysQuery(knex, tenant)
+      const db = tenantDb(knex, tenant);
+      const query = db.table<ApiKey>('api_keys');
+      db.tenantJoin(query, 'users', 'api_keys.user_id', 'users.user_id');
+
+      return await query
         .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name')
-        .join('users', function() {
-          this.on('api_keys.user_id', '=', 'users.user_id')
-              .andOn('users.tenant', '=', 'api_keys.tenant');
-        })
         .orderBy('api_keys.created_at', 'desc');
     } catch (error) {
       console.error(`Error listing API keys in tenant ${tenant}:`, error);
