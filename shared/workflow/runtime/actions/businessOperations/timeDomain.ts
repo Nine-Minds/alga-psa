@@ -579,7 +579,7 @@ async function determineDefaultContractLineForWorkflow(params: {
   const rangeStart = `${effectiveDate}T00:00:00.000Z`;
   const rangeEnd = `${effectiveDate}T23:59:59.999Z`;
 
-  const rows = await trx('client_contracts')
+  const rows = await tenantScopedTable(trx, 'client_contracts', tenantId)
     .join('contracts', function joinContracts() {
       this.on('client_contracts.contract_id', '=', 'contracts.contract_id')
         .andOn('contracts.tenant', '=', 'client_contracts.tenant');
@@ -601,7 +601,6 @@ async function determineDefaultContractLineForWorkflow(params: {
     .where({
       'client_contracts.client_id': clientId,
       'client_contracts.is_active': true,
-      'client_contracts.tenant': tenantId,
       'contract_line_services.service_id': serviceId,
     })
     .where(function withinRange(this: Knex.QueryBuilder) {
@@ -772,7 +771,7 @@ async function findOrCreateBucketUsageForEntry(params: {
     return existing.usage_id;
   }
 
-  const [inserted] = await trx('bucket_usage')
+  const [inserted] = await tenantScopedTable(trx, 'bucket_usage', tenantId)
     .insert({
       usage_id: uuidv4(),
       tenant: tenantId,
@@ -949,7 +948,7 @@ async function resolveOrCreateTimeSheet(params: {
     .first();
 
   if (!timeSheet?.id) {
-    const inserted = await trx('time_sheets')
+    const inserted = await tenantScopedTable(trx, 'time_sheets', tenantId)
       .insert({
         id: uuidv4(),
         tenant: tenantId,
@@ -995,7 +994,7 @@ async function applyTicketAssignmentSideEffects(params: {
   }
 
   if (ticket.assigned_to && ticket.assigned_to !== entryUserId) {
-    await trx('ticket_resources').insert({
+    await tenantScopedTable(trx, 'ticket_resources', tenantId).insert({
       tenant: tenantId,
       ticket_id: ticketId,
       assigned_to: ticket.assigned_to,
@@ -1064,7 +1063,7 @@ async function applyProjectTaskAssignmentSideEffects(params: {
 
   if (task.assigned_to && task.assigned_to !== entryUserId) {
     if (!existingResource) {
-      await trx('task_resources').insert({
+      await tenantScopedTable(trx, 'task_resources', tenantId).insert({
         tenant: tenantId,
         task_id: taskId,
         assigned_to: task.assigned_to,
@@ -1193,7 +1192,7 @@ export async function createWorkflowTimeEntry(params: {
   const startIso = startDate.toISOString();
   const endIso = computedEndDate.toISOString();
 
-  const inserted = await trx('time_entries')
+  const inserted = await tenantScopedTable(trx, 'time_entries', tenantId)
     .insert({
       tenant: tenantId,
       entry_id: entryId,
@@ -1985,7 +1984,7 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
 
   let changeRequestId: string | null = null;
   if (approvalStatus === 'CHANGES_REQUESTED' && changeRequestComment && existing.time_sheet_id) {
-    const inserted = await trx('time_entry_change_requests')
+    const inserted = await tenantScopedTable(trx, 'time_entry_change_requests', tenantId)
       .insert({
         tenant: tenantId,
         change_request_id: trx.raw('gen_random_uuid()'),
@@ -2160,7 +2159,7 @@ export async function findOrCreateWorkflowTimeSheet(params: {
 
   const timeSheetId = existing?.id
     ? String(existing.id)
-    : String((await trx('time_sheets')
+    : String((await tenantScopedTable(trx, 'time_sheets', tenantId)
       .insert({
         tenant: tenantId,
         id: uuidv4(),
@@ -2369,7 +2368,7 @@ export async function approveWorkflowTimeSheet(params: {
       updated_at: new Date().toISOString(),
     });
 
-  await trx('time_sheet_comments').insert({
+  await tenantScopedTable(trx, 'time_sheet_comments', tenantId).insert({
     tenant: tenantId,
     comment_id: uuidv4(),
     time_sheet_id: timeSheetId,
@@ -2424,7 +2423,7 @@ export async function requestWorkflowTimeSheetChanges(params: {
       updated_at: new Date().toISOString(),
     });
 
-  await trx('time_sheet_comments').insert({
+  await tenantScopedTable(trx, 'time_sheet_comments', tenantId).insert({
     tenant: tenantId,
     comment_id: uuidv4(),
     time_sheet_id: timeSheetId,
@@ -2504,7 +2503,7 @@ export async function reverseWorkflowTimeSheetApproval(params: {
       updated_at: new Date().toISOString(),
     });
 
-  await trx('time_sheet_comments').insert({
+  await tenantScopedTable(trx, 'time_sheet_comments', tenantId).insert({
     tenant: tenantId,
     comment_id: uuidv4(),
     time_sheet_id: timeSheetId,
@@ -2545,7 +2544,7 @@ export async function addWorkflowTimeSheetComment(params: {
 
   await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
 
-  const [inserted] = await trx('time_sheet_comments')
+  const [inserted] = await tenantScopedTable(trx, 'time_sheet_comments', tenantId)
     .insert({
       tenant: tenantId,
       comment_id: uuidv4(),

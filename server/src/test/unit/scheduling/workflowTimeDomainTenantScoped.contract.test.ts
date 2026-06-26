@@ -7,6 +7,21 @@ const source = readFileSync(
   path.join(repoRoot, 'shared/workflow/runtime/actions/businessOperations/timeDomain.ts'),
   'utf8'
 );
+const metadataSource = readFileSync(
+  path.join(repoRoot, 'packages/db/src/lib/tenantTableMetadata.ts'),
+  'utf8'
+);
+
+const timeDomainTenantTables = [
+  'bucket_usage',
+  'client_contracts',
+  'task_resources',
+  'ticket_resources',
+  'time_entries',
+  'time_entry_change_requests',
+  'time_sheet_comments',
+  'time_sheets',
+];
 
 function sectionBetween(startMarker: string, endMarker: string): string {
   const start = source.indexOf(startMarker);
@@ -137,6 +152,7 @@ describe('workflow time domain tenant-scoped query contract', () => {
 
     expect(approvalSection).toContain("tenantScopedTable(trx, 'time_entries', tenantId)");
     expect(approvalSection).toContain("tenantScopedTable(trx, 'time_sheets', tenantId)");
+    expect(approvalSection).toContain("tenantScopedTable(trx, 'time_entry_change_requests', tenantId)");
     expect(approvalSection).not.toContain('.where({ tenant: tenantId, entry_id: entryId })');
     expect(approvalSection).not.toContain('.where({ tenant: tenantId, id: existing.time_sheet_id })');
 
@@ -179,5 +195,12 @@ describe('workflow time domain tenant-scoped query contract', () => {
     expect(source).not.toMatch(/\.where\(\{\s*tenant:\s*tenantId/);
     expect(source).not.toContain(".where('ts.tenant', tenantId)");
     expect(source).not.toContain("query.where('te.tenant', tenantId)");
+  });
+
+  it('keeps time-domain tenant data roots behind the facade', () => {
+    for (const table of timeDomainTenantTables) {
+      expect(source).not.toContain(`trx('${table}')`);
+      expect(metadataSource).toContain(`${table}: { scope: 'tenant' }`);
+    }
   });
 });

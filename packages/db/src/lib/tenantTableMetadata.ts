@@ -241,6 +241,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   ticket_materials: { scope: 'tenant' },
   ticket_resources: { scope: 'tenant' },
   time_entries: { scope: 'tenant' },
+  time_entry_change_requests: { scope: 'tenant' },
   time_periods: { scope: 'tenant' },
   time_period_settings: { scope: 'tenant' },
   time_sheets: { scope: 'tenant' },
