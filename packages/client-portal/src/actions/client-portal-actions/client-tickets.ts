@@ -13,7 +13,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils'
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
-import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { enforceTicketCloseRules } from '@alga-psa/tickets/lib/validateTicketClosure';
 import {
@@ -26,10 +26,10 @@ import {
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
   applyVisibilityBoardFilter,
-  getClientContactVisibilityContext,
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
+import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 
@@ -49,7 +49,7 @@ async function resolvePortalVisibility(
   tenant: string,
   userId: string
 ) {
-  const userRecord = await trx('users')
+  const userRecord = await tenantDb(trx, tenant).table('users')
     .where({
       user_id: userId,
       tenant
@@ -72,7 +72,7 @@ async function resolveVisibleTicket(
 ) {
   const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
-  const ticket = await trx('tickets as t')
+  const ticket = await tenantDb(trx, tenant).table('tickets as t')
     .select('t.*')
     .where({
       't.ticket_id': ticketId,
@@ -122,9 +122,30 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
+      const scopedDb = tenantDb(trx, tenant);
+      const additionalAgentCountSubquery = scopedDb
+        .table('ticket_resources as tr')
+        .whereRaw('tr.ticket_id = t.ticket_id')
+        .whereNotNull('tr.additional_user_id')
+        .select(trx.raw('COUNT(*)::int'))
+        .as('additional_agent_count');
+      const additionalAgentsSubquery = scopedDb.table('ticket_resources as tr2');
+      scopedDb.tenantJoin(additionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
+      additionalAgentsSubquery
+        .whereRaw('tr2.ticket_id = t.ticket_id')
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"))
+        .as('additional_agents');
 
-      let query = trx('tickets as t')
-      .select(
+      let query = scopedDb.table('tickets as t');
+      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'boards as c', 't.board_id', 'c.board_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'users as u', 't.entered_by', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
+
+      query = query.select(
         't.ticket_id',
         't.ticket_number',
         't.title',
@@ -156,37 +177,9 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
         't.assigned_team_id',
         'tm.team_name as assigned_team_name',
-        db.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
-        db.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
+        additionalAgentCountSubquery,
+        additionalAgentsSubquery.as('additional_agents')
       )
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', '=', 's.status_id')
-            .andOn('t.tenant', '=', 's.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', '=', 'p.priority_id')
-            .andOn('t.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('boards as c', function() {
-        this.on('t.board_id', '=', 'c.board_id')
-            .andOn('t.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', '=', 'cat.category_id')
-            .andOn('t.tenant', '=', 'cat.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.entered_by', '=', 'u.user_id')
-            .andOn('t.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', '=', 'au.user_id')
-            .andOn('t.tenant', '=', 'au.tenant');
-      })
-      .leftJoin('teams as tm', function() {
-        this.on('t.assigned_team_id', 'tm.team_id')
-            .andOn('t.tenant', 'tm.tenant');
-      })
       .where({
         't.tenant': tenant,
         't.client_id': visibility.clientId
@@ -207,12 +200,12 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
-      const tickets = await query.orderBy('t.entered_at', 'desc');
+      const tickets = await query.orderBy('t.entered_at', 'desc') as ITicketListItem[];
 
       return tickets;
-    });
+    }) as any[];
 
-    return result.map((ticket): ITicketListItem => ({
+    return result.map((ticket: any): ITicketListItem => ({
       ...ticket,
       entered_at: ticket.entered_at instanceof Date ? ticket.entered_at.toISOString() : ticket.entered_at,
       updated_at: ticket.updated_at instanceof Date ? ticket.updated_at.toISOString() : ticket.updated_at,
@@ -253,10 +246,21 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Get ticket details with related data
-      const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
-        trx('tickets as t')
+      const ticketAdditionalAgentsSubquery = scopedDb.table('ticket_resources as tr2');
+      scopedDb.tenantJoin(ticketAdditionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
+      ticketAdditionalAgentsSubquery
+        .whereRaw('tr2.ticket_id = t.ticket_id')
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"));
+
+      const ticketQuery = scopedDb.table('tickets as t');
+      scopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'users as u_creator', 't.entered_by', 'u_creator.user_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
+      ticketQuery
         .select(
           't.*',
           's.name as status_name',
@@ -264,24 +268,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'p.color as priority_color',
           'u_creator.user_type as entered_by_user_type',
           'tm.team_name as assigned_team_name',
-          trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
+          ticketAdditionalAgentsSubquery.as('additional_agents')
         )
-        .leftJoin('statuses as s', function() {
-          this.on('t.status_id', '=', 's.status_id')
-              .andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('priorities as p', function() {
-          this.on('t.priority_id', '=', 'p.priority_id')
-              .andOn('t.tenant', '=', 'p.tenant');
-        })
-        .leftJoin('users as u_creator', function() {
-          this.on('t.entered_by', '=', 'u_creator.user_id')
-              .andOn('t.tenant', '=', 'u_creator.tenant');
-        })
-        .leftJoin('teams as tm', function() {
-          this.on('t.assigned_team_id', 'tm.team_id')
-              .andOn('t.tenant', 'tm.tenant');
-        })
         .where({
           't.ticket_id': ticketId,
           't.tenant': tenant,
@@ -290,10 +278,77 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .modify((ticketQuery: Knex.QueryBuilder) => {
           applyVisibilityBoardFilter(ticketQuery, visibility.visibleBoardIds);
         })
-        .first(),
+        .first();
+
+      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+      documentsQuery.where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.tenant': tenant,
+        'd.is_client_visible': true,
+      });
+
+      const commentUserIdsSubquery = scopedDb.table('comments as c')
+        .select('c.user_id')
+        .where('c.ticket_id', ticketId);
+      const assignedUserIdSubquery = scopedDb.table('tickets as assigned_ticket')
+        .select('assigned_ticket.assigned_to')
+        .where('assigned_ticket.ticket_id', ticketId);
+      const additionalUserIdsSubquery = scopedDb.table('ticket_resources as tr')
+        .select('tr.additional_user_id')
+        .where('tr.ticket_id', ticketId);
+
+      const usersQuery = scopedDb.table('users as u')
+        .distinct(
+          'u.user_id',
+          'u.first_name',
+          'u.last_name',
+          'u.email',
+          'u.user_type',
+          'd.file_id as avatar_file_id'
+        );
+      scopedDb.tenantJoin(usersQuery, 'document_associations as da', 'da.entity_id', 'u.user_id', {
+        type: 'left',
+        on: (join) => {
+          join.andOn('da.entity_type', '=', trx.raw('?', ['user']));
+        },
+      });
+      scopedDb.tenantJoin(usersQuery, 'documents as d', 'd.document_id', 'da.document_id', { type: 'left' });
+      usersQuery.where(function(this: Knex.QueryBuilder) {
+        this.whereIn('u.user_id', commentUserIdsSubquery)
+          .orWhereIn('u.user_id', assignedUserIdSubquery)
+          .orWhereIn('u.user_id', additionalUserIdsSubquery);
+      });
+
+      const linkedAssetsQuery = scopedDb.table('asset_associations as aa');
+      scopedDb.tenantJoin(linkedAssetsQuery, 'assets as a', 'aa.asset_id', 'a.asset_id');
+      linkedAssetsQuery
+        .where({
+          'aa.tenant': tenant,
+          'aa.entity_id': ticketId,
+          'aa.entity_type': 'ticket',
+          'a.client_id': visibility.clientId,
+        })
+        .select<Array<{
+          asset_id: string;
+          name: string;
+          asset_tag: string | null;
+          asset_type: string | null;
+          relationship_type: string | null;
+        }>>(
+          'a.asset_id',
+          'a.name',
+          'a.asset_tag',
+          'a.asset_type',
+          'aa.relationship_type',
+        );
+
+      const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
+        ticketQuery,
 
         // Get conversations
-        trx('comments')
+        scopedDb.table('comments')
         .where({
           ticket_id: ticketId,
           tenant: tenant
@@ -301,78 +356,18 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .orderBy('created_at', 'asc'),
 
         // Get client-visible documents only
-        trx('documents as d')
-        .select('d.*')
-        .join('document_associations as da', function() {
-          this.on('d.document_id', '=', 'da.document_id')
-              .andOn('d.tenant', '=', 'da.tenant');
-        })
-        .where({
-          'da.entity_id': ticketId,
-          'da.entity_type': 'ticket',
-          'd.tenant': tenant,
-          'd.is_client_visible': true,
-        }),
+        documentsQuery,
 
         // Get all users involved in the ticket, including avatar file_id
         // This includes users who have commented OR are assigned to the ticket
-        trx.raw(`
-          SELECT DISTINCT u.user_id, u.first_name, u.last_name, u.email, u.user_type, d.file_id as avatar_file_id
-          FROM users u
-          LEFT JOIN document_associations da ON da.entity_id = u.user_id
-            AND da.tenant = u.tenant
-            AND da.entity_type = 'user'
-          LEFT JOIN documents d ON d.document_id = da.document_id
-            AND d.tenant = u.tenant
-          WHERE u.tenant = ?
-            AND (
-              -- Users who have commented
-              u.user_id IN (
-                SELECT c.user_id FROM comments c
-                WHERE c.ticket_id = ? AND c.tenant = ?
-              )
-              -- Or the assigned agent
-              OR u.user_id = (
-                SELECT t.assigned_to FROM tickets t
-                WHERE t.ticket_id = ? AND t.tenant = ?
-              )
-              -- Or additional agents from ticket_resources
-              OR u.user_id IN (
-                SELECT tr.additional_user_id FROM ticket_resources tr
-                WHERE tr.ticket_id = ? AND tr.tenant = ?
-              )
-            )
-        `, [tenant, ticketId, tenant, ticketId, tenant, ticketId, tenant])
-        .then((result: any) => result.rows),
+        usersQuery,
 
         // Linked assets (asset_associations -> assets) scoped to the requester's client.
-        trx('asset_associations as aa')
-          .innerJoin('assets as a', function joinAssets() {
-            this.on('aa.asset_id', '=', 'a.asset_id').andOn('aa.tenant', '=', 'a.tenant');
-          })
-          .where({
-            'aa.tenant': tenant,
-            'aa.entity_id': ticketId,
-            'aa.entity_type': 'ticket',
-            'a.client_id': visibility.clientId,
-          })
-          .select<Array<{
-            asset_id: string;
-            name: string;
-            asset_tag: string | null;
-            asset_type: string | null;
-            relationship_type: string | null;
-          }>>(
-            'a.asset_id',
-            'a.name',
-            'a.asset_tag',
-            'a.asset_type',
-            'aa.relationship_type',
-          )
+        linkedAssetsQuery
       ]);
 
       return { ticket, conversations, documents, users, linkedAssets };
-    });
+    }) as any;
 
     if (!result.ticket) {
       throw new Error('Ticket not found');
@@ -394,7 +389,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       else if (userRecord.user_type === 'client') {
         try {
           // First, get the user's contact_id
-          const userDbRecord = await db('users')
+          const userDbRecord = await tenantDb(db, tenant).table('users')
             .where({ user_id: userRecord.user_id, tenant })
             .first();
 
@@ -434,7 +429,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     );
 
     const commentContacts = commentContactIds.length > 0
-      ? await db('contacts')
+      ? await tenantDb(db, tenant).table('contacts')
         .select('contact_name_id', 'full_name', 'email')
         .whereIn('contact_name_id', commentContactIds)
         .andWhere({ tenant })
@@ -508,7 +503,7 @@ export const addClientTicketComment = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: user.user_id,
           tenant: tenant
@@ -542,7 +537,7 @@ export const addClientTicketComment = withAuth(async (
       }
       const clientNowIso = new Date().toISOString();
 
-      await trx('comment_threads').insert({
+      await tenantDb(trx, tenant).table('comment_threads').insert({
         tenant,
         thread_id: clientGeneratedIds.thread_id,
         ticket_id: ticketId,
@@ -555,7 +550,7 @@ export const addClientTicketComment = withAuth(async (
         created_by: user.user_id || null,
       });
 
-      const [newComment] = await trx('comments').insert({
+      const [newComment] = await tenantDb(trx, tenant).table('comments').insert({
         tenant,
         comment_id: clientGeneratedIds.comment_id,
         thread_id: clientGeneratedIds.thread_id,
@@ -573,7 +568,7 @@ export const addClientTicketComment = withAuth(async (
       }).returning('*');
 
       if (!isInternal) {
-        await trx('tickets')
+        await tenantDb(trx, tenant).table('tickets')
           .where({
             ticket_id: ticketId,
             tenant,
@@ -651,7 +646,7 @@ export const updateClientTicketComment = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: user.user_id,
           tenant: tenant
@@ -663,7 +658,7 @@ export const updateClientTicketComment = withAuth(async (
       }
 
       // Verify the comment belongs to this user
-      const comment = await trx('comments')
+      const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
           tenant,
@@ -689,7 +684,7 @@ export const updateClientTicketComment = withAuth(async (
         }
       }
 
-      await trx('comments')
+      await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
           tenant: tenant
@@ -750,7 +745,7 @@ export const updateTicketStatus = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: user.user_id,
           tenant: tenant
@@ -776,7 +771,7 @@ export const updateTicketStatus = withAuth(async (
         throw new Error('Ticket does not have a board');
       }
 
-      const statusForBoard = await trx('statuses')
+      const statusForBoard = await tenantDb(trx, tenant).table('statuses')
         .where({
           tenant,
           status_id: newStatusId,
@@ -791,7 +786,7 @@ export const updateTicketStatus = withAuth(async (
 
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
-      const oldStatus = await trx('statuses')
+      const oldStatus = await tenantDb(trx, tenant).table('statuses')
         .where({ tenant, status_id: oldStatusId })
         .first('status_id', 'is_closed');
 
@@ -827,7 +822,7 @@ export const updateTicketStatus = withAuth(async (
       // Update the ticket status with full closure semantics: the denormalized
       // is_closed flag and closed_at/closed_by transitions mirror the MSP-side
       // update paths.
-      await trx('tickets')
+      await tenantDb(trx, tenant).table('tickets')
         .where({
           ticket_id: ticketId,
           tenant: tenant
@@ -955,7 +950,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: user.user_id,
           tenant: tenant
@@ -967,7 +962,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       }
 
       // Verify the comment belongs to this user
-      const comment = await trx('comments')
+      const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
           tenant,
@@ -981,7 +976,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
-      await trx('comments')
+      await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
           tenant: tenant
@@ -1034,7 +1029,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
 
       // Verify ticket belongs to user's client
-      const ticket = await trx('tickets')
+      const ticket = await tenantDb(trx, tenant).table('tickets')
         .where({
           ticket_id: ticketId,
           tenant: tenant,
@@ -1050,18 +1045,17 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       }
 
       // Get client-visible documents for the ticket
-      return trx('documents as d')
-        .select('d.*')
-        .join('document_associations as da', function() {
-          this.on('d.document_id', '=', 'da.document_id')
-              .andOn('d.tenant', '=', 'da.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+      return documentsQuery
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
           'd.tenant': tenant,
           'd.is_client_visible': true,
-        });
+        }) as unknown as Promise<IDocument[]>;
     });
 
     return documents;
@@ -1130,14 +1124,14 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       }
 
       const resolvedBoard = !assignedBoardId
-        ? await trx('boards')
+        ? await tenantDb(trx, tenant).table('boards')
             .where({
               tenant,
               is_default: true,
               is_inactive: false
             })
             .first()
-        : await trx('boards')
+        : await tenantDb(trx, tenant).table('boards')
             .where({
               tenant,
               board_id: assignedBoardId,
@@ -1201,7 +1195,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       // If an asset was selected, link it to the ticket. The asset must already
       // belong to the requester's client; we verify ownership before inserting.
       if (validatedData.asset_id) {
-        const asset = await trx('assets')
+        const asset = await tenantDb(trx, tenant).table('assets')
           .where({
             tenant,
             asset_id: validatedData.asset_id,
@@ -1214,7 +1208,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
           throw new Error('Selected asset does not belong to this client');
         }
 
-        await trx('asset_associations').insert({
+        await tenantDb(trx, tenant).table('asset_associations').insert({
           tenant,
           asset_id: validatedData.asset_id,
           entity_id: ticketResult.ticket_id,
@@ -1239,7 +1233,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       }
 
       // Get the full ticket data for return
-      const fullTicket = await trx('tickets')
+      const fullTicket = await tenantDb(trx, tenant).table('tickets')
         .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
         .first();
 

@@ -1,7 +1,7 @@
 'use server'
 
 import { Knex } from 'knex'; // Import Knex type
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
 import {
@@ -88,6 +88,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   timeSheetId: string
 ): Promise<ITimeEntryWithWorkItem[]> => {
   const {knex: db} = await createTenantKnex();
+  const tenantScopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry reading
   if (!await hasPermission(user, 'timeentry', 'read', db)) {
@@ -97,8 +98,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
-  const timeSheet = await db('time_sheets')
-    .where({ id: validatedParams.timeSheetId, tenant })
+  const timeSheet = await tenantScopedDb.table('time_sheets')
+    .where({ id: validatedParams.timeSheetId })
     .select('user_id')
     .first();
 
@@ -108,14 +109,17 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 
   await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
-  const timeEntries = await db('time_entries')
-    .leftJoin('service_catalog', function() {
-      this.on('time_entries.service_id', '=', 'service_catalog.service_id')
-        .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
-    })
+  const timeEntriesQuery = tenantScopedDb.table('time_entries');
+  tenantScopedDb.tenantJoin(
+    timeEntriesQuery,
+    'service_catalog',
+    'time_entries.service_id',
+    'service_catalog.service_id',
+    { type: 'left' },
+  );
+  const timeEntries: any[] = await timeEntriesQuery
     .where({
-      'time_entries.time_sheet_id': validatedParams.timeSheetId,
-      'time_entries.tenant': tenant
+      'time_entries.time_sheet_id': validatedParams.timeSheetId
     })
     .orderBy('time_entries.start_time', 'desc')
     .select('time_entries.*', 'service_catalog.service_name');
@@ -124,37 +128,30 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
     db,
     tenant,
     timeEntries
-      .map((entry) => entry.entry_id)
-      .filter((entryId): entryId is string => Boolean(entryId)),
+      .map((entry: any) => entry.entry_id)
+      .filter((entryId: any): entryId is string => Boolean(entryId)),
   );
 
   // Fetch work item details for these time entries
-  const workItemDetails = await Promise.all(timeEntries.map(async (entry): Promise<IWorkItem> => {
+  const workItemDetails = await Promise.all(timeEntries.map(async (entry: any): Promise<IWorkItem> => {
     const normalizedWorkItemId = normalizeFetchedWorkItemId(entry);
     let workItem;
     switch (entry.work_item_type) {
       case 'ticket':
-        [workItem] = await db('tickets')
+        [workItem] = await tenantScopedDb.table('tickets')
           .where({
-            ticket_id: entry.work_item_id,
-            'tickets.tenant': tenant
+            ticket_id: entry.work_item_id
           })
           .select('ticket_id as work_item_id', 'title as name', 'url as description', 'ticket_number');
         break;
       case 'project_task':
-        [workItem] = await db('project_tasks')
+        const projectTaskQuery = tenantScopedDb.table('project_tasks')
           .where({
-            task_id: entry.work_item_id,
-            'project_tasks.tenant': tenant
-          })
-          .join('project_phases', function() {
-            this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-                .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-          })
-          .join('projects', function() {
-            this.on('project_phases.project_id', '=', 'projects.project_id')
-                .andOn('project_phases.tenant', '=', 'projects.tenant');
-          })
+            task_id: entry.work_item_id
+          });
+        tenantScopedDb.tenantJoin(projectTaskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+        tenantScopedDb.tenantJoin(projectTaskQuery, 'projects', 'project_phases.project_id', 'projects.project_id');
+        [workItem] = await projectTaskQuery
           .select(
             'task_id as work_item_id',
             'task_name as name',
@@ -173,10 +170,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         break;
       case 'ad_hoc':
         // For ad_hoc entries, get the title from schedule entries
-        const scheduleEntry = await db('schedule_entries')
+        const scheduleEntry = await tenantScopedDb.table('schedule_entries')
           .where({
-            entry_id: entry.work_item_id,
-            'schedule_entries.tenant': tenant
+            entry_id: entry.work_item_id
           })
           .first();
 
@@ -188,23 +184,14 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         };
         break;
       case 'interaction':
-        [workItem] = await db('interactions')
+        const interactionQuery = tenantScopedDb.table('interactions')
           .where({
-            'interactions.interaction_id': entry.work_item_id,
-            'interactions.tenant': tenant
-          })
-          .leftJoin('clients', function() {
-            this.on('interactions.client_id', '=', 'clients.client_id')
-              .andOn('clients.tenant', '=', 'interactions.tenant');
-          })
-          .leftJoin('contacts', function() {
-            this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
-              .andOn('contacts.tenant', '=', 'interactions.tenant');
-          })
-          .leftJoin('interaction_types', function() {
-            this.on('interactions.type_id', '=', 'interaction_types.type_id')
-              .andOn('interaction_types.tenant', '=', 'interactions.tenant');
-          })
+            'interactions.interaction_id': entry.work_item_id
+          });
+        tenantScopedDb.tenantJoin(interactionQuery, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+        tenantScopedDb.tenantJoin(interactionQuery, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+        tenantScopedDb.tenantJoin(interactionQuery, 'interaction_types', 'interactions.type_id', 'interaction_types.type_id', { type: 'left' });
+        [workItem] = await interactionQuery
           .select(
             'interactions.interaction_id as work_item_id',
             'interactions.title as name',
@@ -230,14 +217,11 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
     }
 
     // Fetch service information without treating billing mode as service identity/type.
-    const [service] = await db('service_catalog as sc')
-      .leftJoin('service_types as st', function() {
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-      })
+    const serviceQuery = tenantScopedDb.table('service_catalog as sc');
+    tenantScopedDb.tenantJoin(serviceQuery, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+    const [service] = await serviceQuery
       .where({
-        'sc.service_id': entry.service_id,
-        'sc.tenant': tenant
+        'sc.service_id': entry.service_id
       })
       .select(
         'sc.service_name',
@@ -269,7 +253,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 
   const workItemMap = new Map(workItemDetails.map((item): [string, IWorkItem] => [item.work_item_id, item]));
 
-  const entriesWithWorkItems = timeEntries.map((entry): ITimeEntryWithWorkItem => {
+  const entriesWithWorkItems = timeEntries.map((entry: any): ITimeEntryWithWorkItem => {
     const normalizedWorkItemId = normalizeFetchedWorkItemId(entry);
 
     return {
@@ -297,6 +281,7 @@ export const saveTimeEntry = withAuth(async (
   timeEntry: Omit<ITimeEntry, 'tenant'>
 ): Promise<ITimeEntryWithWorkItem> => {
   const {knex: db} = await createTenantKnex();
+  const tenantScopedDb = tenantDb(db, tenant) as any;
 
   // Check permission based on whether this is a create or update operation
   if (timeEntry.entry_id) {
@@ -323,8 +308,8 @@ export const saveTimeEntry = withAuth(async (
 
   try {
     if (validatedTimeEntry.entry_id) {
-      const existing = await db('time_entries')
-        .where({ entry_id: validatedTimeEntry.entry_id, tenant })
+      const existing = await tenantScopedDb.table('time_entries')
+        .where({ entry_id: validatedTimeEntry.entry_id })
         .select('user_id', 'invoiced', 'time_sheet_id')
         .first();
 
@@ -363,14 +348,16 @@ export const saveTimeEntry = withAuth(async (
     const { work_date: end_work_date } = computeWorkDateFields(end_time, subjectTimeZone);
 
     if (time_sheet_id) {
-      const timeSheetWithPeriod = await db('time_sheets')
-        .join('time_periods', function joinPeriods() {
-          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
-            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-        })
+      const timeSheetWithPeriodQuery = tenantScopedDb.table('time_sheets');
+      tenantScopedDb.tenantJoin(
+        timeSheetWithPeriodQuery,
+        'time_periods',
+        'time_sheets.period_id',
+        'time_periods.period_id',
+      );
+      const timeSheetWithPeriod = await timeSheetWithPeriodQuery
         .where({
-          'time_sheets.id': time_sheet_id,
-          'time_sheets.tenant': tenant
+          'time_sheets.id': time_sheet_id
         })
         .select('time_sheets.user_id', 'time_periods.start_date', 'time_periods.end_date')
         .first();
@@ -443,31 +430,37 @@ export const saveTimeEntry = withAuth(async (
     if (!contract_line_id && service_id) {
       try {
         const effectiveDateForContractResolution = work_date || start_time;
+        let defaultContractClientId: string | null = null;
+
+        if (work_item_type === 'project_task') {
+          const projectTaskClientQuery = tenantScopedDb.table('project_tasks');
+          tenantScopedDb.tenantJoin(
+            projectTaskClientQuery,
+            'project_phases',
+            'project_tasks.phase_id',
+            'project_phases.phase_id',
+          );
+          tenantScopedDb.tenantJoin(
+            projectTaskClientQuery,
+            'projects',
+            'project_phases.project_id',
+            'projects.project_id',
+          );
+          defaultContractClientId = (await projectTaskClientQuery
+            .where({ 'project_tasks.task_id': work_item_id })
+            .first('projects.client_id'))?.client_id ?? null;
+        } else if (work_item_type === 'ticket') {
+          defaultContractClientId = (await tenantScopedDb.table('tickets')
+            .where({ ticket_id: work_item_id })
+            .first('client_id'))?.client_id ?? null;
+        } else if (work_item_type === 'interaction') {
+          defaultContractClientId = (await tenantScopedDb.table('interactions')
+            .where({ interaction_id: work_item_id })
+            .first('client_id'))?.client_id ?? null;
+        }
+
         const defaultPlanId = await determineDefaultContractLine(
-          work_item_type === 'project_task' ?
-            (await db('project_tasks')
-              .join('project_phases', function() {
-                this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-                    .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-              })
-              .join('projects', function() {
-                this.on('project_phases.project_id', '=', 'projects.project_id')
-                    .andOn('project_phases.tenant', '=', 'projects.tenant');
-              })
-              .where({ 'project_tasks.task_id': work_item_id, 'project_tasks.tenant': tenant })
-              .first('projects.client_id')).client_id
-            : work_item_type === 'ticket' ?
-              (await db('tickets')
-                .where({ ticket_id: work_item_id, tenant })
-                .first('client_id')).client_id
-              : work_item_type === 'interaction' ?
-                (await db('interactions')
-                  .where({ 
-                    interaction_id: work_item_id, 
-                    tenant
-                  })
-                  .first('client_id'))?.client_id
-                : null,
+          defaultContractClientId as string,
           service_id,
           effectiveDateForContractResolution
         );
@@ -482,12 +475,13 @@ export const saveTimeEntry = withAuth(async (
 
 
     await db.transaction(async (trx) => {
+      const trxTenantDb = tenantDb(trx, tenant) as any;
       console.log('Starting transaction for time entry');
       let oldDuration = 0; // Initialize oldDuration
       if (entry_id) {
         // Fetch original entry before update to calculate delta
-        const originalEntryForUpdate = await trx('time_entries')
-          .where({ entry_id, tenant })
+        const originalEntryForUpdate = await trxTenantDb.table('time_entries')
+          .where({ entry_id })
           .select('billable_duration')
           .first();
         // If original entry not found, maybe throw error or handle gracefully?
@@ -499,8 +493,8 @@ export const saveTimeEntry = withAuth(async (
 
         // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
         const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry;
-        const [updated] = await trx('time_entries')
-          .where({ entry_id, tenant }) // Ensure tenant match
+        const [updated] = await trxTenantDb.table('time_entries')
+          .where({ entry_id })
           .update(updateData)
           .returning('*');
 
@@ -512,10 +506,9 @@ export const saveTimeEntry = withAuth(async (
         console.log('Updated entry:', resultingEntry);
 
         if (updated.time_sheet_id) {
-          const timeSheetStatus = await trx('time_sheets')
+          const timeSheetStatus = await trxTenantDb.table('time_sheets')
             .where({
               id: updated.time_sheet_id,
-              tenant,
             })
             .first('approval_status');
 
@@ -531,22 +524,20 @@ export const saveTimeEntry = withAuth(async (
         // If this is a project task, update the actual_hours in the project_tasks table
         if (work_item_type === 'project_task') {
           // Get all time entries for this task to calculate total actual hours
-          const timeEntries = await trx('time_entries')
+          const timeEntries = await trxTenantDb.table('time_entries')
             .where({
               work_item_id,
-              work_item_type: 'project_task',
-              tenant
+              work_item_type: 'project_task'
             })
             .select('billable_duration');
 
           // Calculate total minutes from all time entries
-          const totalMinutes = timeEntries.reduce((total, entry) => total + entry.billable_duration, 0);
+          const totalMinutes = timeEntries.reduce((total: number, entry: any) => total + entry.billable_duration, 0);
 
           // Store actual_hours as minutes in the database (integer)
-          await trx('project_tasks')
+          await trxTenantDb.table('project_tasks')
             .where({
-              task_id: work_item_id,
-              tenant
+              task_id: work_item_id
             })
             .update({
               actual_hours: totalMinutes,
@@ -555,7 +546,7 @@ export const saveTimeEntry = withAuth(async (
         }
       } else {
         // Insert new entry
-        const [inserted] = await trx('time_entries')
+        const [inserted] = await trxTenantDb.table('time_entries')
           .insert({
             ...cleanedEntry,
             entry_id: uuidv4(),
@@ -576,22 +567,20 @@ export const saveTimeEntry = withAuth(async (
         if (work_item_type === 'project_task') {
           // Update actual_hours in project_tasks table
           // Get all time entries for this task to calculate total actual hours
-          const timeEntries = await trx('time_entries')
+          const timeEntries = await trxTenantDb.table('time_entries')
             .where({
               work_item_id,
-              work_item_type: 'project_task',
-              tenant
+              work_item_type: 'project_task'
             })
             .select('billable_duration');
 
           // Calculate total minutes from all time entries
-          const totalMinutes = timeEntries.reduce((total, entry) => total + entry.billable_duration, 0);
+          const totalMinutes = timeEntries.reduce((total: number, entry: any) => total + entry.billable_duration, 0);
 
           // Store actual_hours as minutes in the database (integer)
-          await trx('project_tasks')
+          await trxTenantDb.table('project_tasks')
             .where({
-              task_id: work_item_id,
-              tenant
+              task_id: work_item_id
             })
             .update({
               actual_hours: totalMinutes,
@@ -599,21 +588,19 @@ export const saveTimeEntry = withAuth(async (
             });
 
           // Get current task to check if it already has an assignee
-          const task = await trx('project_tasks')
+          const task = await trxTenantDb.table('project_tasks')
             .where({
               task_id: work_item_id,
-              tenant,
             })
             .first();
 
           if (task) {
             // Check if user is already in task_resources for this task
-            const existingResource = await trx('task_resources')
+            const existingResource = await trxTenantDb.table('task_resources')
               .where({
                 task_id: work_item_id,
-                tenant,
               })
-              .where(function() {
+              .where(function(this: any) {
                 this.where('assigned_to', timeEntryUserId)
                   .orWhere('additional_user_id', timeEntryUserId);
               })
@@ -623,7 +610,7 @@ export const saveTimeEntry = withAuth(async (
             if (task.assigned_to && task.assigned_to !== timeEntryUserId) {
               // Only add as additional user if not already in resources
               if (!existingResource) {
-                await trx('task_resources').insert({
+                await trxTenantDb.table('task_resources').insert({
                   task_id: work_item_id,
                   assigned_to: task.assigned_to,
                   additional_user_id: timeEntryUserId,
@@ -633,10 +620,9 @@ export const saveTimeEntry = withAuth(async (
               }
             } else if (!task.assigned_to) {
               // If task has no assignee, only update the task's assigned_to field
-              await trx('project_tasks')
+              await trxTenantDb.table('project_tasks')
                 .where({
                   task_id: work_item_id,
-                  tenant,
                 })
                 .update({
                   assigned_to: timeEntryUserId,
@@ -647,12 +633,11 @@ export const saveTimeEntry = withAuth(async (
           }
         } else if (work_item_type === 'ticket') {
           // Check if user is already in ticket_resources for this ticket
-          const existingResource = await trx('ticket_resources')
+          const existingResource = await trxTenantDb.table('ticket_resources')
             .where({
               ticket_id: work_item_id,
-              tenant,
             })
-            .where(function() {
+            .where(function(this: any) {
               this.where('assigned_to', timeEntryUserId)
                 .orWhere('additional_user_id', timeEntryUserId);
             })
@@ -660,17 +645,16 @@ export const saveTimeEntry = withAuth(async (
 
           if (!existingResource) {
             // Get current ticket to check if it already has an assignee
-            const ticket = await trx('tickets')
+            const ticket = await trxTenantDb.table('tickets')
               .where({
                 ticket_id: work_item_id,
-                tenant,
               })
               .first();
 
             if (ticket) {
               // If ticket already has an assignee, add user as additional_user_id
               if (ticket.assigned_to && ticket.assigned_to !== timeEntryUserId) {
-                await trx('ticket_resources').insert({
+                await trxTenantDb.table('ticket_resources').insert({
                   ticket_id: work_item_id,
                   assigned_to: ticket.assigned_to,
                   additional_user_id: timeEntryUserId,
@@ -681,10 +665,9 @@ export const saveTimeEntry = withAuth(async (
                 // If ticket has no assignee, update the ticket to set user as assigned_to
                 // Note: We do NOT create a ticket_resources record here because that table
                 // is only for additional agents, not the primary assignee
-                await trx('tickets')
+                await trxTenantDb.table('tickets')
                   .where({
                     ticket_id: work_item_id,
-                    tenant,
                   })
                   .update({
                     assigned_to: timeEntryUserId,
@@ -708,9 +691,8 @@ export const saveTimeEntry = withAuth(async (
         const currentPlanId = resultingEntry.contract_line_id; // Use the plan ID associated with the entry
 
         if (clientId && currentPlanId && resultingEntry.service_id) {
-          const overlayConfig = await trx('contract_line_service_configuration')
+          const overlayConfig = await trxTenantDb.table('contract_line_service_configuration')
             .where({
-              tenant,
               contract_line_id: currentPlanId,
               service_id: resultingEntry.service_id,
               configuration_type: 'Bucket'
@@ -783,19 +765,13 @@ export const saveTimeEntry = withAuth(async (
     let workItemDetails: IWorkItem;
     switch (entry.work_item_type) {
       case 'project_task': {
-        const [task] = await db('project_tasks')
+        const taskQuery = tenantScopedDb.table('project_tasks')
           .where({
-            task_id: entry.work_item_id,
-            'project_tasks.tenant': tenant
-          })
-          .join('project_phases', function() {
-            this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-                .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-          })
-          .join('projects', function() {
-            this.on('project_phases.project_id', '=', 'projects.project_id')
-                .andOn('project_phases.tenant', '=', 'projects.tenant');
-          })
+            task_id: entry.work_item_id
+          });
+        tenantScopedDb.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+        tenantScopedDb.tenantJoin(taskQuery, 'projects', 'project_phases.project_id', 'projects.project_id');
+        const [task] = await taskQuery
           .select(
             'task_id as work_item_id',
             'task_name as name',
@@ -813,10 +789,9 @@ export const saveTimeEntry = withAuth(async (
         break;
       }
       case 'ad_hoc': {
-        const schedule = await db('schedule_entries')
+        const schedule = await tenantScopedDb.table('schedule_entries')
           .where({
-            entry_id: entry.work_item_id,
-            tenant
+            entry_id: entry.work_item_id
           })
           .first();
         workItemDetails = {
@@ -829,10 +804,9 @@ export const saveTimeEntry = withAuth(async (
         break;
       }
       case 'ticket': {
-        const [ticket] = await db('tickets')
+        const [ticket] = await tenantScopedDb.table('tickets')
           .where({
-            ticket_id: entry.work_item_id,
-            tenant
+            ticket_id: entry.work_item_id
           })
           .select(
             'ticket_id as work_item_id',
@@ -858,23 +832,14 @@ export const saveTimeEntry = withAuth(async (
         };
         break;
       case 'interaction': {
-        const [interaction] = await db('interactions')
+        const interactionQuery = tenantScopedDb.table('interactions')
           .where({
-            'interactions.interaction_id': entry.work_item_id,
-            'interactions.tenant': tenant
-          })
-          .leftJoin('clients', function() {
-            this.on('interactions.client_id', '=', 'clients.client_id')
-              .andOn('clients.tenant', '=', 'interactions.tenant');
-          })
-          .leftJoin('contacts', function() {
-            this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
-              .andOn('contacts.tenant', '=', 'interactions.tenant');
-          })
-          .leftJoin('interaction_types', function() {
-            this.on('interactions.type_id', '=', 'interaction_types.type_id')
-              .andOn('interaction_types.tenant', '=', 'interactions.tenant');
-          })
+            'interactions.interaction_id': entry.work_item_id
+          });
+        tenantScopedDb.tenantJoin(interactionQuery, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+        tenantScopedDb.tenantJoin(interactionQuery, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+        tenantScopedDb.tenantJoin(interactionQuery, 'interaction_types', 'interactions.type_id', 'interaction_types.type_id', { type: 'left' });
+        const [interaction] = await interactionQuery
           .select(
             'interactions.interaction_id as work_item_id',
             'interactions.title as name',
@@ -943,6 +908,7 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
   }
 ): Promise<void> => {
   const { knex: db } = await createTenantKnex();
+  const tenantScopedDb = tenantDb(db, tenant) as any;
 
   if (!await hasPermission(user, 'timesheet', 'approve', db)) {
     throw new Error('Permission denied: Cannot update time entry approval status');
@@ -953,10 +919,9 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
     params,
   );
 
-  const existingEntry = await db('time_entries')
+  const existingEntry = await tenantScopedDb.table('time_entries')
     .where({
       entry_id: validatedParams.entryId,
-      tenant,
     })
     .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id', 'work_item_id', 'work_item_type')
     .first();
@@ -976,10 +941,11 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
   }
 
   await db.transaction(async (trx) => {
-    await trx('time_entries')
+    const trxTenantDb = tenantDb(trx, tenant) as any;
+
+    await trxTenantDb.table('time_entries')
       .where({
         entry_id: validatedParams.entryId,
-        tenant,
       })
       .update({
         approval_status: validatedParams.approvalStatus,
@@ -991,10 +957,9 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
       validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
       existingEntry.time_sheet_id
     ) {
-      await trx('time_sheets')
+      await trxTenantDb.table('time_sheets')
         .where({
           id: existingEntry.time_sheet_id,
-          tenant,
         })
         .update({
           approval_status: 'CHANGES_REQUESTED',
@@ -1056,11 +1021,11 @@ export const deleteTimeEntry = withAuth(async (
 
   try {
     const deletedTimeEntry = await db.transaction(async (trx) => {
+      const trxTenantDb = tenantDb(trx, tenant) as any;
       // Get the time entry to be deleted
-      const timeEntry = await trx('time_entries')
+      const timeEntry = await trxTenantDb.table('time_entries')
         .where({
-          entry_id: entryId,
-          tenant
+          entry_id: entryId
         })
         .first();
 
@@ -1083,9 +1048,8 @@ export const deleteTimeEntry = withAuth(async (
         const currentPlanId = timeEntry.contract_line_id;
 
         if (clientId && currentPlanId && timeEntry.service_id) {
-          const overlayConfig = await trx('contract_line_service_configuration')
+          const overlayConfig = await trxTenantDb.table('contract_line_service_configuration')
             .where({
-              tenant,
               contract_line_id: currentPlanId,
               service_id: timeEntry.service_id,
               configuration_type: 'Bucket'
@@ -1123,8 +1087,8 @@ export const deleteTimeEntry = withAuth(async (
       // --- End Bucket Usage Update Logic ---
 
       // 2. Delete the time entry
-      const deleteCount = await trx('time_entries')
-        .where({ entry_id: entryId, tenant })
+      const deleteCount = await trxTenantDb.table('time_entries')
+        .where({ entry_id: entryId })
         .delete();
 
       if (deleteCount === 0) {
@@ -1148,22 +1112,20 @@ export const deleteTimeEntry = withAuth(async (
       // If this was a project task, update the actual_hours in the project_tasks table
       if (timeEntry.work_item_type === 'project_task') {
         // Get all remaining time entries for this task to calculate total actual hours
-        const timeEntries = await trx('time_entries')
+        const timeEntries = await trxTenantDb.table('time_entries')
           .where({
             work_item_id: timeEntry.work_item_id,
-            work_item_type: 'project_task',
-            tenant
+            work_item_type: 'project_task'
           })
           .select('billable_duration');
 
         // Calculate total minutes from all time entries
-        const totalMinutes = timeEntries.reduce((total, entry) => total + entry.billable_duration, 0);
+        const totalMinutes = timeEntries.reduce((total: number, entry: any) => total + entry.billable_duration, 0);
 
         // Store actual_hours as minutes in the database (integer)
-        await trx('project_tasks')
+        await trxTenantDb.table('project_tasks')
           .where({
-            task_id: timeEntry.work_item_id,
-            tenant
+            task_id: timeEntry.work_item_id
           })
           .update({
             actual_hours: totalMinutes,
@@ -1206,6 +1168,7 @@ export const getTimeEntryById = withAuth(async (
   entryId: string
 ): Promise<ITimeEntryWithWorkItem | null> => {
   const { knex: db } = await createTenantKnex();
+  const tenantScopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry reading
   if (!await hasPermission(user, 'timeentry', 'read', db)) {
@@ -1213,8 +1176,8 @@ export const getTimeEntryById = withAuth(async (
   }
 
     try {
-      const entry = await db('time_entries')
-        .where({ entry_id: entryId, tenant })
+      const entry = await tenantScopedDb.table('time_entries')
+        .where({ entry_id: entryId })
         .first();
 
       if (!entry) {
@@ -1227,19 +1190,13 @@ export const getTimeEntryById = withAuth(async (
       let workItemDetails: IWorkItem;
       switch (entry.work_item_type) {
         case 'project_task': {
-          const [task] = await db('project_tasks')
+          const taskQuery = tenantScopedDb.table('project_tasks')
             .where({
-              task_id: entry.work_item_id,
-              'project_tasks.tenant': tenant
-            })
-            .join('project_phases', function() {
-              this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-                  .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-            })
-            .join('projects', function() {
-              this.on('project_phases.project_id', '=', 'projects.project_id')
-                  .andOn('project_phases.tenant', '=', 'projects.tenant');
-            })
+              task_id: entry.work_item_id
+            });
+          tenantScopedDb.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+          tenantScopedDb.tenantJoin(taskQuery, 'projects', 'project_phases.project_id', 'projects.project_id');
+          const [task] = await taskQuery
             .select(
               'task_id as work_item_id',
               'task_name as name',
@@ -1257,10 +1214,9 @@ export const getTimeEntryById = withAuth(async (
           break;
         }
         case 'ad_hoc': {
-          const schedule = await db('schedule_entries')
+          const schedule = await tenantScopedDb.table('schedule_entries')
             .where({
-              entry_id: entry.work_item_id,
-              tenant
+              entry_id: entry.work_item_id
             })
             .first();
           workItemDetails = {
@@ -1273,10 +1229,9 @@ export const getTimeEntryById = withAuth(async (
           break;
         }
         case 'ticket': {
-          const [ticket] = await db('tickets')
+          const [ticket] = await tenantScopedDb.table('tickets')
             .where({
-              ticket_id: entry.work_item_id,
-              tenant
+              ticket_id: entry.work_item_id
             })
             .select(
               'ticket_id as work_item_id',
@@ -1302,23 +1257,14 @@ export const getTimeEntryById = withAuth(async (
           };
           break;
         case 'interaction': {
-          const [interaction] = await db('interactions')
+          const interactionQuery = tenantScopedDb.table('interactions')
             .where({
-              'interactions.interaction_id': entry.work_item_id,
-              'interactions.tenant': tenant
-            })
-            .leftJoin('clients', function() {
-              this.on('interactions.client_id', '=', 'clients.client_id')
-                .andOn('clients.tenant', '=', 'interactions.tenant');
-            })
-            .leftJoin('contacts', function() {
-              this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
-                .andOn('contacts.tenant', '=', 'interactions.tenant');
-            })
-            .leftJoin('interaction_types', function() {
-              this.on('interactions.type_id', '=', 'interaction_types.type_id')
-                .andOn('interaction_types.tenant', '=', 'interactions.tenant');
-            })
+              'interactions.interaction_id': entry.work_item_id
+            });
+          tenantScopedDb.tenantJoin(interactionQuery, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+          tenantScopedDb.tenantJoin(interactionQuery, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+          tenantScopedDb.tenantJoin(interactionQuery, 'interaction_types', 'interactions.type_id', 'interaction_types.type_id', { type: 'left' });
+          const [interaction] = await interactionQuery
             .select(
               'interactions.interaction_id as work_item_id',
               'interactions.title as name',

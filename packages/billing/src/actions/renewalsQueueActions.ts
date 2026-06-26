@@ -1,7 +1,7 @@
 'use server';
 
 import { randomUUID } from 'node:crypto';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -227,10 +227,10 @@ export const listRenewalQueueRows = withAuth(async (
     Number.isInteger(horizonDays) && horizonDays > 0
       ? Math.trunc(horizonDays)
       : DEFAULT_RENEWALS_HORIZON_DAYS;
+  const db = tenantDb(knex, tenant);
 
-  await knex('client_contracts')
+  await db.table('client_contracts')
     .where({
-      tenant,
       is_active: true,
       status: 'snoozed',
     })
@@ -248,14 +248,8 @@ export const listRenewalQueueRows = withAuth(async (
     'dbs.default_notice_period_days as tenant_default_notice_period_days',
   ];
 
-  let query = knex('client_contracts as cc')
-    .leftJoin('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('clients as cl', function joinClients() {
-      this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-    })
-    .where({ 'cc.tenant': tenant, 'cc.is_active': true })
+  let query = db.table('client_contracts as cc')
+    .where({ 'cc.is_active': true })
     .select([
       'cc.*',
       'c.contract_name',
@@ -264,9 +258,9 @@ export const listRenewalQueueRows = withAuth(async (
       ...defaultSelections,
     ]);
 
-  query = query.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
-    this.on('cc.tenant', '=', 'dbs.tenant');
-  });
+  db.tenantJoin(query, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
+  db.tenantJoin(query, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+  query = db.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
 
   const rows = await query;
 
@@ -322,9 +316,9 @@ export const markRenewalQueueItemRenewing = withAuth(async (
   const normalizedNote = normalizeActionNote(note);
 
   return knex.transaction(async (trx) => {
-    const row = await trx('client_contracts')
+    const db = tenantDb(trx, tenant);
+    const row = await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
         is_active: true,
       })
@@ -343,9 +337,8 @@ export const markRenewalQueueItemRenewing = withAuth(async (
     }
 
     const updatedAt = new Date().toISOString();
-    await trx('client_contracts')
+    await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
       })
       .update(
@@ -388,9 +381,9 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
   const normalizedNote = normalizeActionNote(note);
 
   return knex.transaction(async (trx) => {
-    const row = await trx('client_contracts')
+    const db = tenantDb(trx, tenant);
+    const row = await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
         is_active: true,
       })
@@ -409,9 +402,8 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
     }
 
     const updatedAt = new Date().toISOString();
-    await trx('client_contracts')
+    await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
       })
       .update(
@@ -456,12 +448,12 @@ export const createRenewalDraftForQueueItem = withAuth(async (
   const normalizedNote = normalizeActionNote(note);
 
   return knex.transaction(async (trx) => {
-    const source = await trx('client_contracts as cc')
-      .join('contracts as c', function joinContract() {
-        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
+    const db = tenantDb(trx, tenant);
+    const sourceQuery = db.table('client_contracts as cc');
+    db.tenantJoin(sourceQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+
+    const source = await sourceQuery
       .where({
-        'cc.tenant': tenant,
         'cc.client_contract_id': clientContractId,
         'cc.is_active': true,
       })
@@ -495,18 +487,16 @@ export const createRenewalDraftForQueueItem = withAuth(async (
     }
 
     if (typeof (source as any).created_draft_contract_id === 'string' && (source as any).created_draft_contract_id.length > 0) {
-      const existingDraft = await trx('contracts')
+      const existingDraft = await db.table('contracts')
         .where({
-          tenant,
           contract_id: (source as any).created_draft_contract_id,
           status: 'draft',
         })
         .first('contract_id');
 
       if (existingDraft) {
-        const existingDraftAssignment = await trx('client_contracts')
+        const existingDraftAssignment = await db.table('client_contracts')
           .where({
-            tenant,
             contract_id: existingDraft.contract_id,
           })
           .first('client_contract_id');
@@ -523,7 +513,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
     const draftContractId = randomUUID();
     const draftClientContractId = randomUUID();
 
-    await trx('contracts').insert({
+    await db.table('contracts').insert({
       tenant,
       contract_id: draftContractId,
       contract_name: `${(source as any).contract_name ?? (source as any).contract_id} (Renewal Draft)`,
@@ -561,16 +551,15 @@ export const createRenewalDraftForQueueItem = withAuth(async (
     clientContractInsert.renewal_term_months = (source as any).renewal_term_months ?? null;
     clientContractInsert.use_tenant_renewal_defaults = (source as any).use_tenant_renewal_defaults ?? true;
 
-    await trx('client_contracts').insert(clientContractInsert);
+    await db.table('client_contracts').insert(clientContractInsert);
 
     const sourceWorkItemUpdate: Record<string, unknown> = {
       updated_at: nowIso,
     };
     sourceWorkItemUpdate.created_draft_contract_id = draftContractId;
 
-    await trx('client_contracts')
+    await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
       })
       .update(
@@ -622,9 +611,9 @@ export const snoozeRenewalQueueItem = withAuth(async (
   }
 
   return knex.transaction(async (trx) => {
-    const row = await trx('client_contracts')
+    const db = tenantDb(trx, tenant);
+    const row = await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
         is_active: true,
       })
@@ -641,9 +630,8 @@ export const snoozeRenewalQueueItem = withAuth(async (
     }
 
     const updatedAt = new Date().toISOString();
-    await trx('client_contracts')
+    await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
       })
       .update(
@@ -696,15 +684,16 @@ export const assignRenewalQueueItemOwner = withAuth(async (
     : null;
 
   return knex.transaction(async (trx) => {
+    const db = tenantDb(trx, tenant);
     if (normalizedAssignedTo) {
-      const ownerInTenant = await trx('users')
+      const ownerInTenant = await db.table('users')
         .where({
-          tenant,
           user_id: normalizedAssignedTo,
         })
         .first('user_id');
       if (!ownerInTenant) {
-        const ownerInAnotherTenant = await trx('users')
+        const ownerInAnotherTenant = await db
+          .unscoped('users', 'Reject cross-tenant owner identifiers in renewal queue assignment')
           .where({ user_id: normalizedAssignedTo })
           .whereNot({ tenant })
           .first('user_id');
@@ -715,9 +704,8 @@ export const assignRenewalQueueItemOwner = withAuth(async (
       }
     }
 
-    const row = await trx('client_contracts')
+    const row = await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
         is_active: true,
       })
@@ -730,9 +718,8 @@ export const assignRenewalQueueItemOwner = withAuth(async (
 
     const currentStatus = toRenewalWorkItemStatus((row as any).status);
     const updatedAt = new Date().toISOString();
-    await trx('client_contracts')
+    await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
       })
       .update(
@@ -776,9 +763,9 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
   const normalizedNote = normalizeActionNote(note);
 
   return knex.transaction(async (trx) => {
-    const sourceRow = await trx('client_contracts')
+    const db = tenantDb(trx, tenant);
+    const sourceRow = await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
         is_active: true,
       })
@@ -807,7 +794,8 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
       throw new Error('Activated renewal contract id is required');
     }
 
-    const crossTenantActivatedContract = await trx('contracts')
+    const crossTenantActivatedContract = await db
+      .unscoped('contracts', 'Reject cross-tenant activated renewal contract identifiers')
       .where({
         contract_id: resolvedActivatedContractId,
       })
@@ -819,9 +807,8 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
       throw new Error('Cross-tenant activated contract identifier is not allowed');
     }
 
-    const activeRenewalContract = await trx('contracts')
+    const activeRenewalContract = await db.table('contracts')
       .where({
-        tenant,
         contract_id: resolvedActivatedContractId,
         status: 'active',
       })
@@ -832,9 +819,8 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
     }
 
     const updatedAt = new Date().toISOString();
-    await trx('client_contracts')
+    await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
       })
       .update(
@@ -878,9 +864,9 @@ export const completeRenewalQueueItemForNonRenewal = withAuth(async (
   const normalizedNote = normalizeActionNote(note);
 
   return knex.transaction(async (trx) => {
-    const sourceRow = await trx('client_contracts')
+    const db = tenantDb(trx, tenant);
+    const sourceRow = await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
         is_active: true,
       })
@@ -897,9 +883,8 @@ export const completeRenewalQueueItemForNonRenewal = withAuth(async (
     }
 
     const updatedAt = new Date().toISOString();
-    await trx('client_contracts')
+    await db.table('client_contracts')
       .where({
-        tenant,
         client_contract_id: clientContractId,
       })
       .update(
@@ -939,6 +924,7 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return knex.transaction(async (trx) => {
+    const db = tenantDb(trx, tenant);
     const defaultSelections: string[] = [
       'dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy',
       'dbs.renewal_ticket_board_id as tenant_renewal_ticket_board_id',
@@ -947,15 +933,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
       'dbs.renewal_ticket_assignee_id as tenant_renewal_ticket_assignee_id',
     ];
 
-    let rowQuery = trx('client_contracts as cc')
-      .leftJoin('contracts as c', function joinContracts() {
-        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-      })
+    let rowQuery = db.table('client_contracts as cc')
       .where({
-        'cc.tenant': tenant,
         'cc.client_contract_id': clientContractId,
         'cc.is_active': true,
         'c.status': 'active',
@@ -968,9 +947,9 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
         ...defaultSelections,
       ]);
 
-    rowQuery = rowQuery.leftJoin('default_billing_settings as dbs', function joinDefaults() {
-      this.on('cc.tenant', '=', 'dbs.tenant');
-    });
+    db.tenantJoin(rowQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
+    db.tenantJoin(rowQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+    rowQuery = db.tenantJoin(rowQuery, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
 
     const sourceRow = await rowQuery.first();
     if (!sourceRow) {
@@ -1024,8 +1003,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
 
     if (!clientId || !boardId || !statusId || !priorityId) {
       const missingDefaultsError = 'Missing renewal ticket routing defaults for create_ticket policy';
-      await trx('client_contracts')
-        .where({ tenant, client_contract_id: clientContractId })
+      await db.table('client_contracts')
+        .where({ client_contract_id: clientContractId })
         .update({ automation_error: missingDefaultsError, updated_at: new Date().toISOString() });
       return {
         client_contract_id: clientContractId,
@@ -1043,15 +1022,14 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
       clientContractId,
       cycleKey,
     });
-    const existingIdempotentTicket = await trx('tickets')
-      .where({ tenant })
+    const existingIdempotentTicket = await db.table('tickets')
       .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
       .first('ticket_id');
     const idempotentTicketId = normalizeOptionalUuid(existingIdempotentTicket?.ticket_id);
 
     if (idempotentTicketId) {
-      await trx('client_contracts')
-        .where({ tenant, client_contract_id: clientContractId })
+      await db.table('client_contracts')
+        .where({ client_contract_id: clientContractId })
         .update({
           created_ticket_id: idempotentTicketId,
           automation_error: null,
@@ -1090,8 +1068,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
         trx
       );
 
-      await trx('client_contracts')
-        .where({ tenant, client_contract_id: clientContractId })
+      await db.table('client_contracts')
+        .where({ client_contract_id: clientContractId })
         .update({
           created_ticket_id: createdTicket.ticket_id,
           automation_error: null,
@@ -1106,8 +1084,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      await trx('client_contracts')
-        .where({ tenant, client_contract_id: clientContractId })
+      await db.table('client_contracts')
+        .where({ client_contract_id: clientContractId })
         .update({
           automation_error: errorMessage,
           updated_at: new Date().toISOString(),

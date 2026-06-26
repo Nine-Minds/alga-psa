@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -9,6 +9,17 @@ import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+
+type ClientTaskDocument = {
+  document_id: string;
+  file_id: string;
+  document_name: string;
+  mime_type: string;
+  file_size: number;
+  created_by: string;
+  entered_at: Date;
+  uploaded_by_name: string;
+};
 
 /**
  * Helper to verify client access and get config
@@ -28,14 +39,14 @@ async function getProjectWithConfigInternal(
   if (!user.contact_id) return null;
 
   // Get client_id from user's contact -> client relationship
-  const contact = await knex('contacts')
+  const contact = await tenantDb(knex, tenant).table('contacts')
     .where({ contact_name_id: user.contact_id, tenant })
-    .first();
+    .first<any>();
   if (!contact?.client_id) return null;
 
-  const project = await knex('projects')
+  const project = await tenantDb(knex, tenant).table('projects')
     .where({ project_id: projectId, tenant, client_id: contact.client_id, is_inactive: false })
-    .first();
+    .first<any>();
   if (!project) return null;
 
   const config = project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
@@ -54,23 +65,21 @@ export const getClientProjectPhases = withAuth(async (
   if (!result?.config.show_phases) return null;
 
   const { knex } = await createTenantKnex();
-  const phases = await knex('project_phases')
+  const phases = await tenantDb(knex, tenant).table('project_phases')
     .where({ project_id: projectId, tenant })
-    .orderBy('order_key');
+    .orderBy('order_key') as any[];
 
   // If show_phase_completion, calculate % per phase using a single aggregated query
   if (result.config.show_phase_completion && phases.length > 0) {
     const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
 
     // Single query to get completion stats for all phases
-    const phaseStats = await knex('project_tasks as pt')
-      .join('project_status_mappings as psm', function() {
-        this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
-            .andOn('pt.tenant', 'psm.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
-      })
+    const scopedDb = tenantDb(knex, tenant);
+    const phaseStatsQuery = scopedDb.table('project_tasks as pt');
+    scopedDb.tenantJoin(phaseStatsQuery, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id');
+    scopedDb.tenantJoin(phaseStatsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+
+    const phaseStats = await phaseStatsQuery
       .whereIn('pt.phase_id', phaseIds)
       .andWhere('pt.tenant', tenant)
       .groupBy('pt.phase_id')
@@ -78,7 +87,7 @@ export const getClientProjectPhases = withAuth(async (
         'pt.phase_id',
         knex.raw('COUNT(*)::int as total'),
         knex.raw('SUM(CASE WHEN s.is_closed THEN 1 ELSE 0 END)::int as completed')
-      );
+      ) as Array<{ phase_id: string; total: number; completed: number }>;
 
     // Create a lookup map for quick access
     const statsMap = new Map(
@@ -129,24 +138,18 @@ export const getClientProjectTasks = withAuth(async (
     selectColumns.push('pri.color as priority_color');
   }
 
-  let query = knex('project_tasks as pt')
-    .join('project_phases as pp', function() {
-      this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-    })
-    // Always join status mappings for ordering and kanban display
-    .leftJoin('project_status_mappings as psm', function() {
-      this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
-          .andOn('pt.tenant', 'psm.tenant');
-    })
-    .leftJoin('statuses as s', function() {
-      this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function() {
-      this.on('psm.standard_status_id', 'ss.standard_status_id');
-    })
-    .leftJoin('priorities as pri', function() {
-      this.on('pt.priority_id', 'pri.priority_id').andOn('pt.tenant', 'pri.tenant');
-    })
+  const scopedDb = tenantDb(knex, tenant);
+  let query = scopedDb.table('project_tasks as pt');
+  scopedDb.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+  // Always join status mappings for ordering and kanban display
+  scopedDb.tenantJoin(query, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  query.leftJoin('standard_statuses as ss', function() {
+    this.on('psm.standard_status_id', 'ss.standard_status_id');
+  });
+  scopedDb.tenantJoin(query, 'priorities as pri', 'pt.priority_id', 'pri.priority_id', { type: 'left' });
+
+  query = query
     .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
     // Only show tasks with visible status mappings
     .where('psm.is_visible', true)
@@ -168,13 +171,9 @@ export const getClientProjectTasks = withAuth(async (
 
   // Join assigned_to if requested
   if (visibleFields.includes('assigned_to')) {
+    scopedDb.tenantJoin(query, 'users as u', 'pt.assigned_to', 'u.user_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'teams as tm', 'pt.assigned_team_id', 'tm.team_id', { type: 'left' });
     query = query
-      .leftJoin('users as u', function() {
-        this.on('pt.assigned_to', 'u.user_id').andOn('pt.tenant', 'u.tenant');
-      })
-      .leftJoin('teams as tm', function() {
-        this.on('pt.assigned_team_id', 'tm.team_id').andOn('pt.tenant', 'tm.tenant');
-      })
       .select(
         'pt.assigned_to as assigned_to_id',
         knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"),
@@ -185,27 +184,28 @@ export const getClientProjectTasks = withAuth(async (
 
   // Join service_catalog if services field is visible
   if (visibleFields.includes('services')) {
-    query = query
-      .leftJoin('service_catalog as sc', function() {
-        this.on('pt.service_id', 'sc.service_id').andOn('pt.tenant', 'sc.tenant');
-      })
-      .select('sc.service_id', 'sc.service_name');
+    scopedDb.tenantJoin(query, 'service_catalog as sc', 'pt.service_id', 'sc.service_id', { type: 'left' });
+    query = query.select('sc.service_id', 'sc.service_name');
   }
 
   // Join for checklist_progress if requested
   if (visibleFields.includes('checklist_progress')) {
+    const checklistTotalSubquery = tenantDb(knex, tenant)
+      .table('task_checklist_items as tci_total')
+      .whereRaw('tci_total.task_id = pt.task_id')
+      .select(knex.raw('COUNT(*)::int'))
+      .as('checklist_total');
+    const checklistCompletedSubquery = tenantDb(knex, tenant)
+      .table('task_checklist_items as tci_completed')
+      .whereRaw('tci_completed.task_id = pt.task_id')
+      .where('tci_completed.completed', true)
+      .select(knex.raw('COUNT(*)::int'))
+      .as('checklist_completed');
+
     query = query
       .select(
-        knex.raw(`(
-          SELECT COUNT(*)::int
-          FROM task_checklist_items
-          WHERE task_id = pt.task_id AND tenant = pt.tenant
-        ) as checklist_total`),
-        knex.raw(`(
-          SELECT COUNT(*)::int
-          FROM task_checklist_items
-          WHERE task_id = pt.task_id AND tenant = pt.tenant AND completed = true
-        ) as checklist_completed`)
+        checklistTotalSubquery,
+        checklistCompletedSubquery
       );
   }
 
@@ -213,7 +213,7 @@ export const getClientProjectTasks = withAuth(async (
   const tasks = await query
     .orderBy('pp.order_key')
     .orderByRaw('COALESCE(psm.display_order, 999)')
-    .orderBy('pt.order_key');
+    .orderBy('pt.order_key') as any[];
 
   // Fetch checklist items if checklist_progress is visible
   let tasksWithChecklists = tasks;
@@ -221,11 +221,11 @@ export const getClientProjectTasks = withAuth(async (
     const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
 
     // Get all checklist items for these tasks
-    const checklistItems = await knex('task_checklist_items')
+    const checklistItems = await tenantDb(knex, tenant).table('task_checklist_items')
       .whereIn('task_id', taskIds)
       .where('tenant', tenant)
       .select('task_id', 'item_name', 'completed')
-      .orderBy('order_number');
+      .orderBy('order_number') as Array<{ task_id: string; item_name: string; completed: boolean }>;
 
     // Group checklist items by task_id
     const checklistsByTask = checklistItems.reduce((acc: Record<string, Array<{ item_name: string; completed: boolean }>>, item: { task_id: string; item_name: string; completed: boolean }) => {
@@ -250,10 +250,10 @@ export const getClientProjectTasks = withAuth(async (
     const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
 
     // Get all additional resources for these tasks
-    const additionalResources = await knex('task_resources as tr')
-      .join('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id').andOn('tr.tenant', 'u.tenant');
-      })
+    const additionalResourcesQuery = tenantDb(knex, tenant).table('task_resources as tr');
+    tenantDb(knex, tenant).tenantJoin(additionalResourcesQuery, 'users as u', 'tr.additional_user_id', 'u.user_id');
+
+    const additionalResources = await additionalResourcesQuery
       .whereIn('tr.task_id', taskIds)
       .where('tr.tenant', tenant)
       .select(
@@ -261,7 +261,7 @@ export const getClientProjectTasks = withAuth(async (
         'tr.additional_user_id',
         'tr.role',
         knex.raw("CONCAT(u.first_name, ' ', u.last_name) as user_name")
-      );
+      ) as Array<{ task_id: string; additional_user_id: string; user_name: string; role: string | null }>;
 
     // Group resources by task_id
     const resourcesByTask = additionalResources.reduce((acc: Record<string, Array<{ user_id: string; user_name: string; role: string | null }>>, r: { task_id: string; additional_user_id: string; user_name: string; role: string | null }) => {
@@ -282,10 +282,10 @@ export const getClientProjectTasks = withAuth(async (
   }
 
   // Always fetch phases (needed for both list grouping and kanban phase selector)
-  const phases = await knex('project_phases')
+  const phases = await tenantDb(knex, tenant).table('project_phases')
     .select('phase_id', 'phase_name', 'description', 'start_date', 'end_date')
     .where({ project_id: projectId, tenant })
-    .orderBy('order_key');
+    .orderBy('order_key') as any[];
 
   // Fetch dependencies if dependencies field is visible
   let taskDependencies: { [taskId: string]: { predecessors: any[]; successors: any[] } } = {};
@@ -293,36 +293,46 @@ export const getClientProjectTasks = withAuth(async (
     const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
 
     // Fetch dependencies where task is the successor (predecessors of task)
-    const predecessorsArray = await knex('project_task_dependencies as ptd')
+    const predecessorsQuery = tenantDb(knex, tenant).table('project_task_dependencies as ptd')
       .whereIn('ptd.successor_task_id', taskIds)
-      .andWhere('ptd.tenant', tenant)
-      .leftJoin('project_tasks as pt', function() {
-        this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
-            .andOn('ptd.tenant', '=', 'pt.tenant');
-      })
+      .andWhere('ptd.tenant', tenant);
+    tenantDb(knex, tenant).tenantJoin(predecessorsQuery, 'project_tasks as pt', 'ptd.predecessor_task_id', 'pt.task_id', { type: 'left' });
+
+    const predecessorsArray = await predecessorsQuery
       .select(
         'ptd.dependency_id',
         'ptd.predecessor_task_id',
         'ptd.successor_task_id',
         'ptd.dependency_type',
         'pt.task_name as predecessor_task_name'
-      );
+      ) as Array<{
+        dependency_id: string;
+        predecessor_task_id: string;
+        successor_task_id: string;
+        dependency_type: string;
+        predecessor_task_name: string | null;
+      }>;
 
     // Fetch dependencies where task is the predecessor (successors of task)
-    const successorsArray = await knex('project_task_dependencies as ptd')
+    const successorsQuery = tenantDb(knex, tenant).table('project_task_dependencies as ptd')
       .whereIn('ptd.predecessor_task_id', taskIds)
-      .andWhere('ptd.tenant', tenant)
-      .leftJoin('project_tasks as pt', function() {
-        this.on('ptd.successor_task_id', '=', 'pt.task_id')
-            .andOn('ptd.tenant', '=', 'pt.tenant');
-      })
+      .andWhere('ptd.tenant', tenant);
+    tenantDb(knex, tenant).tenantJoin(successorsQuery, 'project_tasks as pt', 'ptd.successor_task_id', 'pt.task_id', { type: 'left' });
+
+    const successorsArray = await successorsQuery
       .select(
         'ptd.dependency_id',
         'ptd.predecessor_task_id',
         'ptd.successor_task_id',
         'ptd.dependency_type',
         'pt.task_name as successor_task_name'
-      );
+      ) as Array<{
+        dependency_id: string;
+        predecessor_task_id: string;
+        successor_task_id: string;
+        dependency_type: string;
+        successor_task_name: string | null;
+      }>;
 
     // Group by task
     for (const dep of predecessorsArray) {
@@ -418,10 +428,10 @@ export const getClientProjectStatuses = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const loadStatusesForScope = async (scopedPhaseId?: string | null) => {
-    const query = knex('project_status_mappings as psm')
-      .leftJoin('statuses as s', function() {
-        this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
-      })
+    const scopedDb = tenantDb(knex, tenant);
+    const query = scopedDb.table('project_status_mappings as psm');
+    scopedDb.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+    query
       .leftJoin('standard_statuses as ss', function() {
         this.on('psm.standard_status_id', 'ss.standard_status_id');
       })
@@ -442,7 +452,14 @@ export const getClientProjectStatuses = withAuth(async (
       query.whereNull('psm.phase_id');
     }
 
-    return query;
+    return query as unknown as Promise<Array<{
+      project_status_mapping_id: string;
+      custom_name: string | null;
+      status_name: string;
+      display_order: number;
+      is_closed: boolean;
+      color: string | null;
+    }>>;
   };
 
   let statuses = phaseId ? await loadStatusesForScope(phaseId) : [];
@@ -481,24 +498,23 @@ export const uploadClientTaskDocument = withAuth(async (
   if (!user.contact_id) {
     return { success: false, error: 'User not associated with a contact' };
   }
-  const contact = await knex('contacts')
+  const contact = await tenantDb(knex, tenant).table('contacts')
     .where({ contact_name_id: user.contact_id, tenant })
-    .first();
+    .first<any>();
   if (!contact?.client_id) {
     return { success: false, error: 'Client not found' };
   }
 
   // Verify task belongs to a project owned by this client (read-only check)
-  const task = await knex('project_tasks as pt')
-    .join('project_phases as pp', function() {
-      this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-    })
-    .join('projects as p', function() {
-      this.on('pp.project_id', 'p.project_id').andOn('pp.tenant', 'p.tenant');
-    })
+  const scopedDb = tenantDb(knex, tenant);
+  const taskQuery = scopedDb.table('project_tasks as pt');
+  scopedDb.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+  scopedDb.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+
+  const task = await taskQuery
     .where({ 'pt.task_id': taskId, 'pt.tenant': tenant, 'p.client_id': contact.client_id })
     .select('p.project_id', 'p.client_portal_config')
-    .first();
+    .first<any>();
 
   if (!task) {
     return { success: false, error: 'Task not found or access denied' };
@@ -530,7 +546,7 @@ export const uploadClientTaskDocument = withAuth(async (
     // 3. Create document + association in transaction (matches documentActions.ts pattern)
     const documentId = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const docId = uuidv4();
-      await trx('documents').insert({
+      await tenantDb(trx, tenant).table('documents').insert({
         document_id: docId,
         document_name: file.name,
         tenant,
@@ -546,7 +562,7 @@ export const uploadClientTaskDocument = withAuth(async (
         is_client_visible: true,               // Client-uploaded docs are always visible to client portal
       });
 
-      await trx('document_associations').insert({
+      await tenantDb(trx, tenant).table('document_associations').insert({
         tenant,
         document_id: docId,
         entity_type: 'project_task',
@@ -581,24 +597,23 @@ export const getClientTaskDocuments = withAuth(async (
   if (!user.contact_id) {
     return { success: false, error: 'User not associated with a contact' };
   }
-  const contact = await knex('contacts')
+  const contact = await tenantDb(knex, tenant).table('contacts')
     .where({ contact_name_id: user.contact_id, tenant })
-    .first();
+    .first<any>();
   if (!contact?.client_id) {
     return { success: false, error: 'Client not found' };
   }
 
   // Verify task belongs to a project owned by this client
-  const task = await knex('project_tasks as pt')
-    .join('project_phases as pp', function() {
-      this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-    })
-    .join('projects as p', function() {
-      this.on('pp.project_id', 'p.project_id').andOn('pp.tenant', 'p.tenant');
-    })
+  const scopedDb = tenantDb(knex, tenant);
+  const taskQuery = scopedDb.table('project_tasks as pt');
+  scopedDb.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+  scopedDb.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+
+  const task = await taskQuery
     .where({ 'pt.task_id': taskId, 'pt.tenant': tenant, 'p.client_id': contact.client_id })
     .select('p.project_id', 'p.client_portal_config')
-    .first();
+    .first<any>();
 
   if (!task) {
     return { success: false, error: 'Task not found or access denied' };
@@ -610,13 +625,11 @@ export const getClientTaskDocuments = withAuth(async (
   }
 
   // Get client-visible documents
-  const documents = await knex('documents as d')
-    .join('document_associations as da', function() {
-      this.on('d.document_id', 'da.document_id').andOn('d.tenant', 'da.tenant');
-    })
-    .leftJoin('users as u', function() {
-      this.on('d.created_by', 'u.user_id').andOn('d.tenant', 'u.tenant');
-    })
+  const documentsQuery = tenantDb(knex, tenant).table('documents as d');
+  tenantDb(knex, tenant).tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+  tenantDb(knex, tenant).tenantJoin(documentsQuery, 'users as u', 'd.created_by', 'u.user_id', { type: 'left' });
+
+  const documents = await documentsQuery
     .where({
       'da.entity_type': 'project_task',
       'da.entity_id': taskId,
@@ -633,7 +646,7 @@ export const getClientTaskDocuments = withAuth(async (
       'd.entered_at',
       knex.raw("CONCAT(u.first_name, ' ', u.last_name) as uploaded_by_name")
     )
-    .orderBy('d.entered_at', 'desc');
+    .orderBy('d.entered_at', 'desc') as unknown as ClientTaskDocument[];
 
   return { success: true, documents };
 });

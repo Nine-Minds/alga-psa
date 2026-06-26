@@ -1,7 +1,7 @@
 // @ts-nocheck
 // TODO: Model argument count issues
 'use server';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
@@ -57,6 +57,7 @@ export const searchDispatchWorkItems = withAuth(async (
 ): Promise<SearchResult> => {
   try {
     const {knex: db} = await createTenantKnex();
+    const tenantScopedDb = tenantDb(db, tenant);
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
     const filterUnscheduledOption = options.filterUnscheduled;
@@ -64,38 +65,18 @@ export const searchDispatchWorkItems = withAuth(async (
     const pageSize = options.pageSize || 10;
     const offset = (page - 1) * pageSize;
 
-    let ticketsQuery = db('tickets as t')
+    let ticketsQuery = tenantScopedDb.table('tickets as t')
       .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
-      .where('t.tenant', tenant)
-      .innerJoin('clients as c', function() {
-        this.on('t.client_id', '=', 'c.client_id')
-            .andOn('t.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', '=', 's.status_id')
-            .andOn('t.tenant', '=', 's.tenant');
-      })
       .leftJoin(
-        db('ticket_resources')
-          .where('tenant', tenant)
+        tenantScopedDb.table('ticket_resources')
           .select('ticket_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('ticket_id', 'tenant')
           .as('tr'),
         function() {
-          this.on('t.ticket_id', '=', 'tr.ticket_id')
-              .andOn('t.tenant', '=', db.raw('?', [tenant]));
+          this.on('t.ticket_id', '=', 'tr.ticket_id');
         }
       )
-      .leftJoin('users as u_assignee', function() {
-        this.on('t.assigned_to', '=', 'u_assignee.user_id')
-            .andOn('t.tenant', '=', 'u_assignee.tenant');
-      })
-       .leftJoin('schedule_entries as se_ticket', function() {
-         this.on('t.ticket_id', '=', 'se_ticket.work_item_id')
-             .andOn('t.tenant', '=', 'se_ticket.tenant')
-             .andOn('se_ticket.work_item_type', '=', db.raw("'ticket'"));
-       })
        .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
        .distinctOn('t.ticket_id')
        .modify((queryBuilder) => {
@@ -167,6 +148,15 @@ export const searchDispatchWorkItems = withAuth(async (
          db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
+    tenantScopedDb.tenantJoin(ticketsQuery, 'clients as c', 't.client_id', 'c.client_id');
+    tenantScopedDb.tenantJoin(ticketsQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+    tenantScopedDb.tenantJoin(ticketsQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
+    tenantScopedDb.tenantJoin(ticketsQuery, 'schedule_entries as se_ticket', 't.ticket_id', 'se_ticket.work_item_id', {
+      type: 'left',
+      on(join) {
+        join.andOn('se_ticket.work_item_type', '=', db.raw("'ticket'"));
+      },
+    });
 
     const countQuery = ticketsQuery.clone().clearSelect().clearOrder().count('* as count').first();
     const countResult = await countQuery;
@@ -193,16 +183,18 @@ export const searchDispatchWorkItems = withAuth(async (
 
     const scheduledEntriesMap = new Map<string, Set<string>>();
     if (ticketIds.length > 0 && allAssignedAgentIds.size > 0) {
-      const scheduledEntries = await db('schedule_entries')
-        .where('schedule_entries.tenant', tenant)
+      const scheduledEntriesQuery = tenantScopedDb.table('schedule_entries')
         .where('work_item_type', 'ticket')
         .whereIn('work_item_id', ticketIds)
-        .join('schedule_entry_assignees as sea', function() {
-          this.on('schedule_entries.entry_id', '=', 'sea.entry_id')
-              .andOn('schedule_entries.tenant', '=', 'sea.tenant');
-        })
         .whereIn('sea.user_id', Array.from(allAssignedAgentIds))
         .select('schedule_entries.work_item_id', 'sea.user_id');
+      tenantScopedDb.tenantJoin(
+        scheduledEntriesQuery,
+        'schedule_entry_assignees as sea',
+        'schedule_entries.entry_id',
+        'sea.entry_id',
+      );
+      const scheduledEntries = await scheduledEntriesQuery;
 
       scheduledEntries.forEach(entry => {
         if (!scheduledEntriesMap.has(entry.work_item_id)) {
@@ -294,6 +286,7 @@ export const searchPickerWorkItems = withAuth(async (
 ): Promise<SearchResult> => {
   try {
     const {knex: db} = await createTenantKnex();
+    const tenantScopedDb = tenantDb(db, tenant);
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
     const page = options.page || 1;
@@ -301,37 +294,18 @@ export const searchPickerWorkItems = withAuth(async (
     const offset = (page - 1) * pageSize;
     const availableWorkItemIds = sanitizeWorkItemIdsForUuidColumns(options.availableWorkItemIds);
 
-    let ticketsQuery = db('tickets as t')
+    let ticketsQuery = tenantScopedDb.table('tickets as t')
       .whereNotIn('t.ticket_id', availableWorkItemIds)
-      .where('t.tenant', tenant)
-      .innerJoin('clients as c', function() {
-        this.on('t.client_id', '=', 'c.client_id')
-            .andOn('t.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', '=', 's.status_id')
-            .andOn('t.tenant', '=', 's.tenant');
-      })
-      .leftJoin('tickets as mt', function() {
-        this.on('t.master_ticket_id', '=', 'mt.ticket_id')
-            .andOn('t.tenant', '=', 'mt.tenant');
-      })
       .leftJoin(
-        db('ticket_resources')
-          .where('tenant', tenant)
+        tenantScopedDb.table('ticket_resources')
           .select('ticket_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('ticket_id', 'tenant')
           .as('tr'),
         function() {
-          this.on('t.ticket_id', '=', 'tr.ticket_id')
-              .andOn('t.tenant', '=', db.raw('?', [tenant]));
+          this.on('t.ticket_id', '=', 'tr.ticket_id');
         }
       )
-      .leftJoin('users as u_assignee', function() {
-        this.on('t.assigned_to', '=', 'u_assignee.user_id')
-            .andOn('t.tenant', '=', 'u_assignee.tenant');
-      })
        .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
        .distinctOn('t.ticket_id')
        .modify((queryBuilder) => {
@@ -395,51 +369,23 @@ export const searchPickerWorkItems = withAuth(async (
          'tr.additional_user_ids as additional_user_ids',
          db.raw('NULL::uuid as service_id')
        );
+      tenantScopedDb.tenantJoin(ticketsQuery, 'clients as c', 't.client_id', 'c.client_id');
+      tenantScopedDb.tenantJoin(ticketsQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(ticketsQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
 
-      let projectTasksQuery = db('project_tasks as pt')
+      let projectTasksQuery = tenantScopedDb.table('project_tasks as pt')
       .whereNotIn('pt.task_id', availableWorkItemIds)
-      .where('pt.tenant', tenant)
-      .innerJoin('project_phases as pp', function() {
-        this.on('pt.phase_id', '=', 'pp.phase_id')
-            .andOn('pt.tenant', '=', 'pp.tenant');
-      })
-      .innerJoin('projects as p', function() {
-        this.on('pp.project_id', '=', 'p.project_id')
-            .andOn('pp.tenant', '=', 'p.tenant');
-      })
-      .innerJoin('clients as c', function() {
-        this.on('p.client_id', '=', 'c.client_id')
-            .andOn('p.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('project_status_mappings as psm', function() {
-        this.on('pt.project_status_mapping_id', '=', 'psm.project_status_mapping_id')
-            .andOn('pt.tenant', '=', 'psm.tenant');
-      })
-      .leftJoin('statuses as s_custom', function() {
-        this.on('psm.status_id', '=', 's_custom.status_id')
-            .andOn('psm.tenant', '=', 's_custom.tenant')
-            .andOn('psm.is_standard', '=', db.raw('false'));
-      })
-      .leftJoin('standard_statuses as s_standard', function() {
-        this.on('psm.standard_status_id', '=', 's_standard.standard_status_id')
-            .andOn('psm.is_standard', '=', db.raw('true'));
-      })
       .leftJoin(
-        db('task_resources')
-          .where('tenant', tenant)
+        tenantScopedDb.table('task_resources')
           .select('task_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('task_id', 'tenant')
           .as('tr'),
         function() {
-          this.on('pt.task_id', '=', 'tr.task_id')
-              .andOn('pt.tenant', '=', db.raw('?', [tenant]));
+          this.on('pt.task_id', '=', 'tr.task_id');
         }
       )
-      .leftJoin('users as u_assignee', function() {
-        this.on('pt.assigned_to', '=', 'u_assignee.user_id')
-            .andOn('pt.tenant', '=', 'u_assignee.tenant');
-      })
        .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
        .distinctOn('pt.task_id')
        .modify((queryBuilder) => {
@@ -525,32 +471,40 @@ export const searchPickerWorkItems = withAuth(async (
          'tr.additional_user_ids as additional_user_ids',
          'pt.service_id'
        );
+      tenantScopedDb.tenantJoin(projectTasksQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      tenantScopedDb.tenantJoin(projectTasksQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+      tenantScopedDb.tenantJoin(projectTasksQuery, 'clients as c', 'p.client_id', 'c.client_id');
+      tenantScopedDb.tenantJoin(projectTasksQuery, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(projectTasksQuery, 'statuses as s_custom', 'psm.status_id', 's_custom.status_id', {
+        type: 'left',
+        on(join) {
+          join.andOn('psm.is_standard', '=', db.raw('false'));
+        },
+      });
+      projectTasksQuery.leftJoin('standard_statuses as s_standard', function() {
+        this.on('psm.standard_status_id', '=', 's_standard.standard_status_id')
+            .andOn('psm.is_standard', '=', db.raw('true'));
+      });
+      tenantScopedDb.tenantJoin(projectTasksQuery, 'users as u_assignee', 'pt.assigned_to', 'u_assignee.user_id', { type: 'left' });
 
 
     let adHocQuery;
     if (!options.type || options.type === 'all' || options.type === 'ad_hoc') {
-      adHocQuery = db('schedule_entries as se')
+      adHocQuery = tenantScopedDb.table('schedule_entries as se')
         .whereNotIn('se.entry_id', availableWorkItemIds)
-        .where('se.tenant', tenant)
         .where('work_item_type', 'ad_hoc')
         .whereILike('title', db.raw('?', [`%${searchTerm}%`]))
         .leftJoin(
-          db('schedule_entry_assignees')
-            .where('tenant', tenant)
+          tenantScopedDb.table('schedule_entry_assignees')
             .select('entry_id')
             .select(db.raw('array_agg(distinct user_id ORDER BY user_id) as assigned_user_ids'))
             .select(db.raw('(array_agg(distinct user_id ORDER BY user_id))[1] as first_assigned_user_id'))
             .groupBy('entry_id', 'tenant')
             .as('sea'),
           function() {
-            this.on('se.entry_id', '=', 'sea.entry_id')
-                .andOn('se.tenant', '=', db.raw('?', [tenant]));
+            this.on('se.entry_id', '=', 'sea.entry_id');
           }
         )
-        .leftJoin('users as u_adhoc_assignee', function() {
-          this.on('sea.first_assigned_user_id', '=', 'u_adhoc_assignee.user_id')
-              .andOn('se.tenant', '=', 'u_adhoc_assignee.tenant');
-        })
         .distinctOn('se.entry_id')
         .modify((queryBuilder) => {
           if (options.assignedTo) {
@@ -593,26 +547,17 @@ export const searchPickerWorkItems = withAuth(async (
           db.raw('NULL::uuid[] as additional_user_ids'),
           db.raw('NULL::uuid as service_id')
         );
+      tenantScopedDb.tenantJoin(adHocQuery, 'users as u_adhoc_assignee', 'sea.first_assigned_user_id', 'u_adhoc_assignee.user_id', {
+        type: 'left',
+        rootTenantColumn: 'se.tenant',
+      });
     }
 
     // Add interactions query
     let interactionsQuery;
     if (!options.type || options.type === 'all' || options.type === 'interaction') {
-      interactionsQuery = db('interactions as i')
+      interactionsQuery = tenantScopedDb.table('interactions as i')
         .whereNotIn('i.interaction_id', availableWorkItemIds)
-        .where('i.tenant', tenant)
-        .leftJoin('clients as c', function() {
-          this.on('i.client_id', '=', 'c.client_id')
-              .andOn('i.tenant', '=', 'c.tenant');
-        })
-        .leftJoin('interaction_types as it', function() {
-          this.on('i.type_id', '=', 'it.type_id')
-              .andOn('i.tenant', '=', 'it.tenant');
-        })
-        .leftJoin('users as u_interaction_assignee', function() {
-          this.on('i.user_id', '=', 'u_interaction_assignee.user_id')
-              .andOn('i.tenant', '=', 'u_interaction_assignee.tenant');
-        })
         .whereILike('i.title', db.raw('?', [`%${searchTerm}%`]))
         .select(
           'i.interaction_id as work_item_id',
@@ -636,6 +581,9 @@ export const searchPickerWorkItems = withAuth(async (
           db.raw('ARRAY[]::uuid[] as additional_user_ids'),
           db.raw('NULL::uuid as service_id')
         );
+      tenantScopedDb.tenantJoin(interactionsQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(interactionsQuery, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(interactionsQuery, 'users as u_interaction_assignee', 'i.user_id', 'u_interaction_assignee.user_id', { type: 'left' });
 
       // Apply filters
       if (options.assignedTo) {
@@ -710,14 +658,11 @@ export const searchPickerWorkItems = withAuth(async (
 
     let interactionTypesMap = new Map<string, string>();
     if (interactionIds.length > 0) {
-      const interactionTypes = await db('interactions as i')
+      const interactionTypesQuery = tenantScopedDb.table('interactions as i')
         .whereIn('i.interaction_id', interactionIds)
-        .where('i.tenant', tenant)
-        .leftJoin('interaction_types as it', function() {
-          this.on('i.type_id', '=', 'it.type_id')
-              .andOn('i.tenant', '=', 'it.tenant');
-        })
         .select('i.interaction_id', 'it.type_name');
+      tenantScopedDb.tenantJoin(interactionTypesQuery, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left' });
+      const interactionTypes = await interactionTypesQuery;
 
       interactionTypes.forEach((item: any) => {
         interactionTypesMap.set(item.interaction_id, item.type_name);
@@ -825,44 +770,22 @@ export const getWorkItemById = withAuth(async (
 ): Promise<Omit<IExtendedWorkItem, "tenant"> | null> => {
   try {
     const {knex: db} = await createTenantKnex();
+    const tenantScopedDb = tenantDb(db, tenant);
     let workItem;
 
     if (workItemType === 'ticket') {
-      workItem = await db('tickets as t')
+      const ticketQuery = tenantScopedDb.table('tickets as t')
         .where({
           't.ticket_id': workItemId,
-          't.tenant': tenant
-        })
-        .leftJoin('statuses as s', function() {
-          this.on('t.status_id', '=', 's.status_id')
-              .andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('boards as ch', function() {
-          this.on('t.board_id', '=', 'ch.board_id')
-              .andOn('t.tenant', '=', 'ch.tenant');
-        })
-        .leftJoin('users as u_assignee', function() {
-          this.on('t.assigned_to', '=', 'u_assignee.user_id')
-              .andOn('t.tenant', '=', 'u_assignee.tenant');
-        })
-        .leftJoin('contacts as ct', function() {
-          this.on('t.contact_name_id', '=', 'ct.contact_name_id')
-              .andOn('t.tenant', '=', 'ct.tenant');
-        })
-        .leftJoin('clients as co', function() {
-          this.on('t.client_id', '=', 'co.client_id')
-              .andOn('t.tenant', '=', 'co.tenant');
         })
         .leftJoin(
-          db('ticket_resources')
-            .where('tenant', tenant)
+          tenantScopedDb.table('ticket_resources')
             .select('ticket_id')
             .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
             .groupBy('ticket_id', 'tenant')
             .as('tr'),
           function() {
-            this.on('t.ticket_id', '=', 'tr.ticket_id')
-                .andOn('t.tenant', '=', db.raw('?', [tenant]));
+            this.on('t.ticket_id', '=', 'tr.ticket_id');
           }
         )
         .select(
@@ -883,32 +806,26 @@ export const getWorkItemById = withAuth(async (
           db.raw('NULL::text as task_name'),
           db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
           'tr.additional_user_ids as additional_user_ids'
-        )
-        .first();
+        );
+      tenantScopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(ticketQuery, 'boards as ch', 't.board_id', 'ch.board_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(ticketQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(ticketQuery, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(ticketQuery, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
+      workItem = await ticketQuery.first();
     } else if (workItemType === 'project_task') {
-      workItem = await db('project_tasks as pt')
+      const projectTaskQuery = tenantScopedDb.table('project_tasks as pt')
         .where({
           'pt.task_id': workItemId,
-          'pt.tenant': tenant
-        })
-        .innerJoin('project_phases as pp', function() {
-          this.on('pt.phase_id', '=', 'pp.phase_id')
-              .andOn('pt.tenant', '=', 'pp.tenant');
-        })
-        .innerJoin('projects as p', function() {
-          this.on('pp.project_id', '=', 'p.project_id')
-              .andOn('pp.tenant', '=', 'p.tenant');
         })
         .leftJoin(
-          db('task_resources')
-            .where('tenant', tenant)
+          tenantScopedDb.table('task_resources')
             .select('task_id')
             .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
             .groupBy('task_id', 'tenant')
             .as('tr'),
           function() {
-            this.on('pt.task_id', '=', 'tr.task_id')
-                .andOn('pt.tenant', '=', db.raw('?', [tenant]));
+            this.on('pt.task_id', '=', 'tr.task_id');
           }
         )
         // Removed groupBy for project tasks as well
@@ -924,24 +841,23 @@ export const getWorkItemById = withAuth(async (
           'pt.task_name',
           db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
           'tr.additional_user_ids as additional_user_ids'
-        )
-        .first();
+        );
+      tenantScopedDb.tenantJoin(projectTaskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      tenantScopedDb.tenantJoin(projectTaskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+      workItem = await projectTaskQuery.first();
     } else if (workItemType === 'ad_hoc') {
-      workItem = await db('schedule_entries as se')
+      workItem = await tenantScopedDb.table('schedule_entries as se')
         .where({
           'se.entry_id': workItemId,
-          'se.tenant': tenant
         })
         .leftJoin(
-          db('schedule_entry_assignees')
-            .where('tenant', tenant)
+          tenantScopedDb.table('schedule_entry_assignees')
             .select('entry_id')
             .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
             .groupBy('entry_id', 'tenant')
             .as('sea'),
           function() {
-            this.on('se.entry_id', '=', 'sea.entry_id')
-                .andOn('se.tenant', '=', db.raw('?', [tenant]));
+            this.on('se.entry_id', '=', 'sea.entry_id');
           }
         )
         .groupBy('se.entry_id', 'se.title', 'se.notes', 'se.scheduled_start', 'se.scheduled_end', 'sea.assigned_user_ids', 'se.tenant')
@@ -962,26 +878,9 @@ export const getWorkItemById = withAuth(async (
         )
         .first();
     } else if (workItemType === 'interaction') {
-      workItem = await db('interactions as i')
+      const interactionQuery = tenantScopedDb.table('interactions as i')
         .where({
           'i.interaction_id': workItemId,
-          'i.tenant': tenant
-        })
-        .leftJoin('clients as c', function() {
-          this.on('i.client_id', '=', 'c.client_id')
-              .andOn('i.tenant', '=', 'c.tenant');
-        })
-        .leftJoin('interaction_types as it', function() {
-          this.on('i.type_id', '=', 'it.type_id')
-              .andOn('i.tenant', '=', 'it.tenant');
-        })
-        .leftJoin('statuses as s', function() {
-          this.on('i.status_id', '=', 's.status_id')
-              .andOn('i.tenant', '=', 's.tenant');
-        })
-        .leftJoin('contacts as ct', function() {
-          this.on('i.contact_name_id', '=', 'ct.contact_name_id')
-              .andOn('i.tenant', '=', 'ct.tenant');
         })
         .select(
           'i.interaction_id as work_item_id',
@@ -1000,25 +899,16 @@ export const getWorkItemById = withAuth(async (
           'ct.full_name as contact_name',
           db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
           db.raw('ARRAY[]::uuid[] as additional_user_ids')
-        )
-        .first();
+        );
+      tenantScopedDb.tenantJoin(interactionQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(interactionQuery, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(interactionQuery, 'statuses as s', 'i.status_id', 's.status_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(interactionQuery, 'contacts as ct', 'i.contact_name_id', 'ct.contact_name_id', { type: 'left' });
+      workItem = await interactionQuery.first();
     } else if (workItemType === 'appointment_request') {
-      workItem = await db('appointment_requests as ar')
+      const appointmentRequestQuery = tenantScopedDb.table('appointment_requests as ar')
         .where({
           'ar.appointment_request_id': workItemId,
-          'ar.tenant': tenant
-        })
-        .leftJoin('service_catalog as sc', function() {
-          this.on('ar.service_id', '=', 'sc.service_id')
-              .andOn('ar.tenant', '=', 'sc.tenant');
-        })
-        .leftJoin('clients as c', function() {
-          this.on('ar.client_id', '=', 'c.client_id')
-              .andOn('ar.tenant', '=', 'c.tenant');
-        })
-        .leftJoin('contacts as ct', function() {
-          this.on('ar.contact_id', '=', 'ct.contact_name_id')
-              .andOn('ar.tenant', '=', 'ct.tenant');
         })
         .select(
           'ar.appointment_request_id as work_item_id',
@@ -1038,8 +928,11 @@ export const getWorkItemById = withAuth(async (
           'ct.full_name as contact_name',
           db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
           db.raw('ARRAY[]::uuid[] as additional_user_ids')
-        )
-        .first();
+        );
+      tenantScopedDb.tenantJoin(appointmentRequestQuery, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(appointmentRequestQuery, 'clients as c', 'ar.client_id', 'c.client_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(appointmentRequestQuery, 'contacts as ct', 'ar.contact_id', 'ct.contact_name_id', { type: 'left' });
+      workItem = await appointmentRequestQuery.first();
     }
 
     if (workItem) {

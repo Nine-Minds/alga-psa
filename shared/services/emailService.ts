@@ -5,6 +5,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb, type TenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { normalizeEmailAddress } from '../lib/email/addressUtils';
 import { ContactModel } from '../models/contactModel';
@@ -237,6 +238,10 @@ export interface FindPriorityByNameOutput {
 export class EmailService {
   constructor(private knex: Knex, private tenant: string) {}
 
+  private db(): TenantDb {
+    return tenantDb(this.knex, this.tenant);
+  }
+
   /**
    * Find contact by email address
    */
@@ -257,13 +262,11 @@ export class EmailService {
         return null;
       }
 
+      const db = this.db();
       const client = hydratedContact.client_id
-        ? await this.knex('clients')
+        ? await db.table('clients')
             .select('client_name')
-            .where({
-              tenant: this.tenant,
-              client_id: hydratedContact.client_id,
-            })
+            .where({ client_id: hydratedContact.client_id })
             .first<{ client_name: string }>()
         : null;
 
@@ -340,8 +343,8 @@ export class EmailService {
   async findTicketByEmailThread(input: FindTicketByEmailThreadInput): Promise<FindTicketByEmailThreadOutput | null> {
     try {
       // Look for existing ticket with matching email metadata
-      let query = this.knex('tickets')
-        .leftJoin('statuses', 'tickets.status_id', 'statuses.status_id')
+      const db = this.db();
+      let query = db.table('tickets')
         .select(
           'tickets.ticket_id as ticketId',
           'tickets.ticket_number as ticketNumber',
@@ -349,8 +352,8 @@ export class EmailService {
           'statuses.status_name as status',
           'tickets.email_metadata'
         )
-        .where('tickets.tenant', this.tenant)
         .where('tickets.email_metadata', '!=', null);
+      db.tenantJoin(query, 'statuses', 'tickets.status_id', 'statuses.status_id', { type: 'left' });
 
       // Add conditions based on available threading info
       if (input.originalMessageId) {
@@ -361,7 +364,7 @@ export class EmailService {
         query = query.whereRaw("tickets.email_metadata->>'messageId' = ?", [input.inReplyTo]);
       }
 
-      const ticket = await query.first();
+      const ticket = await query.first<any>();
 
       if (!ticket) {
         return null;
@@ -395,20 +398,21 @@ export class EmailService {
       const now = new Date();
 
       // Generate ticket number
-      const nextNumber = await this.knex('next_number')
+      const db = this.db();
+      const nextNumber = await db.table('next_number')
         .select('next_number')
-        .where({ tenant: this.tenant, entity_type: 'tickets' })
+        .where({ entity_type: 'tickets' })
         .first();
 
       const ticketNumber = nextNumber?.next_number || 1;
 
       // Update next number
-      await this.knex('next_number')
-        .where({ tenant: this.tenant, entity_type: 'tickets' })
+      await db.table('next_number')
+        .where({ entity_type: 'tickets' })
         .update({ next_number: ticketNumber + 1 });
 
       // Create ticket
-      await this.knex('tickets').insert({
+      await db.table('tickets').insert({
         ticket_id: ticketId,
         tenant: this.tenant,
         ticket_number: ticketNumber,
@@ -427,8 +431,8 @@ export class EmailService {
 
       // Get status and priority names for response
       const [status, priority] = await Promise.all([
-        this.knex('statuses').select('status_name').where('status_id', input.status_id).first(),
-        this.knex('priorities').select('priority_name').where('priority_id', input.priority_id).first()
+        db.table('statuses').select('status_name').where('status_id', input.status_id).first(),
+        db.table('priorities').select('priority_name').where('priority_id', input.priority_id).first()
       ]);
 
       return {
@@ -463,7 +467,8 @@ export class EmailService {
         throw new Error('Failed to generate comment thread identifier');
       }
 
-      await this.knex('comment_threads').insert({
+      const db = this.db();
+      await db.table('comment_threads').insert({
         tenant: this.tenant,
         thread_id: emailThreadId,
         ticket_id: input.ticket_id,
@@ -476,7 +481,7 @@ export class EmailService {
         created_by: null,
       });
 
-      await this.knex('comments').insert({
+      await db.table('comments').insert({
         comment_id: commentId,
         thread_id: emailThreadId,
         tenant: this.tenant,
@@ -510,7 +515,7 @@ export class EmailService {
       const clientId = uuidv4();
       const now = new Date();
 
-      await this.knex('clients').insert({
+      await this.db().table('clients').insert({
         client_id: clientId,
         tenant: this.tenant,
         client_name: input.client_name,
@@ -542,12 +547,9 @@ export class EmailService {
    */
   async getClientByIdForEmail(clientId: string): Promise<GetClientByIdForEmailOutput | null> {
     try {
-      const client = await this.knex('clients')
+      const client = await this.db().table('clients')
         .select('client_id', 'client_name', 'email', 'phone', 'address')
-        .where({
-          client_id: clientId,
-          tenant: this.tenant
-        })
+        .where({ client_id: clientId })
         .first();
 
       if (!client) {
@@ -575,7 +577,7 @@ export class EmailService {
       const boardId = uuidv4();
       const now = new Date();
 
-      await this.knex('boards').insert({
+      await this.db().table('boards').insert({
         board_id: boardId,
         tenant: this.tenant,
         board_name: input.board_name,
@@ -602,13 +604,10 @@ export class EmailService {
    */
   async findBoardByName(name: string): Promise<FindBoardByNameOutput | null> {
     try {
-      const board = await this.knex('boards')
+      const board = await this.db().table('boards')
         .select('board_id as id', 'board_name', 'description', 'is_default')
-        .where({
-          board_name: name,
-          tenant: this.tenant
-        })
-        .first();
+        .where({ board_name: name })
+        .first<FindBoardByNameOutput>();
 
       return board || null;
     } catch (error: any) {
@@ -622,14 +621,13 @@ export class EmailService {
    */
   async findStatusByName(input: FindStatusByNameInput): Promise<FindStatusByNameOutput | null> {
     try {
-      const status = await this.knex('statuses')
+      const status = await this.db().table('statuses')
         .select('status_id as id', 'status_name as name', 'item_type', 'is_closed')
         .where({
           status_name: input.name,
-          item_type: input.item_type,
-          tenant: this.tenant
+          item_type: input.item_type
         })
-        .first();
+        .first<FindStatusByNameOutput>();
 
       return status || null;
     } catch (error: any) {
@@ -643,13 +641,10 @@ export class EmailService {
    */
   async findPriorityByName(name: string): Promise<FindPriorityByNameOutput | null> {
     try {
-      const priority = await this.knex('priorities')
+      const priority = await this.db().table('priorities')
         .select('priority_id as id', 'priority_name', 'description')
-        .where({
-          priority_name: name,
-          tenant: this.tenant
-        })
-        .first();
+        .where({ priority_name: name })
+        .first<FindPriorityByNameOutput>();
 
       return priority || null;
     } catch (error: any) {

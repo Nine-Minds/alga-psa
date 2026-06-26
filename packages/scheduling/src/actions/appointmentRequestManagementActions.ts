@@ -2,7 +2,7 @@
 // TODO: Model argument count issues
 'use server';
 
-import { createTenantKnex, User } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
 import { withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -95,12 +95,17 @@ async function loadOnlineMeetingArtifactsForAppointments(
     return result;
   }
 
-  const rows = await trx('online_meeting_artifacts as artifact')
-    .join('online_meetings as meeting', function joinMeeting() {
-      this.on('artifact.tenant', '=', 'meeting.tenant')
-        .andOn('artifact.meeting_id', '=', 'meeting.meeting_id');
-    })
-    .where('meeting.tenant', tenant)
+  const scopedDb = tenantDb(trx, tenant);
+  const artifactsQuery = scopedDb.table('online_meeting_artifacts as artifact');
+  scopedDb.tenantJoin(
+    artifactsQuery,
+    'online_meetings as meeting',
+    'artifact.meeting_id',
+    'meeting.meeting_id',
+    { rootTenantColumn: 'artifact.tenant' },
+  );
+  const rows = await artifactsQuery
+    .where('artifact.tenant', tenant)
     .whereIn('meeting.appointment_request_id', ids)
     .select(
       'meeting.appointment_request_id',
@@ -189,13 +194,13 @@ async function isConfiguredApproverFor(
   userId: string,
   preferredAssignedUserId: string | null
 ): Promise<boolean> {
-  const memberships = await trx('team_members')
-    .where({ tenant, user_id: userId })
+  const scopedDb = tenantDb(trx, tenant);
+  const memberships = await scopedDb.table('team_members')
+    .where({ user_id: userId })
     .select('team_id');
   const userTeamIds = memberships.map(m => m.team_id);
 
-  const rows = await trx('availability_settings')
-    .where({ tenant })
+  const rows = await scopedDb.table('availability_settings')
     .whereIn('setting_type', ['general_settings', 'user_hours'])
     .whereNotNull('config_json')
     .where(withApproverMatchClause(userId, userTeamIds))
@@ -228,30 +233,16 @@ export const getAppointmentRequestById = withAuth(async (
     }
 
     const request = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const row = await trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function() {
-          this.on('ar.service_id', 'sc.service_id')
-            .andOn('ar.tenant', 'sc.tenant');
-        })
-        .leftJoin('clients as c', function() {
-          this.on('ar.client_id', 'c.client_id')
-            .andOn('ar.tenant', 'c.tenant');
-        })
-        .leftJoin('contacts as con', function() {
-          this.on('ar.contact_id', 'con.contact_name_id')
-            .andOn('ar.tenant', 'con.tenant');
-        })
-        .leftJoin('users as u', function() {
-          this.on('ar.preferred_assigned_user_id', 'u.user_id')
-            .andOn('ar.tenant', 'u.tenant');
-        })
-        .leftJoin('users as approver', function() {
-          this.on('ar.approved_by_user_id', 'approver.user_id')
-            .andOn('ar.tenant', 'approver.tenant');
-        })
+      const trxTenantDb = tenantDb(trx, tenant);
+      const requestQuery = trxTenantDb.table('appointment_requests as ar');
+      trxTenantDb.tenantJoin(requestQuery, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      trxTenantDb.tenantJoin(requestQuery, 'clients as c', 'ar.client_id', 'c.client_id', { type: 'left' });
+      trxTenantDb.tenantJoin(requestQuery, 'contacts as con', 'ar.contact_id', 'con.contact_name_id', { type: 'left' });
+      trxTenantDb.tenantJoin(requestQuery, 'users as u', 'ar.preferred_assigned_user_id', 'u.user_id', { type: 'left' });
+      trxTenantDb.tenantJoin(requestQuery, 'users as approver', 'ar.approved_by_user_id', 'approver.user_id', { type: 'left' });
+      const row = await requestQuery
         .where({
-          'ar.appointment_request_id': appointmentRequestId,
-          'ar.tenant': tenant
+          'ar.appointment_request_id': appointmentRequestId
         })
         .select(
           'ar.*',
@@ -315,6 +306,7 @@ export const getAppointmentRequests = withAuth(async (
     const validatedFilters = filters ? appointmentRequestFilterSchema.parse(filters) : {};
 
     const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const trxTenantDb = tenantDb(trx, tenant);
       // Check if user has full admin access
       const hasFullAccess = await hasPermission(user, 'user', 'read', trx);
 
@@ -332,15 +324,14 @@ export const getAppointmentRequests = withAuth(async (
         scopedUserIds.push(user.user_id);
 
         // Check if user is a team manager and get team member IDs
-        const managedTeams = await trx('teams')
-          .where({ manager_id: user.user_id, tenant })
+        const managedTeams = await trxTenantDb.table('teams')
+          .where({ manager_id: user.user_id })
           .select('team_id');
 
         if (managedTeams.length > 0) {
           const teamIds = managedTeams.map(t => t.team_id);
-          const teamMembers = await trx('team_members')
+          const teamMembers = await trxTenantDb.table('team_members')
             .whereIn('team_id', teamIds)
-            .where({ tenant })
             .select('user_id');
 
           scopedUserIds.push(...teamMembers.map(tm => tm.user_id));
@@ -350,8 +341,8 @@ export const getAppointmentRequests = withAuth(async (
         scopedUserIds.push(...subordinateIds);
 
         // Teams the current user belongs to (for team-based approver matching)
-        const memberships = await trx('team_members')
-          .where({ tenant, user_id: user.user_id })
+        const memberships = await trxTenantDb.table('team_members')
+          .where({ user_id: user.user_id })
           .select('team_id');
         const userTeamIds = memberships.map(m => m.team_id);
 
@@ -359,8 +350,7 @@ export const getAppointmentRequests = withAuth(async (
         // on (config_json -> 'approver_user_ids') and (config_json -> 'approver_team_ids').
         // Helper also includes the legacy `default_approver_id` fallback (used only when
         // both arrays are empty/absent) to preserve compatibility with un-backfilled rows.
-        const approverSettings = await trx('availability_settings')
-          .where({ tenant })
+        const approverSettings = await trxTenantDb.table('availability_settings')
           .whereIn('setting_type', ['general_settings', 'user_hours'])
           .whereNotNull('config_json')
           .where(withApproverMatchClause(user.user_id, userTeamIds))
@@ -380,32 +370,7 @@ export const getAppointmentRequests = withAuth(async (
         scopedUserIds = [...new Set(scopedUserIds)];
       }
 
-      let query = trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function() {
-          this.on('ar.service_id', 'sc.service_id')
-            .andOn('ar.tenant', 'sc.tenant');
-        })
-        .leftJoin('clients as c', function() {
-          this.on('ar.client_id', 'c.client_id')
-            .andOn('ar.tenant', 'c.tenant');
-        })
-        .leftJoin('contacts as con', function() {
-          this.on('ar.contact_id', 'con.contact_name_id')
-            .andOn('ar.tenant', 'con.tenant');
-        })
-        .leftJoin('users as u', function() {
-          this.on('ar.preferred_assigned_user_id', 'u.user_id')
-            .andOn('ar.tenant', 'u.tenant');
-        })
-        .leftJoin('users as approver', function() {
-          this.on('ar.approved_by_user_id', 'approver.user_id')
-            .andOn('ar.tenant', 'approver.tenant');
-        })
-        .leftJoin('tickets as t', function() {
-          this.on('ar.ticket_id', 't.ticket_id')
-            .andOn('ar.tenant', 't.tenant');
-        })
-        .where({ 'ar.tenant': tenant })
+      let query = trxTenantDb.table('appointment_requests as ar')
         .select(
           'ar.*',
           'sc.service_name',
@@ -420,6 +385,12 @@ export const getAppointmentRequests = withAuth(async (
           't.title as ticket_title'
         )
         .orderBy('ar.created_at', 'desc');
+      trxTenantDb.tenantJoin(query, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'clients as c', 'ar.client_id', 'c.client_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'contacts as con', 'ar.contact_id', 'con.contact_name_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'users as u', 'ar.preferred_assigned_user_id', 'u.user_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'users as approver', 'ar.approved_by_user_id', 'approver.user_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'tickets as t', 'ar.ticket_id', 't.ticket_id', { type: 'left' });
 
       // Apply scoped access filter unless the user can see all requests
       // (full access, or a company-wide approver).
@@ -496,32 +467,8 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
     }
 
     const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function() {
-          this.on('ar.service_id', 'sc.service_id')
-            .andOn('ar.tenant', 'sc.tenant');
-        })
-        .leftJoin('clients as c', function() {
-          this.on('ar.client_id', 'c.client_id')
-            .andOn('ar.tenant', 'c.tenant');
-        })
-        .leftJoin('contacts as con', function() {
-          this.on('ar.contact_id', 'con.contact_name_id')
-            .andOn('ar.tenant', 'con.tenant');
-        })
-        .leftJoin('users as u', function() {
-          this.on('ar.preferred_assigned_user_id', 'u.user_id')
-            .andOn('ar.tenant', 'u.tenant');
-        })
-        .leftJoin('users as approver', function() {
-          this.on('ar.approved_by_user_id', 'approver.user_id')
-            .andOn('ar.tenant', 'approver.tenant');
-        })
-        .leftJoin('tickets as t', function() {
-          this.on('ar.ticket_id', 't.ticket_id')
-            .andOn('ar.tenant', 't.tenant');
-        })
-        .where('ar.tenant', tenant)
+      const trxTenantDb = tenantDb(trx, tenant);
+      const query = trxTenantDb.table('appointment_requests as ar')
         .where('ar.ticket_id', ticketId)
         .select(
           'ar.*',
@@ -536,6 +483,13 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
           't.ticket_number'
         )
         .orderBy('ar.created_at', 'desc');
+      trxTenantDb.tenantJoin(query, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'clients as c', 'ar.client_id', 'c.client_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'contacts as con', 'ar.contact_id', 'con.contact_name_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'users as u', 'ar.preferred_assigned_user_id', 'u.user_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'users as approver', 'ar.approved_by_user_id', 'approver.user_id', { type: 'left' });
+      trxTenantDb.tenantJoin(query, 'tickets as t', 'ar.ticket_id', 't.ticket_id', { type: 'left' });
+      return await query;
     });
 
     return { success: true, data: requests as IAppointmentRequest[] };
@@ -574,10 +528,10 @@ export const approveAppointmentRequest = withAuth(async (
 
     if (validatedData.generate_teams_meeting && teamsMeetingService) {
       const meetingInput = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const request = await trx('appointment_requests')
+        const trxTenantDb = tenantDb(trx, tenant);
+        const request = await trxTenantDb.table('appointment_requests')
           .where({
-            appointment_request_id: validatedData.appointment_request_id,
-            tenant
+            appointment_request_id: validatedData.appointment_request_id
           })
           .first();
 
@@ -601,10 +555,9 @@ export const approveAppointmentRequest = withAuth(async (
           }
         }
 
-        const assignedUser = await trx('users')
+        const assignedUser = await trxTenantDb.table('users')
           .where({
-            user_id: validatedData.assigned_user_id,
-            tenant
+            user_id: validatedData.assigned_user_id
           })
           .first();
 
@@ -612,10 +565,9 @@ export const approveAppointmentRequest = withAuth(async (
           throw new Error('Assigned user not found');
         }
 
-        const service = await trx('service_catalog')
+        const service = await trxTenantDb.table('service_catalog')
           .where({
-            service_id: request.service_id,
-            tenant
+            service_id: request.service_id
           })
           .first();
 
@@ -695,11 +647,11 @@ export const approveAppointmentRequest = withAuth(async (
     let result;
     try {
       result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const trxTenantDb = tenantDb(trx, tenant);
       // Get the appointment request
-      const request = await trx('appointment_requests')
+      const request = await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .first();
 
@@ -736,10 +688,9 @@ export const approveAppointmentRequest = withAuth(async (
       const approvalUsesRequestedFallback = !validatedData.final_date && !validatedData.final_time;
 
       // Verify assigned user exists
-      const assignedUser = await trx('users')
+      const assignedUser = await trxTenantDb.table('users')
         .where({
-          user_id: validatedData.assigned_user_id,
-          tenant
+          user_id: validatedData.assigned_user_id
         })
         .first();
 
@@ -748,10 +699,9 @@ export const approveAppointmentRequest = withAuth(async (
       }
 
       // Get service details
-      const service = await trx('service_catalog')
+      const service = await trxTenantDb.table('service_catalog')
         .where({
-          service_id: request.service_id,
-          tenant
+          service_id: request.service_id
         })
         .first();
 
@@ -791,10 +741,9 @@ export const approveAppointmentRequest = withAuth(async (
           new_title: newTitle
         });
 
-        await trx('schedule_entries')
+        await trxTenantDb.table('schedule_entries')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .update({
             title: newTitle, // Remove [Pending Request] prefix
@@ -807,24 +756,22 @@ export const approveAppointmentRequest = withAuth(async (
         // Reconcile the assignee to the approver's selection. The pending entry may
         // have been created unassigned (request had no preferred technician), so we
         // must insert when no assignee row exists yet — not only when one differs.
-        const currentAssignee = await trx('schedule_entry_assignees')
+        const currentAssignee = await trxTenantDb.table('schedule_entry_assignees')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .first();
 
         if ((currentAssignee?.user_id || null) !== validatedData.assigned_user_id) {
           // Clear any existing assignees
-          await trx('schedule_entry_assignees')
+          await trxTenantDb.table('schedule_entry_assignees')
             .where({
-              entry_id: request.schedule_entry_id,
-              tenant
+              entry_id: request.schedule_entry_id
             })
             .delete();
 
           // Assign the approver-selected user
-          await trx('schedule_entry_assignees').insert({
+          await trxTenantDb.table('schedule_entry_assignees').insert({
             entry_id: request.schedule_entry_id,
             user_id: validatedData.assigned_user_id,
             tenant,
@@ -837,10 +784,9 @@ export const approveAppointmentRequest = withAuth(async (
         };
 
         // Get the updated schedule entry for the event
-        const updatedEntry = await trx('schedule_entries')
+        const updatedEntry = await trxTenantDb.table('schedule_entries')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .first();
 
@@ -1000,7 +946,7 @@ export const approveAppointmentRequest = withAuth(async (
           interactionSideEffects.push(interactionResult.publishSideEffects);
         }
 
-        await trx('online_meetings').insert({
+        await trxTenantDb.table('online_meetings').insert({
           meeting_id: uuidv4(),
           tenant,
           provider: 'teams',
@@ -1025,10 +971,9 @@ export const approveAppointmentRequest = withAuth(async (
       }
 
       // Update appointment request
-      await trx('appointment_requests')
+      await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .update({
           status: 'approved',
@@ -1043,21 +988,19 @@ export const approveAppointmentRequest = withAuth(async (
         });
 
       // Get updated request
-      const updatedRequest = await trx('appointment_requests')
+      const updatedRequest = await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .first();
 
       // Get client user ID if available
       let clientUserId: string | undefined;
       if (request.is_authenticated && request.contact_id) {
-        const clientUser = await trx('users')
+        const clientUser = await trxTenantDb.table('users')
           .select('user_id')
           .where({
             contact_id: request.contact_id,
-            tenant,
             user_type: 'client'
           })
           .first();
@@ -1093,8 +1036,8 @@ export const approveAppointmentRequest = withAuth(async (
 
         // Shared data for both client and technician emails
         const tenantSettings = await getTenantSettings(tenant);
-        const scheduleEntryWithDetails = await trx('schedule_entries')
-          .where({ entry_id: scheduleEntry.entry_id, tenant })
+        const scheduleEntryWithDetails = await trxTenantDb.table('schedule_entries')
+          .where({ entry_id: scheduleEntry.entry_id })
           .first();
         const calendarLink = await generateICSLink(scheduleEntryWithDetails);
 
@@ -1134,8 +1077,8 @@ export const approveAppointmentRequest = withAuth(async (
         let recipientName = '';
 
         if (request.is_authenticated) {
-          const contact = await trx('contacts')
-            .where({ contact_name_id: request.contact_id, tenant })
+          const contact = await trxTenantDb.table('contacts')
+            .where({ contact_name_id: request.contact_id })
             .first();
           recipientEmail = contact?.email || '';
           recipientName = contact?.full_name || '';
@@ -1173,8 +1116,8 @@ export const approveAppointmentRequest = withAuth(async (
           // Get client name for the technician email
           let clientName = '';
           if (request.client_id) {
-            const client = await trx('clients')
-              .where({ client_id: request.client_id, tenant })
+            const client = await trxTenantDb.table('clients')
+              .where({ client_id: request.client_id })
               .select('client_name')
               .first();
             clientName = client?.client_name || recipientName || '';
@@ -1271,11 +1214,11 @@ export const declineAppointmentRequest = withAuth(async (
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const trxTenantDb = tenantDb(trx, tenant);
       // Get the appointment request
-      const request = await trx('appointment_requests')
+      const request = await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .first();
 
@@ -1304,27 +1247,24 @@ export const declineAppointmentRequest = withAuth(async (
       // Delete the schedule entry if it exists
       if (request.schedule_entry_id) {
         // Delete assignees first (foreign key constraint)
-        await trx('schedule_entry_assignees')
+        await trxTenantDb.table('schedule_entry_assignees')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .delete();
 
         // Delete the schedule entry
-        await trx('schedule_entries')
+        await trxTenantDb.table('schedule_entries')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .delete();
       }
 
       // Update request status
-      await trx('appointment_requests')
+      await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .update({
           status: 'declined',
@@ -1335,10 +1275,9 @@ export const declineAppointmentRequest = withAuth(async (
           updated_at: now
         });
 
-      await trx('online_meetings')
+      await trxTenantDb.table('online_meetings')
         .where({
           appointment_request_id: validatedData.appointment_request_id,
-          tenant,
         })
         .update({
           status: 'cancelled',
@@ -1346,10 +1285,9 @@ export const declineAppointmentRequest = withAuth(async (
         });
 
       // Get service details
-      const service = await trx('service_catalog')
+      const service = await trxTenantDb.table('service_catalog')
         .where({
-          service_id: request.service_id,
-          tenant
+          service_id: request.service_id
         })
         .first();
 
@@ -1360,11 +1298,10 @@ export const declineAppointmentRequest = withAuth(async (
       // Get client user ID if available
       let clientUserId: string | undefined;
       if (request.is_authenticated && request.contact_id) {
-        const clientUser = await trx('users')
+        const clientUser = await trxTenantDb.table('users')
           .select('user_id')
           .where({
             contact_id: request.contact_id,
-            tenant,
             user_type: 'client'
           })
           .first();
@@ -1400,10 +1337,9 @@ export const declineAppointmentRequest = withAuth(async (
 
         if (request.is_authenticated) {
           // Get contact email
-          const contact = await trx('contacts')
+          const contact = await trxTenantDb.table('contacts')
             .where({
-              contact_name_id: request.contact_id,
-              tenant
+              contact_name_id: request.contact_id
             })
             .first();
 
@@ -1480,11 +1416,11 @@ export const updateAppointmentRequestDateTime = withAuth(async (
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const trxTenantDb = tenantDb(trx, tenant);
       // Get the appointment request
-      const request = await trx('appointment_requests')
+      const request = await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .first();
 
@@ -1531,10 +1467,9 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       }
 
       // Update request
-      await trx('appointment_requests')
+      await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .update(updateData);
 
@@ -1548,17 +1483,15 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       const scheduledEnd = new Date(scheduledStart.getTime() + effectiveDuration * 60000);
 
       if (request.schedule_entry_id) {
-        const previousScheduleEntry = await trx('schedule_entries')
+        const previousScheduleEntry = await trxTenantDb.table('schedule_entries')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .first();
 
-        await trx('schedule_entries')
+        await trxTenantDb.table('schedule_entries')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .update({
             scheduled_start: scheduledStart.toISOString(),
@@ -1567,10 +1500,9 @@ export const updateAppointmentRequestDateTime = withAuth(async (
           });
 
         if (request.status === 'approved') {
-          const updatedScheduleEntry = await trx('schedule_entries')
+          const updatedScheduleEntry = await trxTenantDb.table('schedule_entries')
             .where({
-              entry_id: request.schedule_entry_id,
-              tenant
+              entry_id: request.schedule_entry_id
             })
             .first();
 
@@ -1595,18 +1527,16 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         }
       }
 
-      const onlineMeeting = await trx('online_meetings')
+      const onlineMeeting = await trxTenantDb.table('online_meetings')
         .where({
           appointment_request_id: request.appointment_request_id,
-          tenant,
         })
         .first();
 
       if (onlineMeeting) {
-        await trx('online_meetings')
+        await trxTenantDb.table('online_meetings')
           .where({
             meeting_id: onlineMeeting.meeting_id,
-            tenant,
           })
           .update({
             start_time: scheduledStart,
@@ -1615,10 +1545,9 @@ export const updateAppointmentRequestDateTime = withAuth(async (
           });
 
         if (onlineMeeting.interaction_id) {
-          await trx('interactions')
+          await trxTenantDb.table('interactions')
             .where({
               interaction_id: onlineMeeting.interaction_id,
-              tenant,
             })
             .update({
               interaction_date: scheduledStart,
@@ -1650,10 +1579,9 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       }
 
       // Get updated request
-      const updatedRequest = await trx('appointment_requests')
+      const updatedRequest = await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .first();
 
@@ -1704,11 +1632,11 @@ export const associateRequestToTicket = withAuth(async (
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const trxTenantDb = tenantDb(trx, tenant);
       // Get the appointment request
-      const request = await trx('appointment_requests')
+      const request = await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .first();
 
@@ -1729,10 +1657,9 @@ export const associateRequestToTicket = withAuth(async (
       }
 
       // Verify ticket exists
-      const ticket = await trx('tickets')
+      const ticket = await trxTenantDb.table('tickets')
         .where({
-          ticket_id: validatedData.ticket_id,
-          tenant
+          ticket_id: validatedData.ticket_id
         })
         .first();
 
@@ -1748,10 +1675,9 @@ export const associateRequestToTicket = withAuth(async (
       const now = new Date();
 
       // Update request with ticket association
-      await trx('appointment_requests')
+      await trxTenantDb.table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .update({
           ticket_id: validatedData.ticket_id,
@@ -1760,10 +1686,9 @@ export const associateRequestToTicket = withAuth(async (
 
       // If request is already approved and has a schedule entry, update that too
       if (request.schedule_entry_id) {
-        await trx('schedule_entries')
+        await trxTenantDb.table('schedule_entries')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .update({
             work_item_id: validatedData.ticket_id,
