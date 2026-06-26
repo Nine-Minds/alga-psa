@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
+import { tenantDb } from './tenantDb';
 
 export function normalizeIanaTimeZone(timeZone: string | null | undefined): string {
   if (!timeZone) return 'UTC';
@@ -47,8 +48,8 @@ export async function resolveUserTimeZone(
   tenant: string,
   userId: string
 ): Promise<string> {
-  const row = await knexOrTrx('users')
-    .where({ tenant, user_id: userId })
+  const row = await tenantDb(knexOrTrx, tenant).table('users')
+    .where({ user_id: userId })
     .select('timezone')
     .first();
   return normalizeIanaTimeZone(row?.timezone ?? null);
@@ -64,8 +65,8 @@ export async function resolveEffectiveTimeZone(
   userId?: string | null
 ): Promise<string> {
   if (userId) {
-    const userRow = await knexOrTrx('users')
-      .where({ tenant, user_id: userId })
+    const userRow = await tenantDb(knexOrTrx, tenant).table('users')
+      .where({ user_id: userId })
       .select('timezone')
       .first();
     if (userRow?.timezone) {
@@ -73,8 +74,7 @@ export async function resolveEffectiveTimeZone(
     }
   }
 
-  const settingsRow = await knexOrTrx('tenant_settings')
-    .where({ tenant })
+  const settingsRow = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
     .select('settings')
     .first();
   const tenantTz = settingsRow?.settings?.timezone;
