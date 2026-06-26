@@ -1334,6 +1334,8 @@
           },
           "connected": "Connected to NinjaOne",
           "connectedWithErrors": "NinjaOne connected with sync errors",
+          "reconnectRequired": "Wymagane ponowne połączenie z NinjaOne",
+          "reconnectRequiredDescription": "Autoryzacji NinjaOne nie można już odświeżyć (token wygasł lub został unieważniony). Połącz ponownie, aby przywrócić synchronizację urządzeń, alerty i dostęp zdalny.",
           "instanceLabel": "Instance:",
           "organizations": "{{count}} organizations",
           "devices": "{{count}} devices",
