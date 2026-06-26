@@ -1255,15 +1255,22 @@ const hasWorkflowScheduleTable = async (
 const WORKFLOW_ALL_TENANT_QUERY_TENANT = '__workflow_all_tenant_query__';
 const WORKFLOW_ALL_TENANT_QUERY_REASON = 'Workflow admin/all-tenant query keeps tenant equality as correlated predicates';
 
+function workflowTenantDb(
+  conn: Knex | Knex.Transaction,
+  tenant: string | null | undefined
+): ReturnType<typeof tenantDb> {
+  return tenantDb(conn, tenant ?? WORKFLOW_ALL_TENANT_QUERY_TENANT);
+}
+
 function workflowTenantTable(
   conn: Knex | Knex.Transaction,
   tenant: string | null | undefined,
   table: string
 ): Knex.QueryBuilder<any, any> {
+  const db = workflowTenantDb(conn, tenant);
   return tenant
-    ? tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>
-    : tenantDb(conn, WORKFLOW_ALL_TENANT_QUERY_TENANT)
-      .unscoped(table, WORKFLOW_ALL_TENANT_QUERY_REASON) as Knex.QueryBuilder<any, any>;
+    ? db.table(table) as Knex.QueryBuilder<any, any>
+    : db.unscoped(table, WORKFLOW_ALL_TENANT_QUERY_REASON) as Knex.QueryBuilder<any, any>;
 }
 
 const loadWorkflowScheduleStateMap = async (
@@ -2324,7 +2331,7 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
 
   const [sortField, sortDir] = parsed.sort.split(':') as ['started_at' | 'updated_at', 'asc' | 'desc'];
 
-  const db = tenant ? tenantDb(knex, tenant) : null;
+  const db = workflowTenantDb(knex, tenant);
   const query = workflowTenantTable(knex, tenant, 'workflow_runs')
     .select(
       'workflow_runs.run_id',
@@ -2343,18 +2350,10 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
       'workflow_definitions.name as workflow_name'
     );
 
-  if (db) {
-    db.tenantJoin(query, 'workflow_definitions', 'workflow_runs.workflow_id', 'workflow_definitions.workflow_id', {
-      type: 'left',
-      rootTenantColumn: 'workflow_runs.tenant',
-    });
-  } else {
-    // LEVERAGE: friction correlated-tenant-predicate — all-tenant workflow joins need facade support for outer-row tenant equality.
-    query.leftJoin('workflow_definitions', function (this: Knex.JoinClause) {
-      this.on('workflow_runs.workflow_id', 'workflow_definitions.workflow_id')
-        .andOn('workflow_runs.tenant', 'workflow_definitions.tenant');
-    });
-  }
+  db.tenantJoin(query, 'workflow_definitions', 'workflow_runs.workflow_id', 'workflow_definitions.workflow_id', {
+    type: 'left',
+    rootTenantColumn: 'workflow_runs.tenant',
+  });
   if (parsed.status?.length) {
     query.whereIn('workflow_runs.status', parsed.status);
   }
@@ -2374,9 +2373,8 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
         .select(1)
         .whereRaw('workflow_run_waits.run_id = workflow_runs.run_id')
         .where('workflow_run_waits.key', 'ilike', searchValue);
-      if (!db) {
-        // LEVERAGE: friction correlated-tenant-predicate — all-tenant workflow EXISTS filters need facade support for outer-row tenant equality.
-        waitSearch.whereRaw('workflow_run_waits.tenant = workflow_runs.tenant');
+      if (!tenant) {
+        db.tenantWhereColumn(waitSearch, 'workflow_run_waits.tenant', 'workflow_runs.tenant');
       }
       builder
         .whereRaw('workflow_runs.run_id::text ilike ?', [searchValue])
@@ -2472,26 +2470,15 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
     )
     .havingRaw('max(steps.attempt) >= ?', [parsed.minRetries]);
 
-  if (tenant) {
-    const db = tenantDb(knex, tenant);
-    db.tenantJoin(query, 'workflow_definitions as defs', 'runs.workflow_id', 'defs.workflow_id', {
-      type: 'left',
-      rootTenantColumn: 'runs.tenant'
-    });
-    db.tenantJoin(query, 'workflow_run_steps as steps', 'runs.run_id', 'steps.run_id', {
-      type: 'left',
-      rootTenantColumn: 'runs.tenant'
-    });
-  } else {
-    // LEVERAGE: friction correlated-tenant-predicate — all-tenant workflow joins need facade support for outer-row tenant equality.
-    query
-      .leftJoin('workflow_definitions as defs', function () {
-        this.on('runs.workflow_id', 'defs.workflow_id').andOn('runs.tenant', 'defs.tenant');
-      })
-      .leftJoin('workflow_run_steps as steps', function () {
-        this.on('runs.run_id', 'steps.run_id').andOn('runs.tenant', 'steps.tenant');
-      });
-  }
+  const db = workflowTenantDb(knex, tenant);
+  db.tenantJoin(query, 'workflow_definitions as defs', 'runs.workflow_id', 'defs.workflow_id', {
+    type: 'left',
+    rootTenantColumn: 'runs.tenant'
+  });
+  db.tenantJoin(query, 'workflow_run_steps as steps', 'runs.run_id', 'steps.run_id', {
+    type: 'left',
+    rootTenantColumn: 'runs.tenant'
+  });
 
   const rows = await query
     .orderBy('runs.updated_at', 'desc')

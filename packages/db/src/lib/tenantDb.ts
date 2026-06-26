@@ -42,6 +42,11 @@ export interface TenantDb {
     right: string,
     options: TenantSubqueryJoinOptions
   ): Knex.QueryBuilder;
+  tenantWhereColumn(
+    builder: Knex.QueryBuilder,
+    leftTenantColumn: string,
+    rightTenantColumn: string
+  ): Knex.QueryBuilder;
   unscoped<Row extends object = DynamicTenantRow>(
     tableExpression: string,
     reason: string
@@ -183,6 +188,18 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
     return builder.join(subquery, joinDerivedTenantQuery);
   }
 
+  function tenantWhereColumn(
+    builder: Knex.QueryBuilder,
+    leftTenantColumn: string,
+    rightTenantColumn: string
+  ): Knex.QueryBuilder {
+    if (!leftTenantColumn || !leftTenantColumn.trim() || !rightTenantColumn || !rightTenantColumn.trim()) {
+      throw new Error('tenantDb.tenantWhereColumn requires tenant columns');
+    }
+
+    return builder.whereRaw('?? = ??', [leftTenantColumn, rightTenantColumn]);
+  }
+
   function unscoped<Row extends object = DynamicTenantRow>(
     tableExpression: string,
     reason: string
@@ -201,6 +218,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenant: string): TenantD
     subquery: table,
     tenantJoin,
     tenantJoinSubquery,
+    tenantWhereColumn,
     unscoped,
   };
 }

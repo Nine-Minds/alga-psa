@@ -136,7 +136,11 @@ describe('workflow tenant facade roots', () => {
 
     const runtimeSource = read('ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts');
     expect(runtimeSource).toContain('db.tenantJoinSubquery(itemsQuery, versionsSubquery');
+    expect(runtimeSource).toContain("db.tenantWhereColumn(waitSearch, 'workflow_run_waits.tenant', 'workflow_runs.tenant')");
+    expect(runtimeSource).toContain("db.tenantJoin(query, 'workflow_definitions', 'workflow_runs.workflow_id', 'workflow_definitions.workflow_id'");
+    expect(runtimeSource).toContain("db.tenantJoin(query, 'workflow_run_steps as steps', 'runs.run_id', 'steps.run_id'");
     expect(runtimeSource).not.toContain(".leftJoin(versionsSubquery");
+    expect(runtimeSource).not.toContain('LEVERAGE: friction correlated-tenant-predicate');
   });
 
   it('routes workflow runtime support tenant roots through tenantDb', () => {

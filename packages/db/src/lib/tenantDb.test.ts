@@ -147,6 +147,21 @@ describe('tenantDb facade', () => {
     );
   });
 
+  it('supports correlated tenant predicates outside joins', () => {
+    const db = tenantDb(knex, 'tenant-1');
+    const waitSearch = db
+      .unscoped('workflow_run_waits as w', 'all-tenant workflow wait search')
+      .select(1)
+      .whereRaw('?? = ??', ['w.run_id', 'r.run_id']);
+    const query = db
+      .unscoped('workflow_runs as r', 'all-tenant workflow run search')
+      .whereExists(db.tenantWhereColumn(waitSearch, 'w.tenant', 'r.tenant'));
+
+    expect(query.toString()).toContain(
+      'where exists (select 1 from "workflow_run_waits" as "w" where "w"."run_id" = "r"."run_id" and "w"."tenant" = "r"."tenant")'
+    );
+  });
+
   it('requires an explicit reason for unscoped access', () => {
     const db = tenantDb(knex, 'tenant-1');
 
