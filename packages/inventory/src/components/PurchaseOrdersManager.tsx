@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import type {
@@ -96,9 +97,24 @@ function statusVariant(status: string) {
   }
 }
 
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'All statuses' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'open', label: 'Open' },
+  { value: 'partially_received', label: 'Partially received' },
+  { value: 'received', label: 'Received' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+/** Statuses that represent money still on order (counted in the header's open total). */
+const OUTSTANDING_STATUSES = new Set(['open', 'partially_received']);
+
 export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrderListRow[] }) {
   const [pos, setPos] = useState<PurchaseOrderListRow[]>(initialPos || []);
   const [vendors, setVendors] = useState<IVendor[]>([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [vendorFilter, setVendorFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
@@ -391,16 +407,106 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
     },
   ];
 
+  const q = search.trim().toLowerCase();
+  const filtered = pos.filter((p) => {
+    if (statusFilter && p.status !== statusFilter) return false;
+    if (vendorFilter && p.vendor_id !== vendorFilter) return false;
+    if (!q) return true;
+    return p.po_number.toLowerCase().includes(q) || vendorName(p.vendor_id).toLowerCase().includes(q);
+  });
+
+  // Money currently on order — the at-a-glance number for "what's outstanding".
+  const outstanding = pos.filter((p) => OUTSTANDING_STATUSES.has(p.status));
+  const openTotal = outstanding.reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
+  const openCurrency = outstanding[0]?.currency_code ?? 'USD';
+  const filtersActive = Boolean(q || statusFilter || vendorFilter);
+
+  const vendorFilterOptions = [
+    { value: '', label: 'All vendors' },
+    ...vendors.map((v) => ({ value: v.vendor_id, label: v.vendor_name })),
+  ];
+
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('');
+    setVendorFilter('');
+  };
+
   return (
     <div className="p-6 space-y-4" id="purchase-orders-page">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Purchase Orders</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Purchase Orders</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {pos.length} purchase order{pos.length === 1 ? '' : 's'}
+            {outstanding.length > 0 && (
+              <span className="font-medium text-gray-700"> · {money(openTotal, openCurrency)} on order</span>
+            )}
+          </p>
+        </div>
         <Button id="purchase-orders-add-button" onClick={openCreate}>
           Add Purchase Order
         </Button>
       </div>
 
-      <DataTable id="purchase-orders-table" data={pos} columns={columns} />
+      {pos.length > 0 && (
+        <div className="flex items-center gap-3">
+          <div className="w-72">
+            <Input
+              id="purchase-orders-search"
+              placeholder="Search PO number or vendor"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="w-48">
+            <CustomSelect
+              id="purchase-orders-status-filter"
+              value={statusFilter}
+              options={STATUS_FILTER_OPTIONS}
+              onValueChange={setStatusFilter}
+              placeholder="All statuses"
+            />
+          </div>
+          <div className="w-56">
+            <CustomSelect
+              id="purchase-orders-vendor-filter"
+              value={vendorFilter}
+              options={vendorFilterOptions}
+              onValueChange={setVendorFilter}
+              placeholder="All vendors"
+            />
+          </div>
+          {filtersActive && (
+            <span className="text-sm text-gray-500">
+              {filtered.length} of {pos.length}
+            </span>
+          )}
+        </div>
+      )}
+
+      {pos.length === 0 ? (
+        <EmptyState
+          title="No purchase orders yet"
+          description="Create a purchase order to track what's on order from your vendors."
+          action={
+            <Button id="purchase-orders-empty-add" onClick={openCreate}>
+              Add Purchase Order
+            </Button>
+          }
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="No purchase orders match"
+          action={
+            <Button id="purchase-orders-clear-filters" variant="link" onClick={clearFilters}>
+              Clear filters
+            </Button>
+          }
+        />
+      ) : (
+        <DataTable id="purchase-orders-table" data={filtered} columns={columns} />
+      )}
 
       <Dialog
         isOpen={dialogOpen}
