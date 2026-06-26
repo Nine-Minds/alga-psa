@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -189,6 +190,11 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
 
   const productName = useCallback(
     (serviceId: string) => products.find((p) => p.service_id === serviceId)?.service_name || serviceId,
+    [products],
+  );
+
+  const isSerialized = useCallback(
+    (serviceId: string) => products.find((p) => p.service_id === serviceId)?.is_serialized ?? false,
     [products],
   );
 
@@ -682,16 +688,16 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
                   id={`receive-line-${line.po_line_id}`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{line.service_id}</span>
-                    <span className="text-xs text-gray-500">
-                      {Number(line.quantity_received)} / {Number(line.quantity_ordered)} received
+                    <span className="text-sm font-medium text-gray-900">{productName(line.service_id)}</span>
+                    <span className="text-sm text-gray-600 tabular-nums">
+                      {Number(line.quantity_received)} of {Number(line.quantity_ordered)} received
                     </span>
                   </div>
                   <div className="flex gap-2 items-end">
                     <div className="flex-1">
-                      <label className="block text-xs mb-1">Location</label>
                       <CustomSelect
                         id={`receive-line-location-${line.po_line_id}`}
+                        label="Location"
                         placeholder="Select a location…"
                         value={rf?.location_id ?? ''}
                         onValueChange={(value) => updateReceiveLine(line.po_line_id, { location_id: value })}
@@ -699,10 +705,12 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
                       />
                     </div>
                     <div className="w-24">
-                      <label className="block text-xs mb-1">Qty</label>
                       <Input
                         id={`receive-line-qty-${line.po_line_id}`}
+                        label="Qty"
                         type="number"
+                        min="1"
+                        className="text-right tabular-nums"
                         value={rf?.quantity ?? ''}
                         onChange={(e) => updateReceiveLine(line.po_line_id, { quantity: e.target.value })}
                       />
@@ -716,18 +724,17 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: PurchaseOrde
                       {receiving ? 'Receiving…' : 'Receive'}
                     </Button>
                   </div>
-                  <div>
-                    <label className="block text-xs mb-1">
-                      Serial numbers (one per line — required for serialized products)
-                    </label>
-                    <textarea
+                  {/* Serials only matter for serialized products — don't show the field (or its
+                      "required for serialized products" hedge) on consumables that have no serials. */}
+                  {isSerialized(line.service_id) && (
+                    <TextArea
                       id={`receive-line-serials-${line.po_line_id}`}
-                      className="border rounded px-2 py-2 w-full text-sm"
+                      label="Serial numbers (one per line)"
                       rows={2}
                       value={rf?.serials ?? ''}
                       onChange={(e) => updateReceiveLine(line.po_line_id, { serials: e.target.value })}
                     />
-                  </div>
+                  )}
                   {fullyReceived && (
                     <p className="text-xs text-gray-500">This line is fully received.</p>
                   )}
