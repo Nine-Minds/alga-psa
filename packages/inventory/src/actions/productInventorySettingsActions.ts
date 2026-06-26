@@ -39,12 +39,49 @@ export const listInventoryProducts = withAuth(async (user, { tenant }): Promise<
   await requireInvPerm(user, 'read');
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    // Per-product stock totals summed across all locations, so the Stock grid can
+    // show on-hand/available without a per-row drill-in.
+    const levels = trx('stock_levels')
+      .where({ tenant })
+      .groupBy('service_id')
+      .select('service_id')
+      .select(trx.raw('SUM(quantity_on_hand) as on_hand'))
+      .select(trx.raw('SUM(quantity_on_hand - reserved_quantity - held_quantity) as available'))
+      .as('lv');
+
+    // Per-product reorder status, computed per location with the same effective
+    // threshold as lowStockReport / the dashboard: COALESCE(level override, product
+    // default), flagged when available <= threshold. A product is "out" if any
+    // tracked location is at/below 0, else "low" if any location is at/below reorder.
+    const REORDER = 'COALESCE(sl.reorder_point, p2.reorder_point)';
+    const AVAIL = '(sl.quantity_on_hand - sl.reserved_quantity - sl.held_quantity)';
+    const status = trx('stock_levels as sl')
+      .join('product_inventory_settings as p2', function () {
+        this.on('sl.service_id', '=', 'p2.service_id').andOn('sl.tenant', '=', 'p2.tenant');
+      })
+      .where({ 'sl.tenant': tenant, 'p2.track_stock': true })
+      .groupBy('sl.service_id')
+      .select('sl.service_id')
+      .select(trx.raw(`bool_or(${REORDER} IS NOT NULL AND ${AVAIL} <= ${REORDER}) as needs_reorder`))
+      .select(trx.raw(`bool_or(${REORDER} IS NOT NULL AND ${AVAIL} <= 0) as any_out`))
+      .as('st');
+
     return trx('product_inventory_settings as pis')
       .join('service_catalog as sc', function () {
         this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
       })
+      .leftJoin(levels, 'lv.service_id', 'pis.service_id')
+      .leftJoin(status, 'st.service_id', 'pis.service_id')
       .where({ 'pis.tenant': tenant })
-      .select('pis.*', 'sc.service_name', 'sc.sku')
+      .select(
+        'pis.*',
+        'sc.service_name',
+        'sc.sku',
+        trx.raw('COALESCE(lv.on_hand, 0)::int as on_hand'),
+        trx.raw('COALESCE(lv.available, 0)::int as available'),
+        trx.raw('COALESCE(st.needs_reorder, false) as needs_reorder'),
+        trx.raw('COALESCE(st.any_out, false) as any_out'),
+      )
       .orderBy('sc.service_name', 'asc');
   });
 });
