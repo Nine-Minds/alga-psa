@@ -6,12 +6,21 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { toast } from 'react-hot-toast';
-import type { ColumnDefinition, IPurchaseOrder, IVendor } from '@alga-psa/types';
+import type {
+  ColumnDefinition,
+  IPurchaseOrder,
+  IPurchaseOrderLine,
+  IStockLocation,
+  IVendor,
+} from '@alga-psa/types';
 import {
   listPurchaseOrders,
   createPurchaseOrder,
   submitPurchaseOrder,
   cancelPurchaseOrder,
+  getPurchaseOrder,
+  receivePoLine,
+  listStockLocations,
   listVendors,
 } from '../actions';
 
@@ -31,6 +40,15 @@ const emptyLine = (): LineForm => ({ service_id: '', quantity_ordered: '1', unit
 
 const emptyForm = (): FormState => ({ vendor_id: '', currency_code: 'USD', lines: [emptyLine()] });
 
+/** Per-line receive form keyed by po_line_id. */
+interface ReceiveLineForm {
+  location_id: string;
+  quantity: string;
+  serials: string; // newline-separated serial numbers; only used for serialized products
+}
+
+const RECEIVABLE_STATUSES = new Set(['open', 'partially_received']);
+
 function formatDate(value?: string | Date | null): string {
   if (!value) return '';
   const d = new Date(value);
@@ -43,6 +61,13 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+
+  // Receive flow state.
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [receivePo, setReceivePo] = useState<IPurchaseOrder | null>(null);
+  const [locations, setLocations] = useState<IStockLocation[]>([]);
+  const [receiveForms, setReceiveForms] = useState<Record<string, ReceiveLineForm>>({});
+  const [receiving, setReceiving] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -148,6 +173,104 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
     }
   };
 
+  const openReceive = async (po: IPurchaseOrder) => {
+    setReceiveOpen(true);
+    setReceivePo(null);
+    setReceiveForms({});
+    try {
+      const [full, locs] = await Promise.all([
+        getPurchaseOrder(po.po_id),
+        listStockLocations({ includeInactive: false }),
+      ]);
+      if (!full) {
+        toast.error('Purchase order not found');
+        setReceiveOpen(false);
+        return;
+      }
+      setLocations(locs);
+      const defaultLocation = locs.find((l) => l.is_default)?.location_id ?? locs[0]?.location_id ?? '';
+      const forms: Record<string, ReceiveLineForm> = {};
+      for (const line of full.lines ?? []) {
+        const remaining = Number(line.quantity_ordered) - Number(line.quantity_received);
+        forms[line.po_line_id] = {
+          location_id: defaultLocation,
+          quantity: String(remaining > 0 ? remaining : 0),
+          serials: '',
+        };
+      }
+      setReceiveForms(forms);
+      setReceivePo(full);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to load purchase order');
+      setReceiveOpen(false);
+    }
+  };
+
+  const updateReceiveLine = (poLineId: string, patch: Partial<ReceiveLineForm>) => {
+    setReceiveForms((f) => ({ ...f, [poLineId]: { ...f[poLineId], ...patch } }));
+  };
+
+  const receiveLine = async (line: IPurchaseOrderLine) => {
+    const rf = receiveForms[line.po_line_id];
+    if (!rf) return;
+    if (!rf.location_id) {
+      toast.error('Location is required');
+      return;
+    }
+    const quantity = Number(rf.quantity);
+    if (!(quantity > 0)) {
+      toast.error('Quantity must be greater than 0');
+      return;
+    }
+    const serialNumbers = rf.serials
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const serials = serialNumbers.length
+      ? serialNumbers.map((serial_number) => ({ serial_number }))
+      : undefined;
+
+    setReceiving(true);
+    try {
+      const result = await receivePoLine(line.po_line_id, {
+        location_id: rf.location_id,
+        quantity,
+        serials,
+      });
+      if (result.over_receipt) {
+        toast(
+          `Received ${quantity} — over-receipt: cumulative received now exceeds the quantity ordered`,
+          { icon: '⚠️' },
+        );
+      } else {
+        toast.success(`Received ${quantity} (PO status: ${result.po_status})`);
+      }
+      // Refresh the open dialog and the list.
+      const full = await getPurchaseOrder(line.po_id);
+      if (full) {
+        setReceivePo(full);
+        setReceiveForms((prev) => {
+          const next = { ...prev };
+          for (const l of full.lines ?? []) {
+            const remaining = Number(l.quantity_ordered) - Number(l.quantity_received);
+            const existing = next[l.po_line_id];
+            next[l.po_line_id] = {
+              location_id: existing?.location_id || rf.location_id,
+              quantity: String(remaining > 0 ? remaining : 0),
+              serials: '',
+            };
+          }
+          return next;
+        });
+      }
+      await reload();
+    } catch (e: any) {
+      toast.error(e?.message || 'Receive failed');
+    } finally {
+      setReceiving(false);
+    }
+  };
+
   const columns: ColumnDefinition<IPurchaseOrder>[] = [
     { title: 'PO Number', dataIndex: 'po_number' },
     { title: 'Vendor', dataIndex: 'vendor_id', render: (v: any) => vendorName(v) },
@@ -167,6 +290,15 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
             onClick={() => submit(rec)}
           >
             Submit
+          </Button>
+          <Button
+            id={`receive-po-${rec.po_id}`}
+            variant="outline"
+            size="sm"
+            disabled={!RECEIVABLE_STATUSES.has(rec.status)}
+            onClick={() => openReceive(rec)}
+          >
+            Receive
           </Button>
           <Button
             id={`cancel-po-${rec.po_id}`}
@@ -280,6 +412,96 @@ export function PurchaseOrdersManager({ initialPos }: { initialPos: IPurchaseOrd
             </Button>
             <Button id="purchase-order-save" onClick={save} disabled={saving}>
               {saving ? 'Saving…' : 'Create'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={receiveOpen}
+        onClose={() => setReceiveOpen(false)}
+        title={receivePo ? `Receive ${receivePo.po_number}` : 'Receive Purchase Order'}
+        id="receive-po-dialog"
+      >
+        <div className="space-y-4 p-1">
+          {!receivePo ? (
+            <p className="text-sm text-gray-500">Loading purchase order…</p>
+          ) : (receivePo.lines ?? []).length === 0 ? (
+            <p className="text-sm text-gray-500">This purchase order has no lines.</p>
+          ) : (
+            (receivePo.lines ?? []).map((line) => {
+              const rf = receiveForms[line.po_line_id];
+              const remaining = Number(line.quantity_ordered) - Number(line.quantity_received);
+              const fullyReceived = remaining <= 0;
+              return (
+                <div
+                  key={line.po_line_id}
+                  className="border rounded p-3 space-y-2"
+                  id={`receive-line-${line.po_line_id}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{line.service_id}</span>
+                    <span className="text-xs text-gray-500">
+                      {Number(line.quantity_received)} / {Number(line.quantity_ordered)} received
+                    </span>
+                  </div>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <label className="block text-xs mb-1">Location</label>
+                      <select
+                        id={`receive-line-location-${line.po_line_id}`}
+                        className="border rounded px-2 py-2 w-full"
+                        value={rf?.location_id ?? ''}
+                        onChange={(e) => updateReceiveLine(line.po_line_id, { location_id: e.target.value })}
+                      >
+                        <option value="">Select a location…</option>
+                        {locations.map((loc) => (
+                          <option key={loc.location_id} value={loc.location_id}>
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="w-24">
+                      <label className="block text-xs mb-1">Qty</label>
+                      <Input
+                        id={`receive-line-qty-${line.po_line_id}`}
+                        type="number"
+                        value={rf?.quantity ?? ''}
+                        onChange={(e) => updateReceiveLine(line.po_line_id, { quantity: e.target.value })}
+                      />
+                    </div>
+                    <Button
+                      id={`receive-line-submit-${line.po_line_id}`}
+                      size="sm"
+                      disabled={receiving}
+                      onClick={() => receiveLine(line)}
+                    >
+                      {receiving ? 'Receiving…' : 'Receive'}
+                    </Button>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1">
+                      Serial numbers (one per line — required for serialized products)
+                    </label>
+                    <textarea
+                      id={`receive-line-serials-${line.po_line_id}`}
+                      className="border rounded px-2 py-2 w-full text-sm"
+                      rows={2}
+                      value={rf?.serials ?? ''}
+                      onChange={(e) => updateReceiveLine(line.po_line_id, { serials: e.target.value })}
+                    />
+                  </div>
+                  {fullyReceived && (
+                    <p className="text-xs text-gray-500">This line is fully received.</p>
+                  )}
+                </div>
+              );
+            })
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button id="receive-po-close" variant="outline" onClick={() => setReceiveOpen(false)}>
+              Close
             </Button>
           </div>
         </div>

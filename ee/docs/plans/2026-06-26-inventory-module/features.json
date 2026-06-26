@@ -245,7 +245,7 @@
   {
     "id": "F031",
     "description": "[P1] ProductsManager UI: per-product Inventory panel (flags + reorder/location/vendor fields)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -551,7 +551,7 @@
   {
     "id": "F069",
     "description": "[P3] Receiving UI (per-line, serial/MAC/warranty capture)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -857,7 +857,7 @@
   {
     "id": "F107",
     "description": "[P5] Kit management UI (component editor in product Inventory panel)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]

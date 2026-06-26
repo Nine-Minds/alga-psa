@@ -2,6 +2,7 @@
  * @alga-psa/inventory — client components.
  */
 export * from './InventoryDashboard';
+export * from './KitManager';
 export * from './LoanersManager';
 export * from './PurchaseOrdersManager';
 export * from './RmaManager';

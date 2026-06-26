@@ -54,7 +54,7 @@
   {
     "id": "T005",
     "description": "[ledger] Moving-average cost is correct across two receipts at different unit costs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "T009",
     "description": "[alloc] Soft allocation on SO confirm reduces available but not on_hand; cancelling the SO releases reserved/held and returns units to in_stock",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F078",
@@ -100,7 +100,7 @@
   {
     "id": "T010",
     "description": "[alloc] Hard-hold: a unit/qty hard-held by SO-A cannot be poached by a material consume or SO-B fulfill (guard fires); soft allocation does not block",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077",
       "F084"
@@ -191,7 +191,7 @@
   {
     "id": "T020",
     "description": "[kit] Adding a kit to an SO explodes into a parent line + component lines (parent_so_line_id) with correct per-component quantities",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103"
     ]
@@ -405,7 +405,7 @@
   {
     "id": "T044",
     "description": "[guard] Product delete is blocked when stock units/levels/movements exist for that product",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151"
     ]
@@ -413,7 +413,7 @@
   {
     "id": "T045",
     "description": "[contract] Running a recurring contract billing cycle for a stocked product creates NO stock movements (stock is event-driven only)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098"
     ]
