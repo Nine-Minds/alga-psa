@@ -37,6 +37,7 @@ import {
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { TextEditor, RichTextViewer } from '@alga-psa/ui/editor';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -155,6 +156,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   const [conversionPreview, setConversionPreview] = useState<QuoteConversionPreview | null>(null);
   const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const isReadOnly = isEditMode && !isTemplate && (quote?.status ?? 'draft') !== 'draft';
 
   useEffect(() => {
     void loadFormData();
@@ -880,8 +882,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   const formatCurrency = (minorUnits: number) =>
     formatLocalizedCurrency((minorUnits || 0) / 100, form.currency_code || 'USD');
 
-  const isReadOnly = isEditMode && !isTemplate && quoteStatus !== 'draft';
-
   // +Add-location handler moved into the line-items toolbar. Seed an empty
   // second group so the user can pick a location before adding any items.
   const handleAddLocationGroup = () => {
@@ -1297,13 +1297,20 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                   <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} disabled={isReadOnly} />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm font-medium md:col-span-3">
-                  {t('quoteForm.essentials.descriptionField', { defaultValue: 'Description / Scope' })}
-                  <TextArea value={form.description} onChange={(event) => handleChange('description', event.target.value)} rows={4} disabled={isReadOnly} />
+                <div className="flex flex-col gap-1 text-sm font-medium md:col-span-3">
+                  <span>{t('quoteForm.essentials.descriptionField', { defaultValue: 'Description / Scope' })}</span>
+                  {isReadOnly ? (
+                    <RichTextViewer content={form.description || '[]'} className="min-h-[80px]" />
+                  ) : (
+                    <TextEditor
+                      initialContent={form.description || undefined}
+                      onContentChange={(blocks) => handleChange('description', JSON.stringify(blocks))}
+                    />
+                  )}
                   <span className="text-xs font-normal text-muted-foreground">
                     {t('quoteForm.essentials.descriptionHelp', { defaultValue: 'A short paragraph that appears just under the title on the PDF.' })}
                   </span>
-                </label>
+                </div>
 
                 {!isTemplate && (
                   <div className="flex flex-col gap-1 text-sm font-medium md:col-span-2">

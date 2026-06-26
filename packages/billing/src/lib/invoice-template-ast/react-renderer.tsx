@@ -9,6 +9,7 @@ import type {
   TemplateValueFormat,
 } from '@alga-psa/types';
 import { formatTemplateFieldValue } from './fieldFormatting';
+import { sanitizeRichTextHtml } from './sanitizeRichTextHtml';
 import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
@@ -465,6 +466,18 @@ const renderNode = (
     }
     case 'text': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+      if (node.richText) {
+        const sanitized = sanitizeRichTextHtml(content);
+        return (
+          <div
+            key={node.id}
+            id={node.id}
+            className={elementClassName || undefined}
+            style={style}
+            dangerouslySetInnerHTML={{ __html: sanitized }}
+          />
+        );
+      }
       return (
         <p key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {String(content ?? '')}

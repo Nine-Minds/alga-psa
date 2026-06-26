@@ -27,7 +27,7 @@ import {
 } from '../lib/invoice-template-ast/standardTemplates';
 import Invoice from '../models/invoice';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
-import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelection';
+import { resolveQuoteTemplateAst, markQuoteRichTextNodes } from '../lib/quote-template-ast/templateSelection';
 import { browserPoolService } from './browserPoolService';
 
 // ---------------------------------------------------------------------------
@@ -233,14 +233,16 @@ export class PDFGenerationService {
         throw new Error(`Quote ${options.quoteId} not found`);
       }
 
-      const templateAst = options.templateAst
+      const resolvedAst = options.templateAst
         ?? (options.templateCode
           ? getStandardQuoteTemplateAstByCode(options.templateCode)
           : (await resolveQuoteTemplateAst(knex, this.tenant, options.quoteId)).templateAst);
 
-      if (!templateAst) {
+      if (!resolvedAst) {
         throw new Error('No quote template AST available');
       }
+
+      const templateAst = markQuoteRichTextNodes(resolvedAst);
 
       const evaluation = evaluateTemplateAst(
         templateAst,
@@ -398,14 +400,16 @@ export class PDFGenerationService {
         throw new Error(`Quote ${options.quoteId} not found`);
       }
 
-      const templateAst = options.templateAst
+      const resolvedAst = options.templateAst
         ?? (options.templateCode
           ? getStandardQuoteTemplateAstByCode(options.templateCode)
           : (await resolveQuoteTemplateAst(knex, this.tenant, options.quoteId)).templateAst);
 
-      if (!templateAst) {
+      if (!resolvedAst) {
         throw new Error('No quote template AST available for PDF generation');
       }
+
+      const templateAst = markQuoteRichTextNodes(resolvedAst);
 
       const evaluation = evaluateTemplateAst(
         templateAst,

@@ -75,6 +75,11 @@ export interface TemplateStackNode extends TemplateNodeBase {
 export interface TemplateTextNode extends TemplateNodeBase {
   type: 'text';
   content: TemplateValueExpression;
+  /**
+   * When true, the resolved content is treated as rich HTML (e.g. authored in a
+   * WYSIWYG editor) and rendered as sanitized markup instead of escaped text.
+   */
+  richText?: boolean;
   children?: never;
 }
 

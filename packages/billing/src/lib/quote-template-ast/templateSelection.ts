@@ -25,6 +25,69 @@ function countDistinctItemLocations(quote: IQuote): number {
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
+/**
+ * Bindings whose resolved value is rich HTML (authored in the WYSIWYG editor)
+ * and must therefore be rendered as sanitized markup instead of escaped text.
+ */
+const RICH_TEXT_BINDING_IDS = new Set(['scope']);
+
+type MutableTemplateNode = {
+  type?: string;
+  content?: { type?: string; bindingId?: string } | unknown;
+  richText?: boolean;
+  children?: unknown;
+};
+
+/**
+ * Walk the template AST and flag every `text` node bound to a rich-text
+ * binding (e.g. `scope`) with `richText: true`. This guarantees stored
+ * templates (seeded standard templates or custom tenant templates) render the
+ * quote scope as HTML, even if their persisted AST predates the flag.
+ */
+const markRichTextNodes = (node: unknown): void => {
+  if (!node || typeof node !== 'object') {
+    return;
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      markRichTextNodes(child);
+    }
+    return;
+  }
+
+  const candidate = node as MutableTemplateNode;
+  const content = candidate.content as { type?: string; bindingId?: string } | undefined;
+  if (
+    candidate.type === 'text' &&
+    content &&
+    content.type === 'binding' &&
+    typeof content.bindingId === 'string' &&
+    RICH_TEXT_BINDING_IDS.has(content.bindingId)
+  ) {
+    candidate.richText = true;
+  }
+
+  if (candidate.children) {
+    markRichTextNodes(candidate.children);
+  }
+};
+
+/**
+ * Walk the template AST and flag every `text` node bound to a rich-text
+ * binding (e.g. `scope`) with `richText: true`. This guarantees stored
+ * templates (seeded standard templates or custom tenant templates) render the
+ * quote scope as HTML, even if their persisted AST predates the flag.
+ */
+export const markQuoteRichTextNodes = (ast: TemplateAst): TemplateAst => {
+  markRichTextNodes(ast.layout);
+  return ast;
+};
+
+const normalizeResolvedQuoteTemplate = (resolved: ResolvedQuoteTemplate): ResolvedQuoteTemplate => {
+  markQuoteRichTextNodes(resolved.templateAst);
+  return resolved;
+};
+
 const getCustomTemplateAst = async (
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -81,6 +144,15 @@ export interface ResolvedQuoteTemplate {
 }
 
 export async function resolveQuoteTemplateAst(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteOrId: IQuote | string
+): Promise<ResolvedQuoteTemplate> {
+  const resolved = await resolveQuoteTemplateAstInternal(knexOrTrx, tenant, quoteOrId);
+  return normalizeResolvedQuoteTemplate(resolved);
+}
+
+async function resolveQuoteTemplateAstInternal(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteOrId: IQuote | string
