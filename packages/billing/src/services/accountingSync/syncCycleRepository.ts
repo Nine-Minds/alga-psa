@@ -24,7 +24,7 @@ export class SyncCycleRepository {
     targetRealm: string
   ): Promise<string | null> {
     const row = await this.table<AccountingSyncCycleRecord>(tenant)
-      .where({ tenant, adapter_type: adapterType, target_realm: targetRealm, status: 'succeeded' })
+      .where({ adapter_type: adapterType, target_realm: targetRealm, status: 'succeeded' })
       .whereNotNull('cursor_after')
       .orderBy('started_at', 'desc')
       .first();
@@ -62,7 +62,7 @@ export class SyncCycleRepository {
     }
   ): Promise<void> {
     await this.table(tenant)
-      .where({ tenant, cycle_id: cycleId })
+      .where({ cycle_id: cycleId })
       .update({
         status: result.status,
         finished_at: this.knex.fn.now(),
@@ -78,7 +78,7 @@ export class SyncCycleRepository {
     targetRealm?: string | null
   ): Promise<AccountingSyncCycleRecord | null> {
     const query = this.table<AccountingSyncCycleRecord>(tenant)
-      .where({ tenant, adapter_type: adapterType })
+      .where({ adapter_type: adapterType })
       .orderBy('started_at', 'desc');
 
     if (targetRealm) {

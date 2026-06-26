@@ -96,20 +96,15 @@ export async function resolveTeamsTenantContext(
   const explicitTenantId = await resolveTenantId(normalizeOptionalString(input.explicitTenantId));
   const microsoftTenantId = normalizeOptionalString(input.microsoftTenantId);
   const db = await getAdminConnection();
-  const discoveryDb = tenantDb(db, explicitTenantId ?? 'teams-tenant-context-discovery');
-
-  let rowsQuery = discoveryDb.unscoped<TeamsTenantContextRow>(
-    'teams_integrations as teams',
-    'Teams tenant context discovery resolves the PSA tenant before tenant-scoped facade construction'
+  const teamsDb = tenantDb(db, explicitTenantId ?? 'teams-tenant-context-discovery');
+  const rowsQuery = (
+    explicitTenantId
+      ? teamsDb.table<TeamsTenantContextRow>('teams_integrations as teams')
+      : teamsDb.unscoped<TeamsTenantContextRow>(
+          'teams_integrations as teams',
+          'Teams tenant context discovery resolves the PSA tenant before tenant-scoped facade construction'
+        )
   )
-    .join('microsoft_profiles as profiles', function joinSelectedProfile() {
-      this.on('teams.tenant', '=', 'profiles.tenant').andOn('teams.selected_profile_id', '=', 'profiles.profile_id');
-    })
-    .leftJoin('tenant_addons as addons', function joinTeamsAddOn() {
-      this.on('teams.tenant', '=', 'addons.tenant')
-        .andOn(db.raw('addons.addon_key = ?', [ADD_ONS.TEAMS]))
-        .andOn(db.raw('(addons.expires_at IS NULL OR addons.expires_at > now())'));
-    })
     .select(
       'teams.tenant',
       'teams.install_status',
@@ -121,12 +116,19 @@ export async function resolveTeamsTenantContext(
     )
     .where('profiles.is_archived', false);
 
-  if (explicitTenantId) {
-    rowsQuery = rowsQuery.where('teams.tenant', explicitTenantId);
-  }
+  teamsDb.tenantJoin(rowsQuery, 'microsoft_profiles as profiles', 'teams.selected_profile_id', 'profiles.profile_id');
+  teamsDb.tenantJoin(rowsQuery, 'tenant_addons as addons', 'teams.tenant', 'addons.tenant', {
+    type: 'left',
+    rootTenantColumn: 'teams.tenant',
+    on(join) {
+      join
+        .andOn(db.raw('addons.addon_key = ?', [ADD_ONS.TEAMS]))
+        .andOn(db.raw('(addons.expires_at IS NULL OR addons.expires_at > now())'));
+    },
+  });
 
   if (microsoftTenantId) {
-    rowsQuery = rowsQuery.where('profiles.tenant_id', microsoftTenantId);
+    rowsQuery.where('profiles.tenant_id', microsoftTenantId);
   }
 
   const rows = (await rowsQuery) || [];

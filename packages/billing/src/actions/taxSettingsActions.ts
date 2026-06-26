@@ -125,7 +125,6 @@ export const getActiveTaxRegions = withAuth(async (user, { tenant }): Promise<Pi
     const activeRegions = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .select('region_code', 'region_name')
       .where('is_active', true)
-      .where('tenant', tenant)
       .orderBy('region_name', 'asc');
 
     return activeRegions;
@@ -148,7 +147,6 @@ export const getTaxRegions = withAuth(async (user, { tenant }): Promise<ITaxRegi
     const { knex } = await createTenantKnex();
     const regions = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .select('*')
-      .where('tenant', tenant)
       .orderBy('region_name', 'asc');
 
     return regions;
@@ -186,8 +184,7 @@ export const createTaxRegion = withAuth(async (
   try {
     // Check for existing region_code within the tenant
     const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
-      .where('tenant', tenant)
-      .andWhere('region_code', region_code)
+      .where('region_code', region_code)
       .first();
 
     if (existingRegion) {
@@ -253,8 +250,7 @@ export const updateTaxRegion = withAuth(async (
   if (Object.keys(updateData).length === 0) {
     // Optionally, fetch and return the existing region or throw an error
      const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
-      .where('tenant', tenant)
-      .andWhere('region_code', region_code)
+      .where('region_code', region_code)
       .first();
     if (!existingRegion) {
        throw new Error(`Tax region with code "${region_code}" not found.`);
@@ -267,8 +263,7 @@ export const updateTaxRegion = withAuth(async (
     // If updating the region_code, check for uniqueness
     if (data.region_code !== undefined && data.region_code !== region_code) {
       const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
-        .where('tenant', tenant)
-        .andWhere('region_code', data.region_code)
+        .where('region_code', data.region_code)
         .first();
 
       if (existingRegion) {
@@ -277,8 +272,7 @@ export const updateTaxRegion = withAuth(async (
     }
 
     const [updatedRegion] = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
-      .where('tenant', tenant)
-      .andWhere('region_code', region_code)
+      .where('region_code', region_code)
       .update(updateData)
       .returning('*');
 

@@ -124,7 +124,6 @@ export const fetchInvoicesPaginated = withAuth(async (
       const buildBaseQuery = () => {
         const query = db.table('invoices');
         db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
-        query.where('invoices.tenant', tenant);
 
         // Apply status filter
         if (status === 'draft') {
@@ -172,7 +171,6 @@ export const fetchInvoicesPaginated = withAuth(async (
       const invoiceIdsQuery = db.table('invoices');
       db.tenantJoin(invoiceIdsQuery, 'clients', 'invoices.client_id', 'clients.client_id');
       invoiceIdsQuery
-        .where('invoices.tenant', tenant)
         .select('invoices.invoice_id');
 
       // Apply status filter to subquery
@@ -241,7 +239,6 @@ export const fetchInvoicesPaginated = withAuth(async (
         }
       );
       const invoices = await invoicesQuery
-        .where('invoices.tenant', tenant)
         .whereIn('invoices.invoice_id', ids)
         .select(
           'invoices.invoice_id',
@@ -676,7 +673,7 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const invoice = await tenantDb(knex, tenant).table('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId })
     .select('invoice_id', 'client_contract_id', 'po_number')
     .first();
 

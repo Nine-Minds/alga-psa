@@ -60,7 +60,7 @@ export const getClientBillingCycleAnchor = withAuth(async (
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const client = await tenantDb(trx, tenant).table('clients')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .first()
       .select('billing_cycle');
     if (!client) {
@@ -68,7 +68,7 @@ export const getClientBillingCycleAnchor = withAuth(async (
     }
 
     const settings = await tenantDb(trx, tenant).table('client_billing_settings')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .first()
       .select(
         'billing_cycle_anchor_day_of_month',
@@ -193,7 +193,7 @@ export const previewClientBillingPeriods = withAuth(async (
 
   const config = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const client = await tenantDb(trx, tenant).table('clients')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .first()
       .select('billing_cycle');
     if (!client) {
@@ -201,7 +201,7 @@ export const previewClientBillingPeriods = withAuth(async (
     }
 
     const settings = await tenantDb(trx, tenant).table('client_billing_settings')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .first()
       .select(
         'billing_cycle_anchor_day_of_month',

@@ -109,7 +109,6 @@ async function resolveLocationNames(
   }
 
   const rows = await tenantDb(knexOrTrx, tenant).table('client_locations')
-    .where({ tenant })
     .whereIn('location_id', locationIds)
     .select('location_id', 'location_name', 'address_line1');
 
@@ -474,7 +473,7 @@ export async function convertQuoteToDraftContract(
   });
 
   await db.table('quotes')
-    .where({ tenant, quote_id: quote.quote_id })
+    .where({ quote_id: quote.quote_id })
     .update({
       converted_contract_id: contract.contract_id,
       updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
@@ -525,7 +524,7 @@ export async function convertQuoteToDraftInvoice(
   if (quote.converted_invoice_id) {
     const db = tenantDb(knexOrTrx, tenant);
     const existingInvoice = await db.table('invoices')
-      .where({ tenant, invoice_id: quote.converted_invoice_id })
+      .where({ invoice_id: quote.converted_invoice_id })
       .first();
 
     if (existingInvoice) {
@@ -533,7 +532,7 @@ export async function convertQuoteToDraftInvoice(
         quote: await Quote.getById(knexOrTrx, tenant, quote.quote_id) as IQuote,
         invoice: {
           ...existingInvoice,
-          invoice_charges: await db.table('invoice_charges').where({ tenant, invoice_id: existingInvoice.invoice_id }),
+          invoice_charges: await db.table('invoice_charges').where({ invoice_id: existingInvoice.invoice_id }),
         } as IInvoice,
       };
     }
@@ -626,7 +625,7 @@ export async function convertQuoteToDraftInvoice(
   const invoiceTax = invoiceChargeRows.reduce((sum, row) => sum + Number(row.tax_amount), 0);
 
   await db.table('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId })
     .update({
       subtotal: Math.round(invoiceSubtotal),
       tax: Math.round(invoiceTax),
@@ -634,11 +633,11 @@ export async function convertQuoteToDraftInvoice(
     });
 
   const invoice = await db.table('invoices')
-    .where({ tenant, invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId })
     .first();
 
   await db.table('quotes')
-    .where({ tenant, quote_id: quote.quote_id })
+    .where({ quote_id: quote.quote_id })
     .update({
       converted_invoice_id: invoiceId,
       updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
@@ -700,7 +699,7 @@ export async function convertQuoteToDraftContractAndInvoice(
   const nowIso = new Date().toISOString();
 
   await tenantDb(knexOrTrx, tenant).table('quotes')
-    .where({ tenant, quote_id: quoteId })
+    .where({ quote_id: quoteId })
     .update({
       status: 'converted',
       converted_at: nowIso,

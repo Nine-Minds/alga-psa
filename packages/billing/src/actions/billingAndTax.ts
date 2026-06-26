@@ -285,7 +285,6 @@ function buildAvailableBillingPeriodsBaseQuery(
     db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id', { type: 'left' });
 
     query
-        .where('cbc.tenant', tenant)
         .whereNotNull('cbc.period_end_date')
         .whereNull('i.invoice_id');
 
@@ -383,7 +382,6 @@ async function fetchPersistedRecurringDueWorkDbRows(
         },
     });
     contractLineRowsQuery
-        .where('rsp.tenant', tenant)
         .where('rsp.obligation_type', 'contract_line')
         .where((builder) =>
             builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
@@ -445,7 +443,6 @@ async function fetchPersistedRecurringDueWorkDbRows(
         },
     });
     clientContractLineRowsQuery
-        .where('rsp.tenant', tenant)
         .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
         .where((builder) =>
             builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
@@ -513,7 +510,6 @@ async function fetchClientCadenceMaterializationGaps(
     db.tenantJoin(activeRecurringRowsQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
 
     const activeRecurringRows = await activeRecurringRowsQuery
-        .where('cc.tenant', tenant)
         .whereIn('cc.client_id', clientIds)
         .where('cc.is_active', true)
         .where((builder) =>
@@ -742,7 +738,6 @@ async function fetchClientBillingMetadataById(
     db.tenantJoin(query, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
 
     const rows = await query
-        .where('c.tenant', tenant)
         .whereIn('c.client_id', clientIds)
         .select(
             'c.client_id',
@@ -1314,7 +1309,6 @@ export const getAvailableBillingPeriods = withAuth(async (
                 db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id', { type: 'left' });
 
                 query
-                    .where('cbc.tenant', tenant)
                     .whereNotNull('cbc.period_end_date')
                     .whereNull('i.invoice_id');
 

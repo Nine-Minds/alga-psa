@@ -275,7 +275,7 @@ export const applyCustomCreditAdjustment = withAuth(async (
 
       // Get the current client credit balance
       const [client] = await tenantScopedTable(trx, tenant, 'clients')
-        .where({ client_id: report.client_id, tenant })
+        .where({ client_id: report.client_id })
         .select('credit_balance');
 
       if (!client) {
@@ -307,7 +307,7 @@ export const applyCustomCreditAdjustment = withAuth(async (
 
       // Update the client's credit balance
       await tenantScopedTable(trx, tenant, 'clients')
-        .where({ client_id: report.client_id, tenant })
+        .where({ client_id: report.client_id })
         .update({
           credit_balance: newBalance,
           updated_at: now

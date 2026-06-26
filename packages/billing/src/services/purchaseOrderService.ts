@@ -33,7 +33,7 @@ export async function getPurchaseOrderConsumedCents(params: {
 
   const statuses = PO_CONSUMPTION_FINALIZED_STATUSES;
   const row = await tenantDb(knex, tenant).table('invoices')
-    .where({ tenant, client_contract_id: clientContractId })
+    .where({ client_contract_id: clientContractId })
     .andWhereNot('status', 'cancelled')
     .andWhere((builder) => {
       builder.whereNotNull('finalized_at').orWhereIn('status', statuses as readonly string[]);
@@ -63,7 +63,7 @@ export async function getClientContractPurchaseOrderContext(params: {
 }> {
   const { knex, tenant, clientContractId } = params;
   const row = await tenantDb(knex, tenant).table('client_contracts')
-    .where({ tenant, client_contract_id: clientContractId })
+    .where({ client_contract_id: clientContractId })
     .select('po_required', 'po_number', 'po_amount')
     .first();
 

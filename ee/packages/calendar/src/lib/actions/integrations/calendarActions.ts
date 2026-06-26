@@ -399,8 +399,7 @@ export async function resolveCalendarConflictImpl(
       const query = db.table<any>('calendar_event_mappings as cem');
       db.tenantJoin(query, 'calendar_providers as cp', 'cp.id', 'cem.calendar_provider_id');
       return query
-        .where('cem.tenant', tenant)
-        .andWhere('cem.id', resolution.mappingId)
+        .where('cem.id', resolution.mappingId)
         .andWhere('cp.user_id', user.user_id)
         .first(['cem.id']);
     });
@@ -438,7 +437,6 @@ export async function getScheduleEntrySyncStatusImpl(
       db.tenantJoin(query, 'calendar_providers as cp', 'cp.id', 'cem.calendar_provider_id');
       return query
         .where('cem.schedule_entry_id', entryId)
-        .andWhere('cem.tenant', tenant)
         .andWhere('cp.user_id', user.user_id)
         .select('cem.*');
     });
@@ -528,8 +526,7 @@ export async function syncCalendarProviderImpl(
             const query = db.table<any>('calendar_event_mappings as cem');
             db.tenantJoin(query, 'schedule_entries as se', 'se.entry_id', 'cem.schedule_entry_id');
             return query
-              .where('cem.tenant', tenantId)
-              .andWhere('cem.calendar_provider_id', calendarProviderId)
+              .where('cem.calendar_provider_id', calendarProviderId)
               .andWhere(function (this: any) {
                 this.where('se.scheduled_start', '<=', windowEnd).andWhere('se.scheduled_end', '>=', windowStart);
               })
@@ -568,8 +565,7 @@ export async function syncCalendarProviderImpl(
             const recentEntries = await withTransaction(knex, async (trx) => {
               const db = tenantDb(trx, tenantId);
               const query = db.table<any>('schedule_entries')
-                .where('schedule_entries.tenant', tenantId)
-                .andWhere('schedule_entries.scheduled_start', '<=', windowEnd)
+                .where('schedule_entries.scheduled_start', '<=', windowEnd)
                 .andWhere('schedule_entries.scheduled_end', '>=', windowStart);
               db.tenantJoin(query, 'calendar_event_mappings as cem', 'cem.schedule_entry_id', 'schedule_entries.entry_id', {
                 type: 'left',

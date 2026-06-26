@@ -124,8 +124,10 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax rate thresholds lookup');
       }
-      // Note: tenant isolation is enforced via RLS policy on tax_rate_id
-      const thresholds = await db<ITaxRateThreshold>('tax_rate_thresholds')
+      const thresholds = await tenantDb(db, tenant).unscoped<ITaxRateThreshold>(
+        'tax_rate_thresholds',
+        'tax_rate_thresholds are scoped by parent tax_rates.tax_rate_id'
+      )
         .where({ tax_rate_id })
         .orderBy('min_amount');
       return thresholds;
@@ -141,8 +143,10 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax holidays lookup');
       }
-      // Note: tenant isolation is enforced via RLS policy on tax_rate_id
-      const holidays = await db<ITaxHoliday>('tax_holidays')
+      const holidays = await tenantDb(db, tenant).unscoped<ITaxHoliday>(
+        'tax_holidays',
+        'tax_holidays are scoped by parent tax_rates.tax_rate_id'
+      )
         .where('tax_rate_id', tax_rate_id)
         .orderBy('start_date');
       return holidays;
@@ -171,7 +175,10 @@ const ClientTaxSettings = {
         sequence: index + 1,
       }));
 
-      await trx<ICompositeTaxMapping>('composite_tax_mappings').insert(compositeMappings);
+      await tenantDb(trx, tenant).unscoped<ICompositeTaxMapping>(
+        'composite_tax_mappings',
+        'composite_tax_mappings are scoped by parent composite tax rates and tax components'
+      ).insert(compositeMappings);
 
       await trx.commit();
       return createdTaxRate;
@@ -198,7 +205,10 @@ const ClientTaxSettings = {
         .update(taxRate)
         .returning('*');
 
-      await trx<ICompositeTaxMapping>('composite_tax_mappings')
+      await tenantDb(trx, tenant).unscoped<ICompositeTaxMapping>(
+        'composite_tax_mappings',
+        'composite_tax_mappings are scoped by parent composite tax rates and tax components'
+      )
         .where({ composite_tax_id: tax_rate_id })
         .del();
 
@@ -208,7 +218,10 @@ const ClientTaxSettings = {
         sequence: index + 1,
       }));
 
-      await trx<ICompositeTaxMapping>('composite_tax_mappings').insert(compositeMappings);
+      await tenantDb(trx, tenant).unscoped<ICompositeTaxMapping>(
+        'composite_tax_mappings',
+        'composite_tax_mappings are scoped by parent composite tax rates and tax components'
+      ).insert(compositeMappings);
 
       await trx.commit();
       return updatedTaxRate;

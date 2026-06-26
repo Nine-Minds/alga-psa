@@ -236,11 +236,11 @@ export const getInvoiceSyncStatuses = withAuth(async (
 
   const [mappings, ops] = await Promise.all([
     tenantDb(knex, tenant).table('tenant_external_entity_mappings')
-      .where({ tenant: tenant, integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
+      .where({ integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .select('alga_entity_id', 'external_entity_id', 'sync_status', 'last_synced_at', 'metadata'),
     tenantDb(knex, tenant).table('accounting_sync_operations')
-      .where({ tenant, adapter_type: SYNC_ADAPTER_TYPE, operation: 'export_invoice', alga_entity_type: 'invoice' })
+      .where({ adapter_type: SYNC_ADAPTER_TYPE, operation: 'export_invoice', alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .whereIn('status', ['pending', 'in_progress', 'skipped'])
       .select('alga_entity_id', 'status', 'last_error')

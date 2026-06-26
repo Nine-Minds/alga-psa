@@ -95,7 +95,6 @@ export const getCustomerMatchCandidates = withAuth(async (
   const db = tenantDb(knex, tenant);
 
   const clientRows: Array<{ client_id: string; client_name: string }> = await db.table('clients')
-    .where({ tenant: tenant })
     .where(function () {
       this.whereNull('is_inactive').orWhere('is_inactive', false);
     })
@@ -271,7 +270,7 @@ export const createQboCustomerForClient = withAuth(async (
     const realm = await requireDefaultRealm(tenant);
 
     const clientRow = await tenantDb(knex, tenant).table('clients')
-      .where({ client_id: clientId, tenant: tenant })
+      .where({ client_id: clientId })
       .select('client_name')
       .first();
 
@@ -357,7 +356,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   // Finalized Alga invoices not already mapped: status 'sent' or 'paid'
   const candidateQuery = (status: string) => {
     const query = db.table('invoices')
-      .where({ tenant: tenant, status })
+      .where({ status })
       .select('invoice_id', 'invoice_number', 'total_amount', 'client_id');
     if (mappedIds.length > 0) {
       query.whereNotIn('invoice_id', mappedIds);
@@ -472,7 +471,6 @@ export const backfillPaymentsForLinkedInvoices = withAuth(async (
   const invoiceRows: Array<{ invoice_id: string; status: string; client_id: string | null }> =
     await tenantDb(knex, tenant).table('invoices')
       .whereIn('invoice_id', invoiceIds)
-      .where({ tenant: tenant })
       .select('invoice_id', 'status', 'client_id');
 
   // Fetch external invoice mappings
@@ -637,7 +635,7 @@ export const getOnboardingWizardState = withAuth(async (
     return { completedAt: null, lastRunAt: null, connected: false };
   }
 
-  const row = await tenantDb(knex, tenant).table('tenant_settings').where({ tenant: tenant }).select('settings').first();
+  const row = await tenantDb(knex, tenant).table('tenant_settings').select('settings').first();
   const onboarding = (row?.settings?.accountingSync?.[ONBOARDING_KEY]?.[realm] ?? {}) as Record<string, string | null>;
 
   return {
@@ -666,7 +664,7 @@ export const completeOnboardingWizard = withAuth(async (
   });
 
   // Store wizard completion state keyed by realm
-  const row = await tenantDb(knex, tenant).table('tenant_settings').where({ tenant: tenant }).select('settings').first();
+  const row = await tenantDb(knex, tenant).table('tenant_settings').select('settings').first();
   const existing = row?.settings ?? {};
   const accountingSync = existing.accountingSync ?? {};
   const onboardingMap = accountingSync[ONBOARDING_KEY] ?? {};
@@ -688,7 +686,6 @@ export const completeOnboardingWizard = withAuth(async (
 
   if (row) {
     await tenantDb(knex, tenant).table('tenant_settings')
-      .where({ tenant: tenant })
       .update({ settings: next, updated_at: knex.fn.now() });
   } else {
     await tenantDb(knex, tenant).table('tenant_settings').insert({ tenant: tenant, settings: next });

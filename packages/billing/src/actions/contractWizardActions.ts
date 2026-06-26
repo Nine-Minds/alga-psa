@@ -271,7 +271,7 @@ const fetchModeDefaultRatesByServiceId = async (
   }
 
   const rows = await tenantDb(trx, tenant).table('service_catalog_mode_defaults')
-    .where({ tenant, billing_mode: resolveBillingMode(mode), currency_code: currencyCode })
+    .where({ billing_mode: resolveBillingMode(mode), currency_code: currencyCode })
     .whereIn('service_id', uniqueServiceIds)
     .select('service_id', 'rate');
 
@@ -831,14 +831,13 @@ export const createClientContractFromWizard = withAuth(async (
     let resolvedCurrencyCode: string = submission.currency_code;
     if (!existingContractId) {
       const clientRow = await tenantDb(trx, tenant).table('clients')
-        .where({ tenant, client_id: submission.client_id })
+        .where({ client_id: submission.client_id })
         .select('default_currency_code')
         .first();
       if (clientRow?.default_currency_code) {
         resolvedCurrencyCode = clientRow.default_currency_code;
       } else {
         const billingSettings = await tenantDb(trx, tenant).table('default_billing_settings')
-          .where({ tenant })
           .select('default_currency_code')
           .first();
         resolvedCurrencyCode = billingSettings?.default_currency_code || 'USD';
@@ -847,11 +846,11 @@ export const createClientContractFromWizard = withAuth(async (
 
     const clearExistingContractData = async (targetContractId: string) => {
       await tenantDb(trx, tenant).table('client_contracts')
-        .where({ tenant, contract_id: targetContractId })
+        .where({ contract_id: targetContractId })
         .delete();
 
       const contractLineIds = await tenantDb(trx, tenant).table('contract_lines')
-        .where({ tenant, contract_id: targetContractId })
+        .where({ contract_id: targetContractId })
         .pluck('contract_line_id');
 
       if (contractLineIds.length === 0) {
@@ -859,55 +858,47 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       await tenantDb(trx, tenant).table('time_entries')
-        .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .update({ contract_line_id: null });
 
       const configIds = await tenantDb(trx, tenant).table('contract_line_service_configuration')
-        .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .pluck('config_id');
 
       if (configIds.length > 0) {
         await tenantDb(trx, tenant).table('contract_line_service_bucket_config')
-          .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
 
         await tenantDb(trx, tenant).table('contract_line_service_hourly_config')
-          .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
 
         await tenantDb(trx, tenant).table('contract_line_service_usage_config')
-          .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
 
         await tenantDb(trx, tenant).table('contract_line_service_configuration')
-          .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
       }
 
       await tenantDb(trx, tenant).table('contract_line_service_defaults')
-        .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .delete();
 
       await tenantDb(trx, tenant).table('contract_line_services')
-        .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .delete();
 
       await tenantDb(trx, tenant).table('contract_lines')
-        .where({ tenant, contract_id: targetContractId })
+        .where({ contract_id: targetContractId })
         .delete();
     };
 
     if (existingContractId) {
       const existing = await tenantDb(trx, tenant).table('contracts')
-        .where({ tenant, contract_id: existingContractId })
+        .where({ contract_id: existingContractId })
         .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
         .first('contract_id', 'status');
 
@@ -922,7 +913,7 @@ export const createClientContractFromWizard = withAuth(async (
       await clearExistingContractData(existingContractId);
 
       await tenantDb(trx, tenant).table('contracts')
-        .where({ tenant, contract_id: existingContractId })
+        .where({ contract_id: existingContractId })
         .update({
           contract_name: submission.contract_name,
           contract_description: submission.description ?? null,
@@ -1561,7 +1552,6 @@ export const checkTemplateNameExists = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const existingTemplate = await tenantDb(knex, tenant).table('contract_templates')
-    .where({ tenant })
     .whereRaw('LOWER(template_name) = LOWER(?)', [templateName.trim()])
     .first();
 
@@ -1584,7 +1574,6 @@ export const listContractTemplatesForWizard = withAuth(async (
   // currency_code removed from contract_templates - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from a template
   const templates = await tenantDb(knex, tenant).table('contract_templates')
-    .where({ tenant })
     .orderBy('template_name', 'asc')
     .select(
       'template_id',
@@ -1612,7 +1601,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const template = await tenantDb(knex, tenant).table('contract_templates')
-    .where({ tenant, template_id: templateId })
+    .where({ template_id: templateId })
     .first();
 
   if (!template) {
@@ -1872,7 +1861,7 @@ export const getDraftContractForResume = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const contract = await tenantDb(knex, tenant).table('contracts')
-    .where({ tenant, contract_id: contractId })
+    .where({ contract_id: contractId })
     .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
     .first();
 
@@ -1885,7 +1874,7 @@ export const getDraftContractForResume = withAuth(async (
   }
 
   const clientContract = await tenantDb(knex, tenant).table('client_contracts')
-    .where({ tenant, contract_id: contractId })
+    .where({ contract_id: contractId })
     .first();
 
   if (!clientContract) {

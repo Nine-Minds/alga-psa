@@ -24,11 +24,10 @@ export const getCreditExpirationSettings = withAuth(async (
   const clientSettings = await db.table('client_billing_settings')
     .where({
       client_id: clientId,
-      tenant,
     })
     .first();
 
-  const defaultSettings = await db.table('default_billing_settings').where({ tenant }).first();
+  const defaultSettings = await db.table('default_billing_settings').first();
 
   let enableCreditExpiration = true;
   if (clientSettings?.enable_credit_expiration !== undefined) {

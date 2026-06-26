@@ -26,11 +26,9 @@ export async function GET(): Promise<Response> {
         .count<{ count: string }>('* as count')
         .first(),
       db.table('entra_managed_tenants')
-        .where({ tenant: flagGate.tenantId })
         .max<{ last_discovered_at: string | null }>('discovered_at as last_discovered_at')
         .first(),
       db.table('entra_sync_settings')
-        .where({ tenant: flagGate.tenantId })
         .first(['sync_interval_minutes']),
     ]);
 

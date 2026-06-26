@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     if (!reg) return NextResponse.json({ error: 'registry not found' }, { status: 404 });
 
     const install = await tenantDb(knex, tenant).table('tenant_extension_install')
-      .where({ tenant_id: tenant, registry_id: registryId })
+      .where({ registry_id: registryId })
       .first(['id', 'runner_domain', 'runner_status']);
     if (!install) return NextResponse.json({ error: 'install not found' }, { status: 404 });
 

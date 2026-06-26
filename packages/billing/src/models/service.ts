@@ -161,7 +161,6 @@ const Service = {
     try {
       // Fetch services, joining with custom service types to get type names
       const servicesData = await serviceCatalogWithType(knexOrTrx, tenant)
-        .where({ 'sc.tenant': tenant })
         .select<ServiceCatalogWithTypeRow[]>(
           'sc.service_id as service_id',
           'sc.service_name as service_name',
@@ -194,7 +193,6 @@ const Service = {
       const serviceIds = servicesData.map(s => s.service_id);
       const allPrices = serviceIds.length > 0
         ? await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-            .where({ tenant })
             .whereIn('service_id', serviceIds)
             .select('*')
         : [];
@@ -235,8 +233,7 @@ const Service = {
       // Fetch service by ID, joining with custom service types
       const serviceData = await serviceCatalogWithType(knexOrTrx, tenant)
         .where({
-          'sc.service_id': service_id,
-          'sc.tenant': tenant
+          'sc.service_id': service_id
         })
         .select(
           'sc.service_id',
@@ -272,7 +269,7 @@ const Service = {
 
       // Fetch prices for this service
       const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-        .where({ service_id, tenant })
+        .where({ service_id })
         .select('*');
 
       log.info(`[Service.getById] Found service: ${serviceData.service_name} with ${prices.length} price(s)`);
@@ -352,7 +349,6 @@ const Service = {
     let resolvedCostCurrency = cleanedData.cost_currency ?? null;
     if (resolvedCostCurrency == null) {
       const billingSettings = await tenantScopedTable<DefaultBillingSettingsCurrencyRow>(knexOrTrx, effectiveTenant, 'default_billing_settings')
-        .where({ tenant: effectiveTenant })
         .select('default_currency_code')
         .first();
       resolvedCostCurrency = billingSettings?.default_currency_code || 'USD';
@@ -491,8 +487,7 @@ const Service = {
       // Zod validation could be added here too if needed for partial updates.
       const [updatedServiceData] = await tenantScopedTable<IService>(knexOrTrx, tenant, 'service_catalog')
         .where({
-          service_id,
-          tenant
+          service_id
         })
         .update(cleanedUpdateData)
         .returning('*'); // Return all fields to validate against the schema
@@ -542,7 +537,7 @@ const Service = {
 
       // Fetch prices for this service
       const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-        .where({ service_id, tenant })
+        .where({ service_id })
         .select('*');
 
       // Validate and transform the DB result using the final schema's parse method
@@ -562,8 +557,7 @@ const Service = {
         const db = tenantDb(knexOrTrx, tenant);
         const updatedDetails = await db.table('invoice_charge_details')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .update({
             service_id: null
@@ -574,8 +568,7 @@ const Service = {
         // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
         const updatedTasks = await db.table('project_tasks')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .update({
             service_id: null
@@ -586,8 +579,7 @@ const Service = {
         // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
         const updatedTemplateTasks = await db.table('project_template_tasks')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .update({
             service_id: null
@@ -597,7 +589,7 @@ const Service = {
 
         // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
         const updatedRequestDefs = await db.table('service_request_definitions')
-          .where({ linked_service_id: service_id, tenant })
+          .where({ linked_service_id: service_id })
           .update({ linked_service_id: null, linked_service_name_snapshot: null });
 
         log.info(`[Service.delete] Updated ${updatedRequestDefs} service_request_definitions records for service ${service_id}`);
@@ -605,8 +597,7 @@ const Service = {
         // Then delete the service
         const deletedCount = await db.table('service_catalog')
           .where({
-            service_id,
-            tenant
+            service_id
           })
           .del();
 
@@ -618,8 +609,7 @@ const Service = {
           const db = tenantDb(trx, tenant);
           const updatedDetails = await db.table('invoice_charge_details')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .update({
               service_id: null
@@ -630,8 +620,7 @@ const Service = {
           // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
           const updatedTasks = await db.table('project_tasks')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .update({
               service_id: null
@@ -642,8 +631,7 @@ const Service = {
           // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
           const updatedTemplateTasks = await db.table('project_template_tasks')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .update({
               service_id: null
@@ -653,7 +641,7 @@ const Service = {
 
           // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
           const updatedRequestDefs = await db.table('service_request_definitions')
-            .where({ linked_service_id: service_id, tenant })
+            .where({ linked_service_id: service_id })
             .update({ linked_service_id: null, linked_service_name_snapshot: null });
 
           log.info(`[Service.delete] Updated ${updatedRequestDefs} service_request_definitions records for service ${service_id}`);
@@ -661,8 +649,7 @@ const Service = {
           // Then delete the service
           const deletedCount = await db.table('service_catalog')
             .where({
-              service_id,
-              tenant
+              service_id
             })
             .del();
 
@@ -718,7 +705,6 @@ const Service = {
       const serviceIds = servicesData.map(s => s.service_id);
       const allPrices = serviceIds.length > 0
         ? await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-            .where({ tenant })
             .whereIn('service_id', serviceIds)
             .select('*')
         : [];
@@ -754,7 +740,7 @@ const Service = {
     const tenant = await requireTenantId(knexOrTrx);
 
     const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-      .where({ service_id, tenant })
+      .where({ service_id })
       .select('*')
       .orderBy('currency_code', 'asc');
 
@@ -772,7 +758,7 @@ const Service = {
     const tenant = await requireTenantId(knexOrTrx);
 
     const price = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-      .where({ service_id, currency_code, tenant })
+      .where({ service_id, currency_code })
       .first();
 
     return price || null;
@@ -796,13 +782,13 @@ const Service = {
 
     // Check if price already exists
     const existingPrice = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-      .where({ service_id, currency_code, tenant })
+      .where({ service_id, currency_code })
       .first();
 
     if (existingPrice) {
       // Update existing price
       const [updatedPrice] = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-        .where({ price_id: existingPrice.price_id, tenant })
+        .where({ price_id: existingPrice.price_id })
         .update({
           rate: normalizedRate,
           updated_at: knexOrTrx.fn.now()
@@ -840,7 +826,7 @@ const Service = {
 
     // Delete existing prices
     await tenantScopedTable(knexOrTrx, tenant, 'service_prices')
-      .where({ service_id, tenant })
+      .where({ service_id })
       .del();
 
     if (prices.length === 0) {
@@ -881,7 +867,7 @@ const Service = {
     const tenant = await requireTenantId(knexOrTrx);
 
     const deletedCount = await tenantScopedTable(knexOrTrx, tenant, 'service_prices')
-      .where({ service_id, currency_code, tenant })
+      .where({ service_id, currency_code })
       .del();
 
     log.info(`[Service.removePrice] Removed price for service ${service_id} in ${currency_code}. Affected: ${deletedCount}`);
@@ -905,7 +891,6 @@ const Service = {
 
     // Get all services with their prices for the required currency
     const query = tenantScopedTable(knexOrTrx, tenant, 'service_catalog as sc')
-      .where({ 'sc.tenant': tenant })
       .whereIn('sc.service_id', service_ids);
     tenantDb(knexOrTrx, tenant).tenantJoin(query, 'service_prices as sp', 'sc.service_id', 'sp.service_id', {
       type: 'left',

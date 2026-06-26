@@ -56,7 +56,7 @@ export const getInvoiceTemplate = withAuth(async (
 
       const tenantAssignment = await db.table('invoice_template_assignments')
         .select('template_source', 'invoice_template_id')
-        .where({ tenant, scope_type: 'tenant' })
+        .where({ scope_type: 'tenant' })
         .whereNull('scope_id')
         .first();
 
@@ -111,12 +111,11 @@ export const setDefaultTemplate = withAuth(async (
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         const db = tenantDb(trx, tenant);
         await db.table('invoice_template_assignments')
-            .where({ tenant, scope_type: 'tenant' })
+            .where({ scope_type: 'tenant' })
             .whereNull('scope_id')
             .del();
 
         await db.table('invoice_templates')
-            .where({ tenant })
             .update({ is_default: false });
 
         if (payload.templateSource === 'standard' && !payload.standardTemplateCode) {
@@ -125,7 +124,7 @@ export const setDefaultTemplate = withAuth(async (
 
         if (payload.templateSource === 'custom') {
             await db.table('invoice_templates')
-                .where({ tenant, template_id: payload.templateId })
+                .where({ template_id: payload.templateId })
                 .update({ is_default: true });
         }
 
@@ -313,7 +312,7 @@ export const getInvoiceAnnotations = withAuth(async (
 ): Promise<IInvoiceAnnotation[]> => {
     const { knex } = await createTenantKnex();
     return tenantDb(knex, tenant).table('invoice_annotations')
-        .where({ invoice_id: invoiceId, tenant })
+        .where({ invoice_id: invoiceId })
         .orderBy('created_at', 'asc');
 });
 // --- Server-Side Rendering Action ---
@@ -421,13 +420,12 @@ export const deleteInvoiceTemplate = withAuth(async (
 
             // Clean up child records owned by the template
             await db.table('template_sections')
-                .where({ template_id: templateId, tenant })
+                .where({ template_id: templateId })
                 .del();
 
             const deletedCount = await db.table('invoice_templates')
                 .where({
-                    template_id: templateId,
-                    tenant
+                    template_id: templateId
                 })
                 .del();
 
@@ -440,7 +438,6 @@ export const deleteInvoiceTemplate = withAuth(async (
             await withTransaction(knex, async (trx) => {
                 const db = tenantDb(trx, tenant);
                 const fallbackCustom = await db.table('invoice_templates')
-                    .where({ tenant })
                     .select('template_id')
                     .orderBy('name')
                     .first();
@@ -465,12 +462,11 @@ export const deleteInvoiceTemplate = withAuth(async (
                         });
                     } else {
                         await db.table('invoice_template_assignments')
-                            .where({ tenant, scope_type: 'tenant' })
+                            .where({ scope_type: 'tenant' })
                             .whereNull('scope_id')
                             .del();
 
                         await db.table('invoice_templates')
-                            .where({ tenant })
                             .update({ is_default: false });
                     }
                 }

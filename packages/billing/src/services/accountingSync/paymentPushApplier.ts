@@ -127,7 +127,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     // ── Resolve client/customer mapping (QBO Customer ID) ────────────────
     // The client_id lives on the invoice row; the customer mapping is keyed by it.
     const invoiceRow = await tenantDb(deps.knex, deps.tenantId).table('invoices')
-      .where({ invoice_id: payload.invoiceId, tenant: deps.tenantId })
+      .where({ invoice_id: payload.invoiceId })
       .select('client_id')
       .first<{ client_id: string } | undefined>();
 

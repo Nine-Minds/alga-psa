@@ -26,7 +26,6 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       return await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .where({ tenant })
         .select('*');
     });
   } catch (error) {
@@ -147,7 +146,7 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
       // any tenant-less child tables (composite_tax_mappings/tax_holidays/tax_rate_thresholds).
       const db = tenantDb(trx, tenant);
       const exists = await db.table('tax_rates')
-        .where({ tax_rate_id: taxRateId, tenant })
+        .where({ tax_rate_id: taxRateId })
         .first('tax_rate_id');
       if (!exists) {
         throw new Error('Tax rate not found or already deleted.');
@@ -160,13 +159,13 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
       // tenant guard so we can never touch another tenant's rows.
       const ownedTaxRate = db.table('tax_rates')
         .select('tax_rate_id')
-        .where({ tax_rate_id: taxRateId, tenant });
+        .where({ tax_rate_id: taxRateId });
 
       await db.unscoped('composite_tax_mappings', 'tenant-less tax child scoped through tenant-owned tax_rates')
         .where({ composite_tax_id: taxRateId })
         .whereIn('composite_tax_id', ownedTaxRate.clone())
         .del();
-      await db.table('tax_components').where({ tax_rate_id: taxRateId, tenant }).del();
+      await db.table('tax_components').where({ tax_rate_id: taxRateId }).del();
       await db.unscoped('tax_holidays', 'tenant-less tax child scoped through tenant-owned tax_rates')
         .where({ tax_rate_id: taxRateId })
         .whereIn('tax_rate_id', ownedTaxRate.clone())

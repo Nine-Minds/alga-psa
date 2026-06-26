@@ -200,7 +200,7 @@ async function updateWebhookEvent(knex: any, tenant: string, eventId: string, st
   }
 
   await tenantDb(knex, tenant).table('payment_webhook_events')
-    .where({ tenant, provider_type: PROVIDER, external_event_id: eventId })
+    .where({ provider_type: PROVIDER, external_event_id: eventId })
     .update({
       processed: status === 'completed',
       processing_status: status,

@@ -297,14 +297,13 @@ const Invoice = {
       const hasPaymentWebhookEvents = await knexOrTrx.schema.hasTable('payment_webhook_events');
       if (hasPaymentWebhookEvents) {
         await tenantScopedTable(knexOrTrx, tenant, 'payment_webhook_events')
-          .where({ invoice_id: invoiceId, tenant })
+          .where({ invoice_id: invoiceId })
           .update({ invoice_id: null });
       }
 
       const deleted = await tenantScopedTable(knexOrTrx, tenant, 'invoices')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          invoice_id: invoiceId
         })
         .del();
 
@@ -332,7 +331,6 @@ const Invoice = {
 
     try {
       const invoices = await tenantScopedTable<IInvoice>(knexOrTrx, tenant, 'invoices')
-        .where({ tenant })
         .select('*');
       return invoices;
     } catch (error) {
@@ -461,7 +459,7 @@ const Invoice = {
         .first() as unknown as Promise<InvoiceClientDetailsRow | undefined>,
       tenantScopedTable(knexOrTrx, tenant, 'contacts')
         .select('full_name')
-        .where({ client_id: invoice.client_id, tenant })
+        .where({ client_id: invoice.client_id })
         .first() as unknown as Promise<InvoiceContactRow | undefined>,
       getClientLogoUrl(invoice.client_id, tenant).catch(() => null),
       tenantClientQuery
@@ -492,8 +490,7 @@ const Invoice = {
           'invoice_window_end',
           'cadence_owner'
         )
-        .where('tenant', tenant)
-        .andWhere('invoice_id', invoiceId) as unknown as Promise<RecurringInvoiceSummaryRow[]>,
+        .where('invoice_id', invoiceId) as unknown as Promise<RecurringInvoiceSummaryRow[]>,
     ]);
 
     if (!client) {
@@ -514,7 +511,6 @@ const Invoice = {
     const resolveTenantNameFallback = async (): Promise<InvoiceViewModel['tenantClient']> => {
       const tenantRecord = await tenantScopedTable(knexOrTrx, tenant, 'tenants')
         .select('client_name')
-        .where({ tenant })
         .first();
       const fallbackName = asTrimmedString(tenantRecord?.client_name);
       if (fallbackName.length === 0) {
@@ -714,8 +710,7 @@ const Invoice = {
           'ic.is_manual',
           'ic.location_id'
         )
-        .where('ic.invoice_id', invoiceId)
-        .andWhere('ic.tenant', tenant);
+        .where('ic.invoice_id', invoiceId);
 
       const items = (await query) as InvoiceChargeDisplayRow[];
       if (items.length === 0) {
@@ -727,7 +722,6 @@ const Invoice = {
         ? []
         : await tenantScopedTable<InvoiceChargeDetailPeriodRow>(knexOrTrx, tenant, 'invoice_charge_details')
             .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
-            .where({ tenant })
             .whereIn('item_id', itemIds)
             .orderBy('service_period_start', 'asc');
 
@@ -824,7 +818,7 @@ const Invoice = {
       throw new Error('Tenant context is required for getting templates');
     }
 
-    return tenantScopedTable<IInvoiceTemplate>(knexOrTrx, tenant, 'invoice_templates').where({ tenant }).select('*');
+    return tenantScopedTable<IInvoiceTemplate>(knexOrTrx, tenant, 'invoice_templates').select('*');
   },
 
   /**
@@ -872,7 +866,6 @@ const Invoice = {
 
     const [tenantTemplates, standardTemplates, tenantAssignment] = await Promise.all([
       tenantScopedTable<IInvoiceTemplate>(knexOrTrx, tenant, 'invoice_templates')
-        .where({ tenant })
         .select(
           'template_id',
           'name',
@@ -885,7 +878,7 @@ const Invoice = {
       Invoice.getStandardTemplates(knexOrTrx),
       tenantScopedTable(knexOrTrx, tenant, 'invoice_template_assignments')
         .select('template_source', 'standard_invoice_template_code', 'invoice_template_id')
-        .where({ tenant, scope_type: 'tenant' })
+        .where({ scope_type: 'tenant' })
         .whereNull('scope_id')
         .first()
     ]);
@@ -986,7 +979,7 @@ const Invoice = {
     }
 
     return tenantScopedTable<CustomFieldRow>(knexOrTrx, tenant, 'custom_fields')
-      .where({ tenant });
+      .select('*');
   },
 
   /**
@@ -1022,7 +1015,7 @@ const Invoice = {
     }
 
     return tenantScopedTable<ConditionalRuleRow>(knexOrTrx, tenant, 'conditional_display_rules')
-      .where({ tenant, template_id: templateId });
+      .where({ template_id: templateId });
   },
 
   /**

@@ -96,7 +96,6 @@ export class AccountingExportValidation {
     // Clear prior unresolved validation errors so each validation run reflects current mappings.
     await db.table('accounting_export_errors')
       .where({
-        tenant,
         batch_id: batchId,
         resolution_state: 'open'
       })
@@ -135,7 +134,6 @@ export class AccountingExportValidation {
         ? await db.table<ChargeProjection>('invoice_charges')
             .select('item_id', 'invoice_id', 'service_id', 'tax_region')
             .whereIn('item_id', Array.from(chargeIds))
-            .andWhere({ tenant })
         : [];
     const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
     const chargeDetailRows =
@@ -143,7 +141,6 @@ export class AccountingExportValidation {
         ? await db.table<ChargeDetailProjection>('invoice_charge_details')
             .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
             .whereIn('item_id', Array.from(chargeIds))
-            .andWhere({ tenant })
             .orderBy('service_period_start', 'asc')
         : [];
     const canonicalPeriodsByChargeId = new Map<string, NormalizedRecurringPeriod[]>();
@@ -162,7 +159,6 @@ export class AccountingExportValidation {
         ? await db.table<InvoiceProjection>('invoices')
             .select('invoice_id', 'client_id', 'tax_source', 'invoice_type')
             .whereIn('invoice_id', Array.from(invoiceIds))
-            .andWhere({ tenant })
         : [];
     const invoiceTaxSourceById = new Map(invoices.map((row) => [row.invoice_id, row.tax_source]));
     const clientIds = new Set<string>();
@@ -199,7 +195,6 @@ export class AccountingExportValidation {
         ? await db.table<ClientProjection>('clients')
             .select('client_id', 'payment_terms')
             .whereIn('client_id', Array.from(clientIds))
-            .andWhere({ tenant })
         : [];
     const clientsById = new Map(clients.map((row) => [row.client_id, row]));
 
@@ -223,7 +218,6 @@ export class AccountingExportValidation {
         ? await db.table<ServiceProjection>('service_catalog')
             .select('service_id', 'service_name')
             .whereIn('service_id', Array.from(serviceIds))
-            .andWhere({ tenant })
         : [];
     const serviceNameById = new Map<string, string>(
       services.map((row) => [row.service_id, row.service_name])

@@ -139,7 +139,7 @@ async function calculateTaxWithConnection(
 ): Promise<{ taxAmount: number; taxRate: number }> {
   const db = tenantDb(knexOrTrx, tenant);
   const client = await db.table('clients')
-    .where({ tenant, client_id: clientId })
+    .where({ client_id: clientId })
     .select('is_tax_exempt')
     .first();
 
@@ -152,7 +152,7 @@ async function calculateTaxWithConnection(
   }
 
   const taxSettings = await db.table('client_tax_settings')
-    .where({ tenant, client_id: clientId })
+    .where({ client_id: clientId })
     .select('is_reverse_charge_applicable')
     .first();
   if (taxSettings?.is_reverse_charge_applicable) {
@@ -161,7 +161,7 @@ async function calculateTaxWithConnection(
 
   if (regionCode) {
     const applicableRates = await db.table('tax_rates')
-      .where({ tenant, region_code: regionCode, is_active: true })
+      .where({ region_code: regionCode, is_active: true })
       .andWhere('start_date', '<=', date)
       .andWhere(function dateRange() {
         this.whereNull('end_date').orWhere('end_date', '>', date);
@@ -180,7 +180,7 @@ async function calculateTaxWithConnection(
   }
 
   const defaultRateAssoc = await db.table('client_tax_rates')
-    .where({ tenant, client_id: clientId, is_default: true })
+    .where({ client_id: clientId, is_default: true })
     .whereNull('location_id')
     .select('tax_rate_id')
     .first();
@@ -190,7 +190,7 @@ async function calculateTaxWithConnection(
   }
 
   const taxRate = await db.table('tax_rates')
-    .where({ tenant, tax_rate_id: defaultRateAssoc.tax_rate_id, is_active: true })
+    .where({ tax_rate_id: defaultRateAssoc.tax_rate_id, is_active: true })
     .andWhere('start_date', '<=', date)
     .andWhere(function dateRange() {
       this.whereNull('end_date').orWhere('end_date', '>', date);
@@ -209,10 +209,7 @@ async function calculateTaxWithConnection(
     // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
     const components = await db.table('tax_components')
       .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
-      .where({
-        'tax_components.tenant': tenant,
-        'composite_tax_mappings.composite_tax_id': taxRate.tax_rate_id,
-      })
+      .where('composite_tax_mappings.composite_tax_id', taxRate.tax_rate_id)
       .orderBy('composite_tax_mappings.sequence')
       .select('tax_components.*');
 
@@ -258,7 +255,7 @@ export async function recalculateQuoteFinancials(
 ): Promise<void> {
   const db = tenantDb(knexOrTrx, tenant);
   const quote = await db.table('quotes')
-    .where({ tenant, quote_id: quoteId })
+    .where({ quote_id: quoteId })
     .first() as QuoteCalculationContext | undefined;
 
   if (!quote) {
@@ -266,13 +263,13 @@ export async function recalculateQuoteFinancials(
   }
 
   const items = await db.table('quote_items')
-    .where({ tenant, quote_id: quoteId })
+    .where({ quote_id: quoteId })
     .orderBy('display_order', 'asc')
     .orderBy('created_at', 'asc') as QuoteItemRow[];
 
   const client = quote.client_id
     ? await db.table('clients')
-        .where({ tenant, client_id: quote.client_id })
+        .where({ client_id: quote.client_id })
         .select('region_code')
         .first()
     : null;
@@ -287,7 +284,6 @@ export async function recalculateQuoteFinancials(
   const locationRegionMap = new Map<string, string | null>();
   if (distinctLocationIds.length > 0) {
     const locationRows = await db.table('client_locations')
-      .where({ tenant })
       .whereIn('location_id', distinctLocationIds)
       .select('location_id', 'region_code');
     for (const row of locationRows) {
@@ -371,7 +367,7 @@ export async function recalculateQuoteFinancials(
     }
 
     await db.table('quote_items')
-      .where({ tenant, quote_item_id: item.quote_item_id })
+      .where({ quote_item_id: item.quote_item_id })
       .update({
         total_price: resolvedTotalPrice,
         net_amount: netAmount,
@@ -383,7 +379,7 @@ export async function recalculateQuoteFinancials(
   }
 
   await db.table('quotes')
-    .where({ tenant, quote_id: quoteId })
+    .where({ quote_id: quoteId })
     .update({
       subtotal,
       discount_total: discountTotal,

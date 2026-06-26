@@ -25,8 +25,7 @@ export class TaxService {
     // Check for overlapping date ranges in the same region
     const query = tenantDb(knex, tenant).table('tax_rates')
       .where({
-        region_code: regionCode,
-        tenant
+        region_code: regionCode
       })
       .andWhere(function() {
         this.where(function() {
@@ -63,8 +62,7 @@ export class TaxService {
     // Check if client is tax exempt
     const client = await tenantDb(knex, tenant).table('clients')
       .where({
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
       .select('is_tax_exempt')
       .first();
@@ -94,7 +92,6 @@ export class TaxService {
       const applicableRates: Pick<ITaxRate, 'tax_percentage'>[] = await tenantDb(knex, tenant).table('tax_rates')
         .where({
           region_code: regionCode,
-          tenant,
           is_active: true
         })
         .andWhere('start_date', '<=', date)
@@ -153,7 +150,6 @@ export class TaxService {
     const defaultRateAssoc = await tenantDb(knex, tenant).table('client_tax_rates')
       .where({
         client_id: clientId,
-        tenant: tenant,
         is_default: true,
       })
       .whereNull('location_id')
@@ -173,7 +169,6 @@ export class TaxService {
     const taxRate = await tenantDb(knex, tenant).table<ITaxRate>('tax_rates')
       .where({
         tax_rate_id: defaultRateAssoc.tax_rate_id,
-        tenant: tenant,
         is_active: true // Ensure the default rate is active
       })
       // Add date validity check similar to regionCode logic
@@ -357,8 +352,7 @@ export class TaxService {
 
       // Get the first active tax rate to use as the default
       const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
-        .where('tenant', tenant)
-        .andWhere('is_active', true)
+        .where('is_active', true)
         .orderBy('created_at', 'asc')
         .first(); // Use first() instead of limit(1) which returns array
 
@@ -421,7 +415,7 @@ export class TaxService {
     await knex.transaction(async (trx) => {
       const db = tenantDb(trx, tenant);
       const existingDefault = await db.table('client_tax_rates')
-        .where({ client_id: clientId, tenant, is_default: true })
+        .where({ client_id: clientId, is_default: true })
         .whereNull('location_id')
         .first();
 
@@ -430,8 +424,7 @@ export class TaxService {
       }
 
       const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
-        .where('tenant', tenant)
-        .andWhere('is_active', true)
+        .where('is_active', true)
         .whereNotNull('region_code')
         .orderBy('created_at', 'asc')
         .first();
@@ -441,7 +434,7 @@ export class TaxService {
       }
 
       const existingSettings = await db.table<IClientTaxSettings>('client_tax_settings')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId })
         .first();
 
       if (!existingSettings) {
@@ -453,13 +446,13 @@ export class TaxService {
       }
 
       const association = await db.table('client_tax_rates')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId })
         .whereNull('location_id')
         .first();
 
       if (association) {
         await db.table('client_tax_rates')
-          .where({ client_id: clientId, tenant })
+          .where({ client_id: clientId })
           .whereNull('location_id')
           .update({
             tax_rate_id: defaultTaxRate.tax_rate_id,
@@ -492,7 +485,6 @@ export class TaxService {
     const defaultRateAssoc = await tenantDb(knex, tenant).table('client_tax_rates')
       .where({
         client_id: clientId,
-        tenant: tenant,
         is_default: true,
       })
       .whereNull('location_id')
@@ -511,8 +503,7 @@ export class TaxService {
     // Fetch the actual tax rate details using the ID found
     const taxRate = await tenantDb(knex, tenant).table<ITaxRate>('tax_rates')
       .where({
-        tax_rate_id: defaultRateAssoc.tax_rate_id,
-        tenant: tenant
+        tax_rate_id: defaultRateAssoc.tax_rate_id
         // Assuming we don't need activity/date check just to get the type
       })
       .select('tax_type')

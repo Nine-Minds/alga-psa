@@ -69,7 +69,6 @@ export const generateManualInvoice = withAuth(async (
   let currencyCode = request.currency_code || client.default_currency_code;
   if (!currencyCode) {
     const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
-      .where({ tenant })
       .select('default_currency_code')
       .first();
     currencyCode = billingSettings?.default_currency_code || 'USD';

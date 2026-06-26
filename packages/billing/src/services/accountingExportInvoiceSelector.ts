@@ -132,9 +132,7 @@ export class AccountingExportInvoiceSelector {
         'iid.service_period_start as detail_service_period_start',
         'iid.service_period_end as detail_service_period_end',
         'iid.billing_timing as detail_billing_timing'
-      ])
-      .where('inv.tenant', this.tenantId)
-      .andWhere('ch.tenant', this.tenantId);
+      ]);
 
     if (filters.startDate) {
       query.andWhere('inv.invoice_date', '>=', filters.startDate);
@@ -379,7 +377,6 @@ export class AccountingExportInvoiceSelector {
 
     const rows = await tenantDb(this.knex, this.tenantId).table('transactions')
       .select('invoice_id', 'transaction_id')
-      .where('tenant', this.tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     const map = new Map<string, string[]>();

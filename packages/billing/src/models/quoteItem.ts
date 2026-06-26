@@ -65,7 +65,7 @@ async function getNextDisplayOrder(
   quoteId: string
 ): Promise<number> {
   const result = await quoteTable(knexOrTrx, tenant, 'quote_items')
-    .where({ tenant, quote_id: quoteId })
+    .where({ quote_id: quoteId })
     .max<{ max?: number | string }>('display_order as max')
     .first();
 
@@ -83,7 +83,7 @@ const QuoteItem = {
     }
 
     const items = await quoteTable(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_id: quoteId })
+      .where({ quote_id: quoteId })
       .orderBy('display_order', 'asc')
       .orderBy('created_at', 'asc');
 
@@ -106,7 +106,7 @@ const QuoteItem = {
 
     if (item.service_id) {
       const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
-        .where({ tenant, service_id: item.service_id })
+        .where({ service_id: item.service_id })
         .select(
           'service_name',
           'sku',
@@ -127,13 +127,13 @@ const QuoteItem = {
       let resolvedUnitPrice = resolvedItem.unit_price;
       if (resolvedUnitPrice == null) {
         const quote = await quoteTable<QuoteCurrencyLookupRow>(knexOrTrx, tenant, 'quotes')
-          .where({ tenant, quote_id: item.quote_id })
+          .where({ quote_id: item.quote_id })
           .select('currency_code')
           .first();
         const currencyCode = quote?.currency_code ?? 'USD';
 
         const priceRow = await quoteTable<ServicePriceLookupRow>(knexOrTrx, tenant, 'service_prices')
-          .where({ tenant, service_id: item.service_id, currency_code: currencyCode })
+          .where({ service_id: item.service_id, currency_code: currencyCode })
           .select('rate')
           .first();
 
@@ -178,7 +178,7 @@ const QuoteItem = {
     await recalculateQuoteFinancials(knexOrTrx, tenant, item.quote_id);
 
     const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_item_id: createdItem.quote_item_id })
+      .where({ quote_item_id: createdItem.quote_item_id })
       .first();
 
     return normalizeQuoteItem(refreshedItem ?? createdItem);
@@ -195,7 +195,7 @@ const QuoteItem = {
     }
 
     const existingItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_item_id: quoteItemId })
+      .where({ quote_item_id: quoteItemId })
       .first();
 
     if (!existingItem) {
@@ -211,7 +211,7 @@ const QuoteItem = {
     const totalPrice = Number(quantity) * Number(unitPrice);
 
     const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_item_id: quoteItemId })
+      .where({ quote_item_id: quoteItemId })
       .update({
         ...updateData,
         quantity,
@@ -224,7 +224,7 @@ const QuoteItem = {
     await recalculateQuoteFinancials(knexOrTrx, tenant, existingItem.quote_id);
 
     const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_item_id: quoteItemId })
+      .where({ quote_item_id: quoteItemId })
       .first();
 
     return normalizeQuoteItem(refreshedItem ?? updatedItem);
@@ -240,7 +240,7 @@ const QuoteItem = {
     }
 
     const existingItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_item_id: quoteItemId })
+      .where({ quote_item_id: quoteItemId })
       .select('quote_id')
       .first();
 
@@ -249,18 +249,18 @@ const QuoteItem = {
     }
 
     await quoteTable(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_item_id: quoteItemId })
+      .where({ quote_item_id: quoteItemId })
       .del();
 
     const remainingItems = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_id: existingItem.quote_id })
+      .where({ quote_id: existingItem.quote_id })
       .orderBy('display_order', 'asc')
       .orderBy('created_at', 'asc');
 
     for (const [index, item] of remainingItems.entries()) {
       if (item.display_order !== index) {
         await quoteTable(knexOrTrx, tenant, 'quote_items')
-          .where({ tenant, quote_item_id: item.quote_item_id })
+          .where({ quote_item_id: item.quote_item_id })
           .update({ display_order: index });
       }
     }
@@ -281,7 +281,7 @@ const QuoteItem = {
     }
 
     const actualItemIds = await quoteTable(knexOrTrx, tenant, 'quote_items')
-      .where({ tenant, quote_id: quoteId })
+      .where({ quote_id: quoteId })
       .pluck('quote_item_id') as string[];
 
     if (orderedQuoteItemIds.length !== actualItemIds.length) {
@@ -296,7 +296,7 @@ const QuoteItem = {
 
     for (const [index, quoteItemId] of orderedQuoteItemIds.entries()) {
       await quoteTable(knexOrTrx, tenant, 'quote_items')
-        .where({ tenant, quote_id: quoteId, quote_item_id: quoteItemId })
+        .where({ quote_id: quoteId, quote_item_id: quoteItemId })
         .update({ display_order: index });
     }
 

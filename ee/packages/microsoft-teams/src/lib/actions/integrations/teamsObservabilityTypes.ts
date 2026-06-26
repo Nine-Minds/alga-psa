@@ -197,7 +197,6 @@ export async function listTeamsDeliveriesImpl(
   const category = normalizeOptionalString(params.category);
 
   const query = tenantDb(knex, tenant).table<TeamsDeliveryObservabilityRow>('teams_notification_deliveries')
-    .where({ tenant })
     .modify((builder: any) => {
       if (status) {
         builder.andWhere('status', status);
@@ -237,7 +236,6 @@ export async function listTeamsAuditEventsImpl(
   const actorUserId = normalizeOptionalString(params.actor_user_id);
 
   const query = tenantDb(knex, tenant).table<TeamsAuditObservabilityRow>('teams_audit_events')
-    .where({ tenant })
     .modify((builder: any) => {
       if (surface) {
         builder.andWhere('surface', surface);

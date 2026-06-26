@@ -58,7 +58,7 @@ export async function reprovisionExtension(registryId: string): Promise<{ domain
   const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
   if (!reg) throw new Error('Registry not found');
   const install = await tenantDb(adminDb, tenant).table('tenant_extension_install')
-    .where({ tenant_id: tenant, registry_id: registryId })
+    .where({ registry_id: registryId })
     .first(['id', 'runner_domain']);
   if (!install) throw new Error('Install not found');
   const domain = computeDomain(tenant, registryId);

@@ -137,13 +137,11 @@ export async function validateCreditBalanceWithoutCorrection(
         // Check if credit expiration is enabled for this client
         const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
             .where({
-                client_id: clientId,
-                tenant
+                client_id: clientId
             })
             .first();
 
         const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
-            .where({ tenant })
             .first();
 
         // Determine if credit expiration is enabled
@@ -256,7 +254,7 @@ export async function validateCreditBalanceWithoutCorrection(
 
         // Get the client's current credit balance
         const [client] = await tenantScopedTable(trx, tenant, 'clients')
-            .where({ client_id: clientId, tenant })
+            .where({ client_id: clientId })
             .select('credit_balance');
 
         const actualBalance = Number(client.credit_balance);
@@ -735,7 +733,7 @@ export async function runScheduledCreditBalanceValidation(
 
             // Verify the client exists
             const client = await tenantScopedTable(trx, tenant, 'clients')
-                .where({ client_id: clientId, tenant })
+                .where({ client_id: clientId })
                 .first();
 
             if (!client) {
@@ -748,7 +746,6 @@ export async function runScheduledCreditBalanceValidation(
             console.log(`Starting scheduled credit balance and tracking validation for all clients in tenant ${tenant}`);
 
             clients = await tenantScopedTable(trx, tenant, 'clients')
-                .where({ tenant })
                 .select('client_id');
 
             console.log(`Found ${clients.length} clients to validate`);
@@ -913,7 +910,7 @@ export const resolveReconciliationReport = withAuth(async (
 
             // Update the client's credit balance
             await tenantScopedTable(transaction, tenant, 'clients')
-                .where({ client_id: report.client_id, tenant })
+                .where({ client_id: report.client_id })
                 .update({
                     credit_balance: report.expected_balance,
                     updated_at: now

@@ -259,8 +259,7 @@ class CreditReconciliationReport {
 
     try {
       // Build base query
-      const baseQuery = tenantScopedTable(knex, tenant)
-        .where({ tenant });
+      const baseQuery = tenantScopedTable(knex, tenant);
 
       // Apply filters
       if (clientId) {
@@ -441,7 +440,6 @@ class CreditReconciliationReport {
 
     try {
       const result = await tenantScopedTable(knex, tenant)
-        .where({ tenant })
         .sum('difference as total') as unknown as Array<{ total?: string | number | null }>;
 
       return Number(result[0]?.total ?? 0);

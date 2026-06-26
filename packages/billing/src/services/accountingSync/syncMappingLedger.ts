@@ -42,7 +42,6 @@ export class SyncMappingLedger {
   ): Promise<ExternalEntityMappingRow | undefined> {
     const query = this.table<ExternalEntityMappingRow>()
       .where({
-        tenant: this.tenantId,
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
         external_entity_id: externalEntityId
@@ -63,7 +62,6 @@ export class SyncMappingLedger {
   ): Promise<ExternalEntityMappingRow | undefined> {
     return this.table<ExternalEntityMappingRow>()
       .where({
-        tenant: this.tenantId,
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
         alga_entity_id: algaEntityId
@@ -116,14 +114,14 @@ export class SyncMappingLedger {
     }
 
     await this.table()
-      .where({ tenant: this.tenantId, id })
+      .where({ id })
       .update(update);
   }
 
   /** Counts by sync_status for the health panel. */
   async countByStatus(): Promise<Record<string, number>> {
     const rows = await this.table()
-      .where({ tenant: this.tenantId, integration_type: this.integrationType })
+      .where({ integration_type: this.integrationType })
       .select('sync_status')
       .count<{ sync_status: string | null; count: string }[]>('* as count')
       .groupBy('sync_status');

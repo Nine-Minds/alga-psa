@@ -113,7 +113,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const facade = tenantDb(trx, tenant);
-    const base = facade.table('service_catalog as sc').where({ 'sc.tenant': tenant });
+    const base = facade.table('service_catalog as sc');
 
     if (options.is_active !== undefined) {
       base.andWhere('sc.is_active', options.is_active);
@@ -273,7 +273,7 @@ export const getServices = withAuth(async (
         };
 
         const facade = tenantDb(trx, tenant);
-        const baseQuery = facade.table('service_catalog as sc').where({ 'sc.tenant': tenant });
+        const baseQuery = facade.table('service_catalog as sc');
 
         // Get total count for pagination
         const countQuery = applyFilters(baseQuery.clone());
@@ -332,7 +332,6 @@ export const getServices = withAuth(async (
         const serviceIds = servicesData.map((s: { service_id: string }) => s.service_id);
         const allPrices = serviceIds.length > 0
           ? await facade.table<IServicePrice>('service_prices')
-              .where({ tenant })
               .whereIn('service_id', serviceIds)
               .select('*')
           : [];
@@ -432,7 +431,6 @@ export const createService = withAuth(async (
         // 1. Verify the custom service type exists
         const customServiceType = await tenantDb(trx, tenant).table<IServiceType>('service_types')
             .where('id', custom_service_type_id)
-            .andWhere('tenant', tenant) // Match tenant
             .first();
         if (!customServiceType) {
             throw new Error(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
@@ -526,7 +524,7 @@ export const deleteService = withAuth(async (
     try {
         const { knex } = await createTenantKnex();
         const existing = await tenantDb(knex, tenant).table('service_catalog')
-            .where({ service_id: serviceId, tenant })
+            .where({ service_id: serviceId })
             .select('item_kind')
             .first();
 
@@ -585,7 +583,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
             const db = tenantDb(trx, tenant);
 
             const invoiceItemsResult = await db.table('invoice_items')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .count('* as count')
                 .first();
             const invoiceItemsCount = parseInt(String(invoiceItemsResult?.count ?? 0));
@@ -599,7 +597,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
 
             // Check time_entries
             const timeEntriesResult = await db.table('time_entries')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .count('* as count')
                 .first();
             const timeEntriesCount = parseInt(String(timeEntriesResult?.count ?? 0));
@@ -613,7 +611,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
 
             // Check ticket_materials
             const ticketMaterialsResult = await db.table('ticket_materials')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .count('* as count')
                 .first();
             const ticketMaterialsCount = parseInt(String(ticketMaterialsResult?.count ?? 0));
@@ -627,7 +625,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
 
             // Check project_materials
             const projectMaterialsResult = await db.table('project_materials')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .count('* as count')
                 .first();
             const projectMaterialsCount = parseInt(String(projectMaterialsResult?.count ?? 0));
@@ -641,7 +639,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
 
             // Check contract_line_services
             const contractLineServicesResult = await db.table('contract_line_services')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .count('* as count')
                 .first();
             const contractLineServicesCount = parseInt(String(contractLineServicesResult?.count ?? 0));
@@ -655,7 +653,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
 
             // Check contract_line_service_configuration
             const contractLineServiceConfigResult = await db.table('contract_line_service_configuration')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .count('* as count')
                 .first();
             const contractLineServiceConfigCount = parseInt(String(contractLineServiceConfigResult?.count ?? 0));
@@ -669,7 +667,7 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
 
             // Check bucket_usage
             const bucketUsageResult = await db.table('bucket_usage')
-                .where({ service_catalog_id: serviceId, tenant })
+                .where({ service_catalog_id: serviceId })
                 .count('* as count')
                 .first();
             const bucketUsageCount = parseInt(String(bucketUsageResult?.count ?? 0));
@@ -717,7 +715,7 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
             // These have CASCADE on delete but we do it explicitly for clarity
             const db = tenantDb(trx, tenant);
             await db.table('service_prices')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .del();
 
             await tenantDb(trx, tenant).table('service_rate_tiers')
@@ -726,20 +724,20 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
 
             // Clear nullable references
             await db.table('project_tasks')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .update({ service_id: null });
 
             await db.table('project_template_tasks')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .update({ service_id: null });
 
             await db.table('invoice_charge_details')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .update({ service_id: null });
 
             // Delete the product
             const deletedCount = await db.table('service_catalog')
-                .where({ service_id: serviceId, tenant })
+                .where({ service_id: serviceId })
                 .del();
 
             if (deletedCount === 0) {
@@ -876,7 +874,7 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if any services are using this service type
       const servicesUsingType = await tenantDb(trx, tenantId).table('service_catalog')
-        .where({ custom_service_type_id: id, tenant: tenantId })
+        .where({ custom_service_type_id: id })
         .count('service_id as count')
         .first();
 
@@ -937,14 +935,13 @@ export const createServiceTypeInline = withAuth(async (
       }
 
       // If it already exists for this tenant, return it (avoid 23505 on repeated clicks)
-      const existing = await tenantDb(trx, tenant).table<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
+      const existing = await tenantDb(trx, tenant).table<IServiceType>('service_types').where({ name: normalizedName }).first();
       if (existing) {
         return existing;
       }
 
       // Get the highest order number to calculate next order
       const maxOrderResult = await tenantDb(trx, tenant).table('service_types')
-        .where({ tenant })
         .max('order_number as max_order')
         .first();
 
@@ -970,7 +967,7 @@ export const createServiceTypeInline = withAuth(async (
       }
 
       // Insert was skipped due to conflict; fetch and return the existing row.
-      const afterConflict = await tenantDb(trx, tenant).table<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
+      const afterConflict = await tenantDb(trx, tenant).table<IServiceType>('service_types').where({ name: normalizedName }).first();
       if (!afterConflict) {
         throw new Error('Failed to create service type');
       }

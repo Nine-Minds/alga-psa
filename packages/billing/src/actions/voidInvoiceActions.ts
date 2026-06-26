@@ -17,7 +17,7 @@ export async function reverseCreditApplicationsForInvoice(
 ): Promise<void> {
   // Find all credit_application transactions for this invoice
   const creditAppTxns = await tenantDb(trx, tenant).table('transactions')
-    .where({ invoice_id: invoiceId, type: 'credit_application', tenant })
+    .where({ invoice_id: invoiceId, type: 'credit_application' })
     .select('*');
 
   for (const txn of creditAppTxns) {
@@ -29,7 +29,7 @@ export async function reverseCreditApplicationsForInvoice(
     for (const applied of appliedCredits) {
       // Restore the credit tracking pool
       await tenantDb(trx, tenant).table('credit_tracking')
-        .where({ credit_id: applied.creditId, tenant })
+        .where({ credit_id: applied.creditId })
         .increment('remaining_amount', applied.amount)
         .update({ updated_at: new Date().toISOString() });
 
@@ -39,7 +39,7 @@ export async function reverseCreditApplicationsForInvoice(
     if (totalRestored > 0) {
       // Restore client credit balance
       await tenantDb(trx, tenant).table('clients')
-        .where({ client_id: txn.client_id, tenant })
+        .where({ client_id: txn.client_id })
         .increment('credit_balance', totalRestored);
 
       // Write reversing transaction
@@ -65,7 +65,7 @@ export async function reverseCreditApplicationsForInvoice(
   // Zero out credit_applied on the invoice
   if (creditAppTxns.length > 0) {
     await tenantDb(trx, tenant).table('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .update({ credit_applied: 0, updated_at: new Date().toISOString() });
   }
 }
@@ -86,7 +86,7 @@ export const voidInvoice = withAuth(async (
 
   // Load invoice
   const invoice = await tenantDb(knex, tenant).table('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+    .where({ invoice_id: invoiceId })
     .first();
 
   if (!invoice) {
@@ -107,7 +107,7 @@ export const voidInvoice = withAuth(async (
   let paymentSum = 0;
   try {
     const paymentRow = await tenantDb(knex, tenant).table('invoice_payments')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .sum('amount as total')
       .first();
     paymentSum = Number(paymentRow?.total ?? 0);
@@ -131,7 +131,7 @@ export const voidInvoice = withAuth(async (
     // 'credit_issuance_from_negative_invoice'; prepayment credits write
     // 'credit_issuance' — cover both so neither slips through the guard.
     const creditIssuanceTxns = await tenantDb(knex, tenant).table('transactions')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
       .select('transaction_id');
     const txnIds = creditIssuanceTxns.map((t: any) => t.transaction_id);
@@ -140,7 +140,6 @@ export const voidInvoice = withAuth(async (
       const consumedCredit = await tenantDb(knex, tenant).table('credit_tracking')
         .whereIn('transaction_id', txnIds)
         .where(knex.raw('remaining_amount < amount'))
-        .where({ tenant })
         .first('credit_id');
 
       if (consumedCredit) {
@@ -156,13 +155,13 @@ export const voidInvoice = withAuth(async (
       // spendable phantom credit that no longer exists in the accounting
       // system. Matches both issuance transaction types (see guard above).
       const creditIssuanceTxns = await tenantDb(trx, tenant).table('transactions')
-        .where({ invoice_id: invoiceId, tenant })
+        .where({ invoice_id: invoiceId })
         .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
         .select('transaction_id', 'client_id', 'amount');
 
       for (const txn of creditIssuanceTxns) {
         const creditRow = await tenantDb(trx, tenant).table('credit_tracking')
-          .where({ transaction_id: txn.transaction_id, tenant })
+          .where({ transaction_id: txn.transaction_id })
           .first('credit_id', 'remaining_amount');
 
         if (creditRow && Number(creditRow.remaining_amount) > 0) {
@@ -170,12 +169,12 @@ export const voidInvoice = withAuth(async (
 
           // Decrement client.credit_balance by remaining amount
           await tenantDb(trx, tenant).table('clients')
-            .where({ client_id: txn.client_id, tenant })
+            .where({ client_id: txn.client_id })
             .decrement('credit_balance', clawedBack);
 
           // Zero out the credit tracking entry
           await tenantDb(trx, tenant).table('credit_tracking')
-            .where({ credit_id: creditRow.credit_id, tenant })
+            .where({ credit_id: creditRow.credit_id })
             .update({ remaining_amount: 0, updated_at: now });
 
           // Audit trail for the balance change
@@ -208,7 +207,7 @@ export const voidInvoice = withAuth(async (
 
     // Update invoice status to cancelled
     await tenantDb(trx, tenant).table('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .update({ status: 'cancelled', updated_at: now });
 
     // Write invoice_cancelled transaction

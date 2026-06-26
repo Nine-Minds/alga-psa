@@ -62,7 +62,7 @@ export async function validate(params: { tenant: string; extension: string; hash
 
   const db: Knex = await getAdminConnection();
   const install = await tenantDb(db, tenant).table('tenant_extension_install')
-    .where({ tenant_id: tenant, registry_id: extension })
+    .where({ registry_id: extension })
     .first(['version_id']);
   if (!install) return { valid: false };
 

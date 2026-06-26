@@ -56,7 +56,7 @@ async function expireQuoteIfNeeded(
   }
 
   const [expiredQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-    .where({ tenant, quote_id: quote.quote_id })
+    .where({ quote_id: quote.quote_id })
     .update({
       status: 'expired',
       expired_at: knexOrTrx.fn.now(),
@@ -101,7 +101,7 @@ const Quote = {
     }
 
     const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, quote_id: quoteId })
+      .where({ quote_id: quoteId })
       .first();
 
     return mapQuoteRecord(knexOrTrx, tenant, quote ?? null);
@@ -117,7 +117,7 @@ const Quote = {
     }
 
     const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, quote_number: quoteNumber })
+      .where({ quote_number: quoteNumber })
       .orderBy('version', 'desc')
       .first();
 
@@ -134,7 +134,7 @@ const Quote = {
     }
 
     const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, converted_contract_id: contractId })
+      .where({ converted_contract_id: contractId })
       .first();
 
     return mapQuoteRecord(knexOrTrx, tenant, quote ?? null);
@@ -150,7 +150,7 @@ const Quote = {
     }
 
     const quote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, converted_invoice_id: invoiceId })
+      .where({ converted_invoice_id: invoiceId })
       .first();
 
     return mapQuoteRecord(knexOrTrx, tenant, quote ?? null);
@@ -174,9 +174,7 @@ const Quote = {
     const db = tenantDb(knexOrTrx, tenant);
     const baseQuery = db.table<QuoteWithClientRow>('quotes as q');
     db.tenantJoin(baseQuery, 'clients as c', 'q.client_id', 'c.client_id', { type: 'left' });
-    baseQuery
-      .where('q.tenant', tenant)
-      .andWhere('q.is_template', options.is_template ?? false);
+    baseQuery.where('q.is_template', options.is_template ?? false);
 
     if (options.status) {
       baseQuery.andWhere('q.status', options.status);
@@ -223,8 +221,7 @@ const Quote = {
     const query = db.table<QuoteWithClientRow>('quotes as q');
     db.tenantJoin(query, 'clients as c', 'q.client_id', 'c.client_id', { type: 'left' });
     const rows = (await query
-      .where('q.tenant', tenant)
-      .andWhere('q.client_id', clientId)
+      .where('q.client_id', clientId)
       .andWhere('q.is_template', false)
       .select('q.*', 'c.client_name')
       .orderBy('q.quote_date', 'desc')) as QuoteWithClientRow[];
@@ -277,7 +274,7 @@ const Quote = {
     }
 
     const existingQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, quote_id: quoteId })
+      .where({ quote_id: quoteId })
       .first();
 
     if (!existingQuote) {
@@ -293,7 +290,7 @@ const Quote = {
     }
 
     const [updatedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, quote_id: quoteId })
+      .where({ quote_id: quoteId })
       .update({ ...updateData, updated_at: knexOrTrx.fn.now() })
       .returning('*');
 
@@ -312,7 +309,7 @@ const Quote = {
     if (!updatedQuote.is_template) {
       await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
       const recalculatedQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-        .where({ tenant, quote_id: quoteId })
+        .where({ quote_id: quoteId })
         .first();
       return recalculatedQuote ?? updatedQuote;
     }
@@ -331,7 +328,7 @@ const Quote = {
 
     return deleteEntityWithValidation('quote', quoteId, knexOrTrx, tenant, async (trx, tenantId) => {
       await tenantDb(trx, tenantId).table('quotes')
-        .where({ tenant: tenantId, quote_id: quoteId })
+        .where({ quote_id: quoteId })
         .del();
     });
   },
@@ -361,8 +358,7 @@ const Quote = {
 
     const rootQuoteId = sourceQuote.parent_quote_id ?? sourceQuote.quote_id;
     const versionRows = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant })
-      .andWhere((builder) => {
+      .where((builder) => {
         builder.where('quote_id', rootQuoteId).orWhere('parent_quote_id', rootQuoteId);
       })
       .select('version');
@@ -410,7 +406,7 @@ const Quote = {
     }
 
     await quoteTable(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, quote_id: sourceQuote.quote_id })
+      .where({ quote_id: sourceQuote.quote_id })
       .update({
         status: 'superseded',
         updated_at: knexOrTrx.fn.now(),
@@ -448,7 +444,7 @@ const Quote = {
     }
 
     const sourceQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant, quote_id: quoteId })
+      .where({ quote_id: quoteId })
       .first();
 
     if (!sourceQuote) {
@@ -457,8 +453,7 @@ const Quote = {
 
     const rootQuoteId = sourceQuote.parent_quote_id ?? sourceQuote.quote_id;
     const versions = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ tenant })
-      .andWhere((builder) => {
+      .where((builder) => {
         builder.where('quote_id', rootQuoteId).orWhere('parent_quote_id', rootQuoteId);
       })
       .orderBy('version', 'asc');

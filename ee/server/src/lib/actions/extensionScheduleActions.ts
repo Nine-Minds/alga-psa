@@ -155,7 +155,7 @@ async function resolveInstallForTenant(knex: Knex, tenantId: string, extensionId
     return null
   }
   const install = await tenantDb(knex, tenantId).table('tenant_extension_install')
-    .where({ id: config.installId, tenant_id: tenantId })
+    .where({ id: config.installId })
     .first(['is_enabled'])
   return { ...config, isEnabled: install?.is_enabled !== false }
 }
@@ -295,7 +295,7 @@ export const createExtensionSchedule = withAuth(async (
 
     // Guardrail: max schedules per install.
     const scheduleCountRow = await db.table('tenant_extension_schedule')
-      .where({ tenant_id: tenant, install_id: install.installId })
+      .where({ install_id: install.installId })
       .count<{ count: string }[]>({ count: '*' })
       .first()
     const count = Number((scheduleCountRow as any)?.count ?? 0)
@@ -359,7 +359,7 @@ export const createExtensionSchedule = withAuth(async (
 
         // Best-effort touch install updated_at to signal config change.
         await txDb.table('tenant_extension_install')
-          .where({ id: install.installId, tenant_id: tenant })
+          .where({ id: install.installId })
           .update({ updated_at: trx.fn.now() })
       })
     } catch (e) {
@@ -422,7 +422,7 @@ export const updateExtensionSchedule = withAuth(async (
     const now = knex.fn.now()
 
     const current = await db.table('tenant_extension_schedule')
-      .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
+      .where({ id: scheduleId, install_id: install.installId })
       .first()
 
     if (!current) return { success: false, message: 'Schedule not found' }
@@ -495,7 +495,7 @@ export const updateExtensionSchedule = withAuth(async (
                 // Keep DB handles consistent with restored runner schedule (job IDs can change after cancel).
                 try {
                   await db.table('tenant_extension_schedule')
-                    .where({ id: scheduleId, tenant_id: tenant })
+                    .where({ id: scheduleId })
                     .update({
                       job_id: restored?.jobId ?? null,
                       runner_schedule_id: (restored as any)?.externalId ?? null,
@@ -511,7 +511,7 @@ export const updateExtensionSchedule = withAuth(async (
                   error: restoreError,
                 })
                 await db.table('tenant_extension_schedule')
-                  .where({ id: scheduleId, tenant_id: tenant })
+                  .where({ id: scheduleId })
                   .update({
                     enabled: false,
                     job_id: null,
@@ -532,7 +532,7 @@ export const updateExtensionSchedule = withAuth(async (
             // Apply DB updates only after runner scheduling succeeded.
             try {
               await txDb.table('tenant_extension_schedule')
-                .where({ id: scheduleId, tenant_id: tenant })
+                .where({ id: scheduleId })
                 .update({
                   ...patch,
                   job_id: jobId,
@@ -547,7 +547,7 @@ export const updateExtensionSchedule = withAuth(async (
             }
 
             await txDb.table('tenant_extension_install')
-              .where({ id: install.installId, tenant_id: tenant })
+              .where({ id: install.installId })
               .update({ updated_at: trx.fn.now() })
           })
         } catch (e: any) {
@@ -567,7 +567,7 @@ export const updateExtensionSchedule = withAuth(async (
           const txDb = tenantDb(trx, tenant)
           try {
             await txDb.table('tenant_extension_schedule')
-              .where({ id: scheduleId, tenant_id: tenant })
+              .where({ id: scheduleId })
               .update({ ...patch, job_id: null, runner_schedule_id: null, updated_at: now })
           } catch (error) {
             if (isNameUniqueViolation(error)) {
@@ -577,7 +577,7 @@ export const updateExtensionSchedule = withAuth(async (
           }
 
           await txDb.table('tenant_extension_install')
-            .where({ id: install.installId, tenant_id: tenant })
+            .where({ id: install.installId })
             .update({ updated_at: trx.fn.now() })
         })
       }
@@ -589,11 +589,11 @@ export const updateExtensionSchedule = withAuth(async (
       await knex.transaction(async (trx: Knex.Transaction) => {
         const txDb = tenantDb(trx, tenant)
         await txDb.table('tenant_extension_schedule')
-          .where({ id: scheduleId, tenant_id: tenant })
+          .where({ id: scheduleId })
           .update(patch)
 
         await txDb.table('tenant_extension_install')
-          .where({ id: install.installId, tenant_id: tenant })
+          .where({ id: install.installId })
           .update({ updated_at: trx.fn.now() })
       })
     } catch (error) {
@@ -644,7 +644,7 @@ export const deleteExtensionSchedule = withAuth(async (
     const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
 
     const current = await db.table('tenant_extension_schedule')
-      .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
+      .where({ id: scheduleId, install_id: install.installId })
       .first(['id', 'job_id'])
     if (!current) return { success: false, message: 'Schedule not found' }
 
@@ -664,11 +664,11 @@ export const deleteExtensionSchedule = withAuth(async (
     await knex.transaction(async (trx: Knex.Transaction) => {
       const txDb = tenantDb(trx, tenant)
       await txDb.table('tenant_extension_schedule')
-        .where({ id: scheduleId, tenant_id: tenant })
+        .where({ id: scheduleId })
         .del()
       // Best-effort touch install updated_at to signal config change.
       await txDb.table('tenant_extension_install')
-        .where({ id: install.installId, tenant_id: tenant })
+        .where({ id: install.installId })
         .update({ updated_at: trx.fn.now() })
     })
 
@@ -704,7 +704,7 @@ export const runExtensionScheduleNow = withAuth(async (
     const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
 
     const schedule = await db.table('tenant_extension_schedule')
-      .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
+      .where({ id: scheduleId, install_id: install.installId })
       .first(['id', 'enabled'])
     if (!schedule) return { success: false, message: 'Schedule not found' }
 

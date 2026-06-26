@@ -73,14 +73,14 @@ export function isNonPayableInvoiceStatus(status: string | null | undefined): bo
 
 async function getInvoice(knex: Knex, tenantId: string, invoiceId: string): Promise<InvoiceRow | undefined> {
   return tenantDb(knex, tenantId).table('invoices')
-    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId })
     .select('invoice_id', 'client_id', 'status', 'total_amount', 'credit_applied', 'currency_code')
     .first<InvoiceRow | undefined>();
 }
 
 async function sumPayments(trx: Knex, tenantId: string, invoiceId: string): Promise<number> {
   const totalPayments = await tenantDb(trx, tenantId).table('invoice_payments')
-    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId })
     .sum('amount as total')
     .first();
   return parseInt(String(totalPayments?.total ?? '0'), 10) || 0;
@@ -107,7 +107,7 @@ async function applyStatus(trx: Knex, tenantId: string, invoice: InvoiceRow, tot
   const newStatus = resolveStatus(invoice, totalPaid);
   if (newStatus !== invoice.status) {
     await tenantDb(trx, tenantId).table('invoices')
-      .where({ tenant: tenantId, invoice_id: invoice.invoice_id })
+      .where({ invoice_id: invoice.invoice_id })
       .update({ status: newStatus, updated_at: trx.fn.now() });
   }
   return newStatus;
@@ -170,7 +170,7 @@ export async function recordExternalPayment(
   const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
     // Row lock so concurrent providers can't race the status computation.
     await tenantDb(trx, tenantId).table('invoices')
-      .where({ tenant: tenantId, invoice_id: input.invoiceId })
+      .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
 
@@ -256,7 +256,7 @@ export async function reverseExternalPayment(
 
   const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
     await tenantDb(trx, tenantId).table('invoices')
-      .where({ tenant: tenantId, invoice_id: input.invoiceId })
+      .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
 

@@ -54,7 +54,7 @@ export const updateBillingCycle = withAuth(async (
   // "repair required" state on the invoicing screen.
   await withTransaction(conn, async (trx: Knex.Transaction) => {
     const settings = await tenantDb(trx, tenant).table('client_billing_settings')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .first()
       .select(
         'billing_cycle_anchor_day_of_month',
@@ -613,7 +613,6 @@ export const getInvoicedBillingCycles = withAuth(async (
     db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
 
     const rows = await query
-      .where('cbc.tenant', tenant)
       .whereNotNull('cbc.period_end_date')
       .select(
         'cbc.billing_cycle_id',
@@ -690,7 +689,6 @@ async function fetchRecurringInvoiceHistoryPage(
     `;
     const db = tenantDb(trx, tenant);
     const recurringSummaryQuery = db.table('recurring_service_periods as rsp')
-      .where('rsp.tenant', tenant)
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
       .min('rsp.service_period_start as service_period_start')
@@ -706,7 +704,6 @@ async function fetchRecurringInvoiceHistoryPage(
       db.tenantJoin(query, 'clients as c', 'c.client_id', 'i.client_id');
       query
         .leftJoin(recurringSummaryQuery, 'rsp_summary.invoice_id', 'i.invoice_id')
-        .where('i.tenant', tenant)
         .whereRaw(
           `coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) is not null`,
         );
@@ -858,7 +855,6 @@ export const getAllBillingCycles = withAuth(async (
   // Get billing cycles from clients table
   const results = await withTransaction(conn, async (trx: Knex.Transaction) => {
     return await tenantDb(trx, tenant).table('clients')
-      .where({ tenant })
       .select('client_id', 'billing_cycle');
   });
 

@@ -315,7 +315,7 @@ async function persistRecurringServicePeriodRegeneration(
 
   for (const record of params.recordsToSupersede) {
     await db.table('recurring_service_periods')
-      .where({ tenant: params.tenant, record_id: record.recordId })
+      .where({ record_id: record.recordId })
       .update({
         lifecycle_state: record.lifecycleState,
         updated_at: record.updatedAt,
@@ -356,7 +356,6 @@ async function loadContractCadenceObligations(
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
   query
-    .where('cl.tenant', params.tenant)
     .where('cc.is_active', true)
     .where((builder) =>
       builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),

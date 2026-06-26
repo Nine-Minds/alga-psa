@@ -26,7 +26,6 @@ export class SyncOperationsRepository {
   async enqueue(input: EnqueueSyncOperationInput): Promise<AccountingSyncOperation> {
     const existing = await this.table<AccountingSyncOperation>(input.tenant)
       .where({
-        tenant: input.tenant,
         adapter_type: input.adapterType,
         operation: input.operation,
         alga_entity_type: input.algaEntityType,
@@ -62,7 +61,7 @@ export class SyncOperationsRepository {
     options: { operation?: SyncOperationType; targetRealm?: string | null; limit?: number } = {}
   ): Promise<AccountingSyncOperation[]> {
     const query = this.table<AccountingSyncOperation>(tenant)
-      .where({ tenant, adapter_type: adapterType, status: 'pending' })
+      .where({ adapter_type: adapterType, status: 'pending' })
       .orderBy('created_at', 'asc');
 
     if (options.operation) {
@@ -82,13 +81,13 @@ export class SyncOperationsRepository {
 
   async markInProgress(tenant: string, opId: string): Promise<void> {
     await this.table(tenant)
-      .where({ tenant, op_id: opId })
+      .where({ op_id: opId })
       .update({ status: 'in_progress' });
   }
 
   async markDone(tenant: string, opId: string): Promise<void> {
     await this.table(tenant)
-      .where({ tenant, op_id: opId })
+      .where({ op_id: opId })
       .update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
@@ -99,14 +98,14 @@ export class SyncOperationsRepository {
    */
   async markFailed(tenant: string, opId: string, error: string): Promise<'pending' | 'skipped'> {
     const row = await this.table<AccountingSyncOperation>(tenant)
-      .where({ tenant, op_id: opId })
+      .where({ op_id: opId })
       .first();
 
     const attempts = (row?.attempts ?? 0) + 1;
     const nextStatus = attempts >= MAX_OP_ATTEMPTS ? 'skipped' : 'pending';
 
     await this.table(tenant)
-      .where({ tenant, op_id: opId })
+      .where({ op_id: opId })
       .update({
         status: nextStatus,
         attempts,
@@ -132,14 +131,14 @@ export class SyncOperationsRepository {
     }
 
     return this.table(tenant)
-      .where({ tenant, adapter_type: adapterType, operation, status: 'pending' })
+      .where({ adapter_type: adapterType, operation, status: 'pending' })
       .whereIn('alga_entity_id', algaEntityIds)
       .update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
   async countByStatus(tenant: string, adapterType: string): Promise<Record<string, number>> {
     const rows = await this.table(tenant)
-      .where({ tenant, adapter_type: adapterType })
+      .where({ adapter_type: adapterType })
       .select('status')
       .count<{ status: string; count: string }[]>('* as count')
       .groupBy('status');

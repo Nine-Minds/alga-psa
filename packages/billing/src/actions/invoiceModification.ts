@@ -83,8 +83,7 @@ async function hasCanonicalRecurringDetailPeriodsForInvoice(
   const detailQuery = db.table('invoice_charge_details as iid');
   db.tenantJoin(detailQuery, 'invoice_charges as ic', 'iid.item_id', 'ic.item_id');
   const detailRow = await detailQuery
-    .where('iid.tenant', tenant)
-    .andWhere('ic.invoice_id', invoiceId)
+    .where('ic.invoice_id', invoiceId)
     .whereNotNull('iid.service_period_start')
     .whereNotNull('iid.service_period_end')
     .first('iid.item_detail_id');
@@ -321,7 +320,7 @@ export async function finalizeInvoiceWithKnex(
     }
 
     await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId, tenant: tenant })
+      .where({ invoice_id: invoiceId })
       .update({
         status: 'sent',
         finalized_at: toISODate(Temporal.Now.plainDateISO()),
@@ -371,7 +370,7 @@ export async function finalizeInvoiceWithKnex(
       const now = new Date().toISOString();
       // Get current credit balance
       const client = await tenantScopedTable(trx, tenant, 'clients')
-        .where({ client_id: invoice.client_id, tenant })
+        .where({ client_id: invoice.client_id })
         .select('credit_balance')
         .first();
 
@@ -382,13 +381,11 @@ export async function finalizeInvoiceWithKnex(
       // Get client's credit expiration settings or default settings
       const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
         .where({
-          client_id: invoice.client_id,
-          tenant
+          client_id: invoice.client_id
         })
         .first();
 
       const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
-        .where({ tenant })
         .first();
 
       // Determine expiration days - use client setting if available, otherwise use default
@@ -413,7 +410,7 @@ export async function finalizeInvoiceWithKnex(
 
       // Update client credit balance within the transaction
       await tenantScopedTable(trx, tenant, 'clients')
-        .where({ client_id: invoice.client_id, tenant })
+        .where({ client_id: invoice.client_id })
         .update({
           credit_balance: newBalance,
           updated_at: new Date().toISOString()
@@ -500,7 +497,7 @@ export async function finalizeInvoiceWithKnex(
       // Get the current invoice with updated totals
       const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await tenantScopedTable(trx, tenant, 'invoices')
-          .where({ invoice_id: invoiceId, tenant })
+          .where({ invoice_id: invoiceId })
           .first();
       });
 
@@ -588,7 +585,7 @@ export const unfinalizeInvoice = withAuth(async (
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is finalized
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .first();
 
     if (!invoice) {
@@ -615,8 +612,7 @@ export const unfinalizeInvoice = withAuth(async (
 
     await tenantScopedTable(trx, tenant, 'invoices')
       .where({
-        invoice_id: invoiceId,
-        tenant
+        invoice_id: invoiceId
       })
       .update(updatedFields);
 
@@ -661,7 +657,7 @@ export const updateInvoiceManualItems = withAuth(async (
   // Load and validate invoice
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .first();
   });
 
@@ -675,7 +671,7 @@ export const updateInvoiceManualItems = withAuth(async (
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await tenantScopedTable(trx, tenant, 'clients')
-      .where({ client_id: invoice.client_id, tenant })
+      .where({ client_id: invoice.client_id })
       .first();
   });
 
@@ -702,7 +698,7 @@ async function updateManualInvoiceItemsInternal(
 
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .first();
   });
 
@@ -716,7 +712,7 @@ async function updateManualInvoiceItemsInternal(
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await tenantScopedTable(trx, tenant, 'clients')
-      .where({ client_id: invoice.client_id, tenant })
+      .where({ client_id: invoice.client_id })
       .first();
   });
 
@@ -738,7 +734,6 @@ async function updateManualInvoiceItemsInternal(
       db.tenantJoin(nonManualTargetsQuery, 'invoice_charge_details as iid', 'iid.item_id', 'ic.item_id', { type: 'left' });
       const nonManualTargets = await nonManualTargetsQuery
         .where('ic.invoice_id', invoiceId)
-        .andWhere('ic.tenant', tenant)
         .whereIn('ic.item_id', targetedItemIds)
         .where(function(this: Knex.QueryBuilder) {
           this.where('ic.is_manual', false).orWhereNull('ic.is_manual');
@@ -763,7 +758,7 @@ async function updateManualInvoiceItemsInternal(
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
       await tenantScopedTable(trx, tenant, 'invoice_charges')
         .whereIn('item_id', changes.removedItemIds)
-        .andWhere({ tenant: tenant, is_manual: true }) // Ensure we only delete manual items intended for removal
+        .andWhere({ is_manual: true }) // Ensure we only delete manual items intended for removal
         .delete();
     }
 
@@ -789,7 +784,7 @@ async function updateManualInvoiceItemsInternal(
 
         if (Object.keys(filteredUpdateData).length > 0) {
            await tenantScopedTable(trx, tenant, 'invoice_charges')
-            .where({ item_id: item.item_id, tenant: tenant, is_manual: true }) // Ensure we only update manual items
+            .where({ item_id: item.item_id, is_manual: true }) // Ensure we only update manual items
             .update(filteredUpdateData);
         }
       }
@@ -799,7 +794,7 @@ async function updateManualInvoiceItemsInternal(
         if (item.is_discount) {
           // Get the updated item from the database
           const updatedItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
-            .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
+            .where({ item_id: item.item_id, is_manual: true })
             .first();
           
           if (updatedItem) {
@@ -809,7 +804,7 @@ async function updateManualInvoiceItemsInternal(
             // Calculate current subtotal of non-discount items for percentage discounts
             if (updatedItem.discount_type === 'percentage') {
               const nonDiscountItems = await tenantScopedTable(trx, tenant, 'invoice_charges')
-                .where({ invoice_id: invoiceId, tenant: tenant })
+                .where({ invoice_id: invoiceId })
                 .whereNot('is_discount', true)
                 .select('*');
               
@@ -818,7 +813,7 @@ async function updateManualInvoiceItemsInternal(
               // If discount applies to a specific item, get that item's amount
               if (updatedItem.applies_to_item_id) {
                 const applicableItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
-                  .where({ item_id: updatedItem.applies_to_item_id, tenant: tenant })
+                  .where({ item_id: updatedItem.applies_to_item_id })
                   .first();
                 applicableAmount = applicableItem?.net_amount;
               }
@@ -838,7 +833,7 @@ async function updateManualInvoiceItemsInternal(
             
             // Update the net_amount
             await tenantScopedTable(trx, tenant, 'invoice_charges')
-              .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
+              .where({ item_id: item.item_id, is_manual: true })
               .update({
                 net_amount: newNetAmount,
                 total_price: newNetAmount // Also update total_price since discounts have no tax
@@ -879,7 +874,7 @@ async function updateManualInvoiceItemsInternal(
     if (changes.invoice_number && changes.invoice_number !== invoice.invoice_number) {
       try {
         await tenantScopedTable(trx, tenant, 'invoices')
-          .where({ invoice_id: invoiceId, tenant })
+          .where({ invoice_id: invoiceId })
           .update({
             invoice_number: changes.invoice_number,
             updated_at: currentDate
@@ -897,7 +892,7 @@ async function updateManualInvoiceItemsInternal(
     } else {
        // Touch updated_at even if only items changed
        await tenantScopedTable(trx, tenant, 'invoices')
-          .where({ invoice_id: invoiceId, tenant })
+          .where({ invoice_id: invoiceId })
           .update({ updated_at: currentDate });
     }
   });
@@ -971,7 +966,7 @@ async function addManualInvoiceItemsInternal(
 
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId, tenant })
+      .where({ invoice_id: invoiceId })
       .first();
   });
 
@@ -985,7 +980,7 @@ async function addManualInvoiceItemsInternal(
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await tenantScopedTable(trx, tenant, 'clients')
-      .where({ client_id: invoice.client_id, tenant })
+      .where({ client_id: invoice.client_id })
       .first();
   });
 
@@ -1019,7 +1014,7 @@ async function addManualInvoiceItemsInternal(
     );
      // Touch updated_at when items are added
      await tenantScopedTable(trx, tenant, 'invoices')
-        .where({ invoice_id: invoiceId, tenant })
+        .where({ invoice_id: invoiceId })
         .update({ updated_at: Temporal.Now.plainDateISO().toString() });
   });
 
@@ -1305,7 +1300,7 @@ export const hardDeleteInvoice = withAuth(async (
     const hasPaymentWebhookEvents = await trx.schema.hasTable('payment_webhook_events');
     if (hasPaymentWebhookEvents) {
       await tenantScopedTable(trx, tenant, 'payment_webhook_events')
-        .where({ invoice_id: invoiceId, tenant })
+        .where({ invoice_id: invoiceId })
         .update({ invoice_id: null });
     }
 

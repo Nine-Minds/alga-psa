@@ -183,7 +183,7 @@ async function loadTargetInvoices(
 
   for (const invoiceId of invoiceIds) {
     const invoiceRow = await tenantDb(deps.knex, deps.tenantId).table('invoices')
-      .where({ tenant: deps.tenantId, invoice_id: invoiceId })
+      .where({ invoice_id: invoiceId })
       .select('status', 'total_amount', 'credit_applied')
       .first<PaymentTargetInvoiceRow | undefined>();
 
