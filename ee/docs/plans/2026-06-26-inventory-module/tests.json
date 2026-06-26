@@ -22,7 +22,7 @@
   {
     "id": "T002",
     "description": "[schema] Constraints enforced at DB: duplicate serial within (tenant,service_id) rejected; duplicate MAC across DIFFERENT products in same tenant rejected (tenant-wide MAC uniqueness)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F052",
@@ -32,7 +32,7 @@
   {
     "id": "T003",
     "description": "[schema] Seed creates exactly one default stock_location per tenant; a second is_default insert is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F022"
@@ -129,7 +129,7 @@
   {
     "id": "T013",
     "description": "[consume] Consuming more than available soft-warns but does NOT block; the movement is still written and on_hand goes negative as surfaced",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -217,7 +217,7 @@
   {
     "id": "T023",
     "description": "[transfer] Dispatch decrements source on_hand and sets units\u2192in_transit; destination available is unchanged until receive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109",
       "F112"
@@ -226,7 +226,7 @@
   {
     "id": "T024",
     "description": "[transfer] Receive increments destination on_hand and sets units\u2192in_stock at destination; cancel-before-receive returns stock to source",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110",
       "F111"
@@ -235,7 +235,7 @@
   {
     "id": "T025",
     "description": "[loaner] Loan out sets unit\u2192on_loan (excluded from on_hand, no COGS, no invoice); loan return restores it to in_stock",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114",
       "F115"
@@ -244,7 +244,7 @@
   {
     "id": "T026",
     "description": "[restock] Restock return puts a unit/qty back to SELLABLE on_hand (distinct from the defective/RMA path); optional restocking fee recorded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F117",
       "F118"
@@ -253,7 +253,7 @@
   {
     "id": "T027",
     "description": "[rma] Standard RMA: delivered\u2192returned (NOT sellable, on_hand unchanged)\u2192sent_to_vendor\u2192replacement sets replacement_unit_id\u2192replaced\u2192closed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119",
       "F120",
@@ -264,7 +264,7 @@
   {
     "id": "T028",
     "description": "[rma] Standard RMA resolutions: repair (in_rma\u2192in_stock), credit (\u2192retired,credited), scrap (retired,closed) reach correct terminal states",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ]
