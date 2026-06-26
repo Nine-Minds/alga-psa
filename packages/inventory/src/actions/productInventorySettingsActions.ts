@@ -1,0 +1,187 @@
+'use server';
+
+import { Knex } from 'knex';
+import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { IProductInventorySettings, KitPricingMode } from '@alga-psa/types';
+
+async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
+  if (!(await hasPermission(user, 'inventory', action))) {
+    throw new Error(`Permission denied: inventory ${action} required`);
+  }
+}
+
+/** Assert the service row exists and is a product; return its cost_currency. */
+async function assertProduct(trx: Knex.Transaction, tenant: string, serviceId: string): Promise<{ cost_currency: string | null }> {
+  const svc = await trx('service_catalog')
+    .where({ tenant, service_id: serviceId })
+    .select('item_kind', 'cost_currency')
+    .first();
+  if (!svc) throw new Error('Service not found');
+  if (svc.item_kind !== 'product') throw new Error('Inventory can only be enabled on products (item_kind=product)');
+  return { cost_currency: svc.cost_currency ?? null };
+}
+
+export const getProductInventorySettings = withAuth(
+  async (user, { tenant }, serviceId: string): Promise<IProductInventorySettings | null> => {
+    await requireInvPerm(user, 'read');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const row = await trx('product_inventory_settings').where({ tenant, service_id: serviceId }).first();
+      return (row ?? null) as IProductInventorySettings | null;
+    });
+  },
+);
+
+/** List products that are inventory-managed, merged with catalog name/sku. */
+export const listInventoryProducts = withAuth(async (user, { tenant }): Promise<any[]> => {
+  await requireInvPerm(user, 'read');
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return trx('product_inventory_settings as pis')
+      .join('service_catalog as sc', function () {
+        this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
+      })
+      .where({ 'pis.tenant': tenant })
+      .select('pis.*', 'sc.service_name', 'sc.sku')
+      .orderBy('sc.service_name', 'asc');
+  });
+});
+
+export const enableInventory = withAuth(
+  async (
+    user,
+    { tenant },
+    serviceId: string,
+    input?: {
+      is_serialized?: boolean;
+      is_kit?: boolean;
+      creates_asset_on_delivery?: boolean;
+      reorder_point?: number | null;
+      reorder_quantity?: number | null;
+      default_location_id?: string | null;
+    },
+  ): Promise<IProductInventorySettings> => {
+    await requireInvPerm(user, 'create');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const { cost_currency } = await assertProduct(trx, tenant, serviceId);
+
+      // Default preferred vendor from the legacy freeform service_catalog.vendor, if it maps to a vendor.
+      const svc = await trx('service_catalog').where({ tenant, service_id: serviceId }).select('vendor').first();
+      let preferredVendorId: string | null = null;
+      if (svc?.vendor && String(svc.vendor).trim()) {
+        const vendor = await trx('vendors')
+          .where({ tenant })
+          .whereRaw('LOWER(vendor_name) = LOWER(?)', [String(svc.vendor).trim()])
+          .first();
+        preferredVendorId = vendor?.vendor_id ?? null;
+      }
+
+      const [row] = await trx('product_inventory_settings')
+        .insert({
+          tenant,
+          service_id: serviceId,
+          track_stock: true,
+          is_serialized: input?.is_serialized ?? false,
+          is_kit: input?.is_kit ?? false,
+          creates_asset_on_delivery: input?.creates_asset_on_delivery ?? false,
+          reorder_point: input?.reorder_point ?? null,
+          reorder_quantity: input?.reorder_quantity ?? null,
+          cost_currency: cost_currency ?? 'USD',
+          default_location_id: input?.default_location_id ?? null,
+          preferred_vendor_id: preferredVendorId,
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ track_stock: true })
+        .returning('*');
+      return row as IProductInventorySettings;
+    });
+  },
+);
+
+export const updateInventorySettings = withAuth(
+  async (
+    user,
+    { tenant },
+    serviceId: string,
+    patch: Partial<
+      Pick<
+        IProductInventorySettings,
+        | 'track_stock'
+        | 'creates_asset_on_delivery'
+        | 'reorder_point'
+        | 'reorder_quantity'
+        | 'default_location_id'
+        | 'preferred_vendor_id'
+        | 'kit_pricing_mode'
+        | 'kit_fixed_price'
+      >
+    >,
+  ): Promise<IProductInventorySettings> => {
+    await requireInvPerm(user, 'update');
+    if (patch.kit_pricing_mode && !(['sum', 'fixed'] as KitPricingMode[]).includes(patch.kit_pricing_mode)) {
+      throw new Error(`Invalid kit_pricing_mode: ${patch.kit_pricing_mode}`);
+    }
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const update: Record<string, unknown> = { updated_at: trx.fn.now() };
+      for (const k of [
+        'track_stock',
+        'creates_asset_on_delivery',
+        'reorder_point',
+        'reorder_quantity',
+        'default_location_id',
+        'preferred_vendor_id',
+        'kit_pricing_mode',
+        'kit_fixed_price',
+      ] as const) {
+        if (k in patch) update[k] = (patch as any)[k];
+      }
+      const [row] = await trx('product_inventory_settings').where({ tenant, service_id: serviceId }).update(update).returning('*');
+      if (!row) throw new Error('Inventory not enabled for this product');
+      return row as IProductInventorySettings;
+    });
+  },
+);
+
+/** Toggle serialized tracking. Disabling is blocked while serialized units exist. */
+export const setProductSerialized = withAuth(
+  async (user, { tenant }, serviceId: string, isSerialized: boolean): Promise<IProductInventorySettings> => {
+    await requireInvPerm(user, 'update');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!isSerialized) {
+        const unit = await trx('stock_units').where({ tenant, service_id: serviceId }).first();
+        if (unit) throw new Error('Cannot disable serialization while serialized units exist for this product');
+      }
+      const [row] = await trx('product_inventory_settings')
+        .where({ tenant, service_id: serviceId })
+        .update({ is_serialized: isSerialized, updated_at: trx.fn.now() })
+        .returning('*');
+      if (!row) throw new Error('Inventory not enabled for this product');
+      return row as IProductInventorySettings;
+    });
+  },
+);
+
+/** Toggle kit flag. Disabling is blocked while the kit still has components defined. */
+export const setProductKit = withAuth(
+  async (user, { tenant }, serviceId: string, isKit: boolean): Promise<IProductInventorySettings> => {
+    await requireInvPerm(user, 'update');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!isKit) {
+        const comp = await trx('kit_components').where({ tenant, kit_service_id: serviceId }).first();
+        if (comp) throw new Error('Cannot clear the kit flag while the kit still has components; remove components first');
+      }
+      const [row] = await trx('product_inventory_settings')
+        .where({ tenant, service_id: serviceId })
+        .update({ is_kit: isKit, updated_at: trx.fn.now() })
+        .returning('*');
+      if (!row) throw new Error('Inventory not enabled for this product');
+      return row as IProductInventorySettings;
+    });
+  },
+);

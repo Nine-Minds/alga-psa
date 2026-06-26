@@ -164,7 +164,7 @@
   {
     "id": "F021",
     "description": "[P1] stock_locations: list action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -172,7 +172,7 @@
   {
     "id": "F022",
     "description": "[P1] stock_locations: create action enforcing single is_default per tenant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -180,7 +180,7 @@
   {
     "id": "F023",
     "description": "[P1] stock_locations: update action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -188,7 +188,7 @@
   {
     "id": "F024",
     "description": "[P1] stock_locations: deactivate action, guarded against deactivating a location that still holds stock",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -196,7 +196,7 @@
   {
     "id": "F025",
     "description": "[P1] stock_locations: set manager_user_id (alert routing) and assigned_user_id (van/tech)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8",
       "9"
@@ -205,7 +205,7 @@
   {
     "id": "F026",
     "description": "[P1] product_inventory_settings: enable inventory on a product (create row, track_stock=true)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5"
     ]
@@ -213,7 +213,7 @@
   {
     "id": "F027",
     "description": "[P1] product_inventory_settings: toggle is_serialized, guarded when units already exist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5"
     ]
@@ -221,7 +221,7 @@
   {
     "id": "F028",
     "description": "[P1] product_inventory_settings: toggle is_kit, guarded when product is referenced",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5"
     ]
@@ -229,7 +229,7 @@
   {
     "id": "F029",
     "description": "[P1] product_inventory_settings: set reorder_point/qty, default_location, preferred_vendor, creates_asset_on_delivery",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5"
     ]
@@ -237,7 +237,7 @@
   {
     "id": "F030",
     "description": "[P1] Surface product_inventory_settings merged into product read/detail (IService extension)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -269,7 +269,7 @@
   {
     "id": "F034",
     "description": "[P1] Guard: only item_kind='product' rows may receive product_inventory_settings (action-layer)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5"
     ]
@@ -277,7 +277,7 @@
   {
     "id": "F035",
     "description": "[P1] Guard: settings/cost currency aligns with product cost_currency",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "13"
     ]
