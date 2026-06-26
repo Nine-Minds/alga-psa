@@ -61,3 +61,9 @@ Working memory for the inventory-module build. Append continuously.
 - **Placeholder serials for "found" serialized adjustments** (`ADJ-<ts>-<i>`): uniqueness only checked at receive; low collision risk. Revisit if adjust-found is exercised.
 - **createAsset import path inconsistency**: fulfillment imports from `@alga-psa/assets/actions`, dropship from `@alga-psa/assets` — both typecheck; normalize later.
 - Whole wave is **typecheck-clean but behaviorally unverified** (no DB run yet). Wave 3 (45 pareto tests on the test-DB bootstrap) is the behavioral gate.
+
+
+## Real-DB verification + server wiring (this session)
+- **Migrations verified on the REAL `server` DB** (standard local env `alga-psa-local-test`, direct Postgres localhost:5472, wired creds from server/.env.local). All 14 tables created, assets link cols added, PO/SO numbering seeded, default location seeded, 24 inventory permission rows. Applied additively WITHOUT recording in `knex_migrations` (the env DB is on a newer branch line — last applied `20260624120000`, which this feature branch lacks; recording would break the env-owner checkout's migrate:latest). Apply script: scratchpad/apply_inv.cjs. To reverse: run each inventory migration's down() against the server DB.
+- **`@alga-psa/inventory` wired into the server** mirroring billing: next.config.mjs webpack aliases (`/actions`,`/components`,`/lib` → src), added to the transpile/external list, tsconfig.base.json path, and node_modules/@alga-psa/inventory symlink. Actions importable now; components alias ready for the UI wave.
+- **Test DB note**: the standard test harness (server/test-utils/dbConfig.ts) recreates `test_database` + migrate.latest + seeds; per Robert, use the standard local env's `server` DB instead. Browser smoke test via algadev against the local dev server (port 3345, wired to alga-psa-local-test infra).
