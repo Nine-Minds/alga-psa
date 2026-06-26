@@ -6,9 +6,10 @@ import type { InstallInfo } from './types';
 
 export async function getInstallInfoForTenant(tenantId: string, registryId: string): Promise<InstallInfo | null> {
   const adminDb: Knex = await getAdminConnection();
-  const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+  const db = tenantDb(adminDb, tenantId);
+  const reg = await db.table('extension_registry').where({ id: registryId }).first(['id']);
   if (!reg) return null;
-  const install = await tenantDb(adminDb, tenantId).table('tenant_extension_install')
+  const install = await db.table('tenant_extension_install')
     .where({ registry_id: registryId })
     .first(['id', 'runner_domain', 'runner_status']);
   if (!install) return null;
@@ -22,14 +23,15 @@ export async function getInstallInfoForTenant(tenantId: string, registryId: stri
 // Does not enqueue workflows; app should do that separately
 export async function reprovisionInstallForTenant(tenantId: string, registryId: string): Promise<{ domain: string }> {
   const adminDb: Knex = await getAdminConnection();
-  const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+  const db = tenantDb(adminDb, tenantId);
+  const reg = await db.table('extension_registry').where({ id: registryId }).first(['id']);
   if (!reg) throw new Error('Registry not found');
-  const install = await tenantDb(adminDb, tenantId).table('tenant_extension_install')
+  const install = await db.table('tenant_extension_install')
     .where({ registry_id: registryId })
     .first(['id']);
   if (!install) throw new Error('Install not found');
   const domain = computeDomain(tenantId, registryId);
-  await tenantDb(adminDb, tenantId).table('tenant_extension_install')
+  await db.table('tenant_extension_install')
     .where({ id: (install as any).id })
     .update({
       runner_domain: domain,

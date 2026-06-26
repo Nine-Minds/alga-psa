@@ -6,6 +6,8 @@ import type { Knex } from 'knex';
 import { requireExtensionApiAccess } from '../_auth';
 // Classic extension lookups removed; this endpoint expects registryId
 
+const EXTENSION_REGISTRY_GLOBAL_TENANT = '__extension_registry_global__';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
@@ -23,7 +25,9 @@ export async function GET(request: Request) {
     if (!tenant) return NextResponse.json({ error: 'tenant not found' }, { status: 400 });
     trxKnex = knex;
     const adminDb: Knex = await getAdminConnection();
-    const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+    const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
+      .where({ id: registryId })
+      .first(['id']);
     if (!reg) return NextResponse.json({ error: 'registry not found' }, { status: 404 });
 
     const install = await tenantDb(knex, tenant).table('tenant_extension_install')

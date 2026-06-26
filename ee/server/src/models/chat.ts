@@ -1,5 +1,6 @@
 import { createTenantKnex } from '../lib/db';
 import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { IChat } from '../interfaces/chat.interface';
 
 export interface IChatHistoryItem extends IChat {
@@ -8,11 +9,39 @@ export interface IChatHistoryItem extends IChat {
   preview_text?: string | null;
 }
 
+type TenantDbConnection = Parameters<typeof tenantDb>[0];
+
+const CHAT_MODEL_NO_TENANT_CONTEXT = '__chat_model_no_tenant_context__';
+const LEGACY_NO_TENANT_REASON = 'Preserve legacy chat model behavior when no tenant context is available';
+
+const chatsTable = <Row extends object>(
+  db: TenantDbConnection,
+  tenant: string | null | undefined
+): Knex.QueryBuilder<Row, Row[]> =>
+  tenant
+    ? tenantDb(db, tenant).table<Row>('chats')
+    : tenantDb(db, CHAT_MODEL_NO_TENANT_CONTEXT).unscoped<Row>('chats', LEGACY_NO_TENANT_REASON);
+
+const messagesTable = <Row extends object>(
+  db: TenantDbConnection,
+  tenant: string | null | undefined
+): Knex.QueryBuilder<Row, Row[]> =>
+  tenant
+    ? tenantDb(db, tenant).table<Row>('messages')
+    : tenantDb(db, CHAT_MODEL_NO_TENANT_CONTEXT).unscoped<Row>('messages', LEGACY_NO_TENANT_REASON);
+
+const requireTenantForInsert = (tenant: string | null | undefined): string => {
+  if (!tenant) {
+    throw new Error('Missing tenant for chat insert');
+  }
+  return tenant;
+};
+
 const Chat = {
   getAll: async (): Promise<IChat[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const Chats = await db<IChat>('chats').select('*');
+      const {knex: db, tenant} = await createTenantKnex();
+      const Chats = await chatsTable<IChat>(db, tenant).select('*');
       return Chats;
     } catch (error) {
       console.error('Error getting all chats:', error);
@@ -22,8 +51,8 @@ const Chat = {
 
   get: async (id: string): Promise<IChat | undefined> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const Chat = await db<IChat>('chats').select('*').where({ id }).first();
+      const {knex: db, tenant} = await createTenantKnex();
+      const Chat = await chatsTable<IChat>(db, tenant).select('*').where({ id }).first();
       return Chat;
     } catch (error) {
       console.error(`Error getting chat with id ${id}:`, error);
@@ -36,7 +65,7 @@ const Chat = {
       const { knex: db } = await createTenantKnex();
       const chatsRoot = tenant
         ? tenantDb(db, tenant).table<IChatHistoryItem>('chats')
-        : db<IChatHistoryItem>('chats');
+        : chatsTable<IChatHistoryItem>(db, undefined);
       const chats = await chatsRoot
         .select(
           'chats.*',
@@ -68,7 +97,7 @@ const Chat = {
       const { knex: db } = await createTenantKnex();
       const chatsRoot = tenant
         ? tenantDb(db, tenant).table<IChat>('chats')
-        : db<IChat>('chats');
+        : chatsTable<IChat>(db, undefined);
       const chatsRootSql = chatsRoot
         .select('chats.*')
         .where({ user_id: userId })
@@ -140,7 +169,8 @@ const Chat = {
   insert: async (Chat: IChat): Promise<Pick<Omit<IChat, 'tenant'>, "id">> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();
-      const [id] = await db<IChat>('chats').insert({...Chat, tenant: tenant!}).returning('id');
+      const scopedTenant = requireTenantForInsert(tenant);
+      const [id] = await chatsTable<IChat>(db, scopedTenant).insert({...Chat, tenant: scopedTenant}).returning('id');
       return id;
     } catch (error) {
       console.error('Error inserting chat:', error);
@@ -150,8 +180,8 @@ const Chat = {
 
   update: async (id: string, Chat: Partial<IChat>): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      await db<IChat>('chats').where({ id }).update(Chat);
+      const {knex: db, tenant} = await createTenantKnex();
+      await chatsTable<IChat>(db, tenant).where({ id }).update(Chat);
     } catch (error) {
       console.error(`Error updating chat with id ${id}:`, error);
       throw error;
@@ -160,8 +190,8 @@ const Chat = {
 
   updateTitleForUser: async (id: string, userId: string, title: string): Promise<boolean> => {
     try {
-      const { knex: db } = await createTenantKnex();
-      const updatedRows = await db<IChat>('chats')
+      const { knex: db, tenant } = await createTenantKnex();
+      const updatedRows = await chatsTable<IChat>(db, tenant)
         .where({ id, user_id: userId })
         .update({
           title_text: title,
@@ -178,7 +208,7 @@ const Chat = {
     try {
       const { knex: db, tenant } = await createTenantKnex();
       const deleted = await db.transaction(async (trx) => {
-        const chat = await trx<IChat>('chats')
+        const chat = await chatsTable<IChat>(trx, tenant)
           .select('id', 'tenant')
           .where({ id, user_id: userId })
           .first();
@@ -188,15 +218,8 @@ const Chat = {
         }
 
         const scopedTenant = chat.tenant ?? tenant ?? undefined;
-        const messageDeleteFilter = scopedTenant
-          ? { chat_id: id, tenant: scopedTenant }
-          : { chat_id: id };
-        const chatDeleteFilter = scopedTenant
-          ? { id, tenant: scopedTenant }
-          : { id };
-
-        await trx('messages').where(messageDeleteFilter).del();
-        await trx<IChat>('chats').where(chatDeleteFilter).del();
+        await messagesTable(trx, scopedTenant).where({ chat_id: id }).del();
+        await chatsTable<IChat>(trx, scopedTenant).where({ id }).del();
         return true;
       });
 

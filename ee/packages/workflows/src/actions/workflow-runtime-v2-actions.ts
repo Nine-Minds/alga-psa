@@ -1252,6 +1252,9 @@ const hasWorkflowScheduleTable = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex']
 ): Promise<boolean> => knex.schema.hasTable('tenant_workflow_schedule');
 
+const WORKFLOW_ALL_TENANT_QUERY_TENANT = '__workflow_all_tenant_query__';
+const WORKFLOW_ALL_TENANT_QUERY_REASON = 'Workflow admin/all-tenant query keeps tenant equality as correlated predicates';
+
 function workflowTenantTable(
   conn: Knex | Knex.Transaction,
   tenant: string | null | undefined,
@@ -1259,7 +1262,8 @@ function workflowTenantTable(
 ): Knex.QueryBuilder<any, any> {
   return tenant
     ? tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>
-    : conn(table) as Knex.QueryBuilder<any, any>;
+    : tenantDb(conn, WORKFLOW_ALL_TENANT_QUERY_TENANT)
+      .unscoped(table, WORKFLOW_ALL_TENANT_QUERY_REASON) as Knex.QueryBuilder<any, any>;
 }
 
 const loadWorkflowScheduleStateMap = async (
@@ -2345,6 +2349,7 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
       rootTenantColumn: 'workflow_runs.tenant',
     });
   } else {
+    // LEVERAGE: friction correlated-tenant-predicate — all-tenant workflow joins need facade support for outer-row tenant equality.
     query.leftJoin('workflow_definitions', function (this: Knex.JoinClause) {
       this.on('workflow_runs.workflow_id', 'workflow_definitions.workflow_id')
         .andOn('workflow_runs.tenant', 'workflow_definitions.tenant');
@@ -2370,6 +2375,7 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
         .whereRaw('workflow_run_waits.run_id = workflow_runs.run_id')
         .where('workflow_run_waits.key', 'ilike', searchValue);
       if (!db) {
+        // LEVERAGE: friction correlated-tenant-predicate — all-tenant workflow EXISTS filters need facade support for outer-row tenant equality.
         waitSearch.whereRaw('workflow_run_waits.tenant = workflow_runs.tenant');
       }
       builder
@@ -2477,6 +2483,7 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
       rootTenantColumn: 'runs.tenant'
     });
   } else {
+    // LEVERAGE: friction correlated-tenant-predicate — all-tenant workflow joins need facade support for outer-row tenant equality.
     query
       .leftJoin('workflow_definitions as defs', function () {
         this.on('runs.workflow_id', 'defs.workflow_id').andOn('runs.tenant', 'defs.tenant');

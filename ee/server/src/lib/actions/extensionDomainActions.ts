@@ -7,6 +7,8 @@ import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '@ee/lib/extensions/runtime/provision';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
+const EXTENSION_REGISTRY_GLOBAL_TENANT = '__extension_registry_global__';
+
 export interface InstallInfo {
   install_id: string;
   runner_domain: string | null;
@@ -22,7 +24,9 @@ export async function getInstallInfo(registryId: string): Promise<InstallInfo | 
   if (!tenant) throw new Error('Tenant not found');
   await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
   const adminDb: Knex = await getAdminConnection();
-  const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+  const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
+    .where({ id: registryId })
+    .first(['id']);
   if (!reg) return null;
 
   // Join with extension_bundle to get content_hash for Docker backend
@@ -55,7 +59,9 @@ export async function reprovisionExtension(registryId: string): Promise<{ domain
   if (!tenant) throw new Error('Tenant not found');
   await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
   const adminDb: Knex = await getAdminConnection();
-  const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+  const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
+    .where({ id: registryId })
+    .first(['id']);
   if (!reg) throw new Error('Registry not found');
   const install = await tenantDb(adminDb, tenant).table('tenant_extension_install')
     .where({ registry_id: registryId })

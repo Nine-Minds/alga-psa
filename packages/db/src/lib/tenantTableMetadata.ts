@@ -61,6 +61,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   checklist_template_items: { scope: 'tenant' },
   checklist_templates: { scope: 'tenant' },
   chats: { scope: 'tenant' },
+  messages: { scope: 'tenant' },
   companies: { scope: 'tenant' },
   comments: { scope: 'tenant' },
   comment_reactions: { scope: 'tenant' },
