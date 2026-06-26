@@ -1,7 +1,6 @@
 'use server'
 
-import { Knex } from 'knex'; // Import Knex type
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { validateData } from '@alga-psa/validation';
@@ -25,6 +24,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   timeSheetId: string
 ): Promise<IExtendedWorkItem[]> => {
   const {knex: db} = await createTenantKnex();
+  const scopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry reading (reading work items for time entries)
   if (!await hasPermission(user, 'timeentry', 'read', db)) {
@@ -34,7 +34,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
-  const timeSheet = await db('time_sheets')
+  const timeSheet = await scopedDb.table('time_sheets')
     .where({ id: validatedParams.timeSheetId, tenant })
     .select('user_id')
     .first();
@@ -46,21 +46,18 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
   // Get tickets
-  const tickets = await db('tickets')
-    .whereIn('tickets.ticket_id', function () {
-      this.select('work_item_id')
-        .from('time_entries')
+  const ticketsQuery = scopedDb.table('tickets')
+    .whereIn(
+      'tickets.ticket_id',
+      scopedDb.table('time_entries')
+        .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ticket',
-          'time_entries.time_sheet_id': validatedParams.timeSheetId,
-          'time_entries.tenant': tenant
-        });
-    })
-    .where('tickets.tenant', tenant)
-    .leftJoin('tickets as mt', function () {
-      this.on('tickets.master_ticket_id', '=', 'mt.ticket_id')
-        .andOn('tickets.tenant', '=', 'mt.tenant');
-    })
+          'time_entries.time_sheet_id': validatedParams.timeSheetId
+        })
+    );
+  scopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 'tickets.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+  const tickets = await ticketsQuery
     .select(
       'tickets.ticket_id as work_item_id',
       'tickets.title as name',
@@ -72,29 +69,20 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     );
 
   // Get project tasks
-  const projectTasks = await db('project_tasks')
-    .whereIn('task_id', function () {
-      this.select('work_item_id')
-        .from('time_entries')
+  const projectTasksQuery = scopedDb.table('project_tasks')
+    .whereIn(
+      'task_id',
+      scopedDb.table('time_entries')
+        .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'project_task',
-          'time_entries.time_sheet_id': validatedParams.timeSheetId,
-          'time_entries.tenant': tenant
-        });
-    })
-    .join('project_phases', function() {
-      this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-          .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-    })
-    .join('projects', function() {
-      this.on('project_phases.project_id', '=', 'projects.project_id')
-          .andOn('project_phases.tenant', '=', 'projects.tenant');
-    })
-    .leftJoin('service_catalog', function() {
-      this.on('project_tasks.service_id', '=', 'service_catalog.service_id')
-          .andOn('project_tasks.tenant', '=', 'service_catalog.tenant');
-    })
-    .where({ 'project_tasks.tenant': tenant })
+          'time_entries.time_sheet_id': validatedParams.timeSheetId
+        })
+    );
+  scopedDb.tenantJoin(projectTasksQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+  scopedDb.tenantJoin(projectTasksQuery, 'projects', 'project_phases.project_id', 'projects.project_id');
+  scopedDb.tenantJoin(projectTasksQuery, 'service_catalog', 'project_tasks.service_id', 'service_catalog.service_id', { type: 'left' });
+  const projectTasks = await projectTasksQuery
     .select(
       'task_id as work_item_id',
       'task_name as name',
@@ -107,17 +95,16 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     );
 
   // Get ad-hoc entries
-  const adHocEntries = await db('schedule_entries')
-    .whereIn('entry_id', function () {
-      this.select('work_item_id')
-        .from('time_entries')
+  const adHocEntries = await scopedDb.table('schedule_entries')
+    .whereIn(
+      'entry_id',
+      scopedDb.table('time_entries')
+        .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ad_hoc',
-          'time_entries.time_sheet_id': validatedParams.timeSheetId,
-          'time_entries.tenant': tenant
-        });
-    })
-    .where('schedule_entries.tenant', tenant)
+          'time_entries.time_sheet_id': validatedParams.timeSheetId
+        })
+    )
     .select(
       'entry_id as work_item_id',
       'title as name',
@@ -126,29 +113,20 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     );
 
   // Get interactions
-  const interactions = await db('interactions')
-    .whereIn('interaction_id', function () {
-      this.select('work_item_id')
-        .from('time_entries')
+  const interactionsQuery = scopedDb.table('interactions')
+    .whereIn(
+      'interaction_id',
+      scopedDb.table('time_entries')
+        .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'interaction',
-          'time_entries.time_sheet_id': validatedParams.timeSheetId,
-          'time_entries.tenant': tenant
-        });
-    })
-    .leftJoin('clients', function() {
-      this.on('interactions.client_id', '=', 'clients.client_id')
-        .andOn('clients.tenant', '=', 'interactions.tenant');
-    })
-    .leftJoin('contacts', function() {
-      this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
-        .andOn('contacts.tenant', '=', 'interactions.tenant');
-    })
-    .leftJoin('interaction_types', function() {
-      this.on('interactions.type_id', '=', 'interaction_types.type_id')
-        .andOn('interaction_types.tenant', '=', 'interactions.tenant');
-    })
-    .where('interactions.tenant', tenant)
+          'time_entries.time_sheet_id': validatedParams.timeSheetId
+        })
+    );
+  scopedDb.tenantJoin(interactionsQuery, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+  scopedDb.tenantJoin(interactionsQuery, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+  scopedDb.tenantJoin(interactionsQuery, 'interaction_types', 'interactions.type_id', 'interaction_types.type_id', { type: 'left' });
+  const interactions = await interactionsQuery
     .select(
       'interactions.interaction_id as work_item_id',
       'interactions.title as name',
@@ -159,16 +137,15 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
       db.raw("'interaction' as type")
     );
 
-  const nonBillableEntries = await db('time_entries')
+  const nonBillableEntries = await scopedDb.table('time_entries')
     .where({
       'time_entries.work_item_type': 'non_billable_category',
-      'time_entries.time_sheet_id': validatedParams.timeSheetId,
-      'time_entries.tenant': tenant
+      'time_entries.time_sheet_id': validatedParams.timeSheetId
     })
     .select('work_item_id', 'notes');
 
   const nonBillableWorkItems = Array.from(
-    nonBillableEntries.reduce((map, entry) => {
+    nonBillableEntries.reduce((map: Map<string, Pick<IWorkItem, 'work_item_id' | 'name' | 'description' | 'type'>>, entry: any) => {
       const workItemId = normalizeNonBillableWorkItemId(entry.work_item_id);
 
       if (!map.has(workItemId)) {
@@ -197,6 +174,7 @@ export const addWorkItem = withAuth(async (
   workItem: Omit<IWorkItem, 'tenant'>
 ): Promise<IWorkItem> => {
   const {knex: db} = await createTenantKnex();
+  const scopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry creation (adding work items for time entries)
   if (!await hasPermission(user, 'timeentry', 'create', db)) {
@@ -211,7 +189,7 @@ export const addWorkItem = withAuth(async (
   // Assuming it's meant to add a generic work item representation somewhere or
   // perhaps this function is misnamed/misplaced.
   // For now, keeping the original logic but adding a comment.
-  const [newWorkItem] = await db('service_catalog') // <-- Review this table name
+  const [newWorkItem] = await scopedDb.table('service_catalog') // <-- Review this table name
     .insert({
       service_id: validatedWorkItem.work_item_id, // Using work_item_id as service_id
       service_name: validatedWorkItem.name,
@@ -243,13 +221,13 @@ export const deleteWorkItem = withAuth(async (
 
   try {
     await db.transaction(async (trx) => {
+      const scopedDb = tenantDb(trx, tenant) as any;
       // First delete all time entries associated with this work item
       // Note: This only deletes time entries. It doesn't delete the work item itself
       // (e.g., the ticket or project task). Consider if the work item itself should be deleted.
-      await trx('time_entries')
+      await scopedDb.table('time_entries')
         .where({
-          work_item_id: workItemId,
-          tenant
+          work_item_id: workItemId
         })
         .delete();
         console.log(`Deleted time entries associated with work item ${workItemId}`);

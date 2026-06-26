@@ -4,8 +4,10 @@ import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { IUser } from '@alga-psa/types';
 import { getPortalDomain } from '@alga-psa/client-portal/models/PortalDomainModel';
-import { getTenantSlugForTenant } from '@alga-psa/db';
+import { getTenantSlugForTenant, tenantDb } from '@alga-psa/db';
 import { sendTenantRecoveryEmail } from '@alga-psa/email';
+
+const TENANT_RECOVERY_DISCOVERY_CONTEXT = 'tenant-recovery-discovery';
 
 export interface TenantLoginInfo {
   tenantId: string;
@@ -20,7 +22,8 @@ export interface TenantLoginInfo {
 async function isEmailAContact(email: string): Promise<boolean> {
   const db = await getAdminConnection();
   try {
-    const contact = await db('contacts')
+    const contact = await tenantDb(db, TENANT_RECOVERY_DISCOVERY_CONTEXT)
+      .unscoped('contacts', 'tenant discovery for client portal recovery contact email lookup')
       .where({
         'contacts.email': email.toLowerCase(),
         'contacts.is_inactive': false
@@ -40,8 +43,15 @@ async function isEmailAContact(email: string): Promise<boolean> {
 async function findClientUsersByEmail(email: string): Promise<Array<IUser & { client_name?: string }>> {
   const db = await getAdminConnection();
   try {
-    const users = await db<IUser>('users')
-      .leftJoin('tenants', 'users.tenant', 'tenants.tenant')
+    const users = await tenantDb(db, TENANT_RECOVERY_DISCOVERY_CONTEXT)
+      .unscoped<IUser>('users', 'tenant discovery for client portal recovery user email lookup')
+      .leftJoin(
+        tenantDb(db, TENANT_RECOVERY_DISCOVERY_CONTEXT)
+          .unscoped('tenants', 'tenant discovery for client portal recovery tenant name lookup')
+          .as('tenants'),
+        'users.tenant',
+        'tenants.tenant'
+      )
       .select(
         'users.*',
         'tenants.client_name'

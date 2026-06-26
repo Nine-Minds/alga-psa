@@ -75,7 +75,7 @@ async function seedBoardTicketStatusesFromStandards(
     return 0;
   }
 
-  const statusColumns = await trx('statuses').columnInfo();
+  const statusColumns = await tenantDb(trx, tenant).table('statuses').columnInfo();
   const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
   const now = new Date().toISOString();
 
@@ -106,7 +106,7 @@ export async function copyBoardTicketStatuses(
 ): Promise<number> {
   const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
     tenantDb(trx, tenant).table<Row>(table);
-  const statusColumns = await trx('statuses').columnInfo();
+  const statusColumns = await tenantDb(trx, tenant).table('statuses').columnInfo();
   const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
   const sourceStatuses = await tenantScopedTable('statuses')
     .where({

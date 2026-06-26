@@ -1,7 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
@@ -69,7 +68,8 @@ export interface TeamsMeetingOrganizerVerification {
 }
 
 async function tenantHasTeamsAddOn(db: any, tenant: string): Promise<boolean> {
-  const row = await db('tenant_addons')
+  const scopedDb = tenantDb(db, tenant);
+  const row = await scopedDb.table('tenant_addons')
     .where({ tenant, addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', db.fn.now());
@@ -99,7 +99,7 @@ export const getTeamsMeetingsTabState = withAuth(async (
       return { success: true, data: { visible: false, organizerUpn: null } };
     }
 
-    const integration = await db('teams_integrations')
+    const integration = await tenantDb(db, tenant).table('teams_integrations')
       .where({ tenant })
       .select('install_status', 'default_meeting_organizer_upn')
       .first();
@@ -139,7 +139,8 @@ export const setDefaultMeetingOrganizer = withAuth(async (
       return { success: false, error: 'Microsoft Teams meetings require the Teams add-on.' };
     }
 
-    const integration = await db('teams_integrations')
+    const scopedDb = tenantDb(db, tenant);
+    const integration = await scopedDb.table('teams_integrations')
       .where({ tenant })
       .select('tenant', 'install_status')
       .first();
@@ -149,7 +150,7 @@ export const setDefaultMeetingOrganizer = withAuth(async (
     }
 
     const organizerUpn = (input.upn || '').trim() || null;
-    await db('teams_integrations')
+    await scopedDb.table('teams_integrations')
       .where({ tenant })
       .update({
         default_meeting_organizer_upn: organizerUpn,
@@ -235,11 +236,12 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
       const now = new Date();
 
       // Check if updating existing setting
       if (data.availability_setting_id) {
-        const existing = await trx('availability_settings')
+        const existing = await scopedDb.table('availability_settings')
           .where({
             availability_setting_id: data.availability_setting_id,
             tenant
@@ -251,7 +253,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
         }
 
         // Update existing setting
-        await trx('availability_settings')
+        await scopedDb.table('availability_settings')
           .where({
             availability_setting_id: data.availability_setting_id,
             tenant
@@ -261,7 +263,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
             updated_at: now
           });
 
-        const updated = await trx('availability_settings')
+        const updated = await scopedDb.table('availability_settings')
           .where({
             availability_setting_id: data.availability_setting_id,
             tenant
@@ -272,7 +274,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
       }
 
       // Check for existing setting with same criteria
-      let query = trx('availability_settings')
+      let query = scopedDb.table('availability_settings')
         .where({
           tenant,
           setting_type: validatedData.setting_type
@@ -300,7 +302,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
 
       if (existing) {
         // Update existing
-        await trx('availability_settings')
+        await scopedDb.table('availability_settings')
           .where({
             availability_setting_id: existing.availability_setting_id,
             tenant
@@ -310,7 +312,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
             updated_at: now
           });
 
-        const updated = await trx('availability_settings')
+        const updated = await scopedDb.table('availability_settings')
           .where({
             availability_setting_id: existing.availability_setting_id,
             tenant
@@ -330,9 +332,9 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
         updated_at: now
       };
 
-      await trx('availability_settings').insert(newSetting);
+      await scopedDb.table('availability_settings').insert(newSetting);
 
-      const created = await trx('availability_settings')
+      const created = await scopedDb.table('availability_settings')
         .where({
           availability_setting_id: settingId,
           tenant
@@ -368,7 +370,8 @@ export const getAvailabilitySettings = withAuth(async (
     }
 
     const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
-      let query = trx('availability_settings')
+      const scopedDb = tenantDb(trx, tenant);
+      let query = scopedDb.table('availability_settings')
         .where({ tenant })
         .orderBy('created_at', 'desc');
 
@@ -416,7 +419,8 @@ export const deleteAvailabilitySetting = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const setting = await trx('availability_settings')
+      const scopedDb = tenantDb(trx, tenant);
+      const setting = await scopedDb.table('availability_settings')
         .where({
           availability_setting_id: settingId,
           tenant
@@ -427,7 +431,7 @@ export const deleteAvailabilitySetting = withAuth(async (
         throw new Error('Availability setting not found');
       }
 
-      await trx('availability_settings')
+      await scopedDb.table('availability_settings')
         .where({
           availability_setting_id: settingId,
           tenant
@@ -464,10 +468,11 @@ export const addAvailabilityException = withAuth(async (
     }
 
     const exception = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
       const now = new Date();
 
       // Check if exception already exists for this user/date
-      let query = trx('availability_exceptions')
+      let query = scopedDb.table('availability_exceptions')
         .where({
           tenant,
           date: validatedData.date
@@ -483,7 +488,7 @@ export const addAvailabilityException = withAuth(async (
 
       if (existing) {
         // Update existing exception
-        await trx('availability_exceptions')
+        await scopedDb.table('availability_exceptions')
           .where({
             exception_id: existing.exception_id,
             tenant
@@ -494,7 +499,7 @@ export const addAvailabilityException = withAuth(async (
             updated_at: now
           });
 
-        const updated = await trx('availability_exceptions')
+        const updated = await scopedDb.table('availability_exceptions')
           .where({
             exception_id: existing.exception_id,
             tenant
@@ -514,9 +519,9 @@ export const addAvailabilityException = withAuth(async (
         updated_at: now
       };
 
-      await trx('availability_exceptions').insert(newException);
+      await scopedDb.table('availability_exceptions').insert(newException);
 
-      const created = await trx('availability_exceptions')
+      const created = await scopedDb.table('availability_exceptions')
         .where({
           exception_id: exceptionId,
           tenant
@@ -553,7 +558,8 @@ export const getAvailabilityExceptions = withAuth(async (
     }
 
     const exceptions = await withTransaction(db, async (trx: Knex.Transaction) => {
-      let query = trx('availability_exceptions')
+      const scopedDb = tenantDb(trx, tenant);
+      let query = scopedDb.table('availability_exceptions')
         .where({ tenant })
         .orderBy('date', 'asc');
 
@@ -594,7 +600,8 @@ export const deleteAvailabilityException = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const exception = await trx('availability_exceptions')
+      const scopedDb = tenantDb(trx, tenant);
+      const exception = await scopedDb.table('availability_exceptions')
         .where({
           exception_id: exceptionId,
           tenant
@@ -605,7 +612,7 @@ export const deleteAvailabilityException = withAuth(async (
         throw new Error('Availability exception not found');
       }
 
-      await trx('availability_exceptions')
+      await scopedDb.table('availability_exceptions')
         .where({
           exception_id: exceptionId,
           tenant

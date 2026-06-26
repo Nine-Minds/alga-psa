@@ -76,10 +76,9 @@ async function resolveProjectStatusInfo(
   tenant: string,
   projectStatusMappingId: string
 ): Promise<{ status: string; isClosed: boolean }> {
-  const row = await tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
-    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
+  const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+  tenantDb(trx, tenant).tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  const row = await query
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
@@ -1035,11 +1034,10 @@ export const deleteTask = withAuth(async (
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Check for associated time entries before proceeding
-            const timeEntryCount = await trx('time_entries')
+            const timeEntryCount = await tenantScopedTable(trx, 'time_entries', tenant)
                 .where({
                     work_item_id: taskId,
                     work_item_type: 'project_task',
-                    tenant: tenant
                 })
                 .count('* as count')
                 .first();
@@ -1430,7 +1428,7 @@ export const addTaskResourcesAction = withAuth(async (
             const toInsert = wanted.filter((id) => id !== primaryAgentId && !existingIds.has(id));
 
             if (toInsert.length > 0) {
-                await trx('task_resources').insert(
+                await tenantScopedTable(trx, 'task_resources', tenant).insert(
                     toInsert.map((userId) => ({
                         tenant,
                         task_id: taskId,
@@ -1550,7 +1548,7 @@ export const assignTeamToProjectTask = withAuth(async (
                 const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
 
                 if (toInsert.length > 0) {
-                    await trx('task_resources').insert(
+                    await tenantScopedTable(trx, 'task_resources', tenant).insert(
                         toInsert.map((userId) => ({
                             tenant,
                             task_id: taskId,
@@ -2127,11 +2125,10 @@ export const duplicateTaskToPhase = withAuth(async (
             // If options.newStatusMappingId is provided, it's already set as finalStatusMappingId
 
             // 3. Get order key for end of target status
-            const lastTask = await trx('project_tasks')
+            const lastTask = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where({
                     phase_id: newPhaseId,
                     project_status_mapping_id: finalStatusMappingId,
-                    tenant
                 })
                 .orderBy('order_key', 'desc')
                 .first();

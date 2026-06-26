@@ -1782,7 +1782,7 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
 
     await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
 
-    const [group] = await trx('client_portal_visibility_groups')
+    const [group] = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
       .insert({
         tenant,
         client_id: clientId,
@@ -1796,7 +1796,7 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
     }
 
     if (boardIds.length > 0) {
-      await trx('client_portal_visibility_group_boards')
+      await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
         .insert(boardIds.map((boardId) => ({
           tenant,
           group_id: group.group_id,
@@ -1849,7 +1849,7 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
       .delete();
 
     if (boardIds.length > 0) {
-      await trx('client_portal_visibility_group_boards')
+      await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
         .insert(boardIds.map((boardId) => ({
           tenant,
           group_id: groupId,

@@ -125,7 +125,7 @@ async function processExpiredCredit(
 
     // Create the credit expiration transaction
     const expirationTxId = uuidv4();
-    await trx('transactions').insert({
+    await tenantScopedTable(trx, 'transactions', tenant).insert({
       transaction_id: expirationTxId,
       client_id: credit.client_id,
       amount: expirationAmount, // Negative amount to reduce the balance

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 
@@ -58,11 +59,11 @@ export async function POST(req: NextRequest) {
     const knex = await getAdminConnection();
     
     await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant_id);
       // Check for idempotency if event ID is provided
       if (event_id) {
-        const existing = await trx('tenants')
+        const existing = await db.table('tenants')
           .where({ 
-            tenant: tenant_id,
             stripe_event_id: event_id 
           })
           .first();
@@ -77,8 +78,7 @@ export async function POST(req: NextRequest) {
       }
       
       // Update the tenant's license count
-      const result = await trx('tenants')
-        .where({ tenant: tenant_id })
+      const result = await db.table('tenants')
         .update({
           licensed_user_count: license_count,
           last_license_update: knex.fn.now(),
@@ -155,10 +155,10 @@ export async function GET(req: NextRequest) {
     });
     
     const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenantId);
     
     // Get the tenant's license limit
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const tenant = await db.table('tenants')
       .first('licensed_user_count', 'last_license_update');
     
     if (!tenant) {
@@ -169,9 +169,8 @@ export async function GET(req: NextRequest) {
     }
     
     // Count active MSP (internal) users
-    const usedResult = await knex('users')
+    const usedResult = await db.table('users')
       .where({ 
-        tenant: tenantId,
         user_type: 'internal',
         is_inactive: false 
       })

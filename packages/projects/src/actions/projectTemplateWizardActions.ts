@@ -70,7 +70,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
     await checkPermission(user, 'project', 'create', trx);
 
     // 1. Create the template
-    const [template] = await trx('project_templates')
+    const [template] = await tenantScopedTable(trx, 'project_templates', tenant)
       .insert({
         tenant,
         template_name: data.template_name.trim(),
@@ -90,7 +90,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
 
       for (let i = 0; i < sortedPhases.length; i++) {
         const phase = sortedPhases[i];
-        const [newPhase] = await trx('project_template_phases')
+        const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
           .insert({
             tenant,
             template_id: template.template_id,
@@ -110,7 +110,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
     const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
     if (data.status_mappings && data.status_mappings.length > 0) {
       for (const mapping of data.status_mappings) {
-        const [newMapping] = await trx('project_template_status_mappings')
+        const [newMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
           .insert({
             tenant,
             template_id: template.template_id,
@@ -155,7 +155,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
             ? statusMappingMap.get(task.template_status_mapping_id)
             : null;
 
-          const [newTask] = await trx('project_template_tasks')
+          const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
             .insert({
               tenant,
               template_phase_id: templatePhaseId,
@@ -191,7 +191,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
               template_task_id: templateTaskId,
               user_id: userId,
             }));
-            await trx('project_template_task_resources').insert(agentInserts);
+            await tenantScopedTable(trx, 'project_template_task_resources', tenant).insert(agentInserts);
           }
         }
       }
@@ -214,7 +214,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
         }));
 
       if (checklistInserts.length > 0) {
-        await trx('project_template_checklist_items').insert(checklistInserts);
+        await tenantScopedTable(trx, 'project_template_checklist_items', tenant).insert(checklistInserts);
       }
     }
 
@@ -275,7 +275,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
 
       for (let i = 0; i < sortedPhases.length; i++) {
         const phase = sortedPhases[i];
-        const [newPhase] = await trx('project_template_phases')
+        const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
           .insert({
             tenant,
             template_id: templateId,
@@ -294,7 +294,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     const statusMappingMap = new Map<string, string>();
     if (data.status_mappings && data.status_mappings.length > 0) {
       for (const mapping of data.status_mappings) {
-        const [newMapping] = await trx('project_template_status_mappings')
+        const [newMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
           .insert({
             tenant,
             template_id: templateId,
@@ -337,7 +337,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
             ? statusMappingMap.get(task.template_status_mapping_id)
             : null;
 
-          const [newTask] = await trx('project_template_tasks')
+          const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
             .insert({
               tenant,
               template_phase_id: templatePhaseId,
@@ -373,7 +373,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
               template_task_id: templateTaskId,
               user_id: userId,
             }));
-            await trx('project_template_task_resources').insert(agentInserts);
+            await tenantScopedTable(trx, 'project_template_task_resources', tenant).insert(agentInserts);
           }
         }
       }
@@ -396,7 +396,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
         }));
 
       if (checklistInserts.length > 0) {
-        await trx('project_template_checklist_items').insert(checklistInserts);
+        await tenantScopedTable(trx, 'project_template_checklist_items', tenant).insert(checklistInserts);
       }
     }
 
@@ -426,7 +426,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     }
 
     // Create new template
-    const [newTemplate] = await trx('project_templates')
+    const [newTemplate] = await tenantScopedTable(trx, 'project_templates', tenant)
       .insert({
         tenant,
         template_name: newTemplateName.trim(),
@@ -450,7 +450,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
         custom_status_name: mapping.custom_status_name,
         display_order: mapping.display_order,
       }));
-      await trx('project_template_status_mappings').insert(statusInserts);
+      await tenantScopedTable(trx, 'project_template_status_mappings', tenant).insert(statusInserts);
     }
 
     // Copy phases
@@ -461,7 +461,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     const phaseMap = new Map<string, string>();
 
     for (const phase of sourcePhases) {
-      const [newPhase] = await trx('project_template_phases')
+      const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
         .insert({
           tenant,
           template_id: newTemplate.template_id,
@@ -490,7 +490,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
       const newPhaseId = phaseMap.get(task.template_phase_id);
       if (!newPhaseId) continue;
 
-      const [newTask] = await trx('project_template_tasks')
+      const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
         .insert({
           tenant,
           template_phase_id: newPhaseId,
@@ -521,7 +521,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
       const newSucc = taskMap.get(dep.successor_task_id);
 
       if (newPred && newSucc) {
-        await trx('project_template_dependencies').insert({
+        await tenantScopedTable(trx, 'project_template_dependencies', tenant).insert({
           tenant,
           template_id: newTemplate.template_id,
           predecessor_task_id: newPred,
@@ -541,7 +541,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
       for (const item of sourceChecklists) {
         const newTaskId = taskMap.get(item.template_task_id);
         if (newTaskId) {
-          await trx('project_template_checklist_items').insert({
+          await tenantScopedTable(trx, 'project_template_checklist_items', tenant).insert({
             tenant,
             template_task_id: newTaskId,
             item_name: item.item_name,

@@ -10,6 +10,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { IEscalationManagerWithUser } from '../types';
 import { getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
 
@@ -55,8 +56,10 @@ export async function escalateTicket(
   };
 
   try {
+    const scopedDb = tenantDb(trx, tenant);
+
     // 1. Get ticket details
-    const ticket = await trx('tickets')
+    const ticket = await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .select(
         'ticket_id',
@@ -82,7 +85,7 @@ export async function escalateTicket(
     }
 
     // 2. Update ticket escalation fields
-    await trx('tickets')
+    await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .update({
         escalated: true,
@@ -182,8 +185,10 @@ export async function getEscalationManagerForTicket(
   ticketId: string,
   level: 1 | 2 | 3
 ): Promise<IEscalationManagerWithUser | null> {
+  const scopedDb = tenantDb(trx, tenant);
+
   // Get ticket's board
-  const ticket = await trx('tickets')
+  const ticket = await scopedDb.table('tickets')
     .where({ tenant, ticket_id: ticketId })
     .select('board_id')
     .first();
@@ -206,8 +211,10 @@ export async function checkEscalationNeeded(
   ticketId: string,
   elapsedPercent: number
 ): Promise<1 | 2 | 3 | null> {
+  const scopedDb = tenantDb(trx, tenant);
+
   // Get ticket and its SLA policy target
-  const ticket = await trx('tickets')
+  const ticket = await scopedDb.table('tickets')
     .where({ tenant, ticket_id: ticketId })
     .select(
       'sla_policy_id',
@@ -221,7 +228,7 @@ export async function checkEscalationNeeded(
   }
 
   // Get the SLA target for this priority
-  const target = await trx('sla_policy_targets')
+  const target = await scopedDb.table('sla_policy_targets')
     .where({
       tenant,
       sla_policy_id: ticket.sla_policy_id,
@@ -266,11 +273,11 @@ async function getEscalationManagerInternal(
   boardId: string,
   level: 1 | 2 | 3
 ): Promise<IEscalationManagerWithUser | null> {
-  const config = await trx('escalation_managers as em')
-    .leftJoin('users as u', function() {
-      this.on('em.manager_user_id', 'u.user_id')
-          .andOn('em.tenant', 'u.tenant');
-    })
+  const scopedDb = tenantDb(trx, tenant);
+  const configQuery = scopedDb.table<any>('escalation_managers as em');
+  scopedDb.tenantJoin(configQuery, 'users as u', 'em.manager_user_id', 'u.user_id', { type: 'left' });
+
+  const config = await configQuery
     .where('em.tenant', tenant)
     .where('em.board_id', boardId)
     .where('em.escalation_level', level)
@@ -297,8 +304,10 @@ async function addEscalationManagerAsResource(
   level: number
 ): Promise<boolean> {
   try {
+    const scopedDb = tenantDb(trx, tenant);
+
     // Check if this manager is already a resource on this ticket
-    const existingResource = await trx('ticket_resources')
+    const existingResource = await scopedDb.table('ticket_resources')
       .where({
         tenant,
         ticket_id: ticketId,
@@ -308,7 +317,7 @@ async function addEscalationManagerAsResource(
 
     if (existingResource) {
       // Update the role to reflect new escalation level
-      await trx('ticket_resources')
+      await scopedDb.table('ticket_resources')
         .where({
           tenant,
           assignment_id: existingResource.assignment_id
@@ -320,7 +329,7 @@ async function addEscalationManagerAsResource(
     }
 
     // Add as new resource
-    await trx('ticket_resources')
+    await scopedDb.table('ticket_resources')
       .insert({
         assignment_id: crypto.randomUUID(),
         tenant,
@@ -352,7 +361,7 @@ async function sendEscalationInAppNotification(
 ): Promise<boolean> {
   try {
     // Insert notification directly into internal_notifications table
-    await trx('internal_notifications').insert({
+    await tenantDb(trx, tenant).table('internal_notifications').insert({
       tenant,
       user_id: userId,
       template_name: 'sla-escalation',
@@ -414,19 +423,13 @@ async function sendEscalationEmailNotification(
     }
 
     // Get additional ticket context for the email template
-    const ticketDetails = await trx('tickets as t')
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.assigned_to', 'u.user_id')
-            .andOn('t.tenant', 'u.tenant');
-      })
+    const scopedDb = tenantDb(trx, tenant);
+    const ticketDetailsQuery = scopedDb.table<any>('tickets as t');
+    scopedDb.tenantJoin(ticketDetailsQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketDetailsQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketDetailsQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+
+    const ticketDetails = await ticketDetailsQuery
       .where('t.tenant', tenant)
       .where('t.ticket_id', ticketId)
       .select(
@@ -437,7 +440,7 @@ async function sendEscalationEmailNotification(
       .first();
 
     // Get recipient name
-    const recipient = await trx('users')
+    const recipient = await scopedDb.table('users')
       .where({ tenant, user_id: userId })
       .select('first_name', 'last_name')
       .first();
@@ -485,7 +488,7 @@ async function logEscalationEvent(
   eventData: Record<string, unknown>
 ): Promise<void> {
   try {
-    await trx('sla_audit_log').insert({
+    await tenantDb(trx, tenant).table('sla_audit_log').insert({
       log_id: crypto.randomUUID(),
       tenant,
       ticket_id: ticketId,

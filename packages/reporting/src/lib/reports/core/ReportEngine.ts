@@ -1,6 +1,6 @@
 // Core ReportEngine for executing report definitions
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import {
@@ -63,8 +63,7 @@ export class ReportEngine {
         // instead of a hardcoded 'USD'. Defensive: a lookup failure must not fail the report.
         let defaultCurrency = 'USD';
         try {
-          const billingSettings = await trx('default_billing_settings')
-            .where({ tenant })
+          const billingSettings = await tenantDb(trx, tenant).table('default_billing_settings')
             .select('default_currency_code')
             .first();
           if (billingSettings?.default_currency_code) {

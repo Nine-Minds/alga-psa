@@ -10,7 +10,7 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, withTransaction, tenantDb } from '@alga-psa/db';
 import { getEmailNotificationService } from '@alga-psa/notifications';
 import { formatCurrency, formatDate } from '@alga-psa/core/formatters';
 import type { Knex } from 'knex';
@@ -58,9 +58,11 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
       const { knex } = await createTenantKnex();
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenantId);
+
         // Get client details
-        const client = await trx('clients')
-          .where({ client_id: clientId, tenant: tenantId })
+        const client = await scopedDb.table('clients')
+          .where({ client_id: clientId })
           .first();
 
         if (!client) {
@@ -72,8 +74,8 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
         }
 
         // Get client billing contacts
-        const contacts = await trx('client_contacts')
-          .where({ client_id: clientId, tenant: tenantId })
+        const contacts = await scopedDb.table('client_contacts')
+          .where({ client_id: clientId })
           .where('is_billing_contact', true)
           .select('user_id', 'email');
 
@@ -87,9 +89,8 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
 
         // Re-resolve credit + transaction details for the email template
         const creditIds = credits.map((credit) => credit.creditId);
-        const creditRows = await trx('credit_tracking')
+        const creditRows = await scopedDb.table('credit_tracking')
           .whereIn('credit_id', creditIds)
-          .where('tenant', tenantId)
           .select('credit_id', 'transaction_id');
 
         const transactionIdByCreditId = creditRows.reduce((acc, row) => {
@@ -102,9 +103,8 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
           .filter((id): id is string => Boolean(id));
 
         const transactions = transactionIds.length
-          ? await trx('transactions')
+          ? await scopedDb.table('transactions')
               .whereIn('transaction_id', transactionIds)
-              .where('tenant', tenantId)
           : [];
 
         const transactionMap = transactions.reduce((acc, tx) => {

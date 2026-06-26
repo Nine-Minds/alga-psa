@@ -104,8 +104,8 @@ export class QuoteService extends BaseService<IQuote> {
       }
 
       if (options.include_client !== false) {
-        baseQuery.leftJoin('clients as c', function () {
-          this.on('q.client_id', '=', 'c.client_id').andOn('q.tenant', '=', 'c.tenant');
+        tenantDb(knex, context.tenant).tenantJoin(baseQuery, 'clients as c', 'q.client_id', 'c.client_id', {
+          type: 'left',
         });
       }
 

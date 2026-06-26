@@ -11,7 +11,7 @@ import { runWithTenant } from '@/lib/db';
 import { hasPermission } from '@/lib/auth/rbac';
 import { getConnection } from '@/lib/db/db';
 import { validateEmoji } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import {
   ForbiddenError,
   createSuccessResponse,
@@ -38,18 +38,19 @@ export const POST = async (
       const knex = await getConnection(tenantId);
 
       const result = await withTransaction(knex, async (trx) => {
-        const existing = await trx('comment_reactions')
-          .where({ tenant: tenantId, comment_id: commentId, user_id: userId, emoji })
+        const db = tenantDb(trx, tenantId);
+        const existing = await db.table('comment_reactions')
+          .where({ comment_id: commentId, user_id: userId, emoji })
           .first();
 
         if (existing) {
-          await trx('comment_reactions')
-            .where({ tenant: tenantId, reaction_id: existing.reaction_id })
+          await db.table('comment_reactions')
+            .where({ reaction_id: existing.reaction_id })
             .del();
           return { added: false };
         }
 
-        await trx('comment_reactions')
+        await db.table('comment_reactions')
           .insert({ tenant: tenantId, comment_id: commentId, user_id: userId, emoji });
 
         return { added: true };

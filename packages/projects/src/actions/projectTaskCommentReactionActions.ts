@@ -52,7 +52,7 @@ export const toggleTaskCommentReaction = withAuth(async (
       return { added: false };
     }
 
-    await trx('project_task_comment_reactions')
+    await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
       .insert({ tenant, task_comment_id: taskCommentId, user_id: userId, emoji });
 
     return { added: true };

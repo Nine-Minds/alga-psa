@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 
 /**
@@ -21,20 +22,17 @@ export interface SyncNotificationService {
 }
 
 async function findAdminUserIds(knex: Knex, tenantId: string): Promise<string[]> {
-  const rows = await knex('users')
-    .join('user_roles', function joinRoles() {
-      this.on('user_roles.user_id', '=', 'users.user_id').andOn('user_roles.tenant', '=', 'users.tenant');
-    })
-    .join('roles', function joinRoleDefs() {
-      this.on('roles.role_id', '=', 'user_roles.role_id').andOn('roles.tenant', '=', 'user_roles.tenant');
-    })
-    .where('users.tenant', tenantId)
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('users')
     .where('users.user_type', 'internal')
     .whereRaw('LOWER(roles.role_name) = ?', ['admin'])
     .whereNot('users.is_inactive', true)
     .distinct('users.user_id');
+  db.tenantJoin(query, 'user_roles', 'user_roles.user_id', 'users.user_id');
+  db.tenantJoin(query, 'roles', 'roles.role_id', 'user_roles.role_id');
+  const rows = (await query) as unknown as Array<{ user_id: string }>;
 
-  return rows.map((row: { user_id: string }) => row.user_id);
+  return rows.map((row) => row.user_id);
 }
 
 export class DefaultSyncNotificationService implements SyncNotificationService {
@@ -129,7 +127,8 @@ export async function resolveTokenThresholdToAnnounce(
     return null;
   }
 
-  const row = await knex('tenant_settings').where({ tenant: tenantId }).select('settings').first();
+  const db = tenantDb(knex, tenantId);
+  const row = await db.table('tenant_settings').select('settings').first();
   const settings = row?.settings ?? {};
   const accountingSync = settings.accountingSync ?? {};
   const tokenNotices: Record<string, number> = accountingSync.tokenNotices ?? {};
@@ -147,9 +146,9 @@ export async function resolveTokenThresholdToAnnounce(
   };
 
   if (row) {
-    await knex('tenant_settings').where({ tenant: tenantId }).update({ settings: nextSettings });
+    await db.table('tenant_settings').update({ settings: nextSettings });
   } else {
-    await knex('tenant_settings').insert({ tenant: tenantId, settings: nextSettings });
+    await db.table('tenant_settings').insert({ tenant: tenantId, settings: nextSettings });
   }
 
   return threshold;

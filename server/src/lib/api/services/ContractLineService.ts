@@ -666,10 +666,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     const services = await tenantDb(knex, context.tenant).table('contract_line_service_configuration as psc')
-      .join('service_catalog as sc', function() {
-        this.on('psc.service_id', '=', 'sc.service_id')
-            .andOn('psc.tenant', '=', 'sc.tenant');
-      })
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'service_catalog as sc', 'psc.service_id', 'sc.service_id'))
       .where('psc.contract_line_id', planId)
       .select(
         'psc.*',
@@ -737,16 +734,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     const sortColumn = sort ? sortColumns[sort] ?? 'c.contract_name' : 'c.contract_name';
     const sortDirection = order === 'desc' ? 'desc' : 'asc';
 
-    const baseQuery = tenantDb(knex, context.tenant).table('contracts as c')
-      .leftJoin('clients as oc', function joinOwnerClient() {
-        this.on('c.owner_client_id', '=', 'oc.client_id').andOn('c.tenant', '=', 'oc.tenant');
-      })
-      .leftJoin('contract_lines as cl', function joinLines() {
-        this.on('c.contract_id', '=', 'cl.contract_id').andOn('c.tenant', '=', 'cl.tenant');
-      })
-      .leftJoin('client_contracts as cc', function joinAssignments() {
-        this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const baseQuery = scopedDb.table('contracts as c')
+      .modify((q) => scopedDb.tenantJoin(q, 'clients as oc', 'c.owner_client_id', 'oc.client_id', { type: 'left' }))
+      .modify((q) => scopedDb.tenantJoin(q, 'contract_lines as cl', 'c.contract_id', 'cl.contract_id', { type: 'left' }))
+      .modify((q) => scopedDb.tenantJoin(q, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' }))
       .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
       .whereNotNull('c.owner_client_id')
       .groupBy('c.contract_id', 'oc.client_name')
@@ -906,9 +898,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
     const buildQuery = () => {
       let q = tenantDb(knex, context.tenant).table('contract_lines as cl')
-        .join('client_contracts as cc', function joinClientContracts(this: any) {
-          this.on('cl.contract_id', '=', 'cc.contract_id').andOn('cl.tenant', '=', 'cc.tenant');
-        });
+        .modify((query) => tenantDb(knex, context.tenant).tenantJoin(query, 'client_contracts as cc', 'cl.contract_id', 'cc.contract_id'));
 
       if (filters.client_id) q = q.where('cc.client_id', filters.client_id);
       if (filters.contract_line_id) q = q.where('cl.contract_line_id', filters.contract_line_id);
@@ -1071,10 +1061,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
     return withTransaction(knex, async (trx) => {
       const assignment = await tenantDb(trx, context.tenant).table('contract_lines as cl')
-        .join('contracts as c', function joinContracts() {
-          this.on('cl.contract_id', '=', 'c.contract_id')
-            .andOn('cl.tenant', '=', 'c.tenant');
-        })
+        .modify((q) => tenantDb(trx, context.tenant).tenantJoin(q, 'contracts as c', 'cl.contract_id', 'c.contract_id'))
         .where('cl.contract_line_id', clientContractLineId)
         .select('c.owner_client_id as client_id')
         .first();
@@ -1315,19 +1302,17 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get time entries for billable usage
     const timeEntries = await tenantDb(knex, context.tenant).table('time_entries as te')
-      .join('contract_lines as cl', function joinLines() {
-        this.on('cl.contract_line_id', '=', knex.raw('?', [planId]))
-          .andOn('cl.tenant', '=', 'te.tenant');
-      })
-      .join('contracts as c', function joinContracts() {
-        this.on('cl.contract_id', '=', 'c.contract_id')
-          .andOn('cl.tenant', '=', 'c.tenant');
-      })
-      .join('client_contracts as cc', function joinAssignments() {
-        this.on('c.contract_id', '=', 'cc.contract_id')
-          .andOn('c.tenant', '=', 'cc.tenant')
-          .andOn('cc.client_id', '=', 'te.client_id');
-      })
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'contract_lines as cl', 'te.tenant', 'cl.tenant', {
+        on(join) {
+          join.andOn('cl.contract_line_id', '=', knex.raw('?', [planId]));
+        },
+      }))
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'contracts as c', 'cl.contract_id', 'c.contract_id'))
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', {
+        on(join) {
+          join.andOn('cc.client_id', '=', 'te.client_id');
+        },
+      }))
       .where('cl.contract_line_id', planId)
       .where('cc.is_active', true)
       .andWhere(function limitToClientOwnedContracts() {
@@ -1461,14 +1446,8 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get client assignments
     const clientStats = await tenantDb(knex, context.tenant).table('contract_lines as cl')
-      .join('contracts as c', function joinContracts() {
-        this.on('cl.contract_id', '=', 'c.contract_id')
-          .andOn('cl.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('client_contracts as cc', function joinAssignments() {
-        this.on('c.contract_id', '=', 'cc.contract_id')
-          .andOn('c.tenant', '=', 'cc.tenant');
-      })
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'contracts as c', 'cl.contract_id', 'c.contract_id'))
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' }))
       .where('cl.contract_line_id', planId)
       .select(
         knex.raw('COUNT(DISTINCT cc.client_id) as total_clients'),
@@ -1490,10 +1469,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get service usage stats
     const serviceStats = await tenantDb(knex, context.tenant).table('contract_line_service_configuration as psc')
-      .join('service_catalog as sc', function joinCatalog() {
-        this.on('psc.service_id', '=', 'sc.service_id')
-          .andOn('psc.tenant', '=', 'sc.tenant');
-      })
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'service_catalog as sc', 'psc.service_id', 'sc.service_id'))
       .where('psc.contract_line_id', planId)
       .select('sc.service_name', 'psc.service_id')
       .count('* as usage_count');
@@ -1533,14 +1509,8 @@ export class ContractLineService extends BaseService<IContractLine> {
       tenantDb(knex, context.tenant).table('contract_lines').count('* as count').first(),
       tenantDb(knex, context.tenant).table('contracts').count('* as count').first(),
       tenantDb(knex, context.tenant).table('contract_lines as cl')
-        .join('contracts as c', function joinContracts() {
-          this.on('cl.contract_id', '=', 'c.contract_id')
-            .andOn('cl.tenant', '=', 'c.tenant');
-        })
-        .join('client_contracts as cc', function joinAssignments() {
-          this.on('c.contract_id', '=', 'cc.contract_id')
-            .andOn('c.tenant', '=', 'cc.tenant');
-        })
+        .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'contracts as c', 'cl.contract_id', 'c.contract_id'))
+        .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id'))
         .where('cl.is_active', true)
         .where('cc.is_active', true)
         .whereRaw('c.owner_client_id = cc.client_id')
@@ -1610,10 +1580,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Add service count if requested
     if (options.includeServices) {
       query = query
-        .leftJoin('contract_line_service_configuration as psc', function() {
-          this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
-              .andOn('cl.tenant', '=', 'psc.tenant');
-        })
+        .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'contract_line_service_configuration as psc', 'cl.contract_line_id', 'psc.contract_line_id', { type: 'left' }))
         .groupBy('cl.contract_line_id')
         .select(knex.raw('COUNT(DISTINCT psc.service_id) as total_services'));
     }
@@ -1739,19 +1706,14 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Check if plan is associated with any contracts and fetch associated clients
     // After migration 20251028090000, data is stored directly in contract_lines
     const contractsWithClients = await tenantDb(knex, context.tenant).table('contract_lines as clx')
-      .join('contracts as c', function() {
-        this.on('clx.contract_id', '=', 'c.contract_id')
-          .andOn('clx.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('client_contracts as cc', function() {
-        this.on('c.contract_id', '=', 'cc.contract_id')
-          .andOn('c.tenant', '=', 'cc.tenant')
-          .andOn('cc.is_active', '=', knex.raw('?', [true]));
-      })
-      .leftJoin('clients as cl', function() {
-        this.on('cc.client_id', '=', 'cl.client_id')
-          .andOn('cl.tenant', '=', 'cc.tenant');
-      })
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'contracts as c', 'clx.contract_id', 'c.contract_id'))
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', {
+        type: 'left',
+        on(join) {
+          join.andOn('cc.is_active', '=', knex.raw('?', [true]));
+        },
+      }))
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' }))
       .where('clx.contract_line_id', planId)
       .whereNotNull('clx.contract_id')
       .whereRaw('c.owner_client_id = cc.client_id')

@@ -6,6 +6,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { ISlaPolicy, ISlaPolicyTarget } from '../types';
 
@@ -43,8 +44,10 @@ export async function createItilStandardSlaPolicy(
   trx: Knex.Transaction,
   tenant: string
 ): Promise<CreateItilSlaPolicyResult> {
+  const scopedDb = tenantDb(trx, tenant);
+
   // Check if ITIL Standard policy already exists
-  const existingPolicy = await trx('sla_policies')
+  const existingPolicy = await scopedDb.table('sla_policies')
     .where({ tenant, policy_name: ITIL_POLICY_NAME })
     .first();
 
@@ -52,7 +55,7 @@ export async function createItilStandardSlaPolicy(
     console.log(`[ItilSlaService] ITIL Standard policy already exists for tenant ${tenant}`);
 
     // Get existing targets
-    const targets = await trx('sla_policy_targets')
+    const targets = await scopedDb.table('sla_policy_targets')
       .where({ tenant, sla_policy_id: existingPolicy.sla_policy_id })
       .select('*') as ISlaPolicyTarget[];
 
@@ -67,7 +70,7 @@ export async function createItilStandardSlaPolicy(
 
   // Create the policy
   const policyId = uuidv4();
-  const [newPolicy] = await trx('sla_policies')
+  const [newPolicy] = await scopedDb.table('sla_policies')
     .insert({
       tenant,
       sla_policy_id: policyId,
@@ -101,10 +104,10 @@ export async function createItilStandardSlaPolicy(
     created_at: trx.fn.now()
   }));
 
-  await trx('sla_notification_thresholds').insert(thresholdInserts);
+  await scopedDb.table('sla_notification_thresholds').insert(thresholdInserts);
 
   // Get ITIL priorities from tenant's priorities table
-  const itilPriorities = await trx('priorities')
+  const itilPriorities = await scopedDb.table('priorities')
     .where({ tenant, is_from_itil_standard: true, item_type: 'ticket' })
     .select('priority_id', 'itil_priority_level', 'priority_name')
     .orderBy('itil_priority_level', 'asc');
@@ -124,7 +127,7 @@ export async function createItilStandardSlaPolicy(
     }
 
     const targetId = uuidv4();
-    const [newTarget] = await trx('sla_policy_targets')
+    const [newTarget] = await scopedDb.table('sla_policy_targets')
       .insert({
         tenant,
         target_id: targetId,
@@ -168,7 +171,7 @@ export async function assignSlaPolicyToBoard(
   boardId: string,
   policyId: string
 ): Promise<void> {
-  await trx('boards')
+  await tenantDb(trx, tenant).table('boards')
     .where({ tenant, board_id: boardId })
     .update({
       sla_policy_id: policyId,
@@ -193,9 +196,10 @@ export async function configureItilSlaForBoard(
 ): Promise<CreateItilSlaPolicyResult> {
   // Create or get the ITIL Standard policy
   const result = await createItilStandardSlaPolicy(trx, tenant);
+  const scopedDb = tenantDb(trx, tenant);
 
   // Check if board already has an SLA policy assigned
-  const board = await trx('boards')
+  const board = await scopedDb.table('boards')
     .where({ tenant, board_id: boardId })
     .select('sla_policy_id')
     .first();

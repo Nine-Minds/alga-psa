@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { TaggedEntityType } from '@alga-psa/types';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
 import type { ProjectWebhookInternalEvent } from './webhookProjectEventMap';
@@ -324,19 +325,14 @@ async function fetchProjectWebhookRow(
   tenantId: string,
   projectId: string
 ): Promise<ProjectWebhookRow | undefined> {
-  return knex('projects as p')
-    .leftJoin('clients as c', function joinClients() {
-      this.on('p.client_id', '=', 'c.client_id').andOn('p.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('contacts as co', function joinContacts() {
-      this.on('p.contact_name_id', '=', 'co.contact_name_id').andOn('p.tenant', '=', 'co.tenant');
-    })
-    .leftJoin('users as au', function joinAssignedUsers() {
-      this.on('p.assigned_to', '=', 'au.user_id').andOn('p.tenant', '=', 'au.tenant');
-    })
-    .leftJoin('statuses as s', function joinStatuses() {
-      this.on('p.status', '=', 's.status_id').andOn('p.tenant', '=', 's.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('projects as p');
+  db.tenantJoin(query, 'clients as c', 'p.client_id', 'c.client_id', { type: 'left' });
+  db.tenantJoin(query, 'contacts as co', 'p.contact_name_id', 'co.contact_name_id', { type: 'left' });
+  db.tenantJoin(query, 'users as au', 'p.assigned_to', 'au.user_id', { type: 'left' });
+  db.tenantJoin(query, 'statuses as s', 'p.status', 's.status_id', { type: 'left' });
+
+  return query
     .select(
       'p.project_id',
       'p.project_name',
@@ -359,7 +355,6 @@ async function fetchProjectWebhookRow(
       'p.budgeted_hours'
     )
     .where({
-      'p.tenant': tenantId,
       'p.project_id': projectId,
     })
     .first();
@@ -370,32 +365,28 @@ async function fetchProjectTaskWebhookRow(
   tenantId: string,
   taskId: string
 ): Promise<ProjectTaskWebhookRow | undefined> {
-  return knex('project_tasks as pt')
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-    })
-    .join('projects as p', function joinProjects() {
-      this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-    })
-    .leftJoin('clients as c', function joinClients() {
-      this.on('p.client_id', '=', 'c.client_id').andOn('p.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('project_status_mappings as psm', function joinStatusMappings() {
-      this.on('pt.project_status_mapping_id', '=', 'psm.project_status_mapping_id')
-        .andOn('pt.tenant', '=', 'psm.tenant');
-    })
-    .leftJoin('statuses as s', function joinStatuses() {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
-    .leftJoin('users as au', function joinAssignedUsers() {
-      this.on('pt.assigned_to', '=', 'au.user_id').andOn('pt.tenant', '=', 'au.tenant');
-    })
-    .leftJoin('priorities as pr', function joinPriorities() {
-      this.on('pt.priority_id', '=', 'pr.priority_id').andOn('pt.tenant', '=', 'pr.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('project_tasks as pt');
+  db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+  db.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id', { rootTenantColumn: 'pp.tenant' });
+  db.tenantJoin(query, 'clients as c', 'p.client_id', 'c.client_id', {
+    type: 'left',
+    rootTenantColumn: 'p.tenant',
+  });
+  db.tenantJoin(query, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', {
+    type: 'left',
+  });
+  db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', {
+    type: 'left',
+    rootTenantColumn: 'psm.tenant',
+  });
+  query.leftJoin('standard_statuses as ss', function joinStandardStatuses() {
+    this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
+  });
+  db.tenantJoin(query, 'users as au', 'pt.assigned_to', 'au.user_id', { type: 'left' });
+  db.tenantJoin(query, 'priorities as pr', 'pt.priority_id', 'pr.priority_id', { type: 'left' });
+
+  return query
     .select(
       'p.project_id',
       'p.project_name',
@@ -421,7 +412,6 @@ async function fetchProjectTaskWebhookRow(
       'pt.wbs_code'
     )
     .where({
-      'pt.tenant': tenantId,
       'pt.task_id': taskId,
     })
     .first();
@@ -441,10 +431,11 @@ export async function fetchProjectPhasesForWebhook(
   tenantId: string,
   projectId: string
 ): Promise<ProjectWebhookPhasePayload[]> {
-  const rows = await knex('project_phases as pp')
-    .leftJoin('statuses as s', function joinStatuses() {
-      this.on('pp.status', '=', 's.status_id').andOn('pp.tenant', '=', 's.tenant');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('project_phases as pp');
+  db.tenantJoin(query, 'statuses as s', 'pp.status', 's.status_id', { type: 'left' });
+
+  const rows = await query
     .select(
       'pp.phase_id',
       'pp.phase_name',
@@ -458,7 +449,6 @@ export async function fetchProjectPhasesForWebhook(
       'pp.wbs_code'
     )
     .where({
-      'pp.tenant': tenantId,
       'pp.project_id': projectId,
     })
     .orderByRaw('COALESCE(pp.order_key, pp.order_number::text) asc');
@@ -482,27 +472,27 @@ export async function fetchProjectTaskCountsForWebhook(
   tenantId: string,
   projectId: string
 ): Promise<ProjectWebhookTaskCountsPayload> {
-  const rows = await knex('project_tasks as pt')
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-    })
-    .leftJoin('project_status_mappings as psm', function joinStatusMappings() {
-      this.on('pt.project_status_mapping_id', '=', 'psm.project_status_mapping_id')
-        .andOn('pt.tenant', '=', 'psm.tenant');
-    })
-    .leftJoin('statuses as s', function joinStatuses() {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('project_tasks as pt');
+  db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+  db.tenantJoin(query, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', {
+    type: 'left',
+  });
+  db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', {
+    type: 'left',
+    rootTenantColumn: 'psm.tenant',
+  });
+  query.leftJoin('standard_statuses as ss', function joinStandardStatuses() {
+    this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
+  });
+
+  const rows = await query
     .select(
       knex.raw('COALESCE(psm.custom_name, s.name, ss.name, pt.project_status_mapping_id::text) as status_name'),
       knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
       'pt.due_date'
     )
     .where({
-      'pt.tenant': tenantId,
       'pp.project_id': projectId,
     });
 
@@ -537,15 +527,18 @@ async function fetchProjectStatusName(
   tenantId: string,
   statusId: string
 ): Promise<string | null> {
-  const mapping = await knex('project_status_mappings as psm')
-    .leftJoin('statuses as s', function joinStatuses() {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
+  const db = tenantDb(knex, tenantId);
+  const mappingQuery = db.table('project_status_mappings as psm');
+  db.tenantJoin(mappingQuery, 'statuses as s', 'psm.status_id', 's.status_id', {
+    type: 'left',
+    rootTenantColumn: 'psm.tenant',
+  });
+  mappingQuery.leftJoin('standard_statuses as ss', function joinStandardStatuses() {
+    this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
+  });
+
+  const mapping = await mappingQuery
     .where({
-      'psm.tenant': tenantId,
       'psm.project_status_mapping_id': statusId,
     })
     .select(knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'))
@@ -555,8 +548,8 @@ async function fetchProjectStatusName(
     return mapping.status_name;
   }
 
-  const status = await knex('statuses')
-    .where({ tenant: tenantId, status_id: statusId })
+  const status = await db.table('statuses')
+    .where({ status_id: statusId })
     .select('name')
     .first<{ name: string | null }>();
 

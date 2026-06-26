@@ -9,7 +9,7 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, withTransaction, tenantDb } from '@alga-psa/db';
 import {
   sendSlaNotification,
   type SlaNotificationContext,
@@ -56,14 +56,12 @@ async function handleSlaThresholdReachedEvent(event: unknown): Promise<void> {
       const { knex } = await createTenantKnex();
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const ticket = await trx('tickets as t')
-          .leftJoin('clients as c', function () {
-            this.on('t.client_id', 'c.client_id').andOn('t.tenant', 'c.tenant');
-          })
-          .leftJoin('priorities as p', function () {
-            this.on('t.priority_id', 'p.priority_id').andOn('t.tenant', 'p.tenant');
-          })
-          .where('t.tenant', tenantId)
+        const scopedDb = tenantDb(trx, tenantId);
+        const ticketQuery = scopedDb.table('tickets as t');
+        scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+        scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+
+        const ticket = await ticketQuery
           .where('t.ticket_id', ticketId)
           .select(
             't.ticket_id',

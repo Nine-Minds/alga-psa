@@ -103,11 +103,9 @@ export const createTaskComment = withAuth(async (
     const markdownContent = convertBlockNoteToMarkdown(comment.note);
 
     // Get project context for notifications and validate task before inserting thread/comment rows
-    const task = await tenantScopedTable(trx, 'project_tasks', tenant)
-      .join('project_phases', function() {
-        this.on('project_tasks.phase_id', 'project_phases.phase_id')
-          .andOn('project_tasks.tenant', 'project_phases.tenant');
-      })
+    const taskQuery = tenantScopedTable(trx, 'project_tasks', tenant);
+    tenantDb(trx, tenant).tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+    const task = await taskQuery
       .where('project_tasks.task_id', comment.taskId)
       .select('project_phases.project_id', 'project_tasks.task_name')
       .first();
@@ -149,7 +147,7 @@ export const createTaskComment = withAuth(async (
       taskCommentId = generatedIds?.task_comment_id;
       threadId = generatedIds?.thread_id;
 
-      await trx('comment_threads').insert({
+      await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: threadId,
         ticket_id: null,
@@ -168,7 +166,7 @@ export const createTaskComment = withAuth(async (
     }
 
     // Insert comment (convert camelCase to snake_case for DB)
-    const [newComment] = await trx('project_task_comments')
+    const [newComment] = await tenantScopedTable(trx, 'project_task_comments', tenant)
       .insert({
         task_comment_id: taskCommentId,
         task_id: comment.taskId,

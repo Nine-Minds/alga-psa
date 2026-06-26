@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
@@ -56,16 +56,17 @@ const assertSharedHeaderMutationIsExplicit = async (
   tenant: string,
   identity: { clientContractId: string; contractLineId: string },
 ): Promise<void> => {
-  const selectedAssignment = await trx('client_contracts')
-    .where({ tenant, client_contract_id: identity.clientContractId })
+  const scopedDb = tenantDb(trx, tenant);
+
+  const selectedAssignment = await scopedDb.table('client_contracts')
+    .where({ client_contract_id: identity.clientContractId })
     .first('client_id', 'contract_id');
   if (!selectedAssignment) {
     throw new Error(`Client contract ${identity.clientContractId} not found.`);
   }
 
-  const assignmentCountRow = await trx('client_contracts')
+  const assignmentCountRow = await scopedDb.table('client_contracts')
     .where({
-      tenant,
       client_id: selectedAssignment.client_id,
       contract_id: selectedAssignment.contract_id,
       is_active: true,
@@ -80,9 +81,8 @@ const assertSharedHeaderMutationIsExplicit = async (
     );
   }
 
-  const lineExists = await trx('contract_lines as cl')
+  const lineExists = await scopedDb.table('contract_lines as cl')
     .where({
-      'cl.tenant': tenant,
       'cl.contract_line_id': identity.contractLineId,
       'cl.contract_id': selectedAssignment.contract_id,
     })
@@ -100,13 +100,12 @@ async function getLatestHistoricalInvoicedEndDate(db: any, tenant: string, clien
   const identity = parseClientContractLineIdentity(clientContractLineId);
 
   // First, get the client_contract_id associated with the clientContractLineId
-  const planInfoQuery = db('contract_lines as cl')
-    .join('client_contracts as cc', function(this: Knex.JoinClause) {
-      this.on('cl.contract_id', '=', 'cc.contract_id')
-          .andOn('cl.tenant', '=', 'cc.tenant');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const planInfoQuery = scopedDb.table('contract_lines as cl');
+  scopedDb.tenantJoin(planInfoQuery, 'client_contracts as cc', 'cl.contract_id', 'cc.contract_id');
+  planInfoQuery
     .select('cc.client_id', 'cl.contract_line_id', 'cc.client_contract_id')
-    .where({ 'cl.contract_line_id': identity.contractLineId, 'cl.tenant': tenant });
+    .where({ 'cl.contract_line_id': identity.contractLineId });
 
   if (identity.clientContractId) {
     planInfoQuery.andWhere('cc.client_contract_id', identity.clientContractId);
@@ -122,21 +121,18 @@ async function getLatestHistoricalInvoicedEndDate(db: any, tenant: string, clien
 
   // Check for invoices with items linked to this specific client_contract via client_contract_id
   // This ensures we only check invoices generated from THIS specific contract assignment
-  const latestInvoice = await db('invoices as i')
-    .join('invoice_charges as ii', function(this: Knex.JoinClause) {
-      this.on('i.invoice_id', '=', 'ii.invoice_id')
-          .andOn('i.tenant', '=', 'ii.tenant');
-    })
-    .join('client_contracts as cc', function(this: Knex.JoinClause) {
-      this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
-          .andOn('ii.tenant', '=', 'cc.tenant');
-    })
+  const latestInvoiceQuery = scopedDb.table('invoices as i');
+  scopedDb.tenantJoin(latestInvoiceQuery, 'invoice_charges as ii', 'i.invoice_id', 'ii.invoice_id');
+  scopedDb.tenantJoin(latestInvoiceQuery, 'client_contracts as cc', 'ii.client_contract_id', 'cc.client_contract_id');
+  const latestInvoice = await latestInvoiceQuery
     .where({
       'cc.client_contract_id': client_contract_id,
-      'cc.tenant': tenant
     })
     .orderBy('i.invoice_date', 'desc')
-    .select('i.billing_period_end', 'i.invoice_date')
+    .select({
+      billing_period_end: 'i.billing_period_end',
+      invoice_date: 'i.invoice_date',
+    })
     .first();
 
   // If we found an invoice, determine the appropriate date to return
@@ -164,16 +160,14 @@ async function getLatestAuthoritativeRecurringPeriodEndDate(
   tenant: string,
   clientContractLineId: string,
 ): Promise<Temporal.PlainDate | null> {
-  const canonicalDetail = await db('invoice_charge_details as iid')
-    .join('contract_line_service_configuration as clsc', function(this: Knex.JoinClause) {
-      this.on('iid.config_id', '=', 'clsc.config_id')
-        .andOn('iid.tenant', '=', 'clsc.tenant');
-    })
-    .where('iid.tenant', tenant)
+  const scopedDb = tenantDb(db, tenant);
+  const canonicalDetailQuery = scopedDb.table('invoice_charge_details as iid');
+  scopedDb.tenantJoin(canonicalDetailQuery, 'contract_line_service_configuration as clsc', 'iid.config_id', 'clsc.config_id');
+  const canonicalDetail = await canonicalDetailQuery
     .andWhere('clsc.contract_line_id', clientContractLineId)
     .whereNotNull('iid.service_period_end')
     .orderBy('iid.service_period_end', 'desc')
-    .first('iid.service_period_end');
+    .first({ service_period_end: 'iid.service_period_end' });
 
   if (canonicalDetail?.service_period_end) {
     return toPlainDate(canonicalDetail.service_period_end);
@@ -231,10 +225,9 @@ async function getExistingCadenceOwner(
   tenant: string,
   clientContractLineId: string,
 ): Promise<IClientContractLine['cadence_owner']> {
-  const existingLine = await trx('contract_lines')
+  const existingLine = await tenantDb(trx, tenant).table('contract_lines')
     .where({
       contract_line_id: clientContractLineId,
-      tenant,
     })
     .first('cadence_owner');
 
@@ -253,23 +246,15 @@ export const getClientContractLine = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const clientContractLine: IClientContractLine[] = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const query = trx('contract_lines as cl')
-        .join('client_contracts as cc', function () {
-          this.on('cc.contract_id', '=', 'cl.contract_id')
-            .andOn('cc.tenant', '=', 'cl.tenant');
-        })
-        .join('contracts as co', function () {
-          this.on('co.contract_id', '=', 'cl.contract_id')
-            .andOn('co.tenant', '=', 'cl.tenant');
-        })
-        .leftJoin('service_categories as sc', function () {
-          this.on('sc.category_id', '=', 'cl.service_category')
-            .andOn('sc.tenant', '=', 'cl.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('contract_lines as cl');
+      scopedDb.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
+      scopedDb.tenantJoin(query, 'contracts as co', 'co.contract_id', 'cl.contract_id');
+      scopedDb.tenantJoin(query, 'service_categories as sc', 'sc.category_id', 'cl.service_category', { type: 'left' });
+      query
         .where({
           'cc.client_id': clientId,
           'cl.is_active': true,
-          'cl.tenant': tenant
         })
         .select([
           'cl.*',
@@ -341,10 +326,9 @@ export const updateClientContractLine = withAuth(async (
 
       validUpdates.cadence_owner = cadenceOwner;
 
-      return await trx('contract_lines')
+      return await tenantDb(trx, tenant).table('contract_lines')
         .where({
           contract_line_id: identity.contractLineId,
-          tenant
         })
         .update(validUpdates);
     });
@@ -374,8 +358,10 @@ export const addClientContractLine = withAuth(async (
         throw new Error('client_contract_id is required');
       }
 
-      const clientContract = await trx('client_contracts')
-        .where({ tenant, client_contract_id: newBilling.client_contract_id })
+      const db = tenantDb(trx, tenant);
+
+      const clientContract = await db.table('client_contracts')
+        .where({ client_contract_id: newBilling.client_contract_id })
         .first('template_contract_id', 'contract_id');
 
       if (!clientContract?.contract_id) {
@@ -390,8 +376,8 @@ export const addClientContractLine = withAuth(async (
       }
 
       // Get the template line to copy
-      const templateLine = await trx('contract_lines')
-        .where({ tenant, contract_line_id: newBilling.contract_line_id })
+      const templateLine = await db.table('contract_lines')
+        .where({ contract_line_id: newBilling.contract_line_id })
         .first();
 
       if (!templateLine) {
@@ -400,9 +386,8 @@ export const addClientContractLine = withAuth(async (
       const templateRecurringStorage = normalizeLiveRecurringStorage(templateLine);
 
       // Check if this contract already has a line from the same template
-      const existingLine = await trx('contract_lines')
+      const existingLine = await db.table('contract_lines')
         .where({
-          tenant,
           contract_id: clientContract.contract_id,
           is_active: true
         })
@@ -418,7 +403,7 @@ export const addClientContractLine = withAuth(async (
       const newContractLineId = trx.raw('gen_random_uuid()');
       const startDate = newBilling.start_date ? new Date(newBilling.start_date) : new Date();
 
-      const [created] = await trx('contract_lines')
+      const [created] = await db.table('contract_lines')
         .insert({
           contract_line_id: newContractLineId,
           tenant,
@@ -488,10 +473,9 @@ export const removeClientContractLine = withAuth(async (
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       await assertSharedHeaderMutationIsExplicit(trx, tenant, identity);
-      return await trx('contract_lines')
+      return await tenantDb(trx, tenant).table('contract_lines')
         .where({
           contract_line_id: identity.contractLineId,
-          tenant
         })
         .update({ is_active: false }); // end_date removed as it's not on contract_lines
     });
@@ -560,10 +544,9 @@ export const editClientContractLine = withAuth(async (
         ...validUpdates
       } = updateData as any;
 
-      return await trx('contract_lines')
+      return await tenantDb(trx, tenant).table('contract_lines')
         .where({
           contract_line_id: identity.contractLineId,
-          tenant
         })
         .update(validUpdates);
     });

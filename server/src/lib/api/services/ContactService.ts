@@ -44,15 +44,16 @@ function normalizeEmailForSearch(value: string): string {
 function applyEmailSearchClause(
   query: Knex.QueryBuilder,
   knex: Knex,
+  tenant: string,
   value: string,
   contactAlias = 'c'
 ): void {
   const normalizedEmail = normalizeEmailForSearch(value);
   query.where(function emailSearch() {
     this.whereILike(`${contactAlias}.email`, `%${value}%`)
-      .orWhereExists(function existsAdditionalEmail() {
-        this.select(knex.raw('1'))
-          .from('contact_additional_email_addresses as caea')
+      .orWhereExists(
+        tenantDb(knex, tenant).subquery('contact_additional_email_addresses as caea')
+          .select(knex.raw('1'))
           .whereRaw(`caea.tenant = ${contactAlias}.tenant`)
           .andWhereRaw(`caea.contact_name_id = ${contactAlias}.contact_name_id`)
           .andWhere(function matchAdditionalEmail() {
@@ -60,22 +61,24 @@ function applyEmailSearchClause(
             if (normalizedEmail) {
               this.orWhere('caea.normalized_email_address', 'like', `%${normalizedEmail}%`);
             }
-          });
-      });
+          })
+      );
   });
 }
 
-function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, contactAlias = 'c'): Knex.QueryBuilder {
-  return query
-    .leftJoin('contact_phone_numbers as cpn_default', function joinDefaultPhone() {
-      this.on(`${contactAlias}.contact_name_id`, '=', 'cpn_default.contact_name_id')
-        .andOn(`${contactAlias}.tenant`, '=', 'cpn_default.tenant')
-        .andOn('cpn_default.is_default', '=', knex.raw('true'));
-    })
-    .leftJoin('contact_phone_type_definitions as cptd_default', function joinDefaultPhoneType() {
-      this.on('cpn_default.custom_phone_type_id', '=', 'cptd_default.contact_phone_type_id')
-        .andOn('cpn_default.tenant', '=', 'cptd_default.tenant');
-    });
+function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, tenant: string, contactAlias = 'c'): Knex.QueryBuilder {
+  const scopedDb = tenantDb(knex, tenant);
+  scopedDb.tenantJoin(query, 'contact_phone_numbers as cpn_default', `${contactAlias}.contact_name_id`, 'cpn_default.contact_name_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('cpn_default.is_default', '=', knex.raw('true'));
+    },
+  });
+  scopedDb.tenantJoin(query, 'contact_phone_type_definitions as cptd_default', 'cpn_default.custom_phone_type_id', 'cptd_default.contact_phone_type_id', {
+    type: 'left',
+    rootTenantColumn: 'cpn_default.tenant',
+  });
+  return query;
 }
 
 export class ContactService extends BaseService<IContact> {
@@ -100,26 +103,17 @@ export class ContactService extends BaseService<IContact> {
       order,
     } = options;
 
-    let dataQuery = applyDefaultPhoneJoins(
-      tenantDb(knex, context.tenant).table('contacts as c')
-        .leftJoin('clients as comp', function joinClients() {
-          this.on('c.client_id', '=', 'comp.client_id')
-            .andOn('c.tenant', '=', 'comp.tenant');
-        }),
-      knex
-    );
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('contacts as c');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+    dataQuery = applyDefaultPhoneJoins(dataQuery, knex, context.tenant);
 
-    let countQuery = applyDefaultPhoneJoins(
-      tenantDb(knex, context.tenant).table('contacts as c')
-        .leftJoin('clients as comp', function joinClients() {
-          this.on('c.client_id', '=', 'comp.client_id')
-            .andOn('c.tenant', '=', 'comp.tenant');
-        }),
-      knex
-    );
+    let countQuery = scopedDb.table('contacts as c');
+    countQuery = scopedDb.tenantJoin(countQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+    countQuery = applyDefaultPhoneJoins(countQuery, knex, context.tenant);
 
-    dataQuery = this.applyContactFilters(dataQuery, filters, knex);
-    countQuery = this.applyContactFilters(countQuery, filters, knex);
+    dataQuery = this.applyContactFilters(dataQuery, filters, knex, context.tenant);
+    countQuery = this.applyContactFilters(countQuery, filters, knex, context.tenant);
 
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;
@@ -168,20 +162,18 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const contact = await withTransaction(knex, async (trx) => {
-      const baseContact = await applyDefaultPhoneJoins(
-        tenantDb(trx, context.tenant).table('contacts as c')
-          .leftJoin('clients as comp', function joinClients() {
-            this.on('c.client_id', '=', 'comp.client_id')
-              .andOn('c.tenant', '=', 'comp.tenant');
-          })
-          .leftJoin('client_locations as cl', function joinClientLocation() {
-            this.on('comp.client_id', '=', 'cl.client_id')
-              .andOn('comp.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', knex.raw('true'));
-          })
-          .where('c.contact_name_id', id),
-        knex
-      )
+      const scopedDb = tenantDb(trx, context.tenant);
+      const contactQuery = scopedDb.table('contacts as c');
+      scopedDb.tenantJoin(contactQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+      scopedDb.tenantJoin(contactQuery, 'client_locations as cl', 'comp.client_id', 'cl.client_id', {
+        type: 'left',
+        rootTenantColumn: 'comp.tenant',
+        on(join) {
+          join.andOn('cl.is_default', '=', knex.raw('true'));
+        },
+      });
+      const baseContact = await applyDefaultPhoneJoins(contactQuery, trx, context.tenant)
+        .where('c.contact_name_id', id)
         .select(
           'c.*',
           'comp.client_name',
@@ -345,15 +337,11 @@ export class ContactService extends BaseService<IContact> {
   async getContactsByClient(clientId: string, context: ServiceContext): Promise<IContact[]> {
     const { knex } = await this.getKnex();
     const contacts = await withTransaction(knex, async (trx) => {
-      const rows = await applyDefaultPhoneJoins(
-        tenantDb(trx, context.tenant).table('contacts as c')
-          .leftJoin('clients as comp', function joinClients() {
-            this.on('c.client_id', '=', 'comp.client_id')
-              .andOn('c.tenant', '=', 'comp.tenant');
-          })
-          .where('c.client_id', clientId),
-        knex
-      )
+      const scopedDb = tenantDb(trx, context.tenant);
+      const contactsQuery = scopedDb.table('contacts as c');
+      scopedDb.tenantJoin(contactsQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+      const rows = await applyDefaultPhoneJoins(contactsQuery, trx, context.tenant)
+        .where('c.client_id', clientId)
         .select(
           'c.*',
           'comp.client_name',
@@ -382,7 +370,7 @@ export class ContactService extends BaseService<IContact> {
         throw new NotFoundError('Contact not found');
       }
 
-      await trx('contacts')
+      await tenantDb(trx, context.tenant).table('contacts')
         .where('contact_name_id', id)
         .where('tenant', context.tenant)
         .delete();
@@ -408,14 +396,10 @@ export class ContactService extends BaseService<IContact> {
   async search(searchData: ContactSearchData, context: ServiceContext): Promise<IContact[]> {
     const { knex } = await this.getKnex();
 
-    let query = applyDefaultPhoneJoins(
-      tenantDb(knex, context.tenant).table('contacts as c')
-        .leftJoin('clients as comp', function joinClients() {
-          this.on('c.client_id', '=', 'comp.client_id')
-            .andOn('c.tenant', '=', 'comp.tenant');
-        }),
-      knex
-    );
+    const scopedDb = tenantDb(knex, context.tenant);
+    let query = scopedDb.table('contacts as c');
+    query = scopedDb.tenantJoin(query, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+    query = applyDefaultPhoneJoins(query, knex, context.tenant);
 
     if (!searchData.include_inactive) {
       query = query.where('c.is_inactive', false);
@@ -432,9 +416,9 @@ export class ContactService extends BaseService<IContact> {
         if (field === 'phone_number') {
           const normalizedDigits = normalizePhoneForSearch(searchData.query);
           subQuery[method](function phoneSearch() {
-            this.whereExists(function existsPhone() {
-              this.select(knex.raw('1'))
-                .from('contact_phone_numbers as cpn')
+            this.whereExists(
+              tenantDb(knex, context.tenant).subquery('contact_phone_numbers as cpn')
+                .select(knex.raw('1'))
                 .whereRaw('cpn.tenant = c.tenant')
                 .andWhereRaw('cpn.contact_name_id = c.contact_name_id')
                 .andWhere(function matchPhone() {
@@ -442,12 +426,12 @@ export class ContactService extends BaseService<IContact> {
                   if (normalizedDigits) {
                     this.orWhere('cpn.normalized_phone_number', 'like', `%${normalizedDigits}%`);
                   }
-                });
-            });
+                })
+            );
           });
         } else if (field === 'email') {
           subQuery[method](function emailSearch() {
-            applyEmailSearchClause(this, knex, searchData.query, 'c');
+            applyEmailSearchClause(this, knex, context.tenant, searchData.query, 'c');
           });
         } else {
           subQuery[method](`c.${field}`, 'ilike', `%${searchData.query}%`);
@@ -483,8 +467,7 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const [totalStats, roleStats, recentStats] = await Promise.all([
-      knex('contacts')
-        .where('tenant', context.tenant)
+      tenantDb(knex, context.tenant).table('contacts')
         .select(
           knex.raw('COUNT(*) as total_contacts'),
           knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_contacts'),
@@ -493,14 +476,12 @@ export class ContactService extends BaseService<IContact> {
           knex.raw('COUNT(CASE WHEN client_id IS NULL THEN 1 END) as contacts_without_client')
         )
         .first(),
-      knex('contacts')
-        .where('tenant', context.tenant)
+      tenantDb(knex, context.tenant).table('contacts')
         .whereNotNull('role')
         .where('role', '!=', '')
         .groupBy('role')
         .select('role', knex.raw('COUNT(*) as count')),
-      knex('contacts')
-        .where('tenant', context.tenant)
+      tenantDb(knex, context.tenant).table('contacts')
         .where('created_at', '>=', knex.raw("now() - interval '30 days'"))
         .count('* as recent_contacts')
         .first(),
@@ -527,19 +508,15 @@ export class ContactService extends BaseService<IContact> {
   ): Promise<string> {
     const { knex } = await this.getKnex();
 
-    let query = applyDefaultPhoneJoins(
-      tenantDb(knex, context.tenant).table('contacts as c')
-        .leftJoin('clients as comp', function joinClients() {
-          this.on('c.client_id', '=', 'comp.client_id')
-            .andOn('c.tenant', '=', 'comp.tenant');
-        }),
-      knex
-    );
+    const scopedDb = tenantDb(knex, context.tenant);
+    let query = scopedDb.table('contacts as c');
+    query = scopedDb.tenantJoin(query, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+    query = applyDefaultPhoneJoins(query, knex, context.tenant);
 
     query = this.applyContactFilters(query, {
       is_inactive: false,
       ...filters,
-    }, knex);
+    }, knex, context.tenant);
 
     const contacts = await query
       .select(
@@ -581,7 +558,7 @@ export class ContactService extends BaseService<IContact> {
       .join('\n');
   }
 
-  private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData, knex: Knex): Knex.QueryBuilder {
+  private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -591,15 +568,15 @@ export class ContactService extends BaseService<IContact> {
           break;
         case 'email':
           query.where((subQuery) => {
-            applyEmailSearchClause(subQuery, knex, String(value), 'c');
+            applyEmailSearchClause(subQuery, knex, tenant, String(value), 'c');
           });
           break;
         case 'phone_number': {
           const normalizedDigits = normalizePhoneForSearch(String(value));
           query.where((subQuery) => {
-            subQuery.whereExists(function existsPhone() {
-              this.select(knex.raw('1'))
-                .from('contact_phone_numbers as cpn_filter')
+            subQuery.whereExists(
+              tenantDb(knex, tenant).subquery('contact_phone_numbers as cpn_filter')
+                .select(knex.raw('1'))
                 .whereRaw('cpn_filter.tenant = c.tenant')
                 .andWhereRaw('cpn_filter.contact_name_id = c.contact_name_id')
                 .andWhere(function matchPhone() {
@@ -607,8 +584,8 @@ export class ContactService extends BaseService<IContact> {
                   if (normalizedDigits) {
                     this.orWhere('cpn_filter.normalized_phone_number', 'like', `%${normalizedDigits}%`);
                   }
-                });
-            });
+                })
+            );
           });
           break;
         }
@@ -637,13 +614,13 @@ export class ContactService extends BaseService<IContact> {
             subQuery
               .whereILike('c.full_name', `%${value}%`)
               .orWhere(function emailSearch() {
-                applyEmailSearchClause(this, knex, String(value), 'c');
+                applyEmailSearchClause(this, knex, tenant, String(value), 'c');
               })
               .orWhereILike('c.role', `%${value}%`)
               .orWhereILike('comp.client_name', `%${value}%`)
-              .orWhereExists(function existsPhone() {
-                this.select(knex.raw('1'))
-                  .from('contact_phone_numbers as cpn_search')
+              .orWhereExists(
+                tenantDb(knex, tenant).subquery('contact_phone_numbers as cpn_search')
+                  .select(knex.raw('1'))
                   .whereRaw('cpn_search.tenant = c.tenant')
                   .andWhereRaw('cpn_search.contact_name_id = c.contact_name_id')
                   .andWhere(function matchPhone() {
@@ -651,8 +628,8 @@ export class ContactService extends BaseService<IContact> {
                     if (normalizedDigits) {
                       this.orWhere('cpn_search.normalized_phone_number', 'like', `%${normalizedDigits}%`);
                     }
-                  });
-              });
+                  })
+              );
           });
           break;
         }

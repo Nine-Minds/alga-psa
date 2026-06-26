@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -23,7 +23,7 @@ async function getBoardOwnedTicketStatus(
   tenant: string,
   statusId: string
 ) {
-  return trx('statuses')
+  return tenantDb(trx, tenant).table('statuses')
     .select('status_id')
     .where({
       tenant,
@@ -59,8 +59,10 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Try to get existing settings
-      let settings = await trx('sla_settings')
+      let settings = await scopedDb.table('sla_settings')
         .where({ tenant })
         .first();
 
@@ -71,7 +73,7 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
           pause_on_awaiting_client: true,
         };
 
-        const [inserted] = await trx('sla_settings')
+        const [inserted] = await scopedDb.table('sla_settings')
           .insert(defaultSettings)
           .returning('*');
 
@@ -100,8 +102,10 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Check if settings exist
-      const existingSettings = await trx('sla_settings')
+      const existingSettings = await scopedDb.table('sla_settings')
         .where({ tenant })
         .first();
 
@@ -109,7 +113,7 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
 
       if (existingSettings) {
         // Update existing settings
-        const [updated] = await trx('sla_settings')
+        const [updated] = await scopedDb.table('sla_settings')
           .where({ tenant })
           .update({
             pause_on_awaiting_client: settings.pause_on_awaiting_client ?? existingSettings.pause_on_awaiting_client,
@@ -120,7 +124,7 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
         result = updated;
       } else {
         // Insert new settings
-        const [inserted] = await trx('sla_settings')
+        const [inserted] = await scopedDb.table('sla_settings')
           .insert({
             tenant,
             pause_on_awaiting_client: settings.pause_on_awaiting_client ?? true,
@@ -155,11 +159,11 @@ export const getStatusSlaPauseConfigs = withAuth(async (_user, { tenant }): Prom
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const configs = await trx('status_sla_pause_config as config')
-        .join('statuses as status', function () {
-          this.on('config.tenant', '=', 'status.tenant')
-            .andOn('config.status_id', '=', 'status.status_id');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const configsQuery = scopedDb.table<any>('status_sla_pause_config as config');
+      scopedDb.tenantJoin(configsQuery, 'statuses as status', 'config.status_id', 'status.status_id');
+
+      const configs = await configsQuery
         .where({
           'config.tenant': tenant,
           'status.status_type': 'ticket',
@@ -189,11 +193,11 @@ export const getSlaPauseConfigForStatus = withAuth(async (_user, { tenant }, sta
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const config = await trx('status_sla_pause_config as config')
-        .join('statuses as status', function () {
-          this.on('config.tenant', '=', 'status.tenant')
-            .andOn('config.status_id', '=', 'status.status_id');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const configQuery = scopedDb.table<any>('status_sla_pause_config as config');
+      scopedDb.tenantJoin(configQuery, 'statuses as status', 'config.status_id', 'status.status_id');
+
+      const config = await configQuery
         .where({
           'config.tenant': tenant,
           'config.status_id': statusId,
@@ -235,10 +239,11 @@ export const setStatusSlaPauseConfig = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
       await assertBoardOwnedTicketStatus(trx, tenant, statusId);
 
       // Check if config exists for this status
-      const existingConfig = await trx('status_sla_pause_config')
+      const existingConfig = await scopedDb.table('status_sla_pause_config')
         .where({ tenant, status_id: statusId })
         .first();
 
@@ -246,7 +251,7 @@ export const setStatusSlaPauseConfig = withAuth(async (
 
       if (existingConfig) {
         // Update existing config
-        const [updated] = await trx('status_sla_pause_config')
+        const [updated] = await scopedDb.table('status_sla_pause_config')
           .where({ tenant, status_id: statusId })
           .update({
             pauses_sla: pausesSla,
@@ -256,7 +261,7 @@ export const setStatusSlaPauseConfig = withAuth(async (
         result = updated;
       } else {
         // Insert new config
-        const [inserted] = await trx('status_sla_pause_config')
+        const [inserted] = await scopedDb.table('status_sla_pause_config')
           .insert({
             tenant,
             status_id: statusId,
@@ -298,6 +303,8 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       for (const config of configs) {
         await assertBoardOwnedTicketStatus(trx, tenant, config.statusId);
       }
@@ -306,7 +313,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
       for (const config of configs) {
         // Check if config exists for this status
-        const existingConfig = await trx('status_sla_pause_config')
+        const existingConfig = await scopedDb.table('status_sla_pause_config')
           .where({ tenant, status_id: config.statusId })
           .first();
 
@@ -314,7 +321,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
         if (existingConfig) {
           // Update existing config
-          const [updated] = await trx('status_sla_pause_config')
+          const [updated] = await scopedDb.table('status_sla_pause_config')
             .where({ tenant, status_id: config.statusId })
             .update({
               pauses_sla: config.pausesSla,
@@ -324,7 +331,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
           result = updated;
         } else {
           // Insert new config
-          const [inserted] = await trx('status_sla_pause_config')
+          const [inserted] = await scopedDb.table('status_sla_pause_config')
             .insert({
               tenant,
               status_id: config.statusId,
@@ -364,11 +371,11 @@ export const getBoardOwnedTicketStatusesForSlaPauseConfig = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const rows = await trx('statuses as status')
-        .join('boards as board', function () {
-          this.on('status.tenant', '=', 'board.tenant')
-            .andOn('status.board_id', '=', 'board.board_id');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const rowsQuery = scopedDb.table<any>('statuses as status');
+      scopedDb.tenantJoin(rowsQuery, 'boards as board', 'status.board_id', 'board.board_id');
+
+      const rows = await rowsQuery
         .where({
           'status.tenant': tenant,
           'status.status_type': 'ticket',
@@ -424,8 +431,10 @@ export const shouldSlaBePaused = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Get the ticket's current state
-      const ticket = await trx('tickets')
+      const ticket = await scopedDb.table('tickets')
         .where({ tenant, ticket_id: ticketId })
         .select('status_id', 'response_state')
         .first();
@@ -435,7 +444,7 @@ export const shouldSlaBePaused = withAuth(async (
       }
 
       // Get SLA settings
-      let slaSettings = await trx('sla_settings')
+      let slaSettings = await scopedDb.table('sla_settings')
         .where({ tenant })
         .first();
 
@@ -455,7 +464,7 @@ export const shouldSlaBePaused = withAuth(async (
       }
 
       // Check 2: Status-based pause
-      const statusPauseConfig = await trx('status_sla_pause_config')
+      const statusPauseConfig = await scopedDb.table('status_sla_pause_config')
         .where({ tenant, status_id: ticket.status_id })
         .first();
 
@@ -487,7 +496,7 @@ export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, sta
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const deleted = await trx('status_sla_pause_config')
+      const deleted = await tenantDb(trx, tenant).table('status_sla_pause_config')
         .where({ tenant, status_id: statusId })
         .delete();
 
@@ -510,7 +519,7 @@ export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, sta
  */
 export const getResponseStateTrackingSetting = withAuth(async (_user, { tenant }): Promise<boolean> => {
   const { knex: db } = await createTenantKnex();
-  const row = await db('tenant_settings')
+  const row = await tenantDb(db, tenant).table('tenant_settings')
     .select('ticket_display_settings')
     .where({ tenant })
     .first();
@@ -523,8 +532,9 @@ export const getResponseStateTrackingSetting = withAuth(async (_user, { tenant }
 export const updateResponseStateTrackingSetting = withAuth(async (_user, { tenant }, enabled: boolean): Promise<boolean> => {
   const { knex: db } = await createTenantKnex();
   const now = new Date();
+  const scopedDb = tenantDb(db, tenant);
 
-  const existingRow = await db('tenant_settings')
+  const existingRow = await scopedDb.table('tenant_settings')
     .select('ticket_display_settings', 'settings')
     .where({ tenant })
     .first();
@@ -540,7 +550,7 @@ export const updateResponseStateTrackingSetting = withAuth(async (_user, { tenan
     ticketing: { ...ticketing, display: { ...display, responseStateTrackingEnabled: enabled } },
   };
 
-  await db('tenant_settings')
+  await scopedDb.table('tenant_settings')
     .insert({
       tenant,
       ticket_display_settings: JSON.stringify(mergedDisplay),

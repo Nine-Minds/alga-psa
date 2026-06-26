@@ -1421,7 +1421,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         let contact: { full_name: string } | undefined;
         if (project.contact_name_id) {
             const contactData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-                return await trx('contacts')
+                return await tenantDb(trx, tenant).table('contacts')
                     .where({ contact_name_id: project.contact_name_id })
                     .select('full_name')
                     .first();

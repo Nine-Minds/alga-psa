@@ -49,7 +49,7 @@ async function seedBoardTicketStatusesFromStandards(
     return 0;
   }
 
-  const columns = await trx('statuses').columnInfo();
+  const columns = await tenantScopedTable(trx, 'statuses', tenant).columnInfo();
   const hasColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(columns, columnName);
 
   await tenantDb(trx, tenant).table('statuses').insert(standardStatuses.map((status: any) => ({

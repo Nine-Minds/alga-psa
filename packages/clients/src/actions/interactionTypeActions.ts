@@ -2,13 +2,17 @@
 
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { IInteractionType, ISystemInteractionType, DeletionValidationResult } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { assertMspPermission } from '../lib/authHelpers';
+
+type InteractionTypeRow = IInteractionType & {
+  created_by?: string;
+};
 
 export const getAllInteractionTypes = withAuth(async (user, { tenant }): Promise<IInteractionType[]> => {
   await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interaction types');
@@ -18,8 +22,7 @@ export const getAllInteractionTypes = withAuth(async (user, { tenant }): Promise
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get only tenant-specific interaction types
-      const tenantTypes = await trx('interaction_types')
-        .where({ tenant: tenant })
+      const tenantTypes = await tenantDb(trx, tenant).table<InteractionTypeRow>('interaction_types')
         .select('*')
         .orderBy('display_order', 'asc')
         .orderBy('type_name', 'asc');
@@ -88,14 +91,13 @@ export const createInteractionType = withAuth(async (
       // If no display_order provided, get the next available order
       let finalDisplayOrder = display_order;
       if (finalDisplayOrder === undefined || finalDisplayOrder === null) {
-        const maxOrder = await trx('interaction_types')
-          .where({ tenant: tenant })
+        const maxOrder = await tenantDb(trx, tenant).table<any>('interaction_types')
           .max('display_order as max')
           .first();
         finalDisplayOrder = (maxOrder?.max || 0) + 1;
       }
 
-      const [newType] = await trx('interaction_types')
+      const [newType] = await tenantDb(trx, tenant).table<InteractionTypeRow>('interaction_types')
         .insert({
           type_name,
           icon,
@@ -125,8 +127,8 @@ export const updateInteractionType = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if the type exists
-      const existingType = await trx('interaction_types')
-        .where({ type_id: typeId, tenant: tenant })
+      const existingType = await tenantDb(trx, tenant).table<InteractionTypeRow>('interaction_types')
+        .where({ type_id: typeId })
         .first();
 
       if (!existingType) {
@@ -141,8 +143,8 @@ export const updateInteractionType = withAuth(async (
       if (icon !== undefined) updateData.icon = icon;
       if (display_order !== undefined) updateData.display_order = display_order;
 
-      const [updatedType] = await trx('interaction_types')
-        .where({ type_id: typeId, tenant: tenant })
+      const [updatedType] = await tenantDb(trx, tenant).table<InteractionTypeRow>('interaction_types')
+        .where({ type_id: typeId })
         .update(updateData)
         .returning('*');
 
@@ -164,8 +166,8 @@ export const deleteInteractionType = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     return await deleteEntityWithValidation('interaction_type', typeId, knex, tenant, async (trx, tenantId) => {
-      const deletedCount = await trx('interaction_types')
-        .where({ type_id: typeId, tenant: tenantId })
+      const deletedCount = await tenantDb(trx, tenantId).table<InteractionTypeRow>('interaction_types')
+        .where({ type_id: typeId })
         .delete();
 
       if (deletedCount === 0) {
@@ -189,14 +191,14 @@ export const getInteractionTypeById = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const type = await trx('interaction_types')
-        .where({ type_id: typeId, tenant: tenant })
+      const type = await tenantDb(trx, tenant).table<InteractionTypeRow>('interaction_types')
+        .where({ type_id: typeId })
         .first();
 
       if (!type) {
         // If not found in tenant types, check system types
         const systemType = await getSystemInteractionTypeById(typeId);
-        return systemType;
+        return systemType as IInteractionType | null;
       }
 
       return type;

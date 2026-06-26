@@ -275,20 +275,22 @@ export async function validateSessionAndTenant(): Promise<InvoiceContext> {
 }
 
 export async function getClientDetails(knex: Knex, tenant: string, clientId: string): Promise<IClientWithLocation> {
-  const client = await tenantScopedTable(knex, tenant, 'clients as c')
-    .leftJoin('client_locations as cl', function() {
-      this.on('c.client_id', '=', 'cl.client_id')
-          .andOn('c.tenant', '=', 'cl.tenant')
-          .andOn('cl.is_default', '=', knex.raw('true'));
-    })
+  const db = tenantDb(knex, tenant);
+  const clientQuery = db.table('clients as c')
     .select(
       'c.*',
       'cl.address_line1 as location_address'
     )
     .where({
       'c.client_id': clientId
-    })
-    .first();
+    });
+  db.tenantJoin(clientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('cl.is_default', '=', knex.raw('true'));
+    },
+  });
+  const client = (await clientQuery.first()) as unknown as IClientWithLocation | undefined;
   if (!client) {
     throw new Error(`Client not found for tenant ${tenant}`);
   }
@@ -1206,18 +1208,14 @@ export async function calculateAndDistributeTax(
   console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
   // Only fixed-plan parents should be treated as consolidated tax carriers.
-  const detailParentIdsResult = await tenantScopedTable(tx, tenant, 'invoice_charge_details')
-    .join('invoice_charge_fixed_details as iifd', function() {
-      this.on('iifd.item_detail_id', '=', 'invoice_charge_details.item_detail_id')
-        .andOn('iifd.tenant', '=', 'invoice_charge_details.tenant');
-    })
-    .join('invoice_charges', function() {
-      this.on('invoice_charges.item_id', '=', 'invoice_charge_details.item_id')
-        .andOn('invoice_charges.tenant', '=', 'invoice_charge_details.tenant');
-    })
+  const db = tenantDb(tx, tenant);
+  const detailParentIdsQuery = db.table('invoice_charge_details')
     .where('invoice_charges.invoice_id', invoiceId)
     .distinct('invoice_charge_details.item_id');
-  const detailParentIds = new Set(detailParentIdsResult.map((row: { item_id: string }) => row.item_id));
+  db.tenantJoin(detailParentIdsQuery, 'invoice_charge_fixed_details as iifd', 'iifd.item_detail_id', 'invoice_charge_details.item_detail_id');
+  db.tenantJoin(detailParentIdsQuery, 'invoice_charges', 'invoice_charges.item_id', 'invoice_charge_details.item_id');
+  const detailParentIdsResult = (await detailParentIdsQuery) as unknown as Array<{ item_id: string }>;
+  const detailParentIds = new Set(detailParentIdsResult.map((row) => row.item_id));
 
   const consolidatedItemIds = invoiceItems
     .filter(item => detailParentIds.has(item.item_id)) // Item is consolidated if it's a parent in details table
@@ -1229,11 +1227,7 @@ export async function calculateAndDistributeTax(
   if (consolidatedItemIds.length > 0) {
     // Fetch details. Tax info (is_taxable, tax_region) should now be on the parent invoice_item
     // derived during item creation based on service's tax_rate_id.
-    fixedDetails = await tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details as iifd')
-        .join('invoice_charge_details as iid', function() {
-            this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
-                .andOn('iifd.tenant', '=', 'iid.tenant'); // Ensure tenant match
-        })
+    const fixedDetailsQuery = tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')
         .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
         .select(
             'iifd.item_detail_id',
@@ -1241,6 +1235,8 @@ export async function calculateAndDistributeTax(
             'iid.item_id as parent_item_id',
             'iid.service_id' // Keep service_id if needed for other logic, but not for tax region/taxability here
         );
+    tenantDb(tx, tenant).tenantJoin(fixedDetailsQuery, 'invoice_charge_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id');
+    fixedDetails = await fixedDetailsQuery;
     console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (tax info from parent item):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
   } else {
       console.log(`[calculateAndDistributeTax] No consolidated items found, skipping fixed detail fetch.`);
@@ -1442,17 +1438,18 @@ export async function calculateAndDistributeTax(
   const consolidatedUpdatePromises: Array<Promise<any>> = [];
   if (consolidatedItemIds.length > 0) {
       // Fetch the *updated* tax amounts from details
-      const updatedDetailsTaxSum = await tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details as iifd')
-          .join('invoice_charge_details as iid', function() {
-              this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
-                  .andOn('iid.tenant', '=', 'iifd.tenant');
-          })
+      const updatedDetailsTaxSumQuery = tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')
           .whereIn('iid.item_id', consolidatedItemIds)
           .groupBy('iid.item_id')
           .select(
               'iid.item_id',
               tx.raw('SUM(iifd.tax_amount) as total_detail_tax')
           );
+      tenantDb(tx, tenant).tenantJoin(updatedDetailsTaxSumQuery, 'invoice_charge_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id');
+      const updatedDetailsTaxSum = (await updatedDetailsTaxSumQuery) as unknown as Array<{
+          item_id: string;
+          total_detail_tax: string | number | null;
+      }>;
       console.log(`[calculateAndDistributeTax] Fetched updated tax sums for consolidated items:`, JSON.stringify(updatedDetailsTaxSum, null, 2)); // Log moved here
 
       for (const consolidated of updatedDetailsTaxSum) {

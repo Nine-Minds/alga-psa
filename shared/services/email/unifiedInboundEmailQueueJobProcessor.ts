@@ -771,7 +771,7 @@ async function insertProcessingRecord(params: {
 }): Promise<boolean> {
   const db = await getAdminConnection();
   try {
-    await db('email_processed_messages').insert({
+    await tenantDb(db, params.job.tenantId).table('email_processed_messages').insert({
       message_id: params.externalIdentity,
       provider_id: params.job.providerId,
       tenant: params.job.tenantId,
@@ -808,11 +808,10 @@ async function updateProcessingRecord(params: {
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   const db = await getAdminConnection();
-  await db('email_processed_messages')
+  await tenantDb(db, params.job.tenantId).table('email_processed_messages')
     .where({
       message_id: params.externalIdentity,
       provider_id: params.job.providerId,
-      tenant: params.job.tenantId,
     })
     .update({
       processing_status: params.status,

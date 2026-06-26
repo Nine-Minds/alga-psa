@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 /**
@@ -12,11 +13,16 @@ import { getAdminConnection } from '@alga-psa/db/admin';
  */
 export async function emailHasExistingTenant(email: string): Promise<boolean> {
   const knex = await getAdminConnection();
+  const db = tenantDb(knex, '__iap_email_tenant_discovery__');
 
-  const tenant = await knex('tenants').where('email', email).first('tenant');
+  const tenant = await db
+    .unscoped('tenants', 'tenant discovery for mobile IAP pre-purchase email check')
+    .where('email', email)
+    .first('tenant');
   if (tenant) return true;
 
-  const adminUser = await knex('users')
+  const adminUser = await db
+    .unscoped('users', 'tenant discovery for mobile IAP pre-purchase internal-user email check')
     .where({ email, user_type: 'internal' })
     .first('tenant');
   return Boolean(adminUser);

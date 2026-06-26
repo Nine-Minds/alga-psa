@@ -303,7 +303,7 @@ export class FinancialService extends BaseService<ITransaction> {
         created_at: new Date().toISOString()
       };
 
-      const [transaction] = await trx('transactions')
+      const [transaction] = await tenantDb(trx, context.tenant).table('transactions')
         .insert(transactionData)
         .returning('*');
 
@@ -382,17 +382,12 @@ export class FinancialService extends BaseService<ITransaction> {
       order = 'desc'
     } = query;
 
-    let dataQuery = tenantDb(knex, context.tenant).table('transactions as t')
-      .leftJoin('clients as c', function joinClients() {
-        this.on('t.client_id', '=', 'c.client_id')
-          .andOn('t.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('invoices as i', function joinInvoices() {
-        this.on('t.invoice_id', '=', 'i.invoice_id')
-          .andOn('t.tenant', '=', 'i.tenant');
-      });
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('transactions as t');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'invoices as i', 't.invoice_id', 'i.invoice_id', { type: 'left' });
 
-    let countQuery = tenantDb(knex, context.tenant).table('transactions');
+    let countQuery = scopedDb.table('transactions');
 
     // Apply filters
     if (client_id) {
@@ -506,13 +501,11 @@ export class FinancialService extends BaseService<ITransaction> {
     ]);
     const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
 
-    let dataQuery = tenantDb(knex, context.tenant).table('invoices as i')
-      .leftJoin('clients as c', function() {
-        this.on('i.client_id', '=', 'c.client_id')
-          .andOn('i.tenant', '=', 'c.tenant');
-      });
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('invoices as i');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' });
 
-    let countQuery = tenantDb(knex, context.tenant).table('invoices as i');
+    let countQuery = scopedDb.table('invoices as i');
 
     if (client_id) {
       dataQuery = dataQuery.where('i.client_id', client_id);
@@ -695,7 +688,7 @@ export class FinancialService extends BaseService<ITransaction> {
       const newBalance = availableCredit - totalApplied;
 
       // Create credit application transaction
-      const [creditTransaction] = await trx('transactions').insert({
+      const [creditTransaction] = await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: uuidv4(),
         client_id: request.client_id,
         invoice_id: request.invoice_id,
@@ -710,7 +703,7 @@ export class FinancialService extends BaseService<ITransaction> {
       }).returning('*');
 
       // Create credit allocation record
-      await trx('credit_allocations').insert({
+      await tenantDb(trx, tenant).table('credit_allocations').insert({
         allocation_id: uuidv4(),
         transaction_id: creditTransaction.transaction_id,
         invoice_id: request.invoice_id,
@@ -814,7 +807,7 @@ export class FinancialService extends BaseService<ITransaction> {
       const invoiceNumber = await SharedNumberingService.getNextNumber('INVOICE', { knex: trx, tenant });
 
       // Create prepayment invoice
-      const [invoice] = await trx('invoices')
+      const [invoice] = await tenantDb(trx, tenant).table('invoices')
         .insert({
           client_id: request.client_id,
           tenant,
@@ -844,7 +837,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // Create credit issuance transaction
       const transactionId = uuidv4();
-      await trx('transactions').insert({
+      await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: transactionId,
         client_id: request.client_id,
         invoice_id: invoice.invoice_id,
@@ -861,7 +854,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // Create credit tracking entry
       const creditId = uuidv4();
-      await trx('credit_tracking').insert({
+      await tenantDb(trx, tenant).table('credit_tracking').insert({
         credit_id: creditId,
         tenant,
         client_id: request.client_id,
@@ -933,7 +926,7 @@ export class FinancialService extends BaseService<ITransaction> {
         .update({ remaining_amount: newSourceRemaining, updated_at: now });
 
       // 2. Create transfer-out transaction for source
-      await trx('transactions').insert({
+      await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: uuidv4(),
         client_id: sourceCredit.client_id,
         amount: -request.amount,
@@ -957,7 +950,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // 4. Create transfer-in transaction for target
       const targetTransactionId = uuidv4();
-      await trx('transactions').insert({
+      await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: targetTransactionId,
         client_id: request.target_client_id,
         amount: request.amount,
@@ -977,7 +970,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // 6. Create new credit tracking for target
       const newCreditId = uuidv4();
-      const [newCredit] = await trx('credit_tracking').insert({
+      const [newCredit] = await tenantDb(trx, tenant).table('credit_tracking').insert({
         credit_id: newCreditId,
         tenant,
         client_id: request.target_client_id,
@@ -1037,10 +1030,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const credits = await baseQuery
       .clone()
       .select('credit_tracking.*')
-      .leftJoin('transactions', function() {
-        this.on('credit_tracking.transaction_id', '=', 'transactions.transaction_id')
-          .andOn('credit_tracking.tenant', '=', 'transactions.tenant');
-      })
+      .modify((q) => tenantDb(knex, tenant).tenantJoin(q, 'transactions', 'credit_tracking.transaction_id', 'transactions.transaction_id', { type: 'left' }))
       .select(
         'transactions.description as transaction_description',
         'transactions.type as transaction_type',
@@ -1235,7 +1225,7 @@ export class FinancialService extends BaseService<ITransaction> {
           .update({ is_default: false });
       }
 
-      const [paymentMethod] = await trx('payment_methods')
+      const [paymentMethod] = await tenantDb(trx, context.tenant).table('payment_methods')
         .insert(paymentMethodData)
         .returning('*');
 
@@ -1292,13 +1282,11 @@ export class FinancialService extends BaseService<ITransaction> {
     const sortableFields = new Set(['created_at', 'updated_at', 'type', 'is_default']);
     const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
 
-    let dataQuery = tenantDb(knex, context.tenant).table('payment_methods as pm')
-      .leftJoin('clients as c', function() {
-        this.on('pm.client_id', '=', 'c.client_id')
-          .andOn('pm.tenant', '=', 'c.tenant');
-      });
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('payment_methods as pm');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as c', 'pm.client_id', 'c.client_id', { type: 'left' });
 
-    let countQuery = tenantDb(knex, context.tenant).table('payment_methods as pm');
+    let countQuery = scopedDb.table('payment_methods as pm');
 
     if (client_id) {
       dataQuery = dataQuery.where('pm.client_id', client_id);
@@ -1471,11 +1459,9 @@ export class FinancialService extends BaseService<ITransaction> {
     const reportDate = new Date().toISOString();
     const now = new Date();
 
-    let query = tenantDb(knex, tenant).table('invoices as i')
-      .join('clients as c', function joinClients() {
-        this.on('i.client_id', '=', 'c.client_id')
-          .andOn('i.tenant', '=', 'c.tenant');
-      })
+    const scopedDb = tenantDb(knex, tenant);
+    let query = scopedDb.table('invoices as i');
+    query = scopedDb.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id')
       .whereIn('i.status', ['sent', 'overdue']);
 
     if (clientId) {
@@ -1787,7 +1773,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // Create adjustment transaction
       const transactionId = uuidv4();
-      await trx('transactions').insert({
+      await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: transactionId,
         client_id: report.client_id,
         amount: report.difference,
@@ -2034,7 +2020,7 @@ export class FinancialService extends BaseService<ITransaction> {
                 : ['refund_full', 'refund_partial'].includes(existing.type) ? 'refund_reversal'
                 : 'credit_adjustment';
 
-              const [reversal] = await trx('transactions')
+              const [reversal] = await tenantDb(trx, context.tenant).table('transactions')
                 .insert({
                   transaction_id: uuidv4(),
                   client_id: existing.client_id,
@@ -2170,7 +2156,7 @@ export class FinancialService extends BaseService<ITransaction> {
                   .where('client_id', credit.client_id)
                   .select('credit_balance');
                 const newBalance = Number(client?.credit_balance || 0) - remaining;
-                await trx('transactions').insert({
+                await tenantDb(trx, context.tenant).table('transactions').insert({
                   transaction_id: uuidv4(),
                   client_id: credit.client_id,
                   amount: -remaining,
@@ -2273,7 +2259,10 @@ export class FinancialService extends BaseService<ITransaction> {
       };
     }
 
-    const terms = await knex('payment_terms')
+    const terms = await tenantDb(knex, this.tenant).unscoped(
+      'payment_terms',
+      'optional global payment terms reference table; clients store selected payment_terms as a column'
+    )
       .select('term_code as id', 'term_name as name')
       .where({ is_active: true })
       .orderBy('sort_order', 'asc');

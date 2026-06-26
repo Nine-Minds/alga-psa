@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 const MAX_ENTITY_CONTEXT_CHARS = 12000;
@@ -15,7 +16,8 @@ function truncate(text: string, maxLen: number): string {
 }
 
 async function resolveTicket(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
-  const ticket = await knex('tickets as t')
+  const db = tenantDb(knex, tenant);
+  const ticketQuery = db.table('tickets as t')
     .select(
       't.ticket_number',
       't.title',
@@ -25,20 +27,12 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
       'cl.client_name',
       knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"),
     )
-    .leftJoin('statuses as s', function () {
-      this.on('t.status_id', 's.status_id').andOn('t.tenant', 's.tenant');
-    })
-    .leftJoin('priorities as p', function () {
-      this.on('t.priority_id', 'p.priority_id').andOn('t.tenant', 'p.tenant');
-    })
-    .leftJoin('clients as cl', function () {
-      this.on('t.client_id', 'cl.client_id').andOn('t.tenant', 'cl.tenant');
-    })
-    .leftJoin('users as u', function () {
-      this.on('t.assigned_to', 'u.user_id').andOn('t.tenant', 'u.tenant');
-    })
-    .where({ 't.ticket_id': entityId, 't.tenant': tenant })
-    .first();
+    .where('t.ticket_id', entityId);
+  db.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+  db.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+  db.tenantJoin(ticketQuery, 'clients as cl', 't.client_id', 'cl.client_id', { type: 'left' });
+  db.tenantJoin(ticketQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+  const ticket = await ticketQuery.first();
 
   if (!ticket) return null;
 
@@ -53,7 +47,7 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
   if (ticket.url) lines.push(`- URL: ${ticket.url}`);
 
   // Fetch comments
-  const comments = await knex('comments as c')
+  const commentsQuery = db.table('comments as c')
     .select(
       'c.note',
       'c.is_resolution',
@@ -62,13 +56,12 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
       'c.created_at',
       knex.raw("CONCAT(u.first_name, ' ', u.last_name) as author_name"),
     )
-    .leftJoin('users as u', function () {
-      this.on('c.user_id', 'u.user_id').andOn('c.tenant', 'u.tenant');
-    })
-    .where({ 'c.ticket_id': entityId, 'c.tenant': tenant })
+    .where('c.ticket_id', entityId)
     .whereNot('c.is_system_generated', true)
     .orderBy('c.created_at', 'desc')
     .limit(MAX_COMMENTS);
+  db.tenantJoin(commentsQuery, 'users as u', 'c.user_id', 'u.user_id', { type: 'left' });
+  const comments = await commentsQuery;
 
   if (comments.length > 0) {
     // Reverse to show chronological order (we fetched desc to get the most recent)
@@ -88,9 +81,9 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
 }
 
 async function resolveClient(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
-  const client = await knex('clients')
+  const client = await tenantDb(knex, tenant).table('clients')
     .select('client_name', 'phone_no', 'email', 'address', 'url', 'client_type')
-    .where({ client_id: entityId, tenant })
+    .where({ client_id: entityId })
     .first();
 
   if (!client) return null;
@@ -109,13 +102,12 @@ async function resolveClient(knex: Knex, entityId: string, tenant: string): Prom
 }
 
 async function resolveContact(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
-  const contact = await knex('contacts as ct')
+  const db = tenantDb(knex, tenant);
+  const contactQuery = db.table('contacts as ct')
     .select('ct.full_name', 'ct.email', 'ct.role', 'cl.client_name')
-    .leftJoin('clients as cl', function () {
-      this.on('ct.client_id', 'cl.client_id').andOn('ct.tenant', 'cl.tenant');
-    })
-    .where({ 'ct.contact_name_id': entityId, 'ct.tenant': tenant })
-    .first();
+    .where('ct.contact_name_id', entityId);
+  db.tenantJoin(contactQuery, 'clients as cl', 'ct.client_id', 'cl.client_id', { type: 'left' });
+  const contact = await contactQuery.first();
 
   if (!contact) return null;
 
@@ -131,16 +123,15 @@ async function resolveContact(knex: Knex, entityId: string, tenant: string): Pro
 }
 
 async function resolveAsset(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
-  const asset = await knex('assets as a')
+  const db = tenantDb(knex, tenant);
+  const assetQuery = db.table('assets as a')
     .select('a.name', 'a.asset_tag', 'a.serial_number', 'a.status', 'a.location', 'at.type_name', 'cl.client_name')
     .leftJoin('asset_types as at', function () {
       this.on('a.type_id', 'at.type_id').andOn('a.tenant', 'at.tenant');
     })
-    .leftJoin('clients as cl', function () {
-      this.on('a.client_id', 'cl.client_id').andOn('a.tenant', 'cl.tenant');
-    })
-    .where({ 'a.asset_id': entityId, 'a.tenant': tenant })
-    .first();
+    .where('a.asset_id', entityId);
+  db.tenantJoin(assetQuery, 'clients as cl', 'a.client_id', 'cl.client_id', { type: 'left' });
+  const asset = await assetQuery.first();
 
   if (!asset) return null;
 
@@ -159,7 +150,8 @@ async function resolveAsset(knex: Knex, entityId: string, tenant: string): Promi
 }
 
 async function resolveProjectTask(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
-  const task = await knex('project_tasks as pt')
+  const db = tenantDb(knex, tenant);
+  const taskQuery = db.table('project_tasks as pt')
     .select(
       'pt.task_name',
       'pt.due_date',
@@ -170,29 +162,21 @@ async function resolveProjectTask(knex: Knex, entityId: string, tenant: string):
       'psm.standard_status_id',
       knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"),
     )
-    .leftJoin('project_phases as pp', function () {
-      this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-    })
-    .leftJoin('projects as p', function () {
-      this.on('pp.project_id', 'p.project_id').andOn('pp.tenant', 'p.tenant');
-    })
-    .leftJoin('users as u', function () {
-      this.on('pt.assigned_to', 'u.user_id').andOn('pt.tenant', 'u.tenant');
-    })
-    .leftJoin('project_status_mappings as psm', function () {
-      this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id').andOn('pt.tenant', 'psm.tenant');
-    })
-    .where({ 'pt.task_id': entityId, 'pt.tenant': tenant })
-    .first();
+    .where('pt.task_id', entityId);
+  db.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id', { type: 'left' });
+  db.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id', { type: 'left' });
+  db.tenantJoin(taskQuery, 'users as u', 'pt.assigned_to', 'u.user_id', { type: 'left' });
+  db.tenantJoin(taskQuery, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+  const task = await taskQuery.first();
 
   if (!task) return null;
 
   // Resolve status name if we have a mapping
   let statusName: string | null = null;
   if (task.standard_status_id) {
-    const status = await knex('statuses')
+    const status = await db.table('statuses')
       .select('name')
-      .where({ status_id: task.standard_status_id, tenant })
+      .where({ status_id: task.standard_status_id })
       .first();
     statusName = status?.name || null;
   }
@@ -211,21 +195,20 @@ async function resolveProjectTask(knex: Knex, entityId: string, tenant: string):
 }
 
 async function resolveContract(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
-  const contract = await knex('contracts as c')
+  const db = tenantDb(knex, tenant);
+  const contract = await db.table('contracts as c')
     .select('c.contract_name', 'c.contract_description', 'c.status', 'c.billing_frequency')
-    .where({ 'c.contract_id': entityId, 'c.tenant': tenant })
+    .where('c.contract_id', entityId)
     .first();
 
   if (!contract) return null;
 
   // Get associated client via client_contracts
-  const clientContract = await knex('client_contracts as cc')
+  const clientContractQuery = db.table('client_contracts as cc')
     .select('cl.client_name', 'cc.start_date', 'cc.end_date')
-    .leftJoin('clients as cl', function () {
-      this.on('cc.client_id', 'cl.client_id').andOn('cc.tenant', 'cl.tenant');
-    })
-    .where({ 'cc.contract_id': entityId, 'cc.tenant': tenant })
-    .first();
+    .where('cc.contract_id', entityId);
+  db.tenantJoin(clientContractQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+  const clientContract = await clientContractQuery.first();
 
   const lines: string[] = [];
   lines.push(`## Contract: ${contract.contract_name}`);
@@ -242,13 +225,12 @@ async function resolveContract(knex: Knex, entityId: string, tenant: string): Pr
 }
 
 async function resolveQuote(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
-  const quote = await knex('quotes as q')
+  const db = tenantDb(knex, tenant);
+  const quoteQuery = db.table('quotes as q')
     .select('q.quote_number', 'q.title', 'q.status', 'q.total_amount', 'q.currency_code', 'q.valid_until', 'q.quote_date', 'cl.client_name')
-    .leftJoin('clients as cl', function () {
-      this.on('q.client_id', 'cl.client_id').andOn('q.tenant', 'cl.tenant');
-    })
-    .where({ 'q.quote_id': entityId, 'q.tenant': tenant })
-    .first();
+    .where('q.quote_id', entityId);
+  db.tenantJoin(quoteQuery, 'clients as cl', 'q.client_id', 'cl.client_id', { type: 'left' });
+  const quote = await quoteQuery.first();
 
   if (!quote) return null;
 
@@ -289,8 +271,8 @@ export async function resolveDocumentEntityContext(
   tenant: string,
 ): Promise<string> {
   // Fetch document associations
-  const associations = await knex('document_associations')
-    .where({ document_id: documentId, tenant })
+  const associations = await tenantDb(knex, tenant).table('document_associations')
+    .where({ document_id: documentId })
     .orderBy('created_at', 'desc');
 
   if (!associations || associations.length === 0) {

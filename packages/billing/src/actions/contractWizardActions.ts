@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -270,7 +270,7 @@ const fetchModeDefaultRatesByServiceId = async (
     return new Map();
   }
 
-  const rows = await trx('service_catalog_mode_defaults')
+  const rows = await tenantDb(trx, tenant).table('service_catalog_mode_defaults')
     .where({ tenant, billing_mode: resolveBillingMode(mode), currency_code: currencyCode })
     .whereIn('service_id', uniqueServiceIds)
     .select('service_id', 'rate');
@@ -314,7 +314,7 @@ export const createContractTemplateFromWizard = withAuth(async (
     const nowIso = now.toISOString();
     const templateId = uuidv4();
 
-    await trx('contract_templates').insert({
+    await tenantDb(trx, tenant).table('contract_templates').insert({
       tenant,
       template_id: templateId,
       template_name: submission.contract_name,
@@ -363,7 +363,7 @@ export const createContractTemplateFromWizard = withAuth(async (
     );
 
     if (allServiceIds.length > 0) {
-      const services = await trx('service_catalog')
+      const services = await tenantDb(trx, tenant).table('service_catalog')
         .whereIn('service_id', allServiceIds)
         .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active', 'default_rate');
 
@@ -433,7 +433,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         customRate ?? undefined
       );
 
-      await trx('contract_template_lines')
+      await tenantDb(trx, tenant).table('contract_template_lines')
         .where({
           tenant,
           template_id: templateId,
@@ -479,7 +479,7 @@ export const createContractTemplateFromWizard = withAuth(async (
 
       const fixedBaseRateCents = submission.fixed_base_rate ?? 0;
       // Insert into contract_template_line_fixed_config (not contract_line_fixed_config)
-      await trx('contract_template_line_fixed_config').insert({
+      await tenantDb(trx, tenant).table('contract_template_line_fixed_config').insert({
         tenant,
         template_line_id: templateLineId,
         base_rate: fixedBaseRateCents,  // Already in cents from frontend
@@ -514,7 +514,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         }
 
         // Insert into template line services table (not contract_line_services)
-        await trx('contract_template_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_services').insert({
           tenant,
           template_line_id: templateLineId,
           service_id: service.service_id,
@@ -527,7 +527,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         // Insert into template line service configuration
         // For Fixed services, the rate is stored in custom_rate, not in a separate fixed config table
         const configId = uuidv4();
-        await trx('contract_template_line_service_configuration').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_service_configuration').insert({
           tenant,
           config_id: configId,
           template_line_id: templateLineId,
@@ -561,7 +561,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       }
 
       const templateLineId = await recordTemplateMapping(productsLineId, null);
-      await trx('contract_template_line_fixed_config').insert({
+      await tenantDb(trx, tenant).table('contract_template_line_fixed_config').insert({
         tenant,
         template_line_id: templateLineId,
         base_rate: 0,
@@ -573,7 +573,7 @@ export const createContractTemplateFromWizard = withAuth(async (
 
       for (const product of filteredProductServices) {
         const quantity = product.quantity ?? 1;
-        await trx('contract_template_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_services').insert({
           tenant,
           template_line_id: templateLineId,
           service_id: product.service_id,
@@ -584,7 +584,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         });
 
         const configId = uuidv4();
-        await trx('contract_template_line_service_configuration').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_service_configuration').insert({
           tenant,
           config_id: configId,
           template_line_id: templateLineId,
@@ -628,7 +628,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         );
 
         // Insert into template line services table (not contract_line_services)
-        await trx('contract_template_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_services').insert({
           tenant,
           template_line_id: templateLineId,
           service_id: service.service_id,
@@ -640,7 +640,7 @@ export const createContractTemplateFromWizard = withAuth(async (
 
         // Insert into template line service configuration
         const configId = uuidv4();
-        await trx('contract_template_line_service_configuration').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_service_configuration').insert({
           tenant,
           config_id: configId,
           template_line_id: templateLineId,
@@ -653,7 +653,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         });
 
         // Insert hourly config for template
-        await trx('contract_template_line_service_hourly_config').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_service_hourly_config').insert({
           tenant,
           config_id: configId,
           hourly_rate: normalizedHourlyRate ?? null,
@@ -670,7 +670,7 @@ export const createContractTemplateFromWizard = withAuth(async (
 
         if (service.bucket_overlay) {
           // Insert bucket config for template
-          await trx('contract_template_line_service_bucket_config').insert({
+          await tenantDb(trx, tenant).table('contract_template_line_service_bucket_config').insert({
             tenant,
             config_id: configId,
             total_minutes: service.bucket_overlay.total_minutes ?? 0,
@@ -712,7 +712,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         );
 
         // Insert into template line services table (not contract_line_services)
-        await trx('contract_template_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_services').insert({
           tenant,
           template_line_id: templateLineId,
           service_id: service.service_id,
@@ -724,7 +724,7 @@ export const createContractTemplateFromWizard = withAuth(async (
 
         // Insert into template line service configuration
         const configId = uuidv4();
-        await trx('contract_template_line_service_configuration').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_service_configuration').insert({
           tenant,
           config_id: configId,
           template_line_id: templateLineId,
@@ -737,7 +737,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         });
 
         // Insert usage config for template
-        await trx('contract_template_line_service_usage_config').insert({
+        await tenantDb(trx, tenant).table('contract_template_line_service_usage_config').insert({
           tenant,
           config_id: configId,
           unit_of_measure: service.unit_of_measure || 'unit',
@@ -750,7 +750,7 @@ export const createContractTemplateFromWizard = withAuth(async (
 
         if (service.bucket_overlay) {
           // Insert bucket config for template
-          await trx('contract_template_line_service_bucket_config').insert({
+          await tenantDb(trx, tenant).table('contract_template_line_service_bucket_config').insert({
             tenant,
             config_id: configId,
             total_minutes: service.bucket_overlay.total_minutes ?? 0,
@@ -830,14 +830,14 @@ export const createClientContractFromWizard = withAuth(async (
     // contract record AND for matching service-period prices below, so it must be consistent.
     let resolvedCurrencyCode: string = submission.currency_code;
     if (!existingContractId) {
-      const clientRow = await trx('clients')
+      const clientRow = await tenantDb(trx, tenant).table('clients')
         .where({ tenant, client_id: submission.client_id })
         .select('default_currency_code')
         .first();
       if (clientRow?.default_currency_code) {
         resolvedCurrencyCode = clientRow.default_currency_code;
       } else {
-        const billingSettings = await trx('default_billing_settings')
+        const billingSettings = await tenantDb(trx, tenant).table('default_billing_settings')
           .where({ tenant })
           .select('default_currency_code')
           .first();
@@ -846,11 +846,11 @@ export const createClientContractFromWizard = withAuth(async (
     }
 
     const clearExistingContractData = async (targetContractId: string) => {
-      await trx('client_contracts')
+      await tenantDb(trx, tenant).table('client_contracts')
         .where({ tenant, contract_id: targetContractId })
         .delete();
 
-      const contractLineIds = await trx('contract_lines')
+      const contractLineIds = await tenantDb(trx, tenant).table('contract_lines')
         .where({ tenant, contract_id: targetContractId })
         .pluck('contract_line_id');
 
@@ -858,55 +858,55 @@ export const createClientContractFromWizard = withAuth(async (
         return;
       }
 
-      await trx('time_entries')
+      await tenantDb(trx, tenant).table('time_entries')
         .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .update({ contract_line_id: null });
 
-      const configIds = await trx('contract_line_service_configuration')
+      const configIds = await tenantDb(trx, tenant).table('contract_line_service_configuration')
         .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .pluck('config_id');
 
       if (configIds.length > 0) {
-        await trx('contract_line_service_bucket_config')
+        await tenantDb(trx, tenant).table('contract_line_service_bucket_config')
           .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
 
-        await trx('contract_line_service_hourly_config')
+        await tenantDb(trx, tenant).table('contract_line_service_hourly_config')
           .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
 
-        await trx('contract_line_service_usage_config')
+        await tenantDb(trx, tenant).table('contract_line_service_usage_config')
           .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
 
-        await trx('contract_line_service_configuration')
+        await tenantDb(trx, tenant).table('contract_line_service_configuration')
           .where({ tenant })
           .whereIn('config_id', configIds)
           .delete();
       }
 
-      await trx('contract_line_service_defaults')
+      await tenantDb(trx, tenant).table('contract_line_service_defaults')
         .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .delete();
 
-      await trx('contract_line_services')
+      await tenantDb(trx, tenant).table('contract_line_services')
         .where({ tenant })
         .whereIn('contract_line_id', contractLineIds)
         .delete();
 
-      await trx('contract_lines')
+      await tenantDb(trx, tenant).table('contract_lines')
         .where({ tenant, contract_id: targetContractId })
         .delete();
     };
 
     if (existingContractId) {
-      const existing = await trx('contracts')
+      const existing = await tenantDb(trx, tenant).table('contracts')
         .where({ tenant, contract_id: existingContractId })
         .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
         .first('contract_id', 'status');
@@ -921,7 +921,7 @@ export const createClientContractFromWizard = withAuth(async (
 
       await clearExistingContractData(existingContractId);
 
-      await trx('contracts')
+      await tenantDb(trx, tenant).table('contracts')
         .where({ tenant, contract_id: existingContractId })
         .update({
           contract_name: submission.contract_name,
@@ -934,7 +934,7 @@ export const createClientContractFromWizard = withAuth(async (
           updated_at: nowIso,
         });
     } else {
-      await trx('contracts').insert({
+      await tenantDb(trx, tenant).table('contracts').insert({
         tenant,
         contract_id: contractId,
         contract_name: submission.contract_name,
@@ -973,7 +973,7 @@ export const createClientContractFromWizard = withAuth(async (
     let usageModeDefaultsByServiceId = new Map<string, number>();
 
     if (allServiceIds.length > 0) {
-      const services = await trx('service_catalog')
+      const services = await tenantDb(trx, tenant).table('service_catalog')
         .whereIn('service_id', allServiceIds)
         .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active', 'default_rate');
 
@@ -1069,18 +1069,30 @@ export const createClientContractFromWizard = withAuth(async (
 
       if (serviceIdsNeedingCurrencyCheck.length > 0) {
         // Get services that have prices in the required currency
-        const servicesWithPrices = await trx('service_catalog as sc')
+        const servicesWithPricesQuery = tenantDb(trx, tenant).table('service_catalog as sc')
           .whereIn('sc.service_id', serviceIdsNeedingCurrencyCheck)
-          .leftJoin('service_prices as sp', function() {
-            this.on('sc.service_id', '=', 'sp.service_id')
-                .andOn('sp.currency_code', '=', trx.raw('?', [contractCurrency]))
-                .andOn('sp.tenant', '=', trx.raw('?', [tenant]));
-          })
           .select(
             'sc.service_id',
             'sc.service_name',
             'sp.price_id'
           );
+        tenantDb(trx, tenant).tenantJoin(
+          servicesWithPricesQuery,
+          'service_prices as sp',
+          'sc.service_id',
+          'sp.service_id',
+          {
+            type: 'left',
+            on(join) {
+              join.andOn('sp.currency_code', '=', trx.raw('?', [contractCurrency]));
+            },
+          },
+        );
+        const servicesWithPrices = (await servicesWithPricesQuery) as unknown as Array<{
+          service_id: string;
+          service_name: string;
+          price_id: string | null;
+        }>;
 
         // Find services that don't have a price in the required currency AND don't have custom rates
         const missingPriceServices = servicesWithPrices.filter(s => !s.price_id);
@@ -1182,7 +1194,7 @@ export const createClientContractFromWizard = withAuth(async (
       for (const [index, service] of filteredFixedServices.entries()) {
         const quantity = service.quantity ?? 1;
 
-        await trx('contract_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_line_services').insert({
           tenant,
           contract_line_id: planId,
           service_id: service.service_id,
@@ -1255,7 +1267,7 @@ export const createClientContractFromWizard = withAuth(async (
         const quantity = product.quantity ?? 1;
         const customRate = product.custom_rate !== undefined ? Math.round(Number(product.custom_rate) || 0) : undefined;
 
-        await trx('contract_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_line_services').insert({
           tenant,
           contract_line_id: productsLineId,
           service_id: product.service_id,
@@ -1315,7 +1327,7 @@ export const createClientContractFromWizard = withAuth(async (
             hourlyModeDefaultsByServiceId.get(service.service_id),
             serviceCatalogById.get(service.service_id)?.default_rate
           ) ?? 0;
-        await trx('contract_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_line_services').insert({
           tenant,
           contract_line_id: hourlyPlanId,
           service_id: service.service_id,
@@ -1370,7 +1382,7 @@ export const createClientContractFromWizard = withAuth(async (
             usageModeDefaultsByServiceId.get(service.service_id),
             serviceCatalogById.get(service.service_id)?.default_rate
           ) ?? 0;
-        await trx('contract_line_services').insert({
+        await tenantDb(trx, tenant).table('contract_line_services').insert({
           tenant,
           contract_line_id: usagePlanId,
           service_id: service.service_id,
@@ -1548,7 +1560,7 @@ export const checkTemplateNameExists = withAuth(async (
 ): Promise<boolean> => {
   const { knex } = await createTenantKnex();
 
-  const existingTemplate = await knex('contract_templates')
+  const existingTemplate = await tenantDb(knex, tenant).table('contract_templates')
     .where({ tenant })
     .whereRaw('LOWER(template_name) = LOWER(?)', [templateName.trim()])
     .first();
@@ -1571,7 +1583,7 @@ export const listContractTemplatesForWizard = withAuth(async (
 
   // currency_code removed from contract_templates - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from a template
-  const templates = await knex('contract_templates')
+  const templates = await tenantDb(knex, tenant).table('contract_templates')
     .where({ tenant })
     .orderBy('template_name', 'asc')
     .select(
@@ -1599,7 +1611,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   }
   const { knex } = await createTenantKnex();
 
-  const template = await knex('contract_templates')
+  const template = await tenantDb(knex, tenant).table('contract_templates')
     .where({ tenant, template_id: templateId })
     .first();
 
@@ -1859,7 +1871,7 @@ export const getDraftContractForResume = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const contract = await knex('contracts')
+  const contract = await tenantDb(knex, tenant).table('contracts')
     .where({ tenant, contract_id: contractId })
     .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
     .first();
@@ -1872,7 +1884,7 @@ export const getDraftContractForResume = withAuth(async (
     throw new Error('Contract is not a draft');
   }
 
-  const clientContract = await knex('client_contracts')
+  const clientContract = await tenantDb(knex, tenant).table('client_contracts')
     .where({ tenant, contract_id: contractId })
     .first();
 

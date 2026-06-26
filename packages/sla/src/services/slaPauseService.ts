@@ -21,6 +21,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { SlaPauseReason } from '../types';
 import { SlaBackendAction } from './slaBackendActions';
 import { acquireTicketSlaLock } from './slaLock';
@@ -62,9 +63,10 @@ export async function pauseSla(
 ): Promise<PauseResult> {
   try {
     await acquireTicketSlaLock(trx, tenant, ticketId);
+    const scopedDb = tenantDb(trx, tenant);
 
     // Get current ticket state
-    const ticket = await trx('tickets')
+    const ticket = await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .select('sla_policy_id', 'sla_paused_at', 'status_id')
       .first();
@@ -86,7 +88,7 @@ export async function pauseSla(
     const now = new Date();
 
     // Pause the SLA
-    await trx('tickets')
+    await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .update({
         sla_paused_at: now
@@ -138,9 +140,10 @@ export async function resumeSla(
 ): Promise<PauseResult> {
   try {
     await acquireTicketSlaLock(trx, tenant, ticketId);
+    const scopedDb = tenantDb(trx, tenant);
 
     // Get current ticket state (including due dates for shifting)
-    const ticket = await trx('tickets')
+    const ticket = await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .select(
         'sla_policy_id', 'sla_paused_at', 'sla_total_pause_minutes', 'status_id',
@@ -199,7 +202,7 @@ export async function resumeSla(
       }
     }
 
-    await trx('tickets')
+    await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .update(updateData);
 
@@ -258,16 +261,17 @@ export async function handleStatusChange(
     // Take the per-ticket lock before reading pause state so concurrent
     // SLA writers can't interleave between this read and the pause/resume.
     await acquireTicketSlaLock(trx, tenant, ticketId);
+    const scopedDb = tenantDb(trx, tenant);
 
     // Check if new status is configured to pause SLA
-    const newStatusConfig = await trx('status_sla_pause_config')
+    const newStatusConfig = await scopedDb.table('status_sla_pause_config')
       .where({ tenant, status_id: newStatusId })
       .first();
 
     const newStatusPauses = newStatusConfig?.pauses_sla ?? false;
 
     // Check current pause state
-    const ticket = await trx('tickets')
+    const ticket = await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .select('sla_paused_at', 'response_state')
       .first();
@@ -279,14 +283,14 @@ export async function handleStatusChange(
     const isPaused = ticket.sla_paused_at !== null;
 
     // Get SLA settings to check if awaiting_client should also pause
-    const slaSettings = await trx('sla_settings')
+    const slaSettings = await scopedDb.table('sla_settings')
       .where({ tenant })
       .first();
 
     const pauseOnAwaitingClient = slaSettings?.pause_on_awaiting_client ?? true;
 
     // Check if response state tracking is enabled before considering awaiting_client
-    const tenantSettingsRow = await trx('tenant_settings')
+    const tenantSettingsRow = await scopedDb.table('tenant_settings')
       .select('ticket_display_settings')
       .where({ tenant })
       .first();
@@ -350,9 +354,10 @@ export async function handleResponseStateChange(
 ): Promise<PauseResult> {
   try {
     await acquireTicketSlaLock(trx, tenant, ticketId);
+    const scopedDb = tenantDb(trx, tenant);
 
     // Get SLA settings
-    const slaSettings = await trx('sla_settings')
+    const slaSettings = await scopedDb.table('sla_settings')
       .where({ tenant })
       .first();
 
@@ -364,7 +369,7 @@ export async function handleResponseStateChange(
     }
 
     // Check if response state tracking is enabled at tenant level
-    const tenantSettingsRow = await trx('tenant_settings')
+    const tenantSettingsRow = await scopedDb.table('tenant_settings')
       .select('ticket_display_settings')
       .where({ tenant })
       .first();
@@ -374,7 +379,7 @@ export async function handleResponseStateChange(
     }
 
     // Get current ticket state
-    const ticket = await trx('tickets')
+    const ticket = await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .select('sla_paused_at', 'status_id')
       .first();
@@ -388,7 +393,7 @@ export async function handleResponseStateChange(
     const isNowAwaitingClient = newResponseState === 'awaiting_client';
 
     // Check if current status also pauses SLA
-    const statusConfig = await trx('status_sla_pause_config')
+    const statusConfig = await scopedDb.table('status_sla_pause_config')
       .where({ tenant, status_id: ticket.status_id })
       .first();
 
@@ -434,8 +439,10 @@ export async function shouldSlaBePaused(
   tenant: string,
   ticketId: string
 ): Promise<{ paused: boolean; reason: SlaPauseReason | null }> {
+  const scopedDb = tenantDb(trx, tenant);
+
   // Get the ticket's current state
-  const ticket = await trx('tickets')
+  const ticket = await scopedDb.table('tickets')
     .where({ tenant, ticket_id: ticketId })
     .select('status_id', 'response_state')
     .first();
@@ -445,7 +452,7 @@ export async function shouldSlaBePaused(
   }
 
   // Get SLA settings
-  let slaSettings = await trx('sla_settings')
+  let slaSettings = await scopedDb.table('sla_settings')
     .where({ tenant })
     .first();
 
@@ -456,7 +463,7 @@ export async function shouldSlaBePaused(
 
   // Check 1: Awaiting client response (only if response state tracking is enabled)
   if (slaSettings.pause_on_awaiting_client && ticket.response_state === 'awaiting_client') {
-    const tenantSettingsRow = await trx('tenant_settings')
+    const tenantSettingsRow = await scopedDb.table('tenant_settings')
       .select('ticket_display_settings')
       .where({ tenant })
       .first();
@@ -467,7 +474,7 @@ export async function shouldSlaBePaused(
   }
 
   // Check 2: Status-based pause
-  const statusPauseConfig = await trx('status_sla_pause_config')
+  const statusPauseConfig = await scopedDb.table('status_sla_pause_config')
     .where({ tenant, status_id: ticket.status_id })
     .first();
 
@@ -498,10 +505,11 @@ export async function syncPauseState(
 ): Promise<PauseResult> {
   try {
     await acquireTicketSlaLock(trx, tenant, ticketId);
+    const scopedDb = tenantDb(trx, tenant);
 
     const { paused, reason } = await shouldSlaBePaused(trx, tenant, ticketId);
 
-    const ticket = await trx('tickets')
+    const ticket = await scopedDb.table('tickets')
       .where({ tenant, ticket_id: ticketId })
       .select('sla_paused_at')
       .first();
@@ -553,7 +561,9 @@ export async function getPauseStats(
   current_pause_minutes: number;
   pause_reason: SlaPauseReason | null;
 } | null> {
-  const ticket = await trx('tickets')
+  const scopedDb = tenantDb(trx, tenant);
+
+  const ticket = await scopedDb.table('tickets')
     .where({ tenant, ticket_id: ticketId })
     .select('sla_paused_at', 'sla_total_pause_minutes', 'response_state', 'status_id')
     .first();
@@ -599,7 +609,7 @@ async function logPauseEvent(
   reason: SlaPauseReason | null,
   eventData: Record<string, unknown>
 ): Promise<void> {
-  await trx('sla_audit_log').insert({
+  await tenantDb(trx, tenant).table('sla_audit_log').insert({
     tenant,
     ticket_id: ticketId,
     event_type: `sla_${eventType}`,

@@ -3,7 +3,7 @@
 // @alga-psa/clients/actions.ts
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import ClientContract from '../models/clientContract';
 import type { IClientContract } from '@alga-psa/types';
@@ -99,12 +99,11 @@ async function getCanonicalRecurringDetailPeriodsForClientContract(
   clientContractId: string,
 ): Promise<Array<{ service_period_start: string; service_period_end: string }>> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    return trx('invoice_charge_details as iid')
-      .join('invoice_charges as ii', function(this: Knex.JoinClause) {
-        this.on('iid.item_id', '=', 'ii.item_id')
-          .andOn('iid.tenant', '=', 'ii.tenant');
-      })
-      .where('iid.tenant', tenant)
+    const scopedDb = tenantDb(trx, tenant);
+    const query = scopedDb.table('invoice_charge_details as iid');
+    scopedDb.tenantJoin(query, 'invoice_charges as ii', 'iid.item_id', 'ii.item_id');
+
+    return query
       .andWhere('ii.client_contract_id', clientContractId)
       .whereNotNull('iid.service_period_start')
       .whereNotNull('iid.service_period_end')
@@ -325,13 +324,15 @@ export const createClientContract = withAuth(async (
 
   let createdForEvent: IClientContract | null = null;
   const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientExists = await trx('clients').where({ client_id: input.client_id, tenant }).first();
+    const db = tenantDb(trx, tenant);
+
+    const clientExists = await db.table('clients').where({ client_id: input.client_id }).first();
     if (!clientExists) {
       throw new Error(`Client ${input.client_id} not found`);
     }
 
-    const contractQuery = trx('contracts')
-      .where({ contract_id: input.contract_id, tenant });
+    const contractQuery = db.table('contracts')
+      .where({ contract_id: input.contract_id });
     if (input.is_active) {
       contractQuery.andWhere({ is_active: true });
     }
@@ -496,13 +497,12 @@ export const updateClientContract = withAuth(async (
       } else {
         const clientId = beforeContract.client_id;
         const invoicedCycles = await withTransaction(db, async (trx: Knex.Transaction) => {
-          return await trx('client_billing_cycles as cbc')
-            .join('invoices as i', function() {
-              this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                  .andOn('i.tenant', '=', 'cbc.tenant');
-            })
+          const scopedDb = tenantDb(trx, tenant);
+          const query = scopedDb.table('client_billing_cycles as cbc');
+          scopedDb.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id');
+
+          return await query
             .where('cbc.client_id', clientId)
-            .andWhere('cbc.tenant', tenant)
             .select(
               'cbc.period_start_date',
               'cbc.period_end_date'

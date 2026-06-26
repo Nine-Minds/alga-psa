@@ -2,7 +2,7 @@
 
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
@@ -140,6 +140,7 @@ export const scheduleTeamsMeeting = withAuth(async (
 
     try {
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenant);
         const onlineMeetingType = await trx('system_interaction_types')
           .where({ type_name: 'Online Meeting' })
           .first('type_id');
@@ -206,7 +207,7 @@ export const scheduleTeamsMeeting = withAuth(async (
 
         const now = new Date();
         const meetingId = uuidv4();
-        await trx('online_meetings').insert({
+        await scopedDb.table('online_meetings').insert({
           meeting_id: meetingId,
           tenant,
           provider: 'teams',

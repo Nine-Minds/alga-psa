@@ -3,8 +3,7 @@ import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -53,7 +52,7 @@ async function getTicketIdForAppointmentRequest(
   appointmentRequestId: string
 ): Promise<string | undefined> {
   const row = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('appointment_requests')
+    return await (tenantDb(trx, tenant) as any).table('appointment_requests')
       .where({ tenant, appointment_request_id: appointmentRequestId })
       .select('ticket_id')
       .first();
@@ -674,7 +673,7 @@ export const deleteScheduleEntry = withAuth(async (
     const appointmentRequestRow =
       existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
         ? await withTransaction(db, async (trx: Knex.Transaction) => {
-            return await trx('appointment_requests')
+            return await (tenantDb(trx, tenant) as any).table('appointment_requests')
               .where({
                 appointment_request_id: existingEntry.work_item_id,
                 tenant,
@@ -684,7 +683,7 @@ export const deleteScheduleEntry = withAuth(async (
         : null;
     const onlineMeetingRow = appointmentRequestRow
       ? await withTransaction(db, async (trx: Knex.Transaction) => {
-          return await trx('online_meetings')
+          return await (tenantDb(trx, tenant) as any).table('online_meetings')
             .where({
               appointment_request_id: appointmentRequestRow.appointment_request_id,
               tenant,
@@ -694,10 +693,11 @@ export const deleteScheduleEntry = withAuth(async (
       : null;
 
     const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, db, tenant, async (trx, tenantId) => {
+      const scopedDb = tenantDb(trx, tenantId) as any;
       // Clean up schedule conflicts referencing this entry
-      await trx('schedule_conflicts')
+      await scopedDb.table('schedule_conflicts')
         .where({ tenant: tenantId })
-        .where(function() {
+        .where(function(this: any) {
           this.where('entry_id_1', masterEntryId).orWhere('entry_id_2', masterEntryId);
         })
         .del();
@@ -718,6 +718,7 @@ export const deleteScheduleEntry = withAuth(async (
 
     if (appointmentRequestRow) {
       await withTransaction(db, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenant) as any;
         const nextUpdate: Record<string, unknown> = {
           schedule_entry_id: null,
           online_meeting_provider: null,
@@ -731,14 +732,14 @@ export const deleteScheduleEntry = withAuth(async (
           nextUpdate.declined_reason = 'Cancelled by MSP';
         }
 
-        await trx('appointment_requests')
+        await scopedDb.table('appointment_requests')
           .where({
             appointment_request_id: appointmentRequestRow.appointment_request_id,
             tenant,
           })
           .update(nextUpdate);
 
-        await trx('online_meetings')
+        await scopedDb.table('online_meetings')
           .where({
             appointment_request_id: appointmentRequestRow.appointment_request_id,
             tenant,
@@ -870,46 +871,47 @@ export const getScheduleEntryById = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant) as any;
 
-    // Get the schedule entry
-    const entry = await trx('schedule_entries')
-      .where({
-        entry_id: entryId,
-        tenant
-      })
-      .first();
+      // Get the schedule entry
+      const entry = await scopedDb.table('schedule_entries')
+        .where({
+          entry_id: entryId,
+          tenant
+        })
+        .first();
 
-    if (!entry) {
-      return null;
-    }
+      if (!entry) {
+        return null;
+      }
 
-    // Get assigned users
-    const assignees = await trx('schedule_entry_assignees')
-      .where({
-        entry_id: entryId,
-        tenant
-      })
-      .select('user_id');
+      // Get assigned users
+      const assignees = await scopedDb.table('schedule_entry_assignees')
+        .where({
+          entry_id: entryId,
+          tenant
+        })
+        .select('user_id');
 
-    const assignedUserIds = assignees.map(a => a.user_id);
+      const assignedUserIds = assignees.map((a: any) => a.user_id);
 
-    // Combine entry with assigned users
-    const scheduleEntry: IScheduleEntry = {
-      ...entry,
-      assigned_user_ids: assignedUserIds || []
-    };
-
-    // Check if entry is private and user is not assigned to it
-    if (scheduleEntry.is_private && !assignedUserIds.includes(user.user_id)) {
-      // Return limited information for private entries
-      return {
-        ...scheduleEntry,
-        title: "Busy",
-        notes: "",
-        work_item_id: null,
-        work_item_type: "ad_hoc"
+      // Combine entry with assigned users
+      const scheduleEntry: IScheduleEntry = {
+        ...entry,
+        assigned_user_ids: assignedUserIds || []
       };
-    }
+
+      // Check if entry is private and user is not assigned to it
+      if (scheduleEntry.is_private && !assignedUserIds.includes(user.user_id)) {
+        // Return limited information for private entries
+        return {
+          ...scheduleEntry,
+          title: "Busy",
+          notes: "",
+          work_item_id: null,
+          work_item_type: "ad_hoc"
+        };
+      }
 
       return scheduleEntry;
     });

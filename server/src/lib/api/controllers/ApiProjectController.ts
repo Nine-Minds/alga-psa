@@ -31,6 +31,7 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { tenantDb } from '@alga-psa/db';
 import {
   ApiRequest,
   AuthenticatedApiRequest,
@@ -285,8 +286,8 @@ export class ApiProjectController extends ApiBaseController {
     knex?: Awaited<ReturnType<typeof getConnection>>
   ): Promise<string> {
     const resolvedKnex = knex ?? await getConnection(tenant);
-    const phase = await resolvedKnex('project_phases')
-      .where({ phase_id: phaseId, tenant })
+    const phase = await tenantDb(resolvedKnex, tenant).table('project_phases')
+      .where({ phase_id: phaseId })
       .first<{ project_id: string }>('project_id');
 
     if (!phase?.project_id) {
@@ -302,12 +303,11 @@ export class ApiProjectController extends ApiBaseController {
     knex?: Awaited<ReturnType<typeof getConnection>>
   ): Promise<string> {
     const resolvedKnex = knex ?? await getConnection(tenant);
-    const task = await resolvedKnex('project_tasks as pt')
-      .join('project_phases as pp', function joinProjectPhases(this: any) {
-        this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-      })
-      .where({ 'pt.task_id': taskId, 'pt.tenant': tenant })
-      .first<{ project_id: string }>('pp.project_id as project_id');
+    const db = tenantDb(resolvedKnex, tenant);
+    const taskQuery = db.table('project_tasks as pt')
+      .where({ 'pt.task_id': taskId });
+    db.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+    const task = await taskQuery.first<{ project_id: string }>('pp.project_id as project_id');
 
     if (!task?.project_id) {
       throw new NotFoundError('Task not found');
@@ -1526,8 +1526,8 @@ export class ApiProjectController extends ApiBaseController {
 
           await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
-          const phase = await knex('project_phases')
-            .where({ phase_id: phaseId, project_id: projectId, tenant: tenantId })
+          const phase = await tenantDb(knex, tenantId!).table('project_phases')
+            .where({ phase_id: phaseId, project_id: projectId })
             .first('phase_id');
 
           if (!phase) {

@@ -45,11 +45,9 @@ async function getTenantProjectStatusUsage(
   tenant: string,
   statusId: string
 ): Promise<ProjectStatusUsage> {
-  const rows = await tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
-    .leftJoin('projects as p', function() {
-      this.on('psm.project_id', '=', 'p.project_id')
-        .andOn('psm.tenant', '=', 'p.tenant');
-    })
+  const usageQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+  tenantDb(trx, tenant).tenantJoin(usageQuery, 'projects as p', 'psm.project_id', 'p.project_id', { type: 'left' });
+  const rows = await usageQuery
     .where({ 'psm.status_id': statusId })
     .distinct<{ project_id: string; project_name: string | null }[]>(
       'psm.project_id as project_id',
@@ -277,7 +275,7 @@ export const addStatusToProject = withAuth(async (
 
     const displayOrder = (maxOrder?.max ?? 0) + 1;
 
-    const [mapping] = await trx('project_status_mappings')
+    const [mapping] = await tenantScopedTable(trx, 'project_status_mappings', tenant)
       .insert({
         tenant,
         project_id: projectId,
@@ -370,7 +368,7 @@ export const copyProjectStatusesToPhase = withAuth(async (
       is_visible: mapping.is_visible
     }));
 
-    const newMappings: IProjectStatusMapping[] = await trx('project_status_mappings')
+    const newMappings: IProjectStatusMapping[] = await tenantScopedTable(trx, 'project_status_mappings', tenant)
       .insert(inserts)
       .returning('*');
 
@@ -729,7 +727,7 @@ export const createTenantProjectStatus = withAuth(async (
 
     console.log(`[DEBUG] Max order: ${maxOrder?.max}, Next order: ${orderNumber}`);
 
-    const [status] = await trx('statuses')
+    const [status] = await tenantScopedTable(trx, 'statuses', tenant)
       .insert({
         tenant,
         item_type: 'project_task',

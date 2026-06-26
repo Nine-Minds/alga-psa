@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { resolveProductCode } from '@alga-psa/types';
 
 // ITIL SLA configuration is injected by the composition layer to avoid tickets→sla cross-package violation
@@ -17,6 +18,8 @@ export class ItilStandardsService {
    * Copy ITIL standard priorities to tenant's priorities table
    */
   static async copyItilPrioritiesToTenant(trx: Knex.Transaction, tenant: string, createdBy: string): Promise<void> {
+    const db = tenantDb(trx, tenant);
+
     // Get ITIL standard priorities from reference table
     const itilPriorities = await trx('standard_priorities')
       .where('is_itil_standard', true)
@@ -31,8 +34,7 @@ export class ItilStandardsService {
 
     for (const stdPriority of itilPriorities) {
       // Check if already exists in tenant priorities
-      const existing = await trx('priorities')
-        .where('tenant', tenant)
+      const existing = await db.table('priorities')
         .where('priority_name', stdPriority.priority_name)
         .where('item_type', stdPriority.item_type)
         .first();
@@ -40,7 +42,7 @@ export class ItilStandardsService {
       if (!existing) {
         const newPriorityId = uuidv4();
         console.log(`[ItilStandardsService] Inserting ITIL priority "${stdPriority.priority_name}" (${newPriorityId}) for tenant ${tenant}`);
-        await trx('priorities').insert({
+        await db.table('priorities').insert({
           priority_id: newPriorityId,
           tenant: tenant,
           priority_name: stdPriority.priority_name,
@@ -56,9 +58,8 @@ export class ItilStandardsService {
       } else if (!existing.is_from_itil_standard) {
         // Update existing priority to mark as ITIL if it matches but wasn't marked
         console.log(`[ItilStandardsService] Updating existing priority "${stdPriority.priority_name}" to mark as ITIL for tenant ${tenant}`);
-        await trx('priorities')
+        await db.table('priorities')
           .where('priority_id', existing.priority_id)
-          .andWhere('tenant', tenant)
           .update({
             is_from_itil_standard: true,
             itil_priority_level: stdPriority.itil_priority_level,
@@ -76,6 +77,8 @@ export class ItilStandardsService {
    * Copy ITIL standard categories to tenant's categories table
    */
   static async copyItilCategoriesToTenant(trx: Knex.Transaction, tenant: string, createdBy: string, boardId?: string): Promise<void> {
+    const db = tenantDb(trx, tenant);
+
     // Get ITIL standard categories from reference table
     const itilCategories = await trx('standard_categories')
       .where('is_itil_standard', true)
@@ -97,8 +100,7 @@ export class ItilStandardsService {
 
     for (const stdCategory of parentCategories) {
       // Check if already exists in tenant categories
-      const existing = await trx('categories')
-        .where('tenant', tenant)
+      const existing = await db.table('categories')
         .where('category_name', stdCategory.category_name)
         .whereNull('parent_category')
         .first();
@@ -106,7 +108,7 @@ export class ItilStandardsService {
       if (!existing) {
         const newCategoryId = uuidv4();
         console.log(`[ItilStandardsService] Inserting ITIL category "${stdCategory.category_name}" (${newCategoryId}) for tenant ${tenant}`);
-        await trx('categories').insert({
+        await db.table('categories').insert({
           category_id: newCategoryId,
           tenant: tenant,
           category_name: stdCategory.category_name,
@@ -124,9 +126,8 @@ export class ItilStandardsService {
         // Update to mark as ITIL if not already marked
         if (!existing.is_from_itil_standard) {
           console.log(`[ItilStandardsService] Updating existing category "${stdCategory.category_name}" to mark as ITIL for tenant ${tenant}`);
-          await trx('categories')
+          await db.table('categories')
             .where('category_id', existing.category_id)
-            .andWhere('tenant', tenant)
             .update({
               is_from_itil_standard: true
             });
@@ -146,8 +147,7 @@ export class ItilStandardsService {
       }
 
       // Check if already exists in tenant categories
-      const existing = await trx('categories')
-        .where('tenant', tenant)
+      const existing = await db.table('categories')
         .where('category_name', stdCategory.category_name)
         .where('parent_category', parentId)
         .first();
@@ -155,7 +155,7 @@ export class ItilStandardsService {
       if (!existing) {
         const newSubcategoryId = uuidv4();
         console.log(`[ItilStandardsService] Inserting ITIL subcategory "${stdCategory.category_name}" (${newSubcategoryId}) for tenant ${tenant}`);
-        await trx('categories').insert({
+        await db.table('categories').insert({
           category_id: newSubcategoryId,
           tenant: tenant,
           category_name: stdCategory.category_name,
@@ -168,9 +168,8 @@ export class ItilStandardsService {
       } else if (!existing.is_from_itil_standard) {
         // Update to mark as ITIL if not already marked
         console.log(`[ItilStandardsService] Updating existing subcategory "${stdCategory.category_name}" to mark as ITIL for tenant ${tenant}`);
-        await trx('categories')
+        await db.table('categories')
           .where('category_id', existing.category_id)
-          .andWhere('tenant', tenant)
           .update({
             is_from_itil_standard: true
           });
@@ -200,7 +199,7 @@ export class ItilStandardsService {
       // SLA is a PSA-only capability. AlgaDesk tenants may use ITIL priorities for
       // ticket prioritization, but must NOT get an SLA policy auto-created — doing so
       // would generate SLA warning/breach notifications that AlgaDesk does not support.
-      const tenantRow = await trx('tenants').where({ tenant }).first('product_code');
+      const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
       const { productCode } = resolveProductCode(tenantRow?.product_code);
 
       if (productCode === 'algadesk') {
@@ -232,6 +231,7 @@ export class ItilStandardsService {
     prioritiesSkippedReason?: string;
     categoriesSkippedReason?: string;
   }> {
+    const db = tenantDb(trx, tenant);
     const result = {
       prioritiesDeleted: 0,
       categoriesDeleted: 0,
@@ -240,8 +240,7 @@ export class ItilStandardsService {
     };
 
     // Get count of ITIL priorities for logging
-    const itilPrioritiesResult = await trx('priorities')
-      .where('tenant', tenant)
+    const itilPrioritiesResult = await db.table('priorities')
       .where('is_from_itil_standard', true)
       .count('* as count')
       .first();
@@ -250,8 +249,7 @@ export class ItilStandardsService {
     console.log(`[ItilStandardsService.cleanup] Found ${itilPrioritiesCount} ITIL priorities for tenant ${tenant}`);
 
     // Check if any boards still use ITIL priorities
-    const itilPriorityBoards = await trx('boards')
-      .where('tenant', tenant)
+    const itilPriorityBoards = await db.table('boards')
       .where('priority_type', 'itil')
       .count('* as count')
       .first();
@@ -262,22 +260,18 @@ export class ItilStandardsService {
     if (itilPriorityBoardCount === 0) {
       // No boards use ITIL priorities - delete unused ones individually
       // Get ITIL priorities that ARE used by tickets
-      const usedPriorityIds = await trx('tickets')
-        .where('tenant', tenant)
-        .whereIn('priority_id', function() {
-          this.select('priority_id')
-            .from('priorities')
-            .where('tenant', tenant)
-            .where('is_from_itil_standard', true);
-        })
+      const itilPriorityIds = db.table('priorities')
+        .select('priority_id')
+        .where('is_from_itil_standard', true);
+      const usedPriorityIds = await db.table('tickets')
+        .whereIn('priority_id', itilPriorityIds)
         .distinct('priority_id')
         .pluck('priority_id');
 
       console.log(`[ItilStandardsService.cleanup] ITIL priorities in use by tickets: ${usedPriorityIds.length} (${usedPriorityIds.join(', ')})`);
 
       // Delete ITIL priorities that are NOT in use
-      const deleteQuery = trx('priorities')
-        .where('tenant', tenant)
+      const deleteQuery = db.table('priorities')
         .where('is_from_itil_standard', true);
 
       if (usedPriorityIds.length > 0) {
@@ -298,8 +292,7 @@ export class ItilStandardsService {
     }
 
     // Get count of ITIL categories for logging
-    const itilCategoriesResult = await trx('categories')
-      .where('tenant', tenant)
+    const itilCategoriesResult = await db.table('categories')
       .where('is_from_itil_standard', true)
       .count('* as count')
       .first();
@@ -308,8 +301,7 @@ export class ItilStandardsService {
     console.log(`[ItilStandardsService.cleanup] Found ${itilCategoriesCount} ITIL categories for tenant ${tenant}`);
 
     // Check if any boards still use ITIL categories
-    const itilCategoryBoards = await trx('boards')
-      .where('tenant', tenant)
+    const itilCategoryBoards = await db.table('boards')
       .where('category_type', 'itil')
       .count('* as count')
       .first();
@@ -320,21 +312,13 @@ export class ItilStandardsService {
     if (itilCategoryBoardCount === 0) {
       // No boards use ITIL categories - delete unused ones individually
       // Get ITIL categories that ARE used by tickets (as category or subcategory)
-      const usedCategoryIds = await trx('tickets')
-        .where('tenant', tenant)
+      const itilCategoryIds = db.table('categories')
+        .select('category_id')
+        .where('is_from_itil_standard', true);
+      const usedCategoryIds = await db.table('tickets')
         .where(function() {
-          this.whereIn('category_id', function() {
-            this.select('category_id')
-              .from('categories')
-              .where('tenant', tenant)
-              .where('is_from_itil_standard', true);
-          })
-          .orWhereIn('subcategory_id', function() {
-            this.select('category_id')
-              .from('categories')
-              .where('tenant', tenant)
-              .where('is_from_itil_standard', true);
-          });
+          this.whereIn('category_id', itilCategoryIds.clone())
+            .orWhereIn('subcategory_id', itilCategoryIds.clone());
         })
         .select('category_id', 'subcategory_id');
 
@@ -351,8 +335,7 @@ export class ItilStandardsService {
       // Delete ITIL categories that are NOT in use
       // Note: Must delete subcategories first (children), then parent categories
       // First, get all ITIL categories to understand parent-child relationships
-      const allItilCategories = await trx('categories')
-        .where('tenant', tenant)
+      const allItilCategories = await db.table('categories')
         .where('is_from_itil_standard', true)
         .select('category_id', 'parent_category');
 
@@ -367,8 +350,7 @@ export class ItilStandardsService {
       // Delete unused children first
       let deletedCount = 0;
       if (childIds.length > 0) {
-        const childDeleteQuery = trx('categories')
-          .where('tenant', tenant)
+        const childDeleteQuery = db.table('categories')
           .where('is_from_itil_standard', true)
           .whereNotNull('parent_category')
           .whereIn('category_id', childIds);
@@ -382,8 +364,7 @@ export class ItilStandardsService {
 
       // Then delete unused parents
       if (parentIds.length > 0) {
-        const parentDeleteQuery = trx('categories')
-          .where('tenant', tenant)
+        const parentDeleteQuery = db.table('categories')
           .where('is_from_itil_standard', true)
           .whereNull('parent_category')
           .whereIn('category_id', parentIds);

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
@@ -37,18 +38,8 @@ export async function fetchTenantParty(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<TenantParty | null> {
-  const tenantClient = await knexOrTrx('tenant_companies as tc')
-    .join('clients as c', function joinClients() {
-      this.on('tc.client_id', '=', 'c.client_id').andOn('tc.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('client_locations as cl', function joinLocations() {
-      this.on('c.client_id', '=', 'cl.client_id')
-        .andOn('c.tenant', '=', 'cl.tenant')
-        .andOn(function preferredLocation() {
-          this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
-            .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
-        });
-    })
+  const db = tenantDb(knexOrTrx, tenant);
+  const tenantClientQuery = db.table('tenant_companies as tc')
     .select(
       'tc.client_id',
       'c.client_name',
@@ -62,10 +53,20 @@ export async function fetchTenantParty(
       'cl.postal_code',
       'cl.country_name'
     )
-    .where({ 'tc.tenant': tenant, 'tc.is_default': true })
+    .where({ 'tc.is_default': true })
     .whereNull('tc.deleted_at')
-    .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
-    .first<Record<string, unknown>>();
+    .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST');
+  db.tenantJoin(tenantClientQuery, 'clients as c', 'tc.client_id', 'c.client_id');
+  db.tenantJoin(tenantClientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+    type: 'left',
+    on(join) {
+      join.andOn(function preferredLocation() {
+        this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+          .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+      });
+    },
+  });
+  const tenantClient = await tenantClientQuery.first<Record<string, unknown>>();
 
   if (tenantClient?.client_id) {
     const logoUrl = await getClientLogoUrl(String(tenantClient.client_id), tenant).catch(() => null);

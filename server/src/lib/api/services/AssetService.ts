@@ -81,11 +81,8 @@ export class AssetService extends BaseService<any> {
         query.where(`${this.tableName}.location`, 'ilike', `%${filters.location}%`);
       }
       if (filters.client_name) {
-        query.join('clients', function joinClients(this: Knex.JoinClause) {
-          this.on('assets.client_id', '=', 'clients.client_id')
-            .andOn('assets.tenant', '=', 'clients.tenant');
-        })
-          .where('clients.client_name', 'ilike', `%${filters.client_name}%`);
+        tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
+        query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
       }
       if (filters.purchase_date_from) {
         query.where(`${this.tableName}.purchase_date`, '>=', filters.purchase_date_from);
@@ -120,10 +117,10 @@ export class AssetService extends BaseService<any> {
     }
 
     // Add joins for additional data
-    query.leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-      this.on('assets.client_id', '=', 'clients.client_id')
-        .andOn('assets.tenant', '=', 'clients.tenant');
-    })
+    tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
+      type: 'left',
+    });
+    query
       .select(
         `${this.tableName}.*`,
         'clients.client_name',
@@ -193,13 +190,12 @@ export class AssetService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const knex = await this.getDbForContext(context);
     const query = scopedTable(knex, context.tenant, this.tableName)
-      .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-        this.on('assets.client_id', '=', 'clients.client_id')
-          .andOn('assets.tenant', '=', 'clients.tenant');
-      })
       .where({
         [`${this.tableName}.${this.primaryKey}`]: id
       });
+    tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
+      type: 'left',
+    });
       
     const asset = await query.select(
         `${this.tableName}.*`,
@@ -531,7 +527,7 @@ export class AssetService extends BaseService<any> {
       throw new ConflictError('Ticket is already linked to this asset');
     }
 
-    const [created] = await knex('asset_associations')
+    const [created] = await tenantDb(knex, context.tenant).table('asset_associations')
       .insert({
         tenant: context.tenant,
         asset_id: assetId,
@@ -591,7 +587,7 @@ export class AssetService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const [relationship] = await knex('asset_relationships')
+    const [relationship] = await tenantDb(knex, context.tenant).table('asset_relationships')
       .insert(relationshipData)
       .returning('*');
 
@@ -636,7 +632,7 @@ export class AssetService extends BaseService<any> {
     };
 
     const knex = await this.getDbForContext(context);
-    const [association] = await knex('document_associations')
+    const [association] = await tenantDb(knex, context.tenant).table('document_associations')
       .insert(associationData)
       .returning('*');
 
@@ -653,11 +649,7 @@ export class AssetService extends BaseService<any> {
   // Maintenance management
   async getMaintenanceSchedules(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
-        this.on('asset_maintenance_schedules.assigned_to', '=', 'users.user_id')
-          .andOn('asset_maintenance_schedules.tenant', '=', 'users.tenant');
-      })
+    const query = scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .where({
         'asset_maintenance_schedules.asset_id': assetId
       })
@@ -665,6 +657,10 @@ export class AssetService extends BaseService<any> {
         'asset_maintenance_schedules.*',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
       );
+    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_schedules.assigned_to', 'users.user_id', {
+      type: 'left',
+    });
+    return query;
   }
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
@@ -684,7 +680,7 @@ export class AssetService extends BaseService<any> {
     );
 
     const knex = await this.getDbForContext(context);
-    const [schedule] = await knex('asset_maintenance_schedules')
+    const [schedule] = await tenantDb(knex, context.tenant).table('asset_maintenance_schedules')
       .insert(scheduleData)
       .returning('*');
 
@@ -738,7 +734,7 @@ export class AssetService extends BaseService<any> {
     };
 
     const knex = await this.getDbForContext(context);
-    const [maintenance] = await knex('asset_maintenance_history')
+    const [maintenance] = await tenantDb(knex, context.tenant).table('asset_maintenance_history')
       .insert(maintenanceData)
       .returning('*');
 
@@ -752,11 +748,7 @@ export class AssetService extends BaseService<any> {
 
   async getMaintenanceHistory(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    return scopedTable(knex, context.tenant, 'asset_maintenance_history')
-      .leftJoin('users', function joinUsers(this: Knex.JoinClause) {
-        this.on('asset_maintenance_history.performed_by', '=', 'users.user_id')
-          .andOn('asset_maintenance_history.tenant', '=', 'users.tenant');
-      })
+    const query = scopedTable(knex, context.tenant, 'asset_maintenance_history')
       .where({
         'asset_maintenance_history.asset_id': assetId
       })
@@ -765,6 +757,10 @@ export class AssetService extends BaseService<any> {
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as performed_by_user_name`)
       )
       .orderBy('performed_at', 'desc');
+    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_history.performed_by', 'users.user_id', {
+      type: 'left',
+    });
+    return query;
   }
 
   // Search and export

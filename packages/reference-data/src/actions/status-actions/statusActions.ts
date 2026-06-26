@@ -12,7 +12,7 @@ import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
 type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
 
 const statusesQuery = (trx: Knex | Knex.Transaction, tenant: string) =>
-  tenantDb(trx, tenant).table('statuses');
+  tenantDb(trx, tenant).table<IStatus>('statuses');
 
 // Keeps the app-wide search index in sync when project / project_task statuses
 // change. Failures are swallowed: the daily search reconcile job is the backstop.

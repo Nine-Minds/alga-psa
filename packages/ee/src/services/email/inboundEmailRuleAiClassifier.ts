@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ADD_ONS, tenantHasAddOn, type AddOnKey } from '@alga-psa/types';
 
 import { resolveChatProvider } from '../chatProviderResolver';
@@ -44,9 +44,8 @@ const MAX_CLIENT_NAME_LENGTH = 200;
 async function tenantHasAiAssistantAddOn(tenantId: string): Promise<boolean> {
   const { knex } = await createTenantKnex(tenantId);
   try {
-    const rows = await knex('tenant_addons')
-      .select('addon_key', 'expires_at')
-      .where({ tenant: tenantId }) as Array<{ addon_key: string; expires_at: string | Date | null }>;
+    const rows = (await tenantDb(knex, tenantId).table('tenant_addons')
+      .select('addon_key', 'expires_at')) as Array<{ addon_key: string; expires_at: string | Date | null }>;
 
     const now = Date.now();
     const knownAddOns = new Set<string>(Object.values(ADD_ONS));

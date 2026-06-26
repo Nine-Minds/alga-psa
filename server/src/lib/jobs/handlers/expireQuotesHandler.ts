@@ -3,6 +3,7 @@ import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
+import { tenantDb } from '@alga-psa/db';
 
 export interface ExpireQuotesJobData extends Record<string, unknown> {
   tenantId: string;
@@ -87,9 +88,8 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
     const todayStartIso = todayStart.toISOString();
     const notifications: ExpiredQuoteNotification[] = [];
 
-    const tenantRecord = await knex('tenants')
+    const tenantRecord = await tenantDb(knex, tenantId).table('tenants')
       .select('client_name')
-      .where({ tenant: tenantId })
       .first<{ client_name?: string | null }>();
     const tenantName = tenantRecord?.client_name?.trim() || 'your PSA';
 
@@ -97,10 +97,8 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
       await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
       await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
 
-      const expirableQuotes = await trx('quotes as q')
-        .leftJoin('users as u', function joinUsers() {
-          this.on('q.created_by', 'u.user_id').andOn('q.tenant', 'u.tenant');
-        })
+      const db = tenantDb(trx, tenantId);
+      const expirableQuotesQuery = db.table('quotes as q')
         .select(
           'q.quote_id',
           'q.quote_number',
@@ -109,22 +107,23 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
           'q.created_by',
           'u.email as creator_email'
         )
-        .where('q.tenant', tenantId)
         .where('q.is_template', false)
         .where('q.status', 'sent')
         .whereNotNull('q.valid_until')
         .where('q.valid_until', '<', todayStartIso);
+      db.tenantJoin(expirableQuotesQuery, 'users as u', 'q.created_by', 'u.user_id', { type: 'left' });
+      const expirableQuotes = await expirableQuotesQuery;
 
       for (const quote of expirableQuotes) {
-        await trx('quotes')
-          .where({ tenant: tenantId, quote_id: quote.quote_id })
+        await db.table('quotes')
+          .where({ quote_id: quote.quote_id })
           .update({
             status: 'expired',
             expired_at: trx.fn.now(),
             updated_at: trx.fn.now(),
           });
 
-        await trx('quote_activities').insert({
+        await db.table('quote_activities').insert({
           tenant: tenantId,
           quote_id: quote.quote_id,
           activity_type: 'expired',

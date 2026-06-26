@@ -1233,7 +1233,7 @@ async function createNewStatusMapping(
     const orderNumber = (maxOrder?.max ?? 0) + 1;
 
     // Create a new status in the tenant's status library
-    [status] = await trx('statuses')
+    [status] = await tenantScopedTable(trx, 'statuses', tenant)
       .insert({
         tenant,
         item_type: 'project_task',
@@ -1265,7 +1265,7 @@ async function createNewStatusMapping(
   }
 
   // Create the project status mapping pointing to the status
-  const [newMapping] = await trx('project_status_mappings')
+  const [newMapping] = await tenantScopedTable(trx, 'project_status_mappings', tenant)
     .insert({
       tenant,
       project_id: projectId,

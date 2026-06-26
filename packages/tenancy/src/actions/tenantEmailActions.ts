@@ -1,5 +1,6 @@
 'use server';
 
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 /**
@@ -16,9 +17,11 @@ export async function checkTenantEmailExists(email: string): Promise<{
 
   try {
     const knex = await getAdminConnection();
+    const db = tenantDb(knex, '__tenant_email_discovery__');
 
     // Check if any user with this email exists (internal users only, as they're MSP users)
-    const user = await knex('users')
+    const user = await db
+      .unscoped('users', 'tenant discovery for license purchase internal-user email check')
       .where({
         email: email.toLowerCase(),
         user_type: 'internal'

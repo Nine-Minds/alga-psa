@@ -214,10 +214,9 @@ export async function getUserInfoForEmail(
   try {
     const knex = await getConnection(tenantId);
 
-    const user = await knex('users')
+    const user = await tenantScopedTable(knex, 'users', tenantId)
       .where({
-        email,
-        tenant: tenantId
+        email
       })
       .first();
 

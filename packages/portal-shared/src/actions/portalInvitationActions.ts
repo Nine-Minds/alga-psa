@@ -139,16 +139,15 @@ async function resolveInvitationTargetClientId(
   tenant: string,
   invitationId: string
 ): Promise<string | null | undefined> {
-  const invitation = await tenantDb(db, tenant).table('portal_invitations as pi')
-    .leftJoin('contacts as c', function() {
-      this.on('pi.tenant', '=', 'c.tenant')
-        .andOn('pi.contact_id', '=', 'c.contact_name_id');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const invitationQuery = scopedDb.table('portal_invitations as pi')
     .where({
       'pi.invitation_id': invitationId
     })
     .select('c.client_id')
     .first();
+  scopedDb.tenantJoin(invitationQuery, 'contacts as c', 'pi.contact_id', 'c.contact_name_id', { type: 'left' });
+  const invitation = await invitationQuery as { client_id?: string | null } | undefined;
 
   if (!invitation) {
     return undefined;
@@ -162,17 +161,16 @@ async function resolveClientUserTargetClientId(
   tenant: string,
   userId: string
 ): Promise<string | null | undefined> {
-  const targetUser = await tenantDb(db, tenant).table('users as u')
-    .leftJoin('contacts as c', function() {
-      this.on('u.tenant', '=', 'c.tenant')
-        .andOn('u.contact_id', '=', 'c.contact_name_id');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const targetUserQuery = scopedDb.table('users as u')
     .where({
       'u.user_id': userId,
       'u.user_type': 'client'
     })
     .select('c.client_id')
     .first();
+  scopedDb.tenantJoin(targetUserQuery, 'contacts as c', 'u.contact_id', 'c.contact_name_id', { type: 'left' });
+  const targetUser = await targetUserQuery as { client_id?: string | null } | undefined;
 
   if (!targetUser) {
     return undefined;
@@ -225,19 +223,19 @@ export const createClientPortalUser = withAuth(async (
 
     // Create user and assign role
     const result = await knex.transaction(async (trx) => {
-      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+      const scopedDb = tenantDb(trx, tenant);
 
       // 1) Resolve or create contact
       let contact: any = null;
 
       if (params.contactId) {
-        contact = await tenantScopedTable('contacts')
+        contact = await scopedDb.table('contacts')
           .where({ contact_name_id: params.contactId })
           .first();
         if (!contact && params.contact) {
           // Create new contact since provided ID not found and details are available
           const normalizedClientId = params.contact.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null
-          const [createdContact] = await trx('contacts')
+          const [createdContact] = await scopedDb.table('contacts')
             .insert({
               tenant,
               contact_name_id: trx.raw('gen_random_uuid()'),
@@ -257,7 +255,7 @@ export const createClientPortalUser = withAuth(async (
       if (!contact && params.contact) {
         // Try to find by email + client; else create
         const normalizedClientId = params.contact.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
-        const q = tenantScopedTable('contacts')
+        const q = scopedDb.table('contacts')
           .where({ email: params.contact.email.toLowerCase() });
         if (normalizedClientId) {
           q.andWhere('client_id', normalizedClientId);
@@ -266,7 +264,7 @@ export const createClientPortalUser = withAuth(async (
         }
         contact = await q.first();
         if (!contact) {
-          const [createdContact] = await trx('contacts')
+          const [createdContact] = await scopedDb.table('contacts')
             .insert({
               tenant,
               contact_name_id: trx.raw('gen_random_uuid()'),
@@ -305,7 +303,7 @@ export const createClientPortalUser = withAuth(async (
       }
 
       // 2) Ensure no existing user for contact
-      const existingUser = await tenantScopedTable('users')
+      const existingUser = await scopedDb.table('users')
         .where({ contact_id: contact.contact_name_id })
         .first();
       if (existingUser) {
@@ -318,13 +316,13 @@ export const createClientPortalUser = withAuth(async (
       const lastName = nameParts.slice(1).join(' ') || undefined;
 
       // Enforce uniqueness across tenant (regardless of user_type)
-      const existingByEmailAnyType = await tenantScopedTable('users')
+      const existingByEmailAnyType = await scopedDb.table('users')
         .where('email', contact.email.toLowerCase())
         .first();
       if (existingByEmailAnyType) {
         throw new Error('A user with this email already exists in this organization');
       }
-      const existingByUsernameAnyType = await tenantScopedTable('users')
+      const existingByUsernameAnyType = await scopedDb.table('users')
         .where('username', contact.email)
         .first();
       if (existingByUsernameAnyType) {
@@ -334,7 +332,7 @@ export const createClientPortalUser = withAuth(async (
       // 3a) Insert user within the same transaction to satisfy FK on (tenant, contact_id)
       const { hashPassword } = await import('@alga-psa/core/encryption');
       const hashedPassword = await hashPassword(params.password);
-      const [created] = await trx('users')
+      const [created] = await scopedDb.table('users')
         .insert({
           tenant,
           user_id: trx.raw('gen_random_uuid()'),
@@ -358,7 +356,7 @@ export const createClientPortalUser = withAuth(async (
       // 4) Assign role (prefer UI-selected roleId; fallback to contact's admin flag)
       let targetRoleId: string | undefined = undefined;
       if (params.roleId) {
-        const uiRole = await tenantScopedTable('roles')
+        const uiRole = await scopedDb.table('roles')
           .where({ role_id: params.roleId, client: true })
           .first();
         if (uiRole) {
@@ -368,7 +366,7 @@ export const createClientPortalUser = withAuth(async (
       if (!targetRoleId) {
         // Use actual role names from seeds: "Admin" or "User"
         const roleName = contact?.is_client_admin ? 'Admin' : 'User';
-        const fallbackRole = await tenantScopedTable('roles')
+        const fallbackRole = await scopedDb.table('roles')
           .where({ role_name: roleName, client: true })
           .first();
         if (fallbackRole) {
@@ -378,7 +376,7 @@ export const createClientPortalUser = withAuth(async (
         }
       }
       if (targetRoleId) {
-        await trx('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
+        await scopedDb.table('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
       }
 
       // 5) Set password-related preferences
@@ -501,7 +499,7 @@ export const sendPortalInvitation = withAuth(async (
 
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
-      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Create invitation within transaction
       const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
@@ -510,16 +508,14 @@ export const sendPortalInvitation = withAuth(async (
       }
 
       // Get the tenant's default client (MSP client) for reply-to email
-      const tenantDefaultClient = await tenantScopedTable('tenant_companies')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'tenant_companies.client_id')
-              .andOn('clients.tenant', '=', 'tenant_companies.tenant');
-        })
+      const tenantDefaultClientQuery = scopedDb.table('tenant_companies')
         .where({ 
           'tenant_companies.is_default': true 
         })
         .select('clients.*')
         .first();
+      scopedDb.tenantJoin(tenantDefaultClientQuery, 'clients', 'clients.client_id', 'tenant_companies.client_id');
+      const tenantDefaultClient = await tenantDefaultClientQuery as any;
       
       if (!tenantDefaultClient) {
         throw new PortalInvitationError(
@@ -529,7 +525,7 @@ export const sendPortalInvitation = withAuth(async (
       }
       
       // Get MSP client's default location for reply-to email
-      const mspLocation = await tenantScopedTable('client_locations')
+      const mspLocation = await scopedDb.table('client_locations')
         .where({ 
           client_id: tenantDefaultClient.client_id,
           is_default: true,
@@ -552,9 +548,9 @@ export const sendPortalInvitation = withAuth(async (
       }
       
       // Get the client's client info for the email template
-      const clientClient = contact.client_id ? await tenantScopedTable('clients')
+      const clientClient = contact.client_id ? await scopedDb.table('clients')
         .where({ client_id: contact.client_id })
-        .first() : null;
+        .first() as any : null;
 
       const tenantSlug = await getTenantSlugForTenant(tenant);
 
@@ -719,10 +715,10 @@ export async function completePortalSetup(
         } as CompleteSetupResult;
       }
 
-      const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
+      const scopedDb = tenantDb(knex, tenant);
 
       // Check if user already exists
-      const existingUser = await tenantScopedTable('users')
+      const existingUser = await scopedDb.table('users')
         .where({ contact_id: contact.contact_name_id })
         .first();
 
@@ -731,7 +727,7 @@ export async function completePortalSetup(
         try {
           const { hashPassword } = await import('@alga-psa/core/encryption');
           const hashedPassword = await hashPassword(password);
-          await tenantScopedTable('users')
+          await scopedDb.table('users')
             .where({ user_id: existingUser.user_id })
             .update({ hashed_password: hashedPassword, is_inactive: false, updated_at: knex.raw('now()') });
 
@@ -809,19 +805,19 @@ export async function completePortalSetup(
       // Assign appropriate role based on contact's is_client_admin flag
       try {
         // Get the full contact details to check is_client_admin
-        const fullContact = await tenantScopedTable('contacts')
+        const fullContact = await scopedDb.table('contacts')
           .where({ contact_name_id: contact.contact_name_id })
           .first();
         
         // Find the appropriate role - use actual role names from seeds: "Admin" or "User"
         const roleName = fullContact?.is_client_admin ? 'Admin' : 'User';
-        const role = await tenantScopedTable('roles')
+        const role = await scopedDb.table('roles')
           .where({ role_name: roleName, client: true })
           .first();
         
         if (role) {
           // Assign the role to the user
-          await knex('user_roles').insert({
+          await scopedDb.table('user_roles').insert({
             user_id: newUser.user_id,
             role_id: role.role_id,
             tenant

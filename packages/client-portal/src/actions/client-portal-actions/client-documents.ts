@@ -4,7 +4,7 @@ import { IDocument, IFolderNode } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { getConnection, withTransaction } from '@alga-psa/db';
+import { getConnection, withTransaction, tenantDb } from '@alga-psa/db';
 import { getAuthenticatedClientId } from '../../lib/clientAuth';
 
 export interface ClientDocumentFilters {
@@ -55,9 +55,9 @@ export const getClientDocuments = withAuth(
     const db = await getConnection(tenant);
 
     // Fetch real user record for permission check instead of hardcoding is_inactive
-    const userRecord = await db('users')
+    const userRecord = await tenantDb(db, tenant).table('users')
       .select('user_id', 'email', 'user_type', 'is_inactive')
-      .where({ user_id: user.user_id, tenant })
+      .where({ user_id: user.user_id })
       .first();
     const userForPermission = {
       user_id: user.user_id,
@@ -210,9 +210,9 @@ export const getClientDocumentFolders = withAuth(
 
     const db = await getConnection(tenant);
 
-    const userRecord = await db('users')
+    const userRecord = await tenantDb(db, tenant).table('users')
       .select('user_id', 'email', 'user_type', 'is_inactive')
-      .where({ user_id: user.user_id, tenant })
+      .where({ user_id: user.user_id })
       .first();
     const userForPermission = {
       user_id: user.user_id,
@@ -327,9 +327,9 @@ export const downloadClientDocument = withAuth(
 
     const db = await getConnection(tenant);
 
-    const userRecord = await db('users')
+    const userRecord = await tenantDb(db, tenant).table('users')
       .select('user_id', 'email', 'user_type', 'is_inactive')
-      .where({ user_id: user.user_id, tenant })
+      .where({ user_id: user.user_id })
       .first();
     const userForPermission = {
       user_id: user.user_id,
@@ -345,60 +345,50 @@ export const downloadClientDocument = withAuth(
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Check document exists, is client-visible, and belongs to this client
-      const document = await trx('documents as d')
+      const directAssociationQuery = scopedDb.table('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhereRaw('da.tenant = d.tenant')
+        .andWhere('da.entity_type', 'client')
+        .andWhere('da.entity_id', clientId);
+
+      const ticketAssociationQuery = scopedDb.table('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhereRaw('da.tenant = d.tenant')
+        .andWhere('da.entity_type', 'ticket')
+        .andWhere('t.client_id', clientId);
+      scopedDb.tenantJoin(ticketAssociationQuery, 'tickets as t', 't.ticket_id', 'da.entity_id');
+
+      const projectAssociationQuery = scopedDb.table('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhereRaw('da.tenant = d.tenant')
+        .andWhere('da.entity_type', 'project_task')
+        .andWhere('p.client_id', clientId);
+      scopedDb.tenantJoin(projectAssociationQuery, 'project_tasks as pt', 'pt.task_id', 'da.entity_id');
+      scopedDb.tenantJoin(projectAssociationQuery, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+      scopedDb.tenantJoin(projectAssociationQuery, 'projects as p', 'p.project_id', 'pp.project_id');
+
+      const contractAssociationQuery = scopedDb.table('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhereRaw('da.tenant = d.tenant')
+        .andWhere('da.entity_type', 'contract')
+        .andWhere(function (this: Knex.QueryBuilder) {
+          this.whereNull('c.is_template').orWhere('c.is_template', false);
+        })
+        .andWhere('c.owner_client_id', clientId);
+      scopedDb.tenantJoin(contractAssociationQuery, 'contracts as c', 'c.contract_id', 'da.entity_id');
+
+      const document = await scopedDb.table('documents as d')
         .select('d.*')
         .where('d.document_id', documentId)
-        .andWhere('d.tenant', tenant)
         .andWhere('d.is_client_visible', true)
         .andWhere(function (this: Knex.QueryBuilder) {
-          this.whereExists(
-            trx('document_associations as da')
-              .whereRaw('da.document_id = d.document_id')
-              .andWhereRaw('da.tenant = d.tenant')
-              .andWhere('da.entity_type', 'client')
-              .andWhere('da.entity_id', clientId)
-          )
-            .orWhereExists(
-              trx('document_associations as da')
-                .join('tickets as t', function () {
-                  this.on('t.ticket_id', '=', 'da.entity_id').andOn('t.tenant', '=', 'da.tenant');
-                })
-                .whereRaw('da.document_id = d.document_id')
-                .andWhereRaw('da.tenant = d.tenant')
-                .andWhere('da.entity_type', 'ticket')
-                .andWhere('t.client_id', clientId)
-            )
-            .orWhereExists(
-              trx('document_associations as da')
-                .join('project_tasks as pt', function () {
-                  this.on('pt.task_id', '=', 'da.entity_id').andOn('pt.tenant', '=', 'da.tenant');
-                })
-                .join('project_phases as pp', function () {
-                  this.on('pp.phase_id', '=', 'pt.phase_id').andOn('pp.tenant', '=', 'pt.tenant');
-                })
-                .join('projects as p', function () {
-                  this.on('p.project_id', '=', 'pp.project_id').andOn('p.tenant', '=', 'pp.tenant');
-                })
-                .whereRaw('da.document_id = d.document_id')
-                .andWhereRaw('da.tenant = d.tenant')
-                .andWhere('da.entity_type', 'project_task')
-                .andWhere('p.client_id', clientId)
-            )
-            .orWhereExists(
-              trx('document_associations as da')
-                .join('contracts as c', function () {
-                  this.on('c.contract_id', '=', 'da.entity_id').andOn('c.tenant', '=', 'da.tenant');
-                })
-                .whereRaw('da.document_id = d.document_id')
-                .andWhereRaw('da.tenant = d.tenant')
-                .andWhere('da.entity_type', 'contract')
-                .andWhere(function (this: Knex.QueryBuilder) {
-                  this.whereNull('c.is_template').orWhere('c.is_template', false);
-                })
-                .andWhere('c.owner_client_id', clientId)
-            );
+          this.whereExists(directAssociationQuery)
+            .orWhereExists(ticketAssociationQuery)
+            .orWhereExists(projectAssociationQuery)
+            .orWhereExists(contractAssociationQuery);
         })
         .first();
 
@@ -406,7 +396,7 @@ export const downloadClientDocument = withAuth(
         throw new Error('Document not found or access denied');
       }
 
-      return document as IDocument;
+      return document as unknown as IDocument;
     });
   }
 );

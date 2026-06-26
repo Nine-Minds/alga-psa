@@ -211,7 +211,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         tenant: context.tenant
       };
 
-      const [permission] = await trx('permissions').insert(permissionData).returning('*');
+      const [permission] = await tenantDb(trx, context.tenant).table('permissions').insert(permissionData).returning('*');
       
       // Log audit event
       await this.logAuditEvent({
@@ -333,15 +333,10 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getPermissionUsageAnalytics(context: ServiceContext): Promise<PermissionUsageAnalytics[]> {
     const { knex } = await this.getKnex();
     
-    const results = await tenantDb(knex, context.tenant).table('permissions as p')
-      .leftJoin('role_permissions as rp', function() {
-        this.on('p.permission_id', '=', 'rp.permission_id')
-            .andOn('p.tenant', '=', 'rp.tenant');
-      })
-      .leftJoin('user_roles as ur', function() {
-        this.on('rp.role_id', '=', 'ur.role_id')
-            .andOn('rp.tenant', '=', 'ur.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const results = await scopedDb.table('permissions as p')
+      .modify((q) => scopedDb.tenantJoin(q, 'role_permissions as rp', 'p.permission_id', 'rp.permission_id', { type: 'left' }))
+      .modify((q) => scopedDb.tenantJoin(q, 'user_roles as ur', 'rp.role_id', 'ur.role_id', { type: 'left' }))
       .groupBy('p.permission_id', 'p.resource', 'p.action')
       .select(
         'p.permission_id',
@@ -390,13 +385,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     const { page = 1, limit = 25, filters = {} as RoleFilterData, sort, order } = options;
 
-    let dataQuery = tenantDb(knex, context.tenant).table('roles as r')
-      .leftJoin('user_roles as ur', function() {
-        this.on('r.role_id', '=', 'ur.role_id')
-            .andOn('r.tenant', '=', 'ur.tenant');
-      });
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('roles as r');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' });
 
-    let countQuery = tenantDb(knex, context.tenant).table('roles as r');
+    let countQuery = scopedDb.table('roles as r');
 
     // Apply filters
     if (filters.role_name) {
@@ -418,11 +411,8 @@ export class PermissionRoleService extends BaseService<IRole> {
     }
 
     if (filters.permission_resource || filters.permission_action) {
-      let permissionSubQuery = tenantDb(knex, context.tenant).table('role_permissions as rp')
-        .join('permissions as p', function() {
-          this.on('rp.permission_id', '=', 'p.permission_id')
-              .andOn('rp.tenant', '=', 'p.tenant');
-        })
+      let permissionSubQuery = scopedDb.table('role_permissions as rp')
+        .modify((q) => scopedDb.tenantJoin(q, 'permissions as p', 'rp.permission_id', 'p.permission_id'))
         .select('rp.role_id');
 
       if (filters.permission_resource) {
@@ -449,11 +439,8 @@ export class PermissionRoleService extends BaseService<IRole> {
       if (havingConditions.length > 0) {
         dataQuery = dataQuery.groupBy('r.role_id').having(knex.raw(havingConditions.join(' AND ')));
         // For count query, we need a different approach
-        const roleIds = await tenantDb(knex, context.tenant).table('roles as r')
-          .leftJoin('user_roles as ur', function() {
-            this.on('r.role_id', '=', 'ur.role_id')
-                .andOn('r.tenant', '=', 'ur.tenant');
-          })
+        const roleIds = await scopedDb.table('roles as r')
+          .modify((q) => scopedDb.tenantJoin(q, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' }))
           .groupBy('r.role_id')
           .having(knex.raw(havingConditions.join(' AND ')))
           .pluck('r.role_id');
@@ -590,7 +577,7 @@ export class PermissionRoleService extends BaseService<IRole> {
       }
 
       roleData = this.addCreateAuditFields(roleData, context);
-      const [role] = await trx('roles').insert(roleData).returning('*');
+      const [role] = await tenantDb(trx, context.tenant).table('roles').insert(roleData).returning('*');
 
       // Handle permissions assignment
       let permissionIds = data.permissions || [];
@@ -756,11 +743,9 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getRolePermissions(roleId: string, context: ServiceContext): Promise<PermissionResponse[]> {
     const { knex } = await this.getKnex();
     
-    const permissions = await tenantDb(knex, context.tenant).table('permissions as p')
-      .join('role_permissions as rp', function() {
-        this.on('p.permission_id', '=', 'rp.permission_id')
-            .andOn('p.tenant', '=', 'rp.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const permissions = await scopedDb.table('permissions as p')
+      .modify((q) => scopedDb.tenantJoin(q, 'role_permissions as rp', 'p.permission_id', 'rp.permission_id'))
       .where('rp.role_id', roleId)
       .select('p.*')
       .orderBy('p.resource')
@@ -823,7 +808,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         permission_id: permissionId
       }));
 
-      await transaction('role_permissions').insert(rolePermissions);
+      await tenantDb(transaction, context.tenant).table('role_permissions').insert(rolePermissions);
 
       // Log audit event
       await this.logAuditEvent({
@@ -944,7 +929,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           permission_id: permissionId
         }));
 
-        await transaction('role_permissions').insert(rolePermissions);
+        await tenantDb(transaction, context.tenant).table('role_permissions').insert(rolePermissions);
       }
 
       // Log audit event
@@ -1038,11 +1023,9 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getUserRoles(userId: string, context: ServiceContext): Promise<RoleResponse[]> {
     const { knex } = await this.getKnex();
     
-    const roles = await tenantDb(knex, context.tenant).table('roles as r')
-      .join('user_roles as ur', function() {
-        this.on('r.role_id', '=', 'ur.role_id')
-            .andOn('r.tenant', '=', 'ur.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const roles = await scopedDb.table('roles as r')
+      .modify((q) => scopedDb.tenantJoin(q, 'user_roles as ur', 'r.role_id', 'ur.role_id'))
       .where('ur.user_id', userId)
       .select('r.*')
       .orderBy('r.role_name');
@@ -1102,7 +1085,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         tenant: context.tenant
       }));
 
-      await trx('user_roles').insert(userRoles);
+      await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
 
       // Log audit event
       await this.logAuditEvent({
@@ -1225,7 +1208,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           tenant: context.tenant
         }));
 
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
       }
 
       // Log audit event
@@ -1407,15 +1390,10 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getRoleUsageAnalytics(context: ServiceContext): Promise<RoleUsageAnalytics[]> {
     const { knex } = await this.getKnex();
     
-    const results = await tenantDb(knex, context.tenant).table('roles as r')
-      .leftJoin('user_roles as ur', function() {
-        this.on('r.role_id', '=', 'ur.role_id')
-            .andOn('r.tenant', '=', 'ur.tenant');
-      })
-      .leftJoin('role_permissions as rp', function() {
-        this.on('r.role_id', '=', 'rp.role_id')
-            .andOn('r.tenant', '=', 'rp.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const results = await scopedDb.table('roles as r')
+      .modify((q) => scopedDb.tenantJoin(q, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' }))
+      .modify((q) => scopedDb.tenantJoin(q, 'role_permissions as rp', 'r.role_id', 'rp.role_id', { type: 'left' }))
       .groupBy('r.role_id', 'r.role_name', 'r.created_at')
       .select(
         'r.role_id',
@@ -1455,18 +1433,12 @@ export class PermissionRoleService extends BaseService<IRole> {
       tenantDb(knex, context.tenant).table('user_roles').countDistinct('user_id as count').first(),
       tenantDb(knex, context.tenant).table('user_roles').countDistinct('role_id as count').first(),
       tenantDb(knex, context.tenant).table('roles as r')
-        .leftJoin('user_roles as ur', function() {
-          this.on('r.role_id', '=', 'ur.role_id')
-              .andOn('r.tenant', '=', 'ur.tenant');
-        })
+        .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' }))
         .whereNull('ur.role_id')
         .count('r.role_id as count')
         .first(),
       tenantDb(knex, context.tenant).table('permissions as p')
-        .leftJoin('role_permissions as rp', function() {
-          this.on('p.permission_id', '=', 'rp.permission_id')
-              .andOn('p.tenant', '=', 'rp.tenant');
-        })
+        .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'role_permissions as rp', 'p.permission_id', 'rp.permission_id', { type: 'left' }))
         .whereNull('rp.permission_id')
         .count('p.permission_id as count')
         .first()
@@ -1474,10 +1446,7 @@ export class PermissionRoleService extends BaseService<IRole> {
 
     // Get role distribution
     const roleDistribution = await tenantDb(knex, context.tenant).table('user_roles as ur')
-      .join('roles as r', function() {
-        this.on('ur.role_id', '=', 'r.role_id')
-            .andOn('ur.tenant', '=', 'r.tenant');
-      })
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'roles as r', 'ur.role_id', 'r.role_id'))
       .groupBy('r.role_name')
       .select('r.role_name', knex.raw('COUNT(*) as count'));
 
@@ -1860,10 +1829,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     
     const roles = await tenantDb(knex, context.tenant).table('roles as r')
-      .join('role_permissions as rp', function() {
-        this.on('r.role_id', '=', 'rp.role_id')
-            .andOn('r.tenant', '=', 'rp.tenant');
-      })
+      .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'role_permissions as rp', 'r.role_id', 'rp.role_id'))
       .where('rp.permission_id', permissionId)
       .select('r.*');
 

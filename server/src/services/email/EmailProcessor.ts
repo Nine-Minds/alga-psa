@@ -1,5 +1,6 @@
 import { EmailQueueJob, EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Main email processor that coordinates email processing workflow
@@ -80,8 +81,8 @@ export class EmailProcessor {
       // No special handling for test providers - all providers should be in the database
       
       // Query the actual database for real providers
-      const [provider] = await db('email_provider_configs')
-        .where({ id: providerId, tenant: tenant })
+      const [provider] = await tenantDb(db, tenant).table('email_provider_configs')
+        .where({ id: providerId })
         .select('*');
       
       if (!provider) {
@@ -199,7 +200,7 @@ export class EmailProcessor {
       const tableExists = await db.schema.hasTable('email_processed_messages');
       
       if (tableExists) {
-        await db('email_processed_messages').insert(record);
+        await tenantDb(db, job.tenant).table('email_processed_messages').insert(record);
         console.log(`✅ Recorded processed message: ${job.messageId}`);
       } else {
         console.log(`⚠️ email_processed_messages table not found, skipping recording for: ${job.messageId}`);

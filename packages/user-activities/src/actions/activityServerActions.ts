@@ -377,7 +377,8 @@ export const createAdHocActivity = withAuth(async (
   }
 
   const created = await withTransaction(knex, async (trx) => {
-    const [entry] = await trx("schedule_entries")
+    const scopedDb = tenantDb(trx, tenant);
+    const [entry] = await scopedDb.table("schedule_entries")
       .insert({
         tenant,
         title,
@@ -393,7 +394,7 @@ export const createAdHocActivity = withAuth(async (
       })
       .returning("*");
 
-    await trx("schedule_entry_assignees").insert({
+    await scopedDb.table("schedule_entry_assignees").insert({
       tenant,
       entry_id: entry.entry_id,
       user_id: user.user_id,
