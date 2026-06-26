@@ -144,9 +144,7 @@ export const getClientProjectTasks = withAuth(async (
   // Always join status mappings for ordering and kanban display
   scopedDb.tenantJoin(query, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
   scopedDb.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
-  query.leftJoin('standard_statuses as ss', function() {
-    this.on('psm.standard_status_id', 'ss.standard_status_id');
-  });
+  scopedDb.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   scopedDb.tenantJoin(query, 'priorities as pri', 'pt.priority_id', 'pri.priority_id', { type: 'left' });
 
   query = query
@@ -431,10 +429,8 @@ export const getClientProjectStatuses = withAuth(async (
     const scopedDb = tenantDb(knex, tenant);
     const query = scopedDb.table('project_status_mappings as psm');
     scopedDb.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
     query
-      .leftJoin('standard_statuses as ss', function() {
-        this.on('psm.standard_status_id', 'ss.standard_status_id');
-      })
       .where({ 'psm.project_id': projectId, 'psm.tenant': tenant, 'psm.is_visible': true })
       .select(
         'psm.project_status_mapping_id',

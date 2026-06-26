@@ -481,9 +481,11 @@ export const searchPickerWorkItems = withAuth(async (
           join.andOn('psm.is_standard', '=', db.raw('false'));
         },
       });
-      projectTasksQuery.leftJoin('standard_statuses as s_standard', function() {
-        this.on('psm.standard_status_id', '=', 's_standard.standard_status_id')
-            .andOn('psm.is_standard', '=', db.raw('true'));
+      tenantScopedDb.tenantJoin(projectTasksQuery, 'standard_statuses as s_standard', 'psm.standard_status_id', 's_standard.standard_status_id', {
+        type: 'left',
+        on(join) {
+          join.andOn('psm.is_standard', '=', db.raw('true'));
+        },
       });
       tenantScopedDb.tenantJoin(projectTasksQuery, 'users as u_assignee', 'pt.assigned_to', 'u_assignee.user_id', { type: 'left' });
 

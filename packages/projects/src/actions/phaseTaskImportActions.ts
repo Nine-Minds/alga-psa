@@ -51,9 +51,6 @@ async function resolveProjectStatusInfo(
 ): Promise<{ status: string; isClosed: boolean }> {
   const db = tenantDb(trx, tenant);
   const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
       trx.raw(
@@ -62,6 +59,7 @@ async function resolveProjectStatusInfo(
       trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
     )
     .first<{ status_name: string; is_closed: boolean }>();
+  db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
 
   const row = await query;
@@ -152,9 +150,6 @@ async function getImportStatusReferenceData(
   const db = tenantDb(trx, tenant);
   const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
     .where({ 'psm.project_id': projectId })
-    .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', 'ss.standard_status_id');
-    })
     .select(
       'psm.*',
       trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
@@ -162,6 +157,7 @@ async function getImportStatusReferenceData(
       trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
     )
     .orderBy('psm.display_order');
+  db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
   db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
 
   const [phases, statusMappings] = await Promise.all([

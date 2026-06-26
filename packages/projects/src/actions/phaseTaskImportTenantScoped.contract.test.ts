@@ -12,7 +12,9 @@ describe('phase task import tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'service_catalog', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'statuses', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings', tenant)");
+    expect(source).toContain("db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' })");
     expect(source).toContain("db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' })");
+    expect(source).toContain("db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' })");
     expect(source).toContain("db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' })");
     expect(source).not.toContain("'psm.tenant': tenant");
     expect(source).not.toContain(".where('tenant', tenant)");

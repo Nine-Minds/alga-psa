@@ -21,9 +21,14 @@ describe('activity aggregation project status tenant-scoped query contract', () 
 
     expect(section).toContain(".table(\"project_status_mappings");
     expect(section).toContain('.table("project_status_mappings as psm');
+    expect(section).toContain('scopedDb.tenantJoin(');
+    expect(section).toContain('"standard_statuses"');
+    expect(section).toContain('"standard_statuses as ss"');
 
     expect(section).not.toContain('.from("project_status_mappings")');
     expect(section).not.toContain('.from({ psm: "project_status_mappings" })');
+    expect(section).not.toContain('.join("standard_statuses"');
+    expect(section).not.toContain('.leftJoin({ ss: "standard_statuses" }');
     expect(section).not.toContain('.where("project_status_mappings.tenant", tenant)');
     expect(section).not.toContain('.where("psm.tenant", tenant)');
   });

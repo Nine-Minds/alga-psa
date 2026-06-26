@@ -752,12 +752,10 @@ const ProjectTaskModel = {
       db.tenantJoin(linksQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
       db.tenantJoin(linksQuery, 'project_status_mappings as psm', 'project_tasks.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
       db.tenantJoin(linksQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
       const links = await linksQuery
         .where('project_ticket_links.ticket_id', ticketId)
         .whereNotNull('project_ticket_links.task_id')
-        .leftJoin('standard_statuses as ss', function() {
-          this.on('psm.standard_status_id', 'ss.standard_status_id');
-        })
         .select(
           'project_ticket_links.link_id',
           'project_tasks.task_id',

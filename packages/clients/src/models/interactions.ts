@@ -73,10 +73,7 @@ class InteractionModel {
           'statuses.is_closed as is_status_closed'
         );
       facade.tenantJoin(query, 'interaction_types as it', 'interactions.type_id', 'it.type_id', { type: 'left' });
-      query
-        .leftJoin('system_interaction_types as sit', function() {
-          this.on('interactions.type_id', '=', 'sit.type_id');
-        });
+      facade.tenantJoin(query, 'system_interaction_types as sit', 'interactions.type_id', 'sit.type_id', { type: 'left' });
       facade.tenantJoin(query, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
       facade.tenantJoin(query, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
       facade.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });
@@ -336,10 +333,7 @@ class InteractionModel {
           'statuses.is_closed as is_status_closed'
         );
       facade.tenantJoin(query, 'interaction_types as it', 'interactions.type_id', 'it.type_id', { type: 'left' });
-      query
-        .leftJoin('system_interaction_types as sit', function() {
-          this.on('interactions.type_id', '=', 'sit.type_id');
-        });
+      facade.tenantJoin(query, 'system_interaction_types as sit', 'interactions.type_id', 'sit.type_id', { type: 'left' });
       facade.tenantJoin(query, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
       facade.tenantJoin(query, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
       facade.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });

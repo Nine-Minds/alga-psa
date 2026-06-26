@@ -26,6 +26,7 @@ describe('client model tenant facade migration contract', () => {
     expect(source).toContain("facade.tenantJoin(query, 'clients'");
     expect(source).toContain("facade.tenantJoin(query, 'users'");
     expect(source).toContain("facade.tenantJoin(query, 'statuses'");
+    expect(source).toContain("facade.tenantJoin(query, 'system_interaction_types as sit'");
     expect(source).toContain("tenantScopedTable(db, scopedTenant, 'system_interaction_types')");
     expect(source).not.toContain("db('system_interaction_types')");
     expect(source).not.toContain(".andOn('interactions.tenant'");

@@ -7,6 +7,7 @@ const timePeriodSettingsSource = readFileSync(resolve(__dirname, './time-period-
 const projectTaskLookupSource = readFileSync(resolve(__dirname, './projectTaskLookupActions.ts'), 'utf8');
 const capacityThresholdSource = readFileSync(resolve(__dirname, '../lib/capacityThresholdWorkflowEvents.ts'), 'utf8');
 const timeSheetOperationsSource = readFileSync(resolve(__dirname, './timeSheetOperations.ts'), 'utf8');
+const workItemActionsSource = readFileSync(resolve(__dirname, './workItemActions.ts'), 'utf8');
 
 describe('scheduling tenant-scoped query contract', () => {
   it('uses tenantDb roots for time period models and settings actions', () => {
@@ -53,5 +54,11 @@ describe('scheduling tenant-scoped query contract', () => {
     expect(timeSheetOperationsSource).toContain("facade.tenantJoin(periodsQuery, 'time_sheets as ts'");
     expect(timeSheetOperationsSource).not.toContain("'time_sheets.tenant': tenant");
     expect(timeSheetOperationsSource).not.toContain(".where('time_sheets.tenant', tenant)");
+  });
+
+  it('uses tenantJoin for work item project task status lookup joins', () => {
+    expect(workItemActionsSource).toContain("tenantScopedDb.tenantJoin(projectTasksQuery, 'statuses as s_custom'");
+    expect(workItemActionsSource).toContain("tenantScopedDb.tenantJoin(projectTasksQuery, 'standard_statuses as s_standard'");
+    expect(workItemActionsSource).not.toContain("projectTasksQuery.leftJoin('standard_statuses as s_standard'");
   });
 });

@@ -466,9 +466,13 @@ export async function fetchProjectActivities(
         "project_status_mappings.project_status_mapping_id",
         { type: "left" }
       );
-      projectTasksQuery.leftJoin("standard_statuses", function() {
-        this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
-      });
+      scopedDb.tenantJoin(
+        projectTasksQuery,
+        "standard_statuses",
+        "project_status_mappings.standard_status_id",
+        "standard_statuses.standard_status_id",
+        { type: "left" }
+      );
       scopedDb.tenantJoin(
         projectTasksQuery,
         "statuses as custom_statuses",
@@ -497,14 +501,18 @@ export async function fetchProjectActivities(
       .modify(function(queryBuilder) {
         // Apply status filter if provided
         if (filters.status && filters.status.length > 0) {
+          const statusMappingIdsForNames = scopedDb.table("project_status_mappings")
+            .select("project_status_mappings.project_status_mapping_id")
+            .whereIn("standard_statuses.name", filters.status || []);
+          scopedDb.tenantJoin(
+            statusMappingIdsForNames,
+            "standard_statuses",
+            "project_status_mappings.standard_status_id",
+            "standard_statuses.standard_status_id"
+          );
           queryBuilder.whereIn(
             "project_tasks.project_status_mapping_id",
-            scopedDb.table("project_status_mappings")
-              .select("project_status_mappings.project_status_mapping_id")
-              .join("standard_statuses", function() {
-                this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
-              })
-              .whereIn("standard_statuses.name", filters.status || [])
+            statusMappingIdsForNames
           );
         }
         
@@ -523,18 +531,21 @@ export async function fetchProjectActivities(
           // its mapping resolves to a status (custom OR standard) with is_closed=true.
           // Tasks with NULL project_status_mapping_id are treated as open.
           queryBuilder.where(function() {
+            const openStatusMappingIds = scopedDb.table("project_status_mappings as psm")
+              .select("psm.project_status_mapping_id")
+              .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false");
+            scopedDb.tenantJoin(openStatusMappingIds, "statuses as cs", "psm.status_id", "cs.status_id", { type: "left" });
+            scopedDb.tenantJoin(
+              openStatusMappingIds,
+              "standard_statuses as ss",
+              "psm.standard_status_id",
+              "ss.standard_status_id",
+              { type: "left" }
+            );
             this.whereNull("project_tasks.project_status_mapping_id")
               .orWhereIn(
                 "project_tasks.project_status_mapping_id",
-                scopedDb.table("project_status_mappings as psm")
-                  .select("psm.project_status_mapping_id")
-                  .modify((statusQuery) => {
-                    scopedDb.tenantJoin(statusQuery, "statuses as cs", "psm.status_id", "cs.status_id", { type: "left" });
-                  })
-                  .leftJoin({ ss: "standard_statuses" }, function() {
-                    this.on("psm.standard_status_id", "ss.standard_status_id");
-                  })
-                  .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false")
+                openStatusMappingIds
               );
           });
         }
