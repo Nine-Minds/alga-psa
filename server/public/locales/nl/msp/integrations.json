@@ -1334,6 +1334,8 @@
           },
           "connected": "Verbonden met NinjaOne",
           "connectedWithErrors": "NinjaOne verbonden met synchronisatiefouten",
+          "reconnectRequired": "NinjaOne opnieuw verbinden vereist",
+          "reconnectRequiredDescription": "De NinjaOne-autorisatie kan niet meer worden vernieuwd (token verlopen of ingetrokken). Maak opnieuw verbinding om apparaatsynchronisatie, meldingen en externe toegang te herstellen.",
           "instanceLabel": "Instantie:",
           "organizations": "{{count}} organisaties",
           "devices": "{{count}} apparaten",

@@ -1334,6 +1334,8 @@
           },
           "connected": "55555",
           "connectedWithErrors": "55555",
+          "reconnectRequired": "55555",
+          "reconnectRequiredDescription": "55555",
           "instanceLabel": "55555",
           "organizations": "55555 {{count}} 55555",
           "devices": "55555 {{count}} 55555",

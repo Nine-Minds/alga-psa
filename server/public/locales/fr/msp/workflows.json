@@ -462,7 +462,8 @@
       "correlationKeyPlaceholder": "corr-123",
       "statusLabel": "Statut",
       "fromLabel": "De",
-      "toLabel": "À"
+      "toLabel": "À",
+      "datePlaceholder": "Toute date"
     },
     "actions": {
       "applyFilters": "Appliquer les filtres",

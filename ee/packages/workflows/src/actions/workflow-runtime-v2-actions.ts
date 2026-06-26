@@ -3274,9 +3274,18 @@ export const listWorkflowSchemasMetaAction = withAuth(async (user, { tenant }) =
   return { schemas: items };
 });
 
+// Internal job-forwarding / plumbing events (e.g. the Temporal maintenance-job
+// forwarder's MAINTENANCE_JOB_REQUESTED) are published to the event bus but are not
+// domain workflow triggers. They must not be ingested into the workflow runtime /
+// event catalog, where they would otherwise accumulate as uncorrelated noise.
+const INTERNAL_RUNTIME_EVENT_NAMES = new Set<string>(['MAINTENANCE_JOB_REQUESTED']);
+
 export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = SubmitWorkflowEventInput.parse(input);
+  if (INTERNAL_RUNTIME_EVENT_NAMES.has(parsed.eventName)) {
+    return { status: 'skipped', runId: null, startedRuns: [], eventId: null };
+  }
   const payload = parsed.payload ?? {};
   const correlation = resolveWorkflowEventCorrelation({
     eventName: parsed.eventName,
@@ -3557,13 +3566,12 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     return throwHttpError(500, 'Failed to process workflow event', { error: deliveryError });
   }
   const status = signaledTemporalRuns.size > 0 ? 'resumed' : 'no_wait';
-  if (missingCorrelationWarning && !resolvedRunId && startedRuns.length === 0 && eventId) {
-    await WorkflowRuntimeEventModelV2.update(knex, eventId, {
-      error_message: missingCorrelationWarning,
-      processed_at: processedAt
-    });
-  }
-  return { status, runId: resolvedRunId, startedRuns, eventId };
+  // An event with no correlation key can't match a running workflow's event-wait —
+  // normal for the vast majority of events. Keep it as an unmatched record
+  // (error_message stays null, already persisted by the create above) instead of
+  // surfacing this benign warning as an "Error" in the event catalog. The warning is
+  // returned on the result for callers that want it, but never stored as an error.
+  return { status, runId: resolvedRunId, startedRuns, eventId, warning: missingCorrelationWarning ?? undefined };
 });
 
 export const listWorkflowEventsAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3571,11 +3579,16 @@ export const listWorkflowEventsAction = withAuth(async (user, { tenant }, input:
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
+  // Default the catalog view to the last 30 days rather than loading the full
+  // unbounded history (it accumulates every published event for audit). The UI date
+  // filter can pass an explicit `from` to look further back.
+  const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
   const rows = await WorkflowRuntimeEventModelV2.list(knex, {
     tenantId: tenant ?? null,
     eventName: parsed.eventName,
     correlationKey: parsed.correlationKey,
-    from: parsed.from,
+    from: parsed.from ?? defaultFrom,
     to: parsed.to,
     status: parsed.status,
     limit: parsed.limit,
