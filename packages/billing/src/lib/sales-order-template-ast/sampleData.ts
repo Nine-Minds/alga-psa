@@ -1,6 +1,6 @@
 import type { SalesOrderViewModel } from '@alga-psa/types';
 
-import { assembleSalesOrderViewModel } from '../adapters/salesOrderAdapters';
+import { assembleSalesOrderViewModel } from '../adapters/salesOrderViewModel';
 
 /**
  * A representative Sales Order render model for designer preview — so authors see a realistic

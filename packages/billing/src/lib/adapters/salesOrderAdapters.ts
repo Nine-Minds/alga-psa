@@ -1,25 +1,23 @@
 import type { Knex } from 'knex';
-import type {
-  SalesOrderDocumentParty,
-  SalesOrderViewModel,
-  SalesOrderViewModelLineItem,
-} from '@alga-psa/types';
+import type { SalesOrderDocumentParty, SalesOrderViewModel } from '@alga-psa/types';
 
 import { fetchTenantParty } from './tenantPartyAdapter';
+import {
+  asTrimmedString,
+  assembleSalesOrderViewModel,
+  type SalesOrderLineRowForDocument,
+  type SalesOrderRowForDocument,
+  type ServiceNameRecord,
+} from './salesOrderViewModel';
 
-const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
-
-const toFiniteNumber = (value: unknown): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const toIsoOrNull = (value: unknown): string | null => {
-  if (!value) return null;
-  if (value instanceof Date) return value.toISOString();
-  const s = String(value).trim();
-  return s.length > 0 ? s : null;
-};
+// Re-export the pure assembler + its types so existing importers (and tests) keep working, while
+// the knex-laden IO below stays out of any client bundle that only needs the pure model.
+export {
+  assembleSalesOrderViewModel,
+  type SalesOrderLineRowForDocument,
+  type SalesOrderRowForDocument,
+  type ServiceNameRecord,
+} from './salesOrderViewModel';
 
 // LEVERAGE: pattern party-adapter — buildAddress / fetchCustomerParty mirror quoteAdapters' private
 // helpers; converge into a shared party adapter when the generic document spine (Phase 2) lands.
@@ -87,11 +85,6 @@ async function fetchCustomerParty(
   };
 }
 
-export interface ServiceNameRecord {
-  service_name: string | null;
-  sku: string | null;
-}
-
 /** Batch-resolve product/service names + SKUs for a set of service ids. */
 async function fetchServiceNames(
   knexOrTrx: Knex | Knex.Transaction,
@@ -111,86 +104,6 @@ async function fetchServiceNames(
     });
   }
   return map;
-}
-
-/** Minimal shapes the assembler needs — a loaded sales_orders row and its lines. */
-export interface SalesOrderRowForDocument {
-  so_id: string;
-  so_number: string;
-  status?: string | null;
-  order_date?: string | Date | null;
-  expected_ship_date?: string | Date | null;
-  client_po_number?: string | null;
-  currency_code: string;
-  notes?: string | null;
-  client_id?: string | null;
-}
-
-export interface SalesOrderLineRowForDocument {
-  so_line_id: string;
-  service_id?: string | null;
-  description?: string | null;
-  quantity_ordered: number | string;
-  quantity_fulfilled?: number | string | null;
-  unit_price: number | string;
-  fulfillment_type?: string | null;
-}
-
-/**
- * Pure assembly of a Sales Order render model from already-loaded data — no IO, so it is the
- * unit-testable core (line amounts, subtotal/total, name resolution). The IO (loading the order,
- * resolving parties and service names) lives in mapDbSalesOrderToViewModel.
- */
-export function assembleSalesOrderViewModel(input: {
-  so: SalesOrderRowForDocument;
-  lines: SalesOrderLineRowForDocument[];
-  servicesById: Map<string, ServiceNameRecord>;
-  customer: SalesOrderDocumentParty | null;
-  tenantParty: SalesOrderDocumentParty | null;
-}): SalesOrderViewModel {
-  const { so, lines, servicesById, customer, tenantParty } = input;
-
-  const lineItems: SalesOrderViewModelLineItem[] = lines.map((line) => {
-    const service = line.service_id ? servicesById.get(line.service_id) ?? null : null;
-    const quantityOrdered = toFiniteNumber(line.quantity_ordered);
-    const unitPrice = toFiniteNumber(line.unit_price);
-    return {
-      so_line_id: line.so_line_id,
-      service_id: line.service_id ?? null,
-      service_name: service?.service_name ?? null,
-      service_sku: service?.sku ?? null,
-      description: asTrimmedString(line.description) || service?.service_name || null,
-      quantity_ordered: quantityOrdered,
-      quantity_fulfilled: toFiniteNumber(line.quantity_fulfilled),
-      unit_price: unitPrice,
-      amount: quantityOrdered * unitPrice,
-      fulfillment_type: line.fulfillment_type ?? null,
-      is_drop_ship: line.fulfillment_type === 'drop_ship',
-    };
-  });
-
-  const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-  // Phase 1: SO lines carry tax_rate_id, not a stored tax amount; the final tax is computed on the
-  // generated invoice. The order document reports the pre-tax total honestly rather than fabricating.
-  const tax = 0;
-
-  return {
-    so_id: so.so_id,
-    so_number: so.so_number,
-    status: so.status ?? null,
-    order_date: toIsoOrNull(so.order_date),
-    expected_ship_date: toIsoOrNull(so.expected_ship_date),
-    client_po_number: so.client_po_number ?? null,
-    currency_code: so.currency_code,
-    notes: so.notes ?? null,
-    client_id: so.client_id ?? null,
-    customer,
-    tenantClient: tenantParty,
-    line_items: lineItems,
-    subtotal,
-    tax,
-    total: subtotal + tax,
-  };
 }
 
 /** Load a sales order + its lines and build the document render model. Null if not found. */
