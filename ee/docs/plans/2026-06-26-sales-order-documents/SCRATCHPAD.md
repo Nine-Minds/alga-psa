@@ -91,3 +91,28 @@
   in @alga-psa/workflows/expression-authoring — cross-package, needs the browser to verify the SO
   designer renders), F116 (seed). Phase 3: F200–F205. Also the Phase-1 DB-backed tests T004/T005/T006
   and the live authenticated PDF check. Resume here once Tailscale is up + the stack is restored.
+- 2026-06-27: **Env restored + entire PRD landed and live-verified.** Phases 1–3 complete; 43/44
+  features implemented (F205 a grounded proposal — see below). Commits: c9ba4a28 (route→/api/inventory
+  + middleware skip, fixes live 401), 2553c082 (split pure `salesOrderViewModel.ts` out of the
+  knex adapter to fix client-bundle `Can't resolve 'fs'`), 6abd052f (F203/F204 packing slip + pick
+  list types; render path generalized to documentType), deded793 (F200 client override action),
+  f15ae047 (SO row Document → dropdown of all 3 types).
+  - **Live verification (algadev pane, SO-DEMO-001 = 1a1c0745-…):** all three download 200 application/pdf
+    — confirmation 59191B (prices+totals $10,225, drop-ship, pre-tax note), packing-slip 46917B
+    (Ship To + Ordered/Shipped + from_stock/drop_ship source incl. 5/3 partial, NO prices),
+    pick-list 30865B (☐ check column + Qty/Product/SKU + Picked-by line, NO customer/prices).
+    Content extracted via pdftotext — correct.
+  - **Two real bugs typecheck couldn't catch, found live:** (1) the doc route sat in the API-key-gated
+    `/api/v1` namespace → 401 on session-cookie fetch (moved to /api/inventory + middleware skip);
+    (2) a `'use server'` file may export ONLY async functions — an object export (DOCUMENT_TYPE_LABELS)
+    threw "use server file can only export async functions" and 500'd ALL types until removed.
+  - **Turbopack `'use server'` cache is sticky:** after the object-export fix, the stale broken module
+    kept 500ing through touches + content edits; it self-cleared after ~a minute / a recompile. Budget
+    time for this when editing action files.
+  - **F205 (auto-attach confirmation to SO emails) = PROPOSAL, not built:** Sales Orders have no
+    email/send flow to hook (invoices have invoiceEmailHandler/invoiceJobActions; quotes email in
+    quoteActions; SOs have none). The PDF pipeline (downloadSalesOrderPDF / generatePDF) is ready to
+    attach the moment an SO email flow exists; building SO email delivery is a separate initiative
+    outside "SO documents" scope.
+  - Visual smoke of the new Document dropdown was blocked by browser-relay flakiness in the Chrome
+    extension (page itself serves 200) — left for the user to eyeball.
