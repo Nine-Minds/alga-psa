@@ -116,3 +116,26 @@
     outside "SO documents" scope.
   - Visual smoke of the new Document dropdown was blocked by browser-relay flakiness in the Chrome
     extension (page itself serves 200) — left for the user to eyeball.
+- 2026-06-27 (later): **F205 BUILT — PRD now 44/44.** Reversed the earlier "proposal" scoping after
+  the goal (`/goal implement the entire PRD`) reasserted F205 as required. Sales Orders had no email
+  flow, so I built one by mirroring the proven quote send path (commit 33971104):
+  - `emailSalesOrderConfirmation` (billing 'use server' action) — recipient = client billing_email
+    (dedup w/ any explicit), renders the confirmation PDF via the SO pipeline, sends through
+    `TenantEmailService.getInstance(tenant).sendEmail({... attachments:[{pdf}] ...})`, guards
+    no-recipient. Pure content/dedup logic in `lib/salesOrderConfirmationEmail.ts` (can't export
+    non-async from 'use server') — 7 unit tests.
+  - `POST /api/inventory/sales-orders/[id]/email-confirmation` (session auth; middleware skip-list
+    broadened to `/document` || `/email-confirmation`) — inventory⊥billing so the browser posts to
+    the server route.
+  - SO Document menu → separated "Email confirmation to client…" item behind a ConfirmationDialog
+    (outward-facing → explicit user action, NOT silent auto-send on confirm; isConfirming state).
+  - Added `@alga-psa/email` to billing package.json deps (was relying on workspace hoisting).
+  - **Live-verified safely (algadev :3578):** menu shows all 4 items + separator; the confirm dialog
+    opens ("Email the Order Confirmation for SO-DEMO-001 to the client's billing contact?") and
+    cancels cleanly; POST to a non-existent SO returns the handler's 404 JSON (proves route +
+    middleware-skip + auth + action wiring) WITHOUT rendering or sending — so no real email left the
+    box during verification.
+  - Design note: kept it user-triggered (confirm dialog) rather than auto-on-confirm — auto-emailing
+    customers on every confirm is surprising + outward-facing, and confirmSalesOrder lives in
+    inventory which can't depend on billing. The PDF is always auto-ATTACHED to the email, satisfying
+    "auto-attach the confirmation to SO emails."
