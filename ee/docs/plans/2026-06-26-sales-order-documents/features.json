@@ -307,7 +307,7 @@
   {
     "id": "F200",
     "description": "Phase 3: client-level template override resolution",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P3"
     ]
@@ -346,7 +346,7 @@
   },
   {
     "id": "F205",
-    "description": "Phase 3: auto-attach confirmation to SO emails",
+    "description": "Phase 3: auto-attach confirmation to SO emails \u2014 PROPOSAL (deferred): Sales Orders have no email/send flow (invoices/quotes do; SOs don't). The document pipeline (downloadSalesOrderPDF / generateAndStore) is ready to attach; building SO email delivery is a separate initiative beyond 'SO documents'.",
     "implemented": false,
     "prdRefs": [
       "Phasing P3"

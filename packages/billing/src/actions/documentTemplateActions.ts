@@ -83,22 +83,46 @@ export const setDefaultDocumentTemplate = withAuth(
     { tenant },
     documentType: string,
     payload: SetDefaultDocumentTemplatePayload,
+    opts?: { clientId?: string | null },
   ): Promise<{ success: boolean }> => {
     if (!(await hasPermission(user as any, 'billing', 'update'))) {
       throw new Error('Permission denied: cannot set default document template');
     }
     const type = assertDocumentType(documentType);
     const { knex } = await createTenantKnex();
+    const scope = opts?.clientId
+      ? ({ scopeType: 'client', scopeId: opts.clientId } as const)
+      : ({ scopeType: 'tenant', scopeId: null } as const);
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Reflect the default flag on custom rows for this type, then record the assignment.
-      await trx('document_templates').where({ tenant, document_type: type }).update({ is_default: false });
-      if (payload.templateSource === 'custom') {
-        await trx('document_templates')
-          .where({ tenant, document_type: type, template_id: payload.templateId })
-          .update({ is_default: true });
+      // The is_default flag tracks the TENANT default; a client-scoped override doesn't touch it.
+      if (scope.scopeType === 'tenant') {
+        await trx('document_templates').where({ tenant, document_type: type }).update({ is_default: false });
+        if (payload.templateSource === 'custom') {
+          await trx('document_templates')
+            .where({ tenant, document_type: type, template_id: payload.templateId })
+            .update({ is_default: true });
+        }
       }
-      await setDefaultAssignment(trx, tenant, type, { scopeType: 'tenant', scopeId: null }, payload, user.user_id);
+      await setDefaultAssignment(trx, tenant, type, scope, payload, user.user_id);
     });
+    return { success: true };
+  },
+);
+
+/**
+ * Clear a client-scoped template override for a type, so that client falls back to the tenant
+ * default (or standard). Completes the client-override lifecycle (F200).
+ */
+export const clearClientDocumentTemplate = withAuth(
+  async (user, { tenant }, documentType: string, clientId: string): Promise<{ success: boolean }> => {
+    if (!(await hasPermission(user as any, 'billing', 'update'))) {
+      throw new Error('Permission denied: cannot clear document template override');
+    }
+    const type = assertDocumentType(documentType);
+    const { knex } = await createTenantKnex();
+    await knex('document_template_assignments')
+      .where({ tenant, document_type: type, scope_type: 'client', scope_id: clientId })
+      .del();
     return { success: true };
   },
 );
