@@ -14,10 +14,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json({ error: 'invalid_request' }, { status: 404, headers: NO_STORE });
   }
-  const { handleToken, resolvePublicBaseUrl, isAuthServerEnabled } = await import('@product/mcp/entry');
-  if (!(await isAuthServerEnabled())) {
-    return NextResponse.json({ error: 'invalid_request' }, { status: 404, headers: NO_STORE });
-  }
+  const { handleToken, resolvePublicBaseUrl } = await import('@product/mcp/entry');
   const base = await resolvePublicBaseUrl(req);
 
   let form: URLSearchParams;

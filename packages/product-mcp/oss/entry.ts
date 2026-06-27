@@ -138,6 +138,3 @@ export async function listConnectedClients(
 export async function revokeGrant(_params: { tenant: string; userId: string; grantId?: string; clientId?: string }): Promise<number> {
   return 0;
 }
-export async function isAuthServerEnabled(): Promise<boolean> {
-  return false;
-}
