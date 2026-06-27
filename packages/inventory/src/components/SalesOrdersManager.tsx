@@ -8,6 +8,13 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { ChevronDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type {
   ColumnDefinition,
@@ -23,13 +30,29 @@ import {
 } from '../actions';
 
 /**
- * Trigger a browser download of the Sales Order document (Order Confirmation) PDF.
- * Fetches the endpoint so a failure (not found / permission / render error) surfaces as a toast
- * instead of navigating the user to a raw JSON error body.
+ * The Sales Order document types a user can download. All three render from the same SO data;
+ * the server picks the standard (or tenant/client override) template per type.
  */
-async function downloadSalesOrderDocument(soId: string, soNumber: string): Promise<void> {
+const SO_DOCUMENT_TYPES = [
+  { type: 'sales-order', label: 'Order Confirmation', suffix: '' },
+  { type: 'packing-slip', label: 'Packing Slip', suffix: '-packing-slip' },
+  { type: 'pick-list', label: 'Pick List', suffix: '-pick-list' },
+] as const;
+
+/**
+ * Trigger a browser download of a Sales Order document PDF (confirmation, packing slip, or pick
+ * list). Fetches the endpoint so a failure (not found / permission / render error) surfaces as a
+ * toast instead of navigating the user to a raw JSON error body.
+ */
+async function downloadSalesOrderDocument(
+  soId: string,
+  soNumber: string,
+  documentType: string = 'sales-order',
+  fileSuffix: string = '',
+): Promise<void> {
   try {
-    const res = await fetch(`/api/inventory/sales-orders/${soId}/document`);
+    const query = documentType === 'sales-order' ? '' : `?type=${documentType}`;
+    const res = await fetch(`/api/inventory/sales-orders/${soId}/document${query}`);
     if (!res.ok) {
       let message = "Couldn't generate the document.";
       try {
@@ -45,7 +68,7 @@ async function downloadSalesOrderDocument(soId: string, soNumber: string): Promi
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${soNumber || soId}.pdf`;
+    a.download = `${soNumber || soId}${fileSuffix}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -229,17 +252,34 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
           >
             Confirm
           </Button>
-          {/* Order Confirmation document — downloads via the server API route (inventory can't
-              import billing, so the browser fetches the PDF endpoint directly). */}
-          <Button
-            id={`document-so-${rec.so_id}`}
-            variant="outline"
-            size="sm"
-            onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number)}
-            disabled={rec.status === 'cancelled'}
-          >
-            Document
-          </Button>
+          {/* SO documents (confirmation / packing slip / pick list) — each renders from the same SO
+              data via the server PDF route (inventory can't import billing, so the browser fetches
+              the endpoint directly with ?type=). */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id={`document-so-${rec.so_id}`}
+                variant="outline"
+                size="sm"
+                disabled={rec.status === 'cancelled'}
+                className="gap-1"
+              >
+                Document
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {SO_DOCUMENT_TYPES.map((d) => (
+                <DropdownMenuItem
+                  key={d.type}
+                  id={`document-so-${rec.so_id}-${d.type}`}
+                  onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number, d.type, d.suffix)}
+                >
+                  {d.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             id={`cancel-so-${rec.so_id}`}
             variant="ghost"
