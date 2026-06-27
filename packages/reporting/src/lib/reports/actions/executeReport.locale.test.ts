@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const { hasPermissionMock } = vi.hoisted(() => ({
-  hasPermissionMock: vi.fn(async () => true),
+  hasPermissionMock: vi.fn(async (...args: unknown[]) => true),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
