@@ -77,7 +77,7 @@
   {
     "id": "T102",
     "description": "Phase 2: resolveDesignerDocumentKind returns 'sales-order' for SO bindings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F115"
     ]

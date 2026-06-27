@@ -1,7 +1,18 @@
 import type { DesignerNode } from '../state/designerStore';
 import { getNodeMetadata } from './nodeProps';
 
-export type DesignerDocumentKind = 'invoice' | 'quote';
+export type DesignerDocumentKind = 'invoice' | 'quote' | 'sales-order';
+
+const hasSalesOrderBindingCatalog = (bindings: unknown): boolean => {
+  if (!bindings || typeof bindings !== 'object') {
+    return false;
+  }
+  const values = (bindings as { values?: Record<string, unknown> }).values;
+  // orderNumber / expectedShipDate are sales-order-specific (invoices and quotes have neither).
+  return Boolean(
+    values && typeof values === 'object' && ('orderNumber' in values || 'expectedShipDate' in values),
+  );
+};
 
 const hasQuoteBindingCatalog = (bindings: unknown): boolean => {
   if (!bindings || typeof bindings !== 'object') {
@@ -49,6 +60,11 @@ export const resolveDesignerDocumentKind = (nodes: DesignerNode[]): DesignerDocu
   }
 
   const metadata = getNodeMetadata(documentNode) as Record<string, unknown>;
+  // Sales order is checked before quote — both expose tenant/customer bindings, so the
+  // sales-order-specific bindings must win.
+  if (hasSalesOrderBindingCatalog(metadata.__astBindingCatalog)) {
+    return 'sales-order';
+  }
   if (hasQuoteBindingCatalog(metadata.__astBindingCatalog)) {
     return 'quote';
   }
@@ -56,6 +72,9 @@ export const resolveDesignerDocumentKind = (nodes: DesignerNode[]): DesignerDocu
   const templateMetadata = metadata.__astTemplateMetadata;
   if (templateMetadata && typeof templateMetadata === 'object') {
     const templateName = String((templateMetadata as { templateName?: unknown }).templateName ?? '').toLowerCase();
+    if (templateName.includes('sales order') || templateName.includes('order confirmation')) {
+      return 'sales-order';
+    }
     if (templateName.includes('quote')) {
       return 'quote';
     }

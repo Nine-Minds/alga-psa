@@ -291,7 +291,7 @@
   {
     "id": "F115",
     "description": "Phase 2: extend DesignerDocumentKind + resolveDesignerDocumentKind with 'sales-order'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
