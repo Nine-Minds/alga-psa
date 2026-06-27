@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ChevronDown } from 'lucide-react';
@@ -127,6 +128,8 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<ISalesOrder | null>(null);
+  const [emailTarget, setEmailTarget] = useState<ISalesOrder | null>(null);
+  const [emailing, setEmailing] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -217,6 +220,30 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
     }
   };
 
+  // Email the Order Confirmation PDF to the client (F205). Outward-facing, so it goes through a
+  // confirmation dialog; the server resolves the recipient from the client's billing email.
+  const emailConfirmation = async (so: ISalesOrder) => {
+    setEmailing(true);
+    try {
+      const res = await fetch(`/api/inventory/sales-orders/${so.so_id}/email-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body?.success) {
+        toast.success(`Confirmation emailed to ${(body.recipients || []).join(', ')}`);
+      } else {
+        toast.error(body?.error || "Couldn't email the confirmation.");
+      }
+    } catch {
+      toast.error("Couldn't email the confirmation.");
+    } finally {
+      setEmailing(false);
+      setEmailTarget(null);
+    }
+  };
+
   const columns: ColumnDefinition<ISalesOrder>[] = [
     { title: 'SO Number', dataIndex: 'so_number' },
     { title: 'Client', dataIndex: 'client_id' },
@@ -278,6 +305,13 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
                   {d.label}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                id={`email-confirmation-so-${rec.so_id}`}
+                onClick={() => setEmailTarget(rec)}
+              >
+                Email confirmation to client…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
@@ -419,6 +453,22 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
         }
         confirmLabel="Cancel sales order"
         cancelLabel="Keep order"
+      />
+
+      <ConfirmationDialog
+        id="email-so-confirm"
+        isOpen={emailTarget !== null}
+        onClose={() => (emailing ? undefined : setEmailTarget(null))}
+        onConfirm={() => (emailTarget ? emailConfirmation(emailTarget) : undefined)}
+        title="Email order confirmation"
+        message={
+          emailTarget
+            ? `Email the Order Confirmation for ${emailTarget.so_number} to the client's billing contact?`
+            : ''
+        }
+        confirmLabel="Send email"
+        cancelLabel="Cancel"
+        isConfirming={emailing}
       />
     </div>
   );

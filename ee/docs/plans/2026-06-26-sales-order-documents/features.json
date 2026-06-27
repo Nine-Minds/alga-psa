@@ -346,8 +346,8 @@
   },
   {
     "id": "F205",
-    "description": "Phase 3: auto-attach confirmation to SO emails \u2014 PROPOSAL (deferred): Sales Orders have no email/send flow (invoices/quotes do; SOs don't). The document pipeline (downloadSalesOrderPDF / generateAndStore) is ready to attach; building SO email delivery is a separate initiative beyond 'SO documents'.",
-    "implemented": false,
+    "description": "Phase 3: email the Order Confirmation to the client with the rendered PDF auto-attached. emailSalesOrderConfirmation action (recipient = client billing email; PDF via the SO render pipeline; sent through TenantEmailService like quotes) + POST /api/inventory/sales-orders/[id]/email-confirmation (session auth, middleware-skipped) + a confirm-dialog 'Email confirmation to client' item in the SO Document menu. Outward-facing, so user-triggered, not silent auto-send on confirm.",
+    "implemented": true,
     "prdRefs": [
       "Phasing P3"
     ]
