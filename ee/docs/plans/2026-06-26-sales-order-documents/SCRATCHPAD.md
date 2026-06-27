@@ -58,6 +58,18 @@
 - DB (scripts): knex from repo-root node_modules; host localhost:5472, db 'server', creds from
   `server/.env.local` (DB_USER_ADMIN/DB_PASSWORD_ADMIN). Tenant 6d178771-ad9a-4d43-8809-83992745f8f9.
 
+## Environment blocker (2026-06-27)
+- The dev environment drifted after an overnight restart: the test DB on :5472 is DOWN; the running
+  postgres is devstack_postgres on :5432 but its `server` db has no inventory tables (app data is
+  behind pgbouncer:6432, docker-internal). The dev server runs on :3345 but `NEXTAUTH_URL=http://localhost:3578`
+  (dead port) → unauthenticated requests 307-redirect to :3578/auth/signin (connection refused).
+- Consequence: authenticated live browser verification + DB-backed tests (T004/T005/T006) are
+  BLOCKED until the env is healthy. What IS verified: the API route compiles and enforces auth
+  (`GET /api/v1/sales-orders/<id>/document` → 401 unauthenticated, JSON), the render is proven by
+  the smoke test (real AST → correct HTML), the adapter mapping by the unit test, and typecheck is
+  clean across types/billing/inventory. The unverified remainder (authenticated PDF download, the
+  SQL joins in mapDbSalesOrderToViewModel) mirrors proven quote/invoice code.
+
 ## Progress log
 - 2026-06-26: Plan created (PRD + features + tests). Starting Phase 1.
 - 2026-06-26: **F001–F007 done** — `SalesOrderViewModel` types

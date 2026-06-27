@@ -22,6 +22,16 @@ import {
   cancelSalesOrder,
 } from '../actions';
 
+/** Trigger a browser download of the Sales Order document (Order Confirmation) PDF. */
+function downloadSalesOrderDocument(soId: string): void {
+  const a = document.createElement('a');
+  a.href = `/api/v1/sales-orders/${soId}/document`;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
   { value: 'on_fulfillment', label: 'On fulfillment' },
   { value: 'manual', label: 'Manual' },
@@ -184,16 +194,28 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
     {
       title: 'Actions',
       dataIndex: 'so_id',
+      width: '260px',
       render: (_: any, rec: ISalesOrder) => (
         <div className="flex gap-2">
           <Button
             id={`confirm-so-${rec.so_id}`}
-            variant="outline"
+            variant="soft"
             size="sm"
             onClick={() => confirm(rec)}
             disabled={rec.status !== 'draft'}
           >
             Confirm
+          </Button>
+          {/* Order Confirmation document — downloads via the server API route (inventory can't
+              import billing, so the browser fetches the PDF endpoint directly). */}
+          <Button
+            id={`document-so-${rec.so_id}`}
+            variant="outline"
+            size="sm"
+            onClick={() => downloadSalesOrderDocument(rec.so_id)}
+            disabled={rec.status === 'cancelled'}
+          >
+            Document
           </Button>
           <Button
             id={`cancel-so-${rec.so_id}`}
