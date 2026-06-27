@@ -14,13 +14,29 @@ const getAllPrioritiesMock = vi.fn();
 const getAllUsersMock = vi.fn();
 const getSlaPoliciesMock = vi.fn();
 const getTeamsMock = vi.fn();
+const useFeatureFlagMock = vi.fn(() => ({ enabled: false }));
 
 vi.mock('@alga-psa/tickets/actions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
+  getBoardListStats: () => Promise.resolve({}),
   createBoard: (...args: unknown[]) => createBoardMock(...args),
   getBoardTicketStatuses: (...args: unknown[]) => getBoardTicketStatusesMock(...args),
   updateBoard: (...args: unknown[]) => updateBoardMock(...args),
   deleteBoard: vi.fn(),
+  getBoardCloseRules: () =>
+    Promise.resolve({
+      require_resolution_comment: false,
+      require_time_entry: false,
+      require_checklist_complete: false,
+      require_no_open_children: false,
+      required_fields: [],
+      is_enabled: true,
+    }),
+  upsertBoardCloseRules: vi.fn(),
+  getBoardAutoCloseRules: () => Promise.resolve([]),
+  createBoardAutoCloseRule: vi.fn(),
+  updateBoardAutoCloseRule: vi.fn(),
+  deleteBoardAutoCloseRule: vi.fn(),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
@@ -45,7 +61,7 @@ vi.mock('@alga-psa/teams/actions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({ enabled: false }),
+  useFeatureFlag: () => useFeatureFlagMock(),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -91,32 +107,6 @@ vi.mock('@alga-psa/ui/components/Label', () => ({
   Label: ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => <label htmlFor={htmlFor}>{children}</label>,
 }));
 
-vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({
-    data,
-    columns,
-  }: {
-    data: any[];
-    columns: Array<{
-      title: string;
-      dataIndex: string;
-      render?: (value: unknown, record: any) => React.ReactNode;
-    }>;
-  }) => (
-    <div data-testid="boards-table">
-      {data.map((record) => (
-        <div key={record.board_id}>
-          {columns.map((column) => (
-            <div key={`${record.board_id}-${column.dataIndex}`}>
-              {column.render ? column.render(record[column.dataIndex], record) : record[column.dataIndex]}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  ),
-}));
-
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: () => null,
 }));
@@ -127,7 +117,7 @@ vi.mock('@alga-psa/ui', () => ({
 
 vi.mock('@alga-psa/ui/components/Alert', () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDescription: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/Switch', () => ({
@@ -217,9 +207,20 @@ vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   default: () => <div data-testid="user-team-picker" />,
 }));
 
+// The editor accordion opens with only the first (General) section expanded;
+// every other section renders its body only once expanded, so tests must open
+// the section they interact with.
+const expandSection = (id: string) => {
+  const toggle = document.getElementById(`board-editor-section-${id}`);
+  if (toggle) {
+    fireEvent.click(toggle);
+  }
+};
+
 describe('BoardsSettings ticket status copy flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
     getAllBoardsMock.mockResolvedValue([
       {
         board_id: 'board-source',
@@ -417,7 +418,8 @@ describe('BoardsSettings ticket status copy flow', () => {
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
-    expect(screen.getByText('Enable live ticket timer')).toBeInTheDocument();
+    expandSection('display');
+    expect(screen.getByText('ticketing.boards.fields.liveTimer.label')).toBeInTheDocument();
     expect(screen.getByTestId('enable_live_ticket_timer')).toBeChecked();
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Timer Policy Board' },
@@ -445,6 +447,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
     });
 
+    expandSection('display');
     expect(screen.getByTestId('enable_live_ticket_timer')).toBeChecked();
     fireEvent.click(screen.getByTestId('enable_live_ticket_timer'));
     expect(screen.getByTestId('enable_live_ticket_timer')).not.toBeChecked();
@@ -477,7 +480,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.click(screen.getByTestId('inline-ticket-status-closed-0'));
 
     expect(screen.getByTestId('ticket-status-validation-error')).toHaveTextContent(
-      'Select exactly one open default ticket status before saving the board.'
+      'ticketing.boards.messages.error.invalidOpenDefault'
     );
     expect(screen.getByTestId('save-board-button')).toBeDisabled();
 
@@ -529,8 +532,189 @@ describe('BoardsSettings ticket status copy flow', () => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
     });
 
+    expandSection('statuses');
     expect(screen.getByDisplayValue('Support Open')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Support Closed')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Field Ops Closed')).not.toBeInTheDocument();
+  });
+
+  it('opens the create editor with General and the required Statuses section expanded', async () => {
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(screen.getByTestId('add-board-button'));
+
+    // General section body is rendered (its fields are reachable)...
+    expect(screen.getByLabelText('ticketing.boards.fields.boardName.label')).toBeInTheDocument();
+    // ...the required Statuses section is expanded up front (status setup is required)...
+    expect(screen.getByTestId('copy-ticket-statuses-select')).toBeInTheDocument();
+    expect(screen.getByText('ticketing.boards.editor.required')).toBeInTheDocument();
+    // ...while other sections (e.g. Display) stay collapsed.
+    expect(screen.queryByTestId('enable_live_ticket_timer')).not.toBeInTheDocument();
+  });
+
+  it('opens the editor for a board when its list row is clicked', async () => {
+    getBoardTicketStatusesMock.mockResolvedValue([
+      {
+        status_id: 'status-open',
+        name: 'Support Open',
+        is_closed: false,
+        is_default: true,
+        order_number: 10,
+      },
+    ]);
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
+
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+
+    // Editor opened in edit mode with the clicked board's name loaded.
+    expect(screen.getByDisplayValue('Support')).toBeInTheDocument();
+  });
+
+  it('keeps the editor open after saving changes to an existing board', async () => {
+    getBoardTicketStatusesMock.mockResolvedValue([
+      {
+        status_id: 'status-open',
+        name: 'Support Open',
+        is_closed: false,
+        is_default: true,
+        order_number: 10,
+      },
+    ]);
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
+
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+
+    fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
+      target: { value: 'Support Renamed' },
+    });
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => {
+      expect(updateBoardMock).toHaveBeenCalled();
+    });
+
+    // The editor stays open (no return to the list) and the header reflects the saved name.
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('add-board-button')).not.toBeInTheDocument();
+    expect(screen.getByText('Support Renamed')).toBeInTheDocument();
+  });
+
+  it('shows an incomplete auto-close rule error inside the Automation section, not a top banner', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: true });
+    getBoardTicketStatusesMock.mockResolvedValue([
+      {
+        status_id: 'status-open',
+        name: 'Support Open',
+        is_closed: false,
+        is_default: true,
+        order_number: 10,
+      },
+    ]);
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
+
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+
+    // Add an auto-close rule with no trigger/target, then save.
+    expandSection('automation');
+    fireEvent.click(screen.getByTestId('add-auto-close-rule-button'));
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    // The error renders inside the Automation section and the board is not saved.
+    await waitFor(() => {
+      expect(screen.getByTestId('board-editor-section-error-automation')).toHaveTextContent(
+        'ticketing.boards.closeRules.messages.autoCloseStatusRequired'
+      );
+    });
+    expect(updateBoardMock).not.toHaveBeenCalled();
+  });
+
+  it('paginates the boards list at 10 per page with prev/next controls', async () => {
+    const manyBoards = Array.from({ length: 15 }, (_, i) => ({
+      board_id: `board-${i + 1}`,
+      board_name: `Board ${i + 1}`,
+      display_order: (i + 1) * 10,
+      is_inactive: false,
+    }));
+    getAllBoardsMock.mockResolvedValue(manyBoards);
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    // Page 1 shows the first 10 boards only.
+    await waitFor(() => {
+      expect(document.getElementById('board-row-board-1')).toBeInTheDocument();
+    });
+    expect(document.getElementById('board-row-board-10')).toBeInTheDocument();
+    expect(document.getElementById('board-row-board-11')).not.toBeInTheDocument();
+
+    // Advance to page 2 via the standard pagination next control.
+    fireEvent.click(document.getElementById('boards-list-pagination-next-btn') as HTMLElement);
+
+    expect(document.getElementById('board-row-board-11')).toBeInTheDocument();
+    expect(document.getElementById('board-row-board-1')).not.toBeInTheDocument();
+  });
+
+  it('exposes an items-per-page selector that resizes the page', async () => {
+    const manyBoards = Array.from({ length: 15 }, (_, i) => ({
+      board_id: `board-${i + 1}`,
+      board_name: `Board ${i + 1}`,
+      display_order: (i + 1) * 10,
+      is_inactive: false,
+    }));
+    getAllBoardsMock.mockResolvedValue(manyBoards);
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    // Default 10 per page: the 11th board is on page 2.
+    await waitFor(() => {
+      expect(document.getElementById('board-row-board-1')).toBeInTheDocument();
+    });
+    expect(document.getElementById('board-row-board-11')).not.toBeInTheDocument();
+
+    // Raise the page size; all 15 boards now fit on one page.
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '25' } });
+
+    expect(document.getElementById('board-row-board-11')).toBeInTheDocument();
+    expect(document.getElementById('board-row-board-15')).toBeInTheDocument();
   });
 });

@@ -384,7 +384,6 @@
       "display": "Weergave",
       "ticketNumbering": "Ticketnummering",
       "boards": "Borden",
-      "statuses": "Statussen",
       "priorities": "Prioriteiten",
       "categories": "Categorieën",
       "checklistTemplates": "Checklistsjablonen"
@@ -489,7 +488,9 @@
         "boardManager": "Bordverantwoordelijke",
         "order": "Volgorde",
         "itilBoard": "ITIL-bord",
-        "actions": "Acties"
+        "actions": "Acties",
+        "ticketLoad": "Ticketbelasting",
+        "statuses": "Statussen"
       },
       "statusLabels": {
         "active": "Actief",
@@ -508,7 +509,8 @@
         "up": "Omhoog",
         "down": "Omlaag",
         "remove": "Verwijderen",
-        "addStatus": "Status toevoegen"
+        "addStatus": "Status toevoegen",
+        "back": "Terug naar Borden"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Live tickettimer inschakelen",
           "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
+        },
+        "defaultBoard": {
+          "label": "Standaardbord voor tickets uit klantportaal",
+          "help": "Nieuwe tickets die via het klantportaal worden ingediend, komen op dit bord terecht. Slechts één bord kan het standaardbord zijn."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Inactiviteitsdagen voor automatisch sluiten moeten een positief geheel getal zijn",
           "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Algemeen",
+          "generalHelp": "Naam, beschrijving, zichtbaarheid en standaard",
+          "assignment": "Toewijzing & SLA",
+          "assignmentHelp": "Standaardroutering, SLA en bordbeheerder",
+          "inbound": "E-mail & inkomende antwoorden",
+          "inboundHelp": "Tickets heropenen wanneer klanten per e-mail antwoorden",
+          "close": "Afsluitregels",
+          "closeHelp": "Vereisten voordat een ticket kan worden afgesloten",
+          "automation": "Automatisering",
+          "automationHelp": "Inactieve tickets automatisch sluiten na inactiviteit",
+          "statuses": "Prioriteiten & statussen",
+          "statusesHelp": "Standaardprioriteit en de ticketstatussen voor dit bord",
+          "display": "Weergave & gedrag",
+          "displayHelp": "Live-timer en bordtype"
+        },
+        "saveChanges": "Wijzigingen opslaan",
+        "unsaved": "Niet opgeslagen",
+        "unsavedShort": "Niet-opgeslagen wijzigingen",
+        "unsavedBanner": "Je hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+        "allSaved": "Alle wijzigingen opgeslagen",
+        "reopenBadge": "heropenen",
+        "required": "Vereist"
+      },
+      "empty": "Geen borden gevonden.",
+      "searchPlaceholder": "Borden zoeken…"
     },
     "priorities": {
       "title": {
