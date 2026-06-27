@@ -84,7 +84,7 @@ export function parseAuthorizeParams(sp: URLSearchParams): AuthorizeParams {
   };
 }
 
-function signAuthRequest(p: AuthorizeParams): string {
+export function signAuthRequest(p: AuthorizeParams): string {
   const payload = { ...p, exp: Math.floor(Date.now() / 1000) + SIGNED_REQUEST_TTL_SECONDS };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = crypto.createHmac('sha256', signingSecret()).update(body).digest('base64url');

@@ -28,7 +28,7 @@ function opaque(): string {
 }
 
 /** PKCE S256: base64url(sha256(verifier)) must equal the stored challenge. */
-function verifyPkceS256(verifier: string, challenge: string): boolean {
+export function verifyPkceS256(verifier: string, challenge: string): boolean {
   const computed = crypto.createHash('sha256').update(verifier).digest('base64url');
   const a = Buffer.from(computed);
   const b = Buffer.from(challenge);

@@ -169,6 +169,29 @@ DEVIATIONS from the plan, by design:
 
 Remaining: F035/F036 (connected-clients UI), F040 (feature-flag gating), tests.
 
+## Test status (2026-06-27)
+
+All 38 features implemented; both editions typecheck clean. Tests: 8/17 landed.
+
+- **Unit (verified green locally, 25 assertions across 4 files):**
+  - `mcpOAuthTokens.test.ts` — mint/verify, audience binding (T006), expiry,
+    tamper, unknown-kid, looksLikeAlgaToken.
+  - `mcpOAuthCrypto.test.ts` — PKCE S256 (T002 core) + signed auth-request integrity.
+  - `mcpOAuthClients.test.ts` — SSRF guard / isPrivateAddress (T012).
+  - `mcpOAuthMetadata.test.ts` — AS metadata RFC 8414 + CIMD-only (T010), param parse.
+- **DB integration (CI-run; not runnable locally — no Postgres):**
+  - `mcpOAuthGrants.integration.test.ts` — grant lifecycle: consent reuse, PKCE
+    auth-code single-use + replay-revoke (T004), refresh rotation + replay (T005),
+    revocation (T008), DB persistence/guards (T017). Verified it loads + reaches
+    beforeAll; fails only on DB connect locally (ECONNREFUSED 5432), as expected.
+
+- **Remaining (T001, T003, T007, T009, T011, T013, T014, T015, T016):** route- and
+  browser-level e2e (full authorize→token→/api/mcp flow, redirect/login/consent
+  paths, RBAC enforcement, legacy-agent backward compat, CIMD resolve against a
+  live metadata doc, connected-clients UI, EE gate). Higher effort; deferred as a
+  follow-up. The security-critical core (PKCE, audience, single-use, rotation,
+  revocation, SSRF) IS covered.
+
 ## Open questions (remaining)
 
 - Consent scope granularity (coarse for v1; revisit if finer scopes needed).

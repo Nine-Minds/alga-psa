@@ -35,7 +35,7 @@ export class ClientResolutionError extends Error {
 }
 
 /** Reject non-https and any URL whose host resolves to a private/loopback address. */
-async function assertPublicHttpsUrl(raw: string): Promise<URL> {
+export async function assertPublicHttpsUrl(raw: string): Promise<URL> {
   let url: URL;
   try {
     url = new URL(raw);
@@ -70,7 +70,7 @@ async function assertPublicHttpsUrl(raw: string): Promise<URL> {
   return url;
 }
 
-function isPrivateAddress(addr: string): boolean {
+export function isPrivateAddress(addr: string): boolean {
   const v = net.isIP(addr);
   if (v === 4) {
     const p = addr.split('.').map(Number);
