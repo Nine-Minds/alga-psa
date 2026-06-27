@@ -315,7 +315,7 @@
   {
     "id": "F201",
     "description": "Phase 3: detailed / by-location standard confirmation variant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P3"
     ]
@@ -323,7 +323,7 @@
   {
     "id": "F202",
     "description": "Phase 3: drop-ship vs from-stock line nuances in the document",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P3"
     ]

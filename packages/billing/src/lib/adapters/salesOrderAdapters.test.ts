@@ -78,6 +78,23 @@ describe('assembleSalesOrderViewModel', () => {
     expect(vm.customer).toBeNull();
   });
 
+  it('flags drop-ship lines (fulfillment_type → is_drop_ship)', () => {
+    const vm = assembleSalesOrderViewModel({
+      so,
+      lines: [
+        { so_line_id: 'a', service_id: 'svc-switch', quantity_ordered: 1, unit_price: 100, fulfillment_type: 'from_stock' },
+        { so_line_id: 'b', service_id: 'svc-laptop', quantity_ordered: 1, unit_price: 100, fulfillment_type: 'drop_ship' },
+        { so_line_id: 'c', service_id: 'svc-switch', quantity_ordered: 1, unit_price: 100 },
+      ],
+      servicesById,
+      customer,
+      tenantParty,
+    });
+
+    expect(vm.line_items.map((i) => i.is_drop_ship)).toEqual([false, true, false]);
+    expect(vm.line_items[1].fulfillment_type).toBe('drop_ship');
+  });
+
   it('leaves name fields null when a line references an unknown service', () => {
     const vm = assembleSalesOrderViewModel({
       so,

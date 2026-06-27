@@ -155,11 +155,37 @@ const buildStandardSalesOrderConfirmationAst = (): TemplateAst => ({
   },
 });
 
+/**
+ * Detailed Sales Order Confirmation — the standard confirmation plus a per-line Fulfillment column
+ * (from stock vs drop-ship) and an ordered-vs-fulfilled split. Built by augmenting the confirmation
+ * so the two stay in sync.
+ */
+const buildStandardSalesOrderDetailedAst = (): TemplateAst => {
+  const ast = buildStandardSalesOrderConfirmationAst();
+  ast.metadata = { ...ast.metadata, templateName: 'Detailed Sales Order Confirmation' };
+
+  const lineItems = (ast.layout.children as any[] | undefined)?.find((c) => c?.id === 'line-items');
+  if (lineItems) {
+    lineItems.columns = [
+      { id: 'product', header: 'Product', value: { type: 'path', path: 'description' }, style: { inline: { width: '34%' } } },
+      { id: 'sku', header: 'SKU', value: { type: 'path', path: 'service_sku' }, style: { inline: { width: '14%' } } },
+      { id: 'fulfillment', header: 'Fulfillment', value: { type: 'path', path: 'fulfillment_type' }, style: { inline: { width: '14%' } } },
+      { id: 'ordered', header: 'Ordered', value: { type: 'path', path: 'quantity_ordered' }, format: 'number', style: { inline: { textAlign: 'right', width: '9%' } } },
+      { id: 'fulfilled', header: 'Fulfilled', value: { type: 'path', path: 'quantity_fulfilled' }, format: 'number', style: { inline: { textAlign: 'right', width: '9%' } } },
+      { id: 'unit-price', header: 'Unit Price', value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '10%' } } },
+      { id: 'amount', header: 'Amount', value: { type: 'path', path: 'amount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '10%' } } },
+    ];
+  }
+  return ast;
+};
+
 export const STANDARD_SALES_ORDER_TEMPLATE_ASTS: Record<string, TemplateAst> = {
   'standard-sales-order-confirmation': buildStandardSalesOrderConfirmationAst(),
+  'standard-sales-order-detailed': buildStandardSalesOrderDetailedAst(),
 };
 
 export const STANDARD_SALES_ORDER_CONFIRMATION_CODE = 'standard-sales-order-confirmation';
+export const STANDARD_SALES_ORDER_DETAILED_CODE = 'standard-sales-order-detailed';
 
 export const getStandardSalesOrderTemplateAstByCode = (code: string): TemplateAst | null => {
   const ast = STANDARD_SALES_ORDER_TEMPLATE_ASTS[code];

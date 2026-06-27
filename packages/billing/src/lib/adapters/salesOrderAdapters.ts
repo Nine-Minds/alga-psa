@@ -133,6 +133,7 @@ export interface SalesOrderLineRowForDocument {
   quantity_ordered: number | string;
   quantity_fulfilled?: number | string | null;
   unit_price: number | string;
+  fulfillment_type?: string | null;
 }
 
 /**
@@ -163,6 +164,8 @@ export function assembleSalesOrderViewModel(input: {
       quantity_fulfilled: toFiniteNumber(line.quantity_fulfilled),
       unit_price: unitPrice,
       amount: quantityOrdered * unitPrice,
+      fulfillment_type: line.fulfillment_type ?? null,
+      is_drop_ship: line.fulfillment_type === 'drop_ship',
     };
   });
 

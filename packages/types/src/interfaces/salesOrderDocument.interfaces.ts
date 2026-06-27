@@ -27,6 +27,10 @@ export interface SalesOrderViewModelLineItem {
   unit_price: number;
   /** quantity_ordered × unit_price, in integer cents. */
   amount: number;
+  /** 'from_stock' | 'drop_ship' — how the line is fulfilled. */
+  fulfillment_type?: string | null;
+  /** Convenience flag for templates: true when fulfillment_type === 'drop_ship'. */
+  is_drop_ship: boolean;
 }
 
 /**
