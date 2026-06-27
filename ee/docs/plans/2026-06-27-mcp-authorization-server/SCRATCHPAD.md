@@ -143,7 +143,32 @@ audience friction, makes Google work again, and gives claude.ai a clean "Connect
 - (2026-06-27) Prereq cache/origin work all merged: PR #2800 (origin), PR #2801
   (no-store, merge `43a49153`), CDN `/.well-known/*` CachingDisabled applied.
 
+## Implementation notes (2026-06-27)
+
+Backend complete + typechecking clean (ee/server + server). Files:
+- Migration `ee/server/migrations/20260627170000_create_mcp_oauth.cjs` — 5 tables:
+  signing_keys, clients, grants (consent+revocation anchor), auth_codes, refresh_tokens.
+- `ee/server/src/lib/mcp/oauth/{keys,tokens,clients,grants,authServer,userSession}.ts`.
+- Routes (server/src/app): `.well-known/oauth-authorization-server`,
+  `.well-known/jwks.json`, `api/mcp/oauth/{authorize,token,revoke}`; PRM updated to
+  advertise Alga-as-AS + scopes `['mcp']` + no-store.
+- RS: `jsonRpcServer.ts` resolveAuth now has a 3rd path — Alga `at+jwt` user tokens
+  (verify → grant-active check → mintUserSessionKey → dispatch as the user).
+- Seam: ee/entry + oss/entry export the AS surface.
+
+Endpoint paths: `/api/mcp/oauth/{authorize,token,revoke}`, JWKS at
+`/.well-known/jwks.json`. Token TTLs: access 10m, refresh 30d, auth code 60s.
+
+DEVIATIONS from the plan, by design:
+- **F005 signing keys live in a DB table (`mcp_oauth_signing_keys`), not the secret
+  provider.** The secret provider interface is read-only (`getAppSecret`), so a DB
+  table is the practical home for generated, rotatable keypairs (kid + active flag).
+- Tables normalized beyond "clients + grants" (added signing_keys, auth_codes,
+  refresh_tokens) — standard OAuth modeling. Access tokens are stateless JWTs; the
+  grant row is the revocation anchor the RS checks (F030).
+
+Remaining: F035/F036 (connected-clients UI), F040 (feature-flag gating), tests.
+
 ## Open questions (remaining)
 
 - Consent scope granularity (coarse for v1; revisit if finer scopes needed).
-- Exact endpoint paths, token TTLs, table column shapes — technical-design detail.

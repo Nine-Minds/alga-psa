@@ -1,40 +1,321 @@
 [
-  { "id": "F001", "implemented": false, "prdRefs": ["AS discovery"], "description": "Serve /.well-known/oauth-authorization-server (RFC 8414) advertising issuer, authorization_endpoint, token_endpoint, jwks_uri (no registration_endpoint — CIMD), response_types, grant_types, code_challenge_methods=[S256], scopes_supported." },
-  { "id": "F002", "implemented": false, "prdRefs": ["PRM update"], "description": "PRM (/.well-known/oauth-protected-resource) advertises authorization_servers: [https://<base>] (Alga itself) instead of the raw IdP issuers." },
-  { "id": "F003", "implemented": false, "prdRefs": ["PRM update"], "description": "PRM advertises a non-empty scopes_supported consistent with the AS metadata." },
-  { "id": "F004", "implemented": false, "prdRefs": ["JWKS"], "description": "Serve /.well-known/jwks.json publishing Alga's MCP token signing public key(s)." },
-  { "id": "F005", "implemented": false, "prdRefs": ["JWKS"], "description": "Signing key material managed via the secret provider; generated/loaded at startup; never logged." },
-  { "id": "F006", "implemented": false, "prdRefs": ["JWKS"], "description": "Signing key rotation supported (kid in JWT header; JWKS can publish current + previous)." },
-  { "id": "F007", "implemented": false, "prdRefs": ["/authorize"], "description": "/oauth/authorize accepts authorization_code params and validates client_id and exact redirect_uri." },
-  { "id": "F008", "implemented": false, "prdRefs": ["/authorize", "Security"], "description": "PKCE required: reject authorize requests missing code_challenge or using a method other than S256." },
-  { "id": "F009", "implemented": false, "prdRefs": ["/authorize"], "description": "Preserve and return the client state parameter unchanged on redirect." },
-  { "id": "F010", "implemented": false, "prdRefs": ["/authorize", "Security"], "description": "Accept the resource indicator (RFC 8707) and bind the requested MCP resource into the issued token's audience." },
-  { "id": "F011", "implemented": false, "prdRefs": ["/authorize", "Primary Flows"], "description": "If the user already has an Alga session, proceed within it (no second login)." },
-  { "id": "F012", "implemented": false, "prdRefs": ["/authorize", "Primary Flows"], "description": "If no Alga session, redirect to normal Alga login and return to /authorize afterward (round-trip preserved)." },
-  { "id": "F013", "implemented": false, "prdRefs": ["UX/UI", "Primary Flows"], "description": "Render a consent screen (client name, tenant, access description, Approve/Deny)." },
-  { "id": "F014", "implemented": false, "prdRefs": ["UX/UI", "Security"], "description": "Persist consent trust-on-first-use per (user, client); subsequent connects honor the policy." },
-  { "id": "F015", "implemented": false, "prdRefs": ["/authorize", "Security"], "description": "Issue a short-lived, signed authorization code bound to (user, tenant, client_id, redirect_uri, PKCE challenge, resource)." },
-  { "id": "F016", "implemented": false, "prdRefs": ["/authorize"], "description": "Redirect back to the client's redirect_uri with code + state on approval; return an OAuth error on deny." },
-  { "id": "F017", "implemented": false, "prdRefs": ["/token"], "description": "/oauth/token authorization_code grant: verify code, PKCE code_verifier, and redirect_uri match." },
-  { "id": "F018", "implemented": false, "prdRefs": ["/token", "Data"], "description": "Issue an Alga-signed JWT access token (iss=<base>, aud=<base>/api/mcp, sub=user, tenant, scope, client_id, short TTL)." },
-  { "id": "F019", "implemented": false, "prdRefs": ["/token", "Data"], "description": "Issue a rotating refresh token alongside the access token." },
-  { "id": "F020", "implemented": false, "prdRefs": ["/token"], "description": "refresh_token grant: validate + rotate refresh token, issue a fresh access token." },
-  { "id": "F021", "implemented": false, "prdRefs": ["/token", "Security"], "description": "Reject reused/expired authorization codes and reused (replayed) refresh tokens." },
-  { "id": "F022", "implemented": false, "prdRefs": ["/token"], "description": "Return RFC 6749-compliant token error responses (invalid_grant, invalid_client, etc.)." },
-  { "id": "F023", "implemented": false, "prdRefs": ["Client registration"], "description": "CIMD: accept an https URL as client_id, fetch the client metadata document, and validate the requested redirect_uri against it." },
-  { "id": "F024", "implemented": false, "prdRefs": ["Client registration", "Security"], "description": "CIMD fetch is SSRF-safe: https-only, host validation, timeout, response size cap, cached." },
-  { "id": "F027", "implemented": false, "prdRefs": ["Data"], "description": "Persist client records derived from CIMD (client_id URL, fetched redirect_uris, client name, cached metadata, fetched_at)." },
-  { "id": "F028", "implemented": false, "prdRefs": ["Data"], "description": "Persist grants: authorization codes, refresh tokens, consent, and revocation state (keyed by tenant/user/client)." },
-  { "id": "F029", "implemented": false, "prdRefs": ["Token validation at the MCP RS"], "description": "jsonRpcServer accepts Alga-issued access tokens: verify iss, aud=<base>/api/mcp, signature (JWKS/local key), and exp." },
-  { "id": "F030", "implemented": false, "prdRefs": ["Token validation at the MCP RS", "Security"], "description": "On RS validation, check the grant is not revoked before accepting the token." },
-  { "id": "F031", "implemented": false, "prdRefs": ["Token validation at the MCP RS"], "description": "Resolve user_id + tenant from the Alga token and dispatch tool calls under the user's identity (mint a user-scoped short-lived dispatch key)." },
-  { "id": "F032", "implemented": false, "prdRefs": ["Security", "Primary Flows"], "description": "Tool calls run under the user's existing RBAC/ABAC; a permission the user lacks is denied." },
-  { "id": "F033", "implemented": false, "prdRefs": ["Non-goals", "Rollout"], "description": "RS still accepts legacy external-IdP agent tokens (existing authenticateAgentToken path) unchanged — backward compatible." },
-  { "id": "F034", "implemented": false, "prdRefs": ["Revocation / disconnect"], "description": "/oauth/revoke (RFC 7009) revokes a grant (access + refresh)." },
-  { "id": "F035", "implemented": false, "prdRefs": ["UX/UI"], "description": "Settings → MCP: list a user's connected MCP clients (v1)." },
-  { "id": "F036", "implemented": false, "prdRefs": ["UX/UI", "Revocation / disconnect"], "description": "Settings → MCP: disconnect/revoke a connected client from the UI (v1)." },
-  { "id": "F037", "implemented": false, "prdRefs": ["Requirements"], "description": "All new AS + revoke endpoints are EE-gated (404/disabled in CE)." },
-  { "id": "F038", "implemented": false, "prdRefs": ["Data / API / Integrations"], "description": "Expose new AS capability through the @product/mcp seam (ee implementation + oss stub) consistent with existing pattern." },
-  { "id": "F039", "implemented": false, "prdRefs": ["Data"], "description": "DB migrations create mcp_oauth_clients and mcp_oauth_grants tables with tenant scoping and required indexes." },
-  { "id": "F040", "implemented": false, "prdRefs": ["Rollout / Migration"], "description": "Feature-flag / dark-release gating (reuse mcp-server flag) so the AS can ship off-by-default." }
+  {
+    "id": "F001",
+    "implemented": true,
+    "prdRefs": [
+      "AS discovery"
+    ],
+    "description": "Serve /.well-known/oauth-authorization-server (RFC 8414) advertising issuer, authorization_endpoint, token_endpoint, jwks_uri (no registration_endpoint \u2014 CIMD), response_types, grant_types, code_challenge_methods=[S256], scopes_supported."
+  },
+  {
+    "id": "F002",
+    "implemented": true,
+    "prdRefs": [
+      "PRM update"
+    ],
+    "description": "PRM (/.well-known/oauth-protected-resource) advertises authorization_servers: [https://<base>] (Alga itself) instead of the raw IdP issuers."
+  },
+  {
+    "id": "F003",
+    "implemented": true,
+    "prdRefs": [
+      "PRM update"
+    ],
+    "description": "PRM advertises a non-empty scopes_supported consistent with the AS metadata."
+  },
+  {
+    "id": "F004",
+    "implemented": true,
+    "prdRefs": [
+      "JWKS"
+    ],
+    "description": "Serve /.well-known/jwks.json publishing Alga's MCP token signing public key(s)."
+  },
+  {
+    "id": "F005",
+    "implemented": true,
+    "prdRefs": [
+      "JWKS"
+    ],
+    "description": "Signing key material managed via the secret provider; generated/loaded at startup; never logged."
+  },
+  {
+    "id": "F006",
+    "implemented": true,
+    "prdRefs": [
+      "JWKS"
+    ],
+    "description": "Signing key rotation supported (kid in JWT header; JWKS can publish current + previous)."
+  },
+  {
+    "id": "F007",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize"
+    ],
+    "description": "/oauth/authorize accepts authorization_code params and validates client_id and exact redirect_uri."
+  },
+  {
+    "id": "F008",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize",
+      "Security"
+    ],
+    "description": "PKCE required: reject authorize requests missing code_challenge or using a method other than S256."
+  },
+  {
+    "id": "F009",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize"
+    ],
+    "description": "Preserve and return the client state parameter unchanged on redirect."
+  },
+  {
+    "id": "F010",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize",
+      "Security"
+    ],
+    "description": "Accept the resource indicator (RFC 8707) and bind the requested MCP resource into the issued token's audience."
+  },
+  {
+    "id": "F011",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize",
+      "Primary Flows"
+    ],
+    "description": "If the user already has an Alga session, proceed within it (no second login)."
+  },
+  {
+    "id": "F012",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize",
+      "Primary Flows"
+    ],
+    "description": "If no Alga session, redirect to normal Alga login and return to /authorize afterward (round-trip preserved)."
+  },
+  {
+    "id": "F013",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI",
+      "Primary Flows"
+    ],
+    "description": "Render a consent screen (client name, tenant, access description, Approve/Deny)."
+  },
+  {
+    "id": "F014",
+    "implemented": true,
+    "prdRefs": [
+      "UX/UI",
+      "Security"
+    ],
+    "description": "Persist consent trust-on-first-use per (user, client); subsequent connects honor the policy."
+  },
+  {
+    "id": "F015",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize",
+      "Security"
+    ],
+    "description": "Issue a short-lived, signed authorization code bound to (user, tenant, client_id, redirect_uri, PKCE challenge, resource)."
+  },
+  {
+    "id": "F016",
+    "implemented": true,
+    "prdRefs": [
+      "/authorize"
+    ],
+    "description": "Redirect back to the client's redirect_uri with code + state on approval; return an OAuth error on deny."
+  },
+  {
+    "id": "F017",
+    "implemented": true,
+    "prdRefs": [
+      "/token"
+    ],
+    "description": "/oauth/token authorization_code grant: verify code, PKCE code_verifier, and redirect_uri match."
+  },
+  {
+    "id": "F018",
+    "implemented": true,
+    "prdRefs": [
+      "/token",
+      "Data"
+    ],
+    "description": "Issue an Alga-signed JWT access token (iss=<base>, aud=<base>/api/mcp, sub=user, tenant, scope, client_id, short TTL)."
+  },
+  {
+    "id": "F019",
+    "implemented": true,
+    "prdRefs": [
+      "/token",
+      "Data"
+    ],
+    "description": "Issue a rotating refresh token alongside the access token."
+  },
+  {
+    "id": "F020",
+    "implemented": true,
+    "prdRefs": [
+      "/token"
+    ],
+    "description": "refresh_token grant: validate + rotate refresh token, issue a fresh access token."
+  },
+  {
+    "id": "F021",
+    "implemented": true,
+    "prdRefs": [
+      "/token",
+      "Security"
+    ],
+    "description": "Reject reused/expired authorization codes and reused (replayed) refresh tokens."
+  },
+  {
+    "id": "F022",
+    "implemented": true,
+    "prdRefs": [
+      "/token"
+    ],
+    "description": "Return RFC 6749-compliant token error responses (invalid_grant, invalid_client, etc.)."
+  },
+  {
+    "id": "F023",
+    "implemented": true,
+    "prdRefs": [
+      "Client registration"
+    ],
+    "description": "CIMD: accept an https URL as client_id, fetch the client metadata document, and validate the requested redirect_uri against it."
+  },
+  {
+    "id": "F024",
+    "implemented": true,
+    "prdRefs": [
+      "Client registration",
+      "Security"
+    ],
+    "description": "CIMD fetch is SSRF-safe: https-only, host validation, timeout, response size cap, cached."
+  },
+  {
+    "id": "F027",
+    "implemented": true,
+    "prdRefs": [
+      "Data"
+    ],
+    "description": "Persist client records derived from CIMD (client_id URL, fetched redirect_uris, client name, cached metadata, fetched_at)."
+  },
+  {
+    "id": "F028",
+    "implemented": true,
+    "prdRefs": [
+      "Data"
+    ],
+    "description": "Persist grants: authorization codes, refresh tokens, consent, and revocation state (keyed by tenant/user/client)."
+  },
+  {
+    "id": "F029",
+    "implemented": true,
+    "prdRefs": [
+      "Token validation at the MCP RS"
+    ],
+    "description": "jsonRpcServer accepts Alga-issued access tokens: verify iss, aud=<base>/api/mcp, signature (JWKS/local key), and exp."
+  },
+  {
+    "id": "F030",
+    "implemented": true,
+    "prdRefs": [
+      "Token validation at the MCP RS",
+      "Security"
+    ],
+    "description": "On RS validation, check the grant is not revoked before accepting the token."
+  },
+  {
+    "id": "F031",
+    "implemented": true,
+    "prdRefs": [
+      "Token validation at the MCP RS"
+    ],
+    "description": "Resolve user_id + tenant from the Alga token and dispatch tool calls under the user's identity (mint a user-scoped short-lived dispatch key)."
+  },
+  {
+    "id": "F032",
+    "implemented": true,
+    "prdRefs": [
+      "Security",
+      "Primary Flows"
+    ],
+    "description": "Tool calls run under the user's existing RBAC/ABAC; a permission the user lacks is denied."
+  },
+  {
+    "id": "F033",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Rollout"
+    ],
+    "description": "RS still accepts legacy external-IdP agent tokens (existing authenticateAgentToken path) unchanged \u2014 backward compatible."
+  },
+  {
+    "id": "F034",
+    "implemented": true,
+    "prdRefs": [
+      "Revocation / disconnect"
+    ],
+    "description": "/oauth/revoke (RFC 7009) revokes a grant (access + refresh)."
+  },
+  {
+    "id": "F035",
+    "implemented": false,
+    "prdRefs": [
+      "UX/UI"
+    ],
+    "description": "Settings \u2192 MCP: list a user's connected MCP clients (v1)."
+  },
+  {
+    "id": "F036",
+    "implemented": false,
+    "prdRefs": [
+      "UX/UI",
+      "Revocation / disconnect"
+    ],
+    "description": "Settings \u2192 MCP: disconnect/revoke a connected client from the UI (v1)."
+  },
+  {
+    "id": "F037",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "description": "All new AS + revoke endpoints are EE-gated (404/disabled in CE)."
+  },
+  {
+    "id": "F038",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Expose new AS capability through the @product/mcp seam (ee implementation + oss stub) consistent with existing pattern."
+  },
+  {
+    "id": "F039",
+    "implemented": true,
+    "prdRefs": [
+      "Data"
+    ],
+    "description": "DB migrations create mcp_oauth_clients and mcp_oauth_grants tables with tenant scoping and required indexes."
+  },
+  {
+    "id": "F040",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration"
+    ],
+    "description": "Feature-flag / dark-release gating (reuse mcp-server flag) so the AS can ship off-by-default."
+  }
 ]
