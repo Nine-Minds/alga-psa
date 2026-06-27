@@ -1004,6 +1004,17 @@
         "step3": "55555",
         "canonicalHostFallback": "55555"
       },
+      "appliance": {
+        "helpText": "55555",
+        "checklistTitle": "55555",
+        "step1Prefix": "55555",
+        "step1Suffix": "55555",
+        "step2": "55555",
+        "step3": "55555",
+        "step4": "55555",
+        "docLinkText": "55555",
+        "neverSeenWarning": "55555"
+      },
       "badges": {
         "pending_dns": "55555",
         "verifying_dns": "55555",

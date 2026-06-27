@@ -1004,6 +1004,17 @@
         "step3": "Use o botão Atualizar para acompanhar o progresso do aprovisionamento. Os seus administradores serão notificados por email se o aprovisionamento falhar.",
         "canonicalHostFallback": "anfitrião canónico"
       },
+      "appliance": {
+        "helpText": "Aponte este nome de host para o seu appliance e faça com que o seu proxy reverso encaminhe o cabeçalho Host original antes de salvar.",
+        "checklistTitle": "Configuração do proxy reverso",
+        "step1Prefix": "Aponte ",
+        "step1Suffix": " para este appliance (um registro A para o seu endereço ou um CNAME para o seu host de appliance).",
+        "step2": "No seu proxy reverso, termine o TLS para o domínio e encaminhe para este appliance na porta 3000, preservando o cabeçalho Host original (ex. proxy_set_header Host $host) e enviando X-Forwarded-Proto: https.",
+        "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
+        "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
+        "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
+        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original."
+      },
       "badges": {
         "pending_dns": "DNS Pendente",
         "verifying_dns": "A Verificar DNS",

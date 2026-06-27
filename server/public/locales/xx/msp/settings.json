@@ -1004,6 +1004,17 @@
         "step3": "11111",
         "canonicalHostFallback": "11111"
       },
+      "appliance": {
+        "helpText": "11111",
+        "checklistTitle": "11111",
+        "step1Prefix": "11111",
+        "step1Suffix": "11111",
+        "step2": "11111",
+        "step3": "11111",
+        "step4": "11111",
+        "docLinkText": "11111",
+        "neverSeenWarning": "11111"
+      },
       "badges": {
         "pending_dns": "11111",
         "verifying_dns": "11111",
