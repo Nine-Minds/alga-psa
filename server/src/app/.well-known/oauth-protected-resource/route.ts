@@ -1,6 +1,7 @@
 /**
  * OAuth 2.0 Protected Resource Metadata (RFC 9728) for the MCP resource (EE).
- * Advertises AlgaPSA itself as the authorization server (Alga is now the MCP AS).
+ * Advertises AlgaPSA itself as the authorization server when the Alga MCP AS is
+ * enabled; otherwise advertises the legacy trusted IdPs (dark-release safe).
  * Implementation loaded via the @product/mcp seam.
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,8 +10,10 @@ import { isEnterpriseEdition } from '@/lib/features';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Public discovery doc — env-dependent and never CDN-cacheable (a stale entry
-// previously pinned an internal-origin response; see plan + PR #2801).
+// This doc is env- and tenant-dependent and `force-dynamic` only governs Next's
+// rendering, not the CDN. Without an explicit directive a fronting CDN (CloudFront)
+// caches GETs under its default TTL, which once pinned a stale internal-origin
+// response for ~24h. `no-store` keeps OAuth discovery fresh everywhere (PR #2801).
 const NO_STORE = { 'Cache-Control': 'no-store, max-age=0' } as const;
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
