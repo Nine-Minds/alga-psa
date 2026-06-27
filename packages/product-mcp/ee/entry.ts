@@ -1,6 +1,7 @@
 // EE implementation surface for the remote MCP server + governance.
 // Resolves to ee/server/src/lib/mcp/* via the @ee alias in EE builds.
 export { handleMcpJsonRpc } from '@ee/lib/mcp/jsonRpcServer';
+export { resolvePublicBaseUrl } from '@ee/lib/mcp/baseUrl';
 export {
   createAgent,
   listAgents,

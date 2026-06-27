@@ -12,15 +12,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
-  const { listAllActiveIssuers } = await import('@product/mcp/entry');
+  const { listAllActiveIssuers, resolvePublicBaseUrl } = await import('@product/mcp/entry');
   let issuers: string[] = [];
   try {
     issuers = await listAllActiveIssuers();
   } catch {
     issuers = [];
   }
+  // Public discovery doc — external clients (e.g. claude.ai) read this, so the
+  // advertised resource must be the public origin, not the internal upstream one.
+  const baseUrl = await resolvePublicBaseUrl(req);
   return NextResponse.json({
-    resource: `${req.nextUrl.origin}/api/mcp`,
+    resource: `${baseUrl}/api/mcp`,
     authorization_servers: issuers,
     bearer_methods_supported: ['header'],
     scopes_supported: [],

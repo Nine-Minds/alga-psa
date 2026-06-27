@@ -14,6 +14,7 @@ import { loadMcpRegistry } from '@/lib/mcp/loadRegistry';
 import { authenticateAgentToken, looksLikeJwt } from './idpToken';
 import { mintAgentSessionKey } from './agents';
 import { writeAgentAudit } from './agentAudit';
+import { resolvePublicBaseUrl } from './baseUrl';
 
 // Minimal Streamable-HTTP MCP server. Handles JSON-RPC over POST with single
 // application/json responses (sufficient for initialize / tools/list /
@@ -236,7 +237,10 @@ export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> 
   if (authResult.ok === false) {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (authResult.wwwAuthenticate) {
-      headers['WWW-Authenticate'] = `Bearer resource_metadata="${req.nextUrl.origin}/.well-known/oauth-protected-resource"`;
+      // Public discovery pointer — external clients (e.g. claude.ai) chase this,
+      // so it must be the public origin, not the internal upstream one.
+      const publicBase = await resolvePublicBaseUrl(req);
+      headers['WWW-Authenticate'] = `Bearer resource_metadata="${publicBase}/.well-known/oauth-protected-resource"`;
     }
     return new NextResponse(JSON.stringify({ error: authResult.error }), { status: authResult.status, headers });
   }
