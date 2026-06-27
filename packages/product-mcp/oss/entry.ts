@@ -2,9 +2,23 @@
 // is bundled into CE builds in place of the EE implementation so no EE source
 // ships in CE. Route shells also gate on isEnterpriseEdition() before calling.
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 const enterpriseOnly = () =>
   NextResponse.json({ error: 'The MCP server is an Enterprise feature.' }, { status: 404 });
+
+// Mirrors @ee/lib/mcp/baseUrl. The MCP discovery routes gate on
+// isEnterpriseEdition() before calling this, so it is unreachable in CE; kept
+// type-compatible (and harmlessly functional) so the route shells type-check
+// against either edition's seam entry.
+export async function resolvePublicBaseUrl(req: NextRequest): Promise<string> {
+  const base =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXTAUTH_URL ||
+    req.nextUrl.origin ||
+    'http://localhost:3000';
+  return base.replace(/\/$/, '');
+}
 
 // Mirrors @ee/lib/mcp/adminAuth's McpAdminContext so the route shells type-check
 // identically against either edition's seam entry.
