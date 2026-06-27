@@ -33,6 +33,28 @@ describe('document type registry', () => {
     expect(getDocumentTypeStandardAst('sales-order')).not.toBe(ast);
   });
 
+  it('registers packing-slip and pick-list as additional document types', () => {
+    expect(DOCUMENT_TYPES).toEqual(expect.arrayContaining(['sales-order', 'packing-slip', 'pick-list']));
+    expect(getDocumentTypeRegistryEntry('packing-slip').label).toBe('Packing Slip');
+    expect(getDocumentTypeRegistryEntry('pick-list').label).toBe('Pick List');
+  });
+
+  it('renders the packing slip and pick list standards against the shared SO sample', async () => {
+    for (const [type, marker, absent] of [
+      ['packing-slip', 'PACKING SLIP', 'Order Total'],
+      ['pick-list', 'PICK LIST', 'Ship To'],
+    ] as const) {
+      const entry = getDocumentTypeRegistryEntry(type);
+      const ast = getDocumentTypeStandardAst(type);
+      const evaluation = evaluateTemplateAst(ast, entry.buildSampleViewModel());
+      const html = await renderTemplateAstHtmlDocument(ast, evaluation, { title: type });
+      expect(html).toContain(marker);
+      expect(html).toContain('SO-00042');
+      // packing slip / pick list omit prices/customer respectively
+      expect(html).not.toContain(absent);
+    }
+  });
+
   it('the sample view model renders against the standard template (the preview path)', async () => {
     const entry = getDocumentTypeRegistryEntry('sales-order');
     const sample = entry.buildSampleViewModel();

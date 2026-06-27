@@ -5,12 +5,11 @@ import {
   resolveDocumentTemplateAst,
   type DocumentTemplateSource,
 } from '../document-templates/resolution';
-import { getDocumentTypeStandardAst } from '../document-templates/registry';
+import { getDocumentTypeRegistryEntry, getDocumentTypeStandardAst, type DocumentType } from '../document-templates/registry';
 import {
   fetchClientOverrideTemplateAst,
   fetchTenantDefaultTemplateAst,
 } from '../document-templates/storage';
-import { STANDARD_SALES_ORDER_CONFIRMATION_CODE } from './standardTemplates';
 
 export interface ResolveSalesOrderTemplateResult {
   ast: TemplateAst;
@@ -19,28 +18,28 @@ export interface ResolveSalesOrderTemplateResult {
 }
 
 /**
- * Resolve the template AST for a Sales Order document through the generic resolver: a client-scoped
- * override wins, else the tenant default, else the registered standard confirmation. The lookups
- * query the generic document_template_assignments / document_templates tables; with no stored
- * assignments this lands on the standard.
+ * Resolve the template AST for a Sales Order document of a given type (sales-order confirmation,
+ * packing slip, or pick list — all rendered from the same SO data) through the generic resolver:
+ * a client-scoped override wins, else the tenant default, else the type's registered standard.
  */
 export async function resolveSalesOrderTemplateAst(
   knex: Knex | Knex.Transaction,
   tenant: string,
+  documentType: DocumentType = 'sales-order',
   opts?: { clientId?: string | null },
 ): Promise<ResolveSalesOrderTemplateResult> {
   const { ast, source } = await resolveDocumentTemplateAst({
     fetchOverride: () =>
       opts?.clientId
-        ? fetchClientOverrideTemplateAst(knex, tenant, 'sales-order', opts.clientId)
+        ? fetchClientOverrideTemplateAst(knex, tenant, documentType, opts.clientId)
         : Promise.resolve(null),
-    fetchTenantDefault: () => fetchTenantDefaultTemplateAst(knex, tenant, 'sales-order'),
-    getStandard: () => getDocumentTypeStandardAst('sales-order'),
+    fetchTenantDefault: () => fetchTenantDefaultTemplateAst(knex, tenant, documentType),
+    getStandard: () => getDocumentTypeStandardAst(documentType),
   });
 
   return {
     ast,
     source,
-    code: source === 'standard' ? STANDARD_SALES_ORDER_CONFIRMATION_CODE : null,
+    code: source === 'standard' ? getDocumentTypeRegistryEntry(documentType).defaultStandardCode : null,
   };
 }

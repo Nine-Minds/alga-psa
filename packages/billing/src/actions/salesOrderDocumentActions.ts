@@ -11,8 +11,17 @@ import { createPDFGenerationService } from '../services/pdfGenerationService';
  * Returns the bytes as a plain number[] so it can cross the server-action / route boundary.
  * Lives in billing because the render pipeline does; inventory cannot depend on billing.
  */
+export type SalesOrderDocumentType = 'sales-order' | 'packing-slip' | 'pick-list';
+
+// Note: a 'use server' file may only export async functions (plus erased types) — no object/const
+// exports, or Next throws "use server file can only export async functions".
 export const downloadSalesOrderPDF = withAuth(
-  async (user, { tenant }, soId: string): Promise<{ pdfData: number[]; soNumber: string }> => {
+  async (
+    user,
+    { tenant },
+    soId: string,
+    documentType: SalesOrderDocumentType = 'sales-order',
+  ): Promise<{ pdfData: number[]; soNumber: string; documentType: SalesOrderDocumentType }> => {
     if (!(await hasPermission(user, 'sales_order', 'read'))) {
       throw new Error('Permission denied: cannot download sales order documents');
     }
@@ -24,8 +33,12 @@ export const downloadSalesOrderPDF = withAuth(
     }
 
     const pdfGenerationService = createPDFGenerationService(tenant);
-    const pdfBuffer = await pdfGenerationService.generatePDF({ salesOrderId: soId, userId: user.user_id });
+    const pdfBuffer = await pdfGenerationService.generatePDF({
+      salesOrderId: soId,
+      salesOrderDocumentType: documentType,
+      userId: user.user_id,
+    });
 
-    return { pdfData: Array.from(pdfBuffer), soNumber: so.so_number };
+    return { pdfData: Array.from(pdfBuffer), soNumber: so.so_number, documentType };
   },
 );

@@ -56,6 +56,8 @@ export interface QuotePDFOptions {
 
 export interface SalesOrderPDFOptions {
   salesOrderId: string;
+  /** Which Sales Order document to render — confirmation (default), packing slip, or pick list. */
+  documentType?: 'sales-order' | 'packing-slip' | 'pick-list';
   templateCode?: string;
   templateAst?: TemplateAst;
 }
@@ -84,7 +86,7 @@ export class PDFGenerationService {
 
   // ---- Generic entry points ------------------------------------------------
 
-  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
+  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: 'sales-order' | 'packing-slip' | 'pick-list'; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
     let htmlContent: string;
     let templateAst: TemplateAst | null = null;
 
@@ -97,7 +99,7 @@ export class PDFGenerationService {
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
     } else if (options.salesOrderId) {
-      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, templateAst: options.templateAst });
+      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst });
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
     } else if (options.documentId) {
@@ -447,10 +449,11 @@ export class PDFGenerationService {
         throw new Error(`Sales order ${options.salesOrderId} not found`);
       }
 
+      const documentType = options.documentType ?? 'sales-order';
       const templateAst = options.templateAst
         ?? (options.templateCode
           ? getStandardSalesOrderTemplateAstByCode(options.templateCode)
-          : (await resolveSalesOrderTemplateAst(knex, this.tenant, { clientId: viewModel.client_id })).ast);
+          : (await resolveSalesOrderTemplateAst(knex, this.tenant, documentType, { clientId: viewModel.client_id })).ast);
 
       if (!templateAst) {
         throw new Error('No sales order template AST available for PDF generation');

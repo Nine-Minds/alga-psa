@@ -331,7 +331,7 @@
   {
     "id": "F203",
     "description": "Phase 3: packing slip document type (registered)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P3"
     ]
@@ -339,7 +339,7 @@
   {
     "id": "F204",
     "description": "Phase 3: pick list document type (registered)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P3"
     ]

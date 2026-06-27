@@ -7,6 +7,14 @@ import {
   STANDARD_SALES_ORDER_TEMPLATE_ASTS,
   getStandardSalesOrderTemplateAstByCode,
 } from '../sales-order-template-ast/standardTemplates';
+import {
+  STANDARD_PACKING_SLIP_CODE,
+  STANDARD_PACKING_SLIP_TEMPLATE_ASTS,
+  STANDARD_PICK_LIST_CODE,
+  STANDARD_PICK_LIST_TEMPLATE_ASTS,
+  getStandardPackingSlipTemplateAstByCode,
+  getStandardPickListTemplateAstByCode,
+} from '../sales-order-template-ast/otherDocuments';
 
 /**
  * The generic document-template registry (Approach C). Each registered document type contributes
@@ -17,7 +25,7 @@ import {
  * Sales Order is the first registered type. Invoice and quote keep their existing dedicated stacks
  * for now; the registry is shaped so they could migrate onto it later.
  */
-export type DocumentType = 'sales-order';
+export type DocumentType = 'sales-order' | 'packing-slip' | 'pick-list';
 
 export interface DocumentTypeRegistryEntry {
   /** Human label for menus / the management route. */
@@ -40,6 +48,24 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     defaultStandardCode: STANDARD_SALES_ORDER_CONFIRMATION_CODE,
     standardCodes: Object.keys(STANDARD_SALES_ORDER_TEMPLATE_ASTS),
     getStandardTemplateAstByCode: getStandardSalesOrderTemplateAstByCode,
+    buildBindings: buildSalesOrderTemplateBindings,
+    buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+  },
+  // Packing slip + pick list render from the SAME Sales Order data, so they reuse the SO bindings +
+  // sample; only their standard templates differ. Adding a document type is "register an entry".
+  'packing-slip': {
+    label: 'Packing Slip',
+    defaultStandardCode: STANDARD_PACKING_SLIP_CODE,
+    standardCodes: Object.keys(STANDARD_PACKING_SLIP_TEMPLATE_ASTS),
+    getStandardTemplateAstByCode: getStandardPackingSlipTemplateAstByCode,
+    buildBindings: buildSalesOrderTemplateBindings,
+    buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+  },
+  'pick-list': {
+    label: 'Pick List',
+    defaultStandardCode: STANDARD_PICK_LIST_CODE,
+    standardCodes: Object.keys(STANDARD_PICK_LIST_TEMPLATE_ASTS),
+    getStandardTemplateAstByCode: getStandardPickListTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
   },

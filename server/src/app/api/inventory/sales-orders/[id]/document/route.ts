@@ -9,18 +9,24 @@
  * is here (server app) because the inventory package cannot depend on billing.
  */
 
-import { downloadSalesOrderPDF } from '@alga-psa/billing/actions';
+import { downloadSalesOrderPDF, type SalesOrderDocumentType } from '@alga-psa/billing/actions';
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+const VALID_TYPES: SalesOrderDocumentType[] = ['sales-order', 'packing-slip', 'pick-list'];
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const typeParam = new URL(request.url).searchParams.get('type');
+  const documentType: SalesOrderDocumentType =
+    typeParam && (VALID_TYPES as string[]).includes(typeParam) ? (typeParam as SalesOrderDocumentType) : 'sales-order';
   try {
-    const { pdfData, soNumber } = await downloadSalesOrderPDF(id);
+    const { pdfData, soNumber } = await downloadSalesOrderPDF(id, documentType);
     const body = new Uint8Array(pdfData);
+    const suffix = documentType === 'sales-order' ? '' : `-${documentType}`;
     return new Response(body, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${soNumber || id}.pdf"`,
+        'Content-Disposition': `attachment; filename="${soNumber || id}${suffix}.pdf"`,
         'Cache-Control': 'no-store',
       },
     });
