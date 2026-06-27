@@ -53,7 +53,11 @@ export function buildAuthServerMetadata(base: string): Record<string, unknown> {
     code_challenge_methods_supported: ['S256'],
     token_endpoint_auth_methods_supported: ['none'],
     scopes_supported: [MCP_SCOPE],
-    // CIMD: client_id is an https metadata-document URL; no DCR endpoint.
+    // CIMD: client_id is an https metadata-document URL; no DCR endpoint. Clients
+    // (e.g. claude.ai) only choose the CIMD path when the AS advertises BOTH this
+    // flag AND 'none' in token_endpoint_auth_methods_supported — without it they
+    // fall back to DCR, find no registration_endpoint, and demand a manual id.
+    client_id_metadata_document_supported: true,
     response_modes_supported: ['query'],
   };
 }
