@@ -22,14 +22,37 @@ import {
   cancelSalesOrder,
 } from '../actions';
 
-/** Trigger a browser download of the Sales Order document (Order Confirmation) PDF. */
-function downloadSalesOrderDocument(soId: string): void {
-  const a = document.createElement('a');
-  a.href = `/api/v1/sales-orders/${soId}/document`;
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+/**
+ * Trigger a browser download of the Sales Order document (Order Confirmation) PDF.
+ * Fetches the endpoint so a failure (not found / permission / render error) surfaces as a toast
+ * instead of navigating the user to a raw JSON error body.
+ */
+async function downloadSalesOrderDocument(soId: string, soNumber: string): Promise<void> {
+  try {
+    const res = await fetch(`/api/v1/sales-orders/${soId}/document`);
+    if (!res.ok) {
+      let message = "Couldn't generate the document.";
+      try {
+        const body = await res.json();
+        if (body?.error) message = body.error;
+      } catch {
+        /* non-JSON error body — keep the generic message */
+      }
+      toast.error(message);
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${soNumber || soId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    toast.error("Couldn't generate the document.");
+  }
 }
 
 const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
@@ -212,7 +235,7 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
             id={`document-so-${rec.so_id}`}
             variant="outline"
             size="sm"
-            onClick={() => downloadSalesOrderDocument(rec.so_id)}
+            onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number)}
             disabled={rec.status === 'cancelled'}
           >
             Document

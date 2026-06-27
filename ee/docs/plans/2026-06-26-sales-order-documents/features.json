@@ -155,7 +155,7 @@
   {
     "id": "F020",
     "description": "Phase 1: error handling \u2014 SO not found / no lines -> clear message, no PDF",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Error handling"
     ]
@@ -163,7 +163,7 @@
   {
     "id": "F021",
     "description": "Phase 1: error handling \u2014 evaluate/render throws -> 'Couldn't generate the document' + log",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Error handling"
     ]
