@@ -8,9 +8,16 @@ import { isEnterpriseEdition } from '@/lib/features';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// This doc is env- and tenant-dependent (public origin + active issuers), and
+// `force-dynamic` only governs Next's rendering — not the CDN. Without an explicit
+// directive a fronting CDN (CloudFront here) caches GETs under its default TTL,
+// which pinned a stale internal-origin response for ~24h. `no-store` keeps OAuth
+// discovery fresh everywhere instead of relying on per-distribution cache config.
+const NO_STORE = { 'Cache-Control': 'no-store, max-age=0' } as const;
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
   }
   const { listAllActiveIssuers, resolvePublicBaseUrl } = await import('@product/mcp/entry');
   let issuers: string[] = [];
@@ -22,10 +29,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // Public discovery doc — external clients (e.g. claude.ai) read this, so the
   // advertised resource must be the public origin, not the internal upstream one.
   const baseUrl = await resolvePublicBaseUrl(req);
-  return NextResponse.json({
-    resource: `${baseUrl}/api/mcp`,
-    authorization_servers: issuers,
-    bearer_methods_supported: ['header'],
-    scopes_supported: [],
-  });
+  return NextResponse.json(
+    {
+      resource: `${baseUrl}/api/mcp`,
+      authorization_servers: issuers,
+      bearer_methods_supported: ['header'],
+      scopes_supported: [],
+    },
+    { headers: NO_STORE },
+  );
 }
