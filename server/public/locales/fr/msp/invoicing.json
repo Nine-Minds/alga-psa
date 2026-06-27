@@ -28,8 +28,12 @@
         "group": "Groupe",
         "servicePeriod": "Période de service",
         "invoiceWindow": "Fenêtre de facture",
-        "included": "Compris"
-      }
+        "included": "Compris",
+        "charge": "Type",
+        "status": "Statut",
+        "amount": "Montant"
+      },
+      "pageScopeNote": "{{count}} groupe(s) sur cette page"
     },
     "groups": {
       "item": "{{count}} article",
@@ -41,9 +45,6 @@
       "line": "Ligne {{count}}",
       "line_one": "Ligne {{count}}",
       "line_other": "Lignes {{count}}",
-      "obligationCount": "Obligation {{count}}",
-      "obligationCount_one": "Obligation {{count}}",
-      "obligationCount_other": "Obligations {{count}}",
       "includedCount": "{{count}} article inclus",
       "includedCount_one": "{{count}} article inclus",
       "includedCount_other": "Articles {{count}} inclus",
@@ -208,7 +209,12 @@
         "scheduleKey": "Clé de planification"
       },
       "reviewLink": "Examiner les périodes de service",
-      "helpText": "Réparez les enregistrements canoniques de période de service au lieu de générer une ligne de facture de compatibilité."
+      "helpText": "Réparez les enregistrements canoniques de période de service au lieu de générer une ligne de facture de compatibilité.",
+      "fixAll": "Tout réparer",
+      "fixAllBusy": "Reconstruction…",
+      "fixAllResult": "{{schedules}} planning(s) reconstruit(s) pour {{clients}} client(s).",
+      "fixAllError": "Impossible de reconstruire les périodes de service. Veuillez réessayer.",
+      "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service."
     },
     "errors": {
       "title": "Des erreurs se sont produites lors de la finalisation des factures :",
@@ -217,6 +223,61 @@
     },
     "loading": {
       "billingData": "Chargement des données de facturation"
+    },
+    "views": {
+      "all": "Tout",
+      "ready": "Prêt",
+      "combinable": "Combinable",
+      "attention": "Attention requise",
+      "notYetDue": "Pas encore dû"
+    },
+    "status": {
+      "ready": "Prêt",
+      "combine": "Combiner",
+      "separate": "Séparé",
+      "notYetDue": "Pas encore dû",
+      "approval": "Approbation",
+      "blocked": "Bloqué"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} sélectionné(s)",
+      "breakdown": "{{invoices}} facture(s) · {{combine}} combinées · {{separate}} séparées",
+      "knownNow": "connu maintenant",
+      "knownPlusAtGeneration": "connu maintenant · {{count}} calculé à la génération",
+      "atGenerationLines": "{{count}} élément(s)",
+      "empty": "Sélectionnez des groupes ou des éléments pour prévisualiser ou générer des factures.",
+      "pageScope": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculé à la génération",
+      "plusAtGeneration": "+ {{count}} à la génération"
+    },
+    "window": {
+      "open": "Ouverte",
+      "opensOn": "Ouvre le {{date}}",
+      "notOpen": "Pas encore ouverte"
+    },
+    "legend": {
+      "confirmed": "Montant connu maintenant",
+      "atGeneration": "Calculé à la génération",
+      "combine": "Combiner en une facture",
+      "separate": "À facturer séparément",
+      "notYetDue": "Pas encore dû"
+    },
+    "filters": {
+      "title": "Filtres",
+      "windowOpen": "Fenêtre ouverte",
+      "charge": "Type",
+      "currency": "Devise",
+      "any": "tout",
+      "clear": "Effacer",
+      "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
     }
   },
   "manualInvoices": {

@@ -5222,14 +5222,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "description": "Asset type stored in assets.asset_type.",
         "schema": {
           "type": "string",
-          "enum": [
-            "workstation",
-            "network_device",
-            "server",
-            "mobile_device",
-            "printer",
-            "unknown"
-          ],
           "description": "Asset type stored in assets.asset_type."
         }
       },
@@ -5403,14 +5395,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "enum": [
-            "workstation",
-            "network_device",
-            "server",
-            "mobile_device",
-            "printer",
-            "unknown"
-          ],
           "description": "Asset type. Determines the optional extension data table."
         },
         "asset_tag": {
@@ -5690,14 +5674,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ]
+            "description": "Asset type slug from the tenant asset type registry."
           },
           "description": "Filter to these asset types. Repeat the param or pass a comma-separated list."
         }
@@ -5975,14 +5952,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ]
+            "description": "Asset type slug from the tenant asset type registry."
           },
           "description": "Optional asset type filters."
         }
@@ -6185,14 +6155,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "enum": [
-            "workstation",
-            "network_device",
-            "server",
-            "mobile_device",
-            "printer",
-            "unknown"
-          ],
           "description": "Asset type to store in assets.asset_type."
         },
         "asset_tag": {
@@ -10064,6 +10026,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": [
                   "string",
                   "null"
+                ],
+                "enum": [
+                  "company",
+                  "individual"
                 ]
               },
               "tax_id_number": {
@@ -10365,7 +10331,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "client_type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "company",
+            "individual"
+          ]
         },
         "tax_id_number": {
           "type": "string"
@@ -10507,6 +10477,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ],
+              "enum": [
+                "company",
+                "individual"
               ]
             },
             "tax_id_number": {
@@ -10805,6 +10779,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ],
+              "enum": [
+                "company",
+                "individual"
               ]
             },
             "tax_id_number": {
@@ -11071,7 +11049,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "client_type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "company",
+            "individual"
+          ]
         },
         "tax_id_number": {
           "type": "string"
@@ -11213,6 +11195,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ],
+              "enum": [
+                "company",
+                "individual"
               ]
             },
             "tax_id_number": {
@@ -17183,9 +17169,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_financial_invoices",
     "method": "get",
     "path": "/api/v1/financial/invoices",
-    "displayName": "List financial invoices (transaction list wiring)",
-    "summary": "List financial invoices (transaction list wiring)",
-    "description": "Route file maps to ApiFinancialController.list(), which is transaction-oriented (resource financial/transactions) rather than invoice-specific list logic. Current response is the generic transaction list envelope with financial report links.",
+    "displayName": "List invoices",
+    "summary": "List invoices",
+    "description": "Returns a paginated list of invoices for the tenant. Maps to ApiFinancialController.listInvoices() → FinancialService.listInvoices(), filtered and sorted by the supplied query parameters. Each item carries the invoice record (including client_name) plus HATEOAS links.",
     "tags": [
       "Financial"
     ],
@@ -17211,8 +17197,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at).",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at)."
         }
       },
       {
@@ -17231,8 +17219,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
+        "description": "Matches invoice_number or client name.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Matches invoice_number or client name."
         }
       },
       {
@@ -17268,6 +17258,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
         "name": "client_id",
         "in": "query",
         "required": false,
@@ -17277,7 +17279,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "invoice_id",
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "sent",
+            "paid",
+            "overdue",
+            "cancelled",
+            "pending",
+            "prepayment",
+            "partially_applied"
+          ]
+        }
+      },
+      {
+        "name": "billing_cycle_id",
         "in": "query",
         "required": false,
         "schema": {
@@ -17286,7 +17306,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "type",
+        "name": "due_date_from",
         "in": "query",
         "required": false,
         "schema": {
@@ -17294,7 +17314,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "status",
+        "name": "due_date_to",
         "in": "query",
         "required": false,
         "schema": {
@@ -17318,7 +17338,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "include_expired",
+        "name": "is_manual",
         "in": "query",
         "required": false,
         "schema": {
@@ -17330,7 +17350,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "expiring_soon",
+        "name": "has_credit_applied",
         "in": "query",
         "required": false,
         "schema": {
@@ -17339,79 +17359,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "true",
             "false"
           ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
         }
       }
     ],
@@ -17673,9 +17620,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_financial_paymentmethods",
     "method": "get",
     "path": "/api/v1/financial/payment-methods",
-    "displayName": "List payment methods (transaction list wiring)",
-    "summary": "List payment methods (transaction list wiring)",
-    "description": "Current route wiring calls ApiFinancialController.list(), which lists transaction records and not payment methods. This discrepancy is documented as implementation behavior.",
+    "displayName": "List payment methods",
+    "summary": "List payment methods",
+    "description": "Returns a paginated list of payment methods for the tenant. Maps to ApiFinancialController.listPaymentMethods() → FinancialService.listPaymentMethods(). Soft-deleted methods are excluded by default. Each item carries the payment method record (including client_name) plus HATEOAS links.",
     "tags": [
       "Financial"
     ],
@@ -17701,8 +17648,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. One of created_at, updated_at, type, is_default (defaults to created_at).",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Sort field. One of created_at, updated_at, type, is_default (defaults to created_at)."
         }
       },
       {
@@ -17721,8 +17670,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
+        "description": "Matches client name or card last4.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Matches client name or card last4."
         }
       },
       {
@@ -17758,16 +17709,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "client_id",
+        "name": "is_active",
         "in": "query",
         "required": false,
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       },
       {
-        "name": "invoice_id",
+        "name": "client_id",
         "in": "query",
         "required": false,
         "schema": {
@@ -17780,35 +17734,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "credit_card",
+            "bank_account"
+          ]
         }
       },
       {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_min",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
+        "name": "is_default",
         "in": "query",
         "required": false,
         "schema": {
@@ -17820,88 +17754,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "expiring_soon",
+        "name": "exclude_deleted",
         "in": "query",
         "required": false,
+        "description": "Exclude soft-deleted payment methods. Defaults to true.",
         "schema": {
           "type": "string",
           "enum": [
             "true",
             "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
+          ],
+          "description": "Exclude soft-deleted payment methods. Defaults to true."
         }
       }
     ],
@@ -22833,9 +22696,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_invoices_id_pdf",
     "method": "get",
     "path": "/api/v1/invoices/{id}/pdf",
-    "displayName": "Redirect to invoice PDF download",
-    "summary": "Redirect to invoice PDF download",
-    "description": "Attempts to generate/load PDF metadata and redirects to download_url when present.",
+    "displayName": "Download invoice PDF",
+    "summary": "Download invoice PDF",
+    "description": "Generates (when needed) and returns the invoice PDF as a raw application/pdf attachment.",
     "tags": [
       "Invoices"
     ],
@@ -22858,9 +22721,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_invoices_id_pdf",
     "method": "post",
     "path": "/api/v1/invoices/{id}/pdf",
-    "displayName": "Generate invoice PDF asset",
-    "summary": "Generate invoice PDF asset",
-    "description": "Generates/refreshes invoice PDF metadata and returns file_id plus optional download_url.",
+    "displayName": "Generate and download invoice PDF",
+    "summary": "Generate and download invoice PDF",
+    "description": "Generates the invoice PDF and returns the raw PDF file as an application/pdf attachment.",
     "tags": [
       "Invoices"
     ],
@@ -22877,34 +22740,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
         }
       }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
+    ]
   },
   {
     "id": "get-_api_v1_financial",
@@ -23931,37 +23767,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_priorities",
     "method": "get",
     "path": "/api/v1/priorities",
-    "displayName": "List priorities",
-    "summary": "List priorities",
-    "description": "Lists ticket priorities for the tenant with pagination and sorting.",
+    "displayName": "List Priorities",
+    "summary": "Fetch ticket priorities",
+    "description": "Returns the priority catalog for the tenant. This is the canonical way to resolve a valid priority_id before creating or updating a ticket — do not infer one from a board's default_priority_id, which is frequently null. Priorities are tenant-wide (not board-scoped), but each row has an item_type (ticket, project_task, ...); when creating a ticket, use a priority whose item_type is \"ticket\". Each row includes priority_id, priority_name, order_number (sort ascending to list by urgency), color, and item_type.",
     "tags": [
       "Priorities"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
-        }
-      },
-      {
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort column, e.g. order_number to order by urgency.",
         "schema": {
           "type": "string"
         }
@@ -23970,12 +23788,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "order",
         "in": "query",
         "required": false,
+        "description": "Sort direction.",
         "schema": {
           "type": "string",
           "enum": [
             "asc",
             "desc"
           ]
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of records per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number starting at 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     ],
@@ -24005,7 +23845,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
-    }
+    },
+    "examples": [
+      {
+        "name": "Resolve a priority_id before creating a ticket",
+        "request": {
+          "query": {
+            "sort": "order_number",
+            "order": "asc",
+            "limit": 100
+          }
+        },
+        "notes": "Call this before POST /api/v1/tickets to obtain a valid priority_id. Keep only rows where item_type is \"ticket\", then map the user's intent (e.g. priority_name \"Medium\") to its priority_id. Do not read priority_id from a board record — boards often have a null default_priority_id."
+      }
+    ]
   },
   {
     "id": "get-_api_v1_priorities_id",

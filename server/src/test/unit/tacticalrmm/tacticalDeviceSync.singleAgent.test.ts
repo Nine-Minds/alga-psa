@@ -121,7 +121,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
 
   class TacticalRmmClientMock {
     async request(args: { method: string; path: string }) {
-      const m = String(args.path).match(/\/api\/beta\/v1\/agent\/([^/]+)\//);
+      const m = String(args.path).match(/\/(?:api\/)?beta\/v1\/agent\/([^/]+)\//);
       if (!m) throw new Error(`Unexpected request path: ${args.path}`);
       const agentId = decodeURIComponent(m[1]!);
       const agent = tacticalAgentById[agentId];

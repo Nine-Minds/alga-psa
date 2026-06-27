@@ -120,6 +120,21 @@ const COPY = {
     textView: 'Zobacz projekt pod adresem',
   },
 };
+SUBJECTS.pt = 'Projeto atualizado: {{project.name}}';
+COPY.pt = {
+  headerLabel: 'Projeto atualizado',
+  intro: 'Um projeto foi atualizado:',
+  projectName: 'Nome do projeto',
+  status: 'Status',
+  changes: 'Alterações',
+  updatedBy: 'Atualizado por',
+  viewButton: 'Ver projeto',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Projeto atualizado',
+  textIntro: 'Um projeto foi atualizado:',
+  textView: 'Ver projeto em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

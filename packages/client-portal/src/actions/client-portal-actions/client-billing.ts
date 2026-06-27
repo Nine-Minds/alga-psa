@@ -30,8 +30,7 @@ import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
-import { JobService } from '@alga-psa/jobs';
-import { JobStatus } from '@alga-psa/jobs';
+import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 /**
@@ -668,7 +667,6 @@ export interface ClientJobStatus {
  * Get job status - internal helper for polling
  */
 async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobStatus> {
-  const jobService = await JobService.create();
   const { knex } = await createTenantKnex(tenant);
 
   // Get job record
@@ -693,10 +691,14 @@ async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobSta
   // If completed, get the file_id from job details
   let fileId: string | undefined;
   if (status === 'completed') {
-    const details = await jobService.getJobDetails(jobId);
+    const details = await knex('job_details')
+      .where({ job_id: jobId, tenant })
+      .select('metadata');
     // Look for file_id in the metadata of completed steps
     for (const detail of details) {
-      const metadata = detail.metadata as Record<string, unknown> | undefined;
+      const metadata = (typeof detail.metadata === 'string'
+        ? JSON.parse(detail.metadata)
+        : detail.metadata) as Record<string, unknown> | undefined;
       if (metadata?.file_id && typeof metadata.file_id === 'string') {
         fileId = metadata.file_id;
         break;

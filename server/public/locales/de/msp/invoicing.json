@@ -28,8 +28,12 @@
         "group": "Gruppe",
         "servicePeriod": "Leistungszeitraum",
         "invoiceWindow": "Rechnungsfenster",
-        "included": "Im Lieferumfang enthalten"
-      }
+        "included": "Im Lieferumfang enthalten",
+        "charge": "Leistung",
+        "status": "Status",
+        "amount": "Betrag"
+      },
+      "pageScopeNote": "{{count}} Gruppe(n) auf dieser Seite"
     },
     "groups": {
       "item": "{{count}}-Element",
@@ -41,9 +45,6 @@
       "line": "{{count}}-Zeile",
       "line_one": "{{count}}-Zeile",
       "line_other": "{{count}}-Zeilen",
-      "obligationCount": "{{count}}-Verpflichtung",
-      "obligationCount_one": "{{count}}-Verpflichtung",
-      "obligationCount_other": "{{count}}-Verpflichtungen",
       "includedCount": "{{count}}-Artikel enthalten",
       "includedCount_one": "{{count}}-Artikel enthalten",
       "includedCount_other": "{{count}}-Artikel enthalten",
@@ -208,7 +209,12 @@
         "scheduleKey": "Zeitplanschlüssel"
       },
       "reviewLink": "Überprüfen Sie die Servicezeiträume",
-      "helpText": "Reparieren Sie die kanonischen Servicezeitraumdatensätze, anstatt eine Kompatibilitätsrechnungszeile zu erstellen."
+      "helpText": "Reparieren Sie die kanonischen Servicezeitraumdatensätze, anstatt eine Kompatibilitätsrechnungszeile zu erstellen.",
+      "fixAll": "Alle reparieren",
+      "fixAllBusy": "Wird neu aufgebaut…",
+      "fixAllResult": "{{schedules}} Zeitplan/Zeitpläne über {{clients}} Kunde(n) neu aufgebaut.",
+      "fixAllError": "Leistungszeiträume konnten nicht neu aufgebaut werden. Bitte versuchen Sie es erneut.",
+      "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen."
     },
     "errors": {
       "title": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",
@@ -217,6 +223,61 @@
     },
     "loading": {
       "billingData": "Abrechnungsdaten werden geladen"
+    },
+    "views": {
+      "all": "Alle",
+      "ready": "Bereit",
+      "combinable": "Kombinierbar",
+      "attention": "Aufmerksamkeit nötig",
+      "notYetDue": "Noch nicht fällig"
+    },
+    "status": {
+      "ready": "Bereit",
+      "combine": "Kombinieren",
+      "separate": "Getrennt",
+      "notYetDue": "Noch nicht fällig",
+      "approval": "Freigabe",
+      "blocked": "Blockiert"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} ausgewählt",
+      "breakdown": "{{invoices}} Rechnung(en) · {{combine}} kombiniert · {{separate}} getrennt",
+      "knownNow": "jetzt bekannt",
+      "knownPlusAtGeneration": "jetzt bekannt · {{count}} bei Erstellung berechnet",
+      "atGenerationLines": "{{count}} Posten",
+      "empty": "Wählen Sie Gruppen oder Posten, um Rechnungen anzuzeigen oder zu erstellen.",
+      "pageScope": "{{groups}} Gruppe(n) · {{obligations}} Posten"
+    },
+    "amount": {
+      "atGeneration": "Bei Erstellung berechnet",
+      "plusAtGeneration": "+ {{count}} bei Erstellung"
+    },
+    "window": {
+      "open": "Offen",
+      "opensOn": "Öffnet {{date}}",
+      "notOpen": "Noch nicht offen"
+    },
+    "legend": {
+      "confirmed": "Betrag jetzt bekannt",
+      "atGeneration": "Bei Erstellung berechnet",
+      "combine": "Zu einer Rechnung kombinieren",
+      "separate": "Muss getrennt abgerechnet werden",
+      "notYetDue": "Noch nicht fällig"
+    },
+    "filters": {
+      "title": "Filter",
+      "windowOpen": "Fenster offen",
+      "charge": "Leistung",
+      "currency": "Währung",
+      "any": "alle",
+      "clear": "Zurücksetzen",
+      "countSummary": "{{groups}} Gruppe(n) · {{obligations}} Posten"
     }
   },
   "manualInvoices": {

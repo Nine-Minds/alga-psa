@@ -29,7 +29,9 @@
       "viewDetails": "Visualizza i dettagli",
       "manageTimePeriods": "Gestisci periodi di tempo",
       "selectWorkItem": "Seleziona elemento di lavoro",
-      "clearFilter": "Cancella filtro"
+      "clearFilter": "Cancella filtro",
+      "remove": "Rimuovi",
+      "clear": "Cancella"
     },
     "states": {
       "inProgress": "In corso",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "Nessuna voce"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selezionato/i"
+    },
+    "delete": {
+      "success": "{{count}} foglio/i ore rimosso/i",
+      "partialFailure": "Impossibile rimuovere {{count}} foglio/i ore",
+      "error": "Impossibile rimuovere i fogli ore"
+    },
+    "removePeriod": {
+      "success": "{{count}} periodo/i rimosso/i",
+      "partialFailure": "Impossibile rimuovere {{count}} periodo/i",
+      "error": "Impossibile rimuovere i periodi"
+    },
+    "remove": {
+      "title": "Rimuovi elementi non utilizzati",
+      "message": "Rimuovere {{count}} periodo/i selezionato/i? I periodi di paga non utilizzati vengono rimossi per l'intera organizzazione, insieme a eventuali bozze vuote registrate al loro interno. L'operazione non può essere annullata.",
+      "timesheetMessage": "Rimuovere {{count}} foglio/i ore non utilizzato/i? Vengono rimossi solo i fogli ore in bozza vuoti e l'operazione non può essere annullata."
     }
   },
   "timeEntryForm": {

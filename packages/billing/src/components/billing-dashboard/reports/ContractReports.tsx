@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import {
@@ -102,12 +103,7 @@ const ContractReports: React.FC = () => {
     {
       title: t('contractReports.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
-      render: (value: string) => (
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-muted-foreground" />
-          {value}
-        </div>
-      )
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />
     },
     {
       title: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }),
@@ -149,7 +145,8 @@ const ContractReports: React.FC = () => {
     },
     {
       title: t('contractReports.table.client', { defaultValue: 'Client' }),
-      dataIndex: 'client_name'
+      dataIndex: 'client_name',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />
     },
     {
       title: t('contractReports.table.endDate', { defaultValue: 'End Date' }),
@@ -192,7 +189,8 @@ const ContractReports: React.FC = () => {
     },
     {
       title: t('contractReports.table.client', { defaultValue: 'Client' }),
-      dataIndex: 'client_name'
+      dataIndex: 'client_name',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />
     },
     {
       title: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }),
@@ -252,7 +250,8 @@ const ContractReports: React.FC = () => {
     },
     {
       title: t('contractReports.table.client', { defaultValue: 'Client' }),
-      dataIndex: 'client_name'
+      dataIndex: 'client_name',
+      render: (value) => <ClientNameCell clientName={value as string | null | undefined} />
     },
     {
       title: t('contractReports.table.revenueYtd', { defaultValue: 'Revenue (YTD)' }),

@@ -18,13 +18,13 @@ import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
   type ClientAccess,
-} from '@/lib/search/acl';
+} from '@alga-psa/search/acl';
 import {
   countSearchMatches,
   countSearchMatchesByType,
   encodeSearchCursor,
   runSearchQuery,
-} from '@/lib/search/query';
+} from '@alga-psa/search/query';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';

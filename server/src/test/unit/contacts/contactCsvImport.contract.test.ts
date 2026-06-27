@@ -20,6 +20,13 @@ vi.mock('@alga-psa/auth', () => ({
     action({ user_id: testState.userId, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
 }));
 
+// Grant the MSP permission gate so the CSV import logic under test actually runs.
+vi.mock('../../../../../packages/clients/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertMspPermission: vi.fn(async () => {}),
+  hasMspPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<any>('@alga-psa/db');
   return {

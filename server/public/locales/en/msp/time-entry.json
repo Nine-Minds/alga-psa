@@ -29,7 +29,9 @@
       "viewDetails": "View details",
       "manageTimePeriods": "Manage Time Periods",
       "selectWorkItem": "Select Work Item",
-      "clearFilter": "Clear filter"
+      "clearFilter": "Clear filter",
+      "remove": "Remove",
+      "clear": "Clear"
     },
     "states": {
       "inProgress": "In Progress",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "No entries"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selected"
+    },
+    "delete": {
+      "success": "{{count}} time sheet(s) removed",
+      "partialFailure": "{{count}} time sheet(s) couldn't be removed",
+      "error": "Failed to remove time sheet(s)"
+    },
+    "removePeriod": {
+      "success": "{{count}} time period(s) removed",
+      "partialFailure": "{{count}} time period(s) couldn't be removed",
+      "error": "Failed to remove time period(s)"
+    },
+    "remove": {
+      "title": "Remove unused items",
+      "message": "Remove {{count}} selected period(s)? Unused pay periods are removed for the whole organization, along with any empty draft time logged in them. This cannot be undone.",
+      "timesheetMessage": "Remove {{count}} unused time sheet(s)? Only empty draft time sheets are removed and this cannot be undone."
     }
   },
   "timeEntryForm": {

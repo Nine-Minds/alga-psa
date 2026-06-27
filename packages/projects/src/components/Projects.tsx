@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { parse } from 'date-fns';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IProject, IClient, DeletionValidationResult } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -635,18 +636,20 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       width: '12%',
       render: (value, record) => {
         const client = clients.find(c => c.client_id === value);
-        if (!client) return projectListT('noClient', 'No Client');
+        if (!client) return <ClientNameCell clientName={null} />;
 
         return (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickViewClient(value);
-            }}
-            className="text-blue-500 hover:underline text-left whitespace-normal break-words"
-          >
-            {client.client_name}
-          </button>
+          <ClientNameCell clientId={client.client_id} clientName={client.client_name} logoUrl={client.logoUrl ?? null}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickViewClient(value);
+              }}
+              className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+            >
+              {client.client_name}
+            </button>
+          </ClientNameCell>
         );
       }
     },

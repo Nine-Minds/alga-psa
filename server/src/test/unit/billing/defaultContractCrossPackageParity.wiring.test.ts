@@ -22,7 +22,12 @@ describe('default-contract cross-package parity wiring', () => {
     expect(sharedBillingSettingsSource).toContain('await ensureDefaultContractForClient(trx, params);');
     expect(sharedBillingScheduleSource).toContain('import { ensureClientBillingSettingsRow } from \'./billingSettings\';');
     expect(billingCycleAnchorActionsSource).toContain('import { ensureClientBillingSettingsRow } from \'@shared/billingClients/billingSettings\';');
-    expect(billingScheduleActionsSource).toContain('import { ensureClientBillingSettingsRow } from \'./billingCycleAnchorActions\';');
+    // billingScheduleActions now routes settings/cadence changes through the
+    // shared applyClientCadenceChange layer (which keeps the billing-settings
+    // and recurring_service_periods ledger consistent) instead of importing the
+    // ensure helper directly; assert that shared wiring stays in place.
+    expect(billingScheduleActionsSource).toContain('applyClientCadenceChange');
+    expect(billingScheduleActionsSource).toContain('from \'@alga-psa/shared/billingClients\'');
   });
 
   it('T018: integration-created clients still rely on first qualifying billing-config touchpoint for default-contract ensure', () => {

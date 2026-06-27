@@ -15,6 +15,7 @@ import {
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
+import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -850,6 +851,7 @@ function buildProcessingMetadata(params: {
             from: params.emailData.from?.email ?? null,
             to: (params.emailData.to ?? []).map((recipient) => recipient.email),
             subject: params.emailData.subject ?? null,
+            relevantHeaders: extractRelevantInboundHeaders(params.emailData),
           },
         }
       : {}),

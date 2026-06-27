@@ -57,7 +57,7 @@ WORKDIR /app/ee/temporal-workflows
 RUN npm install
 WORKDIR /app
 RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps \
-    && npm install --no-save openai@^4.104.0
+    && npm install --no-save --workspaces=false openai@^4.104.0
 
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
@@ -66,6 +66,11 @@ RUN npx tsup
 
 # Build @alga-psa/workflows (dist/lib/*.mjs required at runtime)
 WORKDIR /app/ee/packages/workflows
+RUN npx tsup
+
+# Build @alga-psa/jobs (dist/lib/handlers/*.mjs + dist/lib/fanout/index.mjs
+# required at runtime by the job + maintenance-fanout activities)
+WORKDIR /app/packages/jobs
 RUN npx tsup
 
 WORKDIR /app/ee/temporal-workflows

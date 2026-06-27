@@ -1334,6 +1334,8 @@
           },
           "connected": "Connected to NinjaOne",
           "connectedWithErrors": "NinjaOne connected with sync errors",
+          "reconnectRequired": "Wymagane ponowne połączenie z NinjaOne",
+          "reconnectRequiredDescription": "Autoryzacji NinjaOne nie można już odświeżyć (token wygasł lub został unieważniony). Połącz ponownie, aby przywrócić synchronizację urządzeń, alerty i dostęp zdalny.",
           "instanceLabel": "Instance:",
           "organizations": "{{count}} organizations",
           "devices": "{{count}} devices",
@@ -1584,6 +1586,14 @@
           "unavailable": "Informacje o webhooku niedostępne. (Wymaga uprawnień do odczytu ustawień.)",
           "url": "URL webhooka",
           "urlCopied": "Skopiowano URL webhooka do schowka."
+        },
+        "mappings": {
+          "org": "Organizacja Tactical",
+          "client": "Klient Alga",
+          "defaultContact": "Kontakt domyślny"
+        },
+        "contact": {
+          "select": "Wybierz kontakt"
         }
       },
       "tanium": {
@@ -1635,7 +1645,9 @@
           "mappedClient": "Zmapowany klient",
           "noScopes": "Nie wykryto jeszcze żadnych zakresów Tanium.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Niezmapowane"
+          "unmapped": "Niezmapowane",
+          "defaultContact": "Kontakt domyślny",
+          "selectContact": "Wybierz kontakt"
         },
         "status": {
           "connected": "Połączono",
@@ -1701,7 +1713,9 @@
           "loading": "Ładowanie…",
           "mappedClient": "Zmapowany klient",
           "noGroups": "Nie wykryto jeszcze grup. Najpierw uruchom Wykryj grupy.",
-          "unmapped": "Niezmapowana"
+          "unmapped": "Niezmapowana",
+          "defaultContact": "Kontakt domyślny",
+          "selectContact": "Wybierz kontakt"
         },
         "status": {
           "connected": "Połączono",
@@ -1732,6 +1746,76 @@
           "showSecret": "Pokaż sekret",
           "title": "Webhook alertów",
           "url": "Adres URL webhooka"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Organizacja Huntress",
+          "client": "Klient Alga",
+          "defaultContact": "Kontakt domyślny",
+          "createTickets": "Twórz zgłoszenia",
+          "status": "Status"
+        },
+        "selectContact": "Wybierz kontakt",
+        "status": {
+          "autoMatched": "Dopasowano automatycznie",
+          "mapped": "Przypisano",
+          "unmapped": "Nieprzypisane → triage"
+        },
+        "title": "Mapowanie organizacji",
+        "description": "Przypisz organizacje Huntress do klientów. Zdarzenia z nieprzypisanych organizacji trafiają do klienta zapasowego i tablicy triage.",
+        "unmappedSuffix": "({{count}} nieprzypisane)",
+        "syncButton": "Synchronizuj organizacje",
+        "loading": "Ładowanie…",
+        "empty": "Brak organizacji — kliknij „Synchronizuj organizacje”.",
+        "errors": {
+          "load": "Nie udało się załadować mapowań organizacji",
+          "sync": "Synchronizacja nie powiodła się",
+          "updateMapping": "Nie udało się zaktualizować mapowania",
+          "updateContact": "Nie udało się zaktualizować kontaktu domyślnego"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "Organizacja NinjaOne",
+          "company": "Firma Alga",
+          "defaultContact": "Kontakt domyślny",
+          "autoSync": "Autosynchronizacja",
+          "status": "Status"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Wybierz firmę",
+        "selectContact": "Wybierz kontakt",
+        "status": {
+          "mapped": "Przypisano",
+          "unmapped": "Nieprzypisane"
+        },
+        "title": "Mapowania organizacji",
+        "description": "Przypisz organizacje NinjaOne do firm Alga, aby włączyć synchronizację urządzeń.",
+        "loading": "Ładowanie mapowań organizacji...",
+        "syncing": "Synchronizowanie...",
+        "refreshButton": "Odśwież organizacje",
+        "summary": {
+          "mapped": "{{count}} przypisane",
+          "unmapped": "{{count}} nieprzypisane"
+        },
+        "empty": {
+          "title": "Nie zsynchronizowano jeszcze żadnych organizacji.",
+          "hint": "Kliknij „Odśwież organizacje”, aby pobrać organizacje z NinjaOne."
+        },
+        "unmappedNote": "Urządzenia z nieprzypisanych organizacji nie będą synchronizowane. Przypisz każdą organizację do firmy Alga, aby włączyć synchronizację urządzeń.",
+        "success": {
+          "synced": "Zsynchronizowano {{processed}} organizacji ({{created}} nowych, {{updated}} zaktualizowanych)",
+          "mappingUpdated": "Pomyślnie zaktualizowano mapowanie",
+          "contactUpdated": "Pomyślnie zaktualizowano kontakt domyślny"
+        },
+        "errors": {
+          "load": "Nie udało się załadować mapowań organizacji",
+          "sync": "Nie udało się zsynchronizować organizacji",
+          "updateMapping": "Nie udało się zaktualizować mapowania",
+          "updateContact": "Nie udało się zaktualizować kontaktu domyślnego",
+          "updateAutoSync": "Nie udało się zaktualizować ustawienia autosynchronizacji"
         }
       }
     },
@@ -2321,8 +2405,5 @@
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Wybierz firmę"
   }
 }

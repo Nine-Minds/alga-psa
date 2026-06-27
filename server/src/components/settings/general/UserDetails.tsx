@@ -98,7 +98,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   userId={item.user_id}
                   userName={nameLabel}
                   avatarUrl={avatarUrl}
-                  size="sm"
+                  size="xs"
                 />
                 <span className={item.is_inactive ? 'text-muted-foreground' : ''}>
                   {item.is_inactive ? `${nameLabel} ${t('userDetails.status.inactiveTag')}` : nameLabel}

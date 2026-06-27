@@ -416,7 +416,6 @@ export default function PrefillFromTicketDialog({
             checked={shouldLink}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => setShouldLink(event.target.checked)}
             label={t('dialogs.prefillFromTicket.linkTicketLabel', 'Link this ticket to the task')}
-            containerClassName="mb-0"
           />
         </div>
 

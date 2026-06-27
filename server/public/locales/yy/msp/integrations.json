@@ -1334,6 +1334,8 @@
           },
           "connected": "55555",
           "connectedWithErrors": "55555",
+          "reconnectRequired": "55555",
+          "reconnectRequiredDescription": "55555",
           "instanceLabel": "55555",
           "organizations": "55555 {{count}} 55555",
           "devices": "55555 {{count}} 55555",
@@ -1510,7 +1512,7 @@
         "fields": {
           "instanceUrl": "55555",
           "instanceUrlHelp": "55555",
-          "betaApiNote": "11111"
+          "betaApiNote": "55555"
         },
         "lastError": "55555 {{error}} 55555",
         "loadingSettings": "55555",
@@ -1584,6 +1586,14 @@
           "unavailable": "55555",
           "url": "55555",
           "urlCopied": "55555"
+        },
+        "mappings": {
+          "org": "55555",
+          "client": "55555",
+          "defaultContact": "55555"
+        },
+        "contact": {
+          "select": "55555"
         }
       },
       "tanium": {
@@ -1630,11 +1640,13 @@
           "autoSync": "55555",
           "autoSyncDisabled": "55555",
           "autoSyncEnabled": "55555",
+          "defaultContact": "55555",
           "externalScope": "55555",
           "loading": "55555",
           "mappedClient": "55555",
           "noScopes": "55555",
           "scopeIdLabel": "55555 {{id}} 55555",
+          "selectContact": "55555",
           "unmapped": "55555"
         },
         "status": {
@@ -1701,7 +1713,9 @@
           "loading": "55555",
           "mappedClient": "55555",
           "noGroups": "55555",
-          "unmapped": "55555"
+          "unmapped": "55555",
+          "defaultContact": "55555",
+          "selectContact": "55555"
         },
         "status": {
           "connected": "55555",
@@ -1732,6 +1746,76 @@
           "showSecret": "55555",
           "title": "55555",
           "url": "55555"
+        }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "55555",
+          "client": "55555",
+          "defaultContact": "55555",
+          "createTickets": "55555",
+          "status": "55555"
+        },
+        "selectContact": "55555",
+        "status": {
+          "autoMatched": "55555",
+          "mapped": "55555",
+          "unmapped": "55555"
+        },
+        "title": "55555",
+        "description": "55555",
+        "unmappedSuffix": "55555 {{count}} 55555",
+        "syncButton": "55555",
+        "loading": "55555",
+        "empty": "55555",
+        "errors": {
+          "load": "55555",
+          "sync": "55555",
+          "updateMapping": "55555",
+          "updateContact": "55555"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "55555",
+          "company": "55555",
+          "defaultContact": "55555",
+          "autoSync": "55555",
+          "status": "55555"
+        },
+        "orgFallback": "55555 {{id}} 55555",
+        "idLabel": "55555 {{id}} 55555",
+        "selectCompany": "55555",
+        "selectContact": "55555",
+        "status": {
+          "mapped": "55555",
+          "unmapped": "55555"
+        },
+        "title": "55555",
+        "description": "55555",
+        "loading": "55555",
+        "syncing": "55555",
+        "refreshButton": "55555",
+        "summary": {
+          "mapped": "55555 {{count}} 55555",
+          "unmapped": "55555 {{count}} 55555"
+        },
+        "empty": {
+          "title": "55555",
+          "hint": "55555"
+        },
+        "unmappedNote": "55555",
+        "success": {
+          "synced": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555",
+          "mappingUpdated": "55555",
+          "contactUpdated": "55555"
+        },
+        "errors": {
+          "load": "55555",
+          "sync": "55555",
+          "updateMapping": "55555",
+          "updateContact": "55555",
+          "updateAutoSync": "55555"
         }
       }
     },
@@ -2321,8 +2405,5 @@
         "publishableKeyFormat": "55555"
       }
     }
-  },
-  "ninjaone": {
-    "selectCompany": "55555"
   }
 }

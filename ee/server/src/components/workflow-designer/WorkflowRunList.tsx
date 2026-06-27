@@ -914,7 +914,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                       checked={allSelected}
                       indeterminate={someSelected}
                       onChange={(event) => toggleSelectAll(event.target.checked)}
-                      containerClassName="mb-0"
                     />
                   </TableHead>
                 )}
@@ -949,7 +948,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                           event.preventDefault();
                         }}
                         onChange={() => { /* controlled via onClick for shift-range support */ }}
-                        containerClassName="mb-0"
                       />
                     </TableCell>
                   )}

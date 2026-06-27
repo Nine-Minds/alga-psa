@@ -89,6 +89,16 @@ describe('T010: header + base URL injection', () => {
     expect(buildHuduApiBaseUrl('https://acme.huducloud.com/api/v1/')).toBe('https://acme.huducloud.com/api/v1');
     expect(buildHuduApiBaseUrl('https://acme.huducloud.com/')).toBe('https://acme.huducloud.com/api/v1');
   });
+
+  it('rejects non-HTTPS and local/private base URLs', async () => {
+    const { buildHuduApiBaseUrl } = await importClient();
+
+    expect(() => buildHuduApiBaseUrl('http://acme.huducloud.com')).toThrow(/HTTPS/);
+    expect(() => buildHuduApiBaseUrl('https://localhost')).toThrow(/private network/);
+    expect(() => buildHuduApiBaseUrl('https://127.0.0.1')).toThrow(/private network/);
+    expect(() => buildHuduApiBaseUrl('https://10.0.0.5')).toThrow(/private network/);
+    expect(() => buildHuduApiBaseUrl('https://192.168.1.5')).toThrow(/private network/);
+  });
 });
 
 describe('T011: credential resolution precedence', () => {

@@ -59,6 +59,18 @@ export const ticketClosedEventPayloadSchema = BaseDomainEventPayloadSchema.exten
 
 export type TicketClosedEventPayload = z.infer<typeof ticketClosedEventPayloadSchema>;
 
+export const ticketAutoCloseWarningEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: z.string().describe('Ticket ID'),
+  ticketNumber: z.string().describe('Ticket number'),
+  title: z.string().describe('Ticket title'),
+  scheduledCloseAt: z.string().describe('Scheduled auto-close timestamp (ISO 8601)'),
+  contactNameId: z.string().nullable().optional().describe('Associated contact ID'),
+  assignedTo: z.string().nullable().optional().describe('Assigned user ID'),
+  enteredBy: z.string().nullable().optional().describe('User who entered the ticket'),
+}).describe('Payload for TICKET_AUTO_CLOSE_WARNING');
+
+export type TicketAutoCloseWarningEventPayload = z.infer<typeof ticketAutoCloseWarningEventPayloadSchema>;
+
 export const ticketUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
   updatedByUserId: userIdSchema.optional().describe('User who updated the ticket'),

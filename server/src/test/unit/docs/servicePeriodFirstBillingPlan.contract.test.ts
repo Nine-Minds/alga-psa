@@ -127,7 +127,7 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
 const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/actions/billingAndTax.ts',
   'packages/billing/src/actions/billingCycleActions.ts',
-  'packages/billing/src/actions/clientCadenceScheduleRegeneration.ts',
+  'shared/billingClients/clientCadenceScheduleRegeneration.ts',
   'packages/billing/src/actions/contractCadenceServicePeriodMaterialization.ts',
   'packages/billing/src/actions/recurringApprovalBlockers.ts',
   'packages/billing/src/actions/recurringServicePeriodActions.ts',

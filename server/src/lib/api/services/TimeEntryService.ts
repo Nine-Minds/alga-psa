@@ -22,7 +22,7 @@ import {
 } from '../schemas/timeEntry';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { ForbiddenError, ValidationError } from '../middleware/apiMiddleware';
-import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
+import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
 
@@ -292,8 +292,11 @@ export class TimeEntryService extends BaseService<any> {
     const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);
     
     // Calculate billable duration
-    const startTime = new Date(data.start_time);
-    const endTime = new Date(data.end_time);
+    // LEVERAGE: pattern time-entry-duration-persist — normalize-to-minute + Math.round duration
+    // is duplicated across this service (create/update/stop) and timeEntryCrudActions; a shared
+    // "normalize and persist a time entry" layer would own this once.
+    const startTime = truncateToMinute(data.start_time);
+    const endTime = truncateToMinute(data.end_time);
     const durationMs = endTime.getTime() - startTime.getTime();
     const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
 
@@ -333,6 +336,8 @@ export class TimeEntryService extends BaseService<any> {
     const timeEntryData = {
       ...dataWithoutBillable,
       user_id: context.userId, // Always use authenticated user
+      start_time: startTime, // persist minute-truncated instants, not the caller's seconds
+      end_time: endTime,
       work_date,
       work_timezone,
       billable_duration: is_billable !== false ? billableDuration : 0,
@@ -418,6 +423,10 @@ export class TimeEntryService extends BaseService<any> {
       updated_at: new Date()
     };
 
+    // Persist minute-truncated instants, not the caller's seconds.
+    if (data.start_time) updateData.start_time = truncateToMinute(data.start_time);
+    if (data.end_time) updateData.end_time = truncateToMinute(data.end_time);
+
     // work_date/work_timezone are server-controlled; recompute when start_time changes.
     if (data.start_time) {
       const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
@@ -428,11 +437,12 @@ export class TimeEntryService extends BaseService<any> {
 
     // Recalculate duration if times changed
     if (data.start_time || data.end_time) {
-      const startTime = new Date(data.start_time || existing.start_time);
-      const endTime = new Date(data.end_time || existing.end_time);
+      // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape.
+      const startTime = truncateToMinute(data.start_time || existing.start_time);
+      const endTime = truncateToMinute(data.end_time || existing.end_time);
       const durationMs = endTime.getTime() - startTime.getTime();
       const totalDuration = Math.round(durationMs / (1000 * 60));
-      
+
       // If is_billable is explicitly set, use it; otherwise keep existing billable status
       if (is_billable !== undefined) {
         updateData.billable_duration = is_billable ? totalDuration : 0;
@@ -443,8 +453,8 @@ export class TimeEntryService extends BaseService<any> {
       }
     } else if (is_billable !== undefined) {
       // is_billable changed but times didn't - recalculate billable_duration
-      const startTime = new Date(existing.start_time);
-      const endTime = new Date(existing.end_time);
+      const startTime = truncateToMinute(existing.start_time);
+      const endTime = truncateToMinute(existing.end_time);
       const durationMs = endTime.getTime() - startTime.getTime();
       const totalDuration = Math.round(durationMs / (1000 * 60));
       updateData.billable_duration = is_billable ? totalDuration : 0;
@@ -578,7 +588,10 @@ export class TimeEntryService extends BaseService<any> {
       throw new Error('Active time tracking session already exists. Please stop the current session first.');
     }
 
-    const startTime = new Date();
+    // Stamp the session start at minute granularity. Start and stop fire at different
+    // wall-clock instants, so keeping raw seconds is exactly what produced the off-by-one
+    // duration bug in stored entries.
+    const startTime = truncateToMinute(new Date());
     const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
     const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
 
@@ -633,8 +646,9 @@ export class TimeEntryService extends BaseService<any> {
 
     this.assertServiceIdPresent(data.service_id ?? session.service_id);
 
-    const endTime = data.end_time ? new Date(data.end_time) : new Date();
-    const startTime = new Date(session.start_time);
+    // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape.
+    const endTime = truncateToMinute(data.end_time ?? new Date());
+    const startTime = truncateToMinute(session.start_time);
     const durationMs = endTime.getTime() - startTime.getTime();
     const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
     

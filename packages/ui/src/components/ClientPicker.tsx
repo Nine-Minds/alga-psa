@@ -196,7 +196,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     const viewportHeight = window.innerHeight;
     const margin = 16;
 
-    const dropdownWidth = Math.min(400, Math.max(buttonRect.width, 250));
+    const dropdownWidth = Math.min(420, Math.max(buttonRect.width, 300));
 
     const spaceOnRight = viewportWidth - buttonRect.right;
     const spaceOnLeft = buttonRect.left;
@@ -383,14 +383,14 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
               onValueChange={(value) => onFilterStateChange(value as any)}
               options={opts}
               placeholder="Filter"
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
             <CustomSelect
               value={clientTypeFilter}
               onValueChange={(value) => onClientTypeFilterChange(value as any)}
               options={clientTypes}
               placeholder="Type"
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
           </div>
         </div>
@@ -423,7 +423,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                       : `cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset ${isSelected ? 'bg-gray-50' : ''}`
                   }`}
                 >
-                  <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
+                  <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
                     <div className="text-xs text-gray-500 truncate">
@@ -495,7 +495,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                     clientId={selectedClient.client_id}
                     clientName={selectedClient.client_name}
                     logoUrl={(selectedClient as any).logoUrl}
-                    size={size}
+                    size={size === 'xs' ? 'xs' : 'sm'}
                   />
                   <span className="truncate">{selectedClient.client_name}</span>
                 </>

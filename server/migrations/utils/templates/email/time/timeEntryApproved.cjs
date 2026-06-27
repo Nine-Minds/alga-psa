@@ -122,6 +122,22 @@ const COPY = {
     textView: 'Zobacz wpis czasu na',
   },
 };
+SUBJECTS.pt = 'Lançamento de horas aprovado';
+COPY.pt = {
+  headerLabel: 'Lançamento de horas aprovado',
+  intro: 'Seu lançamento de horas foi aprovado.',
+  date: 'Data',
+  duration: 'Duração',
+  project: 'Projeto',
+  task: 'Tarefa',
+  approvedBy: 'Aprovado por',
+  viewButton: 'Ver lançamento de horas',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Lançamento de horas aprovado',
+  textIntro: 'Seu lançamento de horas foi aprovado:',
+  textView: 'Ver lançamento de horas em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

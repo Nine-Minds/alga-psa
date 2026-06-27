@@ -72,7 +72,7 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', async (importOrigina
   publishTicketUpdate: vi.fn(),
 }));
 
-import { autoCloseTicketsHandler } from '../../lib/jobs/handlers/autoCloseTicketsHandler';
+import { autoCloseTicketsHandler } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import {
   createCloseRulesFixture,
   createSecondaryTenant,

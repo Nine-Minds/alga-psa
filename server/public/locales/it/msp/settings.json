@@ -384,7 +384,6 @@
       "display": "Visualizzazione",
       "ticketNumbering": "Numerazione ticket",
       "boards": "Bacheche",
-      "statuses": "Stati",
       "priorities": "Priorita",
       "categories": "Categorie",
       "checklistTemplates": "Modelli di checklist"
@@ -489,7 +488,9 @@
         "boardManager": "Responsabile della bacheca",
         "order": "Ordine",
         "itilBoard": "Bacheca ITIL",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "ticketLoad": "Carico di ticket",
+        "statuses": "Stati"
       },
       "statusLabels": {
         "active": "Attivo",
@@ -508,7 +509,8 @@
         "up": "Su",
         "down": "Giù",
         "remove": "Rimuovi",
-        "addStatus": "Aggiungi stato"
+        "addStatus": "Aggiungi stato",
+        "back": "Torna alle Bacheche"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Attiva timer ticket in tempo reale",
           "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+        },
+        "defaultBoard": {
+          "label": "Bacheca predefinita per i ticket del portale clienti",
+          "help": "I nuovi ticket inviati dal portale clienti vengono assegnati a questa bacheca. Solo una bacheca può essere quella predefinita."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "I giorni di inattività per la chiusura automatica devono essere un numero intero positivo",
           "autoCloseWarningInvalid": "Il preavviso di avviso deve essere inferiore ai giorni di inattività"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Generale",
+          "generalHelp": "Nome, descrizione, visibilità e predefinito",
+          "assignment": "Assegnazione e SLA",
+          "assignmentHelp": "Instradamento predefinito, SLA e responsabile della bacheca",
+          "inbound": "Email e risposte in arrivo",
+          "inboundHelp": "Riapri i ticket quando i clienti rispondono via email",
+          "close": "Regole di chiusura",
+          "closeHelp": "Requisiti prima che un ticket possa essere chiuso",
+          "automation": "Automazione",
+          "automationHelp": "Chiudi automaticamente i ticket inattivi dopo un periodo di inattività",
+          "statuses": "Priorità e stati",
+          "statusesHelp": "Priorità predefinita e gli stati dei ticket per questa bacheca",
+          "display": "Visualizzazione e comportamento",
+          "displayHelp": "Timer dal vivo e tipo di bacheca"
+        },
+        "saveChanges": "Salva modifiche",
+        "unsaved": "Non salvato",
+        "unsavedShort": "Modifiche non salvate",
+        "unsavedBanner": "Hai modifiche non salvate. Fai clic su «Salva modifiche» per applicarle.",
+        "allSaved": "Tutte le modifiche salvate",
+        "reopenBadge": "riapri",
+        "required": "Obbligatorio"
+      },
+      "empty": "Nessuna bacheca trovata.",
+      "searchPlaceholder": "Cerca bacheche…"
     },
     "priorities": {
       "title": {
@@ -1232,6 +1265,176 @@
       "telemetry": {
         "title": "Telemetria e analisi",
         "description": "Gestisca le Sue preferenze di telemetria e analisi"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Abilita notifiche",
+        "description": "Attiva o disattiva tutte le notifiche per questo tenant"
+      },
+      "loading": "Caricamento impostazioni di notifica...",
+      "loadError": "Impossibile caricare le impostazioni",
+      "save": "Salva modifiche",
+      "saving": "Salvataggio..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Anteprima oggetto",
+        "iframeTitle": "Anteprima del modello di email",
+        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali."
+      },
+      "errors": {
+        "loadFailed": "Impossibile caricare i modelli"
+      },
+      "list": {
+        "loading": "Caricamento dei modelli di email...",
+        "templateCount": "({{templateCount}} modelli)",
+        "usingCustom": "Utilizzo del modello personalizzato",
+        "usingStandard": "Utilizzo del modello standard"
+      },
+      "columns": {
+        "name": "Nome",
+        "actions": "Azioni"
+      },
+      "fields": {
+        "language": "Lingua",
+        "subject": "Oggetto",
+        "htmlContent": "Contenuto HTML",
+        "textContent": "Contenuto testuale"
+      },
+      "actions": {
+        "collapse": "Comprimi",
+        "expand": "Espandi",
+        "edit": "Modifica",
+        "useStandard": "Usa standard",
+        "view": "Visualizza",
+        "customize": "Personalizza",
+        "sending": "Invio in corso...",
+        "sendTest": "Invia email di prova",
+        "close": "Chiudi",
+        "cancel": "Annulla",
+        "saving": "Salvataggio...",
+        "save": "Salva"
+      },
+      "description": "Ogni tipo di evento ha un modello standard che può essere personalizzato. Puoi usare il modello standard o creare una versione personalizzata.",
+      "filter": {
+        "languages": "Lingue",
+        "reset": "Reimposta"
+      },
+      "test": {
+        "sentTo": "Email di prova inviata a {{recipient}}",
+        "failed": "Impossibile inviare l'email di prova."
+      },
+      "view": {
+        "title": "Modello standard: {{name}}"
+      },
+      "tabs": {
+        "source": "Codice sorgente",
+        "preview": "Anteprima"
+      },
+      "common": {
+        "notAvailable": "N/D"
+      },
+      "edit": {
+        "title": "Modifica modello personalizzato: {{name}}"
+      },
+      "languages": {
+        "en": "Inglese",
+        "fr": "Francese",
+        "es": "Spagnolo",
+        "de": "Tedesco",
+        "nl": "Olandese",
+        "it": "Italiano",
+        "pl": "Polacco",
+        "pt": "Portoghese"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Caricamento delle categorie non riuscito",
+        "loadSubtypes": "Caricamento dei sottotipi di notifica non riuscito",
+        "save": "Salvataggio delle impostazioni di notifica non riuscito"
+      },
+      "loading": "Caricamento delle categorie di notifica...",
+      "toasts": {
+        "saved": "Impostazioni di notifica salvate correttamente",
+        "discarded": "Modifiche annullate"
+      },
+      "columns": {
+        "name": "Nome",
+        "description": "Descrizione",
+        "enabled": "Abilitato",
+        "defaultForUsers": "Predefinito per gli utenti",
+        "actions": "Azioni"
+      },
+      "tooltips": {
+        "cannotDisable": "Questa categoria non può essere disabilitata",
+        "cannotModify": "Questa categoria non può essere modificata"
+      },
+      "actions": {
+        "enableAllSubtypes": "Abilita tutti i sottotipi",
+        "disableAllSubtypes": "Disabilita tutti i sottotipi",
+        "disable": "Disabilita",
+        "enable": "Abilita",
+        "disableDefault": "Disabilita predefinito",
+        "enableDefault": "Abilita predefinito",
+        "discardChanges": "Annulla modifiche",
+        "saving": "Salvataggio...",
+        "saveChanges": "Salva modifiche",
+        "cancel": "Annulla"
+      },
+      "help": {
+        "intro": "Controlla quali tipi di notifica via e-mail sono disponibili e imposta i valori predefiniti per i nuovi utenti.",
+        "enabledLabel": "Abilitato:",
+        "enabledDescription": "Determina se questo tipo di notifica è attivo",
+        "defaultLabel": "Predefinito per gli utenti:",
+        "defaultDescription": "Definisce se i nuovi utenti hanno questa notifica abilitata per impostazione predefinita"
+      },
+      "unsavedChangesAlert": "Hai modifiche non salvate. Fai clic su \"Salva modifiche\" per applicarle.",
+      "discardDialog": {
+        "title": "Annullare le modifiche?",
+        "message": "Sei sicuro di voler annullare tutte le modifiche non salvate? Questa azione non può essere annullata."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Impossibile caricare le categorie",
+        "loadSubtypes": "Impossibile caricare i sottotipi di notifica",
+        "saveSettings": "Impossibile salvare le impostazioni di notifica"
+      },
+      "loading": "Caricamento delle categorie di notifiche interne...",
+      "toasts": {
+        "saveSuccess": "Impostazioni di notifica salvate correttamente",
+        "changesDiscarded": "Modifiche annullate"
+      },
+      "columns": {
+        "name": "Nome",
+        "description": "Descrizione",
+        "enabled": "Abilitato",
+        "defaultForUsers": "Predefinito per gli utenti",
+        "actions": "Azioni"
+      },
+      "actions": {
+        "enableAllSubtypes": "Abilita tutti i sottotipi",
+        "disableAllSubtypes": "Disabilita tutti i sottotipi",
+        "disable": "Disabilita",
+        "enable": "Abilita",
+        "disableDefault": "Disabilita predefinito",
+        "enableDefault": "Abilita predefinito",
+        "discardChanges": "Annulla modifiche",
+        "saving": "Salvataggio...",
+        "saveChanges": "Salva modifiche",
+        "cancel": "Annulla"
+      },
+      "intro": "Controlla quali tipi di notifiche interne sono disponibili e imposta i valori predefiniti per i nuovi utenti.",
+      "enabledLabel": "Abilitato:",
+      "enabledDescription": "Determina se questo tipo di notifica è attivo nel sistema",
+      "defaultForUsersLabel": "Predefinito per gli utenti:",
+      "defaultForUsersDescription": "Determina se i nuovi utenti hanno questa notifica abilitata per impostazione predefinita",
+      "unsavedChangesAlert": "Hai modifiche non salvate. Fai clic su \"Salva modifiche\" per applicarle.",
+      "discardDialog": {
+        "title": "Annullare le modifiche?",
+        "message": "Sei sicuro di voler annullare tutte le modifiche non salvate? Questa azione non può essere annullata."
       }
     }
   },

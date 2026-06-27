@@ -481,7 +481,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                           key={service.service_id}
                           className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded ${!hasCurrencyPrice ? 'bg-warning/10' : ''}`}
                         >
-                          <div className="[&>div]:mb-0">
+                          <div>
                             <Checkbox
                               id={`add-generic-service-${service.service_id}`}
                               checked={isSelected}

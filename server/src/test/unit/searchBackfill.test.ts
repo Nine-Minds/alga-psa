@@ -6,12 +6,12 @@ const mocks = vi.hoisted(() => ({
   upsertSearchDoc: vi.fn(),
 }));
 
-vi.mock('../../lib/search/upsert', () => ({
+vi.mock('@alga-psa/search/upsert', () => ({
   upsertSearchDoc: mocks.upsertSearchDoc,
 }));
 
-import { clientIndexer } from '../../lib/search/indexers/client';
-import { allIndexers } from '../../lib/search';
+import { clientIndexer } from '@alga-psa/search/indexers/client';
+import { allIndexers } from '@alga-psa/search';
 import { runSearchBackfill, upsertBackfillBatches } from '../../scripts/search-backfill';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 

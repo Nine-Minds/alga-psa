@@ -282,7 +282,7 @@ export const updateRmmMaintenanceWindow = withAuth(
 export interface RmmAlertRuleFormOptions {
   boards: Array<{ board_id: string; board_name: string }>;
   priorities: Array<{ priority_id: string; priority_name: string }>;
-  closedStatuses: Array<{ status_id: string; name: string }>;
+  closedStatuses: Array<{ status_id: string; name: string; board_id: string | null }>;
   users: Array<{ user_id: string; first_name: string | null; last_name: string | null; email: string }>;
   organizations: Array<{ external_organization_id: string; external_organization_name: string | null }>;
 }
@@ -298,7 +298,7 @@ export const getRmmAlertRuleFormOptions = withAuth(
       knex('priorities').where({ tenant }).select('priority_id', 'priority_name').orderBy('priority_name'),
       knex('statuses')
         .where({ tenant, status_type: 'ticket', is_closed: true })
-        .select('status_id', 'name')
+        .select('status_id', 'name', 'board_id')
         .orderBy('order_number'),
       knex('users')
         .where({ tenant, user_type: 'internal' })

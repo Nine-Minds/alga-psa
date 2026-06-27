@@ -4,6 +4,7 @@ import * as React from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
+import type { Matcher } from 'react-day-picker';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { DatePickerComponent } from '../ui-reflection/types';
 import { Calendar } from './Calendar';
@@ -25,6 +26,10 @@ interface DatePickerBaseProps {
   required?: boolean;
   /** Fixed date-fns display pattern; overrides the locale-derived format */
   displayFormat?: string;
+  /** Earliest selectable date (inclusive). Days before this are disabled and navigation starts here. */
+  minDate?: Date;
+  /** Latest selectable date (inclusive). Days after this are disabled, including the "Today" shortcut. */
+  maxDate?: Date;
   /** Ref for the component */
   ref?: React.Ref<HTMLDivElement>;
 }
@@ -54,9 +59,20 @@ export function DatePicker({
   required,
   clearable = false,
   displayFormat,
+  minDate,
+  maxDate,
   ref
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+
+  // Constrain selection to [minDate, maxDate] (both inclusive) when bounds are provided.
+  // `before`/`after` matchers are exclusive of the boundary date itself, so the bounds stay selectable.
+  const disabledMatchers = React.useMemo<Matcher[] | undefined>(() => {
+    const matchers: Matcher[] = [];
+    if (minDate) matchers.push({ before: minDate });
+    if (maxDate) matchers.push({ after: maxDate });
+    return matchers.length > 0 ? matchers : undefined;
+  }, [minDate, maxDate]);
   const i18n = useOptionalI18n();
   const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
   const dateFnsLocale = getDateFnsLocale(locale);
@@ -113,10 +129,10 @@ export function DatePicker({
           aria-label={label || placeholder}
           onKeyDown={handleKeyDown}
           className={`
-            flex h-10 w-full rounded-md border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm
+            flex h-9 w-full rounded-lg border border-border bg-[rgb(var(--color-card))] px-3 py-1.5 text-sm
             file:border-0 file:bg-transparent file:text-sm file:font-medium
             placeholder:text-[rgb(var(--color-text-500))]
-            hover:border-[rgb(var(--color-border-400))]
+            hover:border-[rgb(var(--color-border-300))]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2
             disabled:cursor-not-allowed disabled:opacity-50
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -170,7 +186,9 @@ export function DatePicker({
                 }}
                 onClear={clearValue ? handleClear : undefined}
                 defaultMonth={value}
-                fromDate={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
+                fromDate={minDate ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
+                toDate={maxDate}
+                disabled={disabledMatchers}
               />
             </div>
           </Popover.Content>

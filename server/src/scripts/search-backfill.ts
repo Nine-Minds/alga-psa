@@ -5,8 +5,8 @@ import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { ceIndexers } from '../lib/search/indexers';
-import { upsertSearchDoc } from '../lib/search/upsert';
+import { ceIndexers } from '@alga-psa/search/indexers';
+import { upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { EntityIndexer } from '@alga-psa/types';
 
 async function loadAllIndexers(): Promise<EntityIndexer[]> {

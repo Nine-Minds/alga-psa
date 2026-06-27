@@ -193,6 +193,12 @@ export const deleteContact = withAuth(async (
       await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
       await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
 
+      // Unlink from any RMM org mapping using this contact as its default
+      // notification contact (no FK; Citus rejects ON DELETE SET NULL).
+      await trx('rmm_organization_mappings')
+        .where({ default_contact_id: contactId, tenant: tenantId })
+        .update({ default_contact_id: null });
+
       const contactRecord = await trx('contacts')
         .where({ contact_name_id: contactId, tenant: tenantId })
         .select('notes_document_id')

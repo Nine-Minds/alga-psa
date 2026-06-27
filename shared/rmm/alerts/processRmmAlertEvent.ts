@@ -12,6 +12,7 @@ import { computeDedupKey } from './dedupKey';
 import { evaluateAlertRules } from './ruleEvaluator';
 import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
+import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
 
 /**
@@ -48,12 +49,14 @@ interface ResolvedAlertContext {
   assetId: string | null;
   clientId: string | null;
   organizationName: string | null;
+  mappingDefaultContactId: string | null;
 }
 
 async function resolveAlertContext(knex: Knex, event: NormalizedRmmAlertEvent): Promise<ResolvedAlertContext> {
   let assetId: string | null = null;
   let clientId: string | null = null;
   let organizationName: string | null = null;
+  let mappingDefaultContactId: string | null = null;
 
   if (event.externalDeviceId) {
     const mapping = await knex('tenant_external_entity_mappings')
@@ -82,12 +85,13 @@ async function resolveAlertContext(knex: Knex, event: NormalizedRmmAlertEvent): 
         integration_id: event.integrationId,
         external_organization_id: event.externalOrganizationId,
       })
-      .first('client_id', 'external_organization_name');
+      .first('client_id', 'external_organization_name', 'default_contact_id');
     organizationName = orgMapping?.external_organization_name ?? null;
+    mappingDefaultContactId = orgMapping?.default_contact_id ?? null;
     if (!clientId) clientId = orgMapping?.client_id ?? null;
   }
 
-  return { assetId, clientId, organizationName };
+  return { assetId, clientId, organizationName, mappingDefaultContactId };
 }
 
 async function processTriggered(
@@ -251,6 +255,7 @@ async function processTriggered(
       clientId: context.clientId,
       assetId: context.assetId,
       organizationName: context.organizationName,
+      mappingDefaultContactId: context.mappingDefaultContactId,
     });
     await trx('rmm_alerts')
       .where({ tenant: event.tenantId, alert_id: alertId })
@@ -267,6 +272,13 @@ async function processTriggered(
 
   if (result.outcome !== 'suppressed' && result.outcome !== 'skipped') {
     await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, context.assetId);
+    if (result.outcome === 'ticket_created' && result.ticketId) {
+      await publishRmmTicketCreated({
+        tenantId: event.tenantId,
+        ticketId: result.ticketId,
+        source: event.provider,
+      });
+    }
     if (result.outcome === 'ticket_created' && result.matchedRuleId) {
       await notifySafely(ctx, event, result, context.assetId);
     }

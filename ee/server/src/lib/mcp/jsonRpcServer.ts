@@ -14,6 +14,10 @@ import { loadMcpRegistry } from '@/lib/mcp/loadRegistry';
 import { authenticateAgentToken, looksLikeJwt } from './idpToken';
 import { mintAgentSessionKey } from './agents';
 import { writeAgentAudit } from './agentAudit';
+import { resolvePublicBaseUrl } from './baseUrl';
+import { looksLikeAlgaToken, verifyAccessToken } from './oauth/tokens';
+import { isGrantActive } from './oauth/grants';
+import { mintUserSessionKey } from './oauth/userSession';
 
 // Minimal Streamable-HTTP MCP server. Handles JSON-RPC over POST with single
 // application/json responses (sufficient for initialize / tools/list /
@@ -200,9 +204,13 @@ interface ResolvedAuth {
 }
 
 /**
- * Resolve the caller. A Bearer JWT is an IdP-delegated **agent** (validated via
- * the tenant's trusted IdP, then dispatched under a short-lived agent-scoped key
- * so the kernel enforces the agent's RBAC). Otherwise it's an Alga **API key**.
+ * Resolve the caller. Three credential shapes, in priority order:
+ *  1. An AlgaPSA-issued MCP access token (`typ: at+jwt`) — the interactive OAuth
+ *     path. Represents an Alga **user**; dispatched under a short-lived user key
+ *     so the kernel enforces the user's own RBAC.
+ *  2. An IdP-delegated **agent** JWT (legacy/unattended) — validated via the
+ *     tenant's trusted IdP, dispatched under an agent-scoped key.
+ *  3. An Alga **API key** (x-api-key or bearer).
  */
 async function resolveAuth(
   req: NextRequest,
@@ -210,6 +218,19 @@ async function resolveAuth(
   const xApiKey = req.headers.get('x-api-key');
   const bearer = bearerToken(req.headers.get('authorization'));
 
+  // (1) AlgaPSA-issued user token from our own OAuth AS.
+  if (bearer && looksLikeAlgaToken(bearer)) {
+    const base = await resolvePublicBaseUrl(req);
+    const claims = await verifyAccessToken({ token: bearer, base });
+    if (!claims) return { ok: false, status: 401, error: 'Invalid or expired access token', wwwAuthenticate: true };
+    if (!(await isGrantActive(claims.grantId))) {
+      return { ok: false, status: 401, error: 'Authorization was revoked', wwwAuthenticate: true };
+    }
+    const sessionKey = await mintUserSessionKey({ tenant: claims.tenant, userId: claims.userId });
+    return { ok: true, auth: { apiKey: sessionKey, tenant: claims.tenant } };
+  }
+
+  // (2) IdP-delegated agent JWT (legacy/unattended path — unchanged).
   if (bearer && looksLikeJwt(bearer)) {
     const res = await authenticateAgentToken(bearer);
     // Explicit `=== false` (not `!res.ok`): ee/server sets tsconfig strict:false, and
@@ -236,7 +257,10 @@ export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> 
   if (authResult.ok === false) {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (authResult.wwwAuthenticate) {
-      headers['WWW-Authenticate'] = `Bearer resource_metadata="${req.nextUrl.origin}/.well-known/oauth-protected-resource"`;
+      // Public discovery pointer — external clients (e.g. claude.ai) chase this,
+      // so it must be the public origin, not the internal upstream one.
+      const publicBase = await resolvePublicBaseUrl(req);
+      headers['WWW-Authenticate'] = `Bearer resource_metadata="${publicBase}/.well-known/oauth-protected-resource"`;
     }
     return new NextResponse(JSON.stringify({ error: authResult.error }), { status: authResult.status, headers });
   }

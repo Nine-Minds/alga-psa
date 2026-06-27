@@ -6,19 +6,18 @@ const mocks = vi.hoisted(() => ({
   auditLog: vi.fn(),
 }));
 
-vi.mock('server/src/lib/db', () => ({
+// The handler moved to @alga-psa/jobs and imports getConnection/runWithTenant
+// from @alga-psa/db (not the old server/src/lib/db paths); mock the real seams.
+vi.mock('@alga-psa/db', () => ({
   runWithTenant: mocks.runWithTenant,
-}));
-
-vi.mock('server/src/lib/db/db', () => ({
   getConnection: mocks.getConnection,
 }));
 
-vi.mock('server/src/lib/logging/auditLog', () => ({
+vi.mock('../../../../../packages/jobs/src/lib/handler-utils/auditLog', () => ({
   auditLog: mocks.auditLog,
 }));
 
-import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
+import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 
 const TENANT = 'tenant-1';
 

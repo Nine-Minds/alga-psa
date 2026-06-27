@@ -32,7 +32,7 @@ type SelectSize = 'sm' | 'md' | 'lg';
 
 const sizeClasses: Record<SelectSize, string> = {
   sm: 'h-8 text-xs px-2',
-  md: 'h-10 text-sm p-2',
+  md: 'h-9 text-sm px-3',
   lg: 'h-12 text-base px-4',
 };
 
@@ -263,8 +263,8 @@ const CustomSelect = ({
             inline-flex items-center justify-between
             rounded-lg ${sizeClasses[size]}
             font-medium transition-colors w-full
-            bg-background cursor-pointer
-            border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
+            bg-white dark:bg-[rgb(var(--color-card))] cursor-pointer
+            border border-border text-[rgb(var(--color-text-700))]
             hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
             disabled:pointer-events-none disabled:cursor-not-allowed

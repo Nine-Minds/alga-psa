@@ -837,7 +837,13 @@
       "missingHelp": "Wir haben diesen Eintrag im DNS noch nicht erkannt. Prüfen Sie, ob er in Ihrem DNS-Anbieter mit dem genauen oben gezeigten Wert existiert.",
       "mismatchHelp": "Der DNS-Eintrag existiert, aber der Wert stimmt nicht mit dem überein, was Resend erwartet.",
       "matchedHelp": "Der erkannte Wert stimmt mit dem erwarteten überein.",
-      "unknownHelp": "Wir haben das DNS noch nicht geprüft. Prüfen Sie das DNS erneut, um die Verifizierung auszuführen."
+      "unknownHelp": "Wir haben das DNS noch nicht geprüft. Prüfen Sie das DNS erneut, um die Verifizierung auszuführen.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Vollständiger Name",
+      "valueLabel": "Wert",
+      "copyHostAriaLabel": "Host kopieren",
+      "copyFqdnAriaLabel": "Vollständigen Namen kopieren",
+      "hostHint": "Tipp: Geben Sie bei Ihrem DNS-Anbieter nur den oben angezeigten Host ein. Die meisten Anbieter (Namecheap, GoDaddy, Cloudflare und andere) fügen „{{domain}}“ automatisch hinzu. Wenn Sie stattdessen den vollständigen Namen einfügen, wird die Domain wiederholt (…{{domain}}.{{domain}}) und der Eintrag wird nie verifiziert."
     }
   },
   "inboundRules": {

@@ -1,424 +1,424 @@
 {
   "common": {
-    "loading": "Loading..."
+    "loading": "Carregando..."
   },
   "moduleFrame": {
-    "title": "Customer Satisfaction Surveys",
-    "description": "Monitor response quality, analyse satisfaction trends, and follow up on feedback.",
-    "badge": "Satisfaction Insights",
+    "title": "Pesquisas de satisfação do cliente",
+    "description": "Monitore a qualidade das respostas, analise tendências de satisfação e acompanhe o feedback.",
+    "badge": "Informações de satisfação",
     "nav": {
-      "dashboard": "Dashboard",
-      "responses": "Responses",
-      "analytics": "Analytics",
-      "setup": "Setup"
+      "dashboard": "Painel",
+      "responses": "Respostas",
+      "analytics": "Análise",
+      "setup": "Configurar"
     }
   },
   "settings": {
-    "tabLabel": "Surveys",
-    "title": "Customer Satisfaction Surveys",
-    "subtitle": "Configure templates, triggers, and delivery to collect post-ticket feedback.",
+    "tabLabel": "Pesquisas",
+    "title": "Pesquisas de satisfação do cliente",
+    "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-chamado.",
     "tabs": {
-      "templates": "Templates",
-      "triggers": "Triggers"
+      "templates": "Modelos",
+      "triggers": "Gatilhos"
     },
     "templateList": {
-      "title": "Survey templates",
-      "description": "Manage the prompts and rating scales sent to your clients.",
-      "createButton": "New template",
-      "emptyTitle": "No survey templates yet",
-      "emptyDescription": "Create your first template to define the survey wording and rating scale.",
-      "defaultBadge": "Default",
+      "title": "Modelos de pesquisa",
+      "description": "Gerencie as solicitações e escalas de avaliação enviadas aos seus clientes.",
+      "createButton": "Novo modelo",
+      "emptyTitle": "Ainda não há modelos de pesquisa",
+      "emptyDescription": "Crie seu primeiro modelo para definir o texto da pesquisa e a escala de classificação.",
+      "defaultBadge": "Padrão",
       "table": {
-        "name": "Template",
-        "rating": "Rating scale",
+        "name": "Modelo",
+        "rating": "Escala de avaliação",
         "status": "Status",
-        "updated": "Updated",
-        "actions": "Actions"
+        "updated": "Atualizado",
+        "actions": "Ações"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled"
+        "enabled": "Habilitado",
+        "disabled": "Desabilitado"
       },
       "actions": {
-        "setDefault": "Set as default"
+        "setDefault": "Definir como padrão"
       },
       "toasts": {
-        "created": "Template created",
-        "updated": "Template updated",
-        "deleted": "Template deleted",
-        "error": "Unable to save template",
-        "setDefault": "Default template updated"
+        "created": "Modelo criado",
+        "updated": "Modelo atualizado",
+        "deleted": "Modelo excluído",
+        "error": "Não foi possível salvar o modelo",
+        "setDefault": "Modelo padrão atualizado"
       },
       "errors": {
-        "load": "Unable to load survey templates."
+        "load": "Não foi possível carregar modelos de pesquisa."
       },
       "delete": {
-        "validationFailed": "Failed to validate deletion. Please try again.",
-        "error": "Unable to delete template",
-        "entityFallback": "this survey template"
+        "validationFailed": "Falha ao validar a exclusão. Por favor, tente novamente.",
+        "error": "Não foi possível excluir o modelo",
+        "entityFallback": "este modelo de pesquisa"
       },
-      "actionsMenuAria": "Open actions for {{name}}"
+      "actionsMenuAria": "Ações abertas para {{name}}"
     },
     "templateForm": {
-      "titleCreate": "Create survey template",
-      "titleEdit": "Edit survey template",
+      "titleCreate": "Criar modelo de pesquisa",
+      "titleEdit": "Editar modelo de pesquisa",
       "ratingTypes": {
-        "stars": "Stars",
-        "numbers": "Numbers",
+        "stars": "Estrelas",
+        "numbers": "Números",
         "emojis": "Emojis"
       },
       "defaults": {
-        "promptText": "Survey prompt",
-        "commentPrompt": "Additional comments (optional)",
-        "thankYouText": "Thank you!"
+        "promptText": "Solicitação de pesquisa",
+        "commentPrompt": "Comentários adicionais (opcional)",
+        "thankYouText": "Obrigado!"
       },
       "labels": {
-        "name": "Template name",
-        "ratingType": "Rating type",
-        "ratingScale": "Rating scale",
-        "ratingLabels": "Rating labels",
-        "preview": "Preview",
-        "promptText": "Survey prompt",
-        "commentPrompt": "Comment prompt",
-        "thankYouText": "Thank-you message",
-        "isDefault": "Set as default template",
-        "enabled": "Template enabled"
+        "name": "Nome do modelo",
+        "ratingType": "Tipo de classificação",
+        "ratingScale": "Escala de avaliação",
+        "ratingLabels": "Etiquetas de classificação",
+        "preview": "Visualização",
+        "promptText": "Solicitação de pesquisa",
+        "commentPrompt": "Solicitação de comentário",
+        "thankYouText": "Mensagem de agradecimento",
+        "isDefault": "Definir como modelo padrão",
+        "enabled": "Modelo ativado"
       },
       "placeholders": {
-        "ratingLabels": "Example:\nVery Poor\nPoor\nAverage\nGood\nExcellent"
+        "ratingLabels": "Exemplo:\nMuito pobre\nPobre\nMédia\nBom\nExcelente"
       },
       "help": {
-        "ratingLabels": "Provide one label per line, in order from lowest to highest rating."
+        "ratingLabels": "Forneça um rótulo por linha, da classificação mais baixa para a mais alta."
       },
       "actions": {
-        "create": "Create template",
-        "save": "Save changes",
-        "delete": "Delete template"
+        "create": "Criar modelo",
+        "save": "Salvar alterações",
+        "delete": "Excluir modelo"
       },
       "delete": {
-        "validationFailed": "Failed to validate deletion. Please try again.",
-        "error": "Unable to delete template",
-        "entityFallback": "this survey template"
+        "validationFailed": "Falha ao validar a exclusão. Por favor, tente novamente.",
+        "error": "Não foi possível excluir o modelo",
+        "entityFallback": "este modelo de pesquisa"
       }
     },
     "triggerList": {
-      "title": "Survey triggers",
-      "description": "Automatically send invitations when tickets or projects reach completion.",
-      "createButton": "New trigger",
-      "emptyTitle": "No survey triggers configured",
-      "emptyDescription": "Create a trigger to send surveys when tickets close or projects finish.",
+      "title": "Gatilhos de pesquisa",
+      "description": "Envie convites automaticamente quando chamados ou projetos forem concluídos.",
+      "createButton": "Novo gatilho",
+      "emptyTitle": "Nenhum acionador de pesquisa configurado",
+      "emptyDescription": "Crie um gatilho para enviar pesquisas quando os chamados forem fechados ou os projetos terminarem.",
       "table": {
-        "template": "Template",
-        "type": "Trigger",
-        "conditions": "Conditions",
+        "template": "Modelo",
+        "type": "Acionar",
+        "conditions": "Condições",
         "status": "Status",
-        "updated": "Updated",
-        "actions": "Actions"
+        "updated": "Atualizado",
+        "actions": "Ações"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled"
+        "enabled": "Habilitado",
+        "disabled": "Desabilitado"
       },
       "conditions": {
-        "unrestricted": "Applies to every ticket and project",
-        "boards": "Boards",
-        "statuses": "Statuses",
-        "priorities": "Priorities",
-        "any": "Any"
+        "unrestricted": "Aplica-se a todos os chamados e projetos",
+        "boards": "Quadros",
+        "statuses": "Status",
+        "priorities": "Prioridades",
+        "any": "Qualquer"
       },
       "toasts": {
-        "created": "Trigger created",
-        "updated": "Trigger updated",
-        "deleted": "Trigger deleted",
-        "error": "Unable to save trigger",
-        "deleteError": "Unable to delete trigger"
+        "created": "Gatilho criado",
+        "updated": "Gatilho atualizado",
+        "deleted": "Gatilho excluído",
+        "error": "Não foi possível salvar o gatilho",
+        "deleteError": "Não foi possível excluir o gatilho"
       },
       "errors": {
-        "load": "Unable to load survey triggers."
+        "load": "Não foi possível carregar os acionadores de pesquisa."
       },
-      "deleteConfirm": "Delete this trigger? Invitations already queued will still be sent.",
-      "actionsMenuAria": "Open actions for trigger targeting {{target}}"
+      "deleteConfirm": "Excluir este gatilho? Os convites já na fila ainda serão enviados.",
+      "actionsMenuAria": "Ações abertas para gatilho direcionado a {{target}}"
     },
     "triggerForm": {
-      "titleCreate": "Create survey trigger",
-      "titleEdit": "Edit survey trigger",
+      "titleCreate": "Criar gatilho de pesquisa",
+      "titleEdit": "Editar gatilho de pesquisa",
       "triggerTypes": {
-        "ticket_closed": "Ticket closed",
-        "project_completed": "Project completed"
+        "ticket_closed": "Chamado fechado",
+        "project_completed": "Projeto concluído"
       },
       "labels": {
-        "template": "Survey template",
-        "triggerType": "Trigger type",
-        "boardIds": "Boards",
-        "statusIds": "Statuses",
-        "priorities": "Priorities",
-        "enabled": "Trigger enabled"
+        "template": "Modelo de pesquisa",
+        "triggerType": "Tipo de gatilho",
+        "boardIds": "Quadros",
+        "statusIds": "Status",
+        "priorities": "Prioridades",
+        "enabled": "Gatilho ativado"
       },
       "placeholders": {
-        "boardIds": "Select board",
-        "statusIds": "Add status",
-        "priorities": "Add priority"
+        "boardIds": "Selecione o quadro",
+        "statusIds": "Adicionar status",
+        "priorities": "Adicionar prioridade"
       },
       "boardFilters": {
-        "active": "Active boards",
-        "inactive": "Inactive boards",
-        "all": "All boards"
+        "active": "Quadros ativos",
+        "inactive": "Quadros inativos",
+        "all": "Todos os quadros"
       },
       "help": {
-        "conditions": "Leave a field blank to match any value."
+        "conditions": "Deixe um campo em branco para corresponder a qualquer valor."
       },
       "actions": {
-        "create": "Create trigger",
-        "save": "Save changes",
-        "delete": "Delete trigger"
+        "create": "Criar gatilho",
+        "save": "Salvar alterações",
+        "delete": "Excluir gatilho"
       },
-      "noTemplates": "Create a survey template before adding triggers.",
-      "prioritiesMixed": "Selected boards use different priority types. Showing all priorities.",
+      "noTemplates": "Crie um modelo de pesquisa antes de adicionar gatilhos.",
+      "prioritiesMixed": "Os painéis selecionados usam diferentes tipos de prioridade. Mostrando todas as prioridades.",
       "errors": {
-        "reference": "Unable to load trigger options. Please try again."
+        "reference": "Não foi possível carregar as opções do acionador. Por favor, tente novamente."
       }
     }
   },
   "response": {
-    "pageTitle": "Customer Satisfaction Survey",
-    "invalidTitle": "Survey unavailable",
-    "invalidMessage": "This feedback link is no longer valid or has already been used.",
-    "ratingPrompt": "How was your experience?",
-    "ratingAssistive": "Select a score from 1 to {{scale}}",
-    "commentLabel": "Additional comments (optional)",
-    "submitButton": "Submit feedback",
-    "submitting": "Submitting feedback...",
-    "submittedTitle": "Thank you for your response!",
+    "pageTitle": "Pesquisa de satisfação do cliente",
+    "invalidTitle": "Pesquisa indisponível",
+    "invalidMessage": "Este link de feedback não é mais válido ou já foi usado.",
+    "ratingPrompt": "Como foi sua experiência?",
+    "ratingAssistive": "Selecione uma pontuação de 1 a {{scale}}",
+    "commentLabel": "Comentários adicionais (opcional)",
+    "submitButton": "Enviar comentários",
+    "submitting": "Enviando comentários...",
+    "submittedTitle": "Obrigado pela sua resposta!",
     "submittedMessage": "{{thankYouText}}",
-    "ratingSubmitted": "Feedback submitted",
-    "retryButton": "Try again",
-    "selectRatingError": "Select a rating before submitting.",
-    "errorMessage": "We could not record your feedback. Please try again.",
-    "supportMessage": "If you have questions, please contact your technician."
+    "ratingSubmitted": "Feedback enviado",
+    "retryButton": "Tente novamente",
+    "selectRatingError": "Selecione uma classificação antes de enviar.",
+    "errorMessage": "Não foi possível registrar seu feedback. Por favor, tente novamente.",
+    "supportMessage": "Se você tiver dúvidas, entre em contato com seu técnico."
   },
   "rating": {
     "buttonAriaWithLabel": "{{rating}} - {{label}}",
-    "buttonAria": "Rating {{rating}} of {{scale}}",
+    "buttonAria": "Avaliação {{rating}} de {{scale}}",
     "defaults": {
       "3": {
-        "1": "Poor",
-        "2": "Good",
-        "3": "Excellent"
+        "1": "Pobre",
+        "2": "Bom",
+        "3": "Excelente"
       },
       "5": {
-        "1": "Very Poor",
-        "2": "Poor",
-        "3": "Average",
-        "4": "Good",
-        "5": "Excellent"
+        "1": "Muito pobre",
+        "2": "Pobre",
+        "3": "Média",
+        "4": "Bom",
+        "5": "Excelente"
       },
       "10": {
-        "1": "Terrible",
-        "2": "Very Poor",
-        "3": "Poor",
-        "4": "Below Average",
-        "5": "Average",
-        "6": "Above Average",
-        "7": "Good",
-        "8": "Very Good",
-        "9": "Excellent",
-        "10": "Perfect"
+        "1": "Terrível",
+        "2": "Muito pobre",
+        "3": "Pobre",
+        "4": "Abaixo da média",
+        "5": "Média",
+        "6": "Acima da média",
+        "7": "Bom",
+        "8": "Muito bom",
+        "9": "Excelente",
+        "10": "Perfeito"
       }
     }
   },
   "responses": {
     "filters": {
       "labels": {
-        "template": "Template",
-        "technician": "Technician",
-        "client": "Client",
-        "dateRange": "Date Range"
+        "template": "Modelo",
+        "technician": "Técnico",
+        "client": "Cliente",
+        "dateRange": "Período"
       },
       "placeholders": {
-        "allTemplates": "All templates",
-        "allTechnicians": "All technicians",
-        "allClients": "All clients"
+        "allTemplates": "Todos os modelos",
+        "allTechnicians": "Todos os técnicos",
+        "allClients": "Todos os clientes"
       },
       "actions": {
-        "apply": "Apply",
-        "reset": "Reset"
+        "apply": "Aplicar",
+        "reset": "Reiniciar"
       }
     },
     "page": {
-      "filterTitle": "Filter Responses",
-      "loading": "Refreshing responses...",
-      "error": "Unable to load survey responses. Please try again.",
+      "filterTitle": "Filtrar respostas",
+      "loading": "Respostas atualizadas...",
+      "error": "Não foi possível carregar as respostas da pesquisa. Por favor, tente novamente.",
       "pageSizeOptions": {
-        "10": "10 per page",
-        "25": "25 per page",
-        "50": "50 per page"
+        "10": "10 por página",
+        "25": "25 por página",
+        "50": "50 por página"
       },
-      "itemLabel": "responses"
+      "itemLabel": "respostas"
     },
     "detail": {
-      "title": "Survey Response Detail",
-      "empty": "No response selected.",
+      "title": "Detalhes da resposta da pesquisa",
+      "empty": "Nenhuma resposta selecionada.",
       "labels": {
-        "submittedAt": "Submitted At",
-        "client": "Client",
-        "contact": "Contact",
-        "technician": "Technician",
-        "ticket": "Ticket",
-        "rating": "Rating",
-        "comment": "Comment"
+        "submittedAt": "Enviado em",
+        "client": "Cliente",
+        "contact": "Contato",
+        "technician": "Técnico",
+        "ticket": "Chamado",
+        "rating": "Avaliação",
+        "comment": "Comentário"
       },
       "fallbacks": {
-        "unknown": "Unknown",
-        "unassigned": "Unassigned",
+        "unknown": "Desconhecido",
+        "unassigned": "Não atribuído",
         "none": "-",
-        "noComment": "No comment provided."
+        "noComment": "Nenhum comentário fornecido."
       }
     }
   },
   "dashboard": {
-    "loadingInsights": "Loading survey insights...",
+    "loadingInsights": "Carregando informações da pesquisa...",
     "responseMetrics": {
       "cards": {
-        "sent": "Invitations Sent",
-        "responses": "Responses Received",
-        "responseRate": "Response Rate",
-        "averageRating": "Average Rating",
-        "outstanding": "Outstanding Invitations",
-        "negative": "Negative Responses (<= 2 stars)"
+        "sent": "Convites enviados",
+        "responses": "Respostas recebidas",
+        "responseRate": "Taxa de resposta",
+        "averageRating": "Avaliação Média",
+        "outstanding": "Convites excelentes",
+        "negative": "Respostas negativas (<= 2 estrelas)"
       },
       "badges": {
-        "awaitingResponses": "Awaiting responses",
-        "needsReview": "Needs review"
+        "awaitingResponses": "Aguardando respostas",
+        "needsReview": "Precisa de revisão"
       }
     },
     "responseTrend": {
-      "title": "Response Trend",
-      "emptyTitle": "No responses captured for the selected period.",
-      "emptyDescription": "Check back after customers submit feedback.",
+      "title": "Tendência de resposta",
+      "emptyTitle": "Nenhuma resposta capturada para o período selecionado.",
+      "emptyDescription": "Volte depois que os clientes enviarem comentários.",
       "tooltip": {
-        "averageRating": "Average Rating",
-        "responses": "Responses",
-        "date": "Date: {{label}}"
+        "averageRating": "Avaliação Média",
+        "responses": "Respostas",
+        "date": "Data: {{label}}"
       }
     },
     "responsesList": {
-      "title": "Recent Responses",
-      "emptyTitle": "No survey responses available yet.",
-      "emptyDescription": "Encourage customers to provide feedback to populate this view.",
+      "title": "Respostas recentes",
+      "emptyTitle": "Nenhuma resposta da pesquisa disponível ainda.",
+      "emptyDescription": "Incentive os clientes a fornecer feedback para preencher esta visualização.",
       "table": {
-        "submitted": "Submitted",
-        "client": "Client",
-        "technician": "Technician",
-        "rating": "Rating",
-        "comment": "Comment",
-        "ticket": "Ticket"
+        "submitted": "Enviado",
+        "client": "Cliente",
+        "technician": "Técnico",
+        "rating": "Avaliação",
+        "comment": "Comentário",
+        "ticket": "Chamado"
       },
       "fallbacks": {
-        "unknownClient": "Unknown Client",
-        "unassigned": "Unassigned",
-        "noComment": "No comment"
+        "unknownClient": "Cliente desconhecido",
+        "unassigned": "Não atribuído",
+        "noComment": "Sem comentários"
       }
     },
     "satisfactionDistribution": {
-      "title": "Satisfaction Distribution",
-      "emptyTitle": "No survey ratings recorded yet.",
-      "emptyDescription": "Distribution will appear after feedback is collected.",
+      "title": "Distribuição de Satisfação",
+      "emptyTitle": "Nenhuma avaliação de pesquisa registrada ainda.",
+      "emptyDescription": "A distribuição aparecerá após a coleta do feedback.",
       "axes": {
-        "rating": "Rating",
-        "responses": "Responses"
+        "rating": "Avaliação",
+        "responses": "Respostas"
       },
       "tooltip": {
-        "percent": "Percent",
-        "responses": "Responses",
-        "rating": "Rating: {{label}}"
+        "percent": "Por cento",
+        "responses": "Respostas",
+        "rating": "Avaliação: {{label}}"
       }
     },
     "topIssues": {
-      "title": "Top Issues",
-      "emptyTitle": "No negative feedback recorded for the selected filters.",
-      "emptyDescription": "This is a good sign! Keep up the great work.",
+      "title": "Principais problemas",
+      "emptyTitle": "Nenhum feedback negativo registrado para os filtros selecionados.",
+      "emptyDescription": "Este é um bom sinal! Continue com o excelente trabalho.",
       "fallbacks": {
-        "unknownClient": "Unknown Client",
-        "ticket": "Ticket {{ticket}}",
-        "noComment": "No comment left.",
-        "assignedTo": "Assigned to: {{name}}"
+        "unknownClient": "Cliente desconhecido",
+        "ticket": "Chamado {{ticket}}",
+        "noComment": "Nenhum comentário deixado.",
+        "assignedTo": "Atribuído a: {{name}}"
       }
     }
   },
   "analytics": {
     "filters": {
       "labels": {
-        "customerSegment": "Customer Segment",
-        "surveyTemplate": "Survey Template",
-        "timeframe": "Timeframe",
-        "calendarView": "Calendar View"
+        "customerSegment": "Segmento de clientes",
+        "surveyTemplate": "Modelo de pesquisa",
+        "timeframe": "Prazo",
+        "calendarView": "Visualização de calendário"
       },
       "defaults": {
         "segments": {
-          "all": "All customers",
-          "managed": "Managed clients",
-          "project": "Project-only clients"
+          "all": "Todos os clientes",
+          "managed": "Clientes gerenciados",
+          "project": "Clientes somente de projeto"
         },
         "templates": {
-          "all": "All templates",
-          "default": "Phase 1 CSAT template"
+          "all": "Todos os modelos",
+          "default": "Modelo CSAT da Fase 1"
         },
         "timeframes": {
-          "30d": "Last 30 days",
-          "90d": "Last 90 days",
-          "365d": "Year to date"
+          "30d": "Últimos 30 dias",
+          "90d": "Últimos 90 dias",
+          "365d": "No acumulado do ano"
         }
       },
       "actions": {
-        "apply": "Apply Filters",
-        "reset": "Reset",
-        "calendar": "Coming soon"
+        "apply": "Aplicar filtros",
+        "reset": "Reiniciar",
+        "calendar": "Em breve"
       }
     },
     "page": {
-      "filtersTitle": "Analytics Filters",
-      "overviewTitle": "Satisfaction Overview",
-      "overviewDescription": "Compare average satisfaction and response rates over time. Additional segmentation will arrive in later iterations."
+      "filtersTitle": "Filtros analíticos",
+      "overviewTitle": "Visão geral da satisfação",
+      "overviewDescription": "Compare as taxas médias de satisfação e resposta ao longo do tempo. Segmentação adicional chegará em iterações posteriores."
     },
     "chart": {
-      "empty": "Select filters above to explore advanced analytics. (Coming soon)",
+      "empty": "Selecione os filtros acima para explorar análises avançadas. (Em breve)",
       "tooltip": {
-        "averageRating": "Average Rating",
-        "responseRate": "Response Rate"
+        "averageRating": "Avaliação Média",
+        "responseRate": "Taxa de resposta"
       },
       "legend": {
-        "averageRating": "Average Rating",
-        "responseRate": "Response Rate"
+        "averageRating": "Avaliação Média",
+        "responseRate": "Taxa de resposta"
       }
     },
     "export": {
-      "csv": "Export CSV",
-      "shareSnapshot": "Share Snapshot",
-      "emailDigest": "Email Digest"
+      "csv": "Exportar CSV",
+      "shareSnapshot": "Compartilhar instantâneo",
+      "emailDigest": "Resumo por e-mail"
     }
   },
   "clientSummary": {
-    "title": "CSAT Summary",
-    "empty": "No survey data available for this client yet. Surveys sent after ticket closures will populate this view.",
+    "title": "Resumo do CSAT",
+    "empty": "Ainda não há dados de pesquisa disponíveis para este cliente. As pesquisas enviadas após o fechamento do chamado preencherão esta visualização.",
     "labels": {
-      "averageRating": "Average Rating",
-      "responseRate": "Response Rate",
-      "totalResponses": "Total responses",
-      "lastResponse": "Last response",
-      "rollingTrend": "Rolling Trend"
+      "averageRating": "Avaliação Média",
+      "responseRate": "Taxa de resposta",
+      "totalResponses": "Total de respostas",
+      "lastResponse": "Última resposta",
+      "rollingTrend": "Tendência contínua"
     },
     "fallbacks": {
       "none": "-",
-      "noResponsesYet": "No responses yet"
+      "noResponsesYet": "Ainda não há respostas"
     }
   },
   "ticketSummary": {
-    "title": "Customer Feedback",
-    "empty": "No survey responses received for this ticket yet.",
+    "title": "Feedback do cliente",
+    "empty": "Nenhuma resposta de pesquisa recebida para este chamado ainda.",
     "labels": {
-      "latestRating": "Latest Rating",
-      "comment": "Comment",
-      "totalResponses": "Total responses"
+      "latestRating": "Avaliação mais recente",
+      "comment": "Comentário",
+      "totalResponses": "Total de respostas"
     },
     "fallbacks": {
       "none": "-"

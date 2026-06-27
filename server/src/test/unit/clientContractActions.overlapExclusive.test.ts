@@ -11,6 +11,12 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ user_id: 'mock-user-id' }, { tenant: 'test-tenant' }, ...args),
 }));
 
+// Grant the MSP permission gate so the overlap/validation logic under test runs.
+vi.mock('../../../../packages/clients/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertMspPermission: vi.fn(async () => {}),
+}));
+
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<any>('@alga-psa/db');
   return {

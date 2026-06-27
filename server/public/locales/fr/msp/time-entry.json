@@ -29,7 +29,9 @@
       "viewDetails": "Afficher les détails",
       "manageTimePeriods": "Gérer les périodes",
       "selectWorkItem": "Sélectionner un élément de travail",
-      "clearFilter": "Effacer le filtre"
+      "clearFilter": "Effacer le filtre",
+      "remove": "Supprimer",
+      "clear": "Effacer"
     },
     "states": {
       "inProgress": "En cours",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "Aucune entrée"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} sélectionné(s)"
+    },
+    "delete": {
+      "success": "{{count}} feuille(s) de temps supprimée(s)",
+      "partialFailure": "{{count}} feuille(s) de temps n'ont pas pu être supprimée(s)",
+      "error": "Échec de la suppression des feuilles de temps"
+    },
+    "removePeriod": {
+      "success": "{{count}} période(s) supprimée(s)",
+      "partialFailure": "{{count}} période(s) n'ont pas pu être supprimée(s)",
+      "error": "Échec de la suppression des périodes"
+    },
+    "remove": {
+      "title": "Supprimer les éléments inutilisés",
+      "message": "Supprimer {{count}} période(s) sélectionnée(s) ? Les périodes de paie inutilisées sont supprimées pour toute l'organisation, ainsi que tout brouillon vide qui y est enregistré. Cette action est irréversible.",
+      "timesheetMessage": "Supprimer {{count}} feuille(s) de temps inutilisée(s) ? Seuls les brouillons de feuilles de temps vides sont supprimés et cette action est irréversible."
     }
   },
   "timeEntryForm": {

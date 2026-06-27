@@ -158,6 +158,7 @@ export default function ManagedDomainList({
                   emptyMessage={emptyMessage}
                   detections={dnsLookupResults}
                   lastCheckedAt={domain.dnsLastCheckedAt}
+                  domain={domain.domain}
                 />
               </div>
             </CardContent>

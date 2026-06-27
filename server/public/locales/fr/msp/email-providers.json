@@ -837,7 +837,13 @@
       "missingHelp": "Nous n'avons pas encore détecté cet enregistrement dans le DNS. Vérifiez qu'il existe dans votre fournisseur DNS avec la valeur exacte indiquée ci-dessus.",
       "mismatchHelp": "L'enregistrement DNS existe, mais la valeur ne correspond pas à celle attendue par Resend.",
       "matchedHelp": "La valeur détectée correspond à celle attendue.",
-      "unknownHelp": "Nous n'avons pas encore vérifié le DNS. Revérifiez le DNS pour lancer la vérification."
+      "unknownHelp": "Nous n'avons pas encore vérifié le DNS. Revérifiez le DNS pour lancer la vérification.",
+      "hostLabel": "Hôte",
+      "fqdnLabel": "Nom complet",
+      "valueLabel": "Valeur",
+      "copyHostAriaLabel": "Copier l'hôte",
+      "copyFqdnAriaLabel": "Copier le nom complet",
+      "hostHint": "Astuce : chez votre fournisseur DNS, saisissez uniquement l'hôte indiqué ci-dessus. La plupart des fournisseurs (Namecheap, GoDaddy, Cloudflare, etc.) ajoutent « {{domain}} » automatiquement. Si vous collez le nom complet, le domaine est répété (…{{domain}}.{{domain}}) et l'enregistrement ne sera jamais vérifié."
     }
   },
   "inboundRules": {

@@ -19,7 +19,7 @@ import type {
 import { withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { revalidatePath } from 'next/cache';
+import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
@@ -64,7 +64,7 @@ import {
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { createTicketRelationshipSqlAdapter, fetchTicketAdditionalUserIds } from '../lib/ticketAuthorizationSql';
+import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
@@ -140,16 +140,13 @@ async function resolveAuthorizationSubjectForUser(
 }
 
 function toTicketAuthorizationRecord(
-  ticket: Partial<ITicket>,
-  additionalUserIds: string[] = []
+  ticket: Partial<ITicket>
 ): AuthorizationRecord {
-  // `tickets.assigned_to` is the primary assignee; `ticket_resources.additional_user_id`
-  // holds co-assignees ("additional agents"). Both should authorize via own_or_assigned.
+  // Only the primary assignee grants ticket read authorization. Do not trust
+  // `ticket_resources.additional_user_id` as an authorization assignment because
+  // time-entry workflows can create those rows without ticket row-level access.
   const assignees = new Set<string>();
   if (ticket.assigned_to) assignees.add(ticket.assigned_to);
-  for (const id of additionalUserIds) {
-    if (id) assignees.add(id);
-  }
   return {
     id: ticket.ticket_id ?? null,
     ownerUserId: ticket.entered_by ?? null,
@@ -244,14 +241,6 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
   tickets: T[]
 ): Promise<T[]> {
-  const ticketIds = tickets
-    .map((ticket) => ticket.ticket_id)
-    .filter((id): id is string => typeof id === 'string' && id.length > 0);
-  const additionalUserIdsByTicket = await fetchTicketAdditionalUserIds(
-    trx,
-    context.authorizationSubject.tenant,
-    ticketIds
-  );
 
   const decisions = await Promise.all(
     tickets.map((ticket) => {
@@ -266,10 +255,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
           action: 'read',
           id: ticket.ticket_id,
         },
-        record: toTicketAuthorizationRecord(
-          ticket,
-          additionalUserIdsByTicket.get(ticket.ticket_id) ?? []
-        ),
+        record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds: context.selectedBoardIds,
         requestCache: context.requestCache,
         knex: trx,
@@ -1882,7 +1868,14 @@ export const getTicketsForList = withAuth(async (
       }
     });
 
-    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows] = await Promise.all([
+    const clientIds = new Set<string>();
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      if (ticket.client_id) {
+        clientIds.add(ticket.client_id);
+      }
+    });
+
+    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
       agentUserIds.size > 0
         ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
         : Promise.resolve(new Map<string, string | null>()),
@@ -1909,7 +1902,15 @@ export const getTicketsForList = withAuth(async (
               'td.text_color'
             )
         : Promise.resolve([]),
+      clientIds.size > 0
+        ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
+        : Promise.resolve(new Map<string, string | null>()),
     ]);
+
+    // Attach batched client logo URLs to each row (single query, no N+1).
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
+    });
 
     // Convert Maps to Records for serialization
     const agentAvatarUrls: Record<string, string | null> = {};

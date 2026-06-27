@@ -423,7 +423,7 @@ const UserPicker = ({
                     userId={user.user_id}
                     userName={userName}
                     avatarUrl={avatarUrls[user.user_id] || null}
-                    size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
+                    size="xs"
                   />
                   <span>{userName}</span>
                 </div>
@@ -476,7 +476,7 @@ const UserPicker = ({
               userId={currentUser.user_id}
               userName={`${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()}
               avatarUrl={avatarUrls[currentUser.user_id] || null}
-              size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
+              size={size === 'xs' ? 'xs' : 'sm'}
             />
           )}
           {size !== 'xs' && (

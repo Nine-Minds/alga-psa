@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   deleteSearchDoc: vi.fn(),
 }));
 
-vi.mock('../../lib/search/upsert', () => ({
+vi.mock('@alga-psa/search/upsert', () => ({
   upsertSearchDoc: mocks.upsertSearchDoc,
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));
@@ -16,7 +16,7 @@ import {
   deleteRowsMissingFromSource,
   insertRowsMissingFromIndex,
   reindexRowsAfterWatermark,
-} from '../../lib/jobs/handlers/searchReconcileHandler';
+} from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 describe('search reconciliation', () => {
@@ -184,7 +184,7 @@ describe('search reconciliation', () => {
     );
     const jobsIndex = readFileSync(resolve(process.cwd(), 'src/lib/jobs/index.ts'), 'utf8');
     const reconcileHandler = readFileSync(
-      resolve(process.cwd(), 'src/lib/jobs/handlers/searchReconcileHandler.ts'),
+      resolve(process.cwd(), '../packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
       'utf8',
     );
 
@@ -241,7 +241,7 @@ describe('search reconciliation', () => {
 
   it('T195 emits per-run reconciliation summary counts', () => {
     const reconcileHandler = readFileSync(
-      resolve(process.cwd(), 'src/lib/jobs/handlers/searchReconcileHandler.ts'),
+      resolve(process.cwd(), '../packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
       'utf8',
     );
 
@@ -255,7 +255,7 @@ describe('search reconciliation', () => {
 
   it('T205 skips unregistered orphan object types during reconciliation', () => {
     const reconcileHandler = readFileSync(
-      resolve(process.cwd(), 'src/lib/jobs/handlers/searchReconcileHandler.ts'),
+      resolve(process.cwd(), '../packages/jobs/src/lib/handlers/searchReconcileHandler.ts'),
       'utf8',
     );
 

@@ -144,7 +144,6 @@ export default function ClientPortalConfigEditor({
                   checked={config.show_phase_completion}
                   onChange={(e) => updateConfig({ show_phase_completion: e.target.checked })}
                   disabled={disabled || !config.show_phases}
-                  containerClassName=""
                 />
                 <div>
                   <label htmlFor="show-phase-completion" className="text-sm font-medium text-gray-700">
