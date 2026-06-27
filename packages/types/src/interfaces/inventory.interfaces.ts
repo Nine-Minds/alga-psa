@@ -212,6 +212,8 @@ export interface ISalesOrder extends TenantEntity {
   so_id: string;
   so_number: string;
   client_id: string;
+  /** Denormalized client display name (joined in list reads); absent on bare row reads. */
+  client_name?: string | null;
   status: SalesOrderStatus;
   order_date?: string | Date | null;
   expected_ship_date?: string | Date | null;

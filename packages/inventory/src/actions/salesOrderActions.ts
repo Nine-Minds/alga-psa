@@ -213,9 +213,14 @@ export const listSalesOrders = withAuth(
     await requireSoPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      return (await trx('sales_orders')
-        .where({ tenant })
-        .orderBy('created_at', 'desc')) as ISalesOrder[];
+      // Join the client so the list can show a name, not a raw UUID.
+      return (await trx('sales_orders as so')
+        .leftJoin('clients as c', function () {
+          this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
+        })
+        .where('so.tenant', tenant)
+        .orderBy('so.created_at', 'desc')
+        .select('so.*', 'c.client_name')) as ISalesOrder[];
     });
   },
 );

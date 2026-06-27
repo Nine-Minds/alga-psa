@@ -246,7 +246,11 @@ export function SalesOrdersManager({ initialSos }: { initialSos: ISalesOrder[] }
 
   const columns: ColumnDefinition<ISalesOrder>[] = [
     { title: 'SO Number', dataIndex: 'so_number' },
-    { title: 'Client', dataIndex: 'client_id' },
+    {
+      title: 'Client',
+      dataIndex: 'client_name',
+      render: (_: any, rec: ISalesOrder) => rec.client_name?.trim() || rec.client_id,
+    },
     {
       title: 'Status',
       dataIndex: 'status',
