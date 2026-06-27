@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -448,13 +449,15 @@ export function PurchaseOrdersManager({
         const canCancel = rec.status !== 'cancelled' && rec.status !== 'received';
         return (
           <div className="flex gap-2">
+            {/* The primary verb for the row's state (Submit a draft, Receive an open PO) gets
+                the emphasized soft variant; Cancel stays quiet. One clear action per row. */}
             {canSubmit && (
-              <Button id={`submit-po-${rec.po_id}`} variant="outline" size="sm" onClick={() => submit(rec)}>
+              <Button id={`submit-po-${rec.po_id}`} variant="soft" size="sm" onClick={() => submit(rec)}>
                 Submit
               </Button>
             )}
             {canReceive && (
-              <Button id={`receive-po-${rec.po_id}`} variant="outline" size="sm" onClick={() => openReceive(rec)}>
+              <Button id={`receive-po-${rec.po_id}`} variant="soft" size="sm" onClick={() => openReceive(rec)}>
                 Receive
               </Button>
             )}
@@ -516,11 +519,12 @@ export function PurchaseOrdersManager({
       {!loadFailed && pos.length > 0 && (
         <div className="flex items-center gap-3">
           <div className="w-72">
-            <Input
+            <SearchInput
               id="purchase-orders-search"
               placeholder="Search PO number or vendor"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch('')}
             />
           </div>
           <div className="w-48">
