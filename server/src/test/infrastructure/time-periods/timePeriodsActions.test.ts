@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { generateAndSaveTimePeriods, fetchAllTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
 import { ISO8601String } from 'server/src/types/types.d';
@@ -30,6 +31,10 @@ describe('Time Periods Actions', () => {
     runSeeds: true
   });
   let timePeriodSettingsId: string;
+
+  function tenantTable(table: string) {
+    return tenantDb(context.db, context.tenantId).table(table);
+  }
 
   // Set up test context with database connection
   beforeAll(async () => {
@@ -62,7 +67,7 @@ describe('Time Periods Actions', () => {
       updated_at: createTestDateISO({ year: 2024, month: 1, day: 1 })
     };
 
-    await context.db('time_period_settings').insert(settings);
+    await tenantTable('time_period_settings').insert(settings);
   });
 
   // Use cleanup hook for test isolation
@@ -87,8 +92,7 @@ describe('Time Periods Actions', () => {
     expect(result.length).toBeGreaterThan(0);
 
     // Verify the periods were saved to the database
-    const savedPeriods = await context.db('time_periods')
-      .where('tenant', context.tenantId)
+    const savedPeriods = await tenantTable('time_periods')
       .orderBy('start_date', 'asc');
 
     // Verify that time periods were saved

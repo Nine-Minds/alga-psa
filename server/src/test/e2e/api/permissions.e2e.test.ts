@@ -148,7 +148,6 @@ describe('Permissions API E2E Tests', () => {
       // Verify permission is deleted
       const checkPermission = await tenantTable('permissions')
         .where('permission_id', permission[0].permission_id)
-        .where('tenant', env.tenant)
         .first();
       expect(checkPermission).toBeUndefined();
     });
@@ -310,7 +309,7 @@ describe('Permissions API E2E Tests', () => {
 
       // Cleanup
       await tenantTableFor(otherTenant, 'permissions').where('permission_id', otherPermission[0].permission_id).delete();
-      await tenantTableFor(otherTenant, 'tenants').where('tenant', otherTenant).delete();
+      await tenantTableFor(otherTenant, 'tenants').delete();
     });
   });
 

@@ -5,12 +5,24 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 
 let testDb: Knex;
 let testTenant: string;
 let emailProviderService: EmailProviderService;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Email provider error messages test fixture creates and removes tenant rows'
+  );
+}
 
 vi.mock('../../lib/db', () => ({
   createTenantKnex: vi.fn().mockImplementation(async () => ({
@@ -28,7 +40,7 @@ describe('Email Provider Error Messages', () => {
     
     // Create test tenant
     try {
-      await testDb('tenants').insert({
+      await tenantFixtureTable().insert({
         tenant: testTenant,
         client_name: 'Error Test Client',
         email: 'error-test@client.com',
@@ -42,8 +54,8 @@ describe('Email Provider Error Messages', () => {
 
   afterAll(async () => {
     try {
-      await testDb('email_provider_configs').where('tenant', testTenant).delete();
-      await testDb('tenants').where('tenant', testTenant).delete();
+      await tenantTable('email_provider_configs').delete();
+      await tenantFixtureTable().where('tenant', testTenant).delete();
     } catch (error) {
       // Ignore cleanup errors
     }

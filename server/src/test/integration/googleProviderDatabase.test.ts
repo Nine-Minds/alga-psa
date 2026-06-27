@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 
@@ -8,6 +9,17 @@ import { EmailProviderService } from '../../services/email/EmailProviderService'
 let testDb: Knex;
 let testTenant: string;
 let emailProviderService: EmailProviderService;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Google provider database test fixture creates and removes tenant rows'
+  );
+}
 
 // Mock createTenantKnex to use our test database
 vi.mock('../../lib/db', () => ({
@@ -27,7 +39,7 @@ describe('Google Provider Database Integration Tests', () => {
     
     // Create test tenant
     try {
-      await testDb('tenants').insert({
+      await tenantFixtureTable().insert({
         tenant: testTenant,
         client_name: 'Google Test Client',
         email: 'google-test@client.com',
@@ -42,8 +54,8 @@ describe('Google Provider Database Integration Tests', () => {
   afterAll(async () => {
     // Cleanup
     try {
-      await testDb('email_provider_configs').where('tenant', testTenant).delete();
-      await testDb('tenants').where('tenant', testTenant).delete();
+      await tenantTable('email_provider_configs').delete();
+      await tenantFixtureTable().where('tenant', testTenant).delete();
     } catch (error) {
       // Ignore cleanup errors
     }
@@ -56,9 +68,7 @@ describe('Google Provider Database Integration Tests', () => {
   beforeEach(async () => {
     // Clean up any existing test data
     try {
-      await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .delete();
+      await tenantTable('email_provider_configs').delete();
     } catch (error) {
       console.warn('Could not clean up email_provider_configs:', error);
     }
@@ -67,9 +77,7 @@ describe('Google Provider Database Integration Tests', () => {
   afterEach(async () => {
     // Clean up test data after each test
     try {
-      await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .delete();
+      await tenantTable('email_provider_configs').delete();
     } catch (error) {
       console.warn('Could not clean up email_provider_configs:', error);
     }
@@ -105,8 +113,7 @@ describe('Google Provider Database Integration Tests', () => {
       expect(result.mailbox).toBe('test@gmail.com');
 
       // Assert - Verify in database
-      const dbRecord = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('mailbox', 'test@gmail.com')
         .first();
 
@@ -160,8 +167,7 @@ describe('Google Provider Database Integration Tests', () => {
       expect(result.mailbox).toBe('support-test@client.com');
 
       // Verify in database
-      const dbRecord = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('mailbox', 'support-test@client.com')
         .first();
 
@@ -204,8 +210,7 @@ describe('Google Provider Database Integration Tests', () => {
       expect(result).toBeDefined();
 
       // Verify complete configuration in database
-      const dbRecord = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('mailbox', 'fullconfig-test@gmail.com')
         .first();
 
@@ -259,8 +264,7 @@ describe('Google Provider Database Integration Tests', () => {
       // Assert - Should create multiple providers for same mailbox
       expect(duplicateResult).toBeDefined();
       
-      const records = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
+      const records = await tenantTable('email_provider_configs')
         .where('mailbox', 'duplicate-test@gmail.com');
 
       // Should have multiple records for the same mailbox
@@ -291,8 +295,7 @@ describe('Google Provider Database Integration Tests', () => {
       // Assert
       expect(result).toBeDefined();
 
-      const dbRecord = await testDb('email_provider_configs')
-        .where('tenant', testTenant)
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('mailbox', 'minimal-test@gmail.com')
         .first();
 

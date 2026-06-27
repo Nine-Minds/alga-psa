@@ -1,13 +1,21 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) {
     // Get the tenant ID
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
 
-    return knex('schedule_conflicts').insert([
+    const { tenantId, db } = context;
+    const entryId = (title) => db.table('schedule_entries')
+        .where({ title })
+        .select('entry_id')
+        .first();
+
+    return db.table('schedule_conflicts').insert([
         {
-            tenant: tenant.tenant,
-            entry_id_1: knex('schedule_entries').where({ tenant: tenant.tenant, title: 'Cheshire Cat Pathways' }).select('entry_id').first(),
-            entry_id_2: knex('schedule_entries').where({ tenant: tenant.tenant, title: 'Through the Looking Glass Expedition' }).select('entry_id').first(),
+            tenant: tenantId,
+            entry_id_1: entryId('Cheshire Cat Pathways'),
+            entry_id_2: entryId('Through the Looking Glass Expedition'),
             conflict_type: 'Overlap',
             resolved: false,
             resolution_notes: 'Potential overlap in scheduled tasks'

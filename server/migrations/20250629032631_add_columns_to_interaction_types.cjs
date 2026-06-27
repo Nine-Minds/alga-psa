@@ -1,8 +1,19 @@
+const MIGRATION_TENANT = 'migration:20250629032631_add_columns_to_interaction_types';
+const INTERACTION_TYPE_ORDER_BACKFILL_REASON = 'discover tenants with interaction types for display order backfill';
+const INTERACTION_TYPE_SCHEMA_CHECK_REASON = 'schema constraint existence check for interaction type display order unique constraint';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+
   // Check and add columns individually to handle partial migration failures
   const hasSystemTypeId = await knex.schema.hasColumn('interaction_types', 'system_type_id');
   const hasDisplayOrder = await knex.schema.hasColumn('interaction_types', 'display_order');
@@ -51,36 +62,36 @@ exports.up = async function(knex) {
   }
 
   // Update existing interaction_types with sequential order numbers per tenant
-  const tenants = await knex('interaction_types').distinct('tenant').pluck('tenant');
+  const tenants = await migrationDb.unscoped('interaction_types', INTERACTION_TYPE_ORDER_BACKFILL_REASON)
+    .distinct('tenant')
+    .pluck('tenant');
   for (const tenantId of tenants) {
-    const tenantTypes = await knex('interaction_types')
-      .where('tenant', tenantId)
+    const db = tenantDb(knex, tenantId);
+    const tenantTypes = await db.table('interaction_types')
       .orderBy('type_name');
     
     for (let i = 0; i < tenantTypes.length; i++) {
-      await knex('interaction_types')
-        .where({ type_id: tenantTypes[i].type_id, tenant: tenantId })
+      await db.table('interaction_types')
+        .where('type_id', tenantTypes[i].type_id)
         .update({ display_order: i + 1 });
     }
   }
 
   // Update existing system_interaction_types with sequential order numbers
-  const systemTypes = await knex('system_interaction_types').orderBy('type_name');
+  const systemTypes = await migrationDb.table('system_interaction_types').orderBy('type_name');
   for (let i = 0; i < systemTypes.length; i++) {
-    await knex('system_interaction_types')
+    await migrationDb.table('system_interaction_types')
       .where('type_id', systemTypes[i].type_id)
       .update({ display_order: i + 1 });
   }
 
   // Check if unique constraint already exists before adding it
-  const constraintExists = await knex.raw(`
-    SELECT constraint_name 
-    FROM information_schema.table_constraints 
-    WHERE table_name = 'interaction_types' 
-    AND constraint_name = 'interaction_types_tenant_display_order_unique'
-  `);
+  const constraintExists = await migrationDb.unscoped('information_schema.table_constraints', INTERACTION_TYPE_SCHEMA_CHECK_REASON)
+    .select('constraint_name')
+    .where('table_name', 'interaction_types')
+    .andWhere('constraint_name', 'interaction_types_tenant_display_order_unique');
 
-  if (constraintExists.rows.length === 0) {
+  if (constraintExists.length === 0) {
     await knex.schema.alterTable('interaction_types', function(table) {
       table.unique(['tenant', 'display_order']);
     });

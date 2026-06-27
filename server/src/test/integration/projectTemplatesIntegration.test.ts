@@ -242,7 +242,7 @@ describe('Project Templates Integration Tests', () => {
 
       // 8. Verify template was created
       const template = await tenantTable('project_templates')
-        .where({ template_id: templateId, tenant: context.tenantId })
+        .where({ template_id: templateId })
         .first();
 
       expect(template).toBeDefined();
@@ -253,7 +253,7 @@ describe('Project Templates Integration Tests', () => {
 
       // 9. Verify phases were copied
       const templatePhases = await tenantTable('project_template_phases')
-        .where({ template_id: templateId, tenant: context.tenantId })
+        .where({ template_id: templateId })
         .orderBy('order_key');
 
       expect(templatePhases).toHaveLength(2);
@@ -264,7 +264,6 @@ describe('Project Templates Integration Tests', () => {
       // 10. Verify tasks were copied
       const phaseIds = templatePhases.map(p => p.template_phase_id);
       const templateTasks = await tenantTable('project_template_tasks')
-        .where('tenant', context.tenantId)
         .whereIn('template_phase_id', phaseIds)
         .orderBy('order_key');
 
@@ -278,7 +277,7 @@ describe('Project Templates Integration Tests', () => {
 
       // 11. Verify dependencies were copied with correct remapped IDs
       const templateDeps = await tenantTable('project_template_dependencies')
-        .where({ template_id: templateId, tenant: context.tenantId });
+        .where({ template_id: templateId });
 
       expect(templateDeps).toHaveLength(2);
 
@@ -302,7 +301,6 @@ describe('Project Templates Integration Tests', () => {
       // 12. Verify checklists were copied
       const taskIds = templateTasks.map(t => t.template_task_id);
       const templateChecklists = await tenantTable('project_template_checklist_items')
-        .where('tenant', context.tenantId)
         .whereIn('template_task_id', taskIds)
         .orderBy('order_number');
 
@@ -325,7 +323,7 @@ describe('Project Templates Integration Tests', () => {
 
       // 13. Verify status mappings were copied
       const templateStatusMappings = await tenantTable('project_template_status_mappings')
-        .where({ template_id: templateId, tenant: context.tenantId })
+        .where({ template_id: templateId })
         .orderBy('display_order');
 
       expect(templateStatusMappings).toHaveLength(1);
@@ -479,7 +477,7 @@ describe('Project Templates Integration Tests', () => {
 
       // 8. Verify project was created
       const project = await tenantTable('projects')
-        .where({ project_id: projectId, tenant: context.tenantId })
+        .where({ project_id: projectId })
         .first();
 
       expect(project).toBeDefined();
@@ -488,7 +486,7 @@ describe('Project Templates Integration Tests', () => {
 
       // 9. Verify phases were created
       const phases = await tenantTable('project_phases')
-        .where({ project_id: projectId, tenant: context.tenantId })
+        .where({ project_id: projectId })
         .orderBy('order_key');
 
       expect(phases).toHaveLength(2);
@@ -498,7 +496,6 @@ describe('Project Templates Integration Tests', () => {
       // 10. Verify tasks were created
       const phaseIds = phases.map(p => p.phase_id);
       const tasks = await tenantTable('project_tasks')
-        .where('tenant', context.tenantId)
         .whereIn('phase_id', phaseIds)
         .orderBy(['phase_id', 'order_key']);
 
@@ -510,14 +507,13 @@ describe('Project Templates Integration Tests', () => {
       // 11. Verify dependencies were created with remapped IDs
       const taskIds = tasks.map(t => t.task_id);
       const dependencies = await tenantTable('project_task_dependencies')
-        .where('tenant', context.tenantId)
         .whereIn('predecessor_task_id', taskIds);
 
       expect(dependencies).toHaveLength(2);
 
       // 12. Verify template usage was incremented
       const updatedTemplate = await tenantTable('project_templates')
-        .where({ template_id: template.template_id, tenant: context.tenantId })
+        .where({ template_id: template.template_id })
         .first();
 
       expect(updatedTemplate.use_count).toBe(1);
@@ -589,20 +585,19 @@ describe('Project Templates Integration Tests', () => {
 
       // 5. Verify WBS codes
       const project = await tenantTable('projects')
-        .where({ project_id: projectId, tenant: context.tenantId })
+        .where({ project_id: projectId })
         .first();
 
       expect(project.wbs_code).toMatch(/^\d+$/); // Project: "1", "2", etc.
 
       const phases = await tenantTable('project_phases')
-        .where({ project_id: projectId, tenant: context.tenantId })
+        .where({ project_id: projectId })
         .orderBy('order_key');
 
       expect(phases[0].wbs_code).toBe(`${project.wbs_code}.1`);
       expect(phases[1].wbs_code).toBe(`${project.wbs_code}.2`);
 
       const tasks = await tenantTable('project_tasks')
-        .where('tenant', context.tenantId)
         .whereIn('phase_id', phases.map(p => p.phase_id))
         .orderBy(['phase_id', 'order_key']);
 
@@ -668,7 +663,7 @@ describe('Project Templates Integration Tests', () => {
 
       // 5. Verify status mappings were copied
       const projectStatusMappings = await tenantTable('project_status_mappings')
-        .where({ project_id: projectId, tenant: context.tenantId })
+        .where({ project_id: projectId })
         .orderBy('display_order');
 
       expect(projectStatusMappings).toHaveLength(3);
@@ -711,7 +706,7 @@ describe('Project Templates Integration Tests', () => {
       });
 
       let updatedTemplate = await tenantTable('project_templates')
-        .where({ template_id: template.template_id, tenant: context.tenantId })
+        .where({ template_id: template.template_id })
         .first();
 
       expect(updatedTemplate.use_count).toBe(1);
@@ -724,7 +719,7 @@ describe('Project Templates Integration Tests', () => {
       });
 
       updatedTemplate = await tenantTable('project_templates')
-        .where({ template_id: template.template_id, tenant: context.tenantId })
+        .where({ template_id: template.template_id })
         .first();
 
       expect(updatedTemplate.use_count).toBe(2);

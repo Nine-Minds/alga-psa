@@ -3,6 +3,14 @@
  */
 exports.config = { transaction: false };
 
+const MIGRATION_TENANT = 'migration:20251224233805_add_client_portal_config';
+const PROJECT_CLIENT_PORTAL_CONFIG_BACKFILL_REASON = 'discover projects needing default client portal config backfill';
+const TEMPLATE_CLIENT_PORTAL_CONFIG_BACKFILL_REASON = 'discover project templates needing default client portal config backfill';
+
+async function loadTenantDb() {
+  return (await import('@alga-psa/db')).tenantDb;
+}
+
 const DEFAULT_CLIENT_PORTAL_CONFIG = {
   show_phases: false,
   show_phase_completion: false,
@@ -11,6 +19,9 @@ const DEFAULT_CLIENT_PORTAL_CONFIG = {
 };
 
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+
   console.log('Adding client_portal_config column to projects and project_templates...');
 
   // Add to projects table
@@ -21,14 +32,14 @@ exports.up = async function(knex) {
 
   // Backfill existing projects with default config
   // CitusDB requires select-then-update pattern with tenant in WHERE clause
-  const projectsToUpdate = await knex('projects')
+  const projectsToUpdate = await migrationDb.unscoped('projects', PROJECT_CLIENT_PORTAL_CONFIG_BACKFILL_REASON)
     .select('project_id', 'tenant')
     .whereNull('client_portal_config');
 
   for (const record of projectsToUpdate) {
-    await knex('projects')
+    const db = tenantDb(knex, record.tenant);
+    await db.table('projects')
       .where('project_id', record.project_id)
-      .andWhere('tenant', record.tenant)
       .update({ client_portal_config: JSON.stringify(DEFAULT_CLIENT_PORTAL_CONFIG) });
   }
   console.log(`  ✓ Updated ${projectsToUpdate.length} existing projects with default config`);
@@ -41,14 +52,14 @@ exports.up = async function(knex) {
 
   // Backfill existing templates with default config
   // CitusDB requires select-then-update pattern with tenant in WHERE clause
-  const templatesToUpdate = await knex('project_templates')
+  const templatesToUpdate = await migrationDb.unscoped('project_templates', TEMPLATE_CLIENT_PORTAL_CONFIG_BACKFILL_REASON)
     .select('template_id', 'tenant')
     .whereNull('client_portal_config');
 
   for (const record of templatesToUpdate) {
-    await knex('project_templates')
+    const db = tenantDb(knex, record.tenant);
+    await db.table('project_templates')
       .where('template_id', record.template_id)
-      .andWhere('tenant', record.tenant)
       .update({ client_portal_config: JSON.stringify(DEFAULT_CLIENT_PORTAL_CONFIG) });
   }
   console.log(`  ✓ Updated ${templatesToUpdate.length} existing templates with default config`);

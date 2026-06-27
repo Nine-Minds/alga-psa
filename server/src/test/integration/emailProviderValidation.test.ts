@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 
@@ -13,6 +14,17 @@ import { EmailProviderService } from '../../services/email/EmailProviderService'
 let testDb: Knex;
 let testTenant: string;
 let emailProviderService: EmailProviderService;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Email provider validation test fixture creates and removes tenant rows'
+  );
+}
 
 // Mock createTenantKnex to use our test database
 vi.mock('../../lib/db', () => ({
@@ -40,7 +52,7 @@ describe('Email Provider Validation Tests', () => {
     
     try {
       // Create tenant record
-      await testDb('tenants').insert({
+      await tenantFixtureTable().insert({
         tenant: testTenant,
         client_name: 'Validation Test Client',
         email: 'validation-test@client.com',
@@ -54,11 +66,9 @@ describe('Email Provider Validation Tests', () => {
 
   afterEach(async () => {
     try {
-      await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .delete();
+      await tenantTable('email_provider_configs').delete();
         
-      await testDb('tenants')
+      await tenantFixtureTable()
         .where('tenant', testTenant)
         .delete();
     } catch (error) {

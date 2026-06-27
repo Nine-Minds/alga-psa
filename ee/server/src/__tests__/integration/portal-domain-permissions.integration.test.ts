@@ -129,7 +129,7 @@ describe('Portal domain permissions', () => {
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
-    await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains').where({ tenant: tenantId }).delete();
+    await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains').delete();
     enqueueWorkflow.mockClear();
     analyticsCapture.mockClear();
     vi.mocked(getCurrentUser).mockReset();
@@ -151,7 +151,6 @@ describe('Portal domain permissions', () => {
     expect(result.status.status).toBe('pending_dns');
 
     const record = await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains')
-      .where({ tenant: tenantId })
       .first();
 
     expect(record).toBeTruthy();
@@ -172,7 +171,6 @@ describe('Portal domain permissions', () => {
     ).rejects.toThrow('Client portal users cannot manage custom domains.');
 
     const existing = await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains')
-      .where({ tenant: tenantId })
       .first();
 
     expect(existing).toBeFalsy();
@@ -181,6 +179,7 @@ describe('Portal domain permissions', () => {
 });
 
 async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
+  // Integration fixture bootstrap intentionally resets global schema before migrations/seeds.
   await connection.raw('DROP SCHEMA IF EXISTS public CASCADE');
   await connection.raw('CREATE SCHEMA public');
   await connection.raw('GRANT ALL ON SCHEMA public TO public');
@@ -228,8 +227,7 @@ async function findClientUserByRole(connection: Knex, roleName: string): Promise
   const query = scopedDb.table('users as u')
     .select<{ user_id: string; tenant: string; user_type: string }>('u.user_id', 'u.tenant', 'u.user_type')
     .where('r.role_name', roleName)
-    .andWhere('r.client', true)
-    .andWhere('u.tenant', tenantId);
+    .andWhere('r.client', true);
   scopedDb.tenantJoin(query, 'user_roles as ur', 'u.user_id', 'ur.user_id');
   scopedDb.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id');
   const row = await query.first();
@@ -242,8 +240,7 @@ async function findMspUserByRole(connection: Knex, roleName: string): Promise<{ 
   const query = scopedDb.table('users as u')
     .select<{ user_id: string; tenant: string; user_type: string | null }>('u.user_id', 'u.tenant', 'u.user_type')
     .where('r.role_name', roleName)
-    .andWhere('r.msp', true)
-    .andWhere('u.tenant', tenantId);
+    .andWhere('r.msp', true);
   scopedDb.tenantJoin(query, 'user_roles as ur', 'u.user_id', 'ur.user_id');
   scopedDb.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id');
   const row = await query.first();

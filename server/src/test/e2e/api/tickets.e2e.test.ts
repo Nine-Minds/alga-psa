@@ -38,7 +38,7 @@ describe('Ticket API E2E Tests', () => {
     // Set up test data - create necessary entities
     // Get the default board created by setupE2ETestEnvironment
     const existingBoard = await tenantTable('boards')
-      .where({ tenant: env.tenant, is_default: true })
+      .where({ is_default: true })
       .first();
     
     if (existingBoard) {
@@ -56,13 +56,13 @@ describe('Ticket API E2E Tests', () => {
 
     // Get existing statuses created by setupE2ETestEnvironment
     const newStatus = await tenantTable('statuses')
-      .where({ tenant: env.tenant, board_id: boardId, name: 'New', status_type: 'ticket' })
+      .where({ board_id: boardId, name: 'New', status_type: 'ticket' })
       .first();
     const inProgressStatus = await tenantTable('statuses')
-      .where({ tenant: env.tenant, board_id: boardId, name: 'In Progress', status_type: 'ticket' })
+      .where({ board_id: boardId, name: 'In Progress', status_type: 'ticket' })
       .first();
     const closedStatus = await tenantTable('statuses')
-      .where({ tenant: env.tenant, board_id: boardId, name: 'Closed', status_type: 'ticket' })
+      .where({ board_id: boardId, name: 'Closed', status_type: 'ticket' })
       .first();
 
     statusIds = {
@@ -73,13 +73,13 @@ describe('Ticket API E2E Tests', () => {
 
     // Get existing priorities created by setupE2ETestEnvironment
     const lowPriority = await tenantTable('priorities')
-      .where({ tenant: env.tenant, priority_name: 'Low' })
+      .where({ priority_name: 'Low' })
       .first();
     const mediumPriority = await tenantTable('priorities')
-      .where({ tenant: env.tenant, priority_name: 'Medium' })
+      .where({ priority_name: 'Medium' })
       .first();
     const highPriority = await tenantTable('priorities')
-      .where({ tenant: env.tenant, priority_name: 'High' })
+      .where({ priority_name: 'High' })
       .first();
 
     priorityIds = {
@@ -94,8 +94,8 @@ describe('Ticket API E2E Tests', () => {
   afterAll(async () => {
     if (env) {
       // Clean up any remaining test data - delete in order to respect foreign keys
-      await tenantTable('comments').where('tenant', env.tenant).delete();
-      await tenantTable('tickets').where('tenant', env.tenant).delete();
+      await tenantTable('comments').delete();
+      await tenantTable('tickets').delete();
       await env.cleanup();
     }
   });

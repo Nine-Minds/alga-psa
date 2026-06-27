@@ -34,7 +34,6 @@ describe('Roles API E2E Tests', () => {
 
     // Get some permission IDs for testing
     const permissions = await tenantTable('permissions')
-      .where('tenant', env.tenant)
       .select('permission_id')
       .limit(3);
     testPermissionIds = permissions.map(p => p.permission_id);
@@ -158,7 +157,6 @@ describe('Roles API E2E Tests', () => {
       // Verify role is deleted
       const checkRole = await tenantTable('roles')
         .where('role_id', role[0].role_id)
-        .where('tenant', env.tenant)
         .first();
       expect(checkRole).toBeUndefined();
     });
@@ -190,7 +188,6 @@ describe('Roles API E2E Tests', () => {
       // Verify permissions were assigned
       const assignedPermissions = await tenantTable('role_permissions')
         .where('role_id', testRoleId)
-        .where('tenant', env.tenant)
         .select('permission_id');
       
       expect(assignedPermissions.length).toBe(testPermissionIds.length);
@@ -414,7 +411,7 @@ describe('Roles API E2E Tests', () => {
 
       // Cleanup
       await tenantTableFor(otherTenant, 'roles').where('role_id', otherRole[0].role_id).delete();
-      await tenantTableFor(otherTenant, 'tenants').where('tenant', otherTenant).delete();
+      await tenantTableFor(otherTenant, 'tenants').delete();
     });
   });
 });

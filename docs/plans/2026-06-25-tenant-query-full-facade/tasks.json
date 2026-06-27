@@ -144,6 +144,54 @@
       "dependsOn": [],
       "owner": "main",
       "notes": "Workflow runtime/quota/audit/export tests plus calendar, survey, authorization, KB, client portal document/share, and ticket/project permission/e2e residuals now use tenantDb roots, tenantJoin where needed, and explicit schema/tenant-fixture unscoped boundaries."
+    },
+    {
+      "id": "T411A",
+      "title": "Migrate remaining dev seed residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Darwin",
+      "notes": "Remaining dev seed tenant-owned reads/writes/deletes now use getFirstTenantSeedContext and db.table(...); global notification category/subtype roots remain direct by design, and the no-op conditional display seed no longer carries stale tenant predicate examples."
+    },
+    {
+      "id": "T411B",
+      "title": "Migrate historical migration residuals",
+      "status": "in_progress",
+      "dependsOn": [],
+      "owner": "Boole",
+      "notes": "Older comment, interaction type, standard reference, deprecated company field, contract line hourly, client portal config, invoice template normalization, and client portal budget migrations should use tenantDb roots or explicit unscoped historical/schema boundaries."
+    },
+    {
+      "id": "T411C",
+      "title": "Migrate provider and email-settings test residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Rawls",
+      "notes": "Google/email provider integration tests and email-settings e2e context/tests now route provider/config/ticket roots through tenantDb helpers; tenant fixture setup/teardown and optional schema probes are explicit unscoped boundaries."
+    },
+    {
+      "id": "T411D",
+      "title": "Migrate API and remaining server test residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "James",
+      "notes": "Server e2e API role/permission/accounting/ticket fixtures plus project/time/prepayment/project-template tests now use tenantDb/tenantTable roots and tenantJoin for the invoice detail join; relationship SQL parity tests were inspected and left direct by design."
+    },
+    {
+      "id": "T411E",
+      "title": "Migrate EE onboarding and portal-domain residuals",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "Hume",
+      "notes": "EE debug auth, document permissions, and portal-domain tests now use tenantDb/tenantTable roots with explicit cross-tenant debug/bootstrap boundaries; onboarding and contract-wizard residuals were already facade-backed."
+    },
+    {
+      "id": "T411F",
+      "title": "Migrate runtime public/API service tenant lookups",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "main",
+      "notes": "Runtime public appointment/ext/license/job/service tenant-owned lookups were rechecked: concrete tenant paths already use tenantDb roots, and slug/id resolution remains the intentional tenant-discovery boundary."
     }
   ]
 }

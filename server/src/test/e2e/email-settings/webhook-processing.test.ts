@@ -192,7 +192,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       // 5. Wait and verify ticket creation
       try {
         await context.waitForWorkflowProcessing(30000);
-        const ticket = await context.waitForTicketCreation(tenant.id, 'msg-123', 10000);
+        const ticket = await context.waitForTicketCreation(tenant.tenant, 'msg-123', 10000);
         expect(ticket).toBeDefined();
         expect(ticket.title).toBe('Google Test Request');
       } catch (error) {
@@ -275,8 +275,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       // But only one ticket should be created
       await context.waitForWorkflowProcessing(5000);
       
-      const tickets = await context.db('tickets')
-        .where('tenant', tenant.id)
+      const tickets = await context.tenantTable(tenant.tenant, 'tickets')
         .whereRaw(`email_metadata->>'messageId' = ?`, ['duplicate-123']);
       
       if (tickets.length > 0) {
