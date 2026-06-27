@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import type { TemplateAst } from '@alga-psa/types';
 
 import {
@@ -5,6 +6,10 @@ import {
   type DocumentTemplateSource,
 } from '../document-templates/resolution';
 import { getDocumentTypeStandardAst } from '../document-templates/registry';
+import {
+  fetchClientOverrideTemplateAst,
+  fetchTenantDefaultTemplateAst,
+} from '../document-templates/storage';
 import { STANDARD_SALES_ORDER_CONFIRMATION_CODE } from './standardTemplates';
 
 export interface ResolveSalesOrderTemplateResult {
@@ -14,17 +19,22 @@ export interface ResolveSalesOrderTemplateResult {
 }
 
 /**
- * Resolve the template AST for a Sales Order document through the generic document-template
- * resolver (entity override → tenant default → standard).
- *
- * Phase 1: the override/tenant-default lookups are stubbed to null — there are no stored templates
- * yet — so this always lands on the registered standard confirmation. Phase 2 wires the lookups to
- * the document_template_assignments / document_templates tables.
+ * Resolve the template AST for a Sales Order document through the generic resolver: a client-scoped
+ * override wins, else the tenant default, else the registered standard confirmation. The lookups
+ * query the generic document_template_assignments / document_templates tables; with no stored
+ * assignments this lands on the standard.
  */
-export async function resolveSalesOrderTemplateAst(): Promise<ResolveSalesOrderTemplateResult> {
+export async function resolveSalesOrderTemplateAst(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  opts?: { clientId?: string | null },
+): Promise<ResolveSalesOrderTemplateResult> {
   const { ast, source } = await resolveDocumentTemplateAst({
-    fetchOverride: async () => null,
-    fetchTenantDefault: async () => null,
+    fetchOverride: () =>
+      opts?.clientId
+        ? fetchClientOverrideTemplateAst(knex, tenant, 'sales-order', opts.clientId)
+        : Promise.resolve(null),
+    fetchTenantDefault: () => fetchTenantDefaultTemplateAst(knex, tenant, 'sales-order'),
     getStandard: () => getDocumentTypeStandardAst('sales-order'),
   });
 

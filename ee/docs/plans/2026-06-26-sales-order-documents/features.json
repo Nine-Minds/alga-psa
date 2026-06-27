@@ -171,15 +171,15 @@
   {
     "id": "F100",
     "description": "Phase 2: generic document_templates table (document_type-keyed) + migration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
   },
   {
     "id": "F101",
-    "description": "Phase 2: generic standard_document_templates table (document_type-keyed) + migration",
-    "implemented": false,
+    "description": "Phase 2: standard templates live in CODE (the document-type registry), not a DB table \u2014 SUPERSEDED (Approach C refinement: no AST duplicated into a seed migration).",
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -187,7 +187,7 @@
   {
     "id": "F102",
     "description": "Phase 2: generic document_template_assignments table (document_type-keyed) + migration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -211,7 +211,7 @@
   {
     "id": "F105",
     "description": "Phase 2: generic getDocumentTemplates(type) action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -219,7 +219,7 @@
   {
     "id": "F106",
     "description": "Phase 2: generic saveDocumentTemplate(type, ...) action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -227,7 +227,7 @@
   {
     "id": "F107",
     "description": "Phase 2: generic setDefaultDocumentTemplate(type, ...) action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -235,7 +235,7 @@
   {
     "id": "F108",
     "description": "Phase 2: generic deleteDocumentTemplate(type, ...) action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -243,7 +243,7 @@
   {
     "id": "F109",
     "description": "Phase 2: runAuthoritativeTemplatePreview(type, ...) action (sample-data preview)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -298,8 +298,8 @@
   },
   {
     "id": "F116",
-    "description": "Phase 2: seed standard SO confirmation template into standard_document_templates",
-    "implemented": false,
+    "description": "Phase 2: standard-template seed \u2014 SUPERSEDED; standards come from the registry, so there is nothing to seed.",
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]

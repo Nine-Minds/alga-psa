@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
+import { renderTemplateAstHtmlDocument } from '../invoice-template-ast/server-render';
 import {
   DOCUMENT_TYPES,
   getDocumentTypeRegistryEntry,
@@ -29,5 +31,18 @@ describe('document type registry', () => {
     expect(ast.metadata?.templateName).toBe('Standard Sales Order Confirmation');
     // a fresh clone each call (mutating one must not affect the catalog)
     expect(getDocumentTypeStandardAst('sales-order')).not.toBe(ast);
+  });
+
+  it('the sample view model renders against the standard template (the preview path)', async () => {
+    const entry = getDocumentTypeRegistryEntry('sales-order');
+    const sample = entry.buildSampleViewModel();
+    const ast = getDocumentTypeStandardAst('sales-order');
+
+    const evaluation = evaluateTemplateAst(ast, sample);
+    const html = await renderTemplateAstHtmlDocument(ast, evaluation, { title: 'Preview' });
+
+    expect(html).toContain('ORDER CONFIRMATION');
+    expect(html).toContain('SO-00042');
+    expect(html).toContain('Acme Corp');
   });
 });

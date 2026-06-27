@@ -1,6 +1,7 @@
 import type { TemplateAst } from '@alga-psa/types';
 
 import { buildSalesOrderTemplateBindings } from '../sales-order-template-ast/bindings';
+import { buildSampleSalesOrderViewModel } from '../sales-order-template-ast/sampleData';
 import {
   STANDARD_SALES_ORDER_CONFIRMATION_CODE,
   STANDARD_SALES_ORDER_TEMPLATE_ASTS,
@@ -29,6 +30,8 @@ export interface DocumentTypeRegistryEntry {
   getStandardTemplateAstByCode: (code: string) => TemplateAst | null;
   /** The binding catalog the designer exposes for this type. */
   buildBindings: () => NonNullable<TemplateAst['bindings']>;
+  /** A representative render model for designer preview (rendered against the template). */
+  buildSampleViewModel: () => Record<string, unknown>;
 }
 
 export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEntry> = {
@@ -38,6 +41,7 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     standardCodes: Object.keys(STANDARD_SALES_ORDER_TEMPLATE_ASTS),
     getStandardTemplateAstByCode: getStandardSalesOrderTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
+    buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
   },
 };
 

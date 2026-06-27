@@ -47,8 +47,12 @@ describe('standard sales order confirmation template', () => {
     expect(html).toContain('Northwind MSP');
   });
 
-  it('resolveSalesOrderTemplateAst returns the standard confirmation template (via the generic resolver)', async () => {
-    const result = await resolveSalesOrderTemplateAst();
+  it('resolveSalesOrderTemplateAst falls back to the standard when no assignment is stored', async () => {
+    // Fake knex whose assignment lookups return nothing → standard fallback.
+    const builder: any = { where: () => builder, whereNull: () => builder, first: async () => undefined };
+    const fakeKnex: any = () => builder;
+
+    const result = await resolveSalesOrderTemplateAst(fakeKnex, 'tenant-1');
     expect(result.source).toBe('standard');
     expect(result.code).toBe('standard-sales-order-confirmation');
     expect(result.ast.metadata?.templateName).toBe('Standard Sales Order Confirmation');
