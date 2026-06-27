@@ -4,22 +4,21 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
-import BoardsSettings from './BoardsSettings';
 import ChecklistTemplatesSettings from './ChecklistTemplatesSettings';
-import StatusSettings from './StatusSettings';
-import { CategoriesSettings } from '@alga-psa/tickets/components';
-import { DisplaySettings } from '@alga-psa/tickets/components';
+import { BoardsSettings, CategoriesSettings, DisplaySettings } from '@alga-psa/tickets/components';
 import { NumberingSettings, PrioritySettings } from '@alga-psa/reference-data/components';
+import { getSlaPolicies } from '@alga-psa/sla/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useProduct } from '@/context/ProductContext';
 
-const TICKETING_TAB_IDS = ['display', 'ticket-numbering', 'boards', 'statuses', 'priorities', 'categories', 'checklist-templates'] as const;
+const TICKETING_TAB_IDS = ['display', 'ticket-numbering', 'boards', 'priorities', 'categories', 'checklist-templates'] as const;
 const DEFAULT_TICKETING_TAB = 'display';
 
 const TicketingSettingsRefactored = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  const { isAlgaDesk } = useProduct();
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
-  const typeParam = searchParams?.get('type');
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -54,12 +53,7 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
     {
       id: 'boards',
       label: t('ticketing.tabs.boards'),
-      content: <BoardsSettings />
-    },
-    {
-      id: 'statuses',
-      label: t('ticketing.tabs.statuses'),
-      content: <StatusSettings initialStatusType={typeParam} />
+      content: <BoardsSettings isAlgaDesk={isAlgaDesk} getSlaPolicies={getSlaPolicies} />
     },
     {
       id: 'priorities',

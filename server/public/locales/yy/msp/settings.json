@@ -384,7 +384,6 @@
       "display": "55555",
       "ticketNumbering": "55555",
       "boards": "55555",
-      "statuses": "55555",
       "priorities": "55555",
       "categories": "55555",
       "checklistTemplates": "55555"
@@ -489,7 +488,9 @@
         "boardManager": "55555",
         "order": "55555",
         "itilBoard": "55555",
-        "actions": "55555"
+        "actions": "55555",
+        "ticketLoad": "55555",
+        "statuses": "55555"
       },
       "statusLabels": {
         "active": "55555",
@@ -508,7 +509,8 @@
         "up": "55555",
         "down": "55555",
         "remove": "55555",
-        "addStatus": "55555"
+        "addStatus": "55555",
+        "back": "55555"
       },
       "fields": {
         "boardName": {
@@ -586,6 +588,10 @@
           "suppressAiHelp": "55555"
         },
         "liveTimer": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "defaultBoard": {
           "label": "55555",
           "help": "55555"
         }
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "55555",
           "autoCloseWarningInvalid": "55555"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "55555",
+          "generalHelp": "55555",
+          "assignment": "55555",
+          "assignmentHelp": "55555",
+          "inbound": "55555",
+          "inboundHelp": "55555",
+          "close": "55555",
+          "closeHelp": "55555",
+          "automation": "55555",
+          "automationHelp": "55555",
+          "statuses": "55555",
+          "statusesHelp": "55555",
+          "display": "55555",
+          "displayHelp": "55555"
+        },
+        "saveChanges": "55555",
+        "unsaved": "55555",
+        "unsavedShort": "55555",
+        "unsavedBanner": "55555",
+        "allSaved": "55555",
+        "reopenBadge": "55555",
+        "required": "55555"
+      },
+      "empty": "55555",
+      "searchPlaceholder": "55555"
     },
     "priorities": {
       "title": {

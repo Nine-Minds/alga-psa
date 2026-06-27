@@ -384,7 +384,6 @@
       "display": "Visualización",
       "ticketNumbering": "Numeración de tickets",
       "boards": "Tableros",
-      "statuses": "Estados",
       "priorities": "Prioridades",
       "categories": "Categorías",
       "checklistTemplates": "Plantillas de lista de verificación"
@@ -489,7 +488,9 @@
         "boardManager": "Responsable del tablero",
         "order": "Orden",
         "itilBoard": "Tablero ITIL",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "ticketLoad": "Carga de tickets",
+        "statuses": "Estados"
       },
       "statusLabels": {
         "active": "Activo",
@@ -508,7 +509,8 @@
         "up": "Subir",
         "down": "Bajar",
         "remove": "Eliminar",
-        "addStatus": "Agregar estado"
+        "addStatus": "Agregar estado",
+        "back": "Volver a Tableros"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Activar temporizador de tickets en vivo",
           "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
+        },
+        "defaultBoard": {
+          "label": "Tablero predeterminado para tickets del portal del cliente",
+          "help": "Los nuevos tickets enviados desde el portal del cliente se asignan a este tablero. Solo un tablero puede ser el predeterminado."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Los días de inactividad del cierre automático deben ser un número entero positivo",
           "autoCloseWarningInvalid": "El tiempo de aviso previo debe ser menor que los días de inactividad"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "General",
+          "generalHelp": "Nombre, descripción, visibilidad y predeterminado",
+          "assignment": "Asignación y SLA",
+          "assignmentHelp": "Enrutamiento predeterminado, SLA y responsable del tablero",
+          "inbound": "Correo y respuestas entrantes",
+          "inboundHelp": "Reabrir tickets cuando los clientes respondan por correo electrónico",
+          "close": "Reglas de cierre",
+          "closeHelp": "Requisitos antes de que se pueda cerrar un ticket",
+          "automation": "Automatización",
+          "automationHelp": "Cerrar automáticamente los tickets inactivos tras un período de inactividad",
+          "statuses": "Prioridades y estados",
+          "statusesHelp": "Prioridad predeterminada y los estados de ticket de este tablero",
+          "display": "Visualización y comportamiento",
+          "displayHelp": "Temporizador en vivo y tipo de tablero"
+        },
+        "saveChanges": "Guardar cambios",
+        "unsaved": "Sin guardar",
+        "unsavedShort": "Cambios sin guardar",
+        "unsavedBanner": "Tienes cambios sin guardar. Haz clic en «Guardar cambios» para aplicarlos.",
+        "allSaved": "Todos los cambios guardados",
+        "reopenBadge": "reabrir",
+        "required": "Obligatorio"
+      },
+      "empty": "No se encontraron tableros.",
+      "searchPlaceholder": "Buscar tableros…"
     },
     "priorities": {
       "title": {

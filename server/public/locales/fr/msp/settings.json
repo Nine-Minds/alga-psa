@@ -384,7 +384,6 @@
       "display": "Affichage",
       "ticketNumbering": "Numérotation des tickets",
       "boards": "Tableaux",
-      "statuses": "Statuts",
       "priorities": "Priorités",
       "categories": "Catégories",
       "checklistTemplates": "Modèles de checklist"
@@ -489,7 +488,9 @@
         "boardManager": "Responsable du tableau",
         "order": "Ordre",
         "itilBoard": "Tableau ITIL",
-        "actions": "Actions"
+        "actions": "Actions",
+        "ticketLoad": "Charge de tickets",
+        "statuses": "Statuts"
       },
       "statusLabels": {
         "active": "Actif",
@@ -508,7 +509,8 @@
         "up": "Monter",
         "down": "Descendre",
         "remove": "Supprimer",
-        "addStatus": "Ajouter un statut"
+        "addStatus": "Ajouter un statut",
+        "back": "Retour aux Tableaux"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Activer le minuteur de ticket en direct",
           "help": "Affiche le minuteur en direct et les intervalles suivis sur les tickets de ce tableau. La saisie manuelle du temps reste disponible."
+        },
+        "defaultBoard": {
+          "label": "Tableau par défaut pour les tickets du portail client",
+          "help": "Les nouveaux tickets soumis depuis le portail client sont ajoutés à ce tableau. Un seul tableau peut être défini par défaut."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Le nombre de jours d'inactivité pour la clôture automatique doit être un entier positif",
           "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Général",
+          "generalHelp": "Nom, description, visibilité et valeur par défaut",
+          "assignment": "Attribution et SLA",
+          "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
+          "inbound": "E-mail et réponses entrantes",
+          "inboundHelp": "Rouvrir les tickets lorsque les clients répondent par e-mail",
+          "close": "Règles de clôture",
+          "closeHelp": "Conditions requises avant de pouvoir clôturer un ticket",
+          "automation": "Automatisation",
+          "automationHelp": "Clôturer automatiquement les tickets inactifs après une période d'inactivité",
+          "statuses": "Priorités et statuts",
+          "statusesHelp": "Priorité par défaut et statuts de ticket pour ce tableau",
+          "display": "Affichage et comportement",
+          "displayHelp": "Minuteur en direct et type de tableau"
+        },
+        "saveChanges": "Enregistrer les modifications",
+        "unsaved": "Non enregistré",
+        "unsavedShort": "Modifications non enregistrées",
+        "unsavedBanner": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer.",
+        "allSaved": "Toutes les modifications sont enregistrées",
+        "reopenBadge": "rouvrir",
+        "required": "Obligatoire"
+      },
+      "empty": "Aucun tableau trouvé.",
+      "searchPlaceholder": "Rechercher des tableaux…"
     },
     "priorities": {
       "title": {

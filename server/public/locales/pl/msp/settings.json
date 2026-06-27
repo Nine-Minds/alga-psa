@@ -388,7 +388,6 @@
       "display": "Wyświetlanie",
       "ticketNumbering": "Numeracja zgłoszeń",
       "boards": "Tablice",
-      "statuses": "Statusy",
       "priorities": "Priorytety",
       "categories": "Kategorie",
       "checklistTemplates": "Szablony list kontrolnych"
@@ -493,7 +492,9 @@
         "boardManager": "Menedżer tablicy",
         "order": "Kolejność",
         "itilBoard": "Tablica ITIL",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "ticketLoad": "Obciążenie zgłoszeniami",
+        "statuses": "Statusy"
       },
       "statusLabels": {
         "active": "Aktywna",
@@ -512,7 +513,8 @@
         "up": "W górę",
         "down": "W dół",
         "remove": "Usuń",
-        "addStatus": "Dodaj status"
+        "addStatus": "Dodaj status",
+        "back": "Powrót do Tablic"
       },
       "fields": {
         "boardName": {
@@ -592,6 +594,10 @@
         "liveTimer": {
           "label": "Włącz stoper zgłoszeń na żywo",
           "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
+        },
+        "defaultBoard": {
+          "label": "Domyślna tablica dla zgłoszeń z portalu klienta",
+          "help": "Nowe zgłoszenia przesłane z portalu klienta trafiają na tę tablicę. Tylko jedna tablica może być domyślna."
         }
       },
       "dialog": {
@@ -717,7 +723,34 @@
           "autoCloseDaysInvalid": "Liczba dni braku aktywności musi być dodatnią liczbą całkowitą",
           "autoCloseWarningInvalid": "Czas wyprzedzenia ostrzeżenia musi być mniejszy niż liczba dni braku aktywności"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Ogólne",
+          "generalHelp": "Nazwa, opis, widoczność i domyślność",
+          "assignment": "Przypisanie i SLA",
+          "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
+          "inbound": "E-mail i odpowiedzi przychodzące",
+          "inboundHelp": "Ponownie otwieraj zgłoszenia, gdy klienci odpowiadają e-mailem",
+          "close": "Reguły zamykania",
+          "closeHelp": "Wymagania przed zamknięciem zgłoszenia",
+          "automation": "Automatyzacja",
+          "automationHelp": "Automatycznie zamykaj nieaktywne zgłoszenia po okresie bezczynności",
+          "statuses": "Priorytety i statusy",
+          "statusesHelp": "Domyślny priorytet oraz statusy zgłoszeń dla tej tablicy",
+          "display": "Wyświetlanie i zachowanie",
+          "displayHelp": "Licznik na żywo i typ tablicy"
+        },
+        "saveChanges": "Zapisz zmiany",
+        "unsaved": "Niezapisane",
+        "unsavedShort": "Niezapisane zmiany",
+        "unsavedBanner": "Masz niezapisane zmiany. Kliknij „Zapisz zmiany”, aby je zastosować.",
+        "allSaved": "Wszystkie zmiany zapisane",
+        "reopenBadge": "otwórz ponownie",
+        "required": "Wymagane"
+      },
+      "empty": "Nie znaleziono tablic.",
+      "searchPlaceholder": "Szukaj tablic…"
     },
     "priorities": {
       "title": {

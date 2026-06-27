@@ -384,7 +384,6 @@
       "display": "Visualizzazione",
       "ticketNumbering": "Numerazione ticket",
       "boards": "Bacheche",
-      "statuses": "Stati",
       "priorities": "Priorita",
       "categories": "Categorie",
       "checklistTemplates": "Modelli di checklist"
@@ -489,7 +488,9 @@
         "boardManager": "Responsabile della bacheca",
         "order": "Ordine",
         "itilBoard": "Bacheca ITIL",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "ticketLoad": "Carico di ticket",
+        "statuses": "Stati"
       },
       "statusLabels": {
         "active": "Attivo",
@@ -508,7 +509,8 @@
         "up": "Su",
         "down": "Giù",
         "remove": "Rimuovi",
-        "addStatus": "Aggiungi stato"
+        "addStatus": "Aggiungi stato",
+        "back": "Torna alle Bacheche"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Attiva timer ticket in tempo reale",
           "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+        },
+        "defaultBoard": {
+          "label": "Bacheca predefinita per i ticket del portale clienti",
+          "help": "I nuovi ticket inviati dal portale clienti vengono assegnati a questa bacheca. Solo una bacheca può essere quella predefinita."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "I giorni di inattività per la chiusura automatica devono essere un numero intero positivo",
           "autoCloseWarningInvalid": "Il preavviso di avviso deve essere inferiore ai giorni di inattività"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Generale",
+          "generalHelp": "Nome, descrizione, visibilità e predefinito",
+          "assignment": "Assegnazione e SLA",
+          "assignmentHelp": "Instradamento predefinito, SLA e responsabile della bacheca",
+          "inbound": "Email e risposte in arrivo",
+          "inboundHelp": "Riapri i ticket quando i clienti rispondono via email",
+          "close": "Regole di chiusura",
+          "closeHelp": "Requisiti prima che un ticket possa essere chiuso",
+          "automation": "Automazione",
+          "automationHelp": "Chiudi automaticamente i ticket inattivi dopo un periodo di inattività",
+          "statuses": "Priorità e stati",
+          "statusesHelp": "Priorità predefinita e gli stati dei ticket per questa bacheca",
+          "display": "Visualizzazione e comportamento",
+          "displayHelp": "Timer dal vivo e tipo di bacheca"
+        },
+        "saveChanges": "Salva modifiche",
+        "unsaved": "Non salvato",
+        "unsavedShort": "Modifiche non salvate",
+        "unsavedBanner": "Hai modifiche non salvate. Fai clic su «Salva modifiche» per applicarle.",
+        "allSaved": "Tutte le modifiche salvate",
+        "reopenBadge": "riapri",
+        "required": "Obbligatorio"
+      },
+      "empty": "Nessuna bacheca trovata.",
+      "searchPlaceholder": "Cerca bacheche…"
     },
     "priorities": {
       "title": {

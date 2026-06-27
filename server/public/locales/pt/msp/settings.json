@@ -384,7 +384,6 @@
       "display": "Mostrar",
       "ticketNumbering": "Numeração de chamados",
       "boards": "Quadros",
-      "statuses": "Status",
       "priorities": "Prioridades",
       "categories": "Categorias",
       "checklistTemplates": "Modelos de lista de verificação"
@@ -489,7 +488,9 @@
         "boardManager": "Gerente do Conselho",
         "order": "Ordem",
         "itilBoard": "Conselho ITIL",
-        "actions": "Ações"
+        "actions": "Ações",
+        "ticketLoad": "Carga de tickets",
+        "statuses": "Status"
       },
       "statusLabels": {
         "active": "Ativo",
@@ -508,7 +509,8 @@
         "up": "Acima",
         "down": "Abaixo",
         "remove": "Remover",
-        "addStatus": "Adicionar status"
+        "addStatus": "Adicionar status",
+        "back": "Voltar para Quadros"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Ativar cronômetro de chamado ao vivo",
           "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos chamados neste quadro. A entrada manual de hora permanece disponível."
+        },
+        "defaultBoard": {
+          "label": "Quadro padrão para tickets do portal do cliente",
+          "help": "Novos tickets enviados pelo portal do cliente são atribuídos a este quadro. Apenas um quadro pode ser o padrão."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Os dias de inatividade com fechamento automático precisam ser um número inteiro positivo",
           "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Geral",
+          "generalHelp": "Nome, descrição, visibilidade e padrão",
+          "assignment": "Atribuição e SLA",
+          "assignmentHelp": "Roteamento padrão, SLA e responsável pelo quadro",
+          "inbound": "E-mail e respostas recebidas",
+          "inboundHelp": "Reabrir tickets quando os clientes responderem por e-mail",
+          "close": "Regras de fechamento",
+          "closeHelp": "Requisitos antes que um ticket possa ser fechado",
+          "automation": "Automação",
+          "automationHelp": "Fechar automaticamente tickets inativos após inatividade",
+          "statuses": "Prioridades e status",
+          "statusesHelp": "Prioridade padrão e os status de ticket deste quadro",
+          "display": "Exibição e comportamento",
+          "displayHelp": "Cronômetro ao vivo e tipo de quadro"
+        },
+        "saveChanges": "Salvar alterações",
+        "unsaved": "Não salvo",
+        "unsavedShort": "Alterações não salvas",
+        "unsavedBanner": "Você tem alterações não salvas. Clique em \"Salvar alterações\" para aplicá-las.",
+        "allSaved": "Todas as alterações salvas",
+        "reopenBadge": "reabrir",
+        "required": "Obrigatório"
+      },
+      "empty": "Nenhum quadro encontrado.",
+      "searchPlaceholder": "Pesquisar quadros…"
     },
     "priorities": {
       "title": {
