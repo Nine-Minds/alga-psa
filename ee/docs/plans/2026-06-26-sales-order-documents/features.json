@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Phase 1: SALES_ORDER_TEMPLATE_VALUE_BINDINGS defined (orderNumber, orderDate, expectedShipDate, customerName/Address, tenant party, clientPoNumber, subtotal/tax/total, notes)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "Phase 1: SALES_ORDER_TEMPLATE_COLLECTION_BINDINGS defined (lineItems)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Phase 1: buildSalesOrderTemplateBindings() assembles value+collection bindings into AST bindings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Phase 1: buildStandardSalesOrderConfirmationAst() returns a valid confirmation TemplateAst (header, parties, line table, totals, branding)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance criteria"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Phase 1: getStandardSalesOrderTemplateAstByCode(code) lookup returns a cloned standard AST",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P1"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Phase 1: resolveSalesOrderTemplateAst() stub returns the standard confirmation AST (no DB)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P1"
     ]

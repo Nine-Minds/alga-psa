@@ -44,7 +44,9 @@ export interface SalesOrderViewModel {
   notes?: string | null;
   client_id?: string | null;
   customer?: SalesOrderDocumentParty | null;
-  tenant?: SalesOrderDocumentParty | null;
+  /** The tenant's own company (issuer). Named to match the canonical invoice/quote data key
+   *  so template binding paths (customer.*, tenantClient.*) resolve uniformly. */
+  tenantClient?: SalesOrderDocumentParty | null;
   line_items: SalesOrderViewModelLineItem[];
   /** Σ line amounts, integer cents. */
   subtotal: number;

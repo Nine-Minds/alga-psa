@@ -59,7 +59,7 @@ describe('assembleSalesOrderViewModel', () => {
     expect(vm.so_number).toBe('SO-00042');
     expect(vm.client_po_number).toBe('PO-ACME-9');
     expect(vm.customer?.name).toBe('Acme Corp');
-    expect(vm.tenant?.name).toBe('Northwind MSP');
+    expect(vm.tenantClient?.name).toBe('Northwind MSP');
     expect(vm.line_items[1].quantity_fulfilled).toBe(3);
   });
 

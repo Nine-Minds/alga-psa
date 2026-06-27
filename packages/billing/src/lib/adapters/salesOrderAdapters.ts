@@ -182,7 +182,7 @@ export function assembleSalesOrderViewModel(input: {
     notes: so.notes ?? null,
     client_id: so.client_id ?? null,
     customer,
-    tenant: tenantParty,
+    tenantClient: tenantParty,
     line_items: lineItems,
     subtotal,
     tax,
