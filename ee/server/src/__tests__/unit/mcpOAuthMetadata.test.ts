@@ -30,6 +30,12 @@ describe('AS metadata (T010)', () => {
     expect(md.registration_endpoint).toBeUndefined();
   });
 
+  it('signals CIMD support so clients use it instead of falling back to DCR', () => {
+    // Claude (and other clients) only pick CIMD when BOTH are advertised.
+    expect(md.client_id_metadata_document_supported).toBe(true);
+    expect(md.token_endpoint_auth_methods_supported).toEqual(['none']);
+  });
+
   it('advertises the mcp scope', () => {
     expect(md.scopes_supported).toEqual(['mcp']);
   });
