@@ -384,7 +384,6 @@
       "display": "Display",
       "ticketNumbering": "Ticket Numbering",
       "boards": "Boards",
-      "statuses": "Statuses",
       "priorities": "Priorities",
       "categories": "Categories",
       "checklistTemplates": "Checklist Templates"
@@ -489,7 +488,9 @@
         "boardManager": "Board Manager",
         "order": "Order",
         "itilBoard": "ITIL Board",
-        "actions": "Actions"
+        "actions": "Actions",
+        "ticketLoad": "Ticket load",
+        "statuses": "Statuses"
       },
       "statusLabels": {
         "active": "Active",
@@ -508,7 +509,8 @@
         "up": "Up",
         "down": "Down",
         "remove": "Remove",
-        "addStatus": "Add Status"
+        "addStatus": "Add Status",
+        "back": "Back to Boards"
       },
       "fields": {
         "boardName": {
@@ -588,6 +590,10 @@
         "liveTimer": {
           "label": "Enable live ticket timer",
           "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+        },
+        "defaultBoard": {
+          "label": "Default board for client portal tickets",
+          "help": "New tickets submitted from the client portal land on this board. Only one board can be the default."
         }
       },
       "dialog": {
@@ -713,7 +719,34 @@
           "autoCloseDaysInvalid": "Auto-close inactivity days must be a positive whole number",
           "autoCloseWarningInvalid": "The warning lead time must be smaller than the inactivity days"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "General",
+          "generalHelp": "Name, description, visibility and default",
+          "assignment": "Assignment & SLA",
+          "assignmentHelp": "Default routing, SLA and board manager",
+          "inbound": "Email & inbound replies",
+          "inboundHelp": "Reopen tickets when clients reply by email",
+          "close": "Close rules",
+          "closeHelp": "Requirements before a ticket can be closed",
+          "automation": "Automation",
+          "automationHelp": "Auto-close stale tickets after inactivity",
+          "statuses": "Priorities & statuses",
+          "statusesHelp": "Default priority and the ticket statuses for this board",
+          "display": "Display & behaviour",
+          "displayHelp": "Live timer and board type"
+        },
+        "saveChanges": "Save Changes",
+        "unsaved": "Unsaved",
+        "unsavedShort": "Unsaved changes",
+        "unsavedBanner": "You have unsaved changes. Click \"Save Changes\" to apply them.",
+        "allSaved": "All changes saved",
+        "reopenBadge": "reopen",
+        "required": "Required"
+      },
+      "empty": "No boards found.",
+      "searchPlaceholder": "Search boards…"
     },
     "priorities": {
       "title": {

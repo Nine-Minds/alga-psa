@@ -188,6 +188,7 @@ vi.mock('@alga-psa/tickets/components', async () => {
   const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 
   return {
+    BoardsSettings: () => null,
     CategoriesSettings: () => {
       const { t } = useTranslation('features/tickets');
       return (
@@ -222,14 +223,6 @@ vi.mock('@alga-psa/tickets/components', async () => {
 vi.mock('@alga-psa/reference-data/components', () => ({
   NumberingSettings: () => null,
   PrioritySettings: () => null,
-}));
-
-vi.mock('server/src/components/settings/general/BoardsSettings', () => ({
-  default: () => null,
-}));
-
-vi.mock('server/src/components/settings/general/StatusSettings', () => ({
-  default: () => null,
 }));
 
 const { default: TicketingSettings } = await import('server/src/components/settings/general/TicketingSettings');

@@ -171,6 +171,81 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
   }
 });
 
+export interface BoardListStats {
+  ticketCount: number;
+  openTicketCount: number;
+  statusCount: number;
+  closeRulesEnabled: boolean;
+  autoCloseRuleCount: number;
+}
+
+/**
+ * Per-board aggregate metrics for the boards settings list (ticket load, status
+ * count, automation). Tenant-scoped GROUP BYs co-locate on a single Citus shard.
+ * Returns a map keyed by board_id; missing boards default to zeroes in the UI.
+ */
+export const getBoardListStats = withAuth(async (_user, { tenant }): Promise<Record<string, BoardListStats>> => {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const [ticketRows, statusRows, closeRuleRows, autoCloseRows] = await Promise.all([
+        trx('tickets as t')
+          .leftJoin('statuses as s', function () {
+            this.on('t.status_id', 's.status_id').andOn('t.tenant', 's.tenant');
+          })
+          .where('t.tenant', tenant)
+          .whereNotNull('t.board_id')
+          .groupBy('t.board_id')
+          .select('t.board_id')
+          .select(trx.raw('COUNT(*)::int as total'))
+          .select(trx.raw('COUNT(*) FILTER (WHERE s.is_closed IS NOT TRUE)::int as open')),
+        trx('statuses')
+          .where({ tenant, status_type: 'ticket' })
+          .whereNotNull('board_id')
+          .groupBy('board_id')
+          .select('board_id')
+          .select(trx.raw('COUNT(*)::int as count')),
+        trx('board_close_rules')
+          .where({ tenant })
+          .select('board_id', 'is_enabled'),
+        trx('board_auto_close_rules')
+          .where({ tenant })
+          .groupBy('board_id')
+          .select('board_id')
+          .select(trx.raw('COUNT(*)::int as count')),
+      ]);
+
+      const stats: Record<string, BoardListStats> = {};
+      const ensure = (boardId: string): BoardListStats => {
+        if (!stats[boardId]) {
+          stats[boardId] = { ticketCount: 0, openTicketCount: 0, statusCount: 0, closeRulesEnabled: false, autoCloseRuleCount: 0 };
+        }
+        return stats[boardId];
+      };
+
+      for (const row of ticketRows as Array<{ board_id: string; total: number; open: number }>) {
+        const entry = ensure(row.board_id);
+        entry.ticketCount = Number(row.total) || 0;
+        entry.openTicketCount = Number(row.open) || 0;
+      }
+      for (const row of statusRows as Array<{ board_id: string; count: number }>) {
+        ensure(row.board_id).statusCount = Number(row.count) || 0;
+      }
+      for (const row of closeRuleRows as Array<{ board_id: string; is_enabled: boolean }>) {
+        ensure(row.board_id).closeRulesEnabled = Boolean(row.is_enabled);
+      }
+      for (const row of autoCloseRows as Array<{ board_id: string; count: number }>) {
+        ensure(row.board_id).autoCloseRuleCount = Number(row.count) || 0;
+      }
+
+      return stats;
+    });
+  } catch (error) {
+    console.error('Failed to fetch board list stats:', error);
+    return {};
+  }
+});
+
 export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBoardInput): Promise<IBoard> => {
   const { knex: db } = await createTenantKnex();
 
