@@ -304,7 +304,7 @@ async function ensureMspSettingsPermission(
     .andWhere('r.msp', true)
     .andWhere('r.role_name', 'Admin');
   scopedDb.tenantJoin(adminRoleQuery, 'roles as r', 'r.role_id', 'ur.role_id');
-  const adminRole = await adminRoleQuery.first();
+  const adminRole = await adminRoleQuery.first<any>();
 
   if (!adminRole) {
     throw new Error('MSP Admin user does not have an Admin role');

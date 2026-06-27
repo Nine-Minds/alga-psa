@@ -1,5 +1,6 @@
 import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import type { BucketConfig } from '@alga-psa/core/rateLimit';
 
 const TABLE_NAME = 'api_rate_limit_settings';
@@ -137,7 +138,7 @@ export async function upsertForKey(
 ): Promise<ApiRateLimitSettingsRow> {
   const knex = await getConnection(tenant);
 
-  const [row] = await tenantDb(knex, tenant).table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
+  const [row] = await (tenantDb(knex, tenant).table<ApiRateLimitSettingsDbRow>(TABLE_NAME) as unknown as Knex.QueryBuilder)
     .insert({
       tenant,
       api_key_id: apiKeyId,
@@ -152,7 +153,7 @@ export async function upsertForKey(
       refill_per_min: input.refillPerMin,
       updated_at: new Date().toISOString(),
     })
-    .returning('*');
+    .returning('*') as unknown as ApiRateLimitSettingsDbRow[];
 
   return mapRow(row);
 }

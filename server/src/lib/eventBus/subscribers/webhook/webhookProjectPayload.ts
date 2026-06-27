@@ -357,7 +357,7 @@ async function fetchProjectWebhookRow(
     .where({
       'p.project_id': projectId,
     })
-    .first();
+    .first<any>();
 }
 
 async function fetchProjectTaskWebhookRow(
@@ -412,7 +412,7 @@ async function fetchProjectTaskWebhookRow(
     .where({
       'pt.task_id': taskId,
     })
-    .first();
+    .first<any>();
 }
 
 async function fetchProjectTaskTags(

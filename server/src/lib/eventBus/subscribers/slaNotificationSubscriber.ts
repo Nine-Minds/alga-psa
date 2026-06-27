@@ -75,7 +75,7 @@ async function handleSlaThresholdReachedEvent(event: unknown): Promise<void> {
             'c.client_name as client_name',
             'p.priority_name'
           )
-          .first();
+          .first<any>();
 
         if (!ticket || !ticket.sla_policy_id) {
           logger.warn('[SlaNotificationSubscriber] Ticket or SLA policy missing, skipping', {

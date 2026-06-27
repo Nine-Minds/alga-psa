@@ -277,7 +277,7 @@ async function fetchTicketWebhookRow(
     .where({
       't.ticket_id': ticketId,
     })
-    .first();
+    .first<any>();
 }
 
 async function fetchTicketTags(

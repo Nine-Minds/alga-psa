@@ -156,7 +156,7 @@
     {
       "id": "T411B",
       "title": "Migrate historical migration residuals",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "owner": "Boole",
       "notes": "Older comment, interaction type, standard reference, deprecated company field, contract line hourly, client portal config, invoice template normalization, and client portal budget migrations should use tenantDb roots or explicit unscoped historical/schema boundaries."

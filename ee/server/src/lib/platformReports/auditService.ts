@@ -138,7 +138,7 @@ export class ExtensionAuditService {
           workflow_id: input.workflowId || null,
           status: input.status || null,
           error_message: input.errorMessage || null,
-          details: input.details ? JSON.stringify(input.details) : null,
+          details: input.details ? (JSON.stringify(input.details) as any) : null,
           ip_address: input.ipAddress || null,
           user_agent: input.userAgent || null,
         })
@@ -253,13 +253,13 @@ export class ExtensionAuditService {
 
     // Total events
     const [{ count: totalEvents }] = await this.auditLogs(knex)
-      .count('* as count');
+      .count('* as count') as any[];
 
     // Events by type
     const eventsByTypeRows = await this.auditLogs(knex)
       .select('event_type')
       .count('* as count')
-      .groupBy('event_type');
+      .groupBy('event_type') as any[];
 
     const eventsByType: Record<string, number> = {};
     for (const row of eventsByTypeRows) {
@@ -277,7 +277,7 @@ export class ExtensionAuditService {
       .count('* as event_count')
       .groupBy('user_id', 'user_email')
       .orderBy('event_count', 'desc')
-      .limit(10);
+      .limit(10) as any[];
 
     return {
       totalEvents: Number(totalEvents),

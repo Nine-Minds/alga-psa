@@ -237,7 +237,7 @@ export const findPriorityByName = withAuth(async (_user, { tenant }, name: strin
       const priority = await tenantScopedTable(trx, 'priorities', tenant)
         .select('priority_id as id', 'priority_name as name', 'order_number', 'color')
         .whereRaw('LOWER(priority_name) = LOWER(?)', [name])
-        .first() as FindPriorityByNameOutput | undefined;
+        .first() as unknown as FindPriorityByNameOutput | undefined;
 
       return priority || null;
     } catch (error) {

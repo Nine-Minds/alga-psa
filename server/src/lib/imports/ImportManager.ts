@@ -156,7 +156,7 @@ export class ImportManager {
         name: importer.name,
         description: importer.description,
         field_mapping: toTemplate(defaultFieldMapping),
-        duplicate_detection_fields: duplicateStrategy?.exactFields ?? null,
+        duplicate_detection_fields: duplicateStrategy?.exactFields ? [...duplicateStrategy.exactFields] : null,
         is_active: true,
         metadata: combinedMetadata ?? null
       });

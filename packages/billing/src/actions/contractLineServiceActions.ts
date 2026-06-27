@@ -642,7 +642,7 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
             'sc.service_id': config.service_id,
           })
           .select('sc.*', 'st.name as service_type_name')
-          .first() as IService & { service_type_name?: string } | undefined;
+          .first() as unknown as (IService & { service_type_name?: string }) | undefined;
 
         if (!service) {
           continue;
@@ -819,7 +819,7 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
           'sc.service_id': serviceId,
         })
         .select('sc.*', 'st.name as service_type_name')
-        .first() as (IService & { service_type_name?: string }) | undefined;
+        .first() as unknown as (IService & { service_type_name?: string }) | undefined;
 
       if (!service) {
         continue;

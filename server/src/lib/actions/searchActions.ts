@@ -103,7 +103,7 @@ export const searchAppAction = withAuth(async (
 export const searchAppTypeaheadAction = withAuth(async (
   user,
   { tenant },
-  input: Pick<SearchAppInput, 'query' | 'types' | 'cursor'>,
+  input: Partial<Pick<SearchAppInput, 'query' | 'types' | 'cursor'>> & { query: string },
 ): Promise<SearchTypeaheadResult> => {
   const startedAt = Date.now();
   const parsedInput = searchAppInputSchema.pick({

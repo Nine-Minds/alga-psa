@@ -137,7 +137,7 @@ async function getTicketsNeedingSlaCheck(
       join.andOn('t.priority_id', '=', 'spt.priority_id');
     },
   });
-  const tickets = await ticketsQuery;
+  const tickets: any[] = await ticketsQuery;
 
   // Extract the last notified thresholds from attributes
   return tickets.map((ticket) => ({

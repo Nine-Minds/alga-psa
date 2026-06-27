@@ -32,7 +32,7 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
   db.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
   db.tenantJoin(ticketQuery, 'clients as cl', 't.client_id', 'cl.client_id', { type: 'left' });
   db.tenantJoin(ticketQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
-  const ticket = await ticketQuery.first();
+  const ticket = await ticketQuery.first<any>();
 
   if (!ticket) return null;
 
@@ -61,7 +61,7 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
     .orderBy('c.created_at', 'desc')
     .limit(MAX_COMMENTS);
   db.tenantJoin(commentsQuery, 'users as u', 'c.user_id', 'u.user_id', { type: 'left' });
-  const comments = await commentsQuery;
+  const comments: any[] = await commentsQuery;
 
   if (comments.length > 0) {
     // Reverse to show chronological order (we fetched desc to get the most recent)
@@ -107,7 +107,7 @@ async function resolveContact(knex: Knex, entityId: string, tenant: string): Pro
     .select('ct.full_name', 'ct.email', 'ct.role', 'cl.client_name')
     .where('ct.contact_name_id', entityId);
   db.tenantJoin(contactQuery, 'clients as cl', 'ct.client_id', 'cl.client_id', { type: 'left' });
-  const contact = await contactQuery.first();
+  const contact = await contactQuery.first<any>();
 
   if (!contact) return null;
 
@@ -129,7 +129,7 @@ async function resolveAsset(knex: Knex, entityId: string, tenant: string): Promi
     .where('a.asset_id', entityId);
   db.tenantJoin(assetQuery, 'asset_types as at', 'a.type_id', 'at.type_id', { type: 'left' });
   db.tenantJoin(assetQuery, 'clients as cl', 'a.client_id', 'cl.client_id', { type: 'left' });
-  const asset = await assetQuery.first();
+  const asset = await assetQuery.first<any>();
 
   if (!asset) return null;
 
@@ -165,7 +165,7 @@ async function resolveProjectTask(knex: Knex, entityId: string, tenant: string):
   db.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id', { type: 'left' });
   db.tenantJoin(taskQuery, 'users as u', 'pt.assigned_to', 'u.user_id', { type: 'left' });
   db.tenantJoin(taskQuery, 'project_status_mappings as psm', 'pt.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
-  const task = await taskQuery.first();
+  const task = await taskQuery.first<any>();
 
   if (!task) return null;
 
@@ -175,7 +175,7 @@ async function resolveProjectTask(knex: Knex, entityId: string, tenant: string):
     const status = await db.table('statuses')
       .select('name')
       .where({ status_id: task.standard_status_id })
-      .first();
+      .first<any>();
     statusName = status?.name || null;
   }
 
@@ -197,7 +197,7 @@ async function resolveContract(knex: Knex, entityId: string, tenant: string): Pr
   const contract = await db.table('contracts as c')
     .select('c.contract_name', 'c.contract_description', 'c.status', 'c.billing_frequency')
     .where('c.contract_id', entityId)
-    .first();
+    .first<any>();
 
   if (!contract) return null;
 
@@ -206,7 +206,7 @@ async function resolveContract(knex: Knex, entityId: string, tenant: string): Pr
     .select('cl.client_name', 'cc.start_date', 'cc.end_date')
     .where('cc.contract_id', entityId);
   db.tenantJoin(clientContractQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
-  const clientContract = await clientContractQuery.first();
+  const clientContract = await clientContractQuery.first<any>();
 
   const lines: string[] = [];
   lines.push(`## Contract: ${contract.contract_name}`);
@@ -228,7 +228,7 @@ async function resolveQuote(knex: Knex, entityId: string, tenant: string): Promi
     .select('q.quote_number', 'q.title', 'q.status', 'q.total_amount', 'q.currency_code', 'q.valid_until', 'q.quote_date', 'cl.client_name')
     .where('q.quote_id', entityId);
   db.tenantJoin(quoteQuery, 'clients as cl', 'q.client_id', 'cl.client_id', { type: 'left' });
-  const quote = await quoteQuery.first();
+  const quote = await quoteQuery.first<any>();
 
   if (!quote) return null;
 

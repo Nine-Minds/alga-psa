@@ -156,7 +156,7 @@ async function fetchProjectForEmail(
 
   return query
     .where('p.project_id', projectId)
-    .first();
+    .first<any>();
 }
 
 async function fetchTaskResourceEmails(
@@ -177,7 +177,7 @@ async function fetchTaskResourceEmails(
 
   return query
     .where('tr.task_id', taskId)
-    .whereNotNull('tr.additional_user_id');
+    .whereNotNull('tr.additional_user_id') as unknown as Promise<Array<{ email?: string | null; user_id?: string | null }>>;
 }
 
 /**
@@ -1084,7 +1084,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
 
     const project = await query
       .where('p.project_id', payload.projectId)
-      .first();
+      .first<any>();
 
     // Log the project details for debugging
     logger.info('[ProjectEmailSubscriber] Project details:', {
@@ -1217,7 +1217,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
     });
 
     const task = await query
-      .first();
+      .first<any>();
 
     if (!task) {
       logger.warn('Could not send task assigned email - task not found:', {
@@ -1338,7 +1338,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     const task = await taskQuery
       .where('t.task_id', taskId)
-      .first();
+      .first<any>();
 
     if (!task) {
       logger.warn('[ProjectEmailSubscriber] Could not send task comment email - task not found:', {
@@ -1409,9 +1409,9 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
       const primaryAssignee = await scopedDb.table('users')
         .select('user_id', 'email')
         .where({ user_id: task.assigned_to, is_inactive: false })
-        .first();
+        .first<any>();
       if (primaryAssignee && isValidEmail(primaryAssignee.email)) {
-        assignees.push(primaryAssignee);
+        assignees.push({ user_id: primaryAssignee.user_id, email: primaryAssignee.email });
       }
     }
 
@@ -1419,8 +1419,8 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     const additionalAgents = await fetchTaskResourceEmails(db, tenantId, taskId);
 
     for (const agent of additionalAgents) {
-      if (agent.email && isValidEmail(agent.email) && !assignees.some(a => a.user_id === agent.user_id)) {
-        assignees.push(agent);
+      if (agent.email && isValidEmail(agent.email) && agent.user_id && !assignees.some(a => a.user_id === agent.user_id)) {
+        assignees.push({ user_id: agent.user_id, email: agent.email });
       }
     }
 

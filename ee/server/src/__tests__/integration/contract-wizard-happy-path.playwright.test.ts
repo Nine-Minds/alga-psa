@@ -1407,7 +1407,7 @@ test.describe('Date Picker Timezone Regression', () => {
       expect(bundle).toBeDefined();
       const row = await tenantTable(db, tenantId, 'client_plan_bundles')
         .where({ tenant: tenantId, bundle_id: bundle!.bundle_id })
-        .first(db.raw('start_date::text as s'), db.raw('end_date::text as e'));
+        .first<any>(db.raw('start_date::text as s'), db.raw('end_date::text as e'));
       expect(row).toBeDefined();
       // Compare YMD; en-CA locale gives YYYY-MM-DD reliably
       expect(row.s).toBe(startYMD);

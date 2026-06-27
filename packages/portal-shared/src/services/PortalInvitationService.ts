@@ -276,7 +276,7 @@ export class PortalInvitationService {
             'c.email as contact_email',
             'comp.client_name'
           )
-          .first() as PortalInvitationVerificationRow | undefined;
+          .first() as unknown as PortalInvitationVerificationRow | undefined;
 
         if (!invitation) {
           return {

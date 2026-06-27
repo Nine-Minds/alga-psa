@@ -267,7 +267,7 @@ async function fetchAdditionalTicketResources(
 
   scopedDb.tenantJoin(query, 'users as u', 'tr.additional_user_id', 'u.user_id', { type: 'left' });
 
-  return query.where({ 'tr.ticket_id': ticketId });
+  return query.where({ 'tr.ticket_id': ticketId }) as unknown as Promise<Array<{ email?: string | null; user_id?: string | null }>>;
 }
 
 async function fetchBundleChildTicketsForEmail(

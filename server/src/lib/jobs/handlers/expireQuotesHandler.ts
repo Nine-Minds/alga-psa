@@ -112,7 +112,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
         .whereNotNull('q.valid_until')
         .where('q.valid_until', '<', todayStartIso);
       db.tenantJoin(expirableQuotesQuery, 'users as u', 'q.created_by', 'u.user_id', { type: 'left' });
-      const expirableQuotes = await expirableQuotesQuery;
+      const expirableQuotes = await expirableQuotesQuery as any[];
 
       for (const quote of expirableQuotes) {
         await db.table('quotes')

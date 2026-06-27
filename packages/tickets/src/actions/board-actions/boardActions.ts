@@ -794,7 +794,7 @@ export const findBoardByName = withAuth(async (_user, { tenant }, name: string):
     const board = await tenantDb(trx, tenant).table('boards')
       .select('board_id as id', 'board_name as name', 'description', 'is_default', 'is_inactive')
       .whereRaw('LOWER(board_name) = LOWER(?)', [name])
-      .first() as FindBoardByNameOutput | undefined;
+      .first() as unknown as FindBoardByNameOutput | undefined;
 
     return board ?? null;
   });
