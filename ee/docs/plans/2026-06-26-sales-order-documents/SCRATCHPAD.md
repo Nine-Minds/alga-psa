@@ -82,3 +82,12 @@
   marker (client-party fetch duplicated from quoteAdapters; converge in Phase 2).
 - Next: F008–F013 — SO template bindings + standard confirmation AST + resolve stub, then F014–F019
   render+PDF wiring (getSalesOrderHtml + generatePDF branch) and the API-route download trigger.
+- 2026-06-27: Phase 1 complete (F001–F021). Phase 2 *verifiable* spine done (F103/F104 registry,
+  F110 resolution precedence, F111 SO path wired through the generic resolver) — all typecheck + unit
+  tested (resolution 4, registry 3). 33 SO/spine tests green via `vitest run --root=server`.
+- ENV-GATED remainder (cannot build verified until the dev env is healthy — DB up + auth port aligned):
+  Phase 2: F100–F102 (3 generic migrations), F105–F109 (generic CRUD + preview actions), F112–F114
+  (management route + DesignerShell editor), F115 (designer-kind + buildInvoiceExpressionPathOptions
+  in @alga-psa/workflows/expression-authoring — cross-package, needs the browser to verify the SO
+  designer renders), F116 (seed). Phase 3: F200–F205. Also the Phase-1 DB-backed tests T004/T005/T006
+  and the live authenticated PDF check. Resume here once Tailscale is up + the stack is restored.
