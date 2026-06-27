@@ -1,48 +1,355 @@
 [
-  { "id": "F001", "description": "Phase 1: SalesOrderViewModel type defined (header fields, customer/tenant parties, line items, totals, currency)", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F002", "description": "Phase 1: mapDbSalesOrderToViewModel(knex, tenant, soId) loads sales_orders + sales_order_lines", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F003", "description": "Phase 1: adapter resolves customer party (client name + address from client_id and ship_to)", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F004", "description": "Phase 1: adapter resolves product/service name + SKU for each line (service_catalog)", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F005", "description": "Phase 1: adapter computes per-line amount (quantity_ordered x unit_price, integer cents)", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F006", "description": "Phase 1: adapter computes subtotal, tax, total", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F007", "description": "Phase 1: adapter resolves tenant party (company name/address/logo) for branding", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F008", "description": "Phase 1: SALES_ORDER_TEMPLATE_VALUE_BINDINGS defined (orderNumber, orderDate, expectedShipDate, customerName/Address, tenant party, clientPoNumber, subtotal/tax/total, notes)", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F009", "description": "Phase 1: SALES_ORDER_TEMPLATE_COLLECTION_BINDINGS defined (lineItems)", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F010", "description": "Phase 1: buildSalesOrderTemplateBindings() assembles value+collection bindings into AST bindings", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F011", "description": "Phase 1: buildStandardSalesOrderConfirmationAst() returns a valid confirmation TemplateAst (header, parties, line table, totals, branding)", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F012", "description": "Phase 1: getStandardSalesOrderTemplateAstByCode(code) lookup returns a cloned standard AST", "implemented": false, "prdRefs": ["Phasing P1"] },
-  { "id": "F013", "description": "Phase 1: resolveSalesOrderTemplateAst() stub returns the standard confirmation AST (no DB)", "implemented": false, "prdRefs": ["Phasing P1"] },
-  { "id": "F014", "description": "Phase 1: getSalesOrderHtml() renders SO -> HTML via evaluateTemplateAst + renderTemplateAstHtmlDocument", "implemented": false, "prdRefs": ["Data flow"] },
-  { "id": "F015", "description": "Phase 1: generatePDF() handles a salesOrderId branch -> PDF buffer via generatePDFBuffer", "implemented": false, "prdRefs": ["Data flow"] },
-  { "id": "F016", "description": "Phase 1: downloadSalesOrderPDF(soId) server action returns pdf bytes + filename", "implemented": false, "prdRefs": ["Primary flow"] },
-  { "id": "F017", "description": "Phase 1: downloadSalesOrderPDF enforces permission (inventory/sales-order read)", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F018", "description": "Phase 1: Download action wired on the Sales Orders screen (resolve inventory->billing dependency direction: direct import vs API route)", "implemented": false, "prdRefs": ["UX/UI", "Risks"] },
-  { "id": "F019", "description": "Phase 1: confirmation content correct — order number, dates, customer, each line (name+qty+amount), subtotal/total, branding", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F020", "description": "Phase 1: error handling — SO not found / no lines -> clear message, no PDF", "implemented": false, "prdRefs": ["Error handling"] },
-  { "id": "F021", "description": "Phase 1: error handling — evaluate/render throws -> 'Couldn't generate the document' + log", "implemented": false, "prdRefs": ["Error handling"] },
-
-  { "id": "F100", "description": "Phase 2: generic document_templates table (document_type-keyed) + migration", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F101", "description": "Phase 2: generic standard_document_templates table (document_type-keyed) + migration", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F102", "description": "Phase 2: generic document_template_assignments table (document_type-keyed) + migration", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F103", "description": "Phase 2: documentRegistry — type -> { label, bindings, standardTemplates, viewModelBuilder, sampleData, codePrefix }", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F104", "description": "Phase 2: register 'sales-order' in the registry (its Phase-1 artifacts)", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F105", "description": "Phase 2: generic getDocumentTemplates(type) action", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F106", "description": "Phase 2: generic saveDocumentTemplate(type, ...) action", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F107", "description": "Phase 2: generic setDefaultDocumentTemplate(type, ...) action", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F108", "description": "Phase 2: generic deleteDocumentTemplate(type, ...) action", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F109", "description": "Phase 2: runAuthoritativeTemplatePreview(type, ...) action (sample-data preview)", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F110", "description": "Phase 2: resolveDocumentTemplateAst(type, entity) — client override -> tenant default -> standard", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F111", "description": "Phase 2: replace P1 stub with registry-backed resolveSalesOrderTemplateAst", "implemented": false, "prdRefs": ["Phasing P2"] },
-  { "id": "F112", "description": "Phase 2: generic management route /msp/document-templates/[type]", "implemented": false, "prdRefs": ["UX/UI"] },
-  { "id": "F113", "description": "Phase 2: management page lists/clones/edits/deletes templates for a type", "implemented": false, "prdRefs": ["UX/UI"] },
-  { "id": "F114", "description": "Phase 2: editor embeds DesignerShell + preview for a type", "implemented": false, "prdRefs": ["UX/UI"] },
-  { "id": "F115", "description": "Phase 2: extend DesignerDocumentKind + resolveDesignerDocumentKind with 'sales-order'", "implemented": false, "prdRefs": ["Risks"] },
-  { "id": "F116", "description": "Phase 2: seed standard SO confirmation template into standard_document_templates", "implemented": false, "prdRefs": ["Phasing P2"] },
-
-  { "id": "F200", "description": "Phase 3: client-level template override resolution", "implemented": false, "prdRefs": ["Phasing P3"] },
-  { "id": "F201", "description": "Phase 3: detailed / by-location standard confirmation variant", "implemented": false, "prdRefs": ["Phasing P3"] },
-  { "id": "F202", "description": "Phase 3: drop-ship vs from-stock line nuances in the document", "implemented": false, "prdRefs": ["Phasing P3"] },
-  { "id": "F203", "description": "Phase 3: packing slip document type (registered)", "implemented": false, "prdRefs": ["Phasing P3"] },
-  { "id": "F204", "description": "Phase 3: pick list document type (registered)", "implemented": false, "prdRefs": ["Phasing P3"] },
-  { "id": "F205", "description": "Phase 3: auto-attach confirmation to SO emails", "implemented": false, "prdRefs": ["Phasing P3"] }
+  {
+    "id": "F001",
+    "description": "Phase 1: SalesOrderViewModel type defined (header fields, customer/tenant parties, line items, totals, currency)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Phase 1: mapDbSalesOrderToViewModel(knex, tenant, soId) loads sales_orders + sales_order_lines",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Phase 1: adapter resolves customer party (client name + address from client_id and ship_to)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Phase 1: adapter resolves product/service name + SKU for each line (service_catalog)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Phase 1: adapter computes per-line amount (quantity_ordered x unit_price, integer cents)",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Phase 1: adapter computes subtotal, tax, total",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Phase 1: adapter resolves tenant party (company name/address/logo) for branding",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Phase 1: SALES_ORDER_TEMPLATE_VALUE_BINDINGS defined (orderNumber, orderDate, expectedShipDate, customerName/Address, tenant party, clientPoNumber, subtotal/tax/total, notes)",
+    "implemented": false,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Phase 1: SALES_ORDER_TEMPLATE_COLLECTION_BINDINGS defined (lineItems)",
+    "implemented": false,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Phase 1: buildSalesOrderTemplateBindings() assembles value+collection bindings into AST bindings",
+    "implemented": false,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Phase 1: buildStandardSalesOrderConfirmationAst() returns a valid confirmation TemplateAst (header, parties, line table, totals, branding)",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Phase 1: getStandardSalesOrderTemplateAstByCode(code) lookup returns a cloned standard AST",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P1"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Phase 1: resolveSalesOrderTemplateAst() stub returns the standard confirmation AST (no DB)",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P1"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Phase 1: getSalesOrderHtml() renders SO -> HTML via evaluateTemplateAst + renderTemplateAstHtmlDocument",
+    "implemented": false,
+    "prdRefs": [
+      "Data flow"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Phase 1: generatePDF() handles a salesOrderId branch -> PDF buffer via generatePDFBuffer",
+    "implemented": false,
+    "prdRefs": [
+      "Data flow"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Phase 1: downloadSalesOrderPDF(soId) server action returns pdf bytes + filename",
+    "implemented": false,
+    "prdRefs": [
+      "Primary flow"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Phase 1: downloadSalesOrderPDF enforces permission (inventory/sales-order read)",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Phase 1: Download action wired on the Sales Orders screen (resolve inventory->billing dependency direction: direct import vs API route)",
+    "implemented": false,
+    "prdRefs": [
+      "UX/UI",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Phase 1: confirmation content correct \u2014 order number, dates, customer, each line (name+qty+amount), subtotal/total, branding",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Phase 1: error handling \u2014 SO not found / no lines -> clear message, no PDF",
+    "implemented": false,
+    "prdRefs": [
+      "Error handling"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Phase 1: error handling \u2014 evaluate/render throws -> 'Couldn't generate the document' + log",
+    "implemented": false,
+    "prdRefs": [
+      "Error handling"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Phase 2: generic document_templates table (document_type-keyed) + migration",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Phase 2: generic standard_document_templates table (document_type-keyed) + migration",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Phase 2: generic document_template_assignments table (document_type-keyed) + migration",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Phase 2: documentRegistry \u2014 type -> { label, bindings, standardTemplates, viewModelBuilder, sampleData, codePrefix }",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Phase 2: register 'sales-order' in the registry (its Phase-1 artifacts)",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Phase 2: generic getDocumentTemplates(type) action",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Phase 2: generic saveDocumentTemplate(type, ...) action",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Phase 2: generic setDefaultDocumentTemplate(type, ...) action",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Phase 2: generic deleteDocumentTemplate(type, ...) action",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Phase 2: runAuthoritativeTemplatePreview(type, ...) action (sample-data preview)",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Phase 2: resolveDocumentTemplateAst(type, entity) \u2014 client override -> tenant default -> standard",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Phase 2: replace P1 stub with registry-backed resolveSalesOrderTemplateAst",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Phase 2: generic management route /msp/document-templates/[type]",
+    "implemented": false,
+    "prdRefs": [
+      "UX/UI"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Phase 2: management page lists/clones/edits/deletes templates for a type",
+    "implemented": false,
+    "prdRefs": [
+      "UX/UI"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Phase 2: editor embeds DesignerShell + preview for a type",
+    "implemented": false,
+    "prdRefs": [
+      "UX/UI"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Phase 2: extend DesignerDocumentKind + resolveDesignerDocumentKind with 'sales-order'",
+    "implemented": false,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Phase 2: seed standard SO confirmation template into standard_document_templates",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P2"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Phase 3: client-level template override resolution",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P3"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Phase 3: detailed / by-location standard confirmation variant",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P3"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Phase 3: drop-ship vs from-stock line nuances in the document",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P3"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Phase 3: packing slip document type (registered)",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P3"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Phase 3: pick list document type (registered)",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P3"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Phase 3: auto-attach confirmation to SO emails",
+    "implemented": false,
+    "prdRefs": [
+      "Phasing P3"
+    ]
+  }
 ]

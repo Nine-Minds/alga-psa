@@ -30,14 +30,20 @@
 - SO→invoice already exists: `packages/billing/src/actions/salesOrderInvoicingActions.ts` (`generateInvoiceForSalesOrder`).
 - Inventory SO UI: `packages/inventory/src/components/SalesOrdersManager.tsx` (Download button goes here).
 
+## Resolved
+- **Package dep direction (F018): RESOLVED — use an API route.** `salesOrderInvoicingActions.ts`
+  states "billing already depends on inventory", so inventory CANNOT import billing (cycle).
+  The Download trigger goes through a Next API route under `server/` (which can import billing),
+  mirroring `server/src/app/api/v1/invoices/[id]/pdf/route.ts`. Planned route:
+  `server/src/app/api/v1/sales-orders/[id]/document/route.ts` → calls billing pdf service.
+- **Billing reads SO directly:** `salesOrderInvoicingActions.ts` queries `sales_orders` /
+  `sales_order_lines` via knex inside billing. The adapter does the same (no inventory import).
+
 ## Open questions / gotchas
-- **Package dep direction (F018):** can `packages/inventory` (client component) import a
-  `packages/billing` server action? If not, expose `downloadSalesOrderPDF` via an API route
-  (`server/src/app/api/v1/sales-orders/[id]/document/route.ts`) like the invoice PDF route, or
-  place the action where both reach it. CHECK before wiring the button.
-- **Tax (F006):** SO lines have `tax_rate_id`, not a stored tax amount. Mirror how quotes/invoices
-  resolve tax; if no tax engine call is cheap in Phase 1, render tax = 0 and total = subtotal and
-  note it (don't fabricate a tax number).
+- **Tax (F006):** SO lines have `tax_rate_id`, not a stored tax amount; the invoicing path delegates
+  tax to `generateManualInvoice`. Phase 1 adapter computes subtotal from lines and sets tax = 0,
+  total = subtotal (don't fabricate tax). The standard template should frame totals honestly
+  (e.g. "Estimated total — final tax on invoice"). Revisit if a cheap tax calc is available.
 - **Money:** `unit_price` is integer cents. Reuse the same money formatting the templates use.
 - **Verify live:** dev server caches `'use server'` modules — touch the importing route to force a
   rebuild when the action doesn't hot-reload (known quirk on this stack). Dev server: port 3345.
@@ -46,8 +52,21 @@
 - Typecheck billing: `cd packages/billing && npx tsc --noEmit`
 - Typecheck inventory: `cd packages/inventory && npx tsc --noEmit`
 - Inventory tests: `cd packages/inventory && npx vitest run`
+- **Billing/server-config tests (packages/billing/src/**): `npx vitest run --root=server <filter>`**
+  (the root vitest config = server/vitest.config; its `../packages/**` include only resolves with
+  root=server. Plain `npx vitest run` from repo root finds nothing.)
 - DB (scripts): knex from repo-root node_modules; host localhost:5472, db 'server', creds from
   `server/.env.local` (DB_USER_ADMIN/DB_PASSWORD_ADMIN). Tenant 6d178771-ad9a-4d43-8809-83992745f8f9.
 
 ## Progress log
 - 2026-06-26: Plan created (PRD + features + tests). Starting Phase 1.
+- 2026-06-26: **F001–F007 done** — `SalesOrderViewModel` types
+  (`packages/types/src/interfaces/salesOrderDocument.interfaces.ts`) + adapter
+  (`packages/billing/src/lib/adapters/salesOrderAdapters.ts`: pure `assembleSalesOrderViewModel`
+  + IO `mapDbSalesOrderToViewModel`, reusing `fetchTenantParty`). Unit test passing (5 cases:
+  amounts, subtotal/total, name resolution, no-lines guard, unknown-service). Types tsc clean;
+  billing tsc clean for the new files. NOTE: pure mapping is tested; the DB round-trip (T004/T005)
+  and not-found guard (T002) come with the render+wiring slice. Dropped a `// LEVERAGE: party-adapter`
+  marker (client-party fetch duplicated from quoteAdapters; converge in Phase 2).
+- Next: F008–F013 — SO template bindings + standard confirmation AST + resolve stub, then F014–F019
+  render+PDF wiring (getSalesOrderHtml + generatePDF branch) and the API-route download trigger.
