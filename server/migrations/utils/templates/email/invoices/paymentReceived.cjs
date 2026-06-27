@@ -112,6 +112,20 @@ const COPY = {
     textIntro: 'Otrzymali\u015bmy p\u0142atno\u015b\u0107 za faktur\u0119:',
   },
 };
+SUBJECTS.pt = 'Pagamento recebido: fatura #{{invoice.number}}';
+COPY.pt = {
+  headerLabel: 'Pagamento recebido',
+  intro: 'O pagamento da fatura #{{invoice.number}} foi recebido.',
+  invoiceNumberLabel: 'Número da fatura',
+  amountPaidLabel: 'Valor pago',
+  paymentDateLabel: 'Data do pagamento',
+  paymentMethodLabel: 'Forma de pagamento',
+  viewButton: 'Ver fatura',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Pagamento recebido',
+  textIntro: 'O pagamento da fatura #{{invoice.number}} foi recebido:',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

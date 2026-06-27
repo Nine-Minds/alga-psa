@@ -30,6 +30,7 @@ import {
 } from "@alga-psa/ui/components/DropdownMenu";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { useRegisterUnsavedChanges } from "@alga-psa/ui";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 // Types for tracking pending changes
 interface PendingCategoryChange {
@@ -58,6 +59,7 @@ interface NotificationRow {
 }
 
 export function InternalNotificationCategories() {
+  const { t } = useTranslation('msp/settings');
   const [categories, setCategories] = useState<InternalNotificationCategory[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,11 +69,11 @@ export function InternalNotificationCategories() {
         const currentCategories = await getInternalNotificationCategoriesAction();
         setCategories(currentCategories);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load categories');
+        setError(err instanceof Error ? err.message : t('notifications.internalCategoriesUi.errors.loadCategories', 'Failed to load categories'));
       }
     }
     init();
-  }, []);
+  }, [t]);
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
@@ -82,7 +84,7 @@ export function InternalNotificationCategories() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
           layout="stacked"
-          text="Loading internal notification categories..."
+          text={t('notifications.internalCategoriesUi.loading', 'Loading internal notification categories...')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -97,6 +99,7 @@ function InternalNotificationCategoriesContent({
 }: {
   initialCategories: InternalNotificationCategory[];
 }) {
+  const { t } = useTranslation('msp/settings');
   // Current state (what's displayed)
   const [categories, setCategories] = useState(initialCategories);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, InternalNotificationSubtype[]>>({});
@@ -150,7 +153,7 @@ function InternalNotificationCategoriesContent({
       setSubtypesByCategory(prev => ({ ...prev, [categoryId]: subtypes }));
       setOriginalSubtypes(prev => ({ ...prev, [categoryId]: subtypes }));
     } catch (error) {
-      handleError(error, 'Failed to load notification subtypes');
+      handleError(error, t('notifications.internalCategoriesUi.errors.loadSubtypes', 'Failed to load notification subtypes'));
     } finally {
       setLoadingSubtypes(prev => {
         const next = new Set(prev);
@@ -158,7 +161,7 @@ function InternalNotificationCategoriesContent({
         return next;
       });
     }
-  }, [subtypesByCategory]);
+  }, [subtypesByCategory, t]);
 
   // Toggle category expansion
   const handleToggleExpand = async (categoryId: number) => {
@@ -267,9 +270,9 @@ function InternalNotificationCategoriesContent({
       setPendingCategoryChanges(new Map());
       setPendingSubtypeChanges(new Map());
 
-      toast.success("Notification settings saved successfully");
+      toast.success(t('notifications.internalCategoriesUi.toasts.saveSuccess', 'Notification settings saved successfully'));
     } catch (error) {
-      handleError(error, 'Failed to save notification settings');
+      handleError(error, t('notifications.internalCategoriesUi.errors.saveSettings', 'Failed to save notification settings'));
     } finally {
       setIsSaving(false);
     }
@@ -286,7 +289,7 @@ function InternalNotificationCategoriesContent({
     setPendingSubtypeChanges(new Map());
 
     setShowDiscardDialog(false);
-    toast.success("Changes discarded");
+    toast.success(t('notifications.internalCategoriesUi.toasts.changesDiscarded', 'Changes discarded'));
   };
 
   // Check if a row has pending changes
@@ -338,7 +341,7 @@ function InternalNotificationCategoriesContent({
 
   const columns: ColumnDefinition<NotificationRow>[] = [
     {
-      title: 'Name',
+      title: t('notifications.internalCategoriesUi.columns.name', 'Name'),
       dataIndex: 'name',
       render: (value: string, record: NotificationRow) => {
         if (record.isCategory) {
@@ -378,14 +381,14 @@ function InternalNotificationCategoriesContent({
       },
     },
     {
-      title: 'Description',
+      title: t('notifications.internalCategoriesUi.columns.description', 'Description'),
       dataIndex: 'description',
       render: (value: string | null) => (
         <span className="text-gray-600">{value || '-'}</span>
       ),
     },
     {
-      title: 'Enabled',
+      title: t('notifications.internalCategoriesUi.columns.enabled', 'Enabled'),
       dataIndex: 'is_enabled',
       render: (value: boolean, record: NotificationRow) => {
         if (record.isCategory) {
@@ -417,7 +420,7 @@ function InternalNotificationCategoriesContent({
       },
     },
     {
-      title: 'Default for Users',
+      title: t('notifications.internalCategoriesUi.columns.defaultForUsers', 'Default for Users'),
       dataIndex: 'is_default_enabled',
       render: (value: boolean, record: NotificationRow) => {
         if (record.isCategory) {
@@ -449,7 +452,7 @@ function InternalNotificationCategoriesContent({
       },
     },
     {
-      title: 'Actions',
+      title: t('notifications.internalCategoriesUi.columns.actions', 'Actions'),
       dataIndex: 'id',
       width: '10%',
       render: (value: string, record: NotificationRow) => {
@@ -477,7 +480,7 @@ function InternalNotificationCategoriesContent({
                     }}
                     disabled={!category.is_enabled}
                   >
-                    Enable all subtypes
+                    {t('notifications.internalCategoriesUi.actions.enableAllSubtypes', 'Enable all subtypes')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     id={`disable-all-internal-subtypes-${value}`}
@@ -491,7 +494,7 @@ function InternalNotificationCategoriesContent({
                       });
                     }}
                   >
-                    Disable all subtypes
+                    {t('notifications.internalCategoriesUi.actions.disableAllSubtypes', 'Disable all subtypes')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -516,13 +519,13 @@ function InternalNotificationCategoriesContent({
                     onClick={() => handleToggleSubtype(subtype, 'is_enabled', record.categoryId!)}
                     disabled={!category?.is_enabled}
                   >
-                    {subtype.is_enabled ? 'Disable' : 'Enable'}
+                    {subtype.is_enabled ? t('notifications.internalCategoriesUi.actions.disable', 'Disable') : t('notifications.internalCategoriesUi.actions.enable', 'Enable')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     id={`toggle-internal-subtype-default-${value}`}
                     onClick={() => handleToggleSubtype(subtype, 'is_default_enabled', record.categoryId!)}
                   >
-                    {subtype.is_default_enabled ? 'Disable default' : 'Enable default'}
+                    {subtype.is_default_enabled ? t('notifications.internalCategoriesUi.actions.disableDefault', 'Disable default') : t('notifications.internalCategoriesUi.actions.enableDefault', 'Enable default')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -538,11 +541,11 @@ function InternalNotificationCategoriesContent({
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm text-gray-600">
-            Control which internal notification types are available and set defaults for new users.
+            {t('notifications.internalCategoriesUi.intro', 'Control which internal notification types are available and set defaults for new users.')}
           </p>
           <ul className="text-sm text-gray-600 mt-2 ml-4 list-disc space-y-1">
-            <li><strong>Enabled:</strong> Controls whether this notification type is active in the system</li>
-            <li><strong>Default for Users:</strong> Sets whether new users have this notification enabled by default</li>
+            <li><strong>{t('notifications.internalCategoriesUi.enabledLabel', 'Enabled:')}</strong> {t('notifications.internalCategoriesUi.enabledDescription', 'Controls whether this notification type is active in the system')}</li>
+            <li><strong>{t('notifications.internalCategoriesUi.defaultForUsersLabel', 'Default for Users:')}</strong> {t('notifications.internalCategoriesUi.defaultForUsersDescription', 'Sets whether new users have this notification enabled by default')}</li>
           </ul>
         </div>
         {hasUnsavedChanges && (
@@ -553,14 +556,14 @@ function InternalNotificationCategoriesContent({
               onClick={() => setShowDiscardDialog(true)}
               disabled={isSaving}
             >
-              Discard Changes
+              {t('notifications.internalCategoriesUi.actions.discardChanges', 'Discard Changes')}
             </Button>
             <Button
               id="save-internal-notification-changes"
               onClick={handleSave}
               disabled={isSaving}
             >
-              {isSaving ? "Saving..." : "Save Changes"}
+              {isSaving ? t('notifications.internalCategoriesUi.actions.saving', 'Saving...') : t('notifications.internalCategoriesUi.actions.saveChanges', 'Save Changes')}
             </Button>
           </div>
         )}
@@ -569,7 +572,7 @@ function InternalNotificationCategoriesContent({
       {hasUnsavedChanges && (
         <Alert variant="info">
           <AlertDescription>
-            You have unsaved changes. Click "Save Changes" to apply them.
+            {t('notifications.internalCategoriesUi.unsavedChangesAlert', 'You have unsaved changes. Click "Save Changes" to apply them.')}
           </AlertDescription>
         </Alert>
       )}
@@ -597,10 +600,10 @@ function InternalNotificationCategoriesContent({
         isOpen={showDiscardDialog}
         onClose={() => setShowDiscardDialog(false)}
         onConfirm={handleDiscard}
-        title="Discard Changes?"
-        message="Are you sure you want to discard all unsaved changes? This action cannot be undone."
-        confirmLabel="Discard Changes"
-        cancelLabel="Cancel"
+        title={t('notifications.internalCategoriesUi.discardDialog.title', 'Discard Changes?')}
+        message={t('notifications.internalCategoriesUi.discardDialog.message', 'Are you sure you want to discard all unsaved changes? This action cannot be undone.')}
+        confirmLabel={t('notifications.internalCategoriesUi.actions.discardChanges', 'Discard Changes')}
+        cancelLabel={t('notifications.internalCategoriesUi.actions.cancel', 'Cancel')}
       />
     </div>
   );

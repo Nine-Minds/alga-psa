@@ -117,6 +117,21 @@ const COPY = {
     textView: 'Zobacz projekt pod adresem',
   },
 };
+SUBJECTS.pt = 'Marco concluído: {{milestone.name}}';
+COPY.pt = {
+  headerLabel: 'Marco concluído',
+  intro: 'Um marco foi concluído no projeto {{project.name}}:',
+  milestone: 'Marco',
+  completionDate: 'Data de conclusão',
+  completedBy: 'Concluído por',
+  projectProgress: 'Progresso do projeto',
+  viewButton: 'Ver projeto',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Marco concluído',
+  textIntro: 'Um marco foi concluído no projeto {{project.name}}:',
+  textView: 'Ver projeto em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

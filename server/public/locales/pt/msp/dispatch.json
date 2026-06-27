@@ -1,147 +1,147 @@
 {
   "page": {
-    "title": "Technician Dispatch",
-    "filteredWorkItems": "Showing filtered work items"
+    "title": "Despacho Técnico",
+    "filteredWorkItems": "Mostrando itens de trabalho filtrados"
   },
   "workItems": {
-    "title": "Work Items",
-    "searchPlaceholder": "Search work items...",
-    "filterPlaceholder": "Filter by status...",
+    "title": "Itens de trabalho",
+    "searchPlaceholder": "Pesquisar itens de trabalho...",
+    "filterPlaceholder": "Filtrar por status...",
     "status": {
-      "unscheduled": "Unscheduled",
-      "scheduled": "Scheduled"
+      "unscheduled": "Não programado",
+      "scheduled": "Agendado"
     },
     "pagination": {
-      "previous": "Previous",
-      "next": "Next",
-      "pageInfo": "Page {{current}} of {{total}}",
-      "showing": "Showing {{count}} of {{total}} items"
+      "previous": "Anterior",
+      "next": "Próximo",
+      "pageInfo": "Página {{current}} de {{total}}",
+      "showing": "Mostrando {{count}} de itens {{total}}"
     }
   },
   "schedule": {
-    "showInactive": "Show Inactive Users",
-    "prev": "< Prev",
-    "next": "Next >",
-    "today": "Today",
-    "viewDay": "Day",
-    "viewWeek": "Week",
-    "prevAria": "Previous {{mode}}",
-    "nextAria": "Next {{mode}}",
-    "viewWeekTooltip": "View Week",
-    "viewWeekAria": "View week for {{name}}",
-    "viewWeekAriaInactive": "View week for {{name}} (Inactive)",
-    "compareAll": "Compare All",
-    "clearAll": "Clear All",
-    "compare": "Compare",
-    "stopComparing": "Stop Comparing",
-    "compareAria": "Compare {{name}}",
-    "compareAriaInactive": "Compare {{name}} (Inactive)"
+    "showInactive": "Mostrar usuários inativos",
+    "prev": "< Anterior",
+    "next": "Próximo>",
+    "today": "Hoje",
+    "viewDay": "Dia",
+    "viewWeek": "Semana",
+    "prevAria": "Anterior {{mode}}",
+    "nextAria": "Próximo {{mode}}",
+    "viewWeekTooltip": "Ver semana",
+    "viewWeekAria": "Ver semana para {{name}}",
+    "viewWeekAriaInactive": "Ver semana para {{name}} (Inativo)",
+    "compareAll": "Comparar tudo",
+    "clearAll": "Limpar tudo",
+    "compare": "Comparar",
+    "stopComparing": "Pare de comparar",
+    "compareAria": "Comparar {{name}}",
+    "compareAriaInactive": "Comparar {{name}} (Inativo)"
   },
   "details": {
     "appointmentRequest": {
-      "title": "Appointment Request Details"
+      "title": "Detalhes da solicitação de agendamento"
     },
     "sections": {
-      "approvalInformation": "Approval Information"
+      "approvalInformation": "Informações de aprovação"
     },
     "fields": {
-      "service": "Service",
+      "service": "Serviço",
       "status": "Status",
-      "client": "Client",
-      "contact": "Contact",
-      "company": "Company",
-      "requester": "Requester",
-      "email": "Email",
-      "phone": "Phone",
-      "requestedDate": "Requested Date",
-      "requestedTime": "Requested Time",
-      "duration": "Duration",
-      "preferredTechnician": "Preferred Technician",
-      "description": "Description",
-      "declineReason": "Decline Reason",
-      "approvedBy": "Approved by:",
-      "approvedAt": "Approved at:"
+      "client": "Cliente",
+      "contact": "Contato",
+      "company": "Empresa",
+      "requester": "Solicitante",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "requestedDate": "Data solicitada",
+      "requestedTime": "Hora solicitada",
+      "duration": "Duração",
+      "preferredTechnician": "Técnico preferencial",
+      "description": "Descrição",
+      "declineReason": "Motivo da recusa",
+      "approvedBy": "Aprovado por:",
+      "approvedAt": "Aprovado em:"
     },
     "messages": {
-      "notAvailable": "N/A",
-      "unsupportedWorkItemType": "Unsupported work item type"
+      "notAvailable": "N / D",
+      "unsupportedWorkItemType": "Tipo de item de trabalho sem suporte"
     },
     "toasts": {
-      "noUsersAvailable": "No users available in the system",
-      "noUserSession": "No user session found",
-      "failedToLoadTicketData": "Failed to load ticket data",
-      "failedToLoadProjectTaskData": "Failed to load project task data",
-      "failedToLoadAdHocEntryData": "Failed to load ad-hoc entry data",
-      "failedToLoadInteractionData": "Failed to load interaction data",
-      "failedToLoadAppointmentRequestData": "Failed to load appointment request data"
+      "noUsersAvailable": "Nenhum usuário disponível no sistema",
+      "noUserSession": "Nenhuma sessão de usuário encontrada",
+      "failedToLoadTicketData": "Falha ao carregar dados do chamado",
+      "failedToLoadProjectTaskData": "Falha ao carregar os dados da tarefa do projeto",
+      "failedToLoadAdHocEntryData": "Falha ao carregar dados de entrada ad hoc",
+      "failedToLoadInteractionData": "Falha ao carregar dados de interação",
+      "failedToLoadAppointmentRequestData": "Falha ao carregar os dados da solicitação de agendamento"
     },
     "errors": {
-      "loadUsers": "Failed to load users. Please try refreshing the page.",
-      "loadingContent": "Error loading content",
-      "tryAgain": "Please try again"
+      "loadUsers": "Falha ao carregar usuários. Por favor, tente atualizar a página.",
+      "loadingContent": "Erro ao carregar conteúdo",
+      "tryAgain": "Por favor, tente novamente"
     },
     "units": {
-      "minutes": "minutes"
+      "minutes": "minutos"
     }
   },
   "dashboard": {
     "filters": {
-      "allOpen": "All Open",
-      "allClosed": "All Closed"
+      "allOpen": "Tudo aberto",
+      "allClosed": "Tudo fechado"
     },
     "messages": {
-      "accessDenied": "Access Denied: You do not have permission to view the Technician Dispatch dashboard.",
-      "unknownError": "An unknown error occurred.",
-      "permissionDeniedSchedule": "You don't have permission to schedule for this technician.",
-      "couldNotLoadWorkItemDetails": "Could not load work item details."
+      "accessDenied": "Acesso negado: você não tem permissão para visualizar o painel do Technician Dispatch.",
+      "unknownError": "Ocorreu um erro desconhecido.",
+      "permissionDeniedSchedule": "Você não tem permissão para agendar para este técnico.",
+      "couldNotLoadWorkItemDetails": "Não foi possível carregar os detalhes do item de trabalho."
     },
     "errors": {
-      "searchWorkItems": "Failed to search work items",
-      "loadStatusFilterOptions": "Failed to load status filter options.",
-      "refreshScheduleEntries": "Failed to refresh schedule entries",
-      "refreshData": "Failed to refresh data",
-      "loadPermissions": "Failed to load permissions.",
-      "fetchScheduleEntries": "Failed to fetch schedule entries",
-      "fetchData": "Failed to fetch data",
-      "updateSchedule": "Failed to update schedule",
-      "createScheduleEntry": "Failed to create schedule entry",
-      "deleteScheduleEntry": "Failed to delete schedule entry",
-      "updateTask": "Failed to update task",
-      "updateScheduleEntry": "Failed to update schedule entry",
-      "saveScheduleEntry": "Failed to save schedule entry",
-      "openWorkItemDetails": "Failed to open work item details."
+      "searchWorkItems": "Falha ao pesquisar itens de trabalho",
+      "loadStatusFilterOptions": "Falha ao carregar opções de filtro de status.",
+      "refreshScheduleEntries": "Falha ao atualizar entradas de agendamento",
+      "refreshData": "Falha ao atualizar dados",
+      "loadPermissions": "Falha ao carregar permissões.",
+      "fetchScheduleEntries": "Falha ao buscar entradas de agendamento",
+      "fetchData": "Falha ao buscar dados",
+      "updateSchedule": "Falha ao atualizar a programação",
+      "createScheduleEntry": "Falha ao criar entrada de agendamento",
+      "deleteScheduleEntry": "Falha ao excluir entrada de agendamento",
+      "updateTask": "Falha ao atualizar a tarefa",
+      "updateScheduleEntry": "Falha ao atualizar a entrada da programação",
+      "saveScheduleEntry": "Falha ao salvar a entrada da programação",
+      "openWorkItemDetails": "Falha ao abrir detalhes do item de trabalho."
     },
     "success": {
-      "taskUpdated": "Task updated successfully",
-      "scheduleEntryUpdated": "Schedule entry updated successfully",
-      "scheduleEntryCreated": "Schedule entry created successfully"
+      "taskUpdated": "Tarefa atualizada com sucesso",
+      "scheduleEntryUpdated": "Entrada de agendamento atualizada com sucesso",
+      "scheduleEntryCreated": "Entrada de agendamento criada com sucesso"
     }
   },
   "events": {
     "actions": {
-      "viewDetails": "View Details",
-      "delete": "Delete",
-      "deleteScheduleEntry": "Delete schedule entry"
+      "viewDetails": "Ver detalhes",
+      "delete": "Excluir",
+      "deleteScheduleEntry": "Excluir entrada de agendamento"
     },
     "fallbacks": {
-      "busy": "Busy",
-      "unknown": "Unknown",
-      "unassigned": "Unassigned",
-      "unknownAgent": "Unknown Agent",
-      "untitled": "Untitled",
-      "thisScheduleEntry": "this schedule entry"
+      "busy": "Ocupado",
+      "unknown": "Desconhecido",
+      "unassigned": "Não atribuído",
+      "unknownAgent": "Agente desconhecido",
+      "untitled": "Sem título",
+      "thisScheduleEntry": "esta entrada de programação"
     },
     "tooltip": {
-      "privateEvent": "Busy\nStart: {{start}}\nEnd: {{end}}",
-      "eventDetails": "{{title}}\nAssigned to: {{assigned}}\nStart: {{start}}\nEnd: {{end}}"
+      "privateEvent": "Ocupado\nInício: {{start}}\nFim: {{end}}",
+      "eventDetails": "{{title}}\nAtribuído a: {{assigned}}\nInício: {{start}}\nFim: {{end}}"
     },
     "errors": {
-      "validateDeletion": "Failed to validate deletion. Please try again."
+      "validateDeletion": "Falha ao validar a exclusão. Por favor, tente novamente."
     }
   },
   "badges": {
-    "needsDispatch": "Needs Dispatch",
-    "needsDispatchFor": "Needs dispatch for: {{agents}}"
+    "needsDispatch": "Precisa de despacho",
+    "needsDispatchFor": "Precisa de envio para: {{agents}}"
   },
   "time": {
     "suffixes": {

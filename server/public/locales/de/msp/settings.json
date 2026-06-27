@@ -1266,6 +1266,176 @@
         "title": "Telemetrie & Analysen",
         "description": "Verwalten Sie Ihre Telemetrie- und Analysepräferenzen"
       }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Benachrichtigungen aktivieren",
+        "description": "Alle Benachrichtigungen für diesen Mandanten ein- oder ausschalten"
+      },
+      "loading": "Benachrichtigungseinstellungen werden geladen...",
+      "loadError": "Einstellungen konnten nicht geladen werden",
+      "save": "Änderungen speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Betreff-Vorschau",
+        "iframeTitle": "Vorschau der E-Mail-Vorlage",
+        "sampleDataNote": "Die Vorschau verwendet Beispieldaten. Tatsächliche E-Mails enthalten echte Werte."
+      },
+      "errors": {
+        "loadFailed": "Vorlagen konnten nicht geladen werden"
+      },
+      "list": {
+        "loading": "E-Mail-Vorlagen werden geladen...",
+        "templateCount": "({{templateCount}} Vorlagen)",
+        "usingCustom": "Benutzerdefinierte Vorlage wird verwendet",
+        "usingStandard": "Standardvorlage wird verwendet"
+      },
+      "columns": {
+        "name": "Name",
+        "actions": "Aktionen"
+      },
+      "fields": {
+        "language": "Sprache",
+        "subject": "Betreff",
+        "htmlContent": "HTML-Inhalt",
+        "textContent": "Textinhalt"
+      },
+      "actions": {
+        "collapse": "Einklappen",
+        "expand": "Erweitern",
+        "edit": "Bearbeiten",
+        "useStandard": "Standard verwenden",
+        "view": "Anzeigen",
+        "customize": "Anpassen",
+        "sending": "Wird gesendet...",
+        "sendTest": "Test-E-Mail senden",
+        "close": "Schließen",
+        "cancel": "Abbrechen",
+        "saving": "Wird gespeichert...",
+        "save": "Speichern"
+      },
+      "description": "Jeder Ereignistyp verfügt über eine Standardvorlage, die angepasst werden kann. Sie können die Standardvorlage verwenden oder eine benutzerdefinierte Version erstellen.",
+      "filter": {
+        "languages": "Sprachen",
+        "reset": "Zurücksetzen"
+      },
+      "test": {
+        "sentTo": "Test-E-Mail gesendet an {{recipient}}",
+        "failed": "Test-E-Mail konnte nicht gesendet werden."
+      },
+      "view": {
+        "title": "Standardvorlage: {{name}}"
+      },
+      "tabs": {
+        "source": "Quellcode",
+        "preview": "Vorschau"
+      },
+      "common": {
+        "notAvailable": "k. A."
+      },
+      "edit": {
+        "title": "Benutzerdefinierte Vorlage bearbeiten: {{name}}"
+      },
+      "languages": {
+        "en": "Englisch",
+        "fr": "Französisch",
+        "es": "Spanisch",
+        "de": "Deutsch",
+        "nl": "Niederländisch",
+        "it": "Italienisch",
+        "pl": "Polnisch",
+        "pt": "Portugiesisch"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Kategorien konnten nicht geladen werden",
+        "loadSubtypes": "Benachrichtigungs-Untertypen konnten nicht geladen werden",
+        "save": "Benachrichtigungseinstellungen konnten nicht gespeichert werden"
+      },
+      "loading": "Benachrichtigungskategorien werden geladen...",
+      "toasts": {
+        "saved": "Benachrichtigungseinstellungen erfolgreich gespeichert",
+        "discarded": "Änderungen verworfen"
+      },
+      "columns": {
+        "name": "Name",
+        "description": "Beschreibung",
+        "enabled": "Aktiviert",
+        "defaultForUsers": "Standard für Benutzer",
+        "actions": "Aktionen"
+      },
+      "tooltips": {
+        "cannotDisable": "Diese Kategorie kann nicht deaktiviert werden",
+        "cannotModify": "Diese Kategorie kann nicht geändert werden"
+      },
+      "actions": {
+        "enableAllSubtypes": "Alle Untertypen aktivieren",
+        "disableAllSubtypes": "Alle Untertypen deaktivieren",
+        "disable": "Deaktivieren",
+        "enable": "Aktivieren",
+        "disableDefault": "Standard deaktivieren",
+        "enableDefault": "Standard aktivieren",
+        "discardChanges": "Änderungen verwerfen",
+        "saving": "Wird gespeichert...",
+        "saveChanges": "Änderungen speichern",
+        "cancel": "Abbrechen"
+      },
+      "help": {
+        "intro": "Legen Sie fest, welche E-Mail-Benachrichtigungstypen verfügbar sind, und definieren Sie Standardwerte für neue Benutzer.",
+        "enabledLabel": "Aktiviert:",
+        "enabledDescription": "Legt fest, ob dieser Benachrichtigungstyp aktiv ist",
+        "defaultLabel": "Standard für Benutzer:",
+        "defaultDescription": "Legt fest, ob diese Benachrichtigung für neue Benutzer standardmäßig aktiviert ist"
+      },
+      "unsavedChangesAlert": "Sie haben nicht gespeicherte Änderungen. Klicken Sie auf „Änderungen speichern“, um sie zu übernehmen.",
+      "discardDialog": {
+        "title": "Änderungen verwerfen?",
+        "message": "Möchten Sie wirklich alle nicht gespeicherten Änderungen verwerfen? Diese Aktion kann nicht rückgängig gemacht werden."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Kategorien konnten nicht geladen werden",
+        "loadSubtypes": "Benachrichtigungs-Untertypen konnten nicht geladen werden",
+        "saveSettings": "Benachrichtigungseinstellungen konnten nicht gespeichert werden"
+      },
+      "loading": "Interne Benachrichtigungskategorien werden geladen...",
+      "toasts": {
+        "saveSuccess": "Benachrichtigungseinstellungen erfolgreich gespeichert",
+        "changesDiscarded": "Änderungen verworfen"
+      },
+      "columns": {
+        "name": "Name",
+        "description": "Beschreibung",
+        "enabled": "Aktiviert",
+        "defaultForUsers": "Standard für Benutzer",
+        "actions": "Aktionen"
+      },
+      "actions": {
+        "enableAllSubtypes": "Alle Untertypen aktivieren",
+        "disableAllSubtypes": "Alle Untertypen deaktivieren",
+        "disable": "Deaktivieren",
+        "enable": "Aktivieren",
+        "disableDefault": "Standard deaktivieren",
+        "enableDefault": "Standard aktivieren",
+        "discardChanges": "Änderungen verwerfen",
+        "saving": "Wird gespeichert...",
+        "saveChanges": "Änderungen speichern",
+        "cancel": "Abbrechen"
+      },
+      "intro": "Legen Sie fest, welche internen Benachrichtigungstypen verfügbar sind, und definieren Sie Standardwerte für neue Benutzer.",
+      "enabledLabel": "Aktiviert:",
+      "enabledDescription": "Legt fest, ob dieser Benachrichtigungstyp im System aktiv ist",
+      "defaultForUsersLabel": "Standard für Benutzer:",
+      "defaultForUsersDescription": "Legt fest, ob diese Benachrichtigung für neue Benutzer standardmäßig aktiviert ist",
+      "unsavedChangesAlert": "Sie haben nicht gespeicherte Änderungen. Klicken Sie auf „Änderungen speichern“, um sie anzuwenden.",
+      "discardDialog": {
+        "title": "Änderungen verwerfen?",
+        "message": "Sind Sie sicher, dass Sie alle nicht gespeicherten Änderungen verwerfen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      }
     }
   },
   "timeEntry": {

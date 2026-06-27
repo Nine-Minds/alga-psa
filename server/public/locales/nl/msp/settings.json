@@ -1266,6 +1266,176 @@
         "title": "Telemetrie en analyse",
         "description": "Beheer uw telemetrie- en analysevoorkeuren"
       }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Meldingen inschakelen",
+        "description": "Alle meldingen voor deze tenant in- of uitschakelen"
+      },
+      "loading": "Meldingsinstellingen laden...",
+      "loadError": "Kan instellingen niet laden",
+      "save": "Wijzigingen opslaan",
+      "saving": "Opslaan..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Voorbeeld onderwerp",
+        "iframeTitle": "Voorbeeld e-mailsjabloon",
+        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden."
+      },
+      "errors": {
+        "loadFailed": "Sjablonen laden mislukt"
+      },
+      "list": {
+        "loading": "E-mailsjablonen laden...",
+        "templateCount": "({{templateCount}} sjablonen)",
+        "usingCustom": "Aangepast sjabloon wordt gebruikt",
+        "usingStandard": "Standaardsjabloon wordt gebruikt"
+      },
+      "columns": {
+        "name": "Naam",
+        "actions": "Acties"
+      },
+      "fields": {
+        "language": "Taal",
+        "subject": "Onderwerp",
+        "htmlContent": "HTML-inhoud",
+        "textContent": "Tekstinhoud"
+      },
+      "actions": {
+        "collapse": "Inklappen",
+        "expand": "Uitklappen",
+        "edit": "Bewerken",
+        "useStandard": "Standaard gebruiken",
+        "view": "Bekijken",
+        "customize": "Aanpassen",
+        "sending": "Verzenden...",
+        "sendTest": "Test-e-mail verzenden",
+        "close": "Sluiten",
+        "cancel": "Annuleren",
+        "saving": "Opslaan...",
+        "save": "Opslaan"
+      },
+      "description": "Elk gebeurtenistype heeft een standaardsjabloon dat kan worden aangepast. U kunt het standaardsjabloon gebruiken of een aangepaste versie maken.",
+      "filter": {
+        "languages": "Talen",
+        "reset": "Resetten"
+      },
+      "test": {
+        "sentTo": "Test-e-mail verzonden naar {{recipient}}",
+        "failed": "Verzenden van test-e-mail mislukt."
+      },
+      "view": {
+        "title": "Standaardsjabloon: {{name}}"
+      },
+      "tabs": {
+        "source": "Broncode",
+        "preview": "Voorbeeld"
+      },
+      "common": {
+        "notAvailable": "n.v.t."
+      },
+      "edit": {
+        "title": "Aangepast sjabloon bewerken: {{name}}"
+      },
+      "languages": {
+        "en": "Engels",
+        "fr": "Frans",
+        "es": "Spaans",
+        "de": "Duits",
+        "nl": "Nederlands",
+        "it": "Italiaans",
+        "pl": "Pools",
+        "pt": "Portugees"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Categorieën laden mislukt",
+        "loadSubtypes": "Notificatiesubtypen laden mislukt",
+        "save": "Notificatie-instellingen opslaan mislukt"
+      },
+      "loading": "Notificatiecategorieën laden...",
+      "toasts": {
+        "saved": "Notificatie-instellingen succesvol opgeslagen",
+        "discarded": "Wijzigingen verwijderd"
+      },
+      "columns": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "enabled": "Ingeschakeld",
+        "defaultForUsers": "Standaard voor gebruikers",
+        "actions": "Acties"
+      },
+      "tooltips": {
+        "cannotDisable": "Deze categorie kan niet worden uitgeschakeld",
+        "cannotModify": "Deze categorie kan niet worden gewijzigd"
+      },
+      "actions": {
+        "enableAllSubtypes": "Alle subtypen inschakelen",
+        "disableAllSubtypes": "Alle subtypen uitschakelen",
+        "disable": "Uitschakelen",
+        "enable": "Inschakelen",
+        "disableDefault": "Standaard uitschakelen",
+        "enableDefault": "Standaard inschakelen",
+        "discardChanges": "Wijzigingen verwijderen",
+        "saving": "Opslaan...",
+        "saveChanges": "Wijzigingen opslaan",
+        "cancel": "Annuleren"
+      },
+      "help": {
+        "intro": "Bepaal welke soorten e-mailnotificaties beschikbaar zijn en stel standaardwaarden in voor nieuwe gebruikers.",
+        "enabledLabel": "Ingeschakeld:",
+        "enabledDescription": "Bepaalt of dit notificatietype actief is",
+        "defaultLabel": "Standaard voor gebruikers:",
+        "defaultDescription": "Bepaalt of deze notificatie standaard is ingeschakeld voor nieuwe gebruikers"
+      },
+      "unsavedChangesAlert": "U hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+      "discardDialog": {
+        "title": "Wijzigingen verwijderen?",
+        "message": "Weet u zeker dat u alle niet-opgeslagen wijzigingen wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Categorieën laden mislukt",
+        "loadSubtypes": "Meldingssubtypes laden mislukt",
+        "saveSettings": "Meldingsinstellingen opslaan mislukt"
+      },
+      "loading": "Interne meldingscategorieën laden...",
+      "toasts": {
+        "saveSuccess": "Meldingsinstellingen succesvol opgeslagen",
+        "changesDiscarded": "Wijzigingen verworpen"
+      },
+      "columns": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "enabled": "Ingeschakeld",
+        "defaultForUsers": "Standaard voor gebruikers",
+        "actions": "Acties"
+      },
+      "actions": {
+        "enableAllSubtypes": "Alle subtypes inschakelen",
+        "disableAllSubtypes": "Alle subtypes uitschakelen",
+        "disable": "Uitschakelen",
+        "enable": "Inschakelen",
+        "disableDefault": "Standaard uitschakelen",
+        "enableDefault": "Standaard inschakelen",
+        "discardChanges": "Wijzigingen verwerpen",
+        "saving": "Opslaan...",
+        "saveChanges": "Wijzigingen opslaan",
+        "cancel": "Annuleren"
+      },
+      "intro": "Bepaal welke interne meldingstypes beschikbaar zijn en stel standaardwaarden in voor nieuwe gebruikers.",
+      "enabledLabel": "Ingeschakeld:",
+      "enabledDescription": "Bepaalt of dit meldingstype actief is in het systeem",
+      "defaultForUsersLabel": "Standaard voor gebruikers:",
+      "defaultForUsersDescription": "Bepaalt of nieuwe gebruikers deze melding standaard ingeschakeld hebben",
+      "unsavedChangesAlert": "U hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+      "discardDialog": {
+        "title": "Wijzigingen verwerpen?",
+        "message": "Weet u zeker dat u alle niet-opgeslagen wijzigingen wilt verwerpen? Deze actie kan niet ongedaan worden gemaakt."
+      }
     }
   },
   "timeEntry": {

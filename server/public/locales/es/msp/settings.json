@@ -1266,6 +1266,176 @@
         "title": "Telemetría y análisis",
         "description": "Administrar sus preferencias de telemetría y análisis"
       }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Activar notificaciones",
+        "description": "Activa o desactiva todas las notificaciones para este inquilino"
+      },
+      "loading": "Cargando configuración de notificaciones...",
+      "loadError": "Error al cargar la configuración",
+      "save": "Guardar cambios",
+      "saving": "Guardando..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Vista previa del asunto",
+        "iframeTitle": "Vista previa de la plantilla de correo electrónico",
+        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales."
+      },
+      "errors": {
+        "loadFailed": "Error al cargar las plantillas"
+      },
+      "list": {
+        "loading": "Cargando plantillas de correo electrónico...",
+        "templateCount": "({{templateCount}} plantillas)",
+        "usingCustom": "Usando plantilla personalizada",
+        "usingStandard": "Usando plantilla estándar"
+      },
+      "columns": {
+        "name": "Nombre",
+        "actions": "Acciones"
+      },
+      "fields": {
+        "language": "Idioma",
+        "subject": "Asunto",
+        "htmlContent": "Contenido HTML",
+        "textContent": "Contenido de texto"
+      },
+      "actions": {
+        "collapse": "Contraer",
+        "expand": "Expandir",
+        "edit": "Editar",
+        "useStandard": "Usar estándar",
+        "view": "Ver",
+        "customize": "Personalizar",
+        "sending": "Enviando...",
+        "sendTest": "Enviar correo electrónico de prueba",
+        "close": "Cerrar",
+        "cancel": "Cancelar",
+        "saving": "Guardando...",
+        "save": "Guardar"
+      },
+      "description": "Cada tipo de evento tiene una plantilla estándar que se puede personalizar. Puede usar la plantilla estándar o crear una versión personalizada.",
+      "filter": {
+        "languages": "Idiomas",
+        "reset": "Restablecer"
+      },
+      "test": {
+        "sentTo": "Correo electrónico de prueba enviado a {{recipient}}",
+        "failed": "Error al enviar el correo electrónico de prueba."
+      },
+      "view": {
+        "title": "Plantilla estándar: {{name}}"
+      },
+      "tabs": {
+        "source": "Código fuente",
+        "preview": "Vista previa"
+      },
+      "common": {
+        "notAvailable": "N/D"
+      },
+      "edit": {
+        "title": "Editar plantilla personalizada: {{name}}"
+      },
+      "languages": {
+        "en": "Inglés",
+        "fr": "Francés",
+        "es": "Español",
+        "de": "Alemán",
+        "nl": "Neerlandés",
+        "it": "Italiano",
+        "pl": "Polaco",
+        "pt": "Portugués"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Error al cargar las categorías",
+        "loadSubtypes": "Error al cargar los subtipos de notificación",
+        "save": "Error al guardar la configuración de notificaciones"
+      },
+      "loading": "Cargando categorías de notificación...",
+      "toasts": {
+        "saved": "Configuración de notificaciones guardada correctamente",
+        "discarded": "Cambios descartados"
+      },
+      "columns": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "enabled": "Habilitado",
+        "defaultForUsers": "Predeterminado para usuarios",
+        "actions": "Acciones"
+      },
+      "tooltips": {
+        "cannotDisable": "Esta categoría no se puede deshabilitar",
+        "cannotModify": "Esta categoría no se puede modificar"
+      },
+      "actions": {
+        "enableAllSubtypes": "Habilitar todos los subtipos",
+        "disableAllSubtypes": "Deshabilitar todos los subtipos",
+        "disable": "Deshabilitar",
+        "enable": "Habilitar",
+        "disableDefault": "Deshabilitar predeterminado",
+        "enableDefault": "Habilitar predeterminado",
+        "discardChanges": "Descartar cambios",
+        "saving": "Guardando...",
+        "saveChanges": "Guardar cambios",
+        "cancel": "Cancelar"
+      },
+      "help": {
+        "intro": "Controle qué tipos de notificación por correo electrónico están disponibles y establezca los valores predeterminados para los nuevos usuarios.",
+        "enabledLabel": "Habilitado:",
+        "enabledDescription": "Controla si este tipo de notificación está activo",
+        "defaultLabel": "Predeterminado para usuarios:",
+        "defaultDescription": "Define si los nuevos usuarios tienen esta notificación habilitada de forma predeterminada"
+      },
+      "unsavedChangesAlert": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+      "discardDialog": {
+        "title": "¿Descartar cambios?",
+        "message": "¿Está seguro de que desea descartar todos los cambios sin guardar? Esta acción no se puede deshacer."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Error al cargar las categorías",
+        "loadSubtypes": "Error al cargar los subtipos de notificación",
+        "saveSettings": "Error al guardar la configuración de notificaciones"
+      },
+      "loading": "Cargando categorías de notificaciones internas...",
+      "toasts": {
+        "saveSuccess": "Configuración de notificaciones guardada correctamente",
+        "changesDiscarded": "Cambios descartados"
+      },
+      "columns": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "enabled": "Habilitado",
+        "defaultForUsers": "Predeterminado para usuarios",
+        "actions": "Acciones"
+      },
+      "actions": {
+        "enableAllSubtypes": "Habilitar todos los subtipos",
+        "disableAllSubtypes": "Deshabilitar todos los subtipos",
+        "disable": "Deshabilitar",
+        "enable": "Habilitar",
+        "disableDefault": "Deshabilitar predeterminado",
+        "enableDefault": "Habilitar predeterminado",
+        "discardChanges": "Descartar cambios",
+        "saving": "Guardando...",
+        "saveChanges": "Guardar cambios",
+        "cancel": "Cancelar"
+      },
+      "intro": "Controle qué tipos de notificaciones internas están disponibles y establezca los valores predeterminados para los nuevos usuarios.",
+      "enabledLabel": "Habilitado:",
+      "enabledDescription": "Controla si este tipo de notificación está activo en el sistema",
+      "defaultForUsersLabel": "Predeterminado para usuarios:",
+      "defaultForUsersDescription": "Establece si los nuevos usuarios tienen esta notificación habilitada de forma predeterminada",
+      "unsavedChangesAlert": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+      "discardDialog": {
+        "title": "¿Descartar cambios?",
+        "message": "¿Está seguro de que desea descartar todos los cambios sin guardar? Esta acción no se puede deshacer."
+      }
     }
   },
   "timeEntry": {

@@ -165,6 +165,27 @@ const COPY = {
     textView: 'Zobacz zadanie pod adresem',
   },
 };
+SUBJECTS.pt = 'Você foi atribuído à tarefa: {{task.name}}';
+COPY.pt = {
+  headerLabel: 'Atribuição de tarefa',
+  intro: 'Olá{{#if recipientName}} {{recipientName}}{{/if}}, você foi atribuído(a) como recurso principal de uma tarefa do projeto.',
+  assignedBadge: 'Responsável principal',
+  badgeBg: BADGE_BG,
+  badgeColor: BRAND_DARK,
+  taskLabel: 'Tarefa',
+  projectLabel: 'Projeto',
+  dueDateLabel: 'Data de vencimento',
+  assignedByLabel: 'Atribuído por',
+  roleLabel: 'Função',
+  descriptionTitle: 'Descrição',
+  viewButton: 'Ver tarefa',
+  buttonColor: BRAND_PRIMARY,
+  footer: 'Powered by Alga PSA',
+  textHeader: 'Atribuição de tarefa',
+  textIntro: 'Você foi atribuído(a) como responsável principal por esta tarefa:',
+  textView: 'Ver tarefa em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

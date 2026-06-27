@@ -120,6 +120,21 @@ const COPY = {
     textView: 'Zobacz projekt pod adresem',
   },
 };
+SUBJECTS.pt = 'Projeto encerrado: {{project.name}}';
+COPY.pt = {
+  headerLabel: 'Projeto encerrado',
+  intro: 'Um projeto foi encerrado:',
+  projectName: 'Nome do projeto',
+  status: 'Status',
+  changes: 'Alterações',
+  closedBy: 'Encerrado por',
+  viewButton: 'Ver projeto',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Projeto encerrado',
+  textIntro: 'Um projeto foi encerrado:',
+  textView: 'Ver projeto em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {
