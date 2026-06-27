@@ -1,25 +1,36 @@
 import type { TemplateAst } from '@alga-psa/types';
 
 import {
-  getStandardSalesOrderTemplateAstByCode,
-  STANDARD_SALES_ORDER_CONFIRMATION_CODE,
-} from './standardTemplates';
+  resolveDocumentTemplateAst,
+  type DocumentTemplateSource,
+} from '../document-templates/resolution';
+import { getDocumentTypeStandardAst } from '../document-templates/registry';
+import { STANDARD_SALES_ORDER_CONFIRMATION_CODE } from './standardTemplates';
 
 export interface ResolveSalesOrderTemplateResult {
   ast: TemplateAst;
-  source: 'standard-fallback' | 'tenant-default' | 'sales-order';
+  source: DocumentTemplateSource;
   code: string | null;
 }
 
 /**
- * Phase 1: always resolves to the code-defined standard confirmation template.
- * Phase 2 replaces this with registry/assignment-backed resolution
- * (sales-order-level override → tenant default → standard fallback).
+ * Resolve the template AST for a Sales Order document through the generic document-template
+ * resolver (entity override → tenant default → standard).
+ *
+ * Phase 1: the override/tenant-default lookups are stubbed to null — there are no stored templates
+ * yet — so this always lands on the registered standard confirmation. Phase 2 wires the lookups to
+ * the document_template_assignments / document_templates tables.
  */
-export function resolveSalesOrderTemplateAst(): ResolveSalesOrderTemplateResult {
-  const ast = getStandardSalesOrderTemplateAstByCode(STANDARD_SALES_ORDER_CONFIRMATION_CODE);
-  if (!ast) {
-    throw new Error('Standard sales order confirmation template not found');
-  }
-  return { ast, source: 'standard-fallback', code: STANDARD_SALES_ORDER_CONFIRMATION_CODE };
+export async function resolveSalesOrderTemplateAst(): Promise<ResolveSalesOrderTemplateResult> {
+  const { ast, source } = await resolveDocumentTemplateAst({
+    fetchOverride: async () => null,
+    fetchTenantDefault: async () => null,
+    getStandard: () => getDocumentTypeStandardAst('sales-order'),
+  });
+
+  return {
+    ast,
+    source,
+    code: source === 'standard' ? STANDARD_SALES_ORDER_CONFIRMATION_CODE : null,
+  };
 }

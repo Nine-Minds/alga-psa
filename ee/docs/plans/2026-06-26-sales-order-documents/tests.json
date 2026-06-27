@@ -58,7 +58,7 @@
   {
     "id": "T100",
     "description": "Phase 2: resolveDocumentTemplateAst precedence \u2014 client override > tenant default > standard fallback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]

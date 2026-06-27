@@ -450,7 +450,7 @@ export class PDFGenerationService {
       const templateAst = options.templateAst
         ?? (options.templateCode
           ? getStandardSalesOrderTemplateAstByCode(options.templateCode)
-          : resolveSalesOrderTemplateAst().ast);
+          : (await resolveSalesOrderTemplateAst()).ast);
 
       if (!templateAst) {
         throw new Error('No sales order template AST available for PDF generation');

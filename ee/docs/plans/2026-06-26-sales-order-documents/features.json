@@ -195,7 +195,7 @@
   {
     "id": "F103",
     "description": "Phase 2: documentRegistry \u2014 type -> { label, bindings, standardTemplates, viewModelBuilder, sampleData, codePrefix }",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -203,7 +203,7 @@
   {
     "id": "F104",
     "description": "Phase 2: register 'sales-order' in the registry (its Phase-1 artifacts)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -251,7 +251,7 @@
   {
     "id": "F110",
     "description": "Phase 2: resolveDocumentTemplateAst(type, entity) \u2014 client override -> tenant default -> standard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]
@@ -259,7 +259,7 @@
   {
     "id": "F111",
     "description": "Phase 2: replace P1 stub with registry-backed resolveSalesOrderTemplateAst",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phasing P2"
     ]

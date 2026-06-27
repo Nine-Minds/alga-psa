@@ -47,10 +47,10 @@ describe('standard sales order confirmation template', () => {
     expect(html).toContain('Northwind MSP');
   });
 
-  it('resolveSalesOrderTemplateAst returns the standard confirmation template', () => {
-    const result = resolveSalesOrderTemplateAst();
+  it('resolveSalesOrderTemplateAst returns the standard confirmation template (via the generic resolver)', async () => {
+    const result = await resolveSalesOrderTemplateAst();
+    expect(result.source).toBe('standard');
     expect(result.code).toBe('standard-sales-order-confirmation');
-    expect(result.source).toBe('standard-fallback');
     expect(result.ast.metadata?.templateName).toBe('Standard Sales Order Confirmation');
   });
 });
