@@ -1,0 +1,12 @@
+[
+  { "id": "T001", "description": "Phase 1 (DB-backed): mapDbSalesOrderToViewModel builds the correct model from a seeded SO — line amounts, subtotal/total, product names, customer name+address", "implemented": false, "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007"] },
+  { "id": "T002", "description": "Phase 1 (DB-backed guard): SO not found and SO with no lines are handled without throwing / without producing a broken document", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T003", "description": "Phase 1: standard SO confirmation AST evaluates against a sample view model and renders non-empty HTML without throwing (render smoke)", "implemented": false, "featureIds": ["F011", "F014"] },
+  { "id": "T004", "description": "Phase 1 (DB-backed): getSalesOrderHtml for a seeded SO produces HTML containing the order number, a product name, and the formatted total", "implemented": false, "featureIds": ["F014", "F019"] },
+  { "id": "T005", "description": "Phase 1 (DB-backed): generatePDF({ salesOrderId }) returns a non-empty PDF buffer", "implemented": false, "featureIds": ["F015", "F016"] },
+  { "id": "T006", "description": "Phase 1: downloadSalesOrderPDF is denied without inventory/sales-order read permission", "implemented": false, "featureIds": ["F017"] },
+
+  { "id": "T100", "description": "Phase 2: resolveDocumentTemplateAst precedence — client override > tenant default > standard fallback", "implemented": false, "featureIds": ["F110"] },
+  { "id": "T101", "description": "Phase 2 (DB-backed): generic action round-trip — save/list/setDefault/delete scoped by document_type (no cross-type bleed)", "implemented": false, "featureIds": ["F105", "F106", "F107", "F108"] },
+  { "id": "T102", "description": "Phase 2: resolveDesignerDocumentKind returns 'sales-order' for SO bindings", "implemented": false, "featureIds": ["F115"] }
+]
