@@ -7,6 +7,7 @@ import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import ChecklistTemplatesSettings from './ChecklistTemplatesSettings';
 import { BoardsSettings, CategoriesSettings, DisplaySettings } from '@alga-psa/tickets/components';
 import { NumberingSettings, PrioritySettings } from '@alga-psa/reference-data/components';
+import { getSlaPolicies } from '@alga-psa/sla/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
 
@@ -52,7 +53,7 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
     {
       id: 'boards',
       label: t('ticketing.tabs.boards'),
-      content: <BoardsSettings isAlgaDesk={isAlgaDesk} />
+      content: <BoardsSettings isAlgaDesk={isAlgaDesk} getSlaPolicies={getSlaPolicies} />
     },
     {
       id: 'priorities',

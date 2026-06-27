@@ -24,11 +24,9 @@ import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@a
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -309,12 +307,23 @@ const collapsedForCreate = (): Set<string> =>
 // Boards list pagination — matches the shared DataTable default page size.
 const BOARDS_PAGE_SIZE = 10;
 
+// Minimal SLA policy shape this component renders. Injected by the host so the
+// tickets package doesn't import the sla feature package directly
+// (see custom-rules/no-feature-to-feature-imports).
+interface BoardSlaPolicyOption {
+  sla_policy_id: string;
+  policy_name: string;
+  is_default?: boolean;
+}
+
 interface BoardsSettingsProps {
   /** Hide SLA configuration in AlgaDesk edition. Passed by the host page from useProduct(). */
   isAlgaDesk?: boolean;
+  /** Loads SLA policies for the board picker. Injected by the host (server can import @alga-psa/sla). */
+  getSlaPolicies?: () => Promise<BoardSlaPolicyOption[]>;
 }
 
-const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false }) => {
+const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
   const { t } = useTranslation('msp/settings');
   // Pagination option labels live in the shared 'common' namespace (same as DataTable).
   const { t: tCommon } = useTranslation('common');
@@ -349,7 +358,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false }) =
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
+  const [slaPolicies, setSlaPolicies] = useState<BoardSlaPolicyOption[]>([]);
   const [boardStats, setBoardStats] = useState<Record<string, BoardListStats>>({});
   const [listSearch, setListSearch] = useState('');
   const [boardsPage, setBoardsPage] = useState(1);
@@ -507,6 +516,9 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false }) =
   };
 
   const fetchSlaPolicies = async () => {
+    if (!getSlaPolicies) {
+      return;
+    }
     try {
       const policies = await getSlaPolicies();
       setSlaPolicies(policies);
