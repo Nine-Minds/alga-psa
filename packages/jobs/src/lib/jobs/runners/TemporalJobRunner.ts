@@ -377,7 +377,29 @@ export class TemporalJobRunner implements IJobRunner {
         return false;
       }
 
-      // If job is already completed or failed, cannot cancel
+      const metadata = job.metadata
+        ? typeof job.metadata === 'string'
+          ? JSON.parse(job.metadata)
+          : job.metadata
+        : {};
+
+      // A recurring schedule reuses one job row as its per-fire execution tracker,
+      // so tear it down based on `recurring`, not the row's (completed/failed) status.
+      if (metadata.recurring) {
+        if (job.external_id) {
+          try {
+            await this.client.schedule.getHandle(job.external_id).delete();
+          } catch (error) {
+            logger.warn('Failed to delete schedule:', error);
+          }
+        }
+        await this.updateJobStatus(jobId, tenantId, JobStatus.Failed, {
+          error: 'Schedule cancelled',
+        });
+        return true;
+      }
+
+      // One-shot workflow: a finished execution can't be cancelled.
       if (
         job.status === JobStatus.Completed ||
         job.status === JobStatus.Failed
@@ -387,28 +409,10 @@ export class TemporalJobRunner implements IJobRunner {
       }
 
       if (job.external_id) {
-        const metadata = job.metadata
-          ? typeof job.metadata === 'string'
-            ? JSON.parse(job.metadata)
-            : job.metadata
-          : {};
-
-        if (metadata.recurring) {
-          // Cancel schedule
-          try {
-            const scheduleHandle = this.client.schedule.getHandle(job.external_id);
-            await scheduleHandle.delete();
-          } catch (error) {
-            logger.warn('Failed to delete schedule:', error);
-          }
-        } else {
-          // Cancel workflow
-          try {
-            const workflowHandle = this.client.workflow.getHandle(job.external_id);
-            await workflowHandle.cancel();
-          } catch (error) {
-            logger.warn('Failed to cancel workflow:', error);
-          }
+        try {
+          await this.client.workflow.getHandle(job.external_id).cancel();
+        } catch (error) {
+          logger.warn('Failed to cancel workflow:', error);
         }
       }
 

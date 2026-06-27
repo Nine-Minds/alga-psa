@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   createTicketWithRetry: vi.fn(),
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
 }));
 

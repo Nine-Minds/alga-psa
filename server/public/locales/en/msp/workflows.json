@@ -462,7 +462,8 @@
       "correlationKeyPlaceholder": "corr-123",
       "statusLabel": "Status",
       "fromLabel": "From",
-      "toLabel": "To"
+      "toLabel": "To",
+      "datePlaceholder": "Any date"
     },
     "actions": {
       "applyFilters": "Apply filters",

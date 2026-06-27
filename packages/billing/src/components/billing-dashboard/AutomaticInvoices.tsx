@@ -183,6 +183,7 @@ const getParentGroupSummary = ({
   };
 };
 
+// Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
 const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
   candidates.map((candidate) => {
     const memberAmounts = candidate.members
@@ -1329,6 +1330,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   }, [invoicedCurrentPage, invoicedPageSize, debouncedInvoicedSearchTerm, refreshTrigger]);
 
+  // Select All chooses parent rows when a group is combinable and falls back to individual child rows when a group is not combinable.
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const nextSelections = new Set<string>();

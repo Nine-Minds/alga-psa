@@ -837,7 +837,13 @@
       "missingHelp": "Ainda não detectamos esse registro no DNS. Verifique novamente se ele existe no seu provedor DNS com o valor exato mostrado acima.",
       "mismatchHelp": "O registro DNS existe, mas o valor não corresponde ao que Reenviar espera.",
       "matchedHelp": "O valor detectado corresponde ao que esperávamos.",
-      "unknownHelp": "Ainda não verificamos o DNS. Verifique novamente o DNS para executar a verificação."
+      "unknownHelp": "Ainda não verificamos o DNS. Verifique novamente o DNS para executar a verificação.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Nome completo",
+      "valueLabel": "Valor",
+      "copyHostAriaLabel": "Copiar host",
+      "copyFqdnAriaLabel": "Copiar nome completo",
+      "hostHint": "Dica: no seu provedor de DNS, insira apenas o Host mostrado acima. A maioria dos provedores (Namecheap, GoDaddy, Cloudflare, entre outros) adiciona “{{domain}}” automaticamente. Se você colar o nome completo, o domínio é repetido (…{{domain}}.{{domain}}) e o registro nunca será verificado."
     }
   },
   "inboundRules": {

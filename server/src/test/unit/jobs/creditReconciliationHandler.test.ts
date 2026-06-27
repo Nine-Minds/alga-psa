@@ -9,7 +9,7 @@ vi.mock('@alga-psa/billing/actions/creditReconciliationActions', () => ({
   runScheduledCreditBalanceValidation: mocks.runScheduledCreditBalanceValidation,
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   runWithTenant: mocks.runWithTenant,
 }));
 

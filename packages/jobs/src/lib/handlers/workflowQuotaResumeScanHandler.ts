@@ -46,8 +46,11 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
         .where('r.status', 'WAITING')
         .whereNotNull('r.tenant')
         .orderBy('w.created_at', 'asc')
-        .forUpdate()
-        .skipLocked()
+        // No FOR UPDATE / SKIP LOCKED: Citus rejects row locks on distributed
+        // (multi-shard) queries ("could not run distributed query with
+        // FOR UPDATE/SHARE commands"). This is a scope:'system' singleton scan,
+        // so there are no concurrent runners to lock against, and the resume
+        // flips wait/run status so a candidate is not re-selected next batch.
         .limit(batchSize)
         .select('w.wait_id', 'w.run_id', 'w.step_path', 'r.tenant', 'r.node_path');
 
