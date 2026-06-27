@@ -267,7 +267,7 @@
   {
     "id": "F112",
     "description": "Phase 2: generic management route /msp/document-templates/[type]",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX/UI"
     ]
@@ -275,7 +275,7 @@
   {
     "id": "F113",
     "description": "Phase 2: management page lists/clones/edits/deletes templates for a type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX/UI"
     ]
@@ -283,7 +283,7 @@
   {
     "id": "F114",
     "description": "Phase 2: editor embeds DesignerShell + preview for a type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX/UI"
     ]
