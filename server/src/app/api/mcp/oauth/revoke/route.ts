@@ -14,7 +14,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return new NextResponse(null, { status: 404, headers: NO_STORE });
   }
-  const { handleRevoke } = await import('@product/mcp/entry');
+  const { handleRevoke, isAuthServerEnabled } = await import('@product/mcp/entry');
+  if (!(await isAuthServerEnabled())) {
+    return new NextResponse(null, { status: 404, headers: NO_STORE });
+  }
   let form: URLSearchParams;
   try {
     form = new URLSearchParams(await req.text());

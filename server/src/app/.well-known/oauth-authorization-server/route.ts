@@ -15,7 +15,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
   }
-  const { buildAuthServerMetadata, resolvePublicBaseUrl } = await import('@product/mcp/entry');
+  const { buildAuthServerMetadata, resolvePublicBaseUrl, isAuthServerEnabled } = await import('@product/mcp/entry');
+  if (!(await isAuthServerEnabled())) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
+  }
   const base = await resolvePublicBaseUrl(req);
   return NextResponse.json(buildAuthServerMetadata(base), { headers: NO_STORE });
 }

@@ -17,16 +17,34 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
   }
-  const { resolvePublicBaseUrl } = await import('@product/mcp/entry');
+  const { resolvePublicBaseUrl, isAuthServerEnabled, listAllActiveIssuers } = await import('@product/mcp/entry');
   // External clients (e.g. claude.ai) read this, so it must be the public origin.
   const baseUrl = await resolvePublicBaseUrl(req);
+
+  // When the Alga AS is enabled, advertise Alga itself (CIMD + PKCE). Otherwise
+  // fall back to the legacy trusted-IdP issuers so existing clients are unaffected
+  // (dark-release safe — see MCP_AUTH_SERVER_ENABLED).
+  const asEnabled = await isAuthServerEnabled();
+  let authorizationServers: string[];
+  let scopes: string[];
+  if (asEnabled) {
+    authorizationServers = [baseUrl];
+    scopes = ['mcp'];
+  } else {
+    try {
+      authorizationServers = await listAllActiveIssuers();
+    } catch {
+      authorizationServers = [];
+    }
+    scopes = [];
+  }
+
   return NextResponse.json(
     {
       resource: `${baseUrl}/api/mcp`,
-      // AlgaPSA is its own authorization server for MCP (CIMD + PKCE).
-      authorization_servers: [baseUrl],
+      authorization_servers: authorizationServers,
       bearer_methods_supported: ['header'],
-      scopes_supported: ['mcp'],
+      scopes_supported: scopes,
     },
     { headers: NO_STORE },
   );

@@ -271,7 +271,7 @@
   },
   {
     "id": "F035",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX/UI"
     ],
@@ -279,7 +279,7 @@
   },
   {
     "id": "F036",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX/UI",
       "Revocation / disconnect"
@@ -312,7 +312,7 @@
   },
   {
     "id": "F040",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ],

@@ -43,7 +43,8 @@ function consentPage(params: { clientName: string | null; clientId: string; sign
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) return errorPage('Not found.', 404);
-  const { prepareAuthorize, resolvePublicBaseUrl } = await import('@product/mcp/entry');
+  const { prepareAuthorize, resolvePublicBaseUrl, isAuthServerEnabled } = await import('@product/mcp/entry');
+  if (!(await isAuthServerEnabled())) return errorPage('Not found.', 404);
   const base = await resolvePublicBaseUrl(req);
   const publicUrl = new URL(`${base}${req.nextUrl.pathname}${req.nextUrl.search}`);
 
@@ -61,7 +62,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) return errorPage('Not found.', 404);
-  const { completeAuthorize, resolvePublicBaseUrl } = await import('@product/mcp/entry');
+  const { completeAuthorize, resolvePublicBaseUrl, isAuthServerEnabled } = await import('@product/mcp/entry');
+  if (!(await isAuthServerEnabled())) return errorPage('Not found.', 404);
   const base = await resolvePublicBaseUrl(req);
 
   const form = await req.formData();
