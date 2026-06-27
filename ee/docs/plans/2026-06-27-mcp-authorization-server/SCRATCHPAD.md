@@ -179,11 +179,11 @@ All 38 features implemented; both editions typecheck clean. Tests: 8/17 landed.
   - `mcpOAuthCrypto.test.ts` — PKCE S256 (T002 core) + signed auth-request integrity.
   - `mcpOAuthClients.test.ts` — SSRF guard / isPrivateAddress (T012).
   - `mcpOAuthMetadata.test.ts` — AS metadata RFC 8414 + CIMD-only (T010), param parse.
-- **DB integration (CI-run; not runnable locally — no Postgres):**
+- **DB integration (CI-verified green; not runnable locally — no Postgres):**
   - `mcpOAuthGrants.integration.test.ts` — grant lifecycle: consent reuse, PKCE
     auth-code single-use + replay-revoke (T004), refresh rotation + replay (T005),
-    revocation (T008), DB persistence/guards (T017). Verified it loads + reaches
-    beforeAll; fails only on DB connect locally (ECONNREFUSED 5432), as expected.
+    revocation (T008), DB persistence/guards (T017). **Passed in CI** (Tier-1
+    integration subset) against migrated Postgres on PR #2803.
 
 - **Remaining (T001, T003, T007, T009, T011, T013, T014, T015, T016):** route- and
   browser-level e2e (full authorize→token→/api/mcp flow, redirect/login/consent
