@@ -1,9 +1,12 @@
 /**
- * Sales Order Document API Route
- * GET /api/v1/sales-orders/[id]/document — download the Sales Order document (Order Confirmation) PDF.
+ * Sales Order Document API Route (session-authenticated)
+ * GET /api/inventory/sales-orders/[id]/document — download the Sales Order document (Order
+ * Confirmation) PDF for the browser.
  *
- * Lives in the server app because the inventory package (where the Sales Orders screen lives) cannot
- * depend on billing (billing depends on inventory). The browser hits this URL to download the PDF.
+ * Lives under /api/inventory (NOT /api/v1, which is the external API-key namespace) and is added to
+ * the middleware API-key skip-list, so the browser's session cookie reaches the handler. Auth is
+ * enforced in-handler by downloadSalesOrderPDF (withAuth + sales_order read permission). The route
+ * is here (server app) because the inventory package cannot depend on billing.
  */
 
 import { downloadSalesOrderPDF } from '@alga-psa/billing/actions';

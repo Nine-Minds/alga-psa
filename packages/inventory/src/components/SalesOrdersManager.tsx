@@ -29,7 +29,7 @@ import {
  */
 async function downloadSalesOrderDocument(soId: string, soNumber: string): Promise<void> {
   try {
-    const res = await fetch(`/api/v1/sales-orders/${soId}/document`);
+    const res = await fetch(`/api/inventory/sales-orders/${soId}/document`);
     if (!res.ok) {
       let message = "Couldn't generate the document.";
       try {
