@@ -846,7 +846,7 @@
     "placeholders": {
       "title": "Insira o título do chamado",
       "description": "Descreva o problema...",
-      "loadingBoards": "Carregando placas...",
+      "loadingBoards": "Carregando quadros...",
       "selectBoard": "Selecione o quadro...",
       "selectBoardFirst": "Selecione o quadro primeiro...",
       "loadingStatuses": "Carregando status...",
@@ -856,7 +856,7 @@
     },
     "errors": {
       "loadPriorities": "Falha ao carregar prioridades",
-      "loadBoards": "Falha ao carregar placas",
+      "loadBoards": "Falha ao carregar quadros",
       "loadStatuses": "Falha ao carregar status",
       "requiredFields": "Preencha título, quadro, status e prioridade",
       "createFailed": "Falha ao criar chamado"

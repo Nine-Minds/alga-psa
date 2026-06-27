@@ -162,7 +162,7 @@
       "boardFilters": {
         "active": "Quadros ativos",
         "inactive": "Quadros inativos",
-        "all": "Todas as placas"
+        "all": "Todos os quadros"
       },
       "help": {
         "conditions": "Deixe um campo em branco para corresponder a qualquer valor."

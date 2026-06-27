@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterPseudoLocales, INCOMPLETE_LOCALES, LOCALE_CONFIG } from './config';
+import { filterPseudoLocales, INCOMPLETE_LOCALES, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
 
 describe('filterPseudoLocales', () => {
   afterEach(() => {
@@ -20,12 +20,23 @@ describe('filterPseudoLocales', () => {
     expect(result).not.toContain('yy');
   });
 
-  it('strips incomplete locales in both modes', () => {
-    expect(INCOMPLETE_LOCALES).toContain('pt');
+  it('keeps preview locales (pt) selectable in development only', () => {
+    expect(PREVIEW_LOCALES).toContain('pt');
     vi.stubEnv('NODE_ENV', 'development');
-    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).not.toContain('pt');
+    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('pt');
     vi.stubEnv('NODE_ENV', 'production');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).not.toContain('pt');
+  });
+
+  it('strips incomplete locales in both modes', () => {
+    const sample = [...LOCALE_CONFIG.supportedLocales, 'en'] as const;
+    // INCOMPLETE_LOCALES is currently empty; guard the contract for future entries.
+    for (const incomplete of INCOMPLETE_LOCALES) {
+      vi.stubEnv('NODE_ENV', 'development');
+      expect(filterPseudoLocales(sample)).not.toContain(incomplete);
+      vi.stubEnv('NODE_ENV', 'production');
+      expect(filterPseudoLocales(sample)).not.toContain(incomplete);
+    }
   });
 
   it('labels pt as Brazilian Portuguese', () => {

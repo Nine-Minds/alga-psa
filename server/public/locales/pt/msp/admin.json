@@ -419,18 +419,18 @@
         "removeDraftTooltip": "Remova este rascunho de regra.",
         "removePublishedTooltip": "Crie um novo rascunho de revisão que remova esta regra publicada.",
         "selectedClientScopes": "Escopos de cliente selecionados",
-        "selectedBoardScopes": "Escopos de placa selecionados",
+        "selectedBoardScopes": "Escopos de quadro selecionados",
         "redactedFields": "Campos redigidos"
       },
       "scopes": {
         "clientTitle": "Escopos de cliente selecionados",
-        "boardTitle": "Escopos de placa selecionados",
+        "boardTitle": "Escopos de quadro selecionados",
         "selectClient": "Selecione o cliente",
         "selectBoard": "Selecione o quadro",
         "addClientScope": "Adicionar escopo do cliente",
         "addBoardScope": "Adicionar escopo do quadro",
         "noClientScopes": "Nenhum escopo de cliente adicionado ainda.",
-        "noBoardScopes": "Nenhum escopo de placa adicionado ainda.",
+        "noBoardScopes": "Nenhum escopo de quadro adicionado ainda.",
         "remove": "Remover"
       },
       "redaction": {
@@ -470,7 +470,7 @@
       "useSynthetic": "Usar cenário de registro sintético",
       "syntheticOwnerPlaceholder": "ID de usuário proprietário (opcional)",
       "syntheticClientPlaceholder": "ID do cliente (opcional)",
-      "syntheticBoardPlaceholder": "ID da placa (opcional)",
+      "syntheticBoardPlaceholder": "ID do quadro (opcional)",
       "clientVisible": "Cliente visível",
       "run": "Executar simulação",
       "running": "Simulação em execução...",

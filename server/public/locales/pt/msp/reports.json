@@ -112,8 +112,8 @@
       "contractRevenue": "Receita do contrato",
       "upcomingRenewals": "Próximas renovações",
       "bucketUsage": "Uso de balde",
-      "performanceByAssignee": "Desempenho por cessionário",
-      "closedByAssignee": "Fechado pelo cessionário"
+      "performanceByAssignee": "Desempenho por responsável",
+      "closedByAssignee": "Fechado pelo responsável"
     },
     "reportCatalog": {
       "ticketWorkload": {

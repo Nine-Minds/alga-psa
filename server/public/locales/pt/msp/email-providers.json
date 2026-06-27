@@ -403,7 +403,7 @@
     },
     "validation": {
       "nameRequired": "O nome curto e o nome de exibição são obrigatórios",
-      "boardRequired": "Placa é obrigatória",
+      "boardRequired": "Quadro é obrigatório",
       "statusRequired": "O status é obrigatório",
       "priorityRequired": "Prioridade é obrigatória",
       "clientRequired": "A empresa é obrigatória"

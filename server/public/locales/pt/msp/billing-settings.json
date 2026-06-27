@@ -92,7 +92,7 @@
         },
         "ticketBoard": {
           "label": "Quadro de Renovação de Chamados",
-          "placeholderLoading": "Carregando placas...",
+          "placeholderLoading": "Carregando quadros...",
           "placeholderSelect": "Selecione o quadro"
         },
         "ticketStatus": {
@@ -108,7 +108,7 @@
         "queueOnly": "Somente fila"
       },
       "states": {
-        "unnamedBoard": "Placa sem nome"
+        "unnamedBoard": "Quadro sem nome"
       },
       "actions": {
         "save": "Salvar",

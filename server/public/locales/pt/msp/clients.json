@@ -1317,7 +1317,7 @@
     "tickets": {
       "addTicket": "Adicionar chamado",
       "filters": {
-        "allAssignees": "Todos os cessionários",
+        "allAssignees": "Todos os responsáveis",
         "allPriorities": "Todas as prioridades",
         "categoryPlaceholder": "Filtrar por categoria",
         "reset": "Reiniciar",

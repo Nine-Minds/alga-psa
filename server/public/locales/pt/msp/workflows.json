@@ -92,7 +92,7 @@
       "cancelMessage": "Cancelar execução(ões) selecionada(s) de {{count}}? Isto não pode ser desfeito.",
       "reasonLabel": "Razão",
       "cancelReasonPlaceholder": "Forneça um motivo para o cancelamento",
-      "cancelConfirm": "Cancelar corridas"
+      "cancelConfirm": "Cancelar execuções"
     },
     "toasts": {
       "loadRunsFailed": "Falha ao carregar execuções de fluxo de trabalho",
@@ -104,7 +104,7 @@
       "exportFailed": "Falha ao exportar execuções",
       "selectRunsForBulkAction": "Selecione execuções para executar esta ação.",
       "bulkReasonTooShort": "O motivo deve ter pelo menos 3 caracteres.",
-      "noEligibleRuns": "Nenhuma corrida selecionada é elegível para essa ação.",
+      "noEligibleRuns": "Nenhuma execução selecionada é elegível para essa ação.",
       "bulkCancelFailedCount": "Falha ao cancelar execução(ões) {{count}}.",
       "bulkCancelSuccessCount": "Execuções {{count}} canceladas.",
       "bulkSkippedIneligibleCount": "Execuções inelegíveis de {{count}} ignoradas.",
@@ -135,7 +135,7 @@
       "openFullPage": "Abrir página inteira",
       "position": "{{current}} de execuções carregadas de {{total}}",
       "previous": "Anterior",
-      "selectedRun": "Corrida selecionada",
+      "selectedRun": "Execução selecionada",
       "title": "Executar visualização"
     }
   },
@@ -284,7 +284,7 @@
       "replayMessage": "Repita esta execução com uma nova carga útil.",
       "replayReasonPlaceholder": "Forneça um motivo para repetir",
       "payloadLabel": "Carga útil (JSON)",
-      "replayConfirm": "Corrida de repetição"
+      "replayConfirm": "Repetir execução"
     },
     "toasts": {
       "loadRunDetailsFailed": "Falha ao carregar detalhes da execução",
@@ -334,7 +334,7 @@
       "resetToDefaults": "Redefinir para os padrões",
       "savePreset": "Salvar predefinição",
       "show": "Mostrar",
-      "startRun": "Iniciar corrida",
+      "startRun": "Iniciar execução",
       "starting": "Começando..."
     },
     "eventCatalog": {
@@ -374,7 +374,7 @@
       "description": "Você pode visualizar o construtor de carga útil, mas deve publicar o fluxo de trabalho antes de iniciar uma execução."
     },
     "payload": {
-      "largePayloadWarning": "O tamanho da carga excede 256 KB; as corridas podem ser mais lentas.",
+      "largePayloadWarning": "O tamanho da carga excede 256 KB; as execuções podem ser mais lentas.",
       "payloadJsonLabel": "Carga útil (JSON)",
       "payloadLabel": "carga útil",
       "payloadSize": "Tamanho da carga útil: {{size}} KB"
@@ -479,7 +479,7 @@
         "correlation": "Correlação",
         "schema": "Esquema",
         "status": "Status",
-        "matchedRun": "Corrida Correspondida",
+        "matchedRun": "Execução Correspondente",
         "payload": "Carga útil",
         "created": "Criado"
       }
@@ -506,7 +506,7 @@
       "waitTimeoutLine": "Tempo limite: {{value}}",
       "waitResolvedLine": "Resolvido: {{value}}",
       "waitStepLine": "Etapa: {{value}}",
-      "matchedRunLabel": "Corrida correspondente",
+      "matchedRunLabel": "Execução correspondente",
       "runStatusLine": "Status: {{status}}",
       "payloadLabel": "Carga útil"
     },
@@ -1134,7 +1134,7 @@
         "board_id": "Escolha primeiro um quadro fixo para carregar as opções de categoria."
       },
       "ticket-status": {
-        "board_id": "Escolha primeiro uma placa fixa para carregar as opções de status.",
+        "board_id": "Escolha primeiro um quadro fixo para carregar as opções de status.",
         "ticket_id": "Escolha primeiro um chamado fixo para carregar as opções de status."
       },
       "ticket-subcategory": {
@@ -1685,7 +1685,7 @@
     "dialog": {
       "title": {
         "cancel": "Cancelar execução",
-        "replay": "Corrida de repetição"
+        "replay": "Repetir execução"
       },
       "heading": {
         "cancel": "Cancelar execução do fluxo de trabalho",
@@ -1817,7 +1817,7 @@
       "loading": "Carregando programações…",
       "never": "Nunca",
       "calendarMisconfigured": "Agenda mal configurada",
-      "noEligibleUpcomingRun": "Nenhuma próxima corrida elegível",
+      "noEligibleUpcomingRun": "Nenhuma próxima execução elegível",
       "unknownWorkflow": "Fluxo de trabalho desconhecido",
       "empty": "Nenhuma programação encontrada",
       "emptyDescription": "Crie uma programação única ou recorrente para executar um fluxo de trabalho publicado com dados de entrada salvos."
@@ -2465,7 +2465,7 @@
         "contactClient": "Escolha primeiro um Cliente fixo para carregar as opções de contato.",
         "locationClient": "Escolha primeiro um cliente fixo para carregar as opções de localização.",
         "categoryBoard": "Escolha primeiro um quadro fixo para carregar as opções de categoria.",
-        "statusBoard": "Escolha primeiro uma placa fixa para carregar as opções de status.",
+        "statusBoard": "Escolha primeiro um quadro fixo para carregar as opções de status.",
         "statusTicket": "Escolha primeiro um chamado fixo para carregar as opções de status.",
         "subcategoryBoard": "Escolha primeiro um quadro fixo para carregar as opções de subcategoria.",
         "subcategoryCategory": "Escolha primeiro uma categoria fixa para carregar as opções de subcategoria."

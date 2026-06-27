@@ -1233,6 +1233,176 @@
         "title": "55555",
         "description": "55555"
       }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "loading": "55555",
+      "loadError": "55555",
+      "save": "55555",
+      "saving": "55555"
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "55555",
+        "iframeTitle": "55555",
+        "sampleDataNote": "55555"
+      },
+      "errors": {
+        "loadFailed": "55555"
+      },
+      "list": {
+        "loading": "55555",
+        "templateCount": "55555",
+        "usingCustom": "55555",
+        "usingStandard": "55555"
+      },
+      "columns": {
+        "name": "55555",
+        "actions": "55555"
+      },
+      "fields": {
+        "language": "55555",
+        "subject": "55555",
+        "htmlContent": "55555",
+        "textContent": "55555"
+      },
+      "actions": {
+        "collapse": "55555",
+        "expand": "55555",
+        "edit": "55555",
+        "useStandard": "55555",
+        "view": "55555",
+        "customize": "55555",
+        "sending": "55555",
+        "sendTest": "55555",
+        "close": "55555",
+        "cancel": "55555",
+        "saving": "55555",
+        "save": "55555"
+      },
+      "description": "55555",
+      "filter": {
+        "languages": "55555",
+        "reset": "55555"
+      },
+      "test": {
+        "sentTo": "55555",
+        "failed": "55555"
+      },
+      "view": {
+        "title": "55555"
+      },
+      "tabs": {
+        "source": "55555",
+        "preview": "55555"
+      },
+      "common": {
+        "notAvailable": "55555"
+      },
+      "edit": {
+        "title": "55555"
+      },
+      "languages": {
+        "en": "55555",
+        "fr": "55555",
+        "es": "55555",
+        "de": "55555",
+        "nl": "55555",
+        "it": "55555",
+        "pl": "55555",
+        "pt": "55555"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "55555",
+        "loadSubtypes": "55555",
+        "save": "55555"
+      },
+      "loading": "55555",
+      "toasts": {
+        "saved": "55555",
+        "discarded": "55555"
+      },
+      "columns": {
+        "name": "55555",
+        "description": "55555",
+        "enabled": "55555",
+        "defaultForUsers": "55555",
+        "actions": "55555"
+      },
+      "tooltips": {
+        "cannotDisable": "55555",
+        "cannotModify": "55555"
+      },
+      "actions": {
+        "enableAllSubtypes": "55555",
+        "disableAllSubtypes": "55555",
+        "disable": "55555",
+        "enable": "55555",
+        "disableDefault": "55555",
+        "enableDefault": "55555",
+        "discardChanges": "55555",
+        "saving": "55555",
+        "saveChanges": "55555",
+        "cancel": "55555"
+      },
+      "help": {
+        "intro": "55555",
+        "enabledLabel": "55555",
+        "enabledDescription": "55555",
+        "defaultLabel": "55555",
+        "defaultDescription": "55555"
+      },
+      "unsavedChangesAlert": "55555",
+      "discardDialog": {
+        "title": "55555",
+        "message": "55555"
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "55555",
+        "loadSubtypes": "55555",
+        "saveSettings": "55555"
+      },
+      "loading": "55555",
+      "toasts": {
+        "saveSuccess": "55555",
+        "changesDiscarded": "55555"
+      },
+      "columns": {
+        "name": "55555",
+        "description": "55555",
+        "enabled": "55555",
+        "defaultForUsers": "55555",
+        "actions": "55555"
+      },
+      "actions": {
+        "enableAllSubtypes": "55555",
+        "disableAllSubtypes": "55555",
+        "disable": "55555",
+        "enable": "55555",
+        "disableDefault": "55555",
+        "enableDefault": "55555",
+        "discardChanges": "55555",
+        "saving": "55555",
+        "saveChanges": "55555",
+        "cancel": "55555"
+      },
+      "intro": "55555",
+      "enabledLabel": "55555",
+      "enabledDescription": "55555",
+      "defaultForUsersLabel": "55555",
+      "defaultForUsersDescription": "55555",
+      "unsavedChangesAlert": "55555",
+      "discardDialog": {
+        "title": "55555",
+        "message": "55555"
+      }
     }
   },
   "timeEntry": {

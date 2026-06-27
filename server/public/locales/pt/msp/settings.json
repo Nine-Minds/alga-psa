@@ -497,7 +497,7 @@
       },
       "actions": {
         "addBoard": "Adicionar quadro",
-        "importStandard": "Importar de placas padrão",
+        "importStandard": "Importar de quadros padrão",
         "edit": "Editar",
         "delete": "Excluir",
         "cancel": "Cancelar",
@@ -526,7 +526,7 @@
         },
         "inactive": "Marcar como inativo",
         "itilCompliant": "Compatível com ITIL",
-        "boardConfiguration": "Configuração da placa",
+        "boardConfiguration": "Configuração do quadro",
         "boardManager": {
           "label": "Gerente do Conselho",
           "placeholder": "Selecione um gerente do conselho",
@@ -559,15 +559,15 @@
           "label": "Copiar status de chamados de",
           "help": "Novos quadros clonam o ciclo de vida de seus chamados a partir de um quadro existente.",
           "selectSource": "Selecione um quadro de origem",
-          "noSourceAvailable": "Nenhuma placa de origem disponível",
-          "unnamedBoard": "Placa sem nome"
+          "noSourceAvailable": "Nenhum quadro de origem disponível",
+          "unnamedBoard": "Quadro sem nome"
         },
         "ticketStatuses": {
           "labelEditing": "Status dos chamados de embarque",
           "labelCopied": "Status de chamados copiados",
           "labelInline": "Status de chamados in-line",
           "helpEditing": "Edite o ciclo de vida do chamado apenas para este quadro.",
-          "helpCopied": "Revise e ajuste o ciclo de vida copiado antes de salvar a nova placa.",
+          "helpCopied": "Revise e ajuste o ciclo de vida copiado antes de salvar o novo quadro.",
           "helpInline": "Crie o ciclo de vida inicial do chamado do quadro antes de salvá-lo.",
           "loading": "Carregando status de chamados de bordo…",
           "statusName": "Nome do status",
@@ -595,14 +595,14 @@
         "editBoard": "Editar quadro",
         "deleteBoardTitle": "Excluir quadro",
         "deleteBoardMessage": "Isso excluirá permanentemente o quadro.",
-        "cleanupItilTitle": "Limpe a placa ITIL",
+        "cleanupItilTitle": "Limpe o quadro ITIL",
         "cleanupItilMessage": "Isso removerá as categorias ITIL e a matriz de prioridades associadas a este quadro.",
         "deleteOnly": "Excluir apenas",
         "deleteAndCleanup": "Excluir e limpar",
         "deleteAll": "Excluir tudo",
-        "importTitle": "Importar placas padrão",
+        "importTitle": "Importar quadros padrão",
         "importDescription": "Selecione quadros padrão para importar para sua organização:",
-        "importEmpty": "Nenhuma placa padrão disponível para importação.",
+        "importEmpty": "Nenhum quadro padrão disponível para importação.",
         "conflictsTitle": "Resolver conflitos de importação",
         "conflictsDescription": "Os itens a seguir apresentam conflitos que precisam ser resolvidos:",
         "nameConflict": "O nome já existe",
@@ -662,22 +662,22 @@
           "created": "Quadro criado com sucesso",
           "updated": "Quadro atualizado com sucesso",
           "deleted": "Quadro excluído com sucesso",
-          "imported": "Placas importadas com sucesso"
+          "imported": "Quadros importados com sucesso"
         },
         "error": {
-          "fetchFailed": "Falha ao carregar placas",
-          "fetchAvailableFailed": "Falha ao buscar placas disponíveis para importação",
+          "fetchFailed": "Falha ao carregar quadros",
+          "fetchAvailableFailed": "Falha ao buscar quadros disponíveis para importação",
           "nameRequired": "O nome do conselho é obrigatório",
           "saveFailed": "Falha ao salvar o quadro",
-          "lastDefault": "Não é possível remover a última placa padrão",
+          "lastDefault": "Não é possível remover o último quadro padrão",
           "statusRequired": "Adicione pelo menos um status de chamado antes de salvar o quadro.",
           "duplicateStatusName": "Os nomes de status dos chamados devem ser exclusivos em um quadro.",
           "invalidOpenDefault": "Selecione exatamente um status de chamado padrão aberto antes de salvar o quadro.",
-          "nameAlreadyExists": "Já existe uma placa com este nome.",
+          "nameAlreadyExists": "Já existe um quadro com este nome.",
           "selectBoardToCopy": "Selecione um quadro existente para copiar o status dos chamados.",
           "fetchStatusesFailed": "Falha ao carregar os status dos chamados do quadro.",
           "deleteFailed": "Falha ao excluir o quadro",
-          "importFailed": "Falha ao importar placas",
+          "importFailed": "Falha ao importar quadros",
           "updateStatusFailed": "Falha ao atualizar o status do quadro",
           "updateDefaultFailed": "Falha ao atualizar o quadro padrão"
         }
@@ -1232,6 +1232,176 @@
       "telemetry": {
         "title": "Telemetria e Análise",
         "description": "Gerencie suas preferências de telemetria e análise"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Habilitar notificações",
+        "description": "Habilite ou desabilite todas as notificações para este locatário"
+      },
+      "loading": "Carregando configurações de notificação...",
+      "loadError": "Falha ao carregar configurações",
+      "save": "Salvar alterações",
+      "saving": "Salvando..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Pré-visualização do assunto",
+        "iframeTitle": "Pré-visualização do modelo de e-mail",
+        "sampleDataNote": "A pré-visualização usa dados de exemplo. Os e-mails reais conterão valores reais."
+      },
+      "errors": {
+        "loadFailed": "Falha ao carregar os modelos"
+      },
+      "list": {
+        "loading": "Carregando modelos de e-mail...",
+        "templateCount": "({{templateCount}} modelos)",
+        "usingCustom": "Usando modelo personalizado",
+        "usingStandard": "Usando modelo padrão"
+      },
+      "columns": {
+        "name": "Nome",
+        "actions": "Ações"
+      },
+      "fields": {
+        "language": "Idioma",
+        "subject": "Assunto",
+        "htmlContent": "Conteúdo HTML",
+        "textContent": "Conteúdo de texto"
+      },
+      "actions": {
+        "collapse": "Recolher",
+        "expand": "Expandir",
+        "edit": "Editar",
+        "useStandard": "Usar padrão",
+        "view": "Visualizar",
+        "customize": "Personalizar",
+        "sending": "Enviando...",
+        "sendTest": "Enviar e-mail de teste",
+        "close": "Fechar",
+        "cancel": "Cancelar",
+        "saving": "Salvando...",
+        "save": "Salvar"
+      },
+      "description": "Cada tipo de evento tem um modelo padrão que pode ser personalizado. Você pode usar o modelo padrão ou criar uma versão personalizada.",
+      "filter": {
+        "languages": "Idiomas",
+        "reset": "Redefinir"
+      },
+      "test": {
+        "sentTo": "E-mail de teste enviado para {{recipient}}",
+        "failed": "Falha ao enviar o e-mail de teste."
+      },
+      "view": {
+        "title": "Modelo padrão: {{name}}"
+      },
+      "tabs": {
+        "source": "Código-fonte",
+        "preview": "Pré-visualização"
+      },
+      "common": {
+        "notAvailable": "N/D"
+      },
+      "edit": {
+        "title": "Editar modelo personalizado: {{name}}"
+      },
+      "languages": {
+        "en": "Inglês",
+        "fr": "Francês",
+        "es": "Espanhol",
+        "de": "Alemão",
+        "nl": "Holandês",
+        "it": "Italiano",
+        "pl": "Polonês",
+        "pt": "Português"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Falha ao carregar categorias",
+        "loadSubtypes": "Falha ao carregar subtipos de notificação",
+        "save": "Falha ao salvar as configurações de notificação"
+      },
+      "loading": "Carregando categorias de notificação...",
+      "toasts": {
+        "saved": "Configurações de notificação salvas com sucesso",
+        "discarded": "Alterações descartadas"
+      },
+      "columns": {
+        "name": "Nome",
+        "description": "Descrição",
+        "enabled": "Habilitado",
+        "defaultForUsers": "Padrão para usuários",
+        "actions": "Ações"
+      },
+      "tooltips": {
+        "cannotDisable": "Esta categoria não pode ser desabilitada",
+        "cannotModify": "Esta categoria não pode ser modificada"
+      },
+      "actions": {
+        "enableAllSubtypes": "Habilitar todos os subtipos",
+        "disableAllSubtypes": "Desabilitar todos os subtipos",
+        "disable": "Desabilitar",
+        "enable": "Habilitar",
+        "disableDefault": "Desabilitar padrão",
+        "enableDefault": "Habilitar padrão",
+        "discardChanges": "Descartar alterações",
+        "saving": "Salvando...",
+        "saveChanges": "Salvar alterações",
+        "cancel": "Cancelar"
+      },
+      "help": {
+        "intro": "Controle quais tipos de notificação por e-mail estão disponíveis e defina os padrões para novos usuários.",
+        "enabledLabel": "Habilitado:",
+        "enabledDescription": "Controla se este tipo de notificação está ativo",
+        "defaultLabel": "Padrão para usuários:",
+        "defaultDescription": "Define se os novos usuários têm esta notificação habilitada por padrão"
+      },
+      "unsavedChangesAlert": "Você tem alterações não salvas. Clique em \"Salvar alterações\" para aplicá-las.",
+      "discardDialog": {
+        "title": "Descartar alterações?",
+        "message": "Tem certeza de que deseja descartar todas as alterações não salvas? Esta ação não pode ser desfeita."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Falha ao carregar categorias",
+        "loadSubtypes": "Falha ao carregar subtipos de notificação",
+        "saveSettings": "Falha ao salvar as configurações de notificação"
+      },
+      "loading": "Carregando categorias de notificações internas...",
+      "toasts": {
+        "saveSuccess": "Configurações de notificação salvas com sucesso",
+        "changesDiscarded": "Alterações descartadas"
+      },
+      "columns": {
+        "name": "Nome",
+        "description": "Descrição",
+        "enabled": "Habilitado",
+        "defaultForUsers": "Padrão para usuários",
+        "actions": "Ações"
+      },
+      "actions": {
+        "enableAllSubtypes": "Habilitar todos os subtipos",
+        "disableAllSubtypes": "Desabilitar todos os subtipos",
+        "disable": "Desabilitar",
+        "enable": "Habilitar",
+        "disableDefault": "Desabilitar padrão",
+        "enableDefault": "Habilitar padrão",
+        "discardChanges": "Descartar alterações",
+        "saving": "Salvando...",
+        "saveChanges": "Salvar alterações",
+        "cancel": "Cancelar"
+      },
+      "intro": "Controle quais tipos de notificação interna estão disponíveis e defina os padrões para novos usuários.",
+      "enabledLabel": "Habilitado:",
+      "enabledDescription": "Controla se esse tipo de notificação está ativo no sistema",
+      "defaultForUsersLabel": "Padrão para usuários:",
+      "defaultForUsersDescription": "Define se os novos usuários têm essa notificação habilitada por padrão",
+      "unsavedChangesAlert": "Você tem alterações não salvas. Clique em \"Salvar alterações\" para aplicá-las.",
+      "discardDialog": {
+        "title": "Descartar alterações?",
+        "message": "Tem certeza de que deseja descartar todas as alterações não salvas? Esta ação não pode ser desfeita."
       }
     }
   },

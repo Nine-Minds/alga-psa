@@ -455,15 +455,15 @@
     "description": "Etapa do assistente para configurar quadros, status, prioridades, categorias e padrões de SLA durante a integração",
     "boards": {
       "toasts": {
-        "firstDefaultSet": "Primeira placa definida automaticamente como padrão",
+        "firstDefaultSet": "Primeiro quadro definido automaticamente como padrão",
         "deleted": "Quadro excluído com sucesso",
-        "defaultUpdated": "Placa padrão atualizada com sucesso"
+        "defaultUpdated": "Quadro padrão atualizado com sucesso"
       },
       "errors": {
-        "import": "Falha ao importar placas",
+        "import": "Falha ao importar quadros",
         "delete": "Falha ao excluir o quadro.",
-        "defaultRequired": "Pelo menos uma placa deve ser definida como padrão",
-        "defaultUpdate": "Falha ao definir placa padrão",
+        "defaultRequired": "Pelo menos um quadro deve ser definido como padrão",
+        "defaultUpdate": "Falha ao definir quadro padrão",
         "duplicate": "O conselho já existe",
         "create": "Falha ao criar o quadro. Por favor, tente novamente."
       },
@@ -472,7 +472,7 @@
       },
       "title": "Quadros",
       "description": "Os quadros ajudam a organizar chamados por departamento, equipe ou tipo de fluxo de trabalho. Quando os clientes criam chamados através do portal do cliente, eles serão automaticamente atribuídos ao quadro marcado como padrão.",
-      "tip": "Clique na estrela na coluna Padrão para alterar qual placa é padrão.",
+      "tip": "Clique na estrela na coluna Padrão para alterar qual quadro é padrão.",
       "actions": {
         "import": "Importar do Padrão",
         "add": "Adicionar novo quadro",
@@ -495,16 +495,16 @@
             "help": "Controla a ordem em que os painéis aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
           },
           "itil": {
-            "label": "Torne esta placa compatível com ITIL"
+            "label": "Torne este quadro compatível com ITIL"
           }
         },
-        "configurationTitle": "Configuração da placa"
+        "configurationTitle": "Configuração do quadro"
       },
       "import": {
-        "title": "Importar placas padrão",
+        "title": "Importar quadros padrão",
         "success": {
-          "one": "1 placa importada com sucesso.",
-          "other": "Placas {{count}} importadas com sucesso."
+          "one": "1 quadro importado com sucesso.",
+          "other": "Quadros {{count}} importados com sucesso."
         }
       },
       "table": {
@@ -517,9 +517,9 @@
       },
       "current": {
         "title": "Quadros Atuais",
-        "defaultTitle": "Placa padrão",
+        "defaultTitle": "Quadro padrão",
         "setDefaultTitle": "Definir como quadro padrão",
-        "removeTitle": "Remover placa"
+        "removeTitle": "Remover quadro"
       }
     },
     "categories": {
@@ -550,7 +550,7 @@
         "deleted": "Categoria excluída com sucesso"
       },
       "title": "Categorias",
-      "requiresBoard": "(requer placa)",
+      "requiresBoard": "(requer quadro)",
       "description": "As categorias ajudam a organizar os chamados por tipo de problema ou solicitação. Você pode criar categorias principais com subcategorias para melhor organização. Os exemplos incluem Suporte Técnico (com subcategorias como Hardware, Software, Rede) ou Solicitações de Serviço.",
       "actions": {
         "import": "Importar do Padrão",
@@ -611,7 +611,7 @@
         "create": "Falha ao criar status. Por favor, tente novamente."
       },
       "title": "Status",
-      "description": "Os status são configurados por placa. Selecione um quadro abaixo para definir o ciclo de vida dos chamados nesse quadro. O status aberto padrão do quadro selecionado é atribuído automaticamente aos novos chamados criados nesse quadro.",
+      "description": "Os status são configurados por quadro. Selecione um quadro abaixo para definir o ciclo de vida dos chamados nesse quadro. O status aberto padrão do quadro selecionado é atribuído automaticamente aos novos chamados criados nesse quadro.",
       "tip": "Os conselhos não compartilham status. Troque de quadro aqui para revisar ou alterar o conjunto de status de cada quadro.",
       "fields": {
         "board": {
@@ -619,7 +619,7 @@
           "placeholder": "Selecione o quadro"
         }
       },
-      "noBoardWarning": "Crie ou importe um quadro antes de configurar status. Cada placa precisa de seu próprio status padrão aberto.",
+      "noBoardWarning": "Crie ou importe um quadro antes de configurar status. Cada quadro precisa de seu próprio status padrão aberto.",
       "actions": {
         "import": "Importar do Padrão",
         "add": "Adicionar novo status",
@@ -674,7 +674,7 @@
       },
       "empty": {
         "forBoard": "{{boardName}} ainda não possui nenhum status. Adicione ou importe pelo menos um status padrão aberto antes de concluir a integração.",
-        "noBoardSelected": "Selecione uma placa para configurar seus status."
+        "noBoardSelected": "Selecione um quadro para configurar seus status."
       }
     },
     "priorities": {
@@ -865,7 +865,7 @@
     },
     "finalRequirement": {
       "label": "Obrigatório:",
-      "description": "Configure pelo menos uma placa e uma prioridade para concluir a configuração. Importe configurações padrão para configurar rapidamente seu sistema de chamados."
+      "description": "Configure pelo menos um quadro e uma prioridade para concluir a configuração. Importe configurações padrão para configurar rapidamente seu sistema de chamados."
     }
   }
 }
