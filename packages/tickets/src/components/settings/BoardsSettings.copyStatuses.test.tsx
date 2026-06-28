@@ -684,7 +684,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     expect(document.getElementById('board-row-board-11')).not.toBeInTheDocument();
 
     // Advance to page 2 via the standard pagination next control.
-    fireEvent.click(document.getElementById('boards-list-pagination-next-btn') as HTMLElement);
+    fireEvent.click(document.getElementById('boards-settings-table-pagination-next-btn') as HTMLElement);
 
     expect(document.getElementById('board-row-board-11')).toBeInTheDocument();
     expect(document.getElementById('board-row-board-1')).not.toBeInTheDocument();
