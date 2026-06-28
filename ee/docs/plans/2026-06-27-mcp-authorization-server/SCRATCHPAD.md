@@ -2,6 +2,22 @@
 
 Rolling working memory. Append discoveries/decisions/gotchas as they happen.
 
+## Post-merge fixes (2026-06-28)
+
+Live testing of claude.ai after #2803 merged still hit the DCR error. Diagnosis:
+- #2803 IS deployed (the AS route returns my JSON 404, not Next's HTML 404), but
+  it was gated off — and live `sebastian-blue` (active color; green idle) is
+  **Helm-managed**, so a manual `kubectl set env` would be reverted and wouldn't
+  help anyway (CIMD signal is compiled in). No deploy-free path exists.
+- **Real gap (PR #2804):** Claude only uses CIMD when the AS metadata advertises
+  BOTH `client_id_metadata_document_supported: true` AND `none` in
+  `token_endpoint_auth_methods_supported`. We had only the latter → Claude fell
+  back to DCR → no registration_endpoint → the error. Added the missing flag.
+- **F040 reversed per product owner:** the `MCP_AUTH_SERVER_ENABLED` dark-release
+  gate is **removed** — the AS is always on for EE (no flag to set). Deleted
+  `oauth/config.ts`, the seam export, and the route checks; PRM always advertises
+  Alga-as-AS when EE. (Trade-off: no runtime kill-switch; revert = redeploy.)
+
 ## Origin of this plan
 
 Tracing why claude.ai's connector UI couldn't connect to the remote MCP server
