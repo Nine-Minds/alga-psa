@@ -110,10 +110,14 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
 
       const result = await importUnmatchedHuduAssetsCore(tenant, user.user_id, input.clientId);
 
+      // EE tsconfig doesn't narrow the discriminated union on `.success`; read
+      // the counts (data on success, partial on failure) through a view.
+      const counts = (result as { data?: HuduAssetBulkImportSummary }).data
+        ?? (result as { partial?: HuduAssetBulkImportSummary }).partial;
       logger.info('[HuduAssetImportActions] bulk import finished', {
         tenant,
         clientId: input.clientId,
-        ...(result.success ? result.data : result.partial),
+        ...counts,
       });
 
       return result;

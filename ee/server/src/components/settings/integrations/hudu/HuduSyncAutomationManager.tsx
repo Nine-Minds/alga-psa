@@ -114,7 +114,8 @@ export default function HuduSyncAutomationManager() {
       if (!result.success) {
         toast({
           title: t('integrations.hudu.settings.sync.toastErrorTitle', { defaultValue: 'Hudu auto-sync update failed' }),
-          description: result.error,
+          // EE tsconfig doesn't narrow this discriminated union on `!success`.
+          description: (result as { success: false; error: string }).error,
           variant: 'destructive',
         });
       }
