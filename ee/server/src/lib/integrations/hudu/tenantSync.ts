@@ -19,6 +19,7 @@ import type { Knex } from 'knex';
 import { getHuduIntegration, setHuduSyncRunState } from './huduIntegrationRepository';
 import { getHuduCompanyMappingRows } from './companyMapping';
 import { importUnmatchedHuduAssetsCore } from './assetImportCore';
+import type { HuduAssetBulkImportSummary } from './assetImportCore';
 import { syncHuduClientAssetsCore } from './assetSyncCore';
 
 export interface HuduAutoSyncDesiredState {
@@ -134,12 +135,23 @@ export async function runHuduTenantSync(
 
       if (options.importNew) {
         const imp = await importUnmatchedHuduAssetsCore(tenant, actorUserId, clientId);
-        const counts = imp.success ? imp.data : imp.partial;
-        summary.items_created += counts.created;
-        summary.items_skipped += counts.skipped;
-        summary.items_failed += counts.failed.length;
-        if (!imp.success) {
-          summary.errors.push(`${clientId}: ${imp.error}`);
+        // EE tsconfig doesn't narrow the discriminated union on `.success`, so
+        // read both result shapes (data on success, partial on failure) through
+        // a permissive view.
+        const impView = imp as {
+          success: boolean;
+          data?: HuduAssetBulkImportSummary;
+          partial?: HuduAssetBulkImportSummary;
+          error?: string;
+        };
+        const counts = impView.data ?? impView.partial;
+        if (counts) {
+          summary.items_created += counts.created;
+          summary.items_skipped += counts.skipped;
+          summary.items_failed += counts.failed.length;
+        }
+        if (!impView.success && impView.error) {
+          summary.errors.push(`${clientId}: ${impView.error}`);
         }
       }
 
