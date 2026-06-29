@@ -729,6 +729,7 @@
     "submit": "Ajouter un ticket",
     "submitting": "Ajout...",
     "createAndView": "Créer + voir le ticket",
+    "openingTicket": "Ouverture du ticket…",
     "continueEditing": "Continuer la modification",
     "clipboardDraftMessage": "Cette description de création rapide contient des images collées qui n'ont pas encore été jointes à un ticket enregistré. Continuer la modification ou supprimer les images préparées et fermer ?",
     "clipboardUploadSessionRequired": "Une session utilisateur est requise pour le téléchargement d’images dans le presse-papiers.",

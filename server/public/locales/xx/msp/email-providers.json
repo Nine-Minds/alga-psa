@@ -843,7 +843,7 @@
       "valueLabel": "11111",
       "copyHostAriaLabel": "11111",
       "copyFqdnAriaLabel": "11111",
-      "hostHint": "11111"
+      "hostHint": "11111 {{domain}} 11111 {{domain}} 11111 {{domain}} 11111"
     }
   },
   "inboundRules": {

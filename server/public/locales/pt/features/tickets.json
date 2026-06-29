@@ -729,6 +729,7 @@
     "submit": "Adicionar chamado",
     "submitting": "Adicionando...",
     "createAndView": "Criar + visualizar chamado",
+    "openingTicket": "Abrindo chamado…",
     "continueEditing": "Continuar editando",
     "clipboardDraftMessage": "Esta descrição de adição rápida inclui imagens coladas que ainda não foram anexadas a um chamado salvo. Continuar editando ou excluir as imagens preparadas e fechar?",
     "clipboardUploadSessionRequired": "A sessão do usuário é necessária para o upload da imagem da área de transferência.",

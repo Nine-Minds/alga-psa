@@ -729,6 +729,7 @@
     "submit": "Ticket hinzufügen",
     "submitting": "Wird hinzugefügt...",
     "createAndView": "Erstellen + Ticket anzeigen",
+    "openingTicket": "Ticket wird geöffnet…",
     "continueEditing": "Weiter bearbeiten",
     "clipboardDraftMessage": "Diese Schnellanlage-Beschreibung enthält eingefügte Bilder, die noch keinem gespeicherten Ticket angehängt wurden. Weiter bearbeiten oder die vorgemerkten Bilder löschen und schließen?",
     "clipboardUploadSessionRequired": "Für das Hochladen von Zwischenablage-Bildern ist eine Benutzersitzung erforderlich.",

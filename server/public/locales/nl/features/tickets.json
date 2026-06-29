@@ -729,6 +729,7 @@
     "submit": "Ticket toevoegen",
     "submitting": "Bezig met toevoegen...",
     "createAndView": "Aanmaken + ticket bekijken",
+    "openingTicket": "Ticket openen…",
     "continueEditing": "Doorgaan met bewerken",
     "clipboardDraftMessage": "Deze snelle beschrijving bevat geplakte afbeeldingen die nog niet aan een opgeslagen ticket zijn gekoppeld. Wil je doorgaan met bewerken of de klaargezette afbeeldingen verwijderen en sluiten?",
     "clipboardUploadSessionRequired": "Gebruikerssessie is vereist voor het uploaden van een afbeelding via het klembord.",
