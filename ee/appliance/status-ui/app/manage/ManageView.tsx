@@ -167,11 +167,14 @@ function UpdatesTab({
       {error ? <div className={styles.alert}>{error}</div> : null}
       {result ? <p className={styles.manageResult}>{result}</p> : null}
 
-      {!app.updateAvailable && !updateRunning ? (
+      {!app.updateAvailable && !updateRunning && !updateBlocked ? (
         <p className={styles.muted}>No update is available on the {app.channel} channel.</p>
       ) : null}
 
-      {app.updateAvailable || updateRunning ? (
+      {/* A blocked status stays retryable even when no new version is available —
+          otherwise an operator whose update blocked (e.g. a transient reconcile)
+          has no way to re-run it from here once updateAvailable flips back to No. */}
+      {app.updateAvailable || updateRunning || updateBlocked ? (
         <div className={styles.toolbar}>
           <button
             type="button"
@@ -185,7 +188,9 @@ function UpdatesTab({
             {busy || updateRunning
               ? "Updating…"
               : confirm
-              ? "Confirm update"
+              ? (updateBlocked ? "Confirm retry" : "Confirm update")
+              : updateBlocked
+              ? "Retry update"
               : "Run update"}
           </button>
           {confirm && !busy && !updateRunning ? (
