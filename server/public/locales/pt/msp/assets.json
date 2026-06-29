@@ -1,213 +1,213 @@
 {
   "common": {
     "actions": {
-      "add": "Add",
-      "back": "Back",
-      "cancel": "Cancel",
-      "close": "Close",
-      "copy": "Copy",
-      "create": "Create",
-      "delete": "Delete",
-      "download": "Download",
-      "edit": "Edit",
-      "refresh": "Refresh",
-      "remove": "Remove",
-      "retry": "Retry",
-      "save": "Save",
-      "saving": "Saving...",
-      "search": "Search",
-      "select": "Select",
-      "update": "Update",
-      "view": "View"
+      "add": "Adicionar",
+      "back": "Voltar",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "copy": "Cópia",
+      "create": "Criar",
+      "delete": "Excluir",
+      "download": "Baixar",
+      "edit": "Editar",
+      "refresh": "Atualizar",
+      "remove": "Remover",
+      "retry": "Tentar novamente",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "search": "Procurar",
+      "select": "Selecione",
+      "update": "Atualizar",
+      "view": "Visualizar"
     },
     "states": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "loading": "Loading...",
-      "na": "N/A",
-      "none": "None"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "loading": "Carregando...",
+      "na": "N / D",
+      "none": "Nenhum"
     },
-    "no": "No",
-    "yes": "Yes"
+    "no": "Não",
+    "yes": "Sim"
   },
   "enums": {
     "rmmAgentStatus": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Overdue",
-      "unknown": "Unknown"
+      "online": "On-line",
+      "offline": "Off-line",
+      "overdue": "Atrasado",
+      "unknown": "Desconhecido"
     }
   },
   "assetAlertsSection": {
-    "title": "Asset Alerts Section",
-    "description": "Enterprise alert section wrapper for asset-specific RMM alerts and remediation actions"
+    "title": "Seção de alertas de ativos",
+    "description": "Wrapper de seção de alerta corporativo para alertas RMM e ações de correção específicos de ativos"
   },
   "assetCommandPalette": {
-    "title": "Command Palette",
-    "description": "Command palette for searching assets and launching asset actions",
+    "title": "Paleta de Comandos",
+    "description": "Paleta de comandos para pesquisar ativos e iniciar ações de ativos",
     "register": {
-      "label": "Asset Command Palette",
-      "title": "Asset Command Palette"
+      "label": "Paleta de comandos de ativos",
+      "title": "Paleta de comandos de ativos"
     },
     "actions": {
       "createAsset": {
-        "label": "Create asset",
-        "description": "Open quick add to register a new asset"
+        "label": "Criar ativo",
+        "description": "Abra a adição rápida para registrar um novo ativo"
       },
       "refreshData": {
-        "label": "Refresh data",
-        "description": "Re-fetch assets from the server"
+        "label": "Atualizar dados",
+        "description": "Buscar novamente ativos do servidor"
       },
       "reset": {
-        "label": "Reset",
-        "description": "Remove all active filters and search terms"
+        "label": "Reiniciar",
+        "description": "Remova todos os filtros ativos e termos de pesquisa"
       }
     },
-    "searchPlaceholder": "Search assets, clients, tickets…",
-    "empty": "No matches yet. Try a different keyword.",
+    "searchPlaceholder": "Pesquise ativos, clientes, chamados…",
+    "empty": "Nenhuma correspondência ainda. Experimente uma palavra-chave diferente.",
     "groups": {
-      "quickActions": "Quick actions",
-      "assets": "Assets",
-      "hints": "Hints"
+      "quickActions": "Ações rápidas",
+      "assets": "Ativos",
+      "hints": "Dicas"
     },
     "hint": {
-      "body": "Keep typing to search across the full asset list. Tickets and client lookup will arrive in a later drop.",
-      "badge": "Coming soon"
+      "body": "Continue digitando para pesquisar na lista completa de ativos. Os chamados e a pesquisa do cliente chegarão posteriormente.",
+      "badge": "Em breve"
     },
     "values": {
-      "unassigned": "Unassigned"
+      "unassigned": "Não atribuído"
     }
   },
   "assetDashboard": {
-    "title": "Asset Dashboard",
-    "description": "Top-level asset dashboard wrapper that renders the client asset experience"
+    "title": "Painel de ativos",
+    "description": "Wrapper de painel de ativos de nível superior que renderiza a experiência do ativo do cliente"
   },
   "assetDashboardClient": {
-    "title": "Asset Dashboard Client",
-    "description": "Main asset list page with filters, table and grid views, bulk actions, and drawer flows",
+    "title": "Cliente do painel de ativos",
+    "description": "Página principal da lista de ativos com filtros, visualizações de tabela e grade, ações em massa e fluxos de gaveta",
     "reflection": {
-      "label": "Asset Dashboard"
+      "label": "Painel de ativos"
     },
     "errors": {
-      "loadDrawerFailed": "Unable to load asset details right now. Please try again."
+      "loadDrawerFailed": "Não é possível carregar os detalhes do recurso no momento. Por favor, tente novamente."
     },
     "details": {
-      "noIp": "No IP",
-      "network": "Network",
+      "noIp": "Sem IP",
+      "network": "Rede",
       "local": "Local",
-      "noDetails": "No details available",
-      "unassigned": "Unassigned"
+      "noDetails": "Nenhum detalhe disponível",
+      "unassigned": "Não atribuído"
     },
     "selection": {
-      "selectAllVisibleAssets": "Select all visible assets",
-      "selectAsset": "Select asset {{name}}",
-      "selectedAssets_one": "{{count}} asset selected",
-      "selectedAssets_other": "{{count}} assets selected",
-      "clearSelection": "Clear selection",
-      "bulkActionsComingSoon": "Bulk actions coming soon"
+      "selectAllVisibleAssets": "Selecione todos os ativos visíveis",
+      "selectAsset": "Selecione o ativo {{name}}",
+      "selectedAssets_one": "Ativo {{count}} selecionado",
+      "selectedAssets_other": "Ativos {{count}} selecionados",
+      "clearSelection": "Limpar seleção",
+      "bulkActionsComingSoon": "Ações em massa em breve"
     },
     "actions": {
-      "openActionsForAsset": "Open actions for asset {{name}}",
-      "viewDetails": "View details",
-      "editAsset": "Edit asset",
-      "createTicket": "Create ticket",
-      "refreshData": "Refresh data"
+      "openActionsForAsset": "Ações abertas para o ativo {{name}}",
+      "viewDetails": "Ver detalhes",
+      "editAsset": "Editar recurso",
+      "createTicket": "Criar chamado",
+      "refreshData": "Atualizar dados"
     },
     "table": {
-      "name": "Name",
-      "tag": "Tag",
-      "type": "Type",
-      "details": "Details",
+      "name": "Nome",
+      "tag": "Marcação",
+      "type": "Tipo",
+      "details": "Detalhes",
       "status": "Status",
-      "agent": "Agent",
-      "client": "Client",
-      "location": "Location",
-      "actions": "Actions"
+      "agent": "Agente",
+      "client": "Cliente",
+      "location": "Localização",
+      "actions": "Ações"
     },
     "metrics": {
       "totalAssets": {
-        "title": "Total Assets",
-        "helper": "Across all clients"
+        "title": "Ativos totais",
+        "helper": "Em todos os clientes"
       },
       "filteredView": {
-        "title": "Filtered view",
-        "helper": "Matching active filters"
+        "title": "Visualização filtrada",
+        "helper": "Filtros ativos correspondentes"
       },
       "automationReady": {
-        "title": "Automation ready",
-        "helper": "Active maintenance schedules",
-        "upcoming": "Upcoming: {{count}}",
-        "overdue": "Overdue: {{count}}"
+        "title": "Pronto para automação",
+        "helper": "Cronogramas de manutenção ativos",
+        "upcoming": "Próximos: {{count}}",
+        "overdue": "Vencido: {{count}}"
       },
       "activeSchedules": {
-        "title": "Active Schedules",
-        "helper": "Lifecycle automation"
+        "title": "Agendamentos Ativos",
+        "helper": "Automação do ciclo de vida"
       },
       "overdueMaintenance": {
-        "title": "Maintenance Overdue",
-        "helper": "Needs attention"
+        "title": "Manutenção vencida",
+        "helper": "Precisa de atenção"
       },
       "upcomingMaintenance": {
-        "title": "Upcoming Maintenance",
-        "helper": "Next 30 days"
+        "title": "Próxima manutenção",
+        "helper": "Próximos 30 dias"
       }
     },
     "filters": {
-      "searchPlaceholder": "Search by name, tag, or serial number",
-      "reset": "Reset",
+      "searchPlaceholder": "Pesquise por nome, etiqueta ou número de série",
+      "reset": "Reiniciar",
       "status": "Status",
-      "type": "Type",
-      "agent": "Agent",
-      "columns": "Columns",
+      "type": "Tipo",
+      "agent": "Agente",
+      "columns": "Colunas",
       "client": {
-        "loading": "Loading clients…",
-        "placeholder": "Client",
-        "clear": "Clear client filter"
+        "loading": "Carregando clientes…",
+        "placeholder": "Cliente",
+        "clear": "Limpar filtro de cliente"
       },
       "rmmManaged": {
-        "managed": "RMM Managed",
-        "unmanaged": "Not Managed"
+        "managed": "RMM gerenciado",
+        "unmanaged": "Não gerenciado"
       }
     },
     "activeFilters": {
       "status": "Status: {{value}}",
-      "type": "Type: {{value}}",
-      "client": "Client: {{value}}",
-      "agent": "Agent: {{value}}"
+      "type": "Tipo: {{value}}",
+      "client": "Cliente: {{value}}",
+      "agent": "Agente: {{value}}"
     },
     "statuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "maintenance": "Manutenção"
     },
     "types": {
-      "workstation": "Workstation",
-      "server": "Server",
-      "network_device": "Network Device",
-      "mobile_device": "Mobile Device",
-      "printer": "Printer"
+      "workstation": "Estação de trabalho",
+      "server": "Servidor",
+      "network_device": "Dispositivo de rede",
+      "mobile_device": "Dispositivo móvel",
+      "printer": "Impressora"
     },
     "columns": {
-      "select": "select",
-      "name": "name",
-      "asset_tag": "asset tag",
-      "asset_type": "asset type",
-      "details": "details",
+      "select": "selecione",
+      "name": "nome",
+      "asset_tag": "etiqueta de ativo",
+      "asset_type": "tipo de ativo",
+      "details": "detalhes",
       "status": "status",
-      "agent_status": "agent status",
-      "client_name": "client name",
-      "location": "location",
-      "actions": "actions"
+      "agent_status": "status do agente",
+      "client_name": "nome do cliente",
+      "location": "localização",
+      "actions": "ações"
     },
     "print": {
       "title": "Ativos",
       "selectedTitle": "Ativos selecionados",
-      "subtitle": "{{count}} ativos",
+      "subtitle": "Ativos {{count}}",
       "noAssets": "Nenhum ativo para imprimir",
       "emptyValue": "-",
       "columns": {
         "name": "Nome",
-        "tag": "Etiqueta",
+        "tag": "Marcação",
         "type": "Tipo",
         "status": "Status",
         "client": "Cliente",
@@ -215,14 +215,14 @@
       },
       "optionsDialog": {
         "title": "Opções de impressão",
-        "description": "Escolha quais colunas incluir ao imprimir os ativos."
+        "description": "Escolha quais colunas incluir ao imprimir ativos."
       }
     },
     "bulk": {
       "actionBar": {
         "clear": "Limpar",
         "delete": "Excluir",
-        "selectedCount": "{{count}} selecionados",
+        "selectedCount": "{{count}} selecionado",
         "setLocation": "Definir localização",
         "setStatus": "Definir status"
       },
@@ -235,204 +235,204 @@
         "updateStatus": "Atualização de status"
       },
       "deleteDialog": {
-        "description": "Excluir {{count}} ativo(s) selecionado(s). Ativos com dependências podem ser ignorados.",
+        "description": "Exclua o(s) ativo(s) selecionado(s) {{count}}. Os ativos com dependências podem ser ignorados.",
         "title": "Excluir ativos selecionados"
       },
       "errors": {
         "deleteFailed": "Não foi possível excluir os ativos selecionados.",
-        "updateLocationFailed": "Não foi possível atualizar as localizações dos ativos selecionados.",
-        "updateStatusFailed": "Não foi possível atualizar os ativos selecionados."
+        "updateLocationFailed": "Não foi possível atualizar os locais dos ativos selecionados.",
+        "updateStatusFailed": "Não foi possível atualizar os recursos selecionados."
       },
       "locationDialog": {
         "clearLocation": "Limpar localização",
         "customLocation": "Localização personalizada",
-        "customPlaceholder": "Insira uma localização ou área personalizada",
-        "description": "Atualizar {{count}} ativo(s) selecionado(s).",
-        "loadingLocations": "Carregando localizações...",
-        "savedDisabled": "As localizações salvas do cliente só estão disponíveis quando todos os ativos selecionados estão visíveis e pertencem a um único cliente.",
-        "savedLocation": "Localização salva do cliente",
-        "selectLocation": "Selecionar localização",
+        "customPlaceholder": "Insira um local ou área personalizada",
+        "description": "Atualize o(s) ativo(s) selecionado(s) {{count}}.",
+        "loadingLocations": "Carregando locais...",
+        "savedDisabled": "Os locais de clientes salvos estão disponíveis somente quando todos os ativos selecionados estão visíveis e pertencem a um cliente.",
+        "savedLocation": "Localização do cliente salva",
+        "selectLocation": "Selecione o local",
         "title": "Definir localização do ativo"
       },
-      "partialFailure": "{{action}} concluída para {{succeeded}} ativo(s); {{failed}} falharam.",
+      "partialFailure": "{{action}} concluído para ativo(s) {{succeeded}}; {{failed}} falhou.",
       "statusDialog": {
-        "description": "Atualizar {{count}} ativo(s) selecionado(s).",
+        "description": "Atualize o(s) ativo(s) selecionado(s) {{count}}.",
         "title": "Definir status do ativo"
       },
-      "success": "{{action}} concluída para {{count}} ativo(s)."
+      "success": "{{action}} concluído para ativo(s) {{count}}."
     }
   },
   "assetDashboardGrid": {
-    "title": "Asset Dashboard Grid",
-    "description": "Composite grid layout for asset detail cards, RMM panels, and related status widgets"
+    "title": "Grade do painel de ativos",
+    "description": "Layout de grade composto para cartões de detalhes de ativos, painéis RMM e widgets de status relacionados"
   },
   "assetDetailDrawer": {
-    "title": "Asset Detail Drawer",
-    "description": "Drawer-based asset quick view with actions, summary data, and navigation into the full record",
-    "label": "Asset Detail Drawer",
+    "title": "Gaveta de detalhes de ativos",
+    "description": "Visualização rápida de ativos baseada em gaveta com ações, dados resumidos e navegação no registro completo",
+    "label": "Gaveta de detalhes de ativos",
     "header": {
-      "title": "Asset details",
-      "subtitle": "Stay in context while reviewing lifecycle and configuration"
+      "title": "Detalhes do recurso",
+      "subtitle": "Fique por dentro do contexto enquanto analisa o ciclo de vida e a configuração"
     },
     "tabs": {
-      "overview": "Overview",
-      "maintenance": "Maintenance",
-      "tickets": "Tickets",
-      "configuration": "Configuration",
-      "documents": "Documents"
+      "overview": "Visão geral",
+      "maintenance": "Manutenção",
+      "tickets": "Chamados",
+      "configuration": "Configuração",
+      "documents": "Documentos"
     },
     "helper": {
-      "awaitingSelection": "Awaiting asset selection",
+      "awaitingSelection": "Aguardando seleção de ativos",
       "selectedAsset": "{{name}} • {{tab}}"
     },
     "statuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "maintenance": "Manutenção"
     },
     "empty": {
-      "selectAsset": "Select an asset to view details",
-      "nothingToDisplay": "Nothing to display"
+      "selectAsset": "Selecione um ativo para ver detalhes",
+      "nothingToDisplay": "Nada para exibir"
     },
     "actions": {
-      "openAssetRecord": "Open asset record",
-      "delete": "Delete"
+      "openAssetRecord": "Abrir registro de ativo",
+      "delete": "Excluir"
     },
     "overview": {
-      "assetTag": "Asset tag {{tag}} • {{type}}",
-      "client": "Client: {{name}}",
-      "activeSchedules": "Active Schedules",
-      "upcomingMaintenance": "Upcoming Maintenance",
-      "nextOn": "Next on {{date}}",
-      "completedMaintenance": "Completed Maintenance",
-      "compliance": "Compliance {{percent}}%",
-      "lastMaintenance": "Last Maintenance",
-      "noHistory": "No history",
-      "maintenanceDataPending": "Maintenance data will appear once schedules are configured.",
-      "assetSummary": "Asset summary",
-      "recentLifecycleEvents": "Recent lifecycle events"
+      "assetTag": "Etiqueta de ativo {{tag}} • {{type}}",
+      "client": "Cliente: {{name}}",
+      "activeSchedules": "Agendamentos Ativos",
+      "upcomingMaintenance": "Próxima manutenção",
+      "nextOn": "Próximo em {{date}}",
+      "completedMaintenance": "Manutenção concluída",
+      "compliance": "Conformidade {{percent}}%",
+      "lastMaintenance": "Última Manutenção",
+      "noHistory": "Sem histórico",
+      "maintenanceDataPending": "Os dados de manutenção aparecerão assim que os cronogramas forem configurados.",
+      "assetSummary": "Resumo de ativos",
+      "recentLifecycleEvents": "Eventos recentes do ciclo de vida"
     },
     "maintenance": {
-      "noSchedules": "No maintenance schedules found for this asset yet.",
-      "totalSchedules": "Total Schedules",
-      "active": "Active",
-      "complianceRate": "Compliance Rate",
-      "history": "Maintenance history",
-      "loggedBy": "Logged by {{name}}",
-      "system": "system",
-      "noLogs": "Maintenance logs will appear here after the first service entry."
+      "noSchedules": "Nenhuma programação de manutenção encontrada para este ativo ainda.",
+      "totalSchedules": "Horários totais",
+      "active": "Ativo",
+      "complianceRate": "Taxa de conformidade",
+      "history": "Histórico de manutenção",
+      "loggedBy": "Registrado por {{name}}",
+      "system": "sistema",
+      "noLogs": "Os registros de manutenção aparecerão aqui após a primeira entrada de serviço."
     },
     "tickets": {
-      "empty": "No tickets linked to this asset yet. Use the quick action to create one.",
-      "linked": "Linked {{date}}",
-      "client": "Client: {{name}}",
-      "assignee": "Assignee: {{name}}",
-      "openTicket": "Open ticket"
+      "empty": "Ainda não há chamados vinculados a este ativo. Use a ação rápida para criar um.",
+      "linked": "Vinculado {{date}}",
+      "client": "Cliente: {{name}}",
+      "assignee": "Responsável: {{name}}",
+      "openTicket": "Abrir chamado"
     },
     "configuration": {
-      "coreAttributes": "Core attributes",
-      "serialNumber": "Serial number",
-      "location": "Location",
-      "purchaseDate": "Purchase date",
-      "warrantyEnd": "Warranty end",
-      "notProvided": "Not provided"
+      "coreAttributes": "Atributos principais",
+      "serialNumber": "Número de série",
+      "location": "Localização",
+      "purchaseDate": "Data de compra",
+      "warrantyEnd": "Fim da garantia",
+      "notProvided": "Não fornecido"
     },
     "info": {
-      "client": "Client",
-      "unassigned": "Unassigned",
-      "assetTag": "Asset tag",
+      "client": "Cliente",
+      "unassigned": "Não atribuído",
+      "assetTag": "Etiqueta de recurso",
       "status": "Status",
-      "created": "Created",
-      "updated": "Updated",
-      "tenant": "Tenant"
+      "created": "Criado",
+      "updated": "Atualizado",
+      "tenant": "Inquilino"
     },
     "typeDetails": {
-      "workstation": "Workstation details",
-      "networkDevice": "Network device details",
-      "server": "Server details",
-      "mobileDevice": "Mobile device details",
-      "printer": "Printer details",
-      "operatingSystem": "Operating system",
+      "workstation": "Detalhes da estação de trabalho",
+      "networkDevice": "Detalhes do dispositivo de rede",
+      "server": "Detalhes do servidor",
+      "mobileDevice": "Detalhes do dispositivo móvel",
+      "printer": "Detalhes da impressora",
+      "operatingSystem": "Sistema operacional",
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Storage",
+      "storage": "Armazenar",
       "gpu": "GPU",
-      "notProvided": "Not provided",
-      "never": "Never",
-      "deviceType": "Device type",
-      "managementIp": "Management IP",
-      "portCount": "Port count",
-      "firmwareVersion": "Firmware version",
-      "poeSupport": "PoE support",
-      "powerDraw": "Power draw",
-      "virtualized": "Virtualized",
-      "primaryIp": "Primary IP",
-      "hypervisor": "Hypervisor",
+      "notProvided": "Não fornecido",
+      "never": "Nunca",
+      "deviceType": "Tipo de dispositivo",
+      "managementIp": "IP de gerenciamento",
+      "portCount": "Contagem de portas",
+      "firmwareVersion": "Versão do firmware",
+      "poeSupport": "Suporte PoE",
+      "powerDraw": "Consumo de energia",
+      "virtualized": "Virtualizado",
+      "primaryIp": "IP primário",
+      "hypervisor": "Hipervisor",
       "os": "OS",
-      "model": "Model",
+      "model": "Modelo",
       "imei": "IMEI",
-      "phoneNumber": "Phone number",
-      "carrier": "Carrier",
-      "lastLogin": "Last login",
-      "lastCheckIn": "Last check-in",
-      "notReported": "Not reported",
-      "networkPrinter": "Network printer",
-      "ipAddress": "IP address",
-      "supportsColor": "Supports color",
-      "supportsDuplex": "Supports duplex",
-      "monthlyDutyCycle": "Monthly duty cycle",
-      "monthlyDutyCycleValue": "{{count}} pages"
+      "phoneNumber": "Número de telefone",
+      "carrier": "Operadora",
+      "lastLogin": "Último login",
+      "lastCheckIn": "Último check-in",
+      "notReported": "Não relatado",
+      "networkPrinter": "Impressora de rede",
+      "ipAddress": "Endereço IP",
+      "supportsColor": "Suporta cor",
+      "supportsDuplex": "Suporta duplex",
+      "monthlyDutyCycle": "Ciclo de trabalho mensal",
+      "monthlyDutyCycleValue": "Páginas {{count}}"
     },
     "relative": {
-      "momentsAgo": "moments ago",
-      "minutesAgo_one": "{{count}} minute ago",
-      "minutesAgo_other": "{{count}} minutes ago",
-      "hoursAgo_one": "{{count}} hour ago",
-      "hoursAgo_other": "{{count}} hours ago",
-      "daysAgo_one": "{{count}} day ago",
-      "daysAgo_other": "{{count}} days ago"
+      "momentsAgo": "momentos atrás",
+      "minutesAgo_one": "{{count}} minuto atrás",
+      "minutesAgo_other": "{{count}} minutos atrás",
+      "hoursAgo_one": "{{count}} uma hora atrás",
+      "hoursAgo_other": "{{count}} horas atrás",
+      "daysAgo_one": "{{count}} dia atrás",
+      "daysAgo_other": "{{count}} dias atrás"
     }
   },
   "assetDetailHeader": {
-    "title": "Asset Detail Header",
-    "description": "Header chrome for the asset detail experience including identity, badges, and refresh actions",
-    "backToAssets": "Back to Assets",
-    "assetTag": "Asset Tag: {{tag}}",
+    "title": "Cabeçalho de detalhes do ativo",
+    "description": "Cabeçalho cromado para a experiência de detalhes de ativos, incluindo identidade, emblemas e ações de atualização",
+    "backToAssets": "Voltar para Ativos",
+    "assetTag": "Etiqueta de ativo: {{tag}}",
     "actions": {
-      "createTicket": "Create Ticket",
-      "menu": "Actions",
-      "refreshing": "Refreshing...",
-      "refreshData": "Refresh Data",
-      "rebootDevice": "Reboot Device",
-      "editAsset": "Edit Asset",
-      "deleteAsset": "Delete Asset"
+      "createTicket": "Criar chamado",
+      "menu": "Ações",
+      "refreshing": "Refrescante...",
+      "refreshData": "Atualizar dados",
+      "rebootDevice": "Reinicializar dispositivo",
+      "editAsset": "Editar recurso",
+      "deleteAsset": "Excluir recurso"
     },
     "values": {
-      "unknownClient": "Unknown Client"
+      "unknownClient": "Cliente desconhecido"
     }
   },
   "assetDetailTabs": {
-    "title": "Asset Detail Tabs",
-    "description": "Tabbed asset detail navigation for overview, maintenance, documents, history, and related records",
+    "title": "Guias de detalhes de ativos",
+    "description": "Navegação detalhada de ativos com guias para visão geral, manutenção, documentos, histórico e registros relacionados",
     "tabs": {
-      "serviceHistory": "Service History",
+      "serviceHistory": "Histórico de serviço",
       "software": "Software",
-      "maintenance": "Maintenance",
-      "relatedAssets": "Related Assets",
-      "documentsPasswords": "Documents & Passwords",
-      "auditLog": "Audit Log"
+      "maintenance": "Manutenção",
+      "relatedAssets": "Ativos Relacionados",
+      "documentsPasswords": "Documentos e Senhas",
+      "auditLog": "Registro de auditoria"
     }
   },
   "assetDetailView": {
-    "title": "Asset Detail View",
-    "description": "Asset detail composition with loading, error, metrics, grid panels, and detail tabs",
-    "loading": "Loading asset details...",
+    "title": "Visualização detalhada do ativo",
+    "description": "Composição de detalhes de ativos com carregamento, erro, métricas, painéis de grade e guias de detalhes",
+    "loading": "Carregando detalhes do recurso...",
     "errors": {
-      "title": "Error",
-      "notFound": "Asset not found or you do not have permission to view it."
+      "title": "Erro",
+      "notFound": "Ativo não encontrado ou você não tem permissão para visualizá-lo."
     },
     "fields": {
-      "assetTag": "Etiqueta do ativo",
+      "assetTag": "Etiqueta de ativo",
       "serialNumber": "Número de série",
       "assetType": "Tipo",
       "client": "Cliente",
@@ -441,190 +441,190 @@
     }
   },
   "assetDetails": {
-    "title": "Asset Details",
-    "description": "Full asset details page with summary cards, associations, documents, and operational actions",
-    "assetTag": "Asset Tag: {{tag}}",
+    "title": "Detalhes do ativo",
+    "description": "Página completa de detalhes do ativo com cartões de resumo, associações, documentos e ações operacionais",
+    "assetTag": "Etiqueta de ativo: {{tag}}",
     "loading": {
-      "details": "Loading details..."
+      "details": "Carregando detalhes..."
     },
     "fields": {
       "status": "Status",
-      "serialNumber": "Serial Number",
-      "location": "Location",
-      "client": "Client",
-      "purchaseDate": "Purchase Date",
-      "warrantyEnd": "Warranty End",
+      "serialNumber": "Número de série",
+      "location": "Localização",
+      "client": "Cliente",
+      "purchaseDate": "Data de compra",
+      "warrantyEnd": "Fim da garantia",
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Storage",
+      "storage": "Armazenar",
       "gpu": "GPU",
-      "lastLogin": "Last Login",
-      "managementIp": "Management IP",
-      "portCount": "Port Count",
-      "powerDraw": "Power Draw",
-      "firmwareVersion": "Firmware Version",
-      "poeSupport": "PoE Support",
-      "type": "Type",
-      "hypervisor": "Hypervisor",
-      "primaryIp": "Primary IP",
-      "operatingSystem": "Operating System",
+      "lastLogin": "Último login",
+      "managementIp": "IP de gerenciamento",
+      "portCount": "Contagem de portas",
+      "powerDraw": "Consumo de energia",
+      "firmwareVersion": "Versão do Firmware",
+      "poeSupport": "Suporte PoE",
+      "type": "Tipo",
+      "hypervisor": "Hipervisor",
+      "primaryIp": "IP primário",
+      "operatingSystem": "Sistema operacional",
       "imei": "IMEI",
-      "phoneNumber": "Phone Number",
-      "carrier": "Carrier",
-      "supervisionStatus": "Supervision Status",
-      "ipAddress": "IP Address",
-      "networkPrinter": "Network Printer",
-      "colorSupport": "Color Support",
-      "duplexSupport": "Duplex Support",
-      "monthlyDutyCycle": "Monthly Duty Cycle"
+      "phoneNumber": "Número de telefone",
+      "carrier": "Operadora",
+      "supervisionStatus": "Status de supervisão",
+      "ipAddress": "Endereço IP",
+      "networkPrinter": "Impressora de rede",
+      "colorSupport": "Suporte de cores",
+      "duplexSupport": "Suporte Duplex",
+      "monthlyDutyCycle": "Ciclo de trabalho mensal"
     },
     "sections": {
-      "basicInformation": "Basic Information",
-      "workstation": "Workstation Details",
-      "networkDevice": "Network Device Details",
-      "server": "Server Details",
-      "mobileDevice": "Mobile Device Details",
-      "printer": "Printer Details",
-      "relatedAssets": "Related Assets"
+      "basicInformation": "Informações Básicas",
+      "workstation": "Detalhes da estação de trabalho",
+      "networkDevice": "Detalhes do dispositivo de rede",
+      "server": "Detalhes do servidor",
+      "mobileDevice": "Detalhes do dispositivo móvel",
+      "printer": "Detalhes da impressora",
+      "relatedAssets": "Ativos Relacionados"
     },
     "maintenance": {
-      "activeSchedules": "Active Schedules",
-      "overdue": "Overdue",
-      "upcoming": "Upcoming"
+      "activeSchedules": "Agendamentos Ativos",
+      "overdue": "Atrasado",
+      "upcoming": "Por vir"
     },
     "tabs": {
-      "details": "Details",
-      "relatedAssets": "Related Assets",
-      "documents": "Documents"
+      "details": "Detalhes",
+      "relatedAssets": "Ativos Relacionados",
+      "documents": "Documentos"
     },
     "relationships": {
-      "parentOf": "Parent of",
-      "childOf": "Child of"
+      "parentOf": "Pai de",
+      "childOf": "Filho de"
     },
     "empty": {
-      "notSpecified": "Not specified",
-      "unassigned": "Unassigned",
-      "never": "Never",
-      "noAdditionalDetails": "No additional details available",
-      "noRelatedAssets": "No related assets found"
+      "notSpecified": "Não especificado",
+      "unassigned": "Não atribuído",
+      "never": "Nunca",
+      "noAdditionalDetails": "Não há detalhes adicionais disponíveis",
+      "noRelatedAssets": "Nenhum ativo relacionado encontrado"
     },
     "values": {
       "virtual": "Virtual",
-      "physical": "Physical",
-      "supervised": "Supervised",
-      "unsupervised": "Unsupervised",
-      "pagesUnit": "pages"
+      "physical": "Físico",
+      "supervised": "Supervisionado",
+      "unsupervised": "Não supervisionado",
+      "pagesUnit": "páginas"
     },
     "statuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "maintenance": "Manutenção"
     },
     "deviceTypes": {
-      "switch": "Switch",
-      "router": "Router",
+      "switch": "Trocar",
+      "router": "Roteador",
       "firewall": "Firewall",
-      "access_point": "Access Point",
-      "load_balancer": "Load Balancer"
+      "access_point": "Ponto de acesso",
+      "load_balancer": "Balanceador de carga"
     },
     "relationshipTypes": {
-      "affected": "Affected",
-      "related": "Related"
+      "affected": "Afetado",
+      "related": "Relacionado"
     }
   },
   "assetDocuments": {
-    "title": "Asset Documents",
-    "description": "Asset document listing and attachment surface for files associated with an asset"
+    "title": "Documentos de ativos",
+    "description": "Listagem de documentos de ativos e superfície de anexo para arquivos associados a um ativo"
   },
   "assetForm": {
-    "title": "Asset Form",
-    "description": "Primary asset create and edit form with identity, lifecycle, contract, and metadata fields",
-    "heading": "Edit Asset",
+    "title": "Formulário de Ativos",
+    "description": "Formulário de criação e edição de ativos primários com campos de identidade, ciclo de vida, contrato e metadados",
+    "heading": "Editar recurso",
     "loading": {
-      "assetDetails": "Loading asset details..."
+      "assetDetails": "Carregando detalhes do recurso..."
     },
     "errors": {
-      "assetNotFound": "Asset not found",
-      "loadFailed": "Failed to load asset details",
-      "clientsLoadFailed": "Unable to load clients",
-      "locationsLoadFailed": "Unable to load locations for this client",
-      "updateFailed": "Failed to update asset",
+      "assetNotFound": "Recurso não encontrado",
+      "loadFailed": "Falha ao carregar detalhes do recurso",
+      "clientsLoadFailed": "Não foi possível carregar clientes",
+      "locationsLoadFailed": "Não foi possível carregar locais para este cliente",
+      "updateFailed": "Falha ao atualizar o recurso",
       "validation": "Corrija os campos destacados antes de salvar."
     },
     "actions": {
-      "viewClient": "View client",
-      "manageClientLocations": "Manage client locations",
-      "saveChanges": "Save Changes"
+      "viewClient": "Ver cliente",
+      "manageClientLocations": "Gerenciar locais de clientes",
+      "saveChanges": "Salvar alterações"
     },
     "alerts": {
-      "noLocationsSaved": "This client doesn’t have any saved locations yet. Use custom entry or create one from the client record."
+      "noLocationsSaved": "Este cliente ainda não tem locais salvos. Use a entrada personalizada ou crie uma a partir do registro do cliente."
     },
     "sections": {
-      "basicInformation": "Basic Information",
-      "clientAndLocation": "Client & Location",
-      "assetBasics": "Asset Basics"
+      "basicInformation": "Informações Básicas",
+      "clientAndLocation": "Cliente e Localização",
+      "assetBasics": "Noções básicas de ativos"
     },
     "fields": {
-      "customLocationOption": "Custom location",
-      "osType": "OS Type",
-      "osVersion": "OS Version",
-      "cpuModel": "CPU Model",
-      "cpuCores": "CPU Cores",
+      "customLocationOption": "Localização personalizada",
+      "osType": "Tipo de sistema operacional",
+      "osVersion": "Versão do sistema operacional",
+      "cpuModel": "Modelo de CPU",
+      "cpuCores": "Núcleos de CPU",
       "ramGb": "RAM (GB)",
-      "storageType": "Storage Type",
-      "storageCapacityGb": "Storage Capacity (GB)",
-      "gpuModel": "GPU Model",
-      "deviceType": "Device Type",
-      "managementIp": "Management IP",
-      "portCount": "Port Count",
-      "firmwareVersion": "Firmware Version",
-      "powerDrawWatts": "Power Draw (Watts)",
-      "supportsPoe": "Supports PoE",
-      "primaryIp": "Primary IP",
-      "raidConfig": "RAID Config",
-      "virtualMachine": "Virtual Machine",
-      "hypervisor": "Hypervisor",
-      "model": "Model",
+      "storageType": "Tipo de armazenamento",
+      "storageCapacityGb": "Capacidade de armazenamento (GB)",
+      "gpuModel": "Modelo de GPU",
+      "deviceType": "Tipo de dispositivo",
+      "managementIp": "IP de gerenciamento",
+      "portCount": "Contagem de portas",
+      "firmwareVersion": "Versão do Firmware",
+      "powerDrawWatts": "Consumo de energia (Watts)",
+      "supportsPoe": "Suporta PoE",
+      "primaryIp": "IP primário",
+      "raidConfig": "Configuração RAID",
+      "virtualMachine": "Máquina Virtual",
+      "hypervisor": "Hipervisor",
+      "model": "Modelo",
       "imei": "IMEI",
-      "phoneNumber": "Phone Number",
-      "carrier": "Carrier",
-      "supervisedDevice": "Supervised Device",
-      "ipAddress": "IP Address",
-      "monthlyDutyCycle": "Monthly Duty Cycle",
-      "networkPrinter": "Network Printer",
-      "colorSupport": "Color Support",
-      "duplexSupport": "Duplex Support",
-      "client": "Client",
-      "primaryLocation": "Primary Location",
-      "name": "Name",
-      "assetTag": "Asset Tag",
-      "serialNumber": "Serial Number",
+      "phoneNumber": "Número de telefone",
+      "carrier": "Operadora",
+      "supervisedDevice": "Dispositivo supervisionado",
+      "ipAddress": "Endereço IP",
+      "monthlyDutyCycle": "Ciclo de trabalho mensal",
+      "networkPrinter": "Impressora de rede",
+      "colorSupport": "Suporte de cores",
+      "duplexSupport": "Suporte Duplex",
+      "client": "Cliente",
+      "primaryLocation": "Localização principal",
+      "name": "Nome",
+      "assetTag": "Etiqueta de ativo",
+      "serialNumber": "Número de série",
       "status": "Status",
-      "purchaseDate": "Purchase Date",
-      "warrantyEndDate": "Warranty End Date",
+      "purchaseDate": "Data de compra",
+      "warrantyEndDate": "Data de término da garantia",
       "assetType": "Tipo"
     },
     "placeholders": {
-      "loadingClients": "Loading clients…",
-      "selectClient": "Select client",
-      "loadingLocations": "Loading locations…",
-      "selectLocation": "Select a location",
-      "selectClientFirst": "Select a client first",
-      "customLocation": "Enter a custom location or area",
-      "selectPurchaseDate": "Select purchase date",
-      "selectWarrantyEndDate": "Select warranty end date"
+      "loadingClients": "Carregando clientes…",
+      "selectClient": "Selecione o cliente",
+      "loadingLocations": "Carregando locais…",
+      "selectLocation": "Selecione um local",
+      "selectClientFirst": "Selecione um cliente primeiro",
+      "customLocation": "Insira um local ou área personalizada",
+      "selectPurchaseDate": "Selecione a data de compra",
+      "selectWarrantyEndDate": "Selecione a data de término da garantia"
     },
     "statusOptions": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "maintenance": "Manutenção"
     },
     "networkDeviceTypes": {
-      "switch": "Switch",
-      "router": "Router",
+      "switch": "Trocar",
+      "router": "Roteador",
       "firewall": "Firewall",
-      "access_point": "Access Point",
-      "load_balancer": "Load Balancer"
+      "access_point": "Ponto de acesso",
+      "load_balancer": "Balanceador de carga"
     },
     "storageTypes": {
       "ssd": "SSD",
@@ -641,318 +641,318 @@
       "android": "Android"
     },
     "typeDetails": {
-      "workstation": "Workstation Details",
-      "networkDevice": "Network Device Details",
-      "server": "Server Details",
-      "mobileDevice": "Mobile Device Details",
-      "printer": "Printer Details",
-      "custom": "Detalhes de {{typeName}}"
+      "workstation": "Detalhes da estação de trabalho",
+      "networkDevice": "Detalhes do dispositivo de rede",
+      "server": "Detalhes do servidor",
+      "mobileDevice": "Detalhes do dispositivo móvel",
+      "printer": "Detalhes da impressora",
+      "custom": "Detalhes {{typeName}}"
     }
   },
   "assetFormClient": {
-    "title": "Asset Form Client",
-    "description": "Client-only dynamic wrapper for the asset form and edit skeleton experience",
-    "loadingTitle": "Edit Asset"
+    "title": "Cliente de formulário de ativos",
+    "description": "Wrapper dinâmico somente cliente para o formulário de ativo e experiência de edição do esqueleto",
+    "loadingTitle": "Editar recurso"
   },
   "assetMetricsBanner": {
-    "title": "Asset Metrics Banner",
-    "description": "Metric cards and rollups for tickets, maintenance, uptime, and asset health indicators",
+    "title": "Banner de métricas de ativos",
+    "description": "Cartões de métricas e rollups para chamados, manutenção, tempo de atividade e indicadores de integridade de ativos",
     "labels": {
-      "healthStatus": "Health Status",
-      "openTickets": "Open Tickets",
-      "securityStatus": "Security Status",
-      "warranty": "Warranty"
+      "healthStatus": "Estado de saúde",
+      "openTickets": "Chamados abertos",
+      "securityStatus": "Status de segurança",
+      "warranty": "Garantia"
     },
     "healthStatuses": {
-      "healthy": "Healthy",
-      "warning": "Warning",
-      "critical": "Critical",
-      "unknown": "Unknown"
+      "healthy": "Saudável",
+      "warning": "Aviso",
+      "critical": "Crítico",
+      "unknown": "Desconhecido"
     },
     "securityStatuses": {
-      "secure": "Secure",
-      "missingPatches": "{{count}} Missing Patches",
-      "critical": "Critical",
-      "unknown": "Unknown"
+      "secure": "Seguro",
+      "missingPatches": "{{count}} Patches ausentes",
+      "critical": "Crítico",
+      "unknown": "Desconhecido"
     },
     "openTickets": {
-      "active": "[{{count}} Active]"
+      "active": "[{{count}} ativo]"
     },
     "warrantyStatuses": {
-      "expiresIn": "Expires in {{count}} Days",
-      "expired": "Expired",
-      "unknown": "Unknown"
+      "expiresIn": "Expira em dias {{count}}",
+      "expired": "Expirado",
+      "unknown": "Desconhecido"
     }
   },
   "assetPatchStatusSection": {
-    "title": "Asset Patch Status Section",
-    "description": "Enterprise patch and antivirus status wrapper shown in the asset detail experience",
-    "heading": "Estado das Atualizações",
+    "title": "Seção de status do patch de ativo",
+    "description": "Patch corporativo e wrapper de status de antivírus mostrados na experiência de detalhes de ativos",
+    "heading": "Status do patch",
     "compliance": {
       "unknown": "Desconhecido",
-      "actionRequired": "Ação Necessária",
-      "updatesAvailable": "Atualizações Disponíveis",
-      "minorUpdates": "Atualizações Menores",
+      "actionRequired": "Ação necessária",
+      "updatesAvailable": "Atualizações disponíveis",
+      "minorUpdates": "Pequenas atualizações",
       "upToDate": "Atualizado"
     },
     "relativeTime": {
       "never": "Nunca",
       "justNow": "Agora mesmo",
-      "minutesAgo": "há {{count}}m",
-      "hoursAgo": "há {{count}}h",
-      "daysAgo": "há {{count}}d"
+      "minutesAgo": "{{count}}m atrás",
+      "hoursAgo": "{{count}}h atrás",
+      "daysAgo": "{{count}}d atrás"
     },
     "labels": {
-      "osPatches": "Atualizações de SO",
+      "osPatches": "Patches de sistema operacional",
       "software": "Software",
-      "failed": "Falhou",
-      "lastScan": "Última Análise",
-      "pending": "pendentes",
-      "patches": "atualizações"
+      "failed": "Fracassado",
+      "lastScan": "Última verificação",
+      "pending": "pendente",
+      "patches": "manchas"
     }
   },
   "assetSoftwareInventory": {
-    "title": "Asset Software Inventory",
-    "description": "Enterprise software inventory wrapper for installed software and version data",
+    "title": "Inventário de software de ativos",
+    "description": "Wrapper de inventário de software corporativo para software instalado e dados de versão",
     "heading": "Inventário de Software",
-    "searchPlaceholder": "Pesquisar software...",
-    "appsCount": "{{count}} aplicações",
+    "searchPlaceholder": "Software de pesquisa...",
+    "appsCount": "Aplicativos {{count}}",
     "unknownName": "Desconhecido",
-    "noMatch": "Nenhum software corresponde à pesquisa",
+    "noMatch": "Nenhum software corresponde à sua pesquisa",
     "version": "v{{version}}",
     "by": "por {{publisher}}",
-    "showingOfApplications": "A mostrar {{shown}} de {{total}} aplicações",
+    "showingOfApplications": "Mostrando {{shown}} de aplicativos {{total}}",
     "more": "+{{count}} mais"
   },
   "remoteAccess": {
-    "remoteDesktop": "Ambiente de Trabalho Remoto",
-    "remoteShell": "Shell Remota",
-    "remoteAccess": "Acesso Remoto",
-    "deviceOverdue": "O dispositivo está em atraso",
-    "deviceOffline": "O dispositivo está offline",
+    "remoteDesktop": "Área de Trabalho Remota",
+    "remoteShell": "Shell Remoto",
+    "remoteAccess": "Acesso remoto",
+    "deviceOverdue": "O dispositivo está atrasado",
+    "deviceOffline": "O dispositivo está off-line",
     "errors": {
-      "urlFetchFailed": "Falha ao obter o URL de acesso remoto",
+      "urlFetchFailed": "Falha ao obter URL de acesso remoto",
       "initiateFailed": "Falha ao iniciar o acesso remoto"
     },
     "indicator": {
-      "online": "Online",
-      "offline": "Offline",
+      "online": "On-line",
+      "offline": "Off-line",
       "available": "Acesso remoto disponível",
-      "deviceOffline": "Dispositivo offline"
+      "deviceOffline": "Dispositivo off-line"
     }
   },
   "assetListErrors": {
     "genericError": "Ocorreu um erro. Por favor, tente novamente mais tarde.",
-    "assetNotFound": "Ativo não encontrado"
+    "assetNotFound": "Recurso não encontrado"
   },
   "assetEdit": {
-    "pageTitle": "Editar Ativo"
+    "pageTitle": "Editar recurso"
   },
   "associatedAssets": {
     "title": "Ativos",
-    "description": "Parent and child asset relationship management with linked asset actions",
+    "description": "Gerenciamento de relacionamento de ativos pai e filho com ações de ativos vinculados",
     "loading": {
-      "assets": "Loading assets..."
+      "assets": "Carregando recursos..."
     },
     "actions": {
-      "addAsset": "Add Asset",
-      "showLess": "Show less",
-      "moreAssets_one": "{{count}} more asset",
-      "moreAssets_other": "{{count}} more assets"
+      "addAsset": "Adicionar ativo",
+      "showLess": "Mostrar menos",
+      "moreAssets_one": "{{count}} mais ativo",
+      "moreAssets_other": "{{count}} mais ativos"
     },
     "errors": {
-      "loadAvailableAssets": "Failed to load available assets",
-      "loadDrawerFailed": "Unable to load asset details right now. Please try again.",
-      "loadAssociatedAssets": "Failed to load associated assets",
-      "selectAtLeastOneAsset": "Please select at least one asset",
-      "associateFailed": "Failed to associate assets - they may already be associated",
-      "associationFailed": "Failed to associate assets",
-      "removeFailed": "Failed to remove asset association"
+      "loadAvailableAssets": "Falha ao carregar os recursos disponíveis",
+      "loadDrawerFailed": "Não é possível carregar os detalhes do recurso no momento. Por favor, tente novamente.",
+      "loadAssociatedAssets": "Falha ao carregar recursos associados",
+      "selectAtLeastOneAsset": "Selecione pelo menos um recurso",
+      "associateFailed": "Falha ao associar ativos – eles podem já estar associados",
+      "associationFailed": "Falha ao associar recursos",
+      "removeFailed": "Falha ao remover associação de recursos"
     },
     "success": {
-      "associated_one": "{{count}} asset associated successfully",
-      "associated_other": "{{count}} assets associated successfully",
-      "associatedPartial_one": "{{count}} asset associated successfully, {{failed}} failed (may already be associated)",
-      "associatedPartial_other": "{{count}} assets associated successfully, {{failed}} failed (may already be associated)",
-      "removed": "Asset association removed"
+      "associated_one": "Ativo {{count}} associado com sucesso",
+      "associated_other": "Ativos {{count}} associados com sucesso",
+      "associatedPartial_one": "Ativo {{count}} associado com sucesso, {{failed}} falhou (pode já estar associado)",
+      "associatedPartial_other": "Ativos {{count}} associados com sucesso, {{failed}} falhou (pode já estar associado)",
+      "removed": "Associação de recursos removida"
     },
     "empty": {
-      "noneAssociated": "No assets associated with this ticket.",
-      "unknownAsset": "Unknown Asset"
+      "noneAssociated": "Nenhum ativo associado a este chamado.",
+      "unknownAsset": "Ativo desconhecido"
     },
     "dialog": {
-      "title": "Add Asset",
-      "loadingAssets": "Loading assets...",
-      "selectedAssetsLabel": "Selected:",
+      "title": "Adicionar ativo",
+      "loadingAssets": "Carregando recursos...",
+      "selectedAssetsLabel": "Selecionado:",
       "search": {
-        "label": "Search Assets",
-        "placeholder": "Search by name, tag, or serial..."
+        "label": "Pesquisar ativos",
+        "placeholder": "Pesquise por nome, tag ou série..."
       },
       "empty": {
-        "search": "No assets found matching your search",
-        "available": "No assets available for this client"
+        "search": "Nenhum recurso encontrado que corresponda à sua pesquisa",
+        "available": "Nenhum ativo disponível para este cliente"
       },
       "relationship": {
-        "placeholder": "Type..."
+        "placeholder": "Tipo..."
       },
       "actions": {
-        "addAssets_one": "Add Asset",
-        "addAssets_other": "Add Assets"
+        "addAssets_one": "Adicionar ativo",
+        "addAssets_other": "Adicionar ativos"
       }
     },
     "table": {
-      "name": "Name",
-      "assetTag": "Asset Tag",
-      "type": "Type",
+      "name": "Nome",
+      "assetTag": "Etiqueta de ativo",
+      "type": "Tipo",
       "status": "Status"
     },
     "assetStatuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "maintenance": "Manutenção"
     },
     "assetTypes": {
-      "workstation": "Workstation",
-      "server": "Server",
-      "network_device": "Network Device",
-      "mobile_device": "Mobile Device",
-      "printer": "Printer"
+      "workstation": "Estação de trabalho",
+      "server": "Servidor",
+      "network_device": "Dispositivo de rede",
+      "mobile_device": "Dispositivo móvel",
+      "printer": "Impressora"
     },
     "relationshipTypes": {
-      "affected": "Affected",
-      "related": "Related"
+      "affected": "Afetado",
+      "related": "Relacionado"
     }
   },
   "createTicketFromAssetButton": {
-    "title": "Create Ticket from Asset",
-    "description": "Ticket creation flow launched from an asset with board, status, and category selection",
+    "title": "Criar chamado a partir do ativo",
+    "description": "Fluxo de criação de chamados iniciado a partir de um ativo com seleção de quadro, status e categoria",
     "register": {
-      "label": "Create Ticket from Asset",
-      "title": "Create Ticket from Asset"
+      "label": "Criar chamado a partir do ativo",
+      "title": "Criar chamado a partir do ativo"
     },
-    "defaultTitle": "Issue with {{name}}",
+    "defaultTitle": "Problema com {{name}}",
     "actions": {
-      "open": "Create Ticket",
-      "create": "Create Ticket",
-      "creating": "Creating..."
+      "open": "Criar chamado",
+      "create": "Criar chamado",
+      "creating": "Criando..."
     },
     "fields": {
-      "title": "Title",
-      "description": "Description",
-      "board": "Board",
+      "title": "Título",
+      "description": "Descrição",
+      "board": "Quadro",
       "status": "Status",
-      "priority": "Priority"
+      "priority": "Prioridade"
     },
     "placeholders": {
-      "title": "Enter ticket title",
-      "description": "Describe the issue...",
-      "loadingBoards": "Loading boards...",
-      "selectBoard": "Select board...",
-      "selectBoardFirst": "Select board first...",
-      "loadingStatuses": "Loading statuses...",
-      "selectStatus": "Select status...",
-      "loadingPriorities": "Loading priorities...",
-      "selectPriority": "Select priority..."
+      "title": "Insira o título do chamado",
+      "description": "Descreva o problema...",
+      "loadingBoards": "Carregando quadros...",
+      "selectBoard": "Selecione o quadro...",
+      "selectBoardFirst": "Selecione o quadro primeiro...",
+      "loadingStatuses": "Carregando status...",
+      "selectStatus": "Selecione o estado...",
+      "loadingPriorities": "Carregando prioridades...",
+      "selectPriority": "Selecione prioridade..."
     },
     "errors": {
-      "loadPriorities": "Failed to load priorities",
-      "loadBoards": "Failed to load boards",
-      "loadStatuses": "Failed to load statuses",
-      "requiredFields": "Please fill in title, board, status, and priority",
-      "createFailed": "Failed to create ticket"
+      "loadPriorities": "Falha ao carregar prioridades",
+      "loadBoards": "Falha ao carregar quadros",
+      "loadStatuses": "Falha ao carregar status",
+      "requiredFields": "Preencha título, quadro, status e prioridade",
+      "createFailed": "Falha ao criar chamado"
     },
     "success": {
-      "created": "Ticket created successfully"
+      "created": "Chamado criado com sucesso"
     }
   },
   "deleteAssetButton": {
-    "title": "Delete Asset Button",
-    "description": "Delete confirmation flow for removing an asset record",
+    "title": "Botão Excluir ativo",
+    "description": "Excluir fluxo de confirmação para remover um registro de ativo",
     "actions": {
-      "removing": "Removing…"
+      "removing": "Removendo…"
     },
-    "entityNameFallback": "this asset",
+    "entityNameFallback": "este ativo",
     "errors": {
-      "validationFailed": "Failed to validate deletion. Please try again.",
-      "deleteFailed": "Failed to delete asset. Please try again."
+      "validationFailed": "Falha ao validar a exclusão. Por favor, tente novamente.",
+      "deleteFailed": "Falha ao excluir recurso. Por favor, tente novamente."
     }
   },
   "quickAddAsset": {
-    "title": "Quick Add Asset",
-    "description": "Quick-create asset flow with essential fields for adding a new asset record",
+    "title": "Adição rápida de ativo",
+    "description": "Crie fluxo de ativos rapidamente com campos essenciais para adicionar um novo registro de ativos",
     "actions": {
-      "addAsset": "Add Asset",
-      "creating": "Creating...",
-      "createAsset": "Create Asset"
+      "addAsset": "Adicionar ativo",
+      "creating": "Criando...",
+      "createAsset": "Criar ativo"
     },
     "errors": {
-      "fetchClientsFailed": "Failed to fetch clients",
-      "createFailed": "Failed to create asset"
+      "fetchClientsFailed": "Falha ao buscar clientes",
+      "createFailed": "Falha ao criar recurso"
     },
     "validation": {
-      "client": "Client",
-      "assetName": "Asset Name",
-      "assetTag": "Asset Tag",
-      "assetType": "Asset Type",
-      "requiredFields": "Please fill in the required fields:"
+      "client": "Cliente",
+      "assetName": "Nome do ativo",
+      "assetTag": "Etiqueta de ativo",
+      "assetType": "Tipo de ativo",
+      "requiredFields": "Por favor preencha os campos obrigatórios:"
     },
     "fields": {
-      "osType": "OS Type",
-      "osVersion": "OS Version",
-      "deviceType": "Device Type",
-      "managementIp": "Management IP",
-      "model": "Model",
-      "clientRequired": "Client *",
-      "assetNameRequired": "Asset Name *",
-      "assetTagRequired": "Asset Tag *",
-      "typeRequired": "Type *",
+      "osType": "Tipo de sistema operacional",
+      "osVersion": "Versão do sistema operacional",
+      "deviceType": "Tipo de dispositivo",
+      "managementIp": "IP de gerenciamento",
+      "model": "Modelo",
+      "clientRequired": "Cliente *",
+      "assetNameRequired": "Nome do recurso *",
+      "assetTagRequired": "Etiqueta de ativo *",
+      "typeRequired": "Tipo *",
       "status": "Status",
-      "serialNumber": "Serial Number",
+      "serialNumber": "Número de série",
       "customLocationOption": "Localização personalizada",
       "location": "Localização"
     },
     "placeholders": {
-      "workstationOsType": "e.g., Windows, macOS, Linux",
-      "workstationOsVersion": "e.g., 11, Monterey, Ubuntu 22.04",
-      "selectDeviceType": "Select device type",
-      "managementIp": "e.g., 192.168.1.1",
-      "serverOsType": "e.g., Windows Server, Ubuntu Server",
-      "serverOsVersion": "e.g., 2022, 22.04 LTS",
-      "selectOsType": "Select OS type",
-      "mobileModel": "e.g., iPhone 14 Pro, Galaxy S23",
-      "printerModel": "e.g., HP LaserJet Pro M404n",
-      "assetName": "Enter asset name",
-      "assetTag": "Enter asset tag",
-      "selectType": "Select type",
-      "selectStatus": "Select status",
-      "serialNumber": "Enter serial number",
-      "customLocation": "Insira uma localização ou área personalizada",
-      "loadingLocations": "Carregando localizações...",
+      "workstationOsType": "por exemplo, Windows, macOS, Linux",
+      "workstationOsVersion": "por exemplo, 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Selecione o tipo de dispositivo",
+      "managementIp": "por exemplo, 192.168.1.1",
+      "serverOsType": "por exemplo, Windows Server, Ubuntu Server",
+      "serverOsVersion": "por exemplo, 2022, 22.04 LTS",
+      "selectOsType": "Selecione o tipo de sistema operacional",
+      "mobileModel": "por exemplo, iPhone 14 Pro, Galaxy S23",
+      "printerModel": "por exemplo, HP LaserJet Pro M404n",
+      "assetName": "Insira o nome do ativo",
+      "assetTag": "Insira a etiqueta do recurso",
+      "selectType": "Selecione o tipo",
+      "selectStatus": "Selecione o status",
+      "serialNumber": "Insira o número de série",
+      "customLocation": "Insira um local ou área personalizada",
+      "loadingLocations": "Carregando locais...",
       "selectClientFirst": "Selecione um cliente primeiro",
-      "selectLocation": "Selecionar localização"
+      "selectLocation": "Selecione o local"
     },
     "sections": {
-      "typeSpecificDetails": "Type-specific Details"
+      "typeSpecificDetails": "Detalhes específicos do tipo"
     },
     "statusOptions": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "maintenance": "Manutenção"
     },
     "assetTypes": {
-      "workstation": "Workstation",
-      "network_device": "Network Device",
-      "server": "Server",
-      "mobile_device": "Mobile Device",
-      "printer": "Printer",
+      "workstation": "Estação de trabalho",
+      "network_device": "Dispositivo de rede",
+      "server": "Servidor",
+      "mobile_device": "Dispositivo móvel",
+      "printer": "Impressora",
       "unknown": "Desconhecido"
     },
     "networkDeviceTypes": {
-      "switch": "Switch",
-      "router": "Router",
+      "switch": "Trocar",
+      "router": "Roteador",
       "firewall": "Firewall",
-      "accessPoint": "Access Point",
-      "loadBalancer": "Load Balancer"
+      "accessPoint": "Ponto de acesso",
+      "loadBalancer": "Balanceador de carga"
     },
     "mobileOsTypes": {
       "ios": "iOS",
@@ -960,411 +960,411 @@
     }
   },
   "remoteAccessButton": {
-    "title": "Remote Access Button",
-    "description": "Remote access launcher for assets with supported connection integrations"
+    "title": "Botão de acesso remoto",
+    "description": "Iniciador de acesso remoto para ativos com integrações de conexão suportadas"
   },
   "rmmStatusIndicator": {
-    "title": "RMM Status Indicator",
-    "description": "Connected/disconnected RMM status chip and supporting state labels",
+    "title": "Indicador de status RMM",
+    "description": "Chip de status RMM conectado/desconectado e rótulos de estado de suporte",
     "titles": {
-      "unknown": "Agent status unknown",
+      "unknown": "Status do agente desconhecido",
       "status": "{{status}}{{suffix}}",
-      "lastSeen": " - Last seen: {{value}}"
+      "lastSeen": "- Visto pela última vez: {{value}}"
     },
     "relative": {
-      "justNow": "Just now",
-      "minutesAgo": "{{count}}m ago",
-      "hoursAgo": "{{count}}h ago",
-      "daysAgo": "{{count}}d ago"
+      "justNow": "Agora mesmo",
+      "minutesAgo": "{{count}}m atrás",
+      "hoursAgo": "{{count}}h atrás",
+      "daysAgo": "{{count}}d atrás"
     }
   },
   "assetInfoPanel": {
-    "title": "Asset Info & Lifecycle",
-    "description": "General asset information panel for identification, owner, and lifecycle details",
+    "title": "Informações de ativos e ciclo de vida",
+    "description": "Painel geral de informações de ativos para identificação, proprietário e detalhes do ciclo de vida",
     "actions": {
-      "copy": "Copy",
-      "copied": "Copied"
+      "copy": "Cópia",
+      "copied": "Copiado"
     },
     "fields": {
-      "client": "Client",
-      "location": "Location",
-      "model": "Model",
-      "serialNumber": "Serial Number",
-      "purchaseDate": "Purchase Date",
-      "warrantyEnd": "Warranty End"
+      "client": "Cliente",
+      "location": "Localização",
+      "model": "Modelo",
+      "serialNumber": "Número de série",
+      "purchaseDate": "Data de compra",
+      "warrantyEnd": "Fim da garantia"
     },
     "values": {
-      "unknownClient": "Unknown Client",
-      "unassigned": "Unassigned",
-      "unknownModel": "Unknown Model"
+      "unknownClient": "Cliente desconhecido",
+      "unassigned": "Não atribuído",
+      "unknownModel": "Modelo desconhecido"
     }
   },
   "assetNotesPanel": {
-    "title": "Notes & Quick Info",
-    "description": "Rich-text notes panel for asset-specific notes and quick operational context",
+    "title": "Notas e informações rápidas",
+    "description": "Painel de notas em rich text para notas específicas de ativos e contexto operacional rápido",
     "errors": {
-      "loadTitle": "Notes failed to load",
-      "unknown": "Unknown error"
+      "loadTitle": "As notas não foram carregadas",
+      "unknown": "Erro desconhecido"
     },
-    "lastUpdated": "Last updated: {{value}}"
+    "lastUpdated": "Última atualização: {{value}}"
   },
   "hardwareSpecsPanel": {
-    "title": "Hardware Specifications",
-    "description": "Hardware specification panel covering CPU, memory, storage, and device metadata",
+    "title": "Especificações de hardware",
+    "description": "Painel de especificações de hardware que abrange CPU, memória, armazenamento e metadados do dispositivo",
     "fields": {
       "cpu": "CPU",
       "ram": "RAM",
-      "storage": "Storage",
-      "utilization": "Utilization"
+      "storage": "Armazenar",
+      "utilization": "Utilização"
     },
     "values": {
-      "unknownCpu": "Unknown CPU",
-      "unknown": "Unknown",
-      "unifiedMemory": "{{size}}GB Unified Memory",
-      "memoryUsed": " ({{size}}GB Used)",
-      "freeStorage": "{{size}} GB Free"
+      "unknownCpu": "CPU desconhecida",
+      "unknown": "Desconhecido",
+      "unifiedMemory": "Memória unificada {{size}}GB",
+      "memoryUsed": "({{size}}GB usado)",
+      "freeStorage": "{{size}} GB grátis"
     },
-    "empty": "No hardware data available",
-    "emptyStorage": "No storage drives detected"
+    "empty": "Nenhum dado de hardware disponível",
+    "emptyStorage": "Nenhuma unidade de armazenamento detectada"
   },
   "huduDocumentationCard": {
-    "title": "Documentação do Hudu",
+    "title": "Documentação Hudu",
     "syncedAt": "Última sincronização do Hudu: {{value}}"
   },
   "rmmVitalsPanel": {
-    "title": "RMM Vitals & Connectivity",
-    "description": "RMM vitals panel for heartbeat, monitoring, and endpoint health details",
+    "title": "Sinais vitais e conectividade do RMM",
+    "description": "Painel RMM vitals para detalhes de pulsação, monitoramento e integridade do endpoint",
     "actions": {
-      "refresh": "Refresh"
+      "refresh": "Atualizar"
     },
     "fields": {
-      "agentStatus": "Agent Status",
-      "currentUser": "Current User",
-      "lastCheckIn": "(Last check-in: {{value}})",
-      "uptime": "Uptime",
-      "lastSync": "Last RMM Sync",
-      "network": "Network",
-      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}",
-      "taniumCriticality": "Criticidade Tanium"
+      "agentStatus": "Status do Agente",
+      "currentUser": "Usuário atual",
+      "lastCheckIn": "(Último check-in: {{value}})",
+      "uptime": "Tempo de atividade",
+      "lastSync": "Última sincronização RMM",
+      "network": "Rede",
+      "networkValue": "IP da LAN: {{lan}} | IP WAN: {{wan}}",
+      "taniumCriticality": "Criticidade do Tânio"
     },
     "values": {
-      "never": "Never"
+      "never": "Nunca"
     },
     "empty": {
-      "title": "RMM Vitals",
-      "notConnected": "Not connected to RMM"
+      "title": "Sinais vitais do RMM",
+      "notConnected": "Não conectado ao RMM"
     },
-    "uptime": "{{days}} days, {{hours}} hours, {{minutes}} minutes"
+    "uptime": "{{days}} dias, {{hours}} horas, {{minutes}} minutos"
   },
   "securityPatchingPanel": {
-    "title": "Security & Patching",
-    "description": "Security and patching posture panel for vulnerability and update status indicators",
+    "title": "Segurança e patches",
+    "description": "Painel de postura de segurança e correção para vulnerabilidade e indicadores de status de atualização",
     "fields": {
-      "osVersion": "OS Version",
-      "antivirus": "Antivirus",
-      "patchStatus": "Patch Status",
+      "osVersion": "Versão do sistema operacional",
+      "antivirus": "Antivírus",
+      "patchStatus": "Status do patch",
       "firewall": "Firewall"
     },
     "values": {
-      "unknown": "Unknown"
+      "unknown": "Desconhecido"
     },
     "antivirus": {
-      "running": "✔ Installed & Running",
-      "inactive": "Inactive",
-      "lastScan": "| Last Scan: Today, 3:00 AM"
+      "running": "✔ Instalado e em execução",
+      "inactive": "Inativo",
+      "lastScan": "| Última verificação: hoje, 3h"
     },
     "patchStatus": {
-      "critical": "Critical",
-      "atRisk": "At Risk",
-      "missingPatches": "- {{count}} Critical OS Patches missing.",
-      "upToDate": "✔ Up to Date"
+      "critical": "Crítico",
+      "atRisk": "Em risco",
+      "missingPatches": "- {{count}} Patches críticos do sistema operacional ausentes.",
+      "upToDate": "✔ Atualizado"
     },
     "firewall": {
-      "on": "✔ On"
+      "on": "✔ Ligado"
     }
   },
   "copyableField": {
-    "title": "Copyable Field",
-    "description": "Shared copy-to-clipboard field used across asset forms and detail panels",
+    "title": "Campo copiável",
+    "description": "Campo compartilhado de cópia para área de transferência usado em formulários de ativos e painéis de detalhes",
     "actions": {
-      "copy": "Copy",
-      "copied": "Copied"
+      "copy": "Cópia",
+      "copied": "Copiado"
     }
   },
   "statusBadge": {
-    "title": "Status Badge",
-    "description": "Shared badge renderer for asset lifecycle and monitoring statuses",
+    "title": "Selo de status",
+    "description": "Renderizador de crachás compartilhado para ciclo de vida de ativos e status de monitoramento",
     "statuses": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Overdue",
-      "healthy": "Healthy",
-      "warning": "Warning",
-      "critical": "Critical",
-      "unknown": "Unknown",
-      "secure": "Secure",
-      "at_risk": "At Risk",
-      "active": "Active",
-      "expiring_soon": "Expiring Soon",
-      "expired": "Expired"
+      "online": "On-line",
+      "offline": "Off-line",
+      "overdue": "Atrasado",
+      "healthy": "Saudável",
+      "warning": "Aviso",
+      "critical": "Crítico",
+      "unknown": "Desconhecido",
+      "secure": "Seguro",
+      "at_risk": "Em risco",
+      "active": "Ativo",
+      "expiring_soon": "Expirando em breve",
+      "expired": "Expirado"
     }
   },
   "utilizationBar": {
-    "title": "Utilization Bar",
-    "description": "Shared progress bar component for utilization and percentage-based asset metrics"
+    "title": "Barra de utilização",
+    "description": "Componente de barra de progresso compartilhada para utilização e métricas de ativos baseadas em porcentagem"
   },
   "auditLogTab": {
-    "title": "Audit Log",
-    "description": "Asset audit history tab for timeline events and record changes",
-    "changedBy": "Changed by {{name}}",
-    "userFallback": "user {{id}}",
-    "empty": "No audit history available.",
+    "title": "Registro de auditoria",
+    "description": "Guia Histórico de auditoria de ativos para eventos da linha do tempo e alterações de registros",
+    "changedBy": "Alterado por {{name}}",
+    "userFallback": "usuário {{id}}",
+    "empty": "Nenhum histórico de auditoria disponível.",
     "changeTypes": {
-      "created": "Created",
-      "updated": "Updated"
+      "created": "Criado",
+      "updated": "Atualizado"
     }
   },
   "createMaintenanceScheduleDialog": {
-    "title": "Create Maintenance Schedule",
-    "description": "Dialog for defining maintenance schedules and recurrence rules for an asset",
+    "title": "Criar cronograma de manutenção",
+    "description": "Caixa de diálogo para definir cronogramas de manutenção e regras de recorrência para um ativo",
     "titles": {
-      "create": "Schedule Maintenance",
-      "edit": "Edit Maintenance Schedule"
+      "create": "Agendar manutenção",
+      "edit": "Editar cronograma de manutenção"
     },
     "actions": {
-      "create": "Create Schedule",
-      "creating": "Creating...",
-      "update": "Update Schedule",
-      "updating": "Updating..."
+      "create": "Criar cronograma",
+      "creating": "Criando...",
+      "update": "Cronograma de atualização",
+      "updating": "Atualizando..."
     },
     "fields": {
-      "scheduleName": "Schedule Name *",
-      "description": "Description",
-      "maintenanceType": "Maintenance Type *",
-      "frequency": "Frequency *",
-      "interval": "Interval *",
-      "nextMaintenanceDate": "Next Maintenance Date *",
-      "active": "Active"
+      "scheduleName": "Nome do agendamento *",
+      "description": "Descrição",
+      "maintenanceType": "Tipo de manutenção *",
+      "frequency": "Frequência *",
+      "interval": "Intervalo *",
+      "nextMaintenanceDate": "Próxima data de manutenção *",
+      "active": "Ativo"
     },
     "placeholders": {
-      "scheduleName": "e.g., Monthly Server Maintenance",
-      "description": "Optional description...",
-      "maintenanceType": "Select maintenance type",
-      "frequency": "Select frequency",
+      "scheduleName": "por exemplo, manutenção mensal do servidor",
+      "description": "Descrição opcional...",
+      "maintenanceType": "Selecione o tipo de manutenção",
+      "frequency": "Selecione a frequência",
       "interval": "1",
-      "nextMaintenanceDate": "Select date"
+      "nextMaintenanceDate": "Selecione a data"
     },
     "frequencyOptions": {
-      "daily": "Daily",
-      "weekly": "Weekly",
-      "monthly": "Monthly",
-      "quarterly": "Quarterly",
-      "yearly": "Yearly"
+      "daily": "Diário",
+      "weekly": "Semanalmente",
+      "monthly": "Mensal",
+      "quarterly": "Trimestral",
+      "yearly": "Anual"
     },
     "errors": {
-      "scheduleNameRequired": "Schedule name is required",
-      "maintenanceTypeRequired": "Maintenance type is required",
-      "frequencyRequired": "Frequency is required",
-      "nextMaintenanceRequired": "Next maintenance date is required",
-      "frequencyIntervalMin": "Frequency interval must be at least 1",
-      "saveFailed": "Failed to create maintenance schedule"
+      "scheduleNameRequired": "O nome do agendamento é obrigatório",
+      "maintenanceTypeRequired": "O tipo de manutenção é obrigatório",
+      "frequencyRequired": "A frequência é obrigatória",
+      "nextMaintenanceRequired": "A próxima data de manutenção é obrigatória",
+      "frequencyIntervalMin": "O intervalo de frequência deve ser de pelo menos 1",
+      "saveFailed": "Falha ao criar cronograma de manutenção"
     }
   },
   "documentsPasswordsTab": {
-    "title": "Documents & Passwords",
-    "description": "Combined tab for asset documents, credentials, and related secure records",
+    "title": "Documentos e Senhas",
+    "description": "Guia combinada para documentos de ativos, credenciais e registros seguros relacionados",
     "passwords": {
-      "title": "Passwords & Secrets",
-      "comingSoon": "Secure password management coming soon."
+      "title": "Senhas e segredos",
+      "comingSoon": "Gerenciamento seguro de senhas em breve."
     }
   },
   "maintenanceSchedulesTab": {
-    "title": "Maintenance Schedules",
-    "description": "Maintenance schedule management tab for planned service and recurring work",
+    "title": "Cronogramas de manutenção",
+    "description": "Guia de gerenciamento do cronograma de manutenção para serviços planejados e trabalhos recorrentes",
     "summary": {
-      "complianceRate": "Compliance Rate",
-      "nextMaintenance": "Next Maintenance",
-      "noneScheduled": "None Scheduled"
+      "complianceRate": "Taxa de conformidade",
+      "nextMaintenance": "Próxima manutenção",
+      "noneScheduled": "Nenhum agendado"
     },
     "actions": {
-      "scheduleMaintenance": "Schedule Maintenance"
+      "scheduleMaintenance": "Agendar manutenção"
     },
     "errors": {
-      "deleteFailed": "Failed to delete maintenance schedule"
+      "deleteFailed": "Falha ao excluir agendamento de manutenção"
     },
     "table": {
-      "scheduleName": "Schedule Name",
-      "type": "Type",
-      "frequency": "Frequency",
-      "nextMaintenance": "Next Maintenance",
-      "lastMaintenance": "Last Maintenance",
+      "scheduleName": "Nome do agendamento",
+      "type": "Tipo",
+      "frequency": "Freqüência",
+      "nextMaintenance": "Próxima manutenção",
+      "lastMaintenance": "Última Manutenção",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Ações"
     },
     "frequency": {
-      "every_one": "Every {{frequency}}",
-      "every_other": "Every {{count}} {{frequency}}",
+      "every_one": "Cada {{frequency}}",
+      "every_other": "Cada {{count}} {{frequency}}",
       "units": {
-        "daily_one": "day",
-        "daily_other": "days",
-        "weekly_one": "week",
-        "weekly_other": "weeks",
-        "monthly_one": "month",
-        "monthly_other": "months",
-        "quarterly_one": "quarter",
-        "quarterly_other": "quarters",
-        "yearly_one": "year",
-        "yearly_other": "years"
+        "daily_one": "dia",
+        "daily_other": "dias",
+        "weekly_one": "semana",
+        "weekly_other": "semanas",
+        "monthly_one": "mês",
+        "monthly_other": "meses",
+        "quarterly_one": "trimestre",
+        "quarterly_other": "trimestres",
+        "yearly_one": "ano",
+        "yearly_other": "anos"
       }
     },
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Ativo",
+      "inactive": "Inativo"
     },
     "types": {
-      "preventive": "Preventive",
-      "inspection": "Inspection",
-      "calibration": "Calibration",
-      "replacement": "Replacement"
+      "preventive": "Preventivo",
+      "inspection": "Inspeção",
+      "calibration": "Calibração",
+      "replacement": "Substituição"
     },
     "empty": {
-      "schedules": "No maintenance schedules found. Click \"Schedule Maintenance\" to create one."
+      "schedules": "Nenhum cronograma de manutenção encontrado. Clique em “Agendar manutenção” para criar uma."
     },
     "history": {
-      "title": "Maintenance History",
-      "performedAt": "Performed At",
-      "performedBy": "Performed By",
-      "notes": "Notes",
-      "empty": "No maintenance history recorded."
+      "title": "Histórico de manutenção",
+      "performedAt": "Realizado em",
+      "performedBy": "Executado por",
+      "notes": "Notas",
+      "empty": "Nenhum histórico de manutenção registrado."
     },
     "dialog": {
       "delete": {
-        "title": "Delete Maintenance Schedule",
-        "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+        "title": "Excluir cronograma de manutenção",
+        "message": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
       }
     }
   },
   "relatedAssetsTab": {
-    "title": "Related Assets ({{count}})",
-    "description": "Tab for browsing and managing related asset relationships",
-    "loading": "Loading related assets...",
+    "title": "Ativos Relacionados ({{count}})",
+    "description": "Guia para navegar e gerenciar relacionamentos de ativos relacionados",
+    "loading": "Carregando recursos relacionados...",
     "actions": {
-      "linkAsset": "Link Asset",
-      "unlink": "Unlink",
-      "linkEmptyState": "Link an asset"
+      "linkAsset": "Vincular recurso",
+      "unlink": "Desvincular",
+      "linkEmptyState": "Vincular um ativo"
     },
     "success": {
-      "linked": "Asset linked",
-      "unlinked": "Asset unlinked"
+      "linked": "Ativo vinculado",
+      "unlinked": "Recurso desvinculado"
     },
     "errors": {
-      "selectAsset": "Select an asset to link",
-      "linkFailed": "Failed to link asset",
-      "unlinkFailed": "Failed to unlink asset"
+      "selectAsset": "Selecione um ativo para vincular",
+      "linkFailed": "Falha ao vincular recurso",
+      "unlinkFailed": "Falha ao desvincular recurso"
     },
     "table": {
-      "assetName": "Asset Name",
-      "relationship": "Relationship",
-      "linkedDate": "Linked Date",
-      "actions": "Actions"
+      "assetName": "Nome do ativo",
+      "relationship": "Relação",
+      "linkedDate": "Data vinculada",
+      "actions": "Ações"
     },
     "empty": {
-      "linked": "No related assets linked."
+      "linked": "Nenhum ativo relacionado vinculado."
     },
     "dialog": {
-      "title": "Link Asset",
-      "loadingAssets": "Loading assets...",
-      "empty": "No available assets found.",
+      "title": "Vincular recurso",
+      "loadingAssets": "Carregando recursos...",
+      "empty": "Nenhum ativo disponível encontrado.",
       "search": {
-        "label": "Search assets",
-        "placeholder": "Search by name, tag, serial..."
+        "label": "Pesquisar ativos",
+        "placeholder": "Pesquise por nome, tag, série..."
       },
       "relationshipType": {
-        "label": "Relationship type",
-        "placeholder": "related"
+        "label": "Tipo de relacionamento",
+        "placeholder": "relacionado"
       },
       "table": {
-        "asset": "Asset",
-        "select": "Select"
+        "asset": "Ativo",
+        "select": "Selecione"
       },
       "actions": {
-        "selected": "Selected",
-        "linking": "Linking...",
-        "confirm": "Link asset"
+        "selected": "Selecionado",
+        "linking": "Vinculando...",
+        "confirm": "Recurso de link"
       }
     },
     "relationshipTypes": {
-      "related": "Related",
-      "affected": "Affected"
+      "related": "Relacionado",
+      "affected": "Afetado"
     }
   },
   "serviceHistoryTab": {
-    "title": "Service History",
-    "description": "Service history tab summarizing maintenance and ticket activity for the asset",
+    "title": "Histórico de serviço",
+    "description": "Guia Histórico de serviços que resume a atividade de manutenção e chamados do ativo",
     "actions": {
-      "createTicket": "Create Ticket"
+      "createTicket": "Criar chamado"
     },
     "table": {
-      "ticketId": "Ticket ID",
-      "subject": "Subject",
+      "ticketId": "ID do chamado",
+      "subject": "Assunto",
       "status": "Status",
-      "priority": "Priority",
-      "dateLinked": "Date Linked"
+      "priority": "Prioridade",
+      "dateLinked": "Data vinculada"
     },
-    "empty": "No tickets linked to this asset.",
-    "clientFallback": "Unknown Client"
+    "empty": "Nenhum chamado vinculado a este ativo.",
+    "clientFallback": "Cliente desconhecido"
   },
   "softwareInventoryTab": {
-    "title": "Software Inventory",
-    "description": "Software inventory tab for installed software, versions, and discovery metadata",
-    "searchPlaceholder": "Search software...",
+    "title": "Inventário de Software",
+    "description": "Guia Inventário de software para software instalado, versões e metadados de descoberta",
+    "searchPlaceholder": "Software de pesquisa...",
     "category": {
-      "placeholder": "Category",
+      "placeholder": "Categoria",
       "options": {
-        "all": "All",
-        "browser": "Browser",
-        "security": "Security",
-        "productivity": "Productivity",
-        "development": "Development"
+        "all": "Todos",
+        "browser": "Navegador",
+        "security": "Segurança",
+        "productivity": "Produtividade",
+        "development": "Desenvolvimento"
       }
     },
     "table": {
-      "name": "Name",
-      "version": "Version",
-      "publisher": "Publisher",
-      "installDate": "Install Date"
+      "name": "Nome",
+      "version": "Versão",
+      "publisher": "Editor",
+      "installDate": "Data de instalação"
     },
-    "empty": "No software found matching your search.",
-    "totalItems": "Total Items: {{count}}",
+    "empty": "Nenhum software encontrado que corresponda à sua pesquisa.",
+    "totalItems": "Total de itens: {{count}}",
     "values": {
-      "unknown": "Unknown"
+      "unknown": "Desconhecido"
     }
   },
   "alerts": {
     "messages": {
-      "alertAcknowledged": "Alerta confirmado",
-      "acknowledgeFailed": "Falha ao confirmar o alerta",
-      "ticketCreated": "Ticket criado com sucesso",
-      "ticketCreateFailed": "Falha ao criar o ticket"
+      "alertAcknowledged": "Alerta reconhecido",
+      "acknowledgeFailed": "Falha ao reconhecer o alerta",
+      "ticketCreated": "Chamado criado com sucesso",
+      "ticketCreateFailed": "Falha ao criar chamado"
     },
     "activeAlerts": "Alertas ativos",
-    "acknowledge": "Confirmar",
-    "createTicket": "Criar ticket"
+    "acknowledge": "Reconhecer",
+    "createTicket": "Criar chamado"
   },
   "actions": {
     "print": "Imprimir",
     "printOptions": "Opções de impressão",
-    "printSelected": "Imprimir selecionados ({{count}})"
+    "printSelected": "Imprimir selecionado ({{count}})"
   },
   "crossFeature": {
-    "loadTicketFailed": "Falha ao carregar o ticket",
-    "openTicketFailed": "Falha ao abrir o ticket"
+    "loadTicketFailed": "Falha ao carregar o chamado",
+    "openTicketFailed": "Falha ao abrir chamado"
   },
   "assetTypeBreakdown": {
     "title": "Ativos por tipo"
   },
   "customTypeDetailsPanel": {
-    "title": "Detalhes de {{name}}",
+    "title": "Detalhes {{name}}",
     "values": {
       "yes": "Sim",
       "no": "Não"

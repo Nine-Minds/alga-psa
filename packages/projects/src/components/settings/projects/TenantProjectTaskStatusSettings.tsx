@@ -642,7 +642,7 @@ export function TenantProjectTaskStatusSettings() {
                   id="is-closed"
                   checked={formData.is_closed}
                   onChange={(e) => setFormData({ ...formData, is_closed: e.target.checked })}
-                  containerClassName="mb-0 mt-0.5"
+                  containerClassName="mt-0.5"
                   label={
                     <div className="flex-1">
                       <span className="text-sm font-medium text-gray-700 cursor-pointer block">

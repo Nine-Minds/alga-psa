@@ -1087,7 +1087,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 handleSelectAllVisibleTickets(event.target.checked);
               }
             }}
-            containerClassName="mb-0"
             className="m-0"
             skipRegistration
           />
@@ -1153,7 +1152,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 event.preventDefault();
               }}
               onChange={() => { /* controlled via onClick for shift-range support */ }}
-              containerClassName="mb-0"
               className="m-0 pointer-events-none"
               skipRegistration
             />
@@ -2603,7 +2601,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 id={`${id}-bundle-sync-updates`}
                 checked={bundleSyncUpdates}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBundleSyncUpdates(event.target.checked)}
-                containerClassName="mb-0"
                 skipRegistration
               />
               <label htmlFor={`${id}-bundle-sync-updates`} className="text-sm text-gray-700">

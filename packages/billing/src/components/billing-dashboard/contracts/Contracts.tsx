@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -362,10 +363,7 @@ const Contracts: React.FC = () => {
     {
       title: t('contractsList.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
-      render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0
-          ? value
-          : t('contractsList.empty.dash', { defaultValue: '—' }),
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('contractsList.columns.sourceTemplate', { defaultValue: 'Source Template' }),
@@ -709,10 +707,7 @@ const Contracts: React.FC = () => {
             {
               title: t('contractsList.columns.client', { defaultValue: 'Client' }),
               dataIndex: 'client_name',
-              render: (value: string | null) =>
-                typeof value === 'string' && value.trim().length > 0
-                  ? value
-                  : t('contractsList.empty.dash', { defaultValue: '—' }),
+              render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
             },
             {
               title: t('contractsList.columns.created', { defaultValue: 'Created' }),

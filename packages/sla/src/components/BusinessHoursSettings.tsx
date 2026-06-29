@@ -804,7 +804,7 @@ export function BusinessHoursSettings() {
                     style={{ gridTemplateColumns: '80px 50px 1fr 1fr' }}
                   >
                     <span className="text-sm font-medium">{DAY_NAMES[entry.day_of_week]}</span>
-                    <div className="[&>div]:mb-0">
+                    <div>
                       <Checkbox
                         id={`day-enabled-${entry.day_of_week}`}
                         checked={entry.is_enabled}

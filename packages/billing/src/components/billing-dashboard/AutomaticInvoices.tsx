@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -49,12 +50,35 @@ import {
 } from "@alga-psa/ui/components/DropdownMenu";
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog'; // Corrected import
-import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
   refreshTrigger?: number;
+}
+
+// Placeholder for a DataTable while its (independent) section data loads, so the
+// rest of the screen can render immediately instead of waiting behind one spinner.
+function BillingTableSkeleton({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
+  return (
+    <div className="w-full" data-testid="billing-table-skeleton" aria-hidden="true">
+      <div className="flex items-center gap-4 border-b border-[rgb(var(--color-border-200))] py-3">
+        {Array.from({ length: columns }).map((_, columnIndex) => (
+          <Skeleton key={`billing-skeleton-head-${columnIndex}`} className="h-4 flex-1" />
+        ))}
+      </div>
+      <div className="divide-y divide-[rgb(var(--color-border-100))]">
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <div key={`billing-skeleton-row-${rowIndex}`} className="flex items-center gap-4 py-4">
+            {Array.from({ length: columns }).map((_, columnIndex) => (
+              <Skeleton key={`billing-skeleton-cell-${rowIndex}-${columnIndex}`} className="h-4 flex-1" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 type AutomaticInvoiceGroupLabelKey = 'ready' | 'canCombine' | 'separate' | 'blocked' | 'notReady' | 'upcoming';
@@ -159,6 +183,7 @@ const getParentGroupSummary = ({
   };
 };
 
+// Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
 const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
   candidates.map((candidate) => {
     const memberAmounts = candidate.members
@@ -630,8 +655,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [invoicedSearchTerm, setInvoicedSearchTerm] = useState('');
   const [debouncedInvoicedSearchTerm, setDebouncedInvoicedSearchTerm] = useState('');
   const [currentReadyPage, setCurrentReadyPage] = useState(1);
-  const [isInvoicedLoading, setIsInvoicedLoading] = useState(false);
-  const [isPeriodsLoading, setIsPeriodsLoading] = useState(false);
+  const [isInvoicedLoading, setIsInvoicedLoading] = useState(true);
+  const [isPeriodsLoading, setIsPeriodsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRepairingAll, setIsRepairingAll] = useState(false);
   const [repairAllMessage, setRepairAllMessage] = useState<string | null>(null);
@@ -697,6 +722,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [pageSize, setPageSize] = useState(10);
 
   const initialLoadDone = useRef(false);
+  const invoicedInitialLoadDone = useRef(false);
 
   // Debounce client filter for local ready/blocked row filtering and persist it in the URL.
   useEffect(() => {
@@ -1277,6 +1303,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         setInvoicedPeriods(result.rows as InvoicedPeriod[]);
         setTotalInvoicedPeriods(result.total);
+        invoicedInitialLoadDone.current = true;
 
         // Clamp page if current page is beyond available pages
         const maxPage = Math.max(1, Math.ceil(result.total / invoicedPageSize));
@@ -1303,6 +1330,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   }, [invoicedCurrentPage, invoicedPageSize, debouncedInvoicedSearchTerm, refreshTrigger]);
 
+  // Select All chooses parent rows when a group is combinable and falls back to individual child rows when a group is not combinable.
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const nextSelections = new Set<string>();
@@ -1729,50 +1757,45 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     router.push(`/msp/billing?${params.toString()}`);
   };
 
-  // Show combined loading state only during initial load (before any data has loaded)
-  const isInitialLoading = !initialLoadDone.current && (isPeriodsLoading || isInvoicedLoading);
+  // Each section gates its own first load independently so the screen renders
+  // immediately instead of waiting behind one combined spinner. The fix-list +
+  // Ready-to-Invoice block shares the slow due-work fetch; the History table loads
+  // on its own (separate, independent server action).
+  const isReadyInitialLoading = !initialLoadDone.current && isPeriodsLoading;
+  const isHistoryInitialLoading = !invoicedInitialLoadDone.current && isInvoicedLoading;
 
   return (
   // Removed TooltipProvider wrapper
       <>
-      {isInitialLoading ? (
-        <LoadingIndicator
-          layout="stacked"
-          className="py-10 text-muted-foreground"
-          spinnerProps={{ size: 'md' }}
-          text={t('automaticInvoices.loading.billingData', {
-            defaultValue: 'Loading billing data',
-          })}
-        />
-      ) : loadError ? (
-        <Alert variant="destructive" className="relative mb-4">
-          <AlertDescription>
-            <button
-              id="dismiss-load-error-button"
-              className="absolute top-2 right-2"
-              onClick={() => setLoadError(null)}
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <p>{loadError}</p>
-            <Button
-              id="retry-load-button"
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => {
-                setLoadError(null);
-                // Reset to page 1 to trigger a fresh load
-                setCurrentReadyPage(1);
-                setInvoicedCurrentPage(1);
-              }}
-            >
-              {t('common.actions.retry', { defaultValue: 'Retry' })}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      ) : (
       <div className="space-y-8">
+        {loadError ? (
+          <Alert variant="destructive" className="relative">
+            <AlertDescription>
+              <button
+                id="dismiss-load-error-button"
+                className="absolute top-2 right-2"
+                onClick={() => setLoadError(null)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <p>{loadError}</p>
+              <Button
+                id="retry-load-button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  setLoadError(null);
+                  // Reset to page 1 to trigger a fresh load
+                  setCurrentReadyPage(1);
+                  setInvoicedCurrentPage(1);
+                }}
+              >
+                {t('common.actions.retry', { defaultValue: 'Retry' })}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <div>
           {needsApprovalParentGroups.length > 0 ? (
             <div className="mb-6 rounded-md border border-warning/40 bg-warning/5 p-4" data-testid="needs-approval-section">
@@ -2238,6 +2261,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               per-column dataIndex tricks (select/tags → compact ids) + mixed px/% widths because
               DataTable's auto-fit overrides plain widths; a first-class "column width spec" on
               DataTable would remove this dance. */}
+          {isReadyInitialLoading ? (
+            <BillingTableSkeleton columns={6} />
+          ) : (
           <DataTable
             id="automatic-invoices-table"
             key={`${currentReadyPage}-${pageSize}-${activeView}`}
@@ -2549,6 +2575,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               return isSelected ? 'bg-primary-50' : '';
             }}
           />
+          )}
         </div>
 
         <div>
@@ -2569,6 +2596,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               className="w-64"
             />
           </div>
+          {isHistoryInitialLoading ? (
+            <BillingTableSkeleton columns={6} />
+          ) : (
           <DataTable
             id="already-invoiced-table"
             data={invoicedPeriods}
@@ -2577,6 +2607,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {
                 title: t('automaticInvoices.history.columns.client', { defaultValue: 'Client' }),
                 dataIndex: 'clientName',
+                render: (value, record: InvoicedPeriod) => (
+                  <ClientNameCell
+                    clientName={value as string | null | undefined}
+                    clientId={record.clientId}
+                    logoUrl={record.logoUrl ?? null}
+                  />
+                ),
               },
               {
                 title: t('automaticInvoices.history.columns.assignmentScope', {
@@ -2709,9 +2746,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onItemsPerPageChange={handleInvoicedPageSizeChange}
             totalItems={totalInvoicedPeriods}
           />
+          )}
         </div>
       </div>
-      )}
 
       <Dialog
         isOpen={showReverseDialog}

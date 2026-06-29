@@ -18,6 +18,12 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
+// Grant the MSP permission gate so the domain logic under test actually runs.
+vi.mock('../../../../../packages/clients/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertMspPermission: vi.fn(async () => {}),
+}));
+
 vi.mock('../../../../../packages/clients/src/lib/billingHelpers.ts', () => ({
   cloneTemplateContractLineAsync: (...args: any[]) => cloneTemplateContractLineAsync(...args),
 }));

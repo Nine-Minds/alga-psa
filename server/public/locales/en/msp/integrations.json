@@ -1334,6 +1334,8 @@
           },
           "connected": "Connected to NinjaOne",
           "connectedWithErrors": "NinjaOne connected with sync errors",
+          "reconnectRequired": "NinjaOne reconnect required",
+          "reconnectRequiredDescription": "The NinjaOne authorization can no longer be refreshed (token expired or revoked). Reconnect to restore device sync, alerts, and remote access.",
           "instanceLabel": "Instance:",
           "organizations": "{{count}} organizations",
           "devices": "{{count}} devices",

@@ -574,7 +574,6 @@ function RuleEditorDialog({
                   checked={f.severities.includes(s)}
                   onChange={() => toggleSeverity(s)}
                   disabled={saving}
-                  containerClassName=""
                 />
               ))}
             </div>
@@ -652,7 +651,6 @@ function RuleEditorDialog({
                     checked={f.organizationIds.includes(org.external_organization_id)}
                     onChange={() => toggleOrgId(org.external_organization_id)}
                     disabled={saving}
-                    containerClassName=""
                   />
                 ))}
               </div>
@@ -758,7 +756,6 @@ function RuleEditorDialog({
                         checked={f.notifyUserIds.includes(u.user_id)}
                         onChange={() => toggleNotifyUser(u.user_id)}
                         disabled={saving}
-                        containerClassName=""
                       />
                     ))}
                   </div>

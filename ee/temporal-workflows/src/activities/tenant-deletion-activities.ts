@@ -425,6 +425,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'agent_idp_providers',
   'agents',
 
+  // === MCP OAuth Authorization Server (EE) ===
+  // No DB FKs (relations enforced in app code), so order is advisory. Children
+  // first: auth_codes + refresh_tokens reference grants (grant_id), so delete them
+  // before grants. (mcp_oauth_clients + mcp_oauth_signing_keys are instance-wide —
+  // no tenant column — and are intentionally not tenant-scoped here.)
+  'mcp_oauth_auth_codes',
+  'mcp_oauth_refresh_tokens',
+  'mcp_oauth_grants',
+
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
 
   // SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)

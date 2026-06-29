@@ -28,6 +28,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -619,8 +620,19 @@ export const listQuotes = withAuth(async (
     })
   );
 
+  const clientIds = Array.from(
+    new Set(redactedData.map((q) => q.client_id).filter((id): id is string => Boolean(id)))
+  );
+  const logoUrlsMap = clientIds.length > 0
+    ? await getClientLogoUrlsBatch(clientIds, tenant)
+    : new Map<string, string | null>();
+  const dataWithLogos = redactedData.map((q) => ({
+    ...q,
+    logoUrl: q.client_id ? logoUrlsMap.get(q.client_id) ?? null : null,
+  }));
+
   return {
-    data: redactedData,
+    data: dataWithLogos,
     total: authorizedPage.total,
     page,
     pageSize,

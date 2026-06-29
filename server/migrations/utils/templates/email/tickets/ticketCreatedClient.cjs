@@ -131,6 +131,22 @@ const COPY = {
     textView: 'Zobacz zgłoszenie',
   },
 };
+SUBJECTS.pt = 'Seu chamado foi criado • {{ticket.title}}';
+COPY.pt = {
+  headerLabel: 'Chamado criado',
+  intro: 'Seu chamado para <strong>{{ticket.clientName}}</strong> foi criado. Nossa equipe vai analisá-lo e retornar — você pode acompanhar o progresso pelo link abaixo.',
+  badgePrefix: 'Chamado #',
+  priority: 'Prioridade',
+  status: 'Status',
+  assignedTo: 'Atribuído a',
+  descriptionLabel: 'Descrição',
+  viewButton: 'Ver chamado',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Seu chamado foi criado',
+  textDescription: 'Descrição',
+  textView: 'Ver chamado',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

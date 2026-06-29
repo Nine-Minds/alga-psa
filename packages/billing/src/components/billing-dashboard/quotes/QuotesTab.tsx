@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
@@ -99,7 +100,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
     {
       title: t('common.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
-      render: (value: string | null | undefined) => value || '—',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('common.columns.title', { defaultValue: 'Title' }),

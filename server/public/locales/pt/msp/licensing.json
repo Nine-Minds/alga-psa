@@ -1,176 +1,176 @@
 {
   "reduceModal": {
-    "title": "Reduce Licenses",
-    "enterpriseOnly": "This feature is only available in the Enterprise Edition."
+    "title": "Reduzir licenças",
+    "enterpriseOnly": "Este recurso está disponível apenas na Enterprise Edition."
   },
   "purchaseForm": {
-    "title": "License Purchase",
-    "enterpriseOnlyHosted": "License purchasing is available in the Enterprise Edition for hosted deployments.",
-    "communityEditionUnlimited": "Self-hosted Community Edition has unlimited users at no additional cost."
+    "title": "Compra de licença",
+    "enterpriseOnlyHosted": "A compra de licença está disponível na Enterprise Edition para implantações hospedadas.",
+    "communityEditionUnlimited": "Community Edition auto-hospedado tem usuários ilimitados sem custo adicional."
   },
   "purchasePage": {
-    "title": "Purchase Licenses",
-    "description": "Add more user licenses to your AlgaPSA account"
+    "title": "Comprar licenças",
+    "description": "Adicione mais licenças de usuário à sua conta AlgaPSA"
   },
   "purchaseSuccess": {
-    "metaTitle": "Purchase Success",
-    "scheduledTitle": "Change Scheduled Successfully!",
-    "updatedTitle": "Update Successful!",
-    "scheduledDescription": "Your license change has been scheduled and will take effect at the end of your current billing period.",
-    "updatedDescription": "Your license update has been processed successfully!",
-    "loadingSubscriptionDetails": "Loading subscription details...",
-    "updatingLicenseCount": "Updating license count...",
-    "licenseInformation": "License Information",
-    "youNowHave": "You now have",
-    "totalLicenses": "total licenses",
-    "changeEffective": "Change effective",
-    "whatsNext": "What's next?",
+    "metaTitle": "Sucesso de compra",
+    "scheduledTitle": "Alteração agendada com sucesso!",
+    "updatedTitle": "Atualização bem-sucedida!",
+    "scheduledDescription": "A alteração da sua licença foi agendada e entrará em vigor no final do período de faturamento atual.",
+    "updatedDescription": "A atualização da sua licença foi processada com sucesso!",
+    "loadingSubscriptionDetails": "Carregando detalhes da assinatura...",
+    "updatingLicenseCount": "Atualizando contagem de licenças...",
+    "licenseInformation": "Informações sobre licença",
+    "youNowHave": "Você agora tem",
+    "totalLicenses": "total de licenças",
+    "changeEffective": "Mudança efetiva",
+    "whatsNext": "O que vem a seguir?",
     "scheduledSteps": {
-      "currentLicenses": "Your current licenses remain active until the end of the billing period",
-      "autoUpdate": "The license count will automatically update on the scheduled date",
-      "emailConfirmation": "You'll receive an email confirmation when the change takes effect"
+      "currentLicenses": "Suas licenças atuais permanecem ativas até o final do período de faturamento",
+      "autoUpdate": "A contagem de licenças será atualizada automaticamente na data agendada",
+      "emailConfirmation": "Você receberá um e-mail de confirmação quando a alteração entrar em vigor"
     },
     "updatedSteps": {
-      "activeReady": "Your licenses are now active and ready to use",
-      "createUsers": "You can create new users immediately from User Management",
-      "invoiceProrated": "Your next invoice will include the prorated charges"
+      "activeReady": "Suas licenças agora estão ativas e prontas para uso",
+      "createUsers": "Você pode criar novos usuários imediatamente no Gerenciamento de usuários",
+      "invoiceProrated": "Sua próxima fatura incluirá os encargos rateados"
     },
-    "sessionDetails": "Session Details (for support)",
-    "sessionId": "Session ID:",
-    "goToAccountManagement": "Go to Account Management"
+    "sessionDetails": "Detalhes da sessão (para suporte)",
+    "sessionId": "ID da sessão:",
+    "goToAccountManagement": "Vá para Gerenciamento de contas"
   },
   "subscriptionForm": {
-    "title": "Manage License Subscription",
+    "title": "Gerenciar assinatura de licença",
     "errors": {
-      "loadPricing": "Failed to load pricing",
-      "loadLicenseInformation": "Failed to load license information",
-      "prepareUpdate": "Failed to prepare license update",
-      "processUpdate": "Failed to process license update",
-      "missingCheckoutSessionData": "Missing checkout session data"
+      "loadPricing": "Falha ao carregar preços",
+      "loadLicenseInformation": "Falha ao carregar informações de licença",
+      "prepareUpdate": "Falha ao preparar a atualização da licença",
+      "processUpdate": "Falha ao processar a atualização da licença",
+      "missingCheckoutSessionData": "Dados da sessão de checkout ausentes"
     },
     "checkout": {
-      "title": "Complete Your Purchase",
-      "summary": "You are purchasing {{quantity}} {{licenseLabel}} at {{price}} per license per {{interval}}.",
+      "title": "Conclua sua compra",
+      "summary": "Você está comprando {{quantity}} {{licenseLabel}} por {{price}} por licença por {{interval}}.",
       "total": "Total: {{total}}/{{interval}}",
-      "cancel": "Cancel"
+      "cancel": "Cancelar"
     },
     "confirmation": {
-      "title": "Confirm License Update",
-      "increaseDescription": "Review the details of your license increase before confirming.",
-      "decreaseDescription": "Review the details of your license decrease. Changes will take effect at the end of your billing period.",
-      "currentMonthlyCost": "Current Monthly Cost",
-      "currentLicenseCount": "Current License Count",
-      "newMonthlyCost": "New Monthly Cost",
-      "newLicenseCount": "New License Count",
-      "monthlyIncrease": "Monthly Increase",
-      "monthlySavings": "Monthly Savings",
-      "paymentMethod": "Payment Method",
-      "changePaymentMethod": "Change",
-      "immediateChargeTitle": "Immediate charge",
-      "immediateChargeDescription": "You will be charged {{amountDue}} now for the prorated amount.",
-      "prorationDescription": "Proration: {{amount}} for the remainder of this billing period",
-      "scheduledTitle": "Scheduled for period end",
-      "scheduledDescription": "License decrease will take effect on {{date}} at the end of your current billing period.",
-      "scheduledKeepAccess": "You'll keep access to all {{count}} licenses until then.",
-      "cancel": "Cancel",
-      "confirmPayNow": "Confirm & Pay Now",
-      "confirmSchedule": "Confirm Schedule"
+      "title": "Confirmar atualização da licença",
+      "increaseDescription": "Revise os detalhes do aumento da sua licença antes de confirmar.",
+      "decreaseDescription": "Revise os detalhes da redução da sua licença. As alterações entrarão em vigor no final do seu período de faturamento.",
+      "currentMonthlyCost": "Custo mensal atual",
+      "currentLicenseCount": "Contagem de licenças atuais",
+      "newMonthlyCost": "Novo custo mensal",
+      "newLicenseCount": "Nova contagem de licenças",
+      "monthlyIncrease": "Aumento Mensal",
+      "monthlySavings": "Poupança Mensal",
+      "paymentMethod": "Método de pagamento",
+      "changePaymentMethod": "Mudar",
+      "immediateChargeTitle": "Cobrança imediata",
+      "immediateChargeDescription": "Você será cobrado {{amountDue}} agora pelo valor rateado.",
+      "prorationDescription": "Proporção: {{amount}} para o restante deste período de faturamento",
+      "scheduledTitle": "Programado para o final do período",
+      "scheduledDescription": "A redução da licença entrará em vigor em {{date}} no final do seu período de faturamento atual.",
+      "scheduledKeepAccess": "Você manterá acesso a todas as licenças {{count}} até então.",
+      "cancel": "Cancelar",
+      "confirmPayNow": "Confirme e pague agora",
+      "confirmSchedule": "Confirmar agendamento"
     },
     "usage": {
-      "title": "Current License Usage",
-      "licensesUsed": "licenses used"
+      "title": "Uso da licença atual",
+      "licensesUsed": "licenças usadas"
     },
     "fields": {
-      "totalLicenseCount": "Total License Count"
+      "totalLicenseCount": "Contagem total de licenças"
     },
     "help": {
-      "totalLicenseCount": "Enter the new total number of licenses (minimum: {{minimum}}). Currently: {{current}}",
-      "reduceViaAccount": "To reduce licenses, visit Account Management",
-      "quantityWarning": "Warning: You have {{used}} users but are setting the total to {{quantity}}"
+      "totalLicenseCount": "Insira o novo número total de licenças (mínimo: {{minimum}}). Atualmente: {{current}}",
+      "reduceViaAccount": "Para reduzir licenças, visite Gerenciamento de contas",
+      "quantityWarning": "Aviso: você tem usuários {{used}}, mas está definindo o total como {{quantity}}"
     },
     "pricing": {
-      "pricePerLicense": "Price per license:",
-      "quantity": "Quantity:",
+      "pricePerLicense": "Preço por licença:",
+      "quantity": "Quantidade:",
       "total": "Total:"
     },
     "actions": {
-      "creatingCheckout": "Creating Checkout...",
-      "noChange": "No Change",
-      "updateToTotal": "Update to {{quantity}} Total ({{difference}} {{licenseLabel}})"
+      "creatingCheckout": "Criando Check-out...",
+      "noChange": "Sem alteração",
+      "updateToTotal": "Atualizar para {{quantity}} Total ({{difference}} {{licenseLabel}})"
     },
     "info": {
-      "totalQuantity": "This sets your total subscription quantity (not an addition to current licenses)",
-      "increasingImmediate": "Increasing licenses: Immediate access with prorated charge",
-      "billedMonthly": "Licenses are billed monthly and can be canceled anytime"
+      "totalQuantity": "Isso define a quantidade total de assinaturas (não um acréscimo às licenças atuais)",
+      "increasingImmediate": "Aumento de licenças: acesso imediato com cobrança proporcional",
+      "billedMonthly": "As licenças são cobradas mensalmente e podem ser canceladas a qualquer momento"
     },
     "solo": {
-      "title": "Solo includes one user",
-      "description": "The Solo plan is designed for a single user and does not support adding licenses. Upgrade to Pro to add more users to your team.",
-      "upgradeCta": "Upgrade to Pro"
+      "title": "Solo inclui um usuário",
+      "description": "O plano Solo foi projetado para um único usuário e não oferece suporte para adição de licenças. Atualize para o Pro para adicionar mais usuários à sua equipe.",
+      "upgradeCta": "Atualizar para Pro"
     }
   },
   "removalModal": {
-    "title": "Remove Licenses",
-    "description": "Remove licenses from your account. Changes will take effect at the end of your current billing period.",
+    "title": "Remover licenças",
+    "description": "Remova licenças da sua conta. As alterações entrarão em vigor no final do período de faturamento atual.",
     "stats": {
-      "currentLicenses": "Current Licenses",
-      "activeUsers": "Active Users"
+      "currentLicenses": "Licenças atuais",
+      "activeUsers": "Usuários ativos"
     },
     "fields": {
-      "newLicenseCount": "New License Count",
-      "minimum": "Minimum: {{count}} (to accommodate all active users)"
+      "newLicenseCount": "Nova contagem de licenças",
+      "minimum": "Mínimo: {{count}} (para acomodar todos os usuários ativos)"
     },
     "validation": {
-      "positiveInteger": "License quantity must be a positive integer (minimum 1)",
-      "useAddFlow": "Use the \"Add Licenses\" flow to increase licenses",
-      "deactivateUsers": "You have {{activeUsers}} active users. Please deactivate {{usersToDeactivate}} {{userLabel}} first."
+      "positiveInteger": "A quantidade de licenças deve ser um número inteiro positivo (mínimo 1)",
+      "useAddFlow": "Use o fluxo \"Adicionar licenças\" para aumentar as licenças",
+      "deactivateUsers": "Você tem usuários ativos {{activeUsers}}. Por favor, desative {{usersToDeactivate}} {{userLabel}} primeiro."
     },
     "actions": {
-      "goToUserManagement": "Go to User Management",
-      "reviewRemoval": "Review Removal",
-      "confirmRemoval": "Confirm Removal"
+      "goToUserManagement": "Vá para Gerenciamento de usuários",
+      "reviewRemoval": "Remoção de revisão",
+      "confirmRemoval": "Confirmar remoção"
     },
     "scheduled": {
-      "title": "Removal will be scheduled",
-      "description": "Your license count will decrease from {{current}} to {{next}} at the end of your current billing period.",
-      "creditDescription": "You'll receive a credit on your next invoice for the unused licenses."
+      "title": "A remoção será agendada",
+      "description": "A contagem de licenças diminuirá de {{current}} para {{next}} no final do período de faturamento atual.",
+      "creditDescription": "Você receberá um crédito em sua próxima fatura pelas licenças não utilizadas."
     },
     "confirmation": {
-      "description": "Please review and confirm your license removal:",
-      "currentMonthlyCost": "Current Monthly Cost",
-      "currentLicenseCount": "Current License Count",
-      "newMonthlyCost": "New Monthly Cost",
-      "newLicenseCount": "New License Count",
-      "monthlySavings": "Monthly Savings",
-      "creditNotice": "Changes will take effect at the end of your current billing period. You'll receive a prorated credit on your next invoice."
+      "description": "Revise e confirme a remoção da sua licença:",
+      "currentMonthlyCost": "Custo mensal atual",
+      "currentLicenseCount": "Contagem de licenças atuais",
+      "newMonthlyCost": "Novo custo mensal",
+      "newLicenseCount": "Nova contagem de licenças",
+      "monthlySavings": "Poupança Mensal",
+      "creditNotice": "As alterações entrarão em vigor no final do período de faturamento atual. Você receberá um crédito proporcional em sua próxima fatura."
     },
     "errors": {
-      "deactivateUsersFirst": "Please deactivate users first",
-      "reduceFailed": "Failed to reduce licenses",
-      "removeFailed": "Failed to remove licenses. Please try again."
+      "deactivateUsersFirst": "Desative os usuários primeiro",
+      "reduceFailed": "Falha ao reduzir licenças",
+      "removeFailed": "Falha ao remover licenças. Por favor, tente novamente."
     },
     "success": {
-      "scheduled": "License removal scheduled! Your license count will change from {{current}} to {{next}} on {{effectiveDate}}."
+      "scheduled": "Remoção de licença agendada! Sua contagem de licenças mudará de {{current}} para {{next}} em {{effectiveDate}}."
     }
   },
   "shared": {
-    "licenseSingular": "license",
-    "licensePlural": "licenses",
-    "userSingular": "user",
-    "userPlural": "users",
+    "licenseSingular": "licença",
+    "licensePlural": "licenças",
+    "userSingular": "usuário",
+    "userPlural": "Usuários",
     "licenseCount": "{{count}} {{licenseLabel}}",
     "perInterval": "{{amount}}/{{interval}}",
-    "none": "None",
+    "none": "Nenhum",
     "intervals": {
-      "month": "month",
-      "year": "year"
+      "month": "mês",
+      "year": "ano"
     }
   },
   "workflowDesigner": {
-    "enterpriseHeading": "Recurso Enterprise",
-    "unavailable": "O designer de fluxos de trabalho requer a edição Enterprise. Faça upgrade para acessar este recurso."
+    "enterpriseHeading": "Recurso Empresarial",
+    "unavailable": "O designer de fluxo de trabalho requer Enterprise Edition. Atualize para acessar esse recurso."
   },
   "runStudio": {
-    "unavailable": "Workflow Run Studio não está disponível nesta edição. (runId: {{runId}})"
+    "unavailable": "Workflow Run Studio não está disponível nesta edição. (ID de execução: {{runId}})"
   }
 }

@@ -5,13 +5,16 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 
 
 // Type definitions for reports
 export interface ContractRevenue {
   contract_name: string;
+  client_id: string;
   client_name: string;
+  logoUrl?: string | null;
   monthly_recurring: number;
   total_billed_ytd: number;
   status: 'active' | 'upcoming' | 'expired';
@@ -20,7 +23,9 @@ export interface ContractRevenue {
 export interface ContractExpiration {
   client_contract_id?: string;
   contract_name: string;
+  client_id: string;
   client_name: string;
+  logoUrl?: string | null;
   end_date: string;
   decision_due_date?: string | null;
   renewal_mode?: 'none' | 'manual' | 'auto' | null;
@@ -32,7 +37,9 @@ export interface ContractExpiration {
 
 export interface BucketUsage {
   contract_name: string;
+  client_id: string;
   client_name: string;
+  logoUrl?: string | null;
   total_hours: number;
   used_hours: number;
   remaining_hours: number;
@@ -271,6 +278,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         client_contract_id: row.client_contract_id,
         contract_id: row.contract_id,
         contract_name: row.contract_name,
+        client_id: row.client_id,
         client_name: row.client_name || 'Unknown Client',
         monthly_recurring: 0,
         total_billed_ytd: invoiceMap.get(row.client_contract_id) || 0,
@@ -294,7 +302,21 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
       }
     }
 
-    return Array.from(aggregatedMap.values()).map(({ client_contract_id, contract_id, ...rest }) => rest);
+    const rows: ContractRevenue[] = Array.from(aggregatedMap.values()).map(
+      ({ client_contract_id, contract_id, ...rest }) => rest
+    );
+
+    const clientIds = Array.from(
+      new Set(rows.map((row) => row.client_id).filter((id): id is string => Boolean(id)))
+    );
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of rows) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
+
+    return rows;
   } catch (error) {
     console.error('Error fetching contract revenue report:', error);
     if (error instanceof Error) {
@@ -327,6 +349,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'cc.client_contract_id',
         'c.contract_id',
         'c.contract_name',
+        'cc.client_id',
         'cl.client_name',
         'cc.is_active',
         'cc.start_date',
@@ -392,6 +415,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
       expirationMap.set(key, {
         client_contract_id: row.client_contract_id,
         contract_name: row.contract_name,
+        client_id: row.client_id,
         client_name: row.client_name || 'Unknown Client',
         end_date: endDate.toISOString().split('T')[0],
         decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,
@@ -403,7 +427,21 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
       });
     }
 
-    return Array.from(expirationMap.values()).map(({ client_contract_id: _ignored, ...item }) => item);
+    const rows: ContractExpiration[] = Array.from(expirationMap.values()).map(
+      ({ client_contract_id: _ignored, ...item }) => item
+    );
+
+    const clientIds = Array.from(
+      new Set(rows.map((row) => row.client_id).filter((id): id is string => Boolean(id)))
+    );
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of rows) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
+
+    return rows;
   } catch (error) {
     console.error('Error fetching contract expiration report:', error);
     if (error instanceof Error) {
@@ -434,10 +472,11 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
       .select(
         'c.contract_id',
         'c.contract_name',
+        'cl.client_id',
         'cl.client_name',
         knex.raw('COALESCE(SUM(te.billable_duration), 0) as used_minutes')
       )
-      .groupBy('c.contract_id', 'c.contract_name', 'cl.client_name');
+      .groupBy('c.contract_id', 'c.contract_name', 'cl.client_id', 'cl.client_name');
     db.tenantJoin(dataQuery, 'contract_lines as cl_line', 'c.contract_id', 'cl_line.contract_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
@@ -457,6 +496,7 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
 
         return {
           contract_name: row.contract_name,
+          client_id: row.client_id,
           client_name: row.client_name || 'Unknown Client',
           total_hours: totalHours,
           used_hours: usedHours,
@@ -465,6 +505,16 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
           overage_hours: overageHours
         };
       });
+
+    const clientIds = Array.from(
+      new Set(bucketUsages.map((row) => row.client_id).filter((id): id is string => Boolean(id)))
+    );
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of bucketUsages) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
 
     return bucketUsages;
   } catch (error) {

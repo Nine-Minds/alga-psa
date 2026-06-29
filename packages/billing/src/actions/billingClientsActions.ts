@@ -22,6 +22,7 @@ import {
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 
 function tenantScopedTable(
@@ -30,6 +31,20 @@ function tenantScopedTable(
   table: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+async function attachClientLogos(clients: IClient[], tenant: string): Promise<IClient[]> {
+  if (clients.length === 0) {
+    return clients;
+  }
+  const clientIds = clients
+    .map((client) => client.client_id)
+    .filter((clientId): clientId is string => Boolean(clientId));
+  const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+  return clients.map((client) => ({
+    ...client,
+    logoUrl: logoUrlsMap.get(client.client_id) ?? null,
+  }));
 }
 
 async function assertClientContractAssignmentIsAuthorable(
@@ -64,7 +79,8 @@ export const getAllClientsForBilling = withAuth(async (
 ): Promise<IClient[]> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getAllClients(knex, tenant, includeInactive);
+  const clients = await getAllClients(knex, tenant, includeInactive);
+  return attachClientLogos(clients, tenant);
 });
 
 export const getAllClientsPaginatedForBilling = withAuth(async (
@@ -74,7 +90,8 @@ export const getAllClientsPaginatedForBilling = withAuth(async (
 ): Promise<PaginatedClientsResponse> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getAllClientsPaginated(knex, tenant, params);
+  const response = await getAllClientsPaginated(knex, tenant, params);
+  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
 });
 
 export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async (
@@ -84,7 +101,8 @@ export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async
 ): Promise<PaginatedClientsResponse> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getClientsWithBillingCycleRangePaginated(knex, tenant, params);
+  const response = await getClientsWithBillingCycleRangePaginated(knex, tenant, params);
+  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
 });
 
 export const getClientByIdForBilling = withAuth(async (
@@ -94,7 +112,14 @@ export const getClientByIdForBilling = withAuth(async (
 ): Promise<IClient | null> => {
   await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
-  return getClientById(knex, tenant, clientId);
+  const client = await getClientById(knex, tenant, clientId);
+  if (!client) {
+    return null;
+  }
+  // Resolve the uploaded logo so the client drawer (e.g. from a contract) shows
+  // the real logo, not just initials.
+  const logoUrl = await getClientLogoUrl(clientId, tenant);
+  return { ...client, logoUrl };
 });
 
 export const getClientContractsForBilling = withAuth(async (

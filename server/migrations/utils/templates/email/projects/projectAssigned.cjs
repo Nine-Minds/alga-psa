@@ -117,6 +117,21 @@ const COPY = {
     textView: 'Zobacz projekt pod adresem',
   },
 };
+SUBJECTS.pt = 'Você foi atribuído ao projeto: {{project.name}}';
+COPY.pt = {
+  headerLabel: 'Projeto atribuído',
+  intro: 'Você foi atribuído a um projeto:',
+  projectName: 'Nome do projeto',
+  description: 'Descrição',
+  startDate: 'Data de início',
+  assignedBy: 'Atribuído por',
+  viewButton: 'Ver projeto',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Projeto atribuído',
+  textIntro: 'Você foi atribuído a um projeto:',
+  textView: 'Ver projeto em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

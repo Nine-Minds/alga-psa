@@ -26,7 +26,7 @@ import {
   type TenantScopedQuery,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { revalidatePath } from 'next/cache';
+import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
@@ -1957,7 +1957,14 @@ export const getTicketsForList = withAuth(async (
       }
     });
 
-    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows] = await Promise.all([
+    const clientIds = new Set<string>();
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      if (ticket.client_id) {
+        clientIds.add(ticket.client_id);
+      }
+    });
+
+    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
       agentUserIds.size > 0
         ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
         : Promise.resolve(new Map<string, string | null>()),
@@ -1985,7 +1992,15 @@ export const getTicketsForList = withAuth(async (
               'td.text_color'
             )
         : Promise.resolve([]),
+      clientIds.size > 0
+        ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
+        : Promise.resolve(new Map<string, string | null>()),
     ]);
+
+    // Attach batched client logo URLs to each row (single query, no N+1).
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
+    });
 
     // Convert Maps to Records for serialization
     const agentAvatarUrls: Record<string, string | null> = {};

@@ -24,28 +24,11 @@ import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billi
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
-    (...args: any[]) =>
-      action(
-        {
-          user_id: mockedUserId,
-          id: mockedUserId,
-          tenant: mockedTenantId
-        },
-        { tenant: mockedTenantId },
-        ...args,
-      ),
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -266,14 +249,12 @@ describe('Negative Invoice Credit Tests', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
 
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
   }, 120000);
@@ -281,13 +262,11 @@ describe('Negative Invoice Credit Tests', () => {
   beforeEach(async () => {
     context = await resetContext();
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     // Configure default tax for the test client
     await configureDefaultTax();

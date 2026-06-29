@@ -68,14 +68,10 @@ vi.mock('@alga-psa/users/actions', () => ({
   }))
 }));
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))

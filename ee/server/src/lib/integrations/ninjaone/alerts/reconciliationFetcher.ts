@@ -43,7 +43,26 @@ function mapAlertToEvent(alert: NinjaOneAlert, tenantId: string, integrationId: 
     deviceName: alert.device?.displayName || alert.device?.systemName || null,
     externalOrganizationId:
       alert.device?.organizationId != null ? String(alert.device.organizationId) : null,
-    occurredAt: alert.createTime || alert.activityTime || new Date().toISOString(),
+    occurredAt: parseOccurredAt(alert.createTime ?? alert.activityTime),
     raw: alert as unknown as Record<string, unknown>,
   };
+}
+
+/**
+ * NinjaOne's alerts API returns createTime/activityTime as epoch seconds in
+ * practice (despite the ISO-string typing); passing the raw value reaches the
+ * rmm_alerts timestamp column and Postgres rejects it with "date/time field
+ * value out of range". Normalize epochs explicitly, tolerating ISO strings too.
+ */
+function parseOccurredAt(value: string | number | undefined | null): string {
+  if (value != null) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 1_000_000_000) {
+      const millis = numeric > 1_000_000_000_000 ? numeric : numeric * 1000;
+      return new Date(millis).toISOString();
+    }
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  return new Date().toISOString();
 }

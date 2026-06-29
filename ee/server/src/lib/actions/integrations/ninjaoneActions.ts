@@ -261,10 +261,18 @@ export const getNinjaOneConnectionStatus = withAdvancedAssetsAccess(async (user,
       .count('alert_id as count')
       .first();
 
+    // The proactive token-refresh job marks the token lifecycle 'reconnect_required'
+    // when the OAuth refresh permanently fails (e.g. invalid_token). Credentials are
+    // still stored (is_connected true), so surface this so the UI can prompt re-auth.
+    const tokenLifecycleStatus = (integration as { settings?: { tokenLifecycle?: { status?: string } } })
+      ?.settings?.tokenLifecycle?.status;
+    const reconnectRequired = tokenLifecycleStatus === 'reconnect_required';
+
     return {
       provider: 'ninjaone',
       is_connected: hasCredentials && integration.is_active,
       is_active: integration.is_active,
+      reconnect_required: reconnectRequired,
       instance_url: integration.instance_url || undefined,
       connected_at: integration.connected_at || undefined,
       last_sync_at: integration.last_sync_at || undefined,

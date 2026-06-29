@@ -1334,6 +1334,8 @@
           },
           "connected": "Mit NinjaOne verbunden",
           "connectedWithErrors": "NinjaOne verbunden mit Synchronisierungsfehlern",
+          "reconnectRequired": "NinjaOne-Neuverbindung erforderlich",
+          "reconnectRequiredDescription": "Die NinjaOne-Autorisierung kann nicht mehr aktualisiert werden (Token abgelaufen oder widerrufen). Stellen Sie die Verbindung erneut her, um Gerätesynchronisierung, Warnungen und Fernzugriff wiederherzustellen.",
           "instanceLabel": "Instanz:",
           "organizations": "{{count}} Organisationen",
           "devices": "{{count}} Geräte",

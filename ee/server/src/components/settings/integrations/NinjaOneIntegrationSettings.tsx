@@ -274,6 +274,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
   const isConnected = status?.is_connected;
   const isActive = status?.is_active;
+  const reconnectRequired = status?.reconnect_required;
 
   const renderStatusPanel = () => {
     if (isLoading || isRefreshing) {
@@ -300,17 +301,26 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
     return (
       <div className="flex gap-3">
-        {hasError ? (
+        {reconnectRequired ? (
+          <AlertTriangle className="mt-1 h-5 w-5 text-red-500" />
+        ) : hasError ? (
           <AlertTriangle className="mt-1 h-5 w-5 text-amber-500" />
         ) : (
           <CheckCircle className="mt-1 h-5 w-5 text-green-500" />
         )}
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
-            {hasError
-              ? t('integrations.rmm.ninjaOne.status.connectedWithErrors', { defaultValue: 'NinjaOne connected with sync errors' })
-              : t('integrations.rmm.ninjaOne.status.connected', { defaultValue: 'Connected to NinjaOne' })}
+            {reconnectRequired
+              ? t('integrations.rmm.ninjaOne.status.reconnectRequired', { defaultValue: 'NinjaOne reconnect required' })
+              : hasError
+                ? t('integrations.rmm.ninjaOne.status.connectedWithErrors', { defaultValue: 'NinjaOne connected with sync errors' })
+                : t('integrations.rmm.ninjaOne.status.connected', { defaultValue: 'Connected to NinjaOne' })}
           </p>
+          {reconnectRequired && (
+            <p className="text-sm text-red-600">
+              {t('integrations.rmm.ninjaOne.status.reconnectRequiredDescription', { defaultValue: 'The NinjaOne authorization can no longer be refreshed (token expired or revoked). Reconnect to restore device sync, alerts, and remote access.' })}
+            </p>
+          )}
           {status?.instance_url && (
             <p className="text-sm text-muted-foreground">
               {t('integrations.rmm.ninjaOne.status.instanceLabel', { defaultValue: 'Instance:' })}{' '}

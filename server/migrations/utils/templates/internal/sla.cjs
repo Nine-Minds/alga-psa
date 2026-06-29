@@ -45,6 +45,10 @@ const TEMPLATES = [
         title: 'Ostrze\u017cenie SLA: up\u0142yn\u0119\u0142o {{thresholdPercent}}% czasu',
         message: 'Zg\u0142oszenie #{{ticketNumber}} "{{ticketTitle}}" osi\u0105gn\u0119\u0142o {{thresholdPercent}}% limitu SLA {{slaType}}. Pozosta\u0142y czas: {{remainingTime}}.',
       },
+      pt: {
+        title: 'Aviso de SLA: {{thresholdPercent}}% do tempo decorrido',
+        message: 'O chamado #{{ticketNumber}} "{{ticketTitle}}" está em {{thresholdPercent}}% do SLA {{slaType}}. Tempo restante: {{remainingTime}}.',
+      },
     },
   },
 
@@ -80,6 +84,10 @@ const TEMPLATES = [
       pl: {
         title: 'Naruszenie SLA',
         message: 'NARUSZENIE SLA: zg\u0142oszenie #{{ticketNumber}} "{{ticketTitle}}" przekroczy\u0142o cel SLA {{slaType}}. Zasada: {{policyName}}. Klient: {{clientName}}.',
+      },
+      pt: {
+        title: 'SLA violado',
+        message: 'VIOLAÇÃO DE SLA: o chamado #{{ticketNumber}} "{{ticketTitle}}" excedeu a meta de SLA {{slaType}}. Política: {{policyName}}. Cliente: {{clientName}}.',
       },
     },
   },
@@ -117,6 +125,10 @@ const TEMPLATES = [
         title: 'SLA odpowiedzi dotrzymane',
         message: 'SLA odpowiedzi dla zg\u0142oszenia #{{ticketNumber}} "{{ticketTitle}}" zosta\u0142o dotrzymane. Pierwsza odpowied\u017a zosta\u0142a udzielona w docelowym czasie.',
       },
+      pt: {
+        title: 'SLA de resposta cumprido',
+        message: 'O SLA de resposta do chamado #{{ticketNumber}} "{{ticketTitle}}" foi cumprido. A primeira resposta foi fornecida dentro do prazo previsto.',
+      },
     },
   },
 
@@ -153,6 +165,10 @@ const TEMPLATES = [
         title: 'SLA rozwi\u0105zania dotrzymane',
         message: 'Zg\u0142oszenie #{{ticketNumber}} "{{ticketTitle}}" zosta\u0142o rozwi\u0105zane w ramach celu SLA. \u015awietna robota!',
       },
+      pt: {
+        title: 'SLA de resolução cumprido',
+        message: 'O chamado #{{ticketNumber}} "{{ticketTitle}}" foi resolvido dentro da meta de SLA. Ótimo trabalho!',
+      },
     },
   },
 
@@ -188,6 +204,10 @@ const TEMPLATES = [
       pl: {
         title: 'Zg\u0142oszenie eskalowane (SLA)',
         message: 'Zg\u0142oszenie #{{ticketNumber}} "{{ticketTitle}}" zosta\u0142o eskalowane do poziomu {{escalationLevel}} z powodu SLA. Zosta\u0142e\u015b(a\u015b) dodany(a) jako mened\u017cer eskalacji.',
+      },
+      pt: {
+        title: 'Chamado escalonado (SLA)',
+        message: 'O chamado #{{ticketNumber}} "{{ticketTitle}}" foi escalonado para o nível {{escalationLevel}} devido ao SLA. Você foi adicionado como gerente de escalonamento.',
       },
     },
   },

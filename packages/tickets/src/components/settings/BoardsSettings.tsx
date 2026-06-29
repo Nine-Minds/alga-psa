@@ -3,10 +3,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical, HelpCircle } from "lucide-react";
-import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, ColumnDefinition, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
+import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star } from "lucide-react";
+import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
 import {
   getAllBoards,
+  getBoardListStats,
   createBoard,
   updateBoard,
   deleteBoard,
@@ -21,30 +22,31 @@ import {
   createBoardAutoCloseRule,
   updateBoardAutoCloseRule,
   deleteBoardAutoCloseRule,
-} from '@alga-psa/tickets/actions/close-rules/closeRuleActions';
-import type { IBoardAutoCloseRule } from '@alga-psa/tickets/actions/close-rules/closeRuleActions';
+} from '@alga-psa/tickets/actions';
+import type { IBoardAutoCloseRule, BoardListStats } from '@alga-psa/tickets/actions';
 import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@alga-psa/tickets/lib';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
-import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -52,7 +54,6 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useProduct } from '@/context/ProductContext';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
@@ -192,9 +193,128 @@ const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, s
   INVALID_OPEN_DEFAULT: 'ticketing.boards.messages.error.invalidOpenDefault'
 };
 
-const BoardsSettings: React.FC = () => {
+interface EditorSectionProps {
+  id: string;
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+  open: boolean;
+  dirty: boolean;
+  onToggle: () => void;
+  onSave: () => void;
+  saveLabel: string;
+  unsavedLabel: string;
+  saveDisabled?: boolean;
+  error?: string;
+  required?: boolean;
+  requiredLabel?: string;
+  children: React.ReactNode;
+}
+
+const EditorAccordionSection: React.FC<EditorSectionProps> = ({
+  id, title, description, icon, open, dirty, onToggle, onSave, saveLabel, unsavedLabel, saveDisabled, error, required, requiredLabel, children,
+}) => (
+  <section className={`overflow-hidden rounded-lg border bg-white ${error ? 'border-red-300' : 'border-gray-200'}`}>
+    <div className={`flex items-center gap-3 px-5 py-4 ${open ? 'border-b border-gray-100' : ''}`}>
+      <button id={`board-editor-section-${id}`} type="button" onClick={onToggle} className="flex flex-1 items-center gap-3 text-left">
+        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
+        {icon && <span className="text-primary-500">{icon}</span>}
+        <div>
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-gray-900">
+              {title}
+              {required && <span className="ml-0.5 text-red-500" aria-hidden="true">*</span>}
+            </h4>
+            {required && (
+              <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
+                {requiredLabel}
+              </span>
+            )}
+            {dirty && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+                <AlertTriangle className="h-3 w-3" />{unsavedLabel}
+              </span>
+            )}
+          </div>
+          {description && <p className="text-xs text-gray-500">{description}</p>}
+        </div>
+      </button>
+      {dirty && (
+        <Button id={`save-board-section-${id}`} size="sm" onClick={onSave} disabled={saveDisabled}>
+          {saveLabel}
+        </Button>
+      )}
+    </div>
+    {open && (
+      <div className="px-5 py-5">
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription data-testid={`board-editor-section-error-${id}`}>{error}</AlertDescription>
+          </Alert>
+        )}
+        {children}
+      </div>
+    )}
+  </section>
+);
+
+/* ---- Boards list presentational helpers (tickets-style rich rows) ---- */
+const BOARD_PILL_TONES = {
+  gray: 'bg-gray-100 text-gray-700 border-gray-200',
+  green: 'bg-green-50 text-green-700 border-green-200',
+  amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  blue: 'bg-sky-50 text-sky-700 border-sky-200',
+  violet: 'bg-violet-50 text-violet-700 border-violet-200',
+  indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+} as const;
+const ListPill: React.FC<{ tone?: keyof typeof BOARD_PILL_TONES; children: React.ReactNode }> = ({ tone = 'gray', children }) => (
+  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${BOARD_PILL_TONES[tone]}`}>{children}</span>
+);
+const BoardLoadBar: React.FC<{ open: number; total: number }> = ({ open, total }) => {
+  const pct = total === 0 ? 0 : Math.round((open / total) * 100);
+  return (
+    <div className="min-w-[110px]">
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-sm font-semibold text-gray-900">{open}</span>
+        <span className="text-xs text-gray-400">/ {total}</span>
+      </div>
+      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div className="h-full rounded-full bg-primary-500" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+};
+
+// Editor accordion: rendered top-to-bottom in this order. Only the first
+// section (General) is expanded when the editor opens; the rest start collapsed.
+const EDITOR_SECTION_IDS = ['general', 'assignment', 'inbound', 'close', 'automation', 'statuses', 'display'] as const;
+const collapsedExceptFirstSection = (): Set<string> => new Set<string>(EDITOR_SECTION_IDS.slice(1));
+// When creating a board, also expand 'statuses' up front — ticket statuses are
+// required and otherwise hidden inside a collapsed section.
+const collapsedForCreate = (): Set<string> =>
+  new Set<string>(EDITOR_SECTION_IDS.filter((id) => id !== 'general' && id !== 'statuses'));
+
+// Initial page size for the boards list.
+const BOARDS_PAGE_SIZE = 10;
+
+// Minimal SLA policy shape this component renders. Injected by the host so the
+// tickets package doesn't import the sla feature package directly
+// (see custom-rules/no-feature-to-feature-imports).
+interface BoardSlaPolicyOption {
+  sla_policy_id: string;
+  policy_name: string;
+  is_default?: boolean;
+}
+
+interface BoardsSettingsProps {
+  /** Hide SLA configuration in AlgaDesk edition. Passed by the host page from useProduct(). */
+  isAlgaDesk?: boolean;
+  /** Loads SLA policies for the board picker. Injected by the host (server can import @alga-psa/sla). */
+  getSlaPolicies?: () => Promise<BoardSlaPolicyOption[]>;
+}
+
+const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
   const { t } = useTranslation('msp/settings');
-  const { isAlgaDesk } = useProduct();
   // Dark-release gate for the auto-close rules UI. Off by default (PostHog
   // returns false for an unknown flag); UI-only — the auto-close engine and
   // server actions stay live regardless.
@@ -204,6 +324,7 @@ const BoardsSettings: React.FC = () => {
     description: '',
     display_order: 0,
     is_inactive: false,
+    is_default: false,
     category_type: 'custom' as CategoryType,
     priority_type: 'custom' as PriorityType,
     is_itil_compliant: false,
@@ -224,10 +345,23 @@ const BoardsSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
+  // Avatar URLs for the default agents/teams shown in the boards list, keyed by
+  // user/team id. Resolved via the same batch actions the pickers use so the
+  // list renders real avatars (with the shared initials/hue fallback) instead
+  // of a bespoke palette.
+  const [listUserAvatarUrls, setListUserAvatarUrls] = useState<Record<string, string | null>>({});
+  const [listTeamAvatarUrls, setListTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
+  const [slaPolicies, setSlaPolicies] = useState<BoardSlaPolicyOption[]>([]);
+  const [boardStats, setBoardStats] = useState<Record<string, BoardListStats>>({});
+  const [listSearch, setListSearch] = useState('');
+  const [boardsPage, setBoardsPage] = useState(1);
+  const [boardsPageSize, setBoardsPageSize] = useState(BOARDS_PAGE_SIZE);
   const [error, setError] = useState<string | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  // Per-section validation errors shown inside the relevant accordion section,
+  // so the message appears where the offending field is (not just a top banner).
+  const [sectionErrors, setSectionErrors] = useState<Record<string, string>>({});
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     boardId: string;
@@ -276,25 +410,20 @@ const BoardsSettings: React.FC = () => {
     };
   }, [deleteDialog]);
 
-  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Handle page size change - reset to page 1
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(1);
-  };
-  
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
   const [formData, setFormData] = useState(createEmptyFormData);
   const [isLoadingBoardStatuses, setIsLoadingBoardStatuses] = useState(false);
+  // Tracks the close-rules / auto-close fetch on edit so the dirty baseline is
+  // captured only after those values land (otherwise both sections show as dirty on open).
+  const [isLoadingCloseRules, setIsLoadingCloseRules] = useState(false);
   const [closeRulesForm, setCloseRulesForm] = useState<CloseRulesFormState>(createEmptyCloseRulesForm);
   const [autoCloseRulesForm, setAutoCloseRulesForm] = useState<EditableAutoCloseRule[]>([]);
   const [removedAutoCloseRuleIds, setRemovedAutoCloseRuleIds] = useState<string[]>([]);
+  // Accordion editor: per-section collapse state + dirty tracking against an on-open baseline
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(collapsedExceptFirstSection);
+  const [formSnapshot, setFormSnapshot] = useState<Record<string, string> | null>(null);
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -314,6 +443,40 @@ const BoardsSettings: React.FC = () => {
     fetchSlaPolicies();
     fetchTeams();
   }, []);
+
+  // Resolve avatar URLs for the default agents/teams referenced by the boards
+  // list. Tenant is carried on the loaded users/teams (same source the pickers
+  // use). Runs whenever the set of boards/users/teams changes.
+  useEffect(() => {
+    const tenant = users[0]?.tenant || teams[0]?.tenant;
+    if (!tenant) return;
+
+    const userIds = Array.from(
+      new Set(boards.map((b) => b.default_assigned_to).filter((id): id is string => !!id))
+    );
+    const teamIds = Array.from(
+      new Set(boards.map((b) => b.default_assigned_team_id).filter((id): id is string => !!id))
+    );
+
+    if (userIds.length > 0) {
+      getUserAvatarUrlsBatchAction(userIds, tenant)
+        .then((map) => setListUserAvatarUrls((prev) => ({ ...prev, ...Object.fromEntries(map) })))
+        .catch((err) => console.error('Error fetching board agent avatars:', err));
+    }
+    if (teamIds.length > 0) {
+      getTeamAvatarUrlsBatchAction(teamIds, tenant)
+        .then((map) => setListTeamAvatarUrls((prev) => ({ ...prev, ...Object.fromEntries(map) })))
+        .catch((err) => console.error('Error fetching board team avatars:', err));
+    }
+  }, [boards, users, teams]);
+
+  const fetchBoardStats = async () => {
+    try {
+      setBoardStats(await getBoardListStats());
+    } catch (statsError) {
+      console.error('Error fetching board stats:', statsError);
+    }
+  };
 
   // Prevent saving a mismatched default priority when toggling ITIL compliance on new boards.
   useEffect(() => {
@@ -336,6 +499,7 @@ const BoardsSettings: React.FC = () => {
     try {
       const allBoards = await getAllBoards(true);
       setBoards(allBoards);
+      void fetchBoardStats();
     } catch (error) {
       console.error('Error fetching boards:', error);
       setError(t('ticketing.boards.messages.error.fetchFailed'));
@@ -372,6 +536,9 @@ const BoardsSettings: React.FC = () => {
   };
 
   const fetchSlaPolicies = async () => {
+    if (!getSlaPolicies) {
+      return;
+    }
     try {
       const policies = await getSlaPolicies();
       setSlaPolicies(policies);
@@ -397,35 +564,13 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
-  const startEditing = async (board: IBoard) => {
-    setEditingBoard(board);
-    setFormData({
-      ...createEmptyFormData(),
-      board_name: board.board_name || '',
-      description: board.description || '',
-      display_order: board.display_order || 0,
-      is_inactive: board.is_inactive,
-      category_type: board.category_type || 'custom',
-      priority_type: board.priority_type || 'custom',
-      is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil',
-      default_assigned_to: board.default_assigned_to || '',
-      default_assigned_team_id: board.default_assigned_team_id || '',
-      default_priority_id: board.default_priority_id || '',
-      manager_user_id: board.manager_user_id || '',
-      sla_policy_id: board.sla_policy_id || '',
-      inbound_reply_reopen_enabled: board.inbound_reply_reopen_enabled ?? false,
-      inbound_reply_reopen_cutoff_hours: board.inbound_reply_reopen_cutoff_hours ?? 168,
-      inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
-      inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
-      enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
-      ticket_statuses: [],
-    });
-    setShowAddEditDialog(true);
-    setError(null);
-    setDialogError(null);
+  // Loads a board's persisted editor data (ticket statuses + close/auto-close rules)
+  // and toggles the loading flags. Used on edit-open and again after an in-place save,
+  // so the dirty baseline reflects what is actually stored (and re-saving doesn't
+  // duplicate auto-close rules or re-delete already-removed ones).
+  const reloadBoardEditorData = async (board: IBoard) => {
     setIsLoadingBoardStatuses(true);
-    setCloseRulesForm(createEmptyCloseRulesForm());
-    setAutoCloseRulesForm([]);
+    setIsLoadingCloseRules(true);
     setRemovedAutoCloseRuleIds([]);
 
     await loadManagedTicketStatusesFromBoard(board.board_id!);
@@ -457,7 +602,43 @@ const BoardsSettings: React.FC = () => {
     } catch (loadError) {
       console.error('Error loading board close rules:', loadError);
       setDialogError(loadError instanceof Error ? loadError.message : t('ticketing.boards.closeRules.messages.fetchFailed'));
+    } finally {
+      setIsLoadingCloseRules(false);
     }
+  };
+
+  const startEditing = async (board: IBoard) => {
+    setEditingBoard(board);
+    setFormData({
+      ...createEmptyFormData(),
+      board_name: board.board_name || '',
+      description: board.description || '',
+      display_order: board.display_order || 0,
+      is_inactive: board.is_inactive,
+      is_default: board.is_default ?? false,
+      category_type: board.category_type || 'custom',
+      priority_type: board.priority_type || 'custom',
+      is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil',
+      default_assigned_to: board.default_assigned_to || '',
+      default_assigned_team_id: board.default_assigned_team_id || '',
+      default_priority_id: board.default_priority_id || '',
+      manager_user_id: board.manager_user_id || '',
+      sla_policy_id: board.sla_policy_id || '',
+      inbound_reply_reopen_enabled: board.inbound_reply_reopen_enabled ?? false,
+      inbound_reply_reopen_cutoff_hours: board.inbound_reply_reopen_cutoff_hours ?? 168,
+      inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
+      inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
+      enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
+      ticket_statuses: [],
+    });
+    setShowAddEditDialog(true);
+    setError(null);
+    setDialogError(null);
+    setCollapsedSections(collapsedExceptFirstSection());
+    setCloseRulesForm(createEmptyCloseRulesForm());
+    setAutoCloseRulesForm([]);
+
+    await reloadBoardEditorData(board);
   };
 
   const updateManagedTicketStatus = (tempId: string, updates: Partial<ManagedTicketStatus>) => {
@@ -611,17 +792,40 @@ const BoardsSettings: React.FC = () => {
     );
   }, [boards, editingBoard, trimmedBoardName]);
 
+  // Surface a validation failure inside its accordion section: record the message,
+  // make sure the section is expanded, and scroll it into view. Pass no message to
+  // just expand + scroll to a section whose field already renders its own inline error.
+  const failInSection = (sectionId: string, message?: string) => {
+    setSectionErrors(message ? { [sectionId]: message } : {});
+    setCollapsedSections((prev) => {
+      if (!prev.has(sectionId)) return prev;
+      const next = new Set(prev);
+      next.delete(sectionId);
+      return next;
+    });
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        const el = document.getElementById(`board-editor-section-${sectionId}`);
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 0);
+    }
+  };
+
   const handleSaveBoard = async () => {
     try {
       setDialogError(null);
+      setSectionErrors({});
 
       if (!formData.board_name.trim()) {
-        setDialogError(t('ticketing.boards.messages.error.nameRequired'));
+        failInSection('general', t('ticketing.boards.messages.error.nameRequired'));
         return;
       }
 
       if (isDuplicateBoardName) {
-        setDialogError(t('ticketing.boards.messages.error.nameAlreadyExists'));
+        // The board-name field already renders an inline duplicate error; just reveal it.
+        failInSection('general');
         return;
       }
 
@@ -636,23 +840,24 @@ const BoardsSettings: React.FC = () => {
         formData.status_seed_mode === 'copy_existing';
 
       if (shouldRequireStatusCopySource && !formData.copy_ticket_statuses_from_board_id) {
-        setDialogError(t('ticketing.boards.messages.error.selectBoardToCopy'));
+        failInSection('statuses', t('ticketing.boards.messages.error.selectBoardToCopy'));
         return;
       }
 
       if (shouldManageTicketStatuses && ticketStatusValidationError) {
-        setDialogError(t(TICKET_STATUS_VALIDATION_KEYS[ticketStatusValidationError]));
+        // The statuses section already renders an inline validation error; just reveal it.
+        failInSection('statuses');
         return;
       }
 
       if (editingBoard && autoCloseRulesUiEnabled) {
         for (const rule of autoCloseRulesForm) {
           if (!rule.trigger_status_id || !rule.close_to_status_id) {
-            setDialogError(t('ticketing.boards.closeRules.messages.autoCloseStatusRequired'));
+            failInSection('automation', t('ticketing.boards.closeRules.messages.autoCloseStatusRequired'));
             return;
           }
           if (!Number.isInteger(rule.inactivity_days) || rule.inactivity_days < 1) {
-            setDialogError(t('ticketing.boards.closeRules.messages.autoCloseDaysInvalid'));
+            failInSection('automation', t('ticketing.boards.closeRules.messages.autoCloseDaysInvalid'));
             return;
           }
           if (
@@ -661,7 +866,7 @@ const BoardsSettings: React.FC = () => {
               rule.warning_days_before < 1 ||
               rule.warning_days_before >= rule.inactivity_days)
           ) {
-            setDialogError(t('ticketing.boards.closeRules.messages.autoCloseWarningInvalid'));
+            failInSection('automation', t('ticketing.boards.closeRules.messages.autoCloseWarningInvalid'));
             return;
           }
         }
@@ -673,6 +878,7 @@ const BoardsSettings: React.FC = () => {
           description: formData.description,
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
+          is_default: formData.is_default,
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
@@ -711,12 +917,22 @@ const BoardsSettings: React.FC = () => {
         }
 
         toast.success(t('ticketing.boards.messages.success.updated'));
+
+        // Stay in the editor after saving. Reflect the saved name in the header,
+        // refresh the list/stats, then re-baseline the dirty state from what was
+        // actually persisted so the unsaved indicators clear without navigating away.
+        setEditingBoard((prev) => (prev ? { ...prev, board_name: formData.board_name, description: formData.description } : prev));
+        await fetchBoards();
+        setFormSnapshot(null);
+        await reloadBoardEditorData(editingBoard);
+        return;
       } else {
         await createBoard({
           board_name: formData.board_name,
           description: formData.description,
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
+          is_default: formData.is_default,
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
@@ -726,7 +942,10 @@ const BoardsSettings: React.FC = () => {
           sla_policy_id: formData.sla_policy_id || null,
           inbound_reply_reopen_enabled: formData.inbound_reply_reopen_enabled,
           inbound_reply_reopen_cutoff_hours: Math.max(1, Number(formData.inbound_reply_reopen_cutoff_hours) || 168),
-          inbound_reply_reopen_status_id: formData.inbound_reply_reopen_status_id || null,
+          // The copied/inline statuses are (re)created server-side with fresh ids, so any
+          // status id chosen here would dangle to another board. Reopen falls back to the
+          // default open status; the specific status can be set after the board exists.
+          inbound_reply_reopen_status_id: null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
@@ -829,246 +1048,328 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
-  const columns: ColumnDefinition<IBoard>[] = [
+  const closeEditor = () => {
+    setShowAddEditDialog(false);
+    setEditingBoard(null);
+    setFormData(createEmptyFormData());
+    setDialogError(null);
+    setSectionErrors({});
+    setIsLoadingBoardStatuses(false);
+    setIsLoadingCloseRules(false);
+    setCollapsedSections(collapsedExceptFirstSection());
+    setFormSnapshot(null);
+  };
+
+  // Per-section serialization used to detect unsaved changes against the on-open baseline.
+  const serializeSections = (): Record<string, string> => ({
+    general: JSON.stringify({
+      board_name: formData.board_name,
+      description: formData.description,
+      display_order: formData.display_order,
+      is_inactive: formData.is_inactive,
+      is_default: formData.is_default,
+    }),
+    assignment: JSON.stringify({
+      default_assigned_to: formData.default_assigned_to,
+      default_assigned_team_id: formData.default_assigned_team_id,
+      sla_policy_id: formData.sla_policy_id,
+      manager_user_id: formData.manager_user_id,
+    }),
+    statuses: JSON.stringify({
+      default_priority_id: formData.default_priority_id,
+      status_seed_mode: formData.status_seed_mode,
+      copy_ticket_statuses_from_board_id: formData.copy_ticket_statuses_from_board_id,
+      ticket_statuses: formData.ticket_statuses,
+    }),
+    close: JSON.stringify(closeRulesForm),
+    automation: JSON.stringify({ rules: autoCloseRulesForm, removed: removedAutoCloseRuleIds }),
+    inbound: JSON.stringify({
+      enabled: formData.inbound_reply_reopen_enabled,
+      cutoff: formData.inbound_reply_reopen_cutoff_hours,
+      status: formData.inbound_reply_reopen_status_id,
+      suppress: formData.inbound_reply_ai_ack_suppression_enabled,
+    }),
+    display: JSON.stringify({
+      enable_live_ticket_timer: formData.enable_live_ticket_timer,
+      is_itil_compliant: formData.is_itil_compliant,
+    }),
+  });
+
+  // Capture the baseline once, after the editor opens and any async status load settles.
+  useEffect(() => {
+    if (!showAddEditDialog) {
+      if (formSnapshot) setFormSnapshot(null);
+      return;
+    }
+    if (isLoadingBoardStatuses || isLoadingCloseRules || formSnapshot) return;
+    setFormSnapshot(serializeSections());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddEditDialog, isLoadingBoardStatuses, isLoadingCloseRules]);
+
+  const currentSections = serializeSections();
+  const isSectionDirty = (id: string) => !!formSnapshot && formSnapshot[id] !== currentSections[id];
+  const dirtyCount = formSnapshot
+    ? Object.keys(currentSections).filter((id) => formSnapshot[id] !== currentSections[id]).length
+    : 0;
+  const anyDirty = dirtyCount > 0;
+  const toggleSection = (id: string) =>
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
+  const saveDisabled =
+    isLoadingBoardStatuses ||
+    !trimmedBoardName ||
+    isDuplicateBoardName ||
+    (shouldManageTicketStatuses && Boolean(ticketStatusValidationError)) ||
+    (!editingBoard &&
+      formData.status_seed_mode === 'copy_existing' &&
+      !formData.copy_ticket_statuses_from_board_id);
+
+  const visibleBoards = boards.filter((b) => {
+    const q = listSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (b.board_name || '').toLowerCase().includes(q) || (b.description || '').toLowerCase().includes(q);
+  });
+
+  // Columns for the boards DataTable. Derived per-board values (stats, assignee,
+  // SLA) are resolved inside each render from the component-scope lookups. Only
+  // the Name column is sortable; the composite/derived columns opt out so the
+  // list keeps its fetched (display_order) ordering. Each non-scalar column uses
+  // an array dataIndex purely to get a unique column id.
+  const boardColumns: ColumnDefinition<IBoard>[] = [
     {
       title: t('ticketing.boards.table.name'),
       dataIndex: 'board_name',
-      width: '18%',
-      render: (value: string) => (
-        <span className="text-gray-700 font-medium">{value}</span>
-      ),
-    },
-    {
-      title: t('ticketing.boards.table.description'),
-      dataIndex: 'description',
-      width: '20%',
-      render: (value: string | null) => (
-        <span className="text-gray-600">{value || '-'}</span>
-      ),
-    },
-    {
-      title: t('ticketing.boards.table.status'),
-      dataIndex: 'is_inactive',
-      width: '10%',
-      render: (value: boolean, record: IBoard) => (
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600">
-            {value ? t('ticketing.boards.statusLabels.inactive') : t('ticketing.boards.statusLabels.active')}
-          </span>
-          <Switch
-            checked={!value}
-            onCheckedChange={async (checked) => {
-              try {
-                await updateBoard(record.board_id!, {
-                  is_inactive: !checked
-                });
-                await fetchBoards();
-              } catch (error) {
-                handleError(error, t('ticketing.boards.messages.error.updateStatusFailed'));
-              }
-            }}
-            className="data-[state=checked]:bg-primary-500"
-          />
-        </div>
-      ),
-    },
-    {
-      title: t('ticketing.boards.table.default'),
-      dataIndex: 'is_default',
-      width: '8%',
-      render: (value: boolean, record: IBoard) => (
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={value || false}
-            onCheckedChange={async (checked) => {
-              try {
-                // Prevent unchecking if this is the only default board
-                if (!checked && value) {
-                  toast.error(t('ticketing.boards.messages.error.lastDefault'));
-                  return;
-                }
-
-                // Backend handles unsetting other defaults atomically when setting a new one
-                await updateBoard(record.board_id!, {
-                  is_default: checked
-                });
-                await fetchBoards();
-              } catch (error) {
-                handleError(error, t('ticketing.boards.messages.error.updateDefaultFailed'));
-              }
-            }}
-            className="data-[state=checked]:bg-primary-500"
-          />
-        </div>
-      ),
+      render: (_value: string, board: IBoard) => {
+        const isItil = board.category_type === 'itil' && board.priority_type === 'itil';
+        return (
+          <div id={`board-row-${board.board_id}`} className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-gray-500">
+              <Inbox className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium text-gray-900">{board.board_name}</span>
+                {board.is_default && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
+                {isItil && <ListPill tone="violet">ITIL</ListPill>}
+                {board.is_inactive && <ListPill tone="gray">{t('ticketing.boards.statusLabels.inactive')}</ListPill>}
+              </div>
+              {board.description && <p className="truncate text-xs text-gray-500 max-w-[260px]">{board.description}</p>}
+            </div>
+          </div>
+        );
+      },
     },
     {
       title: t('ticketing.boards.table.defaultAgent'),
       dataIndex: 'default_assigned_to',
-      width: '10%',
-      render: (value: string | null, record: IBoard) => {
-        const team = record.default_assigned_team_id
-          ? teams.find(t => t.team_id === record.default_assigned_team_id)
-          : null;
-        const user = value ? users.find(u => u.user_id === value) : null;
-
-        if (!team && !user) return <span className="text-gray-400">-</span>;
-
+      sortable: false,
+      render: (_value: string, board: IBoard) => {
+        const team = board.default_assigned_team_id ? teams.find((tm) => tm.team_id === board.default_assigned_team_id) : null;
+        const agent = board.default_assigned_to ? users.find((u) => u.user_id === board.default_assigned_to) : null;
+        const assigneeName = team ? team.team_name : agent ? `${agent.first_name} ${agent.last_name}` : null;
+        if (!assigneeName) return <span className="text-xs text-gray-400">—</span>;
         return (
-          <span className="text-gray-700">
-            {team ? team.team_name : user ? `${user.first_name} ${user.last_name}` : <span className="text-gray-400 italic">Unknown</span>}
+          <div className="flex items-center gap-2">
+            {team ? (
+              <TeamAvatar
+                teamId={team.team_id}
+                teamName={team.team_name}
+                avatarUrl={listTeamAvatarUrls[team.team_id] ?? null}
+                size="xs"
+              />
+            ) : agent ? (
+              <UserAvatar
+                userId={agent.user_id}
+                userName={assigneeName}
+                avatarUrl={listUserAvatarUrls[agent.user_id] ?? null}
+                size="xs"
+              />
+            ) : null}
+            <span className="text-gray-700">{assigneeName}</span>
+          </div>
+        );
+      },
+    },
+    {
+      title: t('ticketing.boards.fields.slaPolicy.label', 'SLA'),
+      dataIndex: 'sla_policy_id',
+      sortable: false,
+      render: (_value: string, board: IBoard) => {
+        const sla = board.sla_policy_id ? slaPolicies.find((s) => s.sla_policy_id === board.sla_policy_id) : null;
+        return sla ? <ListPill tone="green">{sla.policy_name}</ListPill> : <span className="text-xs text-gray-400">—</span>;
+      },
+    },
+    {
+      title: t('ticketing.boards.table.statuses', 'Statuses'),
+      dataIndex: ['board_id', 'statusCount'],
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => {
+        const stats = boardStats[board.board_id || ''];
+        return (
+          <span className="inline-flex items-center gap-1 text-gray-700">
+            <ListChecks className="h-3.5 w-3.5 text-gray-400" />{stats?.statusCount ?? 0}
           </span>
         );
       },
     },
     {
-      title: t('ticketing.boards.table.defaultPriority'),
-      dataIndex: 'default_priority_id',
-      width: '10%',
-      render: (value: string | null) => {
-        if (!value) return <span className="text-gray-400">-</span>;
-        const pr = priorities.find(p => p.priority_id === value);
-        if (!pr) return <span className="text-gray-400 italic">Unknown</span>;
+      title: t('ticketing.boards.table.ticketLoad', 'Ticket load'),
+      dataIndex: ['board_id', 'ticketLoad'],
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => {
+        const stats = boardStats[board.board_id || ''];
+        return <BoardLoadBar open={stats?.openTicketCount ?? 0} total={stats?.ticketCount ?? 0} />;
+      },
+    },
+    {
+      title: t('ticketing.boards.editor.sections.automation', 'Automation'),
+      dataIndex: ['board_id', 'automation'],
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => {
+        const stats = boardStats[board.board_id || ''];
+        const hasAutomation = stats?.closeRulesEnabled || (stats?.autoCloseRuleCount ?? 0) > 0 || board.inbound_reply_reopen_enabled;
+        if (!hasAutomation) return <span className="text-xs text-gray-400">—</span>;
         return (
-          <span className="text-gray-700">{pr.priority_name}</span>
+          <div className="flex flex-wrap gap-1">
+            {stats?.closeRulesEnabled && <ListPill tone="blue"><ListChecks className="h-3 w-3" />{t('ticketing.boards.editor.sections.close', 'Close rules')}</ListPill>}
+            {(stats?.autoCloseRuleCount ?? 0) > 0 && <ListPill tone="violet"><Zap className="h-3 w-3" />{stats?.autoCloseRuleCount}</ListPill>}
+            {board.inbound_reply_reopen_enabled && <ListPill tone="amber"><Mail className="h-3 w-3" />{t('ticketing.boards.editor.reopenBadge', 'reopen')}</ListPill>}
+          </div>
         );
       },
     },
     {
-      title: t('ticketing.boards.table.boardManager'),
-      dataIndex: 'manager_user_id',
-      width: '10%',
-      render: (value: string | null) => {
-        if (!value) return <span className="text-gray-400">-</span>;
-        const user = users.find(u => u.user_id === value);
-        return user ? (
-          <span className="text-gray-700">{user.first_name} {user.last_name}</span>
-        ) : (
-          <span className="text-gray-400 italic">Unknown</span>
-        );
-      },
-    },
-    {
-      title: t('ticketing.boards.table.order'),
-      dataIndex: 'display_order',
+      title: '',
+      dataIndex: 'actions',
       width: '5%',
-      render: (value: number) => (
-        <span className="text-gray-600">{value}</span>
-      ),
-    },
-    {
-      title: t('ticketing.boards.table.itilBoard'),
-      dataIndex: 'category_type',
-      width: '6%',
-      render: (_, record: IBoard) => (
-        record.category_type === 'itil' && record.priority_type === 'itil' ? (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-600">
-            ITIL
-          </span>
-        ) : (
-          <span className="text-gray-500">-</span>
-        )
-      ),
-    },
-    {
-      title: t('ticketing.boards.table.actions'),
-      dataIndex: 'board_id',
-      width: '3%',
-      render: (value: string, record: IBoard) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button id="board-actions-menu" variant="ghost" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => startEditing(record)}>
-              {t('ticketing.boards.actions.edit')}
-            </DropdownMenuItem>
-            {!record.is_default && (
-              <DropdownMenuItem
-                onClick={() => setDeleteDialog({
-                  isOpen: true,
-                  boardId: value,
-                  boardName: record.board_name || ''
-                })}
-                className="text-destructive"
-              >
-                {t('ticketing.boards.actions.delete')}
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => (
+        <div className="text-right">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id={`board-actions-menu-${board.board_id}`} variant="ghost" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => startEditing(board)}>
+                {t('ticketing.boards.actions.edit')}
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+              {!board.is_default && (
+                <DropdownMenuItem
+                  onClick={() => setDeleteDialog({ isOpen: true, boardId: board.board_id || '', boardName: board.board_name || '' })}
+                  className="text-destructive"
+                >
+                  {t('ticketing.boards.actions.delete')}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
     },
   ];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
+      {!showAddEditDialog && (
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">{t('ticketing.boards.title')}</h3>
-        <Alert variant="info" className="mb-4">
-          <AlertDescription>
-            {t('ticketing.boards.alert')}
-          </AlertDescription>
-        </Alert>
+        {/* Header */}
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">{t('ticketing.boards.title')}</h3>
+            <p className="text-sm text-gray-500">{t('ticketing.boards.alert')}</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              id="add-board-button"
+              onClick={() => {
+                setEditingBoard(null);
+                setDialogError(null);
+                setFormData(() => {
+                  const nextFormData = createEmptyFormData();
+                  if (boards.length === 0) {
+                    return {
+                      ...nextFormData,
+                      status_seed_mode: 'create_inline' as TicketStatusSeedMode,
+                      ticket_statuses: [createManagedTicketStatus(0)],
+                    };
+                  }
+                  return nextFormData;
+                });
+                setCollapsedSections(collapsedForCreate());
+                setShowAddEditDialog(true);
+                setIsLoadingBoardStatuses(false);
+                setIsLoadingCloseRules(false);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" /> {t('ticketing.boards.actions.addBoard')}
+            </Button>
+            <Button
+              id="import-boards-button"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const available = await getAvailableReferenceData('boards');
+                  setAvailableReferenceBoards(available || []);
+                  setSelectedImportBoards([]);
+                  setShowImportDialog(true);
+                } catch (importError) {
+                  handleError(importError, t('ticketing.boards.messages.error.fetchAvailableFailed'));
+                }
+              }}
+            >
+              {t('ticketing.boards.actions.importStandard')}
+            </Button>
+          </div>
+        </div>
+
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        {/* Toolbar: search + active/inactive counts */}
+        <div className="mb-3 flex items-center gap-3">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              id="boards-search"
+              value={listSearch}
+              onChange={(e) => { setListSearch(e.target.value); setBoardsPage(1); }}
+              placeholder={t('ticketing.boards.searchPlaceholder', 'Search boards…')}
+              className="pl-9"
+            />
+          </div>
+          <ListPill tone="indigo">{boards.filter((b) => !b.is_inactive).length} {t('ticketing.boards.statusLabels.active')}</ListPill>
+          <ListPill tone="gray">{boards.filter((b) => b.is_inactive).length} {t('ticketing.boards.statusLabels.inactive')}</ListPill>
+        </div>
+
+        {/* Rich board table — shared DataTable (consistent with the other settings tabs). */}
         <DataTable
           id="boards-settings-table"
-          data={boards}
-          columns={columns}
+          data={visibleBoards}
+          columns={boardColumns}
           pagination={true}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          pageSize={pageSize}
-          onItemsPerPageChange={handlePageSizeChange}
+          currentPage={boardsPage}
+          onPageChange={setBoardsPage}
+          pageSize={boardsPageSize}
+          onItemsPerPageChange={(size) => { setBoardsPageSize(size); setBoardsPage(1); }}
+          onRowClick={(board) => startEditing(board)}
+          rowClassName={(board) => (board.is_inactive ? 'opacity-60' : '')}
         />
-        <div className="mt-4 flex gap-2">
-          <Button 
-            id="add-board-button"
-	            onClick={() => {
-	              setEditingBoard(null);
-	              setDialogError(null);
-	              setFormData(() => {
-                const nextFormData = createEmptyFormData();
-                if (boards.length === 0) {
-                  return {
-                    ...nextFormData,
-                    status_seed_mode: 'create_inline' as TicketStatusSeedMode,
-                    ticket_statuses: [createManagedTicketStatus(0)],
-                  };
-                }
-                return nextFormData;
-              });
-              setShowAddEditDialog(true);
-              setIsLoadingBoardStatuses(false);
-            }}
-            className="bg-primary-500 text-white hover:bg-primary-600"
-          >
-            <Plus className="h-4 w-4 mr-2" /> {t('ticketing.boards.actions.addBoard')}
-          </Button>
-          <Button 
-            id="import-boards-button"
-            variant="outline"
-            onClick={async () => {
-              try {
-                const available = await getAvailableReferenceData('boards');
-                setAvailableReferenceBoards(available || []);
-                setSelectedImportBoards([]);
-                setShowImportDialog(true);
-              } catch (error) {
-                handleError(error, t('ticketing.boards.messages.error.fetchAvailableFailed'));
-              }
-            }}
-          >
-            {t('ticketing.boards.actions.importStandard')}
-          </Button>
-        </div>
+        {visibleBoards.length === 0 && (
+          <p className="mt-3 text-center text-sm text-gray-400">
+            {t('ticketing.boards.empty', 'No boards found.')}
+          </p>
+        )}
       </div>
+      )}
 
       <DeleteEntityDialog
         id="delete-board-dialog"
@@ -1114,58 +1415,51 @@ const BoardsSettings: React.FC = () => {
         } : undefined}
       />
 
-      {/* Add/Edit Dialog */}
-      <Dialog
-        isOpen={showAddEditDialog}
-	        onClose={() => {
-	          setShowAddEditDialog(false);
-	          setEditingBoard(null);
-	          setFormData(createEmptyFormData());
-	          setDialogError(null);
-	          setIsLoadingBoardStatuses(false);
-	        }}
-        title={editingBoard ? t('ticketing.boards.dialog.editBoard') : t('ticketing.boards.dialog.addBoard')}
-        footer={(
-          <div className="space-y-3">
-            {dialogError && (
-              <Alert variant="destructive">
-                <AlertDescription>{dialogError}</AlertDescription>
-              </Alert>
-            )}
-            <div className="flex justify-end space-x-2">
-              <Button
-                id="cancel-board-dialog"
-                variant="outline"
-                onClick={() => {
-                  setShowAddEditDialog(false);
-                  setEditingBoard(null);
-                  setFormData(createEmptyFormData());
-                  setDialogError(null);
-                  setIsLoadingBoardStatuses(false);
-                }}
-              >
-                {t('ticketing.boards.actions.cancel')}
-              </Button>
-              <Button
-                id="save-board-button"
-                onClick={handleSaveBoard}
-                disabled={
-                  isLoadingBoardStatuses ||
-                  !trimmedBoardName ||
-                  isDuplicateBoardName ||
-                  (shouldManageTicketStatuses && Boolean(ticketStatusValidationError)) ||
-                  (!editingBoard &&
-                    formData.status_seed_mode === 'copy_existing' &&
-                    !formData.copy_ticket_statuses_from_board_id)
-                }
-              >
-                {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
-              </Button>
-            </div>
-          </div>
+      {/* Dedicated board editor (in-view; replaces the boards list while open) */}
+      {showAddEditDialog && (
+      <div>
+        <div className="mb-4 flex items-center gap-3">
+          <Button id="board-editor-back" variant="soft" size="sm" onClick={closeEditor}>
+            <ArrowLeft className="h-4 w-4 mr-2" />{t('ticketing.boards.actions.back', 'Back to Boards')}
+          </Button>
+          <h3 className="text-lg font-semibold text-gray-800">
+            {editingBoard ? editingBoard.board_name : t('ticketing.boards.dialog.addBoard')}
+          </h3>
+          {dirtyCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+              {dirtyCount} {t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            </span>
+          )}
+        </div>
+
+        {dialogError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{dialogError}</AlertDescription>
+          </Alert>
         )}
-      >
-        <DialogContent>
+        {anyDirty && (
+          <Alert variant="warning" className="mb-4">
+            <AlertDescription>
+              {t('ticketing.boards.editor.unsavedBanner', 'You have unsaved changes. Click "Save Changes" to apply them.')}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-3 pb-24">
+          <EditorAccordionSection
+            id="general"
+            error={sectionErrors['general']}
+            title={t('ticketing.boards.editor.sections.general', 'General')}
+            description={t('ticketing.boards.editor.sections.generalHelp', 'Name, description, visibility and default')}
+            icon={<Settings2 className="h-4 w-4" />}
+            open={!collapsedSections.has('general')}
+            dirty={isSectionDirty('general')}
+            onToggle={() => toggleSection('general')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
           <div className="space-y-4">
             <div>
               <Label htmlFor="board_name" required>{t('ticketing.boards.fields.boardName.label')}</Label>
@@ -1211,6 +1505,37 @@ const BoardsSettings: React.FC = () => {
                 onCheckedChange={(checked) => setFormData({ ...formData, is_inactive: checked })}
               />
             </div>
+            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50/60 p-3">
+              <div>
+                <Label htmlFor="is_default">{t('ticketing.boards.fields.defaultBoard.label', 'Default board for client portal tickets')}</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('ticketing.boards.fields.defaultBoard.help', 'New tickets submitted from the client portal land on this board. Only one board can be the default.')}
+                </p>
+              </div>
+              <Switch
+                id="is_default"
+                checked={formData.is_default}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_default: checked })}
+              />
+            </div>
+          </div>
+          </EditorAccordionSection>
+
+          <EditorAccordionSection
+            id="assignment"
+            error={sectionErrors['assignment']}
+            title={t('ticketing.boards.editor.sections.assignment', 'Assignment & SLA')}
+            description={t('ticketing.boards.editor.sections.assignmentHelp', 'Default routing, SLA and board manager')}
+            icon={<Users className="h-4 w-4" />}
+            open={!collapsedSections.has('assignment')}
+            dirty={isSectionDirty('assignment')}
+            onToggle={() => toggleSection('assignment')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
+          <div className="space-y-4">
             <div>
               <Label htmlFor="default-assigned-agent-picker">{t('ticketing.boards.fields.defaultAssignedAgent.label')}</Label>
               <UserAndTeamPicker
@@ -1266,6 +1591,7 @@ const BoardsSettings: React.FC = () => {
                 onValueChange={(value) => setFormData({ ...formData, manager_user_id: value })}
                 users={users}
                 userTypeFilter="internal"
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 placeholder={t('ticketing.boards.fields.boardManager.placeholder')}
                 buttonWidth="full"
                 labelStyle="none"
@@ -1274,8 +1600,24 @@ const BoardsSettings: React.FC = () => {
                 {t('ticketing.boards.fields.boardManager.help')}
               </p>
             </div>
+          </div>
+          </EditorAccordionSection>
 
-            <div className="space-y-3 rounded-md border border-gray-200 p-3">
+          <EditorAccordionSection
+            id="inbound"
+            error={sectionErrors['inbound']}
+            title={t('ticketing.boards.editor.sections.inbound', 'Email & inbound replies')}
+            description={t('ticketing.boards.editor.sections.inboundHelp', 'Reopen tickets when clients reply by email')}
+            icon={<Mail className="h-4 w-4" />}
+            open={!collapsedSections.has('inbound')}
+            dirty={isSectionDirty('inbound')}
+            onToggle={() => toggleSection('inbound')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="inbound_reply_reopen_enabled">{t('ticketing.boards.fields.inboundReplyReopen.enabledLabel')}</Label>
@@ -1312,6 +1654,10 @@ const BoardsSettings: React.FC = () => {
                 </p>
               </div>
 
+              {/* Reopen status references this board's own statuses, which only have
+                  persisted ids once the board exists. Offer it on edit only; new boards
+                  fall back to the default open status until they're created. */}
+              {editingBoard && (
               <div>
                 <Label htmlFor="inbound_reply_reopen_status_id">{t('ticketing.boards.fields.inboundReplyReopen.statusLabel')}</Label>
                 <CustomSelect
@@ -1337,6 +1683,7 @@ const BoardsSettings: React.FC = () => {
                   disabled={!formData.inbound_reply_reopen_enabled}
                 />
               </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <div>
@@ -1355,9 +1702,24 @@ const BoardsSettings: React.FC = () => {
                 />
               </div>
             </div>
+          </EditorAccordionSection>
 
             {editingBoard && (
-              <div className="space-y-3 rounded-md border border-gray-200 p-3">
+              <EditorAccordionSection
+                id="close"
+            error={sectionErrors['close']}
+                title={t('ticketing.boards.editor.sections.close', 'Close rules')}
+                description={t('ticketing.boards.editor.sections.closeHelp', 'Requirements before a ticket can be closed')}
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                open={!collapsedSections.has('close')}
+                dirty={isSectionDirty('close')}
+                onToggle={() => toggleSection('close')}
+                onSave={handleSaveBoard}
+                saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+                unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+                saveDisabled={saveDisabled}
+              >
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="close-rules-enabled">{t('ticketing.boards.closeRules.enabledLabel')}</Label>
@@ -1428,10 +1790,25 @@ const BoardsSettings: React.FC = () => {
                   </div>
                 </div>
               </div>
+              </EditorAccordionSection>
             )}
 
             {editingBoard && autoCloseRulesUiEnabled && (
-              <div className="space-y-3 rounded-md border border-gray-200 p-3">
+              <EditorAccordionSection
+                id="automation"
+            error={sectionErrors['automation']}
+                title={t('ticketing.boards.editor.sections.automation', 'Automation')}
+                description={t('ticketing.boards.editor.sections.automationHelp', 'Auto-close stale tickets after inactivity')}
+                icon={<Zap className="h-4 w-4" />}
+                open={!collapsedSections.has('automation')}
+                dirty={isSectionDirty('automation')}
+                onToggle={() => toggleSection('automation')}
+                onSave={handleSaveBoard}
+                saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+                unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+                saveDisabled={saveDisabled}
+              >
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>{t('ticketing.boards.closeRules.autoCloseLabel')}</Label>
@@ -1548,8 +1925,26 @@ const BoardsSettings: React.FC = () => {
                   );
                 })}
               </div>
+              </EditorAccordionSection>
             )}
 
+          <EditorAccordionSection
+            id="statuses"
+            error={sectionErrors['statuses']}
+            required={!editingBoard}
+            requiredLabel={t('ticketing.boards.editor.required', 'Required')}
+            title={t('ticketing.boards.editor.sections.statuses', 'Priorities & statuses')}
+            description={t('ticketing.boards.editor.sections.statusesHelp', 'Default priority and the ticket statuses for this board')}
+            icon={<ListChecks className="h-4 w-4" />}
+            open={!collapsedSections.has('statuses')}
+            dirty={isSectionDirty('statuses')}
+            onToggle={() => toggleSection('statuses')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
+          <div className="space-y-4">
             <div>
               <Label htmlFor="default-priority-select">{t('ticketing.boards.fields.defaultPriority.label')}</Label>
               <CustomSelect
@@ -1655,7 +2050,7 @@ const BoardsSettings: React.FC = () => {
             )}
 
             {shouldManageTicketStatuses && (
-              <div className="space-y-3 rounded-md border border-gray-200 p-4">
+              <div className="space-y-3 rounded-md border border-gray-200 p-4 bg-gray-50/50">
                 <div>
                   <Label>
                     {editingBoard
@@ -1753,9 +2148,24 @@ const BoardsSettings: React.FC = () => {
                 )}
               </div>
             )}
+          </div>
+          </EditorAccordionSection>
 
-            <div className="border-t pt-4 space-y-4">
-              <h4 className="font-medium text-gray-800">{t('ticketing.boards.fields.boardConfiguration')}</h4>
+          <EditorAccordionSection
+            id="display"
+            error={sectionErrors['display']}
+            title={t('ticketing.boards.editor.sections.display', 'Display & behaviour')}
+            description={t('ticketing.boards.editor.sections.displayHelp', 'Live timer and board type')}
+            icon={<Clock className="h-4 w-4" />}
+            open={!collapsedSections.has('display')}
+            dirty={isSectionDirty('display')}
+            onToggle={() => toggleSection('display')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
+            <div className="space-y-4">
 
               <div className="flex items-center justify-between">
                 <div>
@@ -1793,9 +2203,37 @@ const BoardsSettings: React.FC = () => {
                 </div>
               )}
             </div>
+          </EditorAccordionSection>
+        </div>
+
+        {/* Sticky whole-board save bar */}
+        <div className="sticky bottom-0 -mx-6 border-t border-gray-200 bg-white/95 px-6 py-3 backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-xs text-gray-500">
+              {anyDirty ? (
+                <><AlertTriangle className="h-3.5 w-3.5 text-amber-500" />{t('ticketing.boards.editor.unsavedShort', 'Unsaved changes')}</>
+              ) : (
+                <><CheckCircle2 className="h-3.5 w-3.5 text-green-500" />{t('ticketing.boards.editor.allSaved', 'All changes saved')}</>
+              )}
+            </p>
+            <div className="flex gap-2">
+              <Button id="cancel-board-dialog" variant="outline" onClick={closeEditor}>
+                {t('ticketing.boards.actions.cancel')}
+              </Button>
+              <Button id="save-board-button" onClick={handleSaveBoard} disabled={saveDisabled}>
+                <span className={anyDirty ? 'font-bold' : ''}>
+                  {editingBoard
+                    ? (anyDirty
+                        ? `${t('ticketing.boards.editor.saveChanges', 'Save Changes')} *`
+                        : t('ticketing.boards.editor.saveChanges', 'Save Changes'))
+                    : t('ticketing.boards.actions.create')}
+                </span>
+              </Button>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
+      )}
 
       {/* Import Dialog */}
       <Dialog
@@ -1839,7 +2277,7 @@ const BoardsSettings: React.FC = () => {
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                    <div className="w-8 [&>div]:mb-0">
+                    <div className="w-8">
                       <Checkbox
                         id="select-all-boards"
                         checked={availableReferenceBoards.length > 0 && selectedImportBoards.length === availableReferenceBoards.length}
@@ -1877,7 +2315,7 @@ const BoardsSettings: React.FC = () => {
                         key={board.id} 
                         className="flex items-center space-x-2 p-2 hover:bg-muted/30 border-b"
                       >
-                        <div className="w-8 [&>div]:mb-0">
+                        <div className="w-8">
                           <Checkbox
                             id={`import-board-${board.id}`}
                             checked={selectedImportBoards.includes(board.id)}

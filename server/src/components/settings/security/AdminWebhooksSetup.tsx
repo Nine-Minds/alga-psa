@@ -2732,7 +2732,6 @@ function PayloadFieldSelector(props: {
                   label={field}
                   checked={selected.has(field)}
                   onChange={(event) => toggleField(entity, field, event.target.checked)}
-                  containerClassName="mb-0"
                 />
               ))}
             </div>
@@ -2794,7 +2793,6 @@ function ConfigurationTabBody(props: {
                 label={eventType}
                 checked={formState.eventTypes.includes(eventType)}
                 onChange={(event) => handleEventToggle(eventType, event.target.checked)}
-                containerClassName="mb-0"
               />
             ))}
           </div>
@@ -2852,14 +2850,12 @@ function ConfigurationTabBody(props: {
             label={t('security.webhooks.form.verifySsl')}
             checked={formState.verifySsl}
             onChange={(event) => handleFieldChange('verifySsl', event.target.checked)}
-            containerClassName="mb-0"
           />
           <Checkbox
             id="webhook-is-active"
             label={t('security.webhooks.form.webhookActive')}
             checked={formState.isActive}
             onChange={(event) => handleFieldChange('isActive', event.target.checked)}
-            containerClassName="mb-0"
           />
         </div>
       </div>
