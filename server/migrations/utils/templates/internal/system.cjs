@@ -13,6 +13,7 @@ const TEMPLATES = [
       nl: { title: 'Systeemmededeling', message: '{{announcementTitle}}' },
       it: { title: 'Annuncio di sistema', message: '{{announcementTitle}}' },
       pl: { title: 'Ogłoszenie systemowe', message: '{{announcementTitle}}' },
+      pt: { title: 'Anúncio do sistema', message: '{{announcementTitle}}' },
     },
   },
   {
@@ -26,6 +27,7 @@ const TEMPLATES = [
       nl: { title: 'U bent genoemd', message: '{{authorName}} heeft u genoemd in {{entityType}} {{entityName}}' },
       it: { title: 'È stato menzionato', message: "{{authorName}} l'ha menzionato in {{entityType}} {{entityName}}" },
       pl: { title: 'Wspomniano o Tobie', message: '{{authorName}} wspomniał(a) o Tobie w {{entityType}} {{entityName}}' },
+      pt: { title: 'Você foi mencionado', message: '{{authorName}} mencionou você em {{entityType}} {{entityName}}' },
     },
   },
   {
@@ -39,6 +41,7 @@ const TEMPLATES = [
       nl: { title: 'U bent genoemd in een opmerking', message: '{{commentAuthor}} heeft u genoemd in ticket #{{ticketNumber}}: {{commentPreview}}' },
       it: { title: 'Sei stato menzionato in un commento', message: '{{commentAuthor}} ti ha menzionato nel ticket #{{ticketNumber}}: {{commentPreview}}' },
       pl: { title: 'Wspomniano o Tobie w komentarzu', message: '{{commentAuthor}} wspomniał(a) o Tobie w zgłoszeniu #{{ticketNumber}}: {{commentPreview}}' },
+      pt: { title: 'Você foi mencionado em um comentário', message: '{{commentAuthor}} mencionou você no chamado #{{ticketNumber}}: {{commentPreview}}' },
     },
   },
   {
@@ -52,6 +55,7 @@ const TEMPLATES = [
       nl: { title: 'Je bent vermeld in een document', message: '{{authorName}} heeft je vermeld in document "{{documentName}}"' },
       it: { title: 'Sei stato menzionato in un documento', message: '{{authorName}} ti ha menzionato nel documento "{{documentName}}"' },
       pl: { title: 'Wspomniano o Tobie w dokumencie', message: '{{authorName}} wspomniał(a) o Tobie w dokumencie "{{documentName}}"' },
+      pt: { title: 'Você foi mencionado em um documento', message: '{{authorName}} mencionou você no documento "{{documentName}}"' },
     },
   },
   {
@@ -65,6 +69,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuw bericht', message: '{{senderName}}: {{messagePreview}}' },
       it: { title: 'Nuovo messaggio', message: '{{senderName}}: {{messagePreview}}' },
       pl: { title: 'Nowa wiadomość', message: '{{senderName}}: {{messagePreview}}' },
+      pt: { title: 'Nova mensagem', message: '{{senderName}}: {{messagePreview}}' },
     },
   },
 ];

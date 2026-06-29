@@ -164,6 +164,28 @@ const COPY = {
     textView: 'Zobacz kredyty pod adresem',
   },
 };
+SUBJECTS.pt = 'Créditos expiram em breve: {{company.name}}';
+COPY.pt = {
+  headerLabel: 'Créditos expiram em breve',
+  intro: 'Os créditos abaixo de <strong>{{company.name}}</strong> expirarão em breve.',
+  company: 'Empresa',
+  totalAmount: 'Valor total a expirar',
+  expirationDate: 'Data de expiração',
+  daysRemaining: 'Dias até a expiração',
+  tableHeaderCreditId: 'ID do crédito',
+  tableHeaderAmount: 'Valor',
+  tableHeaderExpiration: 'Data de expiração',
+  tableHeaderTransaction: 'Transação original',
+  closingNote: 'Use estes créditos antes que expirem para evitar perdê-los.',
+  viewButton: 'Ver créditos',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Créditos expiram em breve',
+  textIntro: 'Os créditos abaixo de {{company.name}} expirarão em breve:',
+  textCreditDetails: 'Detalhes dos créditos',
+  textClosingNote: 'Use estes créditos antes que expirem para evitar perdê-los.',
+  textView: 'Ver créditos em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

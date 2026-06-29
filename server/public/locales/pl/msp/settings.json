@@ -388,7 +388,6 @@
       "display": "Wyświetlanie",
       "ticketNumbering": "Numeracja zgłoszeń",
       "boards": "Tablice",
-      "statuses": "Statusy",
       "priorities": "Priorytety",
       "categories": "Kategorie",
       "checklistTemplates": "Szablony list kontrolnych"
@@ -493,7 +492,9 @@
         "boardManager": "Menedżer tablicy",
         "order": "Kolejność",
         "itilBoard": "Tablica ITIL",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "ticketLoad": "Obciążenie zgłoszeniami",
+        "statuses": "Statusy"
       },
       "statusLabels": {
         "active": "Aktywna",
@@ -512,7 +513,8 @@
         "up": "W górę",
         "down": "W dół",
         "remove": "Usuń",
-        "addStatus": "Dodaj status"
+        "addStatus": "Dodaj status",
+        "back": "Powrót do Tablic"
       },
       "fields": {
         "boardName": {
@@ -592,6 +594,10 @@
         "liveTimer": {
           "label": "Włącz stoper zgłoszeń na żywo",
           "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
+        },
+        "defaultBoard": {
+          "label": "Domyślna tablica dla zgłoszeń z portalu klienta",
+          "help": "Nowe zgłoszenia przesłane z portalu klienta trafiają na tę tablicę. Tylko jedna tablica może być domyślna."
         }
       },
       "dialog": {
@@ -717,7 +723,34 @@
           "autoCloseDaysInvalid": "Liczba dni braku aktywności musi być dodatnią liczbą całkowitą",
           "autoCloseWarningInvalid": "Czas wyprzedzenia ostrzeżenia musi być mniejszy niż liczba dni braku aktywności"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "Ogólne",
+          "generalHelp": "Nazwa, opis, widoczność i domyślność",
+          "assignment": "Przypisanie i SLA",
+          "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
+          "inbound": "E-mail i odpowiedzi przychodzące",
+          "inboundHelp": "Ponownie otwieraj zgłoszenia, gdy klienci odpowiadają e-mailem",
+          "close": "Reguły zamykania",
+          "closeHelp": "Wymagania przed zamknięciem zgłoszenia",
+          "automation": "Automatyzacja",
+          "automationHelp": "Automatycznie zamykaj nieaktywne zgłoszenia po okresie bezczynności",
+          "statuses": "Priorytety i statusy",
+          "statusesHelp": "Domyślny priorytet oraz statusy zgłoszeń dla tej tablicy",
+          "display": "Wyświetlanie i zachowanie",
+          "displayHelp": "Licznik na żywo i typ tablicy"
+        },
+        "saveChanges": "Zapisz zmiany",
+        "unsaved": "Niezapisane",
+        "unsavedShort": "Niezapisane zmiany",
+        "unsavedBanner": "Masz niezapisane zmiany. Kliknij „Zapisz zmiany”, aby je zastosować.",
+        "allSaved": "Wszystkie zmiany zapisane",
+        "reopenBadge": "otwórz ponownie",
+        "required": "Wymagane"
+      },
+      "empty": "Nie znaleziono tablic.",
+      "searchPlaceholder": "Szukaj tablic…"
     },
     "priorities": {
       "title": {
@@ -1238,6 +1271,176 @@
       "telemetry": {
         "title": "Telemetria i analityka",
         "description": "Zarządzanie preferencjami telemetrii i analityki"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Włącz powiadomienia",
+        "description": "Włącz lub wyłącz wszystkie powiadomienia dla tego najemcy"
+      },
+      "loading": "Ładowanie ustawień powiadomień...",
+      "loadError": "Nie udało się załadować ustawień",
+      "save": "Zapisz zmiany",
+      "saving": "Zapisywanie..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Podgląd tematu",
+        "iframeTitle": "Podgląd szablonu e-maila",
+        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości."
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować szablonów"
+      },
+      "list": {
+        "loading": "Ładowanie szablonów e-mail...",
+        "templateCount": "({{templateCount}} szablonów)",
+        "usingCustom": "Używany szablon niestandardowy",
+        "usingStandard": "Używany szablon standardowy"
+      },
+      "columns": {
+        "name": "Nazwa",
+        "actions": "Akcje"
+      },
+      "fields": {
+        "language": "Język",
+        "subject": "Temat",
+        "htmlContent": "Zawartość HTML",
+        "textContent": "Zawartość tekstowa"
+      },
+      "actions": {
+        "collapse": "Zwiń",
+        "expand": "Rozwiń",
+        "edit": "Edytuj",
+        "useStandard": "Użyj standardowego",
+        "view": "Wyświetl",
+        "customize": "Dostosuj",
+        "sending": "Wysyłanie...",
+        "sendTest": "Wyślij testowy e-mail",
+        "close": "Zamknij",
+        "cancel": "Anuluj",
+        "saving": "Zapisywanie...",
+        "save": "Zapisz"
+      },
+      "description": "Każdy typ zdarzenia ma standardowy szablon, który można dostosować. Możesz użyć standardowego szablonu lub utworzyć wersję niestandardową.",
+      "filter": {
+        "languages": "Języki",
+        "reset": "Resetuj"
+      },
+      "test": {
+        "sentTo": "Testowy e-mail wysłany do {{recipient}}",
+        "failed": "Nie udało się wysłać testowego e-maila."
+      },
+      "view": {
+        "title": "Szablon standardowy: {{name}}"
+      },
+      "tabs": {
+        "source": "Kod źródłowy",
+        "preview": "Podgląd"
+      },
+      "common": {
+        "notAvailable": "Nd."
+      },
+      "edit": {
+        "title": "Edytuj szablon niestandardowy: {{name}}"
+      },
+      "languages": {
+        "en": "Angielski",
+        "fr": "Francuski",
+        "es": "Hiszpański",
+        "de": "Niemiecki",
+        "nl": "Niderlandzki",
+        "it": "Włoski",
+        "pl": "Polski",
+        "pt": "Portugalski"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Nie udało się załadować kategorii",
+        "loadSubtypes": "Nie udało się załadować podtypów powiadomień",
+        "save": "Nie udało się zapisać ustawień powiadomień"
+      },
+      "loading": "Ładowanie kategorii powiadomień...",
+      "toasts": {
+        "saved": "Ustawienia powiadomień zostały pomyślnie zapisane",
+        "discarded": "Zmiany odrzucone"
+      },
+      "columns": {
+        "name": "Nazwa",
+        "description": "Opis",
+        "enabled": "Włączone",
+        "defaultForUsers": "Domyślne dla użytkowników",
+        "actions": "Akcje"
+      },
+      "tooltips": {
+        "cannotDisable": "Tej kategorii nie można wyłączyć",
+        "cannotModify": "Tej kategorii nie można modyfikować"
+      },
+      "actions": {
+        "enableAllSubtypes": "Włącz wszystkie podtypy",
+        "disableAllSubtypes": "Wyłącz wszystkie podtypy",
+        "disable": "Wyłącz",
+        "enable": "Włącz",
+        "disableDefault": "Wyłącz domyślne",
+        "enableDefault": "Włącz domyślne",
+        "discardChanges": "Odrzuć zmiany",
+        "saving": "Zapisywanie...",
+        "saveChanges": "Zapisz zmiany",
+        "cancel": "Anuluj"
+      },
+      "help": {
+        "intro": "Określ, które typy powiadomień e-mail są dostępne, i ustaw wartości domyślne dla nowych użytkowników.",
+        "enabledLabel": "Włączone:",
+        "enabledDescription": "Określa, czy ten typ powiadomienia jest aktywny",
+        "defaultLabel": "Domyślne dla użytkowników:",
+        "defaultDescription": "Określa, czy nowi użytkownicy mają to powiadomienie domyślnie włączone"
+      },
+      "unsavedChangesAlert": "Masz niezapisane zmiany. Kliknij \"Zapisz zmiany\", aby je zastosować.",
+      "discardDialog": {
+        "title": "Odrzucić zmiany?",
+        "message": "Czy na pewno chcesz odrzucić wszystkie niezapisane zmiany? Tej akcji nie można cofnąć."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Nie udało się załadować kategorii",
+        "loadSubtypes": "Nie udało się załadować podtypów powiadomień",
+        "saveSettings": "Nie udało się zapisać ustawień powiadomień"
+      },
+      "loading": "Ładowanie kategorii powiadomień wewnętrznych...",
+      "toasts": {
+        "saveSuccess": "Ustawienia powiadomień zapisane pomyślnie",
+        "changesDiscarded": "Zmiany odrzucone"
+      },
+      "columns": {
+        "name": "Nazwa",
+        "description": "Opis",
+        "enabled": "Włączone",
+        "defaultForUsers": "Domyślne dla użytkowników",
+        "actions": "Akcje"
+      },
+      "actions": {
+        "enableAllSubtypes": "Włącz wszystkie podtypy",
+        "disableAllSubtypes": "Wyłącz wszystkie podtypy",
+        "disable": "Wyłącz",
+        "enable": "Włącz",
+        "disableDefault": "Wyłącz domyślne",
+        "enableDefault": "Włącz domyślne",
+        "discardChanges": "Odrzuć zmiany",
+        "saving": "Zapisywanie...",
+        "saveChanges": "Zapisz zmiany",
+        "cancel": "Anuluj"
+      },
+      "intro": "Określ, które typy powiadomień wewnętrznych są dostępne, i ustaw wartości domyślne dla nowych użytkowników.",
+      "enabledLabel": "Włączone:",
+      "enabledDescription": "Określa, czy ten typ powiadomienia jest aktywny w systemie",
+      "defaultForUsersLabel": "Domyślne dla użytkowników:",
+      "defaultForUsersDescription": "Określa, czy nowi użytkownicy mają to powiadomienie domyślnie włączone",
+      "unsavedChangesAlert": "Masz niezapisane zmiany. Kliknij „Zapisz zmiany”, aby je zastosować.",
+      "discardDialog": {
+        "title": "Odrzucić zmiany?",
+        "message": "Czy na pewno chcesz odrzucić wszystkie niezapisane zmiany? Tej akcji nie można cofnąć."
       }
     }
   },

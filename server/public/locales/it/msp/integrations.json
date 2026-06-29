@@ -1334,6 +1334,8 @@
           },
           "connected": "Connesso a NinjaOne",
           "connectedWithErrors": "NinjaOne connesso con errori di sincronizzazione",
+          "reconnectRequired": "Riconnessione a NinjaOne richiesta",
+          "reconnectRequiredDescription": "L'autorizzazione di NinjaOne non può più essere aggiornata (token scaduto o revocato). Riconnetti per ripristinare la sincronizzazione dei dispositivi, gli avvisi e l'accesso remoto.",
           "instanceLabel": "Istanza:",
           "organizations": "{{count}} organizzazioni",
           "devices": "{{count}} dispositivi",

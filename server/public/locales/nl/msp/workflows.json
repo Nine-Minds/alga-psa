@@ -462,7 +462,8 @@
       "correlationKeyPlaceholder": "corr-123",
       "statusLabel": "Status",
       "fromLabel": "Van",
-      "toLabel": "Tot"
+      "toLabel": "Tot",
+      "datePlaceholder": "Elke datum"
     },
     "actions": {
       "applyFilters": "Filters toepassen",

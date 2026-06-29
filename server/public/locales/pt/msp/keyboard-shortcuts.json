@@ -1,38 +1,38 @@
 {
   "settings": {
     "title": "Atalhos de teclado",
-    "description": "Personalize atalhos de teclado para este dispositivo e conta.",
+    "description": "Personalize os atalhos de teclado para este dispositivo e conta.",
     "loading": "Carregando atalhos de teclado...",
     "capturePrompt": "Pressione as teclas",
     "columns": {
       "action": "Ação",
       "scope": "Escopo",
       "default": "Padrão",
-      "effective": "Atalho efetivo",
-      "enabled": "Ativado",
-      "reset": "Redefinir"
+      "effective": "Vinculação eficaz",
+      "enabled": "Habilitado",
+      "reset": "Reiniciar"
     },
     "actions": {
       "resetAll": "Redefinir tudo",
       "replace": "Substituir",
-      "copyCheatsheet": "Copiar resumo",
+      "copyCheatsheet": "Copiar folha de dicas",
       "printCheatsheet": "Imprimir",
       "reassign": "Reatribuir",
-      "rebind": "Remapear",
-      "reset": "Redefinir",
+      "rebind": "Revincular",
+      "reset": "Reiniciar",
       "resetAllTo": "Redefinir tudo para {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Atalho de teclado atualizado",
       "enabledUpdated": "Atalho de teclado atualizado",
-      "resetOne": "Atalho de teclado redefinido",
-      "resetAll": "Atalhos de teclado redefinidos",
-      "cheatsheetCopied": "Resumo copiado para a área de transferência",
+      "resetOne": "Redefinição de atalho de teclado",
+      "resetAll": "Redefinição de atalhos de teclado",
+      "cheatsheetCopied": "Cheatsheet copiado para a área de transferência",
       "profileChanged": "Perfil alterado"
     },
     "errors": {
-      "saveFailed": "Falha ao salvar preferências de atalhos de teclado",
-      "copyFailed": "Falha ao copiar o resumo",
+      "saveFailed": "Falha ao salvar preferências de atalho de teclado",
+      "copyFailed": "Falha ao copiar cheatsheet",
       "printFailed": "Não foi possível abrir a janela de impressão. Permita pop-ups e tente novamente."
     },
     "resetAll": {
@@ -40,23 +40,23 @@
       "message": "Todos os atalhos de teclado personalizados serão removidos."
     },
     "conflict": {
-      "title": "Substituir atalho existente?",
+      "title": "Substituir o atalho existente?",
       "message": "{{binding}} já está atribuído a {{action}}.",
       "indicator": "Conflita com outra ação"
     },
     "advisory": {
-      "hostileCombo": "{{binding}} pode entrar em conflito com atalhos do navegador ou do sistema para {{action}}."
+      "hostileCombo": "{{binding}} pode entrar em conflito com os atalhos do navegador ou do sistema operacional para {{action}}."
     },
-    "boundTo": "Associado a",
+    "boundTo": "Obrigado a",
     "chords": {
-      "empty": "Nenhum atalho encadeado corresponde.",
-      "search": "Pesquisar…",
-      "title": "Atalhos encadeados"
+      "empty": "Nenhum acorde corresponde.",
+      "search": "Procurar…",
+      "title": "Atalhos de acordes"
     },
-    "hint": "Passe o cursor sobre uma tecla para pré-visualizar, clique para remapear. Alterne as camadas de modificadores acima para ver os atalhos com prefixo.",
+    "hint": "Passe o mouse sobre uma tecla para visualizar e clique para religar. Alterne as camadas modificadoras acima para ver os atalhos prefixados.",
     "modified": "Modificado",
     "notSet": "Não definido",
-    "modHint": "mod corresponde a {{modKey}} neste dispositivo"
+    "modHint": "mod resolve para {{modKey}} neste dispositivo"
   },
   "help": {
     "title": "Atalhos de teclado",
@@ -64,34 +64,34 @@
     "custom": "Personalizado"
   },
   "commandPalette": {
-    "title": "Paleta de comandos",
-    "placeholder": "Pesquisar registros, navegação e ações",
-    "loading": "Pesquisando...",
-    "resultCount": "{{count}} resultados",
+    "title": "Paleta de Comandos",
+    "placeholder": "Navegação e ações de pesquisa",
+    "placeholderFulltext": "Pesquise registros, comentários, documentos…",
+    "loading": "Procurando…",
+    "resultCount": "Resultados {{count}}",
+    "seeAll": "Ver todos os resultados",
+    "fulltextHint": "Digite pelo menos 2 caracteres para pesquisar registros.",
+    "fulltextInlineHelp": "Pesquisando registros, comentários e documentos.",
+    "modes": {
+      "ariaLabel": "Modo de pesquisa",
+      "navigation": "Navegação",
+      "fulltext": "Texto completo"
+    },
     "syntax": {
-      "title": "Sintaxe de pesquisa",
-      "summary": "Campos, operadores, palavras-chave $ e sigilos",
-      "inlineHelp": "Use ticket:, client:, >action, /nav, @user, #id, $mine e frases entre aspas."
+      "title": "Dicas de pesquisa",
+      "summary": "Digite um nome de menu ou ação; use /nav ou >action para restringir.",
+      "inlineHelp": "Use /nav para navegação ou >action para ações."
     },
     "types": {
       "nav": "Navegação",
       "action": "Ação",
       "record": "Registro",
       "help": "Ajuda"
-    },
-    "placeholderFulltext": "Pesquisar registros, comentários, documentos…",
-    "seeAll": "Ver todos os resultados",
-    "fulltextHint": "Digite ao menos 2 caracteres para pesquisar.",
-    "fulltextInlineHelp": "Pesquisando em registros, comentários e documentos.",
-    "modes": {
-      "ariaLabel": "Modo de pesquisa",
-      "navigation": "Navegação",
-      "fulltext": "Texto completo"
     }
   },
   "groups": {
     "global": "Global",
-    "ai": "IA",
+    "ai": "AI",
     "page": "Página",
     "selection": "Seleção",
     "navigation": "Navegação",
@@ -100,35 +100,35 @@
     "panel": "Painel",
     "record": "Registro",
     "editor": "Editor",
-    "scroll": "Scroll"
+    "scroll": "Rolar"
   },
   "actions": {
     "global": {
       "search": {
-        "label": "Pesquisar",
-        "description": "Abra a paleta de pesquisa global."
-      },
-      "toggleChat": {
-        "label": "Alternar chat de IA",
-        "description": "Abra o assistente de IA ou focalize o chat atual."
-      },
-      "openShortcuts": {
-        "label": "Abrir atalhos de teclado",
-        "description": "Mostre a referência de atalhos de teclado."
-      },
-      "quickCreate": {
-        "label": "Criação rápida",
-        "description": "Abra o diálogo de criação rápida."
+        "label": "Procurar",
+        "description": "Concentre o campo de pesquisa da barra lateral."
       },
       "commandPalette": {
         "label": "Paleta de comandos",
-        "description": "Abrir a pesquisa de navegação e ações."
+        "description": "Navegação aberta e pesquisa de ação."
+      },
+      "toggleChat": {
+        "label": "Alternar bate-papo com IA",
+        "description": "Abra o assistente de IA ou concentre-se no chat atual."
+      },
+      "openShortcuts": {
+        "label": "Abra atalhos de teclado",
+        "description": "Mostre a referência dos atalhos de teclado."
+      },
+      "quickCreate": {
+        "label": "Criação rápida",
+        "description": "Abra a caixa de diálogo de criação rápida."
       }
     },
     "ai": {
       "quickAsk": {
-        "label": "Pergunta rápida à IA",
-        "description": "Inicie uma pergunta rápida ao assistente de IA."
+        "label": "Pergunte rapidamente à IA",
+        "description": "Inicie um prompt rápido do assistente de IA."
       }
     },
     "page": {
@@ -144,11 +144,11 @@
     "selection": {
       "previous": {
         "label": "Item anterior",
-        "description": "Mova a seleção para o item anterior."
+        "description": "Move a seleção para o item anterior."
       },
       "next": {
         "label": "Próximo item",
-        "description": "Mova a seleção para o próximo item."
+        "description": "Move a seleção para o próximo item."
       },
       "open": {
         "label": "Abrir seleção",
@@ -157,76 +157,76 @@
     },
     "navigation": {
       "goTickets": {
-        "label": "Ir para tickets",
-        "description": "Navegue para a página de tickets."
+        "label": "Ir para chamados",
+        "description": "Navegue até a página de chamados."
       },
       "goAssets": {
         "label": "Ir para ativos",
-        "description": "Navegue para a página de ativos."
+        "description": "Navegue até a página de ativos."
       },
       "goClients": {
         "label": "Ir para clientes",
-        "description": "Navegue para a página de clientes."
+        "description": "Navegue até a página dos clientes."
       },
       "goDashboard": {
-        "label": "Go to dashboard",
-        "description": "Navigate to the dashboard."
+        "label": "Vá para o painel",
+        "description": "Navegue até o painel."
       },
       "goProjects": {
-        "label": "Go to projects",
-        "description": "Navigate to the projects page."
+        "label": "Ir para projetos",
+        "description": "Navegue até a página de projetos."
       },
       "goBilling": {
-        "label": "Go to billing",
-        "description": "Navigate to billing."
+        "label": "Ir para faturamento",
+        "description": "Navegue até faturamento."
       },
       "goSettings": {
-        "label": "Go to settings",
-        "description": "Navigate to settings."
+        "label": "Vá para configurações",
+        "description": "Navegue até as configurações."
       },
       "goSearch": {
-        "label": "Go to global search",
-        "description": "Focus the global search field."
+        "label": "Ir para a pesquisa global",
+        "description": "Concentre o campo de pesquisa global."
       },
       "goHelp": {
-        "label": "Go to keyboard help",
-        "description": "Open the keyboard shortcuts reference."
+        "label": "Vá para a ajuda do teclado",
+        "description": "Abra a referência de atalhos de teclado."
       },
       "backToParent": {
-        "label": "Back to parent list",
-        "description": "Activate the page back navigation button when one is available."
+        "label": "Voltar à lista de pais",
+        "description": "Ative o botão de navegação de retorno de página quando houver um disponível."
       }
     },
     "assets": {
       "commandPalette": {
         "label": "Paleta de comandos de ativos",
-        "description": "Abra comandos da página de ativos."
+        "description": "Abra os comandos da página de ativos."
       }
     },
     "dialog": {
       "cancel": {
-        "label": "Cancelar diálogo",
-        "description": "Feche ou cancele o diálogo ativo."
+        "label": "Caixa de diálogo Cancelar",
+        "description": "Feche ou cancele a caixa de diálogo ativa."
       },
       "submit": {
-        "label": "Enviar diálogo",
-        "description": "Enviar o formulário do diálogo ativo."
+        "label": "Caixa de diálogo Enviar",
+        "description": "Envie o formulário de diálogo ativo."
       }
     },
     "panel": {
       "close": {
         "label": "Fechar painel",
-        "description": "Feche o painel ou a gaveta ativa."
+        "description": "Feche o painel ou gaveta ativa."
       }
     },
     "drawer": {
       "historyBack": {
-        "label": "Gaveta voltar",
-        "description": "Volte no histórico da gaveta."
+        "label": "Gaveta traseira",
+        "description": "Volte na história da gaveta."
       },
       "historyForward": {
-        "label": "Gaveta avançar",
-        "description": "Avance no histórico da gaveta."
+        "label": "Gaveta para frente",
+        "description": "Avance na história da gaveta."
       }
     },
     "record": {
@@ -240,7 +240,7 @@
       },
       "addTime": {
         "label": "Adicionar entrada de tempo",
-        "description": "Abrir o painel de entrada de tempo do registro atual."
+        "description": "Abra a gaveta de entrada de horas do registro atual."
       }
     },
     "editor": {
@@ -258,129 +258,129 @@
       },
       "deleteSelection": {
         "label": "Excluir seleção",
-        "description": "Exclua o item selecionado do editor."
+        "description": "Exclua o item do editor selecionado."
       },
       "cancel": {
         "label": "Cancelar ação do editor",
-        "description": "Cancele a ação ativa do editor."
+        "description": "Cancele a ação do editor ativo."
       },
       "moveUp": {
-        "label": "Mover para cima",
-        "description": "Mova o item selecionado do editor para cima."
+        "label": "Subir",
+        "description": "Mova o item do editor selecionado para cima."
       },
       "moveDown": {
         "label": "Mover para baixo",
-        "description": "Mova o item selecionado do editor para baixo."
+        "description": "Mova o item do editor selecionado para baixo."
       },
       "moveLeft": {
-        "label": "Mover à esquerda",
-        "description": "Mova o item selecionado do editor à esquerda."
+        "label": "Mover para a esquerda",
+        "description": "Mova o item do editor selecionado para a esquerda."
       },
       "moveRight": {
-        "label": "Mover à direita",
-        "description": "Mova o item selecionado do editor à direita."
+        "label": "Mover para a direita",
+        "description": "Mova o item do editor selecionado para a direita."
       }
     },
     "scroll": {
       "halfDown": {
-        "label": "Scroll half page down",
-        "description": "Scroll down by half a page."
+        "label": "Rolar meia página para baixo",
+        "description": "Role meia página para baixo."
       },
       "halfUp": {
-        "label": "Scroll half page up",
-        "description": "Scroll up by half a page."
+        "label": "Rolar meia página para cima",
+        "description": "Role para cima meia página."
       },
       "fullDown": {
-        "label": "Scroll full page down",
-        "description": "Scroll down by one full page."
+        "label": "Role a página inteira para baixo",
+        "description": "Role para baixo uma página inteira."
       },
       "fullUp": {
-        "label": "Scroll full page up",
-        "description": "Scroll up by one full page."
+        "label": "Rolar a página inteira para cima",
+        "description": "Role para cima uma página inteira."
       },
       "top": {
-        "label": "Scroll to top",
-        "description": "Scroll to the top of the current page or panel."
+        "label": "Role para cima",
+        "description": "Role até o topo da página ou painel atual."
       },
       "bottom": {
-        "label": "Scroll to bottom",
-        "description": "Scroll to the bottom of the current page or panel."
+        "label": "Role para baixo",
+        "description": "Role até a parte inferior da página ou painel atual."
       }
     },
     "focus": {
       "primarySearch": {
-        "label": "Focus page search",
-        "description": "Focus the primary search field on the current page."
+        "label": "Pesquisa de página de foco",
+        "description": "Concentre o campo de pesquisa principal na página atual."
       }
     },
     "table": {
       "nextRow": {
-        "label": "Next table row",
-        "description": "Move the active row marker to the next selectable table row."
+        "label": "Próxima linha da tabela",
+        "description": "Mova o marcador de linha ativo para a próxima linha selecionável da tabela."
       },
       "previousRow": {
-        "label": "Previous table row",
-        "description": "Move the active row marker to the previous selectable table row."
+        "label": "Linha anterior da tabela",
+        "description": "Mova o marcador de linha ativo para a linha selecionável anterior da tabela."
       },
       "toggleRow": {
-        "label": "Toggle table row",
-        "description": "Select or deselect the active table row."
+        "label": "Alternar linha da tabela",
+        "description": "Selecione ou desmarque a linha ativa da tabela."
       },
       "visualRange": {
-        "label": "Visual row range",
-        "description": "Start or stop selecting a contiguous table row range."
+        "label": "Intervalo visual de linhas",
+        "description": "Inicie ou pare a seleção de um intervalo de linhas de tabela contíguas."
       },
       "openRow": {
-        "label": "Open table row",
-        "description": "Open the active table row."
+        "label": "Abrir linha da tabela",
+        "description": "Abra a linha da tabela ativa."
       }
     },
     "repeat": {
       "lastAction": {
-        "label": "Repeat last action",
-        "description": "Repeat the last Vim-style navigation action."
+        "label": "Repita a última ação",
+        "description": "Repita a última ação de navegação no estilo Vim."
       }
     },
     "macro": {
       "record": {
-        "label": "Record macro",
-        "description": "Start or stop recording a Vim-style navigation macro."
+        "label": "Gravar macro",
+        "description": "Inicie ou pare a gravação de uma macro de navegação no estilo Vim."
       },
       "play": {
-        "label": "Play macro",
-        "description": "Play a recorded Vim-style navigation macro."
+        "label": "Reproduzir macro",
+        "description": "Reproduza uma macro de navegação gravada no estilo Vim."
       }
     },
     "linkhints": {
       "show": {
-        "label": "Show link hints",
-        "description": "Show keyboard hints for visible links and controls."
+        "label": "Mostrar dicas de links",
+        "description": "Mostre dicas de teclado para links e controles visíveis."
       },
       "showNewTab": {
-        "label": "Show link hints in new tab",
-        "description": "Show keyboard hints and open links in a new tab when possible."
+        "label": "Mostrar dicas de links em uma nova guia",
+        "description": "Mostre dicas de teclado e abra links em uma nova guia quando possível."
       }
     }
   },
   "platform": {
     "modifiers": {
-      "meta": "Meta",
+      "meta": "meta",
       "ctrl": "Ctrl",
-      "alt": "Alt",
-      "shift": "Shift"
+      "alt": "Alt.",
+      "shift": "Mudança"
     },
     "keys": {
       "space": "Espaço"
     },
     "aria": {
-      "control": "Control",
-      "meta": "Meta",
-      "alt": "Alt",
-      "shift": "Shift"
+      "control": "Controlar",
+      "meta": "meta",
+      "alt": "Alt.",
+      "shift": "Mudança"
     }
   },
   "hud": {
     "combinations": "combinações",
-    "thenPress": "depois…"
+    "thenPress": "então…"
   }
 }

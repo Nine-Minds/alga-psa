@@ -1334,6 +1334,8 @@
           },
           "connected": "Connecté à NinjaOne",
           "connectedWithErrors": "NinjaOne connecté avec des erreurs de synchronisation",
+          "reconnectRequired": "Reconnexion à NinjaOne requise",
+          "reconnectRequiredDescription": "L'autorisation NinjaOne ne peut plus être actualisée (jeton expiré ou révoqué). Reconnectez-vous pour rétablir la synchronisation des appareils, les alertes et l'accès à distance.",
           "instanceLabel": "Instance :",
           "organizations": "{{count}} organisations",
           "devices": "{{count}} appareils",

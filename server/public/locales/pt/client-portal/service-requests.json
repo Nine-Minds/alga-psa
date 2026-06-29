@@ -1,71 +1,71 @@
 {
   "catalog": {
-    "title": "Pedidos de serviço",
-    "description": "Envie um pedido estruturado e criaremos automaticamente um ticket.",
-    "myRequests": "Minhas Solicitações",
+    "title": "Solicitações de serviço",
+    "description": "Envie uma solicitação estruturada e criaremos um chamado para ela automaticamente.",
+    "myRequests": "Minhas solicitações",
     "empty": "Nenhum serviço de solicitação está disponível no momento.",
     "fallbackCategory": "Serviço",
     "noDescription": "Nenhuma descrição fornecida",
-    "newRequestHeading": "Enviar um novo pedido"
+    "newRequestHeading": "Envie uma nova solicitação"
   },
   "detail": {
     "version": "Versão {{version}}",
     "submitted": "Solicitação enviada",
-    "requestIdLabel": "ID da Solicitação: ",
-    "ticketIdLabel": "ID do Ticket: ",
+    "requestIdLabel": "ID da solicitação:",
+    "ticketIdLabel": "ID do chamado:",
     "unableToSubmit": "Não foi possível enviar a solicitação",
-    "formTitle": "Formulário de Solicitação",
+    "formTitle": "Formulário de solicitação",
     "noFields": "Nenhum campo configurado.",
     "selectOption": "Selecione uma opção",
-    "datePlaceholder": "Selecione uma data",
+    "datePlaceholder": "Selecione a data",
     "optionLabel": "Opção {{index}}",
-    "submit": "Enviar Solicitação",
+    "submit": "Enviar solicitação",
     "initialValuesTitle": "Valores Iniciais",
-    "noInitialValues": "Nenhum valor padrão estático configurado."
+    "noInitialValues": "Nenhum padrão estático configurado."
   },
   "myRequests": {
-    "title": "Minhas Solicitações",
-    "browseServices": "Navegar pelos Serviços",
+    "title": "Minhas solicitações",
+    "browseServices": "Navegar pelos serviços",
     "empty": "Você ainda não enviou nenhuma solicitação de serviço.",
     "columns": {
       "request": "Solicitação",
-      "submitted": "Enviada",
+      "submitted": "Enviado",
       "status": "Status",
       "details": "Detalhes",
-      "ticket": "Ticket"
+      "ticket": "Chamado"
     },
     "view": "Visualizar",
-    "unknownDate": "Desconhecida",
+    "unknownDate": "Desconhecido",
     "statuses": {
       "pending": "Pendente",
-      "succeeded": "Concluída",
-      "failed": "Falhou"
+      "succeeded": "Sucesso",
+      "failed": "Fracassado"
     },
-    "noTicket": "Sem ticket"
+    "noTicket": "Sem chamado"
   },
   "submissionDetail": {
-    "backToMyRequests": "Voltar para Minhas Solicitações",
-    "requestIdLabel": "ID da Solicitação:",
+    "backToMyRequests": "Voltar para Meus Pedidos",
+    "requestIdLabel": "ID da solicitação:",
     "statusSection": "Status",
-    "submittedAt": "Enviada: {{date}}",
+    "submittedAt": "Enviado: {{date}}",
     "executionStatus": "Status de execução: {{status}}",
-    "ticketLabel": "Ticket:",
-    "workflowLabel": "Workflow: {{id}}",
-    "submittedAnswersTitle": "Respostas Enviadas",
+    "ticketLabel": "Chamado:",
+    "workflowLabel": "Fluxo de trabalho: {{id}}",
+    "submittedAnswersTitle": "Respostas enviadas",
     "noResponse": "Sem resposta",
     "attachmentsTitle": "Anexos",
     "noAttachments": "Nenhum anexo incluído.",
-    "fileIdLabel": "ID do Arquivo: {{id}}",
+    "fileIdLabel": "ID do arquivo: {{id}}",
     "fileTypeLabel": "Tipo: {{mime}}"
   },
   "recent": {
-    "title": "Os seus pedidos recentes",
-    "viewAll": "Ver todos",
-    "empty": "Ainda não enviou pedidos.",
-    "ticket": "Ticket #{{number}}",
-    "noTicket": "Sem ticket"
+    "title": "Suas solicitações recentes",
+    "viewAll": "Ver tudo",
+    "empty": "Nenhuma solicitação enviada ainda.",
+    "ticket": "Chamado #{{number}}",
+    "noTicket": "Ainda não há chamado"
   },
   "myRequestsAll": {
-    "title": "Os seus pedidos"
+    "title": "Suas solicitações"
   }
 }

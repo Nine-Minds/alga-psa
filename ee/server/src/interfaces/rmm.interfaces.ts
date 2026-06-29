@@ -334,6 +334,12 @@ export interface RmmConnectionStatus {
   provider: RmmProvider;
   is_connected: boolean;
   is_active: boolean;
+  /**
+   * Credentials are stored (is_connected) but the OAuth token can no longer be
+   * refreshed — the integration needs to be re-authorized. Surfaced so the UI can
+   * prompt a reconnect instead of showing a misleading "Connected" badge.
+   */
+  reconnect_required?: boolean;
   instance_url?: string;
   connected_at?: string;
   last_sync_at?: string;
