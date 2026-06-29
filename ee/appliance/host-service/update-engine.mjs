@@ -56,6 +56,42 @@ function appendUpdateHistory(entry, historyFile) {
   writeSecureJsonFile(historyFile, payload);
 }
 
+// Read the alga-core HelmRelease Ready condition so a non-zero `flux reconcile`
+// exit can be judged against the release's *actual* state instead of the CLI's
+// (often transient) result. Returns { readable, ready, hardFailed, reason,
+// message }; readable=false means we could not determine the state.
+// LEVERAGE: pattern appliance-transient-reconcile-vs-failure — status-engine
+// already distinguishes transient Helm convergence from real failure
+// (isTransientHelmReleaseConvergenceIssue); this is the same judgment applied to
+// the update path. A shared classifier would unify them.
+function readHelmReleaseReadiness(options = {}) {
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
+  const name = options.helmReleaseName || 'alga-core';
+  const namespace = options.helmReleaseNamespace || 'alga-system';
+  const cmd = options.readHelmReleaseCommand
+    || `kubectl --kubeconfig ${kubeconfigPath} -n ${namespace} get helmrelease ${name} -o json`;
+  const res = spawnSync('sh', ['-c', cmd], { env: process.env, encoding: 'utf8' });
+  if (res.status !== 0) return { readable: false };
+  let condition = null;
+  try {
+    const hr = JSON.parse(res.stdout || '{}');
+    condition = (hr?.status?.conditions || []).find((c) => c.type === 'Ready') || null;
+  } catch {
+    return { readable: false };
+  }
+  if (!condition) return { readable: false };
+  const status = condition.status || 'Unknown';
+  const reason = condition.reason || 'Unknown';
+  return {
+    readable: true,
+    ready: status === 'True',
+    // helm-controller terminal reasons; anything else is still converging.
+    hardFailed: status === 'False' && /Failed|RetriesExceeded|Stalled|Exhausted/i.test(reason),
+    reason,
+    message: condition.message || ''
+  };
+}
+
 function reconcileFluxAndHelm(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const fluxSourceName = options.fluxSourceName || 'alga-appliance';
@@ -80,11 +116,31 @@ function reconcileFluxAndHelm(options = {}) {
 
   const helm = spawnSync('sh', ['-c', reconcileHelmCmd], { env: process.env, encoding: 'utf8' });
   if (helm.status !== 0) {
+    const cliCause = (helm.stderr || helm.stdout || '').trim() || `exit ${helm.status ?? 1}`;
+    // `flux reconcile helmrelease --with-source` kicks a reconcile and waits for
+    // the Ready condition; a non-zero exit is frequently transient — the
+    // controller is already reconciling, or the wait times out while the roll
+    // continues. The runtime values + release-selection are already written, so
+    // Flux keeps converging regardless. Judge the outcome from the HelmRelease's
+    // actual Ready condition rather than the CLI exit code; only a genuinely
+    // failed release (or one we cannot read at all) is reported as a block.
+    const readiness = readHelmReleaseReadiness(options);
+    if (readiness.readable && readiness.ready) {
+      return { ok: true, phase: 'flux', message: 'Flux source and HelmRelease reconcile completed.' };
+    }
+    if (readiness.readable && !readiness.hardFailed) {
+      return {
+        ok: true,
+        phase: 'flux',
+        pending: true,
+        message: 'Update applied; services are still reconciling in the background.'
+      };
+    }
     return {
       ok: false,
       phase: 'flux',
       message: 'HelmRelease reconcile failed during app update.',
-      suspectedCause: (helm.stderr || helm.stdout || '').trim() || `exit ${helm.status ?? 1}`,
+      suspectedCause: readiness.message || cliCause,
       suggestedNextStep: 'Inspect alga-core HelmRelease events and controller logs.',
       retrySafe: true
     };
@@ -225,7 +281,9 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
   const result = {
     ok: true,
     phase: 'registry-release-source',
-    message: `App-channel update applied for ${validated.channel}; OS and k3s updates remain manual in v1.`,
+    message: reconcileResult.pending
+      ? `App-channel update applied for ${validated.channel}; services are reconciling in the background.`
+      : `App-channel update applied for ${validated.channel}; OS and k3s updates remain manual in v1.`,
     releaseVersion: releaseSelection.releaseVersion,
     selectedChannel: validated.channel,
     updateScope: 'application-only'
