@@ -248,7 +248,7 @@ export const addUser = withAuth(async (
           })
           .count('* as count');
 
-        const used = parseInt(usedResult[0].count as string, 10);
+        const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
         const limit = tenantRow.licensed_user_count as number | null;
         const plan = tenantRow.plan as string | null | undefined;
 

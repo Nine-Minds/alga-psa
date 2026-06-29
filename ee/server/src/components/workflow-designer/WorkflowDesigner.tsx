@@ -346,7 +346,7 @@ const workflowPickerActions: WorkflowPickerActions = {
   getTicketsForList: async ({ boardFilterState, searchQuery }) => {
     const result = await getTicketsForList({ boardFilterState, searchQuery });
     return {
-      tickets: (result?.tickets ?? [])
+      tickets: (result ?? [])
         .filter((ticket): ticket is typeof ticket & { ticket_id: string } => Boolean(ticket.ticket_id))
         .map((ticket) => ({
           ticket_id: ticket.ticket_id,

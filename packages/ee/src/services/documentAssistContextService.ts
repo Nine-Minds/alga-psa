@@ -19,12 +19,14 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
   const db = tenantDb(knex, tenant);
   const ticketQuery = db.table('tickets as t')
     .select(
-      't.ticket_number',
-      't.title',
-      't.url',
-      's.name as status_name',
-      'p.priority_name',
-      'cl.client_name',
+      {
+        ticket_number: 't.ticket_number',
+        title: 't.title',
+        url: 't.url',
+        status_name: 's.name',
+        priority_name: 'p.priority_name',
+        client_name: 'cl.client_name',
+      },
       knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"),
     )
     .where('t.ticket_id', entityId);
@@ -49,11 +51,13 @@ async function resolveTicket(knex: Knex, entityId: string, tenant: string): Prom
   // Fetch comments
   const commentsQuery = db.table('comments as c')
     .select(
-      'c.note',
-      'c.is_resolution',
-      'c.is_internal',
-      'c.author_type',
-      'c.created_at',
+      {
+        note: 'c.note',
+        is_resolution: 'c.is_resolution',
+        is_internal: 'c.is_internal',
+        author_type: 'c.author_type',
+        created_at: 'c.created_at',
+      },
       knex.raw("CONCAT(u.first_name, ' ', u.last_name) as author_name"),
     )
     .where('c.ticket_id', entityId)
@@ -104,7 +108,7 @@ async function resolveClient(knex: Knex, entityId: string, tenant: string): Prom
 async function resolveContact(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
   const db = tenantDb(knex, tenant);
   const contactQuery = db.table('contacts as ct')
-    .select('ct.full_name', 'ct.email', 'ct.role', 'cl.client_name')
+    .select({ full_name: 'ct.full_name', email: 'ct.email', role: 'ct.role', client_name: 'cl.client_name' })
     .where('ct.contact_name_id', entityId);
   db.tenantJoin(contactQuery, 'clients as cl', 'ct.client_id', 'cl.client_id', { type: 'left' });
   const contact = await contactQuery.first();
@@ -125,7 +129,7 @@ async function resolveContact(knex: Knex, entityId: string, tenant: string): Pro
 async function resolveAsset(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
   const db = tenantDb(knex, tenant);
   const assetQuery = db.table('assets as a')
-    .select('a.name', 'a.asset_tag', 'a.serial_number', 'a.status', 'a.location', 'at.type_name', 'cl.client_name')
+    .select({ name: 'a.name', asset_tag: 'a.asset_tag', serial_number: 'a.serial_number', status: 'a.status', location: 'a.location', type_name: 'at.type_name', client_name: 'cl.client_name' })
     .where('a.asset_id', entityId);
   db.tenantJoin(assetQuery, 'asset_types as at', 'a.type_id', 'at.type_id', { type: 'left' });
   db.tenantJoin(assetQuery, 'clients as cl', 'a.client_id', 'cl.client_id', { type: 'left' });
@@ -151,13 +155,15 @@ async function resolveProjectTask(knex: Knex, entityId: string, tenant: string):
   const db = tenantDb(knex, tenant);
   const taskQuery = db.table('project_tasks as pt')
     .select(
-      'pt.task_name',
-      'pt.due_date',
-      'pt.estimated_hours',
-      'pt.actual_hours',
-      'pp.phase_name',
-      'p.project_name',
-      'psm.standard_status_id',
+      {
+        task_name: 'pt.task_name',
+        due_date: 'pt.due_date',
+        estimated_hours: 'pt.estimated_hours',
+        actual_hours: 'pt.actual_hours',
+        phase_name: 'pp.phase_name',
+        project_name: 'p.project_name',
+        standard_status_id: 'psm.standard_status_id',
+      },
       knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"),
     )
     .where('pt.task_id', entityId);
@@ -195,7 +201,7 @@ async function resolveProjectTask(knex: Knex, entityId: string, tenant: string):
 async function resolveContract(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
   const db = tenantDb(knex, tenant);
   const contract = await db.table('contracts as c')
-    .select('c.contract_name', 'c.contract_description', 'c.status', 'c.billing_frequency')
+    .select({ contract_name: 'c.contract_name', contract_description: 'c.contract_description', status: 'c.status', billing_frequency: 'c.billing_frequency' })
     .where('c.contract_id', entityId)
     .first();
 
@@ -203,7 +209,7 @@ async function resolveContract(knex: Knex, entityId: string, tenant: string): Pr
 
   // Get associated client via client_contracts
   const clientContractQuery = db.table('client_contracts as cc')
-    .select('cl.client_name', 'cc.start_date', 'cc.end_date')
+    .select({ client_name: 'cl.client_name', start_date: 'cc.start_date', end_date: 'cc.end_date' })
     .where('cc.contract_id', entityId);
   db.tenantJoin(clientContractQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
   const clientContract = await clientContractQuery.first();
@@ -225,7 +231,7 @@ async function resolveContract(knex: Knex, entityId: string, tenant: string): Pr
 async function resolveQuote(knex: Knex, entityId: string, tenant: string): Promise<string | null> {
   const db = tenantDb(knex, tenant);
   const quoteQuery = db.table('quotes as q')
-    .select('q.quote_number', 'q.title', 'q.status', 'q.total_amount', 'q.currency_code', 'q.valid_until', 'q.quote_date', 'cl.client_name')
+    .select({ quote_number: 'q.quote_number', title: 'q.title', status: 'q.status', total_amount: 'q.total_amount', currency_code: 'q.currency_code', valid_until: 'q.valid_until', quote_date: 'q.quote_date', client_name: 'cl.client_name' })
     .where('q.quote_id', entityId);
   db.tenantJoin(quoteQuery, 'clients as cl', 'q.client_id', 'cl.client_id', { type: 'left' });
   const quote = await quoteQuery.first();

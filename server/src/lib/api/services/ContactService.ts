@@ -138,7 +138,7 @@ export class ContactService extends BaseService<IContact> {
 
     const [contacts, [{ count }]] = await Promise.all([
       dataQuery,
-      countQuery.countDistinct('c.contact_name_id as count'),
+      countQuery.countDistinct('c.contact_name_id as count') as unknown as Promise<Array<{ count: string }>>,
     ]);
 
     const contactsWithPhones = await withTransaction(knex, async (trx) =>

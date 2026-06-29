@@ -1063,7 +1063,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const assignment = await tenantDb(trx, context.tenant).table('contract_lines as cl')
         .modify((q) => tenantDb(trx, context.tenant).tenantJoin(q, 'contracts as c', 'cl.contract_id', 'c.contract_id'))
         .where('cl.contract_line_id', clientContractLineId)
-        .select('c.owner_client_id as client_id')
+        .select({ client_id: 'c.owner_client_id' })
         .first();
 
       if (!assignment) {
@@ -1471,7 +1471,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const serviceStats = await tenantDb(knex, context.tenant).table('contract_line_service_configuration as psc')
       .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'service_catalog as sc', 'psc.service_id', 'sc.service_id'))
       .where('psc.contract_line_id', planId)
-      .select('sc.service_name', 'psc.service_id')
+      .select({ service_name: 'sc.service_name', service_id: 'psc.service_id' })
       .count('* as usage_count');
     
     return {
@@ -1601,8 +1601,8 @@ export class ContractLineService extends BaseService<IContractLine> {
     if (filters.has_services !== undefined) {
       const scopedDb = tenantDb(knex, context.tenant);
       const serviceConfigurationProbe = scopedDb.table('contract_lines as service_probe_cl')
+        .whereRaw('?? = ??', ['service_probe_cl.contract_line_id', 'cl.contract_line_id'])
         .select(1)
-        .whereColumn('service_probe_cl.contract_line_id', 'cl.contract_line_id')
         .modify((q) => scopedDb.tenantJoin(
           q,
           'contract_line_service_configuration as psc',
@@ -1727,7 +1727,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .andWhere(function limitToClientOwnedContracts() {
         this.whereNull('c.is_template').orWhere('c.is_template', false);
       })
-      .select('c.contract_name', 'cl.client_name', 'c.contract_id')
+      .select({ contract_name: 'c.contract_name', client_name: 'cl.client_name', contract_id: 'c.contract_id' })
       .orderBy(['c.contract_name', 'cl.client_name']);
 
     if (contractsWithClients.length > 0) {

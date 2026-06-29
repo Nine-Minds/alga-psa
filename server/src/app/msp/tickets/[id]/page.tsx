@@ -74,7 +74,7 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
       <div id="ticket-details-container" className="bg-gray-100">
         <Suspense fallback={<TicketDetailsSkeleton />}>
           <MspTicketDetailsContainerClient
-            ticketData={ticketData}
+            ticketData={ticketData as any}
             surveySummary={surveySummary ?? null}
             associatedAssets={associatedAssets}
             isAlgaDeskMode={isAlgaDesk}

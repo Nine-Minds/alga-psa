@@ -210,7 +210,7 @@ export class ClientService extends BaseService<IClient> {
       // Execute queries
       const [clients, [{ count }]] = await Promise.all([
         dataQuery,
-        countQuery.count('* as count')
+        countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
       ]);
 
       // Add logo URLs
@@ -257,7 +257,7 @@ export class ClientService extends BaseService<IClient> {
       return {
         ...client,
         logoUrl
-      } as IClient;
+      } as unknown as IClient;
     });
   }
 

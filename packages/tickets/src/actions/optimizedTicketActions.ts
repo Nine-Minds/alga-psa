@@ -745,7 +745,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }));
 
     const boardOptions = (boards as Array<{ board_id?: string; board_name?: string | null }>)
-      .filter((board) => board.board_id !== undefined)
+      .filter((board): board is { board_id: string; board_name?: string | null } => board.board_id !== undefined)
       .map((board) => ({
         value: board.board_id,
         label: board.board_name || ""

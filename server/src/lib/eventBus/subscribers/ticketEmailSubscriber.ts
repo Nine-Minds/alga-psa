@@ -263,7 +263,7 @@ async function fetchAdditionalTicketResources(
 ): Promise<Array<{ email?: string | null; user_id?: string | null }>> {
   const scopedDb = tenantDb(db, tenantId);
   const query = scopedDb.table('ticket_resources as tr')
-    .select('u.email as email', 'u.user_id as user_id');
+    .select({ email: 'u.email', user_id: 'u.user_id' });
 
   scopedDb.tenantJoin(query, 'users as u', 'tr.additional_user_id', 'u.user_id', { type: 'left' });
 
@@ -277,18 +277,7 @@ async function fetchBundleChildTicketsForEmail(
 ): Promise<Array<Record<string, any>>> {
   const scopedDb = tenantDb(db, tenantId);
   const query = scopedDb.table('tickets as t')
-    .select(
-      't.ticket_id',
-      't.ticket_number',
-      't.contact_name_id',
-      't.client_id',
-      't.email_metadata',
-      'dcl.email as client_email',
-      'c.client_name',
-      'co.email as contact_email',
-      'co.full_name as contact_name',
-      'cpn_default.phone_number as contact_phone'
-    );
+    .select({ ticket_id: 't.ticket_id', ticket_number: 't.ticket_number', contact_name_id: 't.contact_name_id', client_id: 't.client_id', email_metadata: 't.email_metadata', client_email: 'dcl.email', client_name: 'c.client_name', contact_email: 'co.email', contact_name: 'co.full_name', contact_phone: 'cpn_default.phone_number' });
 
   scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
   scopedDb.tenantJoin(query, 'client_locations as dcl', 'dcl.client_id', 't.client_id', {
@@ -1448,7 +1437,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `Ticket Updated: ${ticket.title}`,
           template: 'ticket-updated',
           context: buildContext(internalUrl),
@@ -1848,7 +1837,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
           template: 'ticket-updated',
           context: buildContext(internalUrl),
@@ -2206,7 +2195,7 @@ async function sendTicketAssignedNotifications(
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `You have been added as additional resource to ticket: ${ticket.title}`,
           template: 'ticket-assigned',
           context: buildContext(internalUrl),
@@ -2323,13 +2312,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     if (payload.comment?.id) {
       const scopedDb = tenantDb(db, tenantId);
       const commentAuthorQuery = scopedDb.table('comments as cm')
-        .select(
-          'cm.user_id as comment_user_id',
-          'cm.metadata as comment_metadata',
-          'cu.contact_id as comment_contact_id',
-          'cu.email as comment_user_email',
-          'cc.email as comment_contact_email'
-        );
+        .select({ comment_user_id: 'cm.user_id', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
       scopedDb.tenantJoin(commentAuthorQuery, 'users as cu', 'cm.user_id', 'cu.user_id', { type: 'left' });
       scopedDb.tenantJoin(commentAuthorQuery, 'contacts as cc', 'cu.contact_id', 'cc.contact_name_id', {
         type: 'left',
@@ -2743,7 +2726,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `New Comment on Ticket: ${ticket.title}`,
           template: 'ticket-comment-added',
           context: buildContext(internalUrl),
@@ -3081,7 +3064,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          to: resource.email,
+          to: resource.email ?? '',
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
           context: internalContext,

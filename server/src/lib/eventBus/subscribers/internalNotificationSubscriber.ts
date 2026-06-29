@@ -2405,6 +2405,7 @@ async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedE
 
     // Send notification to MSP STAFF
     // Get users with 'schedule' 'update' permission
+    const scopedDb = tenantDb(db, tenantId);
     const staffUsersQuery = tenantScopedTable(db, 'users as u', tenantId);
     scopedDb.tenantJoin(staffUsersQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
     scopedDb.tenantJoin(staffUsersQuery, 'roles as r', 'ur.role_id', 'r.role_id', {

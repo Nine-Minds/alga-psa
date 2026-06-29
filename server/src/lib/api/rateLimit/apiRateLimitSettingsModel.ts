@@ -137,7 +137,7 @@ export async function upsertForKey(
 ): Promise<ApiRateLimitSettingsRow> {
   const knex = await getConnection(tenant);
 
-  const [row] = await tenantDb(knex, tenant).table<ApiRateLimitSettingsDbRow>(TABLE_NAME)
+  const [row] = await tenantDb(knex, tenant).table(TABLE_NAME)
     .insert({
       tenant,
       api_key_id: apiKeyId,

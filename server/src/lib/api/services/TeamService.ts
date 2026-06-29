@@ -165,7 +165,7 @@ export class TeamService extends BaseService<ITeam> {
       // Execute queries
       const [teams, [{ count }]] = await Promise.all([
         dataQuery,
-        countQuery.count('* as count')
+        countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
       ]);
   
       // Enhance teams with members and HATEOAS links
@@ -1338,7 +1338,7 @@ export class TeamService extends BaseService<ITeam> {
         't.*',
         knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name')
       ),
-      countQuery.count('* as count')
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
     ]);
 
     // Enhance with members
@@ -1448,7 +1448,7 @@ export class TeamService extends BaseService<ITeam> {
 
       // Get largest team size
       largestTeamQuery
-        .select('t.team_id')
+        .select({ team_id: 't.team_id' })
         .select(knex.raw('COALESCE(amc.member_count, 0) as size'))
         .orderBy('size', 'desc')
         .first(),
@@ -1512,7 +1512,7 @@ export class TeamService extends BaseService<ITeam> {
   private activeMemberCountsByTeamQuery(knex: Knex, tenant: string, countAlias = 'member_count'): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
     const query = scopedDb.table('team_members as tm')
-      .select('tm.team_id', 'tm.tenant')
+      .select({ team_id: 'tm.team_id', tenant: 'tm.tenant' })
       .count(`* as ${countAlias}`)
       .where('u.is_inactive', false)
       .groupBy('tm.team_id', 'tm.tenant');
@@ -2104,7 +2104,7 @@ export class TeamService extends BaseService<ITeam> {
 
     // Get total count
     const countQuery = query.clone().clearSelect().count('* as count');
-    const [{ count }] = await countQuery;
+    const [{ count }] = (await countQuery) as Array<{ count: string }>;
 
     // Apply pagination
     const page = options?.page || 1;

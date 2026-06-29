@@ -215,7 +215,7 @@ export const getDashboardMetrics = withAuth(async (
             }),
           visibility.visibleBoardIds,
           'tickets.board_id'
-        ).count('ticket_id as count'),
+        ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Get active projects count
         scopedDb.table('projects')
@@ -223,7 +223,7 @@ export const getDashboardMetrics = withAuth(async (
             'projects.client_id': clientId,
             'is_inactive': false
           })
-          .count('project_id as count'),
+          .count('project_id as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Pending invoice counts remain financial-document / invoice-state
         // metrics. They should not silently pivot to recurring coverage dates.
@@ -232,7 +232,7 @@ export const getDashboardMetrics = withAuth(async (
             'invoices.client_id': clientId
           })
           .whereNull('finalized_at')
-          .count('* as count'),
+          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Get active assets count
         scopedDb.table('assets')
@@ -240,14 +240,14 @@ export const getDashboardMetrics = withAuth(async (
             'assets.client_id': clientId
           })
           .andWhere('status', '!=', 'inactive')
-          .count('* as count'),
+          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Total service request submissions for this client (any status).
         scopedDb.table('service_request_submissions')
           .where({
             'client_id': clientId,
           })
-          .count('* as count'),
+          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
       ]);
 
       return {

@@ -450,7 +450,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
     const [transactions, [{ count }]] = await Promise.all([
       dataQuery,
-      countQuery.count('* as count')
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
     ]);
 
     const transactionsWithLinks = transactions.map(transaction => ({
@@ -575,7 +575,7 @@ export class FinancialService extends BaseService<ITransaction> {
         .orderBy(`i.${sortField}`, order)
         .limit(limit)
         .offset((page - 1) * limit),
-      countQuery.count('* as count'),
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>,
     ]);
 
     return {
@@ -1023,7 +1023,7 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     // Count
-    const [{ count }] = await baseQuery.clone().count('credit_id as count');
+    const [{ count }] = (await baseQuery.clone().count('credit_id as count')) as Array<{ count: string }>;
     const total = parseInt(count as string);
 
     // Fetch credits with transaction details
@@ -1031,12 +1031,7 @@ export class FinancialService extends BaseService<ITransaction> {
       .clone()
       .select('credit_tracking.*')
       .modify((q) => tenantDb(knex, tenant).tenantJoin(q, 'transactions', 'credit_tracking.transaction_id', 'transactions.transaction_id', { type: 'left' }))
-      .select(
-        'transactions.description as transaction_description',
-        'transactions.type as transaction_type',
-        'transactions.invoice_id',
-        'transactions.created_at as transaction_date'
-      )
+      .select({ transaction_description: 'transactions.description', transaction_type: 'transactions.type', invoice_id: 'transactions.invoice_id', transaction_date: 'transactions.created_at' })
       .orderBy([
         { column: 'is_expired', order: 'asc' },
         { column: 'expiration_date', order: 'asc', nulls: 'last' },
@@ -1322,7 +1317,7 @@ export class FinancialService extends BaseService<ITransaction> {
         .orderBy(`pm.${sortField}`, order)
         .limit(limit)
         .offset((page - 1) * limit),
-      countQuery.count('* as count'),
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>,
     ]);
 
     return {
@@ -1415,8 +1410,8 @@ export class FinancialService extends BaseService<ITransaction> {
     const report: AccountBalanceReport = {
       client_id: clientId,
       current_balance: client.credit_balance || 0,
-      available_credit: Number(availableCredits[0]?.total) || 0,
-      expired_credit: Number(expiredCredits[0]?.total) || 0,
+      available_credit: Number((availableCredits as Array<{ total: string }>)[0]?.total) || 0,
+      expired_credit: Number((expiredCredits as Array<{ total: string }>)[0]?.total) || 0,
       pending_invoices: Number(pendingInvoices[0]?.total) || 0,
       overdue_amount: Number(overdueInvoices[0]?.total) || 0,
       last_payment_date: lastPayment?.created_at,
@@ -2245,7 +2240,7 @@ export class FinancialService extends BaseService<ITransaction> {
    * Get payment terms list
    */
   async getPaymentTerms(context?: ServiceContext): Promise<FinancialResponse<Array<{ id: string; name: string }>>> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
     const hasPaymentTermsTable = await knex.schema.hasTable('payment_terms');
     if (!hasPaymentTermsTable) {
@@ -2259,11 +2254,11 @@ export class FinancialService extends BaseService<ITransaction> {
       };
     }
 
-    const terms = await tenantDb(knex, this.tenant).unscoped(
+    const terms = await tenantDb(knex, tenant).unscoped(
       'payment_terms',
       'optional global payment terms reference table; clients store selected payment_terms as a column'
     )
-      .select('term_code as id', 'term_name as name')
+      .select({ id: 'term_code', name: 'term_name' })
       .where({ is_active: true })
       .orderBy('sort_order', 'asc');
 

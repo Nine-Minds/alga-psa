@@ -434,18 +434,7 @@ export async function fetchProjectPhasesForWebhook(
   db.tenantJoin(query, 'statuses as s', 'pp.status', 's.status_id', { type: 'left' });
 
   const rows = await query
-    .select(
-      'pp.phase_id',
-      'pp.phase_name',
-      'pp.description',
-      'pp.start_date',
-      'pp.end_date',
-      'pp.status as status_id',
-      's.name as status_name',
-      'pp.order_key',
-      'pp.order_number',
-      'pp.wbs_code'
-    )
+    .select({ phase_id: 'pp.phase_id', phase_name: 'pp.phase_name', description: 'pp.description', start_date: 'pp.start_date', end_date: 'pp.end_date', status_id: 'pp.status', status_name: 's.name', order_key: 'pp.order_key', order_number: 'pp.order_number', wbs_code: 'pp.wbs_code' })
     .where({
       'pp.project_id': projectId,
     })

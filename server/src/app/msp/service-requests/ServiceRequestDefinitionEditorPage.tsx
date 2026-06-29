@@ -764,7 +764,7 @@ export default function ServiceRequestDefinitionEditorPage() {
       replaceDrawer(
         <div className="bg-gray-100">
           <MspTicketDetailsContainerClient
-            ticketData={ticketData}
+            ticketData={ticketData as any}
             surveySummary={surveySummary ?? null}
           />
         </div>,

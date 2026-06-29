@@ -114,23 +114,7 @@ async function getTicketsNeedingSlaCheck(
     .whereNotNull('t.sla_policy_id')
     .whereNull('t.sla_resolution_at') // Not yet resolved
     .whereNull('t.sla_paused_at') // Not currently paused
-    .select(
-      't.ticket_id',
-      't.ticket_number',
-      't.sla_policy_id',
-      't.sla_started_at',
-      't.sla_response_due_at',
-      't.sla_response_at',
-      't.sla_response_met',
-      't.sla_resolution_due_at',
-      't.sla_resolution_at',
-      't.sla_resolution_met',
-      't.sla_paused_at',
-      't.sla_total_pause_minutes',
-      't.attributes',
-      'spt.response_time_minutes',
-      'spt.resolution_time_minutes'
-    );
+    .select({ ticket_id: 't.ticket_id', ticket_number: 't.ticket_number', sla_policy_id: 't.sla_policy_id', sla_started_at: 't.sla_started_at', sla_response_due_at: 't.sla_response_due_at', sla_response_at: 't.sla_response_at', sla_response_met: 't.sla_response_met', sla_resolution_due_at: 't.sla_resolution_due_at', sla_resolution_at: 't.sla_resolution_at', sla_resolution_met: 't.sla_resolution_met', sla_paused_at: 't.sla_paused_at', sla_total_pause_minutes: 't.sla_total_pause_minutes', attributes: 't.attributes', response_time_minutes: 'spt.response_time_minutes', resolution_time_minutes: 'spt.resolution_time_minutes' });
   db.tenantJoin(ticketsQuery, 'sla_policy_targets as spt', 't.sla_policy_id', 'spt.sla_policy_id', {
     type: 'left',
     on(join) {

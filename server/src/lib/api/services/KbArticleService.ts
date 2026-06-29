@@ -431,7 +431,7 @@ export class KbArticleService extends BaseService<any> {
 
     const db = tenantDb(knex, context.tenant);
     const articleQuery = db.table('kb_articles as ka')
-      .select('dbc.block_data');
+      .select({ block_data: 'dbc.block_data' });
     db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
 
     const article = await articleQuery
