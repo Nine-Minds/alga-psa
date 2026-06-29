@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Błąd połączenia Hudu"
+        },
+        "sync": {
+          "title": "Synchronizacja i automatyzacja",
+          "description": "Importuj zasoby dla wszystkich powiązanych klientów naraz i automatycznie utrzymuj je w aktualności. Powiązanie firmy lub układu konfiguruje tylko integrację — zasoby pojawiają się dopiero po imporcie.",
+          "summary": "{{created}} utworzono · {{updated}} zaktualizowano · {{skipped}} pominięto · {{failed}} nieudanych",
+          "toastErrorTitle": "Błąd synchronizacji Hudu",
+          "importDoneTitle": "Zakończono import Hudu",
+          "syncDoneTitle": "Zakończono synchronizację Hudu",
+          "importing": "Importowanie…",
+          "importAll": "Importuj wszystkich powiązanych klientów",
+          "syncing2": "Synchronizowanie…",
+          "syncAll": "Synchronizuj wszystko",
+          "autoSyncLabel": "Codzienna automatyczna synchronizacja",
+          "autoSyncHint": "Automatycznie importuje nowe zasoby i odświeża istniejące raz dziennie dla każdego powiązanego klienta.",
+          "neverRun": "Brak uruchomienia dla całego najemcy.",
+          "lastRun": "Ostatnie uruchomienie {{at}}: {{created}} utworzono · {{updated}} zaktualizowano · {{skipped}} pominięto · {{failed}} nieudanych",
+          "status": {
+            "syncing": "W toku…",
+            "completed": "Zakończono",
+            "error": "Błąd"
+          }
         }
       }
     },

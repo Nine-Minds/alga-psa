@@ -15,7 +15,11 @@ import {
   timeEntryToActivity,
   workflowTaskToActivity,
 } from '@alga-psa/types';
-import { getScheduleActivityEntries } from '@alga-psa/scheduling/actions';
+// Identity-explicit core (NOT the withAuth `getScheduleActivityEntries`): the v1 REST API
+// resolves the user from an API key, so withAuth — which reads the NextAuth session — would
+// throw and the catch below would silently drop every schedule + ad-hoc item. The caller has
+// already gated `targetUserId` via resolveActivityTarget.
+import { getScheduleActivityEntriesForUser } from '@alga-psa/scheduling/actions/scheduleActivityCore';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
@@ -188,18 +192,28 @@ export const fetchUserActivities = withAuth(async (
   page: number = 1,
   pageSize: number = 10
 ): Promise<ActivityResponse> => {
-  const tenantId: string = tenant;
+  return fetchUserActivitiesForApi(user, tenant, filters, page, pageSize);
+});
 
+/**
+ * Fetch every requested activity type for the (resolved) user, combine them, then apply
+ * cross-type filtering + sorting via processActivities. Shared by the paginated list and
+ * the grouped view so both operate over an identical, fully-sorted result set. Ad-hoc
+ * entries are surfaced via fetchScheduleActivities regardless of the date window.
+ */
+async function collectProcessedActivities(
+  user: any,
+  tenantId: string,
+  filters: ActivityFilters
+): Promise<{ activities: Activity[]; effectiveUserId: string; typesToFetch: ActivityType[] }> {
   // Determine whose activities to fetch (self, or another user if permitted).
   const { userId: effectiveUserId, viewingOther } =
     await resolveActivityTarget(user, tenantId, filters.targetUserId);
 
-  // Fetch activities from different sources based on filters
-  const activities: Activity[] = [];
   const promises: Promise<Activity[]>[] = [];
 
-  // Only fetch requested activity types or all if not specified
-  // Note: An empty array is truthy, so we need to check length explicitly
+  // Only fetch requested activity types or all if not specified.
+  // Note: An empty array is truthy, so we need to check length explicitly.
   let typesToFetch = filters.types && filters.types.length > 0
     ? filters.types
     : Object.values(ActivityType);
@@ -215,67 +229,250 @@ export const fetchUserActivities = withAuth(async (
   if (typesToFetch.includes(ActivityType.SCHEDULE)) {
     promises.push(fetchScheduleActivities(effectiveUserId, tenantId, filters));
   }
-
   if (typesToFetch.includes(ActivityType.PROJECT_TASK)) {
     promises.push(fetchProjectActivities(effectiveUserId, tenantId, filters));
   }
-
   if (typesToFetch.includes(ActivityType.TICKET)) {
     promises.push(fetchTicketActivities(effectiveUserId, tenantId, filters));
   }
-
   if (typesToFetch.includes(ActivityType.TIME_ENTRY)) {
     promises.push(fetchTimeEntryActivities(effectiveUserId, tenantId, filters));
   }
-
   if (typesToFetch.includes(ActivityType.WORKFLOW_TASK)) {
     promises.push(fetchWorkflowTaskActivities(effectiveUserId, tenantId, filters));
   }
-
   if (typesToFetch.includes(ActivityType.NOTIFICATION)) {
     promises.push(fetchNotificationActivities(effectiveUserId, tenantId, filters));
   }
 
-  // Wait for all fetches to complete
   const results = await Promise.all(promises);
-  
-  // Combine all activities
+  const activities: Activity[] = [];
   results.forEach(result => activities.push(...result));
 
-  // Apply additional filtering, sorting, etc.
-  const processedActivities = processActivities(activities, filters);
+  return { activities: processActivities(activities, filters), effectiveUserId, typesToFetch };
+}
+
+/**
+ * Core (identity-explicit) implementation of the unified activity fetch. Shared by the
+ * `withAuth` web wrapper above and the v1 REST API, which resolves the user from an API
+ * key and calls this directly under `runWithTenant`. Fans out to the per-type fetchers,
+ * applies cross-type filtering/sorting, and paginates.
+ */
+export async function fetchUserActivitiesForApi(
+  user: any,
+  tenantId: string,
+  filters: ActivityFilters = {},
+  page: number = 1,
+  pageSize: number = 10
+): Promise<ActivityResponse> {
+  const { activities: processedActivities, effectiveUserId, typesToFetch } =
+    await collectProcessedActivities(user, tenantId, filters);
+
   const totalCount = processedActivities.length;
   const pageCount = Math.ceil(totalCount / pageSize);
-
-  // Apply pagination slicing
   const startIndex = (page - 1) * pageSize;
   const paginatedActivities = processedActivities.slice(startIndex, startIndex + pageSize);
 
-  // Create response with pagination info using passed parameters
   const response: ActivityResponse = {
     activities: paginatedActivities,
-    totalCount: totalCount,
-    pageCount: pageCount,
-    pageSize: pageSize,
-    pageNumber: page
+    totalCount,
+    pageCount,
+    pageSize,
+    pageNumber: page,
   };
 
-  // Update cache key to include pagination (keyed on whose activities these are)
+  // In-memory cache keyed on whose activities these are + filters + page.
   const cacheKey = `user-activities:${effectiveUserId}:${JSON.stringify(filters)}:page${page}:size${pageSize}`;
-
-  // Create tags for cache invalidation
-  const tags = [
-    `user:${effectiveUserId}`,
-    ...typesToFetch.map(type => `type:${type}`)
-  ];
-  
-  // Cache the result with appropriate TTL
-  // Use longer TTL for drawer operations (detected by small page size)
+  const tags = [`user:${effectiveUserId}`, ...typesToFetch.map(type => `type:${type}`)];
+  // Longer TTL for drawer operations (detected by small page size).
   const ttl = pageSize <= 5 ? cache.ttl.DRAWER : cache.ttl.DEFAULT;
   await cache.set(cacheKey, JSON.stringify(response), ttl, tags);
 
   return response;
-});
+}
+
+// ---------------------------------------------------------------------------
+// Grouped view (server-side group-by for the unified list)
+// ---------------------------------------------------------------------------
+
+export type ActivityGroupByKey = 'type' | 'priority' | 'status' | 'dueDate';
+
+export interface ApiActivityGroup {
+  /** Stable bucket key the client can localize (type/priority/dueDate) or show verbatim (status). */
+  key: string;
+  /** Human-readable English label; the client localizes known keys and falls back to this. */
+  label: string;
+  count: number;
+  activities: Activity[];
+}
+
+export interface GroupedActivityResponse {
+  groupBy: ActivityGroupByKey;
+  groups: ApiActivityGroup[];
+  totalCount: number;
+  /** True when the result set exceeded the grouping cap and was truncated. */
+  truncated: boolean;
+}
+
+// Grouping needs the full result set in memory; cap it so a pathological account (huge
+// notification / time-entry history) can't blow up the response.
+const GROUPED_ACTIVITY_CAP = 1000;
+
+const TYPE_GROUP_ORDER: ActivityType[] = [
+  ActivityType.TICKET,
+  ActivityType.PROJECT_TASK,
+  ActivityType.SCHEDULE,
+  ActivityType.WORKFLOW_TASK,
+  ActivityType.TIME_ENTRY,
+  ActivityType.NOTIFICATION,
+  ActivityType.DOCUMENT,
+];
+
+const TYPE_GROUP_LABELS: Record<string, string> = {
+  [ActivityType.TICKET]: 'Tickets',
+  [ActivityType.PROJECT_TASK]: 'Project tasks',
+  [ActivityType.SCHEDULE]: 'Schedule',
+  [ActivityType.WORKFLOW_TASK]: 'Workflow tasks',
+  [ActivityType.TIME_ENTRY]: 'Time entries',
+  [ActivityType.NOTIFICATION]: 'Notifications',
+  [ActivityType.DOCUMENT]: 'Documents',
+};
+
+const DUE_DATE_GROUP_ORDER = ['overdue', 'today', 'thisWeek', 'later', 'none'] as const;
+const DUE_DATE_GROUP_LABELS: Record<string, string> = {
+  overdue: 'Overdue',
+  today: 'Due today',
+  thisWeek: 'Due this week',
+  later: 'Later',
+  none: 'No due date',
+};
+
+function startOfTodayMs(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function dueDateBucket(activity: Activity, todayStart: number): (typeof DUE_DATE_GROUP_ORDER)[number] {
+  if (!activity.dueDate) return 'none';
+  const due = new Date(activity.dueDate).getTime();
+  if (Number.isNaN(due)) return 'none';
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (due < todayStart) return 'overdue';
+  if (due < todayStart + dayMs) return 'today';
+  if (due < todayStart + 7 * dayMs) return 'thisWeek';
+  return 'later';
+}
+
+/**
+ * Bucket a fully-sorted activity list into ordered groups. Each group preserves the
+ * incoming (sorted) order of its members. `type`, `priority`, and `dueDate` use fixed
+ * orderings; `status` groups appear in first-seen order (i.e. honoring the active sort).
+ */
+function groupProcessedActivities(
+  activities: Activity[],
+  groupBy: ActivityGroupByKey
+): ApiActivityGroup[] {
+  const buckets = new Map<string, ApiActivityGroup>();
+  const seenOrder: string[] = [];
+  const todayStart = startOfTodayMs();
+
+  const ensure = (key: string, label: string): ApiActivityGroup => {
+    let group = buckets.get(key);
+    if (!group) {
+      group = { key, label, count: 0, activities: [] };
+      buckets.set(key, group);
+      seenOrder.push(key);
+    }
+    return group;
+  };
+
+  for (const activity of activities) {
+    let key: string;
+    let label: string;
+    switch (groupBy) {
+      case 'type':
+        key = activity.type;
+        label = TYPE_GROUP_LABELS[activity.type] ?? activity.type;
+        break;
+      case 'priority':
+        // Group by the tenant's REAL priority name (e.g. "P1 Critical", "3"), not the
+        // lossy normalized bucket — a tenant using 1–5 must not collapse into "Medium".
+        key = activity.priorityName || 'none';
+        label = activity.priorityName || 'No priority';
+        break;
+      case 'dueDate': {
+        const bucket = dueDateBucket(activity, todayStart);
+        key = bucket;
+        label = DUE_DATE_GROUP_LABELS[bucket];
+        break;
+      }
+      case 'status':
+      default:
+        key = activity.status || 'unknown';
+        label = activity.status || 'Unknown';
+        break;
+    }
+    const group = ensure(key, label);
+    group.activities.push(activity);
+    group.count += 1;
+  }
+
+  // Priority groups key on the real priority name, so order them by the normalized tier
+  // (high→low, derived from each bucket's items) then by name (numeric-aware) — keeping
+  // "Critical/High" on top and numeric schemes (1..5) in a natural order.
+  if (groupBy === 'priority') {
+    const tierOrder: Record<string, number> = {
+      [ActivityPriority.HIGH]: 0,
+      [ActivityPriority.MEDIUM]: 1,
+      [ActivityPriority.LOW]: 2,
+    };
+    const tier = (group: ApiActivityGroup): number => {
+      const sample = group.activities[0];
+      return sample ? tierOrder[sample.priority] ?? 1 : 3;
+    };
+    return [...buckets.values()].sort((a, b) => {
+      const t = tier(a) - tier(b);
+      if (t !== 0) return t;
+      return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }
+
+  // Apply the fixed ordering for dimensions that have one; status keeps first-seen order.
+  const fixedOrder: string[] | null =
+    groupBy === 'type'
+      ? (TYPE_GROUP_ORDER as string[])
+      : groupBy === 'dueDate'
+        ? [...DUE_DATE_GROUP_ORDER]
+        : null;
+
+  if (!fixedOrder) {
+    return seenOrder.map((key) => buckets.get(key)!);
+  }
+  const rank = (key: string): number => {
+    const i = fixedOrder.indexOf(key);
+    return i === -1 ? fixedOrder.length : i;
+  };
+  return [...buckets.values()].sort((a, b) => rank(a.key) - rank(b.key));
+}
+
+/**
+ * Grouped variant of {@link fetchUserActivitiesForApi}. Fetches and sorts the full
+ * (filtered) activity set, then buckets it server-side by the requested dimension. The
+ * set is capped at GROUPED_ACTIVITY_CAP; `truncated` reports when the cap was hit.
+ */
+export async function fetchUserActivitiesGroupedForApi(
+  user: any,
+  tenantId: string,
+  filters: ActivityFilters = {},
+  groupBy: ActivityGroupByKey
+): Promise<GroupedActivityResponse> {
+  const { activities } = await collectProcessedActivities(user, tenantId, filters);
+  const totalCount = activities.length;
+  const capped = activities.slice(0, GROUPED_ACTIVITY_CAP);
+  const groups = groupProcessedActivities(capped, groupBy);
+  return { groupBy, groups, totalCount, truncated: totalCount > capped.length };
+}
 
 /**
  * Fetch ad-hoc schedule entries assigned to a user, independent of any date window.
@@ -351,7 +548,7 @@ export async function fetchScheduleActivities(
     if (!tenant) {
       throw new Error("Tenant is required");
     }
-    let userEntries = await getScheduleActivityEntries(userId, start, end);
+    let userEntries = await getScheduleActivityEntriesForUser(tenant, userId, start, end);
 
     // Also include ad-hoc entries regardless of the date window — they may have no
     // scheduled time (which the window query above drops) or fall outside now→+30d.

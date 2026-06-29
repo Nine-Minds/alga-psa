@@ -1,24 +1,21 @@
 'use server';
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
+import {
+  getUserActivityGroupsForApi,
+  moveActivityToGroupForApi,
+  removeActivityFromGroupsForApi,
+  reorderActivitiesInGroupForApi,
+} from './activityGroupCore';
+import type { ActivityGroup, ActivityGroupItem } from './activityGroupCore';
 
-export interface ActivityGroup {
-  groupId: string;
-  groupName: string;
-  sortOrder: number;
-  isCollapsed: boolean;
-  items: ActivityGroupItem[];
-}
-
-export interface ActivityGroupItem {
-  itemId: string;
-  activityId: string;
-  activityType: string;
-  sortOrder: number;
-}
+// Re-export via the `from` form (not a bare `export type { … }` of the imported binding):
+// turbopack mis-emits the bare re-export as a runtime value export, throwing
+// "ActivityGroup is not defined" when the actions module evaluates.
+export type { ActivityGroup, ActivityGroupItem } from './activityGroupCore';
 
 /**
  * Fetch all groups with their items for a user.
@@ -33,62 +30,7 @@ export const getUserActivityGroups = withAuth(async (
   { tenant },
   targetUserId?: string
 ): Promise<ActivityGroup[]> => {
-  const { knex: db } = await createTenantKnex();
-
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
-    let ownerUserId = user.user_id;
-    if (targetUserId && targetUserId !== user.user_id) {
-      const [canUpdate, canReadAll] = await Promise.all([
-        hasPermission(user, 'user_schedule', 'update', trx),
-        hasPermission(user, 'user_schedule', 'read_all', trx),
-      ]);
-      if (!canUpdate && !canReadAll) {
-        throw new Error("Permission denied: cannot view another user's groups");
-      }
-      const target = await trx('users')
-        .where({ tenant, user_id: targetUserId, user_type: 'internal' })
-        .first();
-      if (!target) {
-        throw new Error('User not found');
-      }
-      ownerUserId = targetUserId;
-    }
-
-    const groups = await trx('user_activity_groups')
-      .where({ tenant, user_id: ownerUserId })
-      .orderBy('sort_order')
-      .select('group_id', 'group_name', 'sort_order', 'is_collapsed');
-
-    if (groups.length === 0) return [];
-
-    const groupIds = groups.map((g) => g.group_id);
-
-    const items = await trx('user_activity_group_items')
-      .where({ tenant })
-      .whereIn('group_id', groupIds)
-      .orderBy('sort_order')
-      .select('item_id', 'group_id', 'activity_id', 'activity_type', 'sort_order');
-
-    const itemsByGroup = new Map<string, ActivityGroupItem[]>();
-    for (const item of items) {
-      const list = itemsByGroup.get(item.group_id) || [];
-      list.push({
-        itemId: item.item_id,
-        activityId: item.activity_id,
-        activityType: item.activity_type,
-        sortOrder: item.sort_order,
-      });
-      itemsByGroup.set(item.group_id, list);
-    }
-
-    return groups.map((g) => ({
-      groupId: g.group_id,
-      groupName: g.group_name,
-      sortOrder: g.sort_order,
-      isCollapsed: g.is_collapsed,
-      items: itemsByGroup.get(g.group_id) || [],
-    }));
-  });
+  return getUserActivityGroupsForApi(user, tenant, targetUserId);
 });
 
 /**
@@ -210,48 +152,7 @@ export const moveActivityToGroup = withAuth(async (
   targetGroupId: string,
   sortOrder: number
 ): Promise<boolean> => {
-  const { knex: db } = await createTenantKnex();
-
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    // Verify target group belongs to user
-    const target = await trx('user_activity_groups')
-      .where({ tenant, group_id: targetGroupId, user_id: user.user_id })
-      .first();
-    if (!target) {
-      throw new Error('Target group not found');
-    }
-
-    // Remove any existing membership of this activity in any of the user's groups
-    const userGroups = await trx('user_activity_groups')
-      .where({ tenant, user_id: user.user_id })
-      .select('group_id');
-    const userGroupIds = userGroups.map((g) => g.group_id);
-
-    if (userGroupIds.length > 0) {
-      await trx('user_activity_group_items')
-        .where({ tenant, activity_id: activityId, activity_type: activityType })
-        .whereIn('group_id', userGroupIds)
-        .del();
-    }
-
-    // Make room at the insertion index. Without this, multiple rows would
-    // share the same sort_order and the final order on reload would be
-    // non-deterministic.
-    await trx('user_activity_group_items')
-      .where({ tenant, group_id: targetGroupId })
-      .andWhere('sort_order', '>=', sortOrder)
-      .increment('sort_order', 1);
-
-    // Insert at new position
-    await trx('user_activity_group_items').insert({
-      tenant,
-      group_id: targetGroupId,
-      activity_id: activityId,
-      activity_type: activityType,
-      sort_order: sortOrder,
-    });
-  });
-
+  await moveActivityToGroupForApi(user, tenant, activityId, activityType, targetGroupId, sortOrder);
   revalidatePath('/activities');
   return true;
 });
@@ -265,22 +166,7 @@ export const removeActivityFromGroups = withAuth(async (
   activityId: string,
   activityType: string
 ): Promise<boolean> => {
-  const { knex: db } = await createTenantKnex();
-
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    const userGroups = await trx('user_activity_groups')
-      .where({ tenant, user_id: user.user_id })
-      .select('group_id');
-    const userGroupIds = userGroups.map((g) => g.group_id);
-
-    if (userGroupIds.length === 0) return;
-
-    await trx('user_activity_group_items')
-      .where({ tenant, activity_id: activityId, activity_type: activityType })
-      .whereIn('group_id', userGroupIds)
-      .del();
-  });
-
+  await removeActivityFromGroupsForApi(user, tenant, activityId, activityType);
   revalidatePath('/activities');
   return true;
 });
@@ -295,29 +181,7 @@ export const reorderActivitiesInGroup = withAuth(async (
   groupId: string,
   orderedItems: Array<{ activityId: string; activityType: string; sortOrder: number }>
 ): Promise<boolean> => {
-  const { knex: db } = await createTenantKnex();
-
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    // Verify group ownership
-    const group = await trx('user_activity_groups')
-      .where({ tenant, group_id: groupId, user_id: user.user_id })
-      .first();
-    if (!group) {
-      throw new Error('Group not found');
-    }
-
-    for (const item of orderedItems) {
-      await trx('user_activity_group_items')
-        .where({
-          tenant,
-          group_id: groupId,
-          activity_id: item.activityId,
-          activity_type: item.activityType,
-        })
-        .update({ sort_order: item.sortOrder });
-    }
-  });
-
+  await reorderActivitiesInGroupForApi(user, tenant, groupId, orderedItems);
   revalidatePath('/activities');
   return true;
 });

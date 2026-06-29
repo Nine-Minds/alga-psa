@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "55555"
+        },
+        "sync": {
+          "title": "55555",
+          "description": "55555",
+          "summary": "55555 {{created}} 55555 {{updated}} 55555 {{skipped}} 55555 {{failed}} 55555",
+          "toastErrorTitle": "55555",
+          "importDoneTitle": "55555",
+          "syncDoneTitle": "55555",
+          "importing": "55555",
+          "importAll": "55555",
+          "syncing2": "55555",
+          "syncAll": "55555",
+          "autoSyncLabel": "55555",
+          "autoSyncHint": "55555",
+          "neverRun": "55555",
+          "lastRun": "55555 {{at}} 55555 {{created}} 55555 {{updated}} 55555 {{skipped}} 55555 {{failed}} 55555",
+          "status": {
+            "syncing": "55555",
+            "completed": "55555",
+            "error": "55555"
+          }
         }
       }
     },

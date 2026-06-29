@@ -11,7 +11,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HuduClientPasswordsTab } from '@ee/components/integrations/hudu/HuduClientPasswordsTab';
-import type { HuduCompanyDataResult } from '@ee/lib/actions/integrations/huduDataActions';
+import type { HuduCompanyDataResult } from '@ee/lib/integrations/hudu/huduDataTypes';
 import type { HuduAssetPasswordSummary } from '@ee/lib/integrations/hudu/contracts';
 
 const { getHuduClientContextMock, getHuduCompanyPasswordsMock, revealHuduPasswordMock } =
