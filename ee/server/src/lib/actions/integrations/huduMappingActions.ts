@@ -6,8 +6,8 @@
  * sync / list / set / clear for company mappings in the SHARED CE table
  * `tenant_external_entity_mappings`. Gating mirrors huduActions
  * (withHuduSettingsAccess): EE tier, `system_settings`
- * RBAC (read=list, update=mutate), and the `hudu-integration` flag — NOT the
- * billing_settings-gated externalMappingActions wrappers (OQ3).
+ * RBAC (read=list, update=mutate) — NOT the billing_settings-gated
+ * externalMappingActions wrappers (OQ3).
  *
  * "Cache the list for mapping" (F040) = a compact companies snapshot in
  * hudu_integrations.settings.companies_cache so the mapping UI renders
@@ -18,7 +18,6 @@ import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
@@ -94,14 +93,6 @@ function withHuduSettingsAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
 
     return handler(user, context as { tenant: string }, ...args);
   });

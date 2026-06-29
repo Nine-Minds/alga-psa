@@ -64,8 +64,8 @@ export default defineConfig({
       APP_ENV: 'test',
       NODE_ENV: 'development',
       PORT: PORT,
-      // Keep Tactical RMM UI visible in Playwright runs even when PostHog is not configured.
-      NEXT_PUBLIC_FORCE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS || 'tactical-rmm-integration:true',
+      // Feature-flag overrides for e2e, forwarded from the environment when set.
+      NEXT_PUBLIC_FORCE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS || '',
     },
   },
 });

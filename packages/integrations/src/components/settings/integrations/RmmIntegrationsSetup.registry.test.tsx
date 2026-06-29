@@ -15,10 +15,6 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(''),
 }));
 
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: vi.fn((flag: string) => ({ enabled: flag === 'tactical-rmm-integration' })),
-}));
-
 vi.mock('./TacticalRmmIntegrationSettings', () => ({
   default: () => <div data-testid="tactical-settings">Tactical Settings</div>,
 }));

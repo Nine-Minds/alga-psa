@@ -5,8 +5,8 @@
  *
  * connect / test / getStatus / disconnect for the per-tenant Hudu connection.
  * Gating mirrors requireHuduUiFlagEnabled (and the Entra action gating): EE
- * tier, `system_settings` RBAC (read=view, update=manage),
- * and the `hudu-integration` feature flag — enforced on every action.
+ * tier and `system_settings` RBAC (read=view, update=manage) — enforced on
+ * every action.
  *
  * SECURITY: the api key is only ever written to the secret provider
  * (`hudu_api_key`/`hudu_base_url` tenant secrets) and is never returned to the
@@ -20,7 +20,6 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import { HuduClient, buildHuduApiBaseUrl } from '../../integrations/hudu/huduClient';
@@ -114,14 +113,6 @@ function withHuduSettingsAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
 
     return handler(user, context as { tenant: string }, ...args);
   });

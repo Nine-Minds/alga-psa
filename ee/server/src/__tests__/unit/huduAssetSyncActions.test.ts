@@ -7,7 +7,7 @@
  * Helper persistence (stale metadata merge, last_synced_at stamping, and the
  * assets.attributes jsonb merge) runs against the REAL local dev DB exactly
  * like huduAssetMappingActions.test.ts (shared advisory lock, importActual).
- * The action layer is unit-mocked like the sibling: auth, flag, tiers, knex,
+ * The action layer is unit-mocked like the sibling: auth, tiers, knex,
  * huduDataActions, updateAsset and the mapping-row functions are fakes; the
  * attributes helpers (assetAttributes) stay REAL.
  */
@@ -32,7 +32,6 @@ const HUDU_COMPANY_ID = '55';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
@@ -85,10 +84,6 @@ vi.mock('@alga-psa/auth', () => ({
     (...args: unknown[]) =>
       handler(internalUser, { tenant: TENANT }, ...args),
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -167,7 +162,6 @@ beforeEach(() => {
   attributeUpdates = [];
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
@@ -929,13 +923,5 @@ describe('T229: guard chain', () => {
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'asset', 'update');
     expect(getHuduCompanyAssetsMock).not.toHaveBeenCalled();
     expect(updateAssetMock).not.toHaveBeenCalled();
-  });
-
-  it('rejects when the hudu-integration flag is off (404 semantics)', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { syncHuduClientAssets } = await importActions();
-
-    await expect(syncHuduClientAssets({ clientId: CLIENT_1 })).rejects.toThrow(/disabled for this tenant/);
-    expect(getHuduCompanyAssetsMock).not.toHaveBeenCalled();
   });
 });

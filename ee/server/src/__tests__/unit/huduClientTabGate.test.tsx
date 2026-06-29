@@ -2,7 +2,7 @@
 /**
  * T070 — registration gating for the client "Hudu" tab (client-hudu-tab
  * group): useHuduClientTab (packages/clients) resolves visible ONLY when
- * EE edition + `hudu-integration` flag AND the edition-swapped probe reports
+ * EE edition AND the edition-swapped probe reports
  * Hudu connected + this client mapped. ClientDetails registers the tab in its
  * tabs array only when `visible` is true, so hidden here = tab absent.
  */
@@ -11,14 +11,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHuduClientTab } from '@alga-psa/clients/components/clients/useHuduClientTab';
 
-const { useFeatureFlagMock, isEnterpriseRef, getHuduClientContextMock } = vi.hoisted(() => ({
-  useFeatureFlagMock: vi.fn(),
+const { isEnterpriseRef, getHuduClientContextMock } = vi.hoisted(() => ({
   isEnterpriseRef: { value: true },
   getHuduClientContextMock: vi.fn(),
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: useFeatureFlagMock,
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -56,25 +51,13 @@ async function renderGate(clientId?: string) {
 }
 
 beforeEach(() => {
-  useFeatureFlagMock.mockReset();
   getHuduClientContextMock.mockReset();
   isEnterpriseRef.value = true;
-  useFeatureFlagMock.mockReturnValue({ enabled: true, loading: false, error: null });
   getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
 });
 
 describe('T070: useHuduClientTab registration gate', () => {
-  it('is hidden and never probes when the feature flag is off', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: false, error: null });
-
-    const gate = await renderGate();
-
-    expect(gate.getAttribute('data-visible')).toBe('false');
-    expect(getHuduClientContextMock).not.toHaveBeenCalled();
-    expect(useFeatureFlagMock).toHaveBeenCalledWith('hudu-integration', { defaultValue: false });
-  });
-
-  it('is hidden and never probes in Community Edition even with the flag on', async () => {
+  it('is hidden and never probes in Community Edition', async () => {
     isEnterpriseRef.value = false;
 
     const gate = await renderGate();
@@ -100,7 +83,7 @@ describe('T070: useHuduClientTab registration gate', () => {
     expect(gate.getAttribute('data-visible')).toBe('false');
   });
 
-  it('is visible when EE + flag + connected + mapped all hold', async () => {
+  it('is visible when EE + connected + mapped all hold', async () => {
     const gate = await renderGate();
 
     await waitFor(() => {
