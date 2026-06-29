@@ -109,6 +109,24 @@ async function isDistributed(knex, table) {
   return Boolean(res.rows?.[0]?.distributed);
 }
 
+// Restore the standard_status_id primary key. In Citus every key must include
+// the distribution column, so standard_statuses' primary key was composite with
+// `tenant` and got dropped together with that column above, leaving no unique
+// constraint for inbound FKs to target. Re-add it idempotently. On plain Postgres
+// the single-column primary key survives the column drop, so this no-ops.
+async function ensureStandardStatusPrimaryKey(knex) {
+  // Top-level ALTER (not a DO block) so Citus propagates it to worker nodes even
+  // after the table is already a reference table; guard for idempotency in JS.
+  const existing = await knex.raw(
+    `SELECT 1 FROM pg_constraint
+     WHERE conrelid = 'standard_statuses'::regclass AND contype = 'p'
+     LIMIT 1`
+  );
+  if (existing.rows?.length) return;
+
+  await knex.raw('ALTER TABLE standard_statuses ADD PRIMARY KEY (standard_status_id)');
+}
+
 // Re-create standard_statuses' inbound foreign keys on standard_status_id when
 // missing. Idempotent and unconditional: skips any child whose FK already exists
 // (the common case on plain Postgres), and restores them where an earlier run
@@ -243,9 +261,11 @@ exports.up = async function up(knex) {
     }
   }
 
-  // Restore the catalog's inbound foreign keys. Runs unconditionally so an
-  // environment where an earlier (partially-applied) run dropped them during the
-  // distributed->reference conversion is self-healed; no-ops when they exist.
+  // Restore the standard_status_id primary key, then the catalog's inbound
+  // foreign keys that target it. Both run unconditionally so an environment where
+  // an earlier (partially-applied) run dropped them during the distributed->
+  // reference conversion is self-healed; both no-op when already present.
+  await ensureStandardStatusPrimaryKey(knex);
   await ensureStandardStatusForeignKeys(knex);
 
   await knex('standard_statuses')
