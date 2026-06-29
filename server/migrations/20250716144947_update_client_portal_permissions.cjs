@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250716144947_update_client_portal_permissi
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for client portal permission reset';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function(knex) {

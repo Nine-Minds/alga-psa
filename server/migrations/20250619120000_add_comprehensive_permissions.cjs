@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250619120000_add_comprehensive_permissions
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for comprehensive permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

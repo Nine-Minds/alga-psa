@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20260320105000_add_quote_approval_permission
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for quote approval permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function up(knex) {

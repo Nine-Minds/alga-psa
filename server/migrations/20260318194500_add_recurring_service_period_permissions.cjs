@@ -5,7 +5,7 @@ const MIGRATION_TENANT = 'migration:20260318194500_add_recurring_service_period_
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for recurring service period permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 async function assignPermissionsToRole(db, tenant, roleId, permissionIds) {

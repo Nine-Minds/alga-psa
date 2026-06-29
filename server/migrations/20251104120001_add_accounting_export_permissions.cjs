@@ -17,7 +17,7 @@ const MIGRATION_TENANT = 'migration:20251104120001_add_accounting_export_permiss
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for accounting export permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 async function insertPermission(knex, db, tenant, resource, action, description) {

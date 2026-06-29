@@ -8,7 +8,7 @@ const MIGRATION_TENANT = 'migration:20250922102000_add_msp_settings_permission';
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for MSP settings permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function up(knex) {

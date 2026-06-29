@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250611165040_add_client_role';
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for client role backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

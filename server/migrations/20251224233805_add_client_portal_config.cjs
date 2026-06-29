@@ -8,7 +8,7 @@ const PROJECT_CLIENT_PORTAL_CONFIG_BACKFILL_REASON = 'discover projects needing 
 const TEMPLATE_CLIENT_PORTAL_CONFIG_BACKFILL_REASON = 'discover project templates needing default client portal config backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 const DEFAULT_CLIENT_PORTAL_CONFIG = {

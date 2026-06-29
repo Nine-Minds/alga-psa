@@ -6,7 +6,7 @@ const MIGRATION_TENANT = 'migration:20251221103000_register_email_workflow_runti
 const SYSTEM_WORKFLOW_REGISTRATION_REASON = 'register system email workflow runtime definition';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 function loadDefinition() {

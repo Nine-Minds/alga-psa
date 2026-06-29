@@ -21,7 +21,7 @@ const TENANT_ENUMERATION_REASON = 'enumerate tenants for secrets permission crea
 const SECRETS_PERMISSION_DISCOVERY_REASON = 'discover secrets permissions for rollback';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function (knex) {

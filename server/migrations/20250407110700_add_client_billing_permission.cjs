@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250407110700_add_client_billing_permission
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for client billing permission backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

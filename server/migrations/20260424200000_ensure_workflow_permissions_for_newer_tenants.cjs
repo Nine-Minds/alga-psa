@@ -9,7 +9,7 @@ const MIGRATION_TENANT = 'migration:20260424200000_ensure_workflow_permissions_f
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for newer-tenant workflow permission repair';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function up(knex) {

@@ -6,7 +6,7 @@ const MIGRATION_TENANT = 'migration:20251117120000_ensure_project_task_statuses'
 const PROJECT_TASK_STATUS_REPAIR_REASON = 'all-tenant project task status repair';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 exports.up = async function(knex) {

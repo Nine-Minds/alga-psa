@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250530000000_improve_interactions_schema';
 const INTERACTION_SCHEMA_DATA_BACKFILL_REASON = 'interaction schema historical status data backfill';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

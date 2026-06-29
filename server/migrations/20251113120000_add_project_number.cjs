@@ -3,7 +3,7 @@ const TENANT_ENUMERATION_REASON = 'enumerate tenants for project number backfill
 const PROJECT_NUMBER_ROLLBACK_REASON = 'all-tenant project number sequence rollback';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

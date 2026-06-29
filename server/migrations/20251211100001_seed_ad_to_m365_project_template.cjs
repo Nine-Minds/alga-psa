@@ -23,7 +23,7 @@ const MIGRATION_TENANT = 'migration:20251211100001_seed_ad_to_m365_project_templ
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for AD to M365 project template seed';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**

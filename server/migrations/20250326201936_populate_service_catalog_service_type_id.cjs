@@ -2,7 +2,7 @@ const MIGRATION_TENANT = 'migration:20250326201936_populate_service_catalog_serv
 const SERVICE_TYPE_ID_BACKFILL_REASON = 'historical service catalog service_type_id backfill with tenant_id service_types';
 
 async function loadTenantDb() {
-  return (await import('@alga-psa/db')).tenantDb;
+  return require('./utils/tenantDb.cjs').tenantDb;
 }
 
 /**
