@@ -782,21 +782,21 @@ function formatAssetForOutput(asset: any): Asset {
     return formattedAsset;
 }
 
-export const createAsset = withAuth(async (
-    user,
-    { tenant },
+/**
+ * Actor-injectable asset creation core (no withAuth). Shared by the createAsset
+ * server action (passes the session user id) and sessionless callers such as
+ * the Hudu background sync (passes a resolved tenant audit user id). Permission
+ * checks live in the withAuth wrapper; this core trusts its caller.
+ */
+export async function createAssetRecord(
+    knex: Knex,
+    tenant: string,
+    actorUserId: string,
     data: CreateAssetRequest,
     // Importers (e.g. Hudu) project best-effort attributes and must never fail
     // on a required custom field the source didn't supply; they pass false.
     options?: { requireCustomAttributes?: boolean }
-): Promise<Asset> => {
-    const { knex } = await createTenantKnex();
-
-    // Check permission for asset creation
-    if (!await hasPermission(user, 'asset', 'create')) {
-        throw new Error('Permission denied: Cannot create assets');
-    }
-
+): Promise<Asset> {
     try {
         // Validate input data first
         try {
@@ -875,7 +875,7 @@ export const createAsset = withAuth(async (
             await trx('asset_history').insert({
                 tenant,
                 asset_id: asset.asset_id,
-                changed_by: user.user_id,
+                changed_by: actorUserId,
                 change_type: 'created',
                 changes: validatedData,
                 changed_at: now
@@ -898,7 +898,7 @@ export const createAsset = withAuth(async (
                 payload: buildAssetCreatedPayload({
                     assetId: created.asset_id,
                     clientId: created.client_id || undefined,
-                    createdByUserId: user.user_id,
+                    createdByUserId: actorUserId,
                     createdAt: created.created_at || occurredAt,
                     assetType: created.asset_type,
                     serialNumber: created.serial_number,
@@ -906,7 +906,7 @@ export const createAsset = withAuth(async (
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                    actor: { actorType: 'USER', actorUserId },
                 },
             });
 
@@ -928,7 +928,7 @@ export const createAsset = withAuth(async (
                     ctx: {
                         tenantId: tenant,
                         occurredAt,
-                        actor: { actorType: 'USER', actorUserId: user.user_id },
+                        actor: { actorType: 'USER', actorUserId },
                     },
                 });
             }
@@ -954,25 +954,52 @@ export const createAsset = withAuth(async (
         }
         throw new Error('Failed to create asset');
     }
-});
+}
 
-export const updateAsset = withAuth(async (
+export const createAsset = withAuth(async (
     user,
     { tenant },
-    asset_id: string,
-    data: UpdateAssetRequest,
-    opts?: { suppressRevalidate?: boolean }
+    data: CreateAssetRequest,
+    options?: { requireCustomAttributes?: boolean }
 ): Promise<Asset> => {
     const { knex } = await createTenantKnex();
 
-    // Check permission for asset updating
-    if (!await hasPermission(user, 'asset', 'update')) {
-        throw new Error('Permission denied: Cannot update assets');
+    // Check permission for asset creation
+    if (!await hasPermission(user, 'asset', 'create')) {
+        throw new Error('Permission denied: Cannot create assets');
     }
 
+    return createAssetRecord(knex, tenant, user.user_id, data, options);
+});
+
+export interface AssetWriteHooks {
+    /**
+     * Runs inside the write transaction. The withAuth wrappers supply the
+     * user-scoped read-authorization context; sessionless callers (e.g. the
+     * Hudu background sync) omit it and write as a full-access system actor.
+     */
+    authorize?: (trx: Knex.Transaction) => Promise<void>;
+}
+
+/**
+ * Actor-injectable asset update core (no withAuth). Shared by the updateAsset
+ * server action and sessionless callers. Permission + user authorization live
+ * in the wrapper / authorize hook; this core trusts its caller.
+ */
+export async function updateAssetRecord(
+    knex: Knex,
+    tenant: string,
+    actorUserId: string,
+    asset_id: string,
+    data: UpdateAssetRequest,
+    opts?: { suppressRevalidate?: boolean },
+    hooks?: AssetWriteHooks
+): Promise<Asset> {
     try {
         const result = await knex.transaction(async (trx: Knex.Transaction) => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            if (hooks?.authorize) {
+                await hooks.authorize(trx);
+            }
 
             const normalizedData = sanitizeUpdatePayload(data);
             const validatedData = validateData(updateAssetSchema, normalizedData);
@@ -1103,7 +1130,7 @@ export const updateAsset = withAuth(async (
             await trx('asset_history').insert({
                 tenant,
                 asset_id,
-                changed_by: user.user_id,
+                changed_by: actorUserId,
                 change_type: 'updated',
                 changes: validatedData,
                 changed_at: knex.fn.now()
@@ -1136,7 +1163,7 @@ export const updateAsset = withAuth(async (
             before: result.before,
             after: result.after,
             updatedPaths,
-            updatedByUserId: user.user_id,
+            updatedByUserId: actorUserId,
             updatedAt: occurredAt,
         });
 
@@ -1147,7 +1174,7 @@ export const updateAsset = withAuth(async (
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                    actor: { actorType: 'USER', actorUserId },
                 },
             });
         }
@@ -1168,7 +1195,7 @@ export const updateAsset = withAuth(async (
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                    actor: { actorType: 'USER', actorUserId },
                 },
             });
         }
@@ -1191,7 +1218,7 @@ export const updateAsset = withAuth(async (
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                    actor: { actorType: 'USER', actorUserId },
                 },
             });
         }
@@ -1218,23 +1245,47 @@ export const updateAsset = withAuth(async (
         }
         throw new Error('Failed to update asset');
     }
-});
+}
 
-export const deleteAsset = withAuth(async (
+export const updateAsset = withAuth(async (
     user,
     { tenant },
     asset_id: string,
+    data: UpdateAssetRequest,
     opts?: { suppressRevalidate?: boolean }
-): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+): Promise<Asset> => {
+    const { knex } = await createTenantKnex();
+
+    // Check permission for asset updating
+    if (!await hasPermission(user, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot update assets');
+    }
+
+    return updateAssetRecord(knex, tenant, user.user_id, asset_id, data, opts, {
+        authorize: async (trx) => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+        },
+    });
+});
+
+/**
+ * Actor-injectable asset deletion core (no withAuth). Shared by the deleteAsset
+ * server action and sessionless callers (e.g. Hudu orphan cleanup). Permission
+ * + user authorization live in the wrapper / authorize hook.
+ */
+export async function deleteAssetRecord(
+    knex: Knex,
+    tenant: string,
+    actorUserId: string,
+    asset_id: string,
+    opts?: { suppressRevalidate?: boolean },
+    hooks?: { authorize?: (trx: Knex.Transaction, tenantId: string) => Promise<void> }
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> {
     try {
-        const { knex } = await createTenantKnex();
-
-        if (!await hasPermission(user, 'asset', 'delete')) {
-            throw new Error('Permission denied: Cannot delete assets');
-        }
-
         const result = await deleteEntityWithValidation('asset', asset_id, knex, tenant, async (trx, tenantId) => {
-            await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);
+            if (hooks?.authorize) {
+                await hooks.authorize(trx as Knex.Transaction, tenantId);
+            }
 
             const asset = await trx('assets')
                 .where({ tenant: tenantId, asset_id })
@@ -1314,13 +1365,13 @@ export const deleteAsset = withAuth(async (
                 eventType: 'ASSET_DELETED',
                 payload: {
                     assetId: asset_id,
-                    userId: user.user_id,
+                    userId: actorUserId,
                     timestamp: occurredAt,
                 },
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                    actor: { actorType: 'USER', actorUserId },
                 },
                 idempotencyKey: `asset_deleted:${asset_id}:${occurredAt}`,
             });
@@ -1342,6 +1393,25 @@ export const deleteAsset = withAuth(async (
             alternatives: []
         };
     }
+}
+
+export const deleteAsset = withAuth(async (
+    user,
+    { tenant },
+    asset_id: string,
+    opts?: { suppressRevalidate?: boolean }
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+    const { knex } = await createTenantKnex();
+
+    if (!await hasPermission(user, 'asset', 'delete')) {
+        throw new Error('Permission denied: Cannot delete assets');
+    }
+
+    return deleteAssetRecord(knex, tenant, user.user_id, asset_id, opts, {
+        authorize: async (trx, tenantId) => {
+            await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);
+        },
+    });
 });
 
 // Each item in a bulk action commits independently so partial failures

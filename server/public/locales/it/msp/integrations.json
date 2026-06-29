@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Errore di connessione Hudu"
+        },
+        "sync": {
+          "title": "Sincronizzazione e automazione",
+          "description": "Importa le risorse di tutti i clienti associati in una sola volta e mantienile aggiornate automaticamente. Associare un'azienda o un layout configura solo l'integrazione: le risorse compaiono solo dopo un'importazione.",
+          "summary": "{{created}} create · {{updated}} aggiornate · {{skipped}} ignorate · {{failed}} non riuscite",
+          "toastErrorTitle": "Errore di sincronizzazione Hudu",
+          "importDoneTitle": "Importazione Hudu completata",
+          "syncDoneTitle": "Sincronizzazione Hudu completata",
+          "importing": "Importazione…",
+          "importAll": "Importa tutti i clienti associati",
+          "syncing2": "Sincronizzazione…",
+          "syncAll": "Sincronizza tutto",
+          "autoSyncLabel": "Sincronizzazione automatica giornaliera",
+          "autoSyncHint": "Importa automaticamente le nuove risorse e aggiorna quelle esistenti una volta al giorno per ogni cliente associato.",
+          "neverRun": "Nessuna esecuzione a livello di tenant per ora.",
+          "lastRun": "Ultima esecuzione {{at}}: {{created}} create · {{updated}} aggiornate · {{skipped}} ignorate · {{failed}} non riuscite",
+          "status": {
+            "syncing": "In corso…",
+            "completed": "Completata",
+            "error": "Errore"
+          }
         }
       }
     },
