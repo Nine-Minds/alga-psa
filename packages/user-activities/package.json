@@ -26,6 +26,10 @@
       "import": "./src/components/constants.ts",
       "types": "./src/components/constants.ts"
     },
+    "./server/activity-actions": {
+      "import": "./src/server/activity-actions.ts",
+      "types": "./src/server/activity-actions.ts"
+    },
     "./server/workflow-tasks": {
       "import": "./src/server/workflow-tasks.ts",
       "types": "./src/server/workflow-tasks.ts"

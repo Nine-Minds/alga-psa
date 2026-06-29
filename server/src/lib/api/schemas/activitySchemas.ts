@@ -17,6 +17,15 @@ export const activityTypeSchema = z.nativeEnum(ActivityType);
 export const activityPrioritySchema = z.nativeEnum(ActivityPriority);
 
 const ACTIVITY_TYPE_VALUES = Object.values(ActivityType) as string[];
+const ACTIVITY_PRIORITY_VALUES = Object.values(ActivityPriority) as string[];
+
+/** Server-side sort columns (mirrors `ActivitySortBy` in @alga-psa/types). */
+export const activitySortBySchema = z.enum(['type', 'title', 'status', 'priority', 'dueDate']);
+export const activitySortDirectionSchema = z.enum(['asc', 'desc']);
+
+/** Dimension the unified list is grouped by when `groupBy` is supplied. */
+export const activityGroupBySchema = z.enum(['type', 'priority', 'status', 'dueDate']);
+export type ActivityGroupBy = z.infer<typeof activityGroupBySchema>;
 
 /**
  * Open/closed status filter for the unified list. Maps to the package's `isClosed` filter:
@@ -67,6 +76,49 @@ export const listActivitiesQuerySchema = z.object({
   // Schedule/time-entry/notification date window (ISO 8601).
   dateStart: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
   dateEnd: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
+  // Comma-separated list of ActivityPriority values (e.g. "high,medium").
+  priority: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .optional()
+      .transform((val) =>
+        val
+          ? val
+              .split(',')
+              .map((p) => p.trim())
+              .filter(Boolean)
+          : undefined,
+      )
+      .refine(
+        (priorities) => !priorities || priorities.every((p) => ACTIVITY_PRIORITY_VALUES.includes(p)),
+        { message: `priority must be a comma-separated list of: ${ACTIVITY_PRIORITY_VALUES.join(', ')}` },
+      )
+      .transform((priorities) => priorities as ActivityPriority[] | undefined),
+  ),
+  // Comma-separated exact priority IDs (the tenant's real per-type priorities). Precise,
+  // unlike the normalized `priority` bucket; applies to ticket/project-task activities.
+  priorityIds: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .optional()
+      .transform((val) =>
+        val
+          ? val
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined,
+      ),
+  ),
+  // Due-date window (ISO 8601), independent of the schedule date window above.
+  dueDateStart: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
+  dueDateEnd: z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional()),
+  sortBy: z.preprocess(emptyToUndefined, activitySortBySchema.optional()),
+  sortDirection: z.preprocess(emptyToUndefined, activitySortDirectionSchema.optional()),
+  // When present, the response is grouped by this dimension instead of paginated.
+  groupBy: z.preprocess(emptyToUndefined, activityGroupBySchema.optional()),
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(25),
 });
@@ -119,6 +171,43 @@ export const setAdHocActivityDoneSchema = z.object({
 });
 
 export type SetAdHocActivityDoneBody = z.infer<typeof setAdHocActivityDoneSchema>;
+
+// ---------------------------------------------------------------------------
+// Request: custom activity-group organization (drag-to-organize on mobile)
+// ---------------------------------------------------------------------------
+
+/** Body for POST /activities/groups/items — move an activity into a group at a position. */
+export const moveActivityToGroupSchema = z.object({
+  activityId: z.string().min(1, 'activityId is required'),
+  activityType: z.string().min(1, 'activityType is required'),
+  groupId: z.string().min(1, 'groupId is required'),
+  sortOrder: z.number().int().min(0),
+});
+
+export type MoveActivityToGroupBody = z.infer<typeof moveActivityToGroupSchema>;
+
+/** Body for DELETE /activities/groups/items — remove an activity from all of the caller's groups. */
+export const removeActivityFromGroupSchema = z.object({
+  activityId: z.string().min(1, 'activityId is required'),
+  activityType: z.string().min(1, 'activityType is required'),
+});
+
+export type RemoveActivityFromGroupBody = z.infer<typeof removeActivityFromGroupSchema>;
+
+/** Body for PATCH /activities/groups/{groupId}/items — persist the full ordered membership. */
+export const reorderActivitiesInGroupSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        activityId: z.string().min(1),
+        activityType: z.string().min(1),
+        sortOrder: z.number().int().min(0),
+      }),
+    )
+    .min(1, 'items must not be empty'),
+});
+
+export type ReorderActivitiesInGroupBody = z.infer<typeof reorderActivitiesInGroupSchema>;
 
 // ---------------------------------------------------------------------------
 // Response shapes (mirror @alga-psa/types Activity)
@@ -178,5 +267,50 @@ export const activityListResponseSchema = z.object({
 /** Response for POST /activities/ad-hoc — the created ad-hoc rendered as a ScheduleActivity. */
 export const adHocActivityResponseSchema = z.object({
   data: activitySchema,
+  meta: z.any().optional(),
+});
+
+/** A single group bucket in the grouped activities response. */
+export const activityGroupSchema = z.object({
+  /** Stable bucket key the client can localize (type/priority/dueDate) or show verbatim (status). */
+  key: z.string(),
+  /** Human-readable English label; the client localizes known keys and falls back to this. */
+  label: z.string(),
+  count: z.number(),
+  activities: z.array(activitySchema),
+});
+
+/** Response for GET /activities?groupBy=… — the unified list bucketed server-side. */
+export const groupedActivitiesResponseSchema = z.object({
+  data: z.object({
+    groupBy: activityGroupBySchema,
+    groups: z.array(activityGroupSchema),
+    totalCount: z.number(),
+    /** True when the result set exceeded the grouping cap and was truncated. */
+    truncated: z.boolean(),
+  }),
+  meta: z.any().optional(),
+});
+
+/** One member reference inside a saved custom group. */
+export const customActivityGroupItemSchema = z.object({
+  itemId: z.string(),
+  activityId: z.string(),
+  activityType: z.string(),
+  sortOrder: z.number(),
+});
+
+/** A user's saved custom activity group (created/ordered on the web) with its ordered items. */
+export const customActivityGroupSchema = z.object({
+  groupId: z.string(),
+  groupName: z.string(),
+  sortOrder: z.number(),
+  isCollapsed: z.boolean(),
+  items: z.array(customActivityGroupItemSchema),
+});
+
+/** Response for GET /activities/groups — the caller's saved custom groups (ordered). */
+export const customActivityGroupsResponseSchema = z.object({
+  data: z.array(customActivityGroupSchema),
   meta: z.any().optional(),
 });

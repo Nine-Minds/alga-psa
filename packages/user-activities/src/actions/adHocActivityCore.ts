@@ -22,7 +22,6 @@ import {
   IUserWithRoles,
 } from "@alga-psa/types";
 import { hasPermission } from "@alga-psa/auth";
-import { revalidatePath } from "next/cache";
 
 export interface CreateAdHocActivityInput {
   title: string;
@@ -148,7 +147,6 @@ export async function createAdHocActivityForApi(
     return { ...entry, assigned_user_ids: [user.user_id] };
   });
 
-  revalidatePath("/msp/user-activities");
   return scheduleEntryToActivity(created) as ScheduleActivity;
 }
 
@@ -271,8 +269,6 @@ export async function updateAdHocActivityForApi(
 
     await trx("schedule_entries").where({ tenant, entry_id: entryId }).update(patch);
   });
-
-  revalidatePath("/msp/user-activities");
 }
 
 /**
@@ -305,8 +301,6 @@ export async function setAdHocActivityDoneForApi(
       .where({ tenant, entry_id: entryId })
       .update({ status: done ? "closed" : "scheduled", updated_at: trx.fn.now() });
   });
-
-  revalidatePath("/msp/user-activities");
 }
 
 /**
@@ -336,6 +330,4 @@ export async function deleteAdHocActivityForApi(
     await trx("schedule_entry_assignees").where({ tenant, entry_id: entryId }).delete();
     await trx("schedule_entries").where({ tenant, entry_id: entryId }).delete();
   });
-
-  revalidatePath("/msp/user-activities");
 }

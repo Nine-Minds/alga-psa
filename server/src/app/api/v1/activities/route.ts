@@ -10,9 +10,16 @@
 
 import type { NextRequest } from 'next/server';
 import type { ActivityFilters } from '@alga-psa/types';
-import { fetchUserActivitiesForApi } from '@alga-psa/user-activities/actions';
+import {
+  fetchUserActivitiesForApi,
+  fetchUserActivitiesGroupedForApi,
+} from '@alga-psa/user-activities/server/activity-actions';
 import { runWithTenant } from '@/lib/db';
-import { createPaginatedResponse, handleApiError } from '@/lib/api/middleware/apiMiddleware';
+import {
+  createPaginatedResponse,
+  createSuccessResponse,
+  handleApiError,
+} from '@/lib/api/middleware/apiMiddleware';
 import { listActivitiesQuerySchema } from '@/lib/api/schemas/activitySchemas';
 import { resolveActivityAuthContext, classifyActivityError } from './utils';
 
@@ -30,6 +37,20 @@ export async function GET(req: NextRequest) {
     else if (query.status === 'closed') filters.isClosed = true;
     if (query.dateStart) filters.dateRangeStart = query.dateStart;
     if (query.dateEnd) filters.dateRangeEnd = query.dateEnd;
+    if (query.priority) filters.priority = query.priority;
+    if (query.priorityIds) filters.priorityIds = query.priorityIds;
+    if (query.dueDateStart) filters.dueDateStart = query.dueDateStart;
+    if (query.dueDateEnd) filters.dueDateEnd = query.dueDateEnd;
+    if (query.sortBy) filters.sortBy = query.sortBy;
+    if (query.sortDirection) filters.sortDirection = query.sortDirection;
+
+    // Grouped view: server buckets the full (filtered) set by the requested dimension.
+    if (query.groupBy) {
+      const grouped = await runWithTenant(tenant, () =>
+        fetchUserActivitiesGroupedForApi(user, tenant, filters, query.groupBy!),
+      );
+      return createSuccessResponse(grouped);
+    }
 
     const result = await runWithTenant(tenant, () =>
       fetchUserActivitiesForApi(user, tenant, filters, query.page, query.pageSize),

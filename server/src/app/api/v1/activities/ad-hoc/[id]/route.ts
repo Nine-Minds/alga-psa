@@ -12,7 +12,7 @@ import {
   updateAdHocActivityForApi,
   getAdHocActivityAsActivityForApi,
   deleteAdHocActivityForApi,
-} from '@alga-psa/user-activities/actions';
+} from '@alga-psa/user-activities/server/activity-actions';
 import { runWithTenant } from '@/lib/db';
 import { createSuccessResponse, handleApiError } from '@/lib/api/middleware/apiMiddleware';
 import { updateAdHocActivitySchema } from '@/lib/api/schemas/activitySchemas';

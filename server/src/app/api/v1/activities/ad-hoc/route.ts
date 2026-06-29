@@ -7,7 +7,7 @@
  */
 
 import type { NextRequest } from 'next/server';
-import { createAdHocActivityForApi } from '@alga-psa/user-activities/actions';
+import { createAdHocActivityForApi } from '@alga-psa/user-activities/server/activity-actions';
 import { runWithTenant } from '@/lib/db';
 import { createSuccessResponse, handleApiError } from '@/lib/api/middleware/apiMiddleware';
 import { createAdHocActivitySchema } from '@/lib/api/schemas/activitySchemas';

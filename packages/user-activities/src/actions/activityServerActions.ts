@@ -344,7 +344,9 @@ export const createAdHocActivity = withAuth(async (
   { tenant },
   input: CreateAdHocActivityInput
 ): Promise<ScheduleActivity> => {
-  return createAdHocActivityForApi(user, tenant, input);
+  const created = await createAdHocActivityForApi(user, tenant, input);
+  revalidatePath("/msp/user-activities");
+  return created;
 });
 
 /**
@@ -358,7 +360,8 @@ export const setAdHocActivityDone = withAuth(async (
   entryId: string,
   done: boolean
 ): Promise<void> => {
-  return setAdHocActivityDoneForApi(user, tenant, entryId, done);
+  await setAdHocActivityDoneForApi(user, tenant, entryId, done);
+  revalidatePath("/msp/user-activities");
 });
 
 /**
@@ -385,7 +388,8 @@ export const updateAdHocActivity = withAuth(async (
   entryId: string,
   input: UpdateAdHocActivityInput
 ): Promise<void> => {
-  return updateAdHocActivityForApi(user, tenant, entryId, input);
+  await updateAdHocActivityForApi(user, tenant, entryId, input);
+  revalidatePath("/msp/user-activities");
 });
 
 /**
@@ -397,7 +401,8 @@ export const deleteAdHocActivity = withAuth(async (
   { tenant },
   entryId: string
 ): Promise<void> => {
-  return deleteAdHocActivityForApi(user, tenant, entryId);
+  await deleteAdHocActivityForApi(user, tenant, entryId);
+  revalidatePath("/msp/user-activities");
 });
 
 export interface ActivityViewableUsersResult {
