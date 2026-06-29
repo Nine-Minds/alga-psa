@@ -7,6 +7,15 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
+    // Inline next-auth/@auth/core/next so vite transforms them and the next/server
+    // alias below actually applies to next-auth's internal `import "next/server"`.
+    // Without this the deps stay external, Node resolves next/server itself, and a
+    // fresh CI install fails ("Cannot find module next/server"). Matches tickets.
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core', 'next'],
+      },
+    },
   },
   resolve: {
     alias: [
