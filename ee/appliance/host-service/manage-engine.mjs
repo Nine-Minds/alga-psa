@@ -228,6 +228,12 @@ export async function applyAppUrl(deps) {
 
 // --- Control-plane upgrade request (-> host-agent over the socket) ----------
 
+// LEVERAGE: friction appliance-host-agent-out-of-band — the control plane is
+// delivered via the OCI release channel, but this upgrade hops to the host-agent
+// (a host systemd service baked at install) which the channel can't update. So a
+// new control-plane image can call a host-agent route an older install lacks
+// (-> relayed 404 {"error":"not found"}). The host should be inside the update
+// plane, or the upgrade shouldn't depend on a separately-shipped host-agent route.
 export function requestControlPlaneUpgrade(deps) {
   const { hostAgentSocket = '/run/alga-appliance/host-agent.sock', timeoutMs = 10000 } = deps;
   return new Promise((resolve) => {

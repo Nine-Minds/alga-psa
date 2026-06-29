@@ -265,7 +265,21 @@ function ControlPlaneTab({
       });
       if (response.status === 401) { window.location.reload(); return; }
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Failed to start upgrade.");
+      if (!response.ok) {
+        // Older installs ship a host-agent that predates the in-place upgrade
+        // route (/v1/control-plane/upgrade), so this POST comes back as a relayed
+        // 404 {"error":"not found"}. The host-agent is a host systemd service
+        // baked at install — it is NOT delivered via the OCI release channel, so a
+        // channel/control-plane bump can't add the route. A reboot applies the
+        // channel's current control-plane image via the boot bootstrap, which
+        // doesn't go through the host-agent.
+        if (response.status === 404 && String(data.error || "").toLowerCase() === "not found") {
+          throw new Error(
+            "This appliance's host agent predates in-place control-plane upgrade, so the upgrade button can't apply it. Reboot the appliance to apply the latest control plane — the boot process pulls it directly (no host agent needed).",
+          );
+        }
+        throw new Error(data.error || "Failed to start upgrade.");
+      }
       setReconnecting(true);
       pollStartRef.current = Date.now();
       // Poll every 3 s, tolerating fetch failures while the pod restarts.
