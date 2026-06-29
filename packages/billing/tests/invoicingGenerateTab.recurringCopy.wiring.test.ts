@@ -28,15 +28,11 @@ describe('invoicing generate tab recurring copy wiring', () => {
     expect(overviewSource).toContain(
       'Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage'
     );
-    expect(generateTabSource).toContain(
-      'Use invoice windows to review due recurring service periods before generating a recurring batch.'
-    );
-    expect(generateTabSource).toContain(
-      'Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.'
-    );
-    expect(generateTabSource).toContain(
-      'Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage.'
-    );
+    // The data-first invoicing redesign collapsed GenerateTab's per-type summary
+    // descriptions into the InvoicingHub icon+label selector; the service-period
+    // semantics now live in each invoice surface (Automatic/Manual/Prepayment)
+    // asserted below, plus the Overview blurb above.
+    expect(generateTabSource).toContain("useTranslation('msp/invoicing')");
     expect(automaticSource).toContain(
       'Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.'
     );
