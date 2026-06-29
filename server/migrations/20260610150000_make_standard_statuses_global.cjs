@@ -132,6 +132,73 @@ exports.up = async function up(knex) {
     // tenant deletion before this migration) are recovered via custom_name.
     await recoverOrphanedProjectTaskMappings(knex);
 
+    // standard_statuses is the last per-tenant standard_* catalog. In Citus it is
+    // distributed on `tenant` while its sibling standard_* tables are reference
+    // tables; the distribution column cannot be dropped while the table is
+    // distributed (Citus: "cannot execute ALTER TABLE command involving partition
+    // column"). Undistribute first, drop the column, then redistribute it as a
+    // reference table so it matches every other standard_* catalog. On plain
+    // Postgres every Citus step below is skipped and the table is altered in place.
+    const citusEnabled = await knex.raw(
+      "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled"
+    );
+    const onCitus = Boolean(citusEnabled.rows?.[0]?.enabled);
+
+    let wasDistributed = false;
+    let inboundForeignKeys = [];
+
+    if (onCitus) {
+      const distRes = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition
+          WHERE logicalrelid = 'standard_statuses'::regclass
+            AND partmethod <> 'n'
+        ) AS distributed
+      `);
+      wasDistributed = Boolean(distRes.rows?.[0]?.distributed);
+    }
+
+    if (wasDistributed) {
+      // Inbound FKs from distributed tables (statuses, project_status_mappings, ...)
+      // block undistribute_table(). Capture each one's column pairs so it can be
+      // rebuilt against the reference table afterwards, dropping any `tenant` leg
+      // (that column no longer exists once it is removed below).
+      const inboundRes = await knex.raw(`
+        SELECT
+          con.conrelid::regclass::text AS child_table,
+          con.conname AS conname,
+          (SELECT array_agg(att.attname ORDER BY u.ord)
+             FROM unnest(con.conkey) WITH ORDINALITY AS u(attnum, ord)
+             JOIN pg_attribute att
+               ON att.attrelid = con.conrelid AND att.attnum = u.attnum) AS child_columns,
+          (SELECT array_agg(att.attname ORDER BY u.ord)
+             FROM unnest(con.confkey) WITH ORDINALITY AS u(attnum, ord)
+             JOIN pg_attribute att
+               ON att.attrelid = con.confrelid AND att.attnum = u.attnum) AS ref_columns
+        FROM pg_constraint con
+        WHERE con.confrelid = 'standard_statuses'::regclass
+          AND con.contype = 'f'
+      `);
+      inboundForeignKeys = inboundRes.rows ?? [];
+
+      for (const fk of inboundForeignKeys) {
+        await knex.raw(`ALTER TABLE ${fk.child_table} DROP CONSTRAINT IF EXISTS "${fk.conname}"`);
+      }
+
+      // standard_statuses' own FKs (e.g. tenant -> tenants) reference the
+      // distribution column and likewise obstruct undistribute_table(); they
+      // disappear together with the column, so just drop them up front.
+      const outboundRes = await knex.raw(`
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'standard_statuses'::regclass AND contype = 'f'
+      `);
+      for (const fk of outboundRes.rows ?? []) {
+        await knex.raw(`ALTER TABLE standard_statuses DROP CONSTRAINT IF EXISTS "${fk.conname}"`);
+      }
+
+      await knex.raw("SELECT undistribute_table('standard_statuses')");
+    }
+
     await knex.raw('ALTER TABLE standard_statuses DROP CONSTRAINT IF EXISTS standard_statuses_name_item_type_tenant_key');
     await knex.raw('ALTER TABLE standard_statuses DROP COLUMN tenant');
     await knex.raw(`
@@ -148,6 +215,29 @@ exports.up = async function up(knex) {
       END
       $$
     `);
+
+    if (wasDistributed) {
+      // Reference tables are replicated to every node, so distributed children can
+      // keep foreign keys into standard_statuses (matching the other standard_*).
+      await knex.raw("SELECT create_reference_table('standard_statuses')");
+
+      for (const fk of inboundForeignKeys) {
+        const pairs = (fk.child_columns || [])
+          .map((childCol, i) => ({ childCol, refCol: (fk.ref_columns || [])[i] }))
+          .filter((pair) => pair.refCol && pair.refCol !== 'tenant');
+
+        if (pairs.length === 0) {
+          continue;
+        }
+
+        const childCols = pairs.map((p) => `"${p.childCol}"`).join(', ');
+        const refCols = pairs.map((p) => `"${p.refCol}"`).join(', ');
+        await knex.raw(
+          `ALTER TABLE ${fk.child_table} ADD CONSTRAINT "${fk.conname}" ` +
+          `FOREIGN KEY (${childCols}) REFERENCES standard_statuses (${refCols})`
+        );
+      }
+    }
   }
 
   await knex('standard_statuses')
