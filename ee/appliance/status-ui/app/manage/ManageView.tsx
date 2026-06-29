@@ -696,6 +696,10 @@ export function ManageView() {
   const [manageStatus, setManageStatus] = useState<ManageStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Latest poll failed but we still have a prior snapshot to keep showing.
+  const [reconnecting, setReconnecting] = useState(false);
+  // Mirror of manageStatus, readable inside the (stable) loader closure.
+  const manageStatusRef = useRef<ManageStatus | null>(null);
 
   const loadManageStatus = useCallback(async () => {
     try {
@@ -708,10 +712,27 @@ export function ManageView() {
         return;
       }
       if (!response.ok) throw new Error("Manage status unavailable.");
-      setManageStatus(await response.json());
+      const data = (await response.json()) as ManageStatus;
+      manageStatusRef.current = data;
+      setManageStatus(data);
       setError(null);
+      setReconnecting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      // Flux/Helm churn — and the control-plane pod restarting during its own
+      // upgrade — make individual status polls fail transiently. Once we have a
+      // snapshot, ride the blip out: keep the last-good view and show a quiet
+      // "reconnecting" strip instead of replacing the whole Manage UI (and the
+      // tabs' own progress banners) with a fatal error. A fatal error is only for
+      // the initial load, when there is nothing to show yet.
+      // LEVERAGE: pattern appliance-resilient-status-poll — the status page
+      // (app/page.tsx) hand-rolls this same "keep last-good snapshot across
+      // transient poll failures" behavior separately; a shared usePolledResource
+      // hook would unify both surfaces.
+      if (manageStatusRef.current) {
+        setReconnecting(true);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -759,10 +780,16 @@ export function ManageView() {
             ))}
           </div>
         </div>
-      ) : error ? (
+      ) : error && !manageStatus ? (
         <div className={styles.alert}>{error}</div>
       ) : manageStatus ? (
         <>
+          {reconnecting ? (
+            <div className={`${styles.alert} ${styles.alertInfo}`}>
+              Reconnecting to the appliance… showing the last known status. This is
+              expected while services reconcile or the control plane restarts.
+            </div>
+          ) : null}
           {activeTab === "updates" ? (
             <div
               id="manage-panel-updates"
