@@ -9,16 +9,85 @@
     "noAccess": "No access",
     "noAccessDescription": "Your account does not have permission to view activities.",
     "signOut": "Sign out",
-    "addEntry": "New to-do"
+    "addEntry": "New to-do",
+    "resultsCount_one": "{{count}} activity",
+    "resultsCount_other": "{{count}} activities",
+    "truncated": "showing the first results"
   },
   "filters": {
+    "button": "Filters",
+    "title": "Filters",
     "status": "Status",
     "open": "Open",
     "closed": "Closed",
     "all": "All",
     "types": "Types",
+    "typesCount": "Types ({{count}})",
+    "priority": "Priority",
+    "priorityCount": "Priority ({{count}})",
+    "priorityScopeHint": "Select a single type — Tickets or Project tasks — to filter by priority.",
+    "prioritiesLoading": "Loading priorities…",
+    "prioritiesError": "Couldn't load priorities.",
+    "prioritiesEmpty": "No priorities defined for this type.",
+    "dueDate": "Due date",
+    "due": {
+      "any": "Any due date",
+      "overdue": "Overdue",
+      "today": "Due today",
+      "week": "Due this week"
+    },
+    "groupByLabel": "Group by",
+    "groupBy": {
+      "none": "None",
+      "custom": "My groups",
+      "type": "Type",
+      "priority": "Priority",
+      "status": "Status",
+      "dueDate": "Due date"
+    },
+    "groupedBy": "Grouped: {{dimension}}",
+    "sortLabel": "Sort by",
+    "sort": {
+      "default": "Smart",
+      "priority": "Priority",
+      "dueDate": "Due date",
+      "title": "Title",
+      "status": "Status",
+      "type": "Type"
+    },
+    "sortedBy": "Sort: {{field}}",
+    "order": "Order",
+    "asc": "Ascending",
+    "desc": "Descending",
+    "clearAll": "Clear all",
+    "viewResults": "View results",
+    "viewResultsCount_one": "View {{count}} result",
+    "viewResultsCount_other": "View {{count}} results",
+    "viewResultsLoading": "Loading…",
     "searchPlaceholder": "Search activities",
     "searchAccessibility": "Search activities"
+  },
+  "quickFilters": {
+    "overdue": "Overdue",
+    "dueToday": "Due today",
+    "highPriority": "High priority"
+  },
+  "groups": {
+    "ungrouped": "Ungrouped",
+    "dragHint": "Hold a card to drag it between groups",
+    "saveFailed": "Couldn't save your change. Pull to refresh and try again.",
+    "priority": {
+      "high": "High priority",
+      "medium": "Medium priority",
+      "low": "Low priority"
+    },
+    "due": {
+      "overdue": "Overdue",
+      "today": "Due today",
+      "thisWeek": "Due this week",
+      "later": "Later",
+      "none": "No due date"
+    }
   },
   "types": {
     "ticket": "Ticket",

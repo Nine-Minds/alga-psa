@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Badge } from "../../../ui/components/Badge";
@@ -99,7 +99,7 @@ export const ActivityRow = memo(function ActivityRow({
       <View style={{ width: 4, backgroundColor: barColor }} />
       <View style={{ flex: 1, padding: theme.spacing.md }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Feather name={activityTypeIcon(activity)} size={13} color={barColor} />
+          <MaterialCommunityIcons name={activityTypeIcon(activity)} size={14} color={barColor} />
           <Text
             style={{
               ...theme.typography.caption,

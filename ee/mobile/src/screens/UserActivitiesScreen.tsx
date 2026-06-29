@@ -1,13 +1,27 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
+  SectionList,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { CompositeScreenProps } from "@react-navigation/native";
@@ -16,24 +30,34 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { DrawerParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
-import { createApiClient } from "../api";
+import { createApiClient, type ApiClient } from "../api";
 import type { ApiError } from "../api";
 import {
   createAdHocEntry,
   deleteAdHocEntry,
   listActivities,
+  listActivitiesGrouped,
+  listActivityGroups,
+  moveActivityToGroup,
+  removeActivityFromGroups,
+  reorderActivitiesInGroup,
   setAdHocDone,
   updateAdHocEntry,
   isAdHocActivity,
   type Activity,
-  type ActivityStatusFilter,
+  type ActivityGroup,
   type MobileActivityType,
   type ScheduleActivity,
 } from "../api/activities";
+import { buildCustomGroups, UNGROUPED_KEY } from "../features/userActivities/activityHelpers";
+import { DraggableGroupedList } from "../features/userActivities/components/DraggableGroupedList";
+import type { GroupDragPlan } from "../features/userActivities/groupDragPlan";
+import { listPriorities, type MobilePriority } from "../api/priorities";
 import {
   getCachedUserActivities,
   setCachedUserActivities,
 } from "../cache/userActivitiesCache";
+import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAppResume } from "../hooks/useAppResume";
 import { useTheme } from "../ui/ThemeContext";
@@ -47,6 +71,18 @@ import {
   defaultAdHocFormValue,
   type AdHocFormValue,
 } from "../features/userActivities/components/AdHocEntryFormModal";
+import {
+  ACTIVITY_SORT_FIELDS,
+  ACTIVITY_TYPE_FILTERS,
+  DEFAULT_ACTIVITY_FILTERS,
+  activitiesApiParams,
+  countActiveFilters,
+  groupFieldsFor,
+  scopedPriorityItemType,
+  type ActivitiesFilterState,
+  type ActivityDueFilter,
+  type ActivityGroupField,
+} from "../features/userActivities/activityFilters";
 
 type Props = CompositeScreenProps<
   DrawerScreenProps<DrawerParamList, "UserActivitiesTab">,
@@ -56,25 +92,7 @@ type Props = CompositeScreenProps<
 const PAGE_SIZE = 25;
 const NEXT_PAGE_PREFETCH_THRESHOLD = 0.6;
 
-const TYPE_FILTERS: MobileActivityType[] = [
-  "ticket",
-  "projectTask",
-  "schedule",
-  "workflowTask",
-  "timeEntry",
-];
-
-type ActivityFilterState = {
-  status: ActivityStatusFilter;
-  types: MobileActivityType[];
-  search: string;
-};
-
-const DEFAULT_FILTERS: ActivityFilterState = {
-  status: "open",
-  types: [],
-  search: "",
-};
+const DUE_FILTERS: ActivityDueFilter[] = ["any", "overdue", "today", "week"];
 
 function adHocActivityToFormValue(activity: ScheduleActivity): AdHocFormValue {
   const startDate = activity.startDate ? new Date(activity.startDate) : undefined;
@@ -106,6 +124,33 @@ function formScheduleTimes(value: AdHocFormValue): { scheduledStart: string | nu
   };
 }
 
+/** Localized section title for a server group bucket (falls back to the server label). */
+function useGroupTitle(): (groupBy: ActivityGroupField, group: ActivityGroup) => string {
+  const { t } = useTranslation("userActivities");
+  return useCallback(
+    (groupBy: ActivityGroupField, group: ActivityGroup) => {
+      switch (groupBy) {
+        case "type":
+          return t(`types.${group.key}`, { defaultValue: group.label });
+        case "priority":
+          return t(`groups.priority.${group.key}`, { defaultValue: group.label });
+        case "dueDate":
+          return t(`groups.due.${group.key}`, { defaultValue: group.label });
+        case "custom":
+          // Saved group names are user-authored; only the synthetic "Ungrouped" is localized.
+          return group.key === UNGROUPED_KEY
+            ? t("groups.ungrouped", { defaultValue: "Ungrouped" })
+            : group.label;
+        case "status":
+        case "none":
+        default:
+          return group.label;
+      }
+    },
+    [t],
+  );
+}
+
 export function UserActivitiesScreen({ navigation }: Props) {
   const { t } = useTranslation("userActivities");
   const theme = useTheme();
@@ -113,6 +158,7 @@ export function UserActivitiesScreen({ navigation }: Props) {
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
   const loadingMoreRef = useRef(false);
+  const groupTitleFor = useGroupTitle();
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -124,19 +170,33 @@ export function UserActivitiesScreen({ navigation }: Props) {
     });
   }, [config, refreshSession, session]);
 
+  // Flat (paginated) state.
   const [items, setItems] = useState<Activity[]>([]);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(true);
+  const [total, setTotal] = useState<number | null>(null);
+
+  // Grouped state.
+  const [groups, setGroups] = useState<ActivityGroup[]>([]);
+  const [groupTotal, setGroupTotal] = useState<number | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noAccess, setNoAccess] = useState(false);
 
-  const [filters, setFilters] = useState<ActivityFilterState>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<ActivitiesFilterState>(DEFAULT_ACTIVITY_FILTERS);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
-  // Ad-hoc create/edit sheet
+  const grouped = filters.groupBy !== "none";
+  const resultsTotal = grouped ? groupTotal : total;
+
+  // Ad-hoc create/edit sheet.
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<"create" | "edit">("create");
   const [sheetInitial, setSheetInitial] = useState<AdHocFormValue>(() => defaultAdHocFormValue());
@@ -153,54 +213,104 @@ export function UserActivitiesScreen({ navigation }: Props) {
     if (searchInput === "" && search !== "") setSearch("");
   }, [searchInput, search]);
 
+  // Load persisted filters once per user.
+  useEffect(() => {
+    let canceled = false;
+    const run = async () => {
+      const userId = session?.user?.id;
+      if (!userId) {
+        setFiltersLoaded(true);
+        return;
+      }
+      const saved = await getSecureJson<ActivitiesFilterState>(`alga.mobile.activities.filters.${userId}`);
+      if (canceled) return;
+      if (saved) {
+        setFilters({
+          ...DEFAULT_ACTIVITY_FILTERS,
+          ...saved,
+          types: Array.isArray(saved.types) ? saved.types : [],
+          priorityIds: Array.isArray(saved.priorityIds) ? saved.priorityIds : [],
+        });
+      }
+      setFiltersLoaded(true);
+    };
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!filtersLoaded || !userId) return;
+    void setSecureJson(`alga.mobile.activities.filters.${userId}`, filters);
+  }, [filters, filtersLoaded, session?.user?.id]);
+
+  // Priorities are per-type and only meaningful when scoped to a single prioritized type.
+  // When that scope is lost (multi-type / non-prioritized), drop stale priority filters and
+  // the now-invalid priority grouping so the query and view stay coherent.
+  useEffect(() => {
+    if (scopedPriorityItemType(filters)) return;
+    if (filters.priorityIds.length === 0 && filters.groupBy !== "priority") return;
+    setFilters((prev) => ({
+      ...prev,
+      priorityIds: [],
+      groupBy: prev.groupBy === "priority" ? "none" : prev.groupBy,
+    }));
+  }, [filters]);
+
   const cacheKey = useMemo(() => {
     if (!session) return null;
     const userId = session.user?.id ?? "anon";
     return `alga.mobile.activities.list.${userId}.${JSON.stringify({
       status: filters.status,
       types: [...filters.types].sort(),
+      priorityIds: [...filters.priorityIds].sort(),
+      due: filters.due,
+      sortField: filters.sortField,
+      sortOrder: filters.sortOrder,
       search,
     })}`;
-  }, [filters.status, filters.types, search, session]);
+  }, [filters.status, filters.types, filters.priorityIds, filters.due, filters.sortField, filters.sortOrder, search, session]);
 
+  // Seed the flat list from cache when the (flat) cache key changes.
   useEffect(() => {
+    if (grouped) return;
     if (!cacheKey) return;
     const cached = getCachedUserActivities(cacheKey);
+    setTotal(null);
     if (!cached) {
       setItems([]);
       setPage(1);
       setHasNext(true);
-      setError(null);
-      setNoAccess(false);
       return;
     }
     setItems(cached.items);
     setPage(cached.page);
     setHasNext(cached.hasNext);
-  }, [cacheKey]);
+  }, [cacheKey, grouped]);
 
-  const loadPage = useCallback(
+  const loadFlat = useCallback(
     async ({ pageToLoad, replace }: { pageToLoad: number; replace: boolean }) => {
       if (!client || !session) return;
       setError(null);
       setNoAccess(false);
 
       listAbortRef.current?.abort();
-      const abortController = new AbortController();
-      listAbortRef.current = abortController;
+      const ac = new AbortController();
+      listAbortRef.current = ac;
 
       const result = await listActivities(client, {
         apiKey: session.accessToken,
         page: pageToLoad,
         pageSize: PAGE_SIZE,
-        status: filters.status,
-        type: filters.types.length > 0 ? filters.types : undefined,
         search: search || undefined,
-        signal: abortController.signal,
+        ...activitiesApiParams(filters),
+        signal: ac.signal,
       });
 
-      if (listAbortRef.current === abortController) listAbortRef.current = null;
-      if (abortController.signal.aborted) return;
+      if (listAbortRef.current === ac) listAbortRef.current = null;
+      if (ac.signal.aborted) return;
 
       if (!result.ok) {
         if (result.error.kind === "canceled") return;
@@ -218,6 +328,7 @@ export function UserActivitiesScreen({ navigation }: Props) {
       setItems((prev) => (replace ? nextItems : [...prev, ...nextItems]));
       setPage(result.data.pagination.page);
       setHasNext(result.data.pagination.hasNext);
+      setTotal(typeof result.data.pagination.total === "number" ? result.data.pagination.total : null);
 
       if (replace && pageToLoad === 1 && cacheKey) {
         setCachedUserActivities(cacheKey, {
@@ -228,44 +339,171 @@ export function UserActivitiesScreen({ navigation }: Props) {
         });
       }
     },
-    [cacheKey, client, filters.status, filters.types, search, session, t],
+    [cacheKey, client, filters, search, session, t],
   );
 
-  const { refreshing, refresh } = usePullToRefresh(async () => {
-    await loadPage({ pageToLoad: 1, replace: true });
-  }, { haptics: true });
+  const loadGrouped = useCallback(async () => {
+    if (!client || !session) return;
+    // `custom` is handled by loadCustomGroups; loadGrouped only serves the server dimensions.
+    if (filters.groupBy === "none" || filters.groupBy === "custom") return;
+    setError(null);
+    setNoAccess(false);
+
+    listAbortRef.current?.abort();
+    const ac = new AbortController();
+    listAbortRef.current = ac;
+
+    const result = await listActivitiesGrouped(client, {
+      apiKey: session.accessToken,
+      search: search || undefined,
+      ...activitiesApiParams(filters),
+      groupBy: filters.groupBy,
+      signal: ac.signal,
+    });
+
+    if (listAbortRef.current === ac) listAbortRef.current = null;
+    if (ac.signal.aborted) return;
+
+    if (!result.ok) {
+      if (result.error.kind === "canceled") return;
+      if (result.error.kind === "permission") {
+        setGroups([]);
+        setNoAccess(true);
+        return;
+      }
+      setError(t("list.unableToLoadDescription", { defaultValue: "We couldn't load your activities. Pull to refresh or try again." }));
+      return;
+    }
+
+    setGroups(result.data.data.groups);
+    setGroupTotal(result.data.data.totalCount);
+    setTruncated(result.data.data.truncated);
+  }, [client, filters, search, session, t]);
+
+  const loadCustomGroups = useCallback(async () => {
+    if (!client || !session) return;
+    setError(null);
+    setNoAccess(false);
+
+    listAbortRef.current?.abort();
+    const ac = new AbortController();
+    listAbortRef.current = ac;
+
+    // Reuse the (unpaginated) grouped endpoint to pull the full filtered activity set, then
+    // re-bucket it into the user's saved groups (fetched read-only from /activities/groups).
+    const [listResult, groupsResult] = await Promise.all([
+      listActivitiesGrouped(client, {
+        apiKey: session.accessToken,
+        search: search || undefined,
+        ...activitiesApiParams(filters),
+        groupBy: "type",
+        signal: ac.signal,
+      }),
+      listActivityGroups(client, { apiKey: session.accessToken, signal: ac.signal }),
+    ]);
+
+    if (listAbortRef.current === ac) listAbortRef.current = null;
+    if (ac.signal.aborted) return;
+
+    if (!listResult.ok || !groupsResult.ok) {
+      const failure = !listResult.ok ? listResult.error : !groupsResult.ok ? groupsResult.error : null;
+      if (failure?.kind === "canceled") return;
+      if (failure?.kind === "permission") {
+        setGroups([]);
+        setNoAccess(true);
+        return;
+      }
+      setError(t("list.unableToLoadDescription", { defaultValue: "We couldn't load your activities. Pull to refresh or try again." }));
+      return;
+    }
+
+    const allActivities = listResult.data.data.groups.flatMap((g) => g.activities);
+    setGroups(buildCustomGroups(allActivities, groupsResult.data.data));
+    setGroupTotal(listResult.data.data.totalCount);
+    setTruncated(listResult.data.data.truncated);
+  }, [client, filters, search, session, t]);
+
+  // Persist a drag-to-organize gesture: render the optimistic arrangement immediately, fire
+  // the single mutation it maps to, then reconcile against the server (or revert on failure).
+  const handleGroupDragCommit = useCallback(
+    async (plan: GroupDragPlan) => {
+      if (!client || !session) return;
+      const previous = groups;
+      setGroups(plan.nextGroups);
+
+      const m = plan.mutation;
+      const result =
+        m.kind === "reorder"
+          ? await reorderActivitiesInGroup(client, { apiKey: session.accessToken, groupId: m.groupKey, items: m.items })
+          : m.kind === "move"
+            ? await moveActivityToGroup(client, {
+                apiKey: session.accessToken,
+                activityId: m.activityId,
+                activityType: m.activityType,
+                groupId: m.groupKey,
+                sortOrder: m.sortOrder,
+              })
+            : m.kind === "remove"
+              ? await removeActivityFromGroups(client, {
+                  apiKey: session.accessToken,
+                  activityId: m.activityId,
+                  activityType: m.activityType,
+                })
+              : null;
+
+      if (!result) return;
+      if (!result.ok) {
+        setGroups(previous);
+        setError(t("groups.saveFailed", { defaultValue: "Couldn't save your change. Pull to refresh and try again." }));
+        return;
+      }
+      // Reconcile counts / ungrouped membership / cross-group ordering with the server.
+      await loadCustomGroups();
+    },
+    [client, groups, loadCustomGroups, session, t],
+  );
+
+  const reload = useCallback(async () => {
+    if (filters.groupBy === "none") await loadFlat({ pageToLoad: 1, replace: true });
+    else if (filters.groupBy === "custom") await loadCustomGroups();
+    else await loadGrouped();
+  }, [filters.groupBy, loadFlat, loadGrouped, loadCustomGroups]);
+
+  const { refreshing, refresh } = usePullToRefresh(reload, { haptics: true });
 
   useAppResume(() => {
     void refresh();
   });
 
   useEffect(() => {
+    if (!filtersLoaded) return;
     let canceled = false;
     const run = async () => {
       if (!client || !session) return;
       setInitialLoading(true);
-      await loadPage({ pageToLoad: 1, replace: true });
+      await reload();
       if (!canceled) setInitialLoading(false);
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [client, loadPage, session]);
+  }, [client, filtersLoaded, reload, session]);
 
   const onEndReached = useCallback(async () => {
+    if (grouped) return;
     if (!client || !session) return;
     if (initialLoading || refreshing || loadingMoreRef.current) return;
     if (!hasNext) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
-      await loadPage({ pageToLoad: page + 1, replace: false });
+      await loadFlat({ pageToLoad: page + 1, replace: false });
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [client, hasNext, initialLoading, loadPage, page, refreshing, session]);
+  }, [client, grouped, hasNext, initialLoading, loadFlat, page, refreshing, session]);
 
   const errorMessageFor = useCallback(
     (apiError: ApiError, fallback: string): string => {
@@ -407,12 +645,30 @@ export function UserActivitiesScreen({ navigation }: Props) {
     setSearch("");
   }, []);
 
-  const toggleType = useCallback((type: MobileActivityType) => {
-    setFilters((prev) => {
-      const has = prev.types.includes(type);
-      return { ...prev, types: has ? prev.types.filter((tpe) => tpe !== type) : [...prev.types, type] };
+  const toggleCollapsed = useCallback((key: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
   }, []);
+
+  const clearAllFilters = useCallback(() => {
+    setFilters(DEFAULT_ACTIVITY_FILTERS);
+    clearSearch();
+  }, [clearSearch]);
+
+  const sections = useMemo(
+    () =>
+      groups.map((group) => ({
+        key: group.key,
+        title: groupTitleFor(filters.groupBy, group),
+        count: group.count,
+        data: collapsed.has(group.key) ? [] : group.activities,
+      })),
+    [collapsed, filters.groupBy, groups, groupTitleFor],
+  );
 
   if (!config.ok) {
     return <ErrorState title={t("common:configurationError")} description={config.error} />;
@@ -461,51 +717,115 @@ export function UserActivitiesScreen({ navigation }: Props) {
         >
           <Feather name="search" size={16} color={theme.colors.text} />
         </Pressable>
+        <View style={{ width: theme.spacing.sm }} />
+        <FiltersButton
+          theme={theme}
+          label={t("filters.button", { defaultValue: "Filters" })}
+          count={countActiveFilters(filters)}
+          onPress={() => setFiltersOpen(true)}
+        />
       </View>
 
-      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>
-        {t("filters.status", { defaultValue: "Status" })}
-      </Text>
-      <ChipRow
-        theme={theme}
-        options={[
-          { label: t("filters.open", { defaultValue: "Open" }), value: "open" },
-          { label: t("filters.closed", { defaultValue: "Closed" }), value: "closed" },
-          { label: t("filters.all", { defaultValue: "All" }), value: "all" },
-        ]}
-        selected={filters.status}
-        onSelect={(status) => setFilters((prev) => ({ ...prev, status }))}
-      />
-
-      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>
-        {t("filters.types", { defaultValue: "Types" })}
-      </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
-        {TYPE_FILTERS.map((type) => {
-          const selected = filters.types.includes(type);
-          return (
-            <Chip
-              key={type}
-              theme={theme}
-              label={t(`types.${type}`, { defaultValue: type })}
-              selected={selected}
-              onPress={() => toggleType(type)}
-            />
-          );
-        })}
+      {/* Quick filters on the left; the "My groups" grouping toggle tucked to the right under
+          the Filters button. Other groupings (Type/Status/Due date) live in the Filters modal. */}
+      <View style={{ flexDirection: "row", alignItems: "center", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
+        <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
+          <QuickChip
+            theme={theme}
+            label={t("quickFilters.overdue", { defaultValue: "Overdue" })}
+            selected={filters.due === "overdue"}
+            onPress={() => setFilters((prev) => ({ ...prev, due: prev.due === "overdue" ? "any" : "overdue" }))}
+          />
+          <QuickChip
+            theme={theme}
+            label={t("quickFilters.dueToday", { defaultValue: "Due today" })}
+            selected={filters.due === "today"}
+            onPress={() => setFilters((prev) => ({ ...prev, due: prev.due === "today" ? "any" : "today" }))}
+          />
+        </View>
+        <QuickChip
+          theme={theme}
+          label={t("filters.groupBy.custom", { defaultValue: "My groups" })}
+          selected={filters.groupBy === "custom"}
+          onPress={() => setFilters((prev) => ({ ...prev, groupBy: prev.groupBy === "custom" ? "none" : "custom" }))}
+        />
       </View>
+
+      <FilterChipBar theme={theme} filters={filters} onPress={() => setFiltersOpen(true)} onClearAll={clearAllFilters} />
+
+      {resultsTotal !== null ? (
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("list.resultsCount", { count: resultsTotal, defaultValue: "{{count}} activities" })}
+          {truncated && grouped ? ` • ${t("list.truncated", { defaultValue: "showing the first results" })}` : ""}
+        </Text>
+      ) : null}
     </View>
   );
 
-  let body;
-  if (initialLoading && items.length === 0) {
+  let body: ReactNode;
+  if (initialLoading && items.length === 0 && groups.length === 0) {
     body = <LoadingState message={t("list.loading", { defaultValue: "Loading your activities…" })} />;
-  } else if (error && items.length === 0) {
+  } else if (error && items.length === 0 && groups.length === 0) {
     body = (
       <ErrorState
         title={t("list.unableToLoad", { defaultValue: "Unable to load activities" })}
         description={error}
         action={<PrimaryButton onPress={() => void refresh()}>{t("common:retry")}</PrimaryButton>}
+      />
+    );
+  } else if (grouped && filters.groupBy === "custom") {
+    body = (
+      <DraggableGroupedList
+        theme={theme}
+        groups={groups}
+        collapsed={collapsed}
+        onToggleCollapsed={toggleCollapsed}
+        titleForGroup={(group) => groupTitleFor(filters.groupBy, group)}
+        onPressActivity={onPressActivity}
+        onCommit={(plan) => void handleGroupDragCommit(plan)}
+        refreshing={refreshing}
+        onRefresh={refresh}
+        header={header}
+        emptyComponent={
+          <EmptyState
+            title={t("list.empty", { defaultValue: "Nothing here yet" })}
+            description={t("list.emptyDescription", { defaultValue: "You have no activities matching these filters." })}
+          />
+        }
+        dragHint={t("groups.dragHint", { defaultValue: "Hold a card to drag it between groups" })}
+      />
+    );
+  } else if (grouped) {
+    body = (
+      <SectionList
+        sections={sections}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xxxl, flexGrow: 1, backgroundColor: theme.colors.background }}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          <EmptyState
+            title={t("list.empty", { defaultValue: "Nothing here yet" })}
+            description={t("list.emptyDescription", { defaultValue: "You have no activities matching these filters." })}
+          />
+        }
+        renderSectionHeader={({ section }) => (
+          <GroupHeader
+            theme={theme}
+            title={section.title}
+            count={section.count}
+            collapsed={collapsed.has(section.key)}
+            onPress={() => toggleCollapsed(section.key)}
+          />
+        )}
+        stickySectionHeadersEnabled={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        removeClippedSubviews
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
       />
     );
   } else {
@@ -515,7 +835,7 @@ export function UserActivitiesScreen({ navigation }: Props) {
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-        contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xxxl, backgroundColor: theme.colors.background }}
+        contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xxxl, flexGrow: 1, backgroundColor: theme.colors.background }}
         onEndReached={onEndReached}
         onEndReachedThreshold={NEXT_PAGE_PREFETCH_THRESHOLD}
         ListHeaderComponent={header}
@@ -585,9 +905,501 @@ export function UserActivitiesScreen({ navigation }: Props) {
           }
         }}
       />
+
+      <FiltersModal
+        theme={theme}
+        visible={filtersOpen}
+        client={client}
+        apiKey={session.accessToken}
+        filters={filters}
+        setFilters={setFilters}
+        resultsTotal={resultsTotal}
+        resultsLoading={initialLoading}
+        onClose={() => setFiltersOpen(false)}
+      />
     </View>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Header pieces
+// ---------------------------------------------------------------------------
+
+function FiltersButton({
+  theme,
+  label,
+  count,
+  onPress,
+}: {
+  theme: Theme;
+  label: string;
+  count: number;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.borderRadius.lg,
+        borderWidth: 1,
+        borderColor: count > 0 ? theme.colors.primary : theme.colors.border,
+        backgroundColor: theme.colors.card,
+        opacity: pressed ? 0.95 : 1,
+      })}
+    >
+      <Feather name="filter" size={14} color={count > 0 ? theme.colors.primary : theme.colors.text} />
+      <Text
+        style={{
+          ...theme.typography.caption,
+          color: count > 0 ? theme.colors.primary : theme.colors.text,
+          fontWeight: "600",
+          marginLeft: theme.spacing.xs,
+        }}
+      >
+        {label}
+        {count > 0 ? ` (${count})` : ""}
+      </Text>
+    </Pressable>
+  );
+}
+
+function GroupHeader({
+  theme,
+  title,
+  count,
+  collapsed,
+  onPress,
+}: {
+  theme: Theme;
+  title: string;
+  count: number;
+  collapsed: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: !collapsed }}
+      accessibilityLabel={title}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: theme.spacing.sm,
+        backgroundColor: theme.colors.background,
+        opacity: pressed ? 0.8 : 1,
+      })}
+    >
+      <Feather
+        name={collapsed ? "chevron-right" : "chevron-down"}
+        size={16}
+        color={theme.colors.textSecondary}
+      />
+      <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "700", marginLeft: theme.spacing.xs, flex: 1 }}>
+        {title}
+      </Text>
+      <View
+        style={{
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: 2,
+          borderRadius: theme.borderRadius.full,
+          backgroundColor: theme.colors.badge.neutral.bg,
+          borderWidth: 1,
+          borderColor: theme.colors.badge.neutral.border,
+        }}
+      >
+        <Text style={{ ...theme.typography.caption, color: theme.colors.badge.neutral.text, fontWeight: "700" }}>{count}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function FilterChipBar({
+  theme,
+  filters,
+  onPress,
+  onClearAll,
+}: {
+  theme: Theme;
+  filters: ActivitiesFilterState;
+  onPress: () => void;
+  onClearAll: () => void;
+}) {
+  const { t } = useTranslation("userActivities");
+  const chips: string[] = [];
+  if (filters.status !== DEFAULT_ACTIVITY_FILTERS.status) {
+    chips.push(t(`filters.${filters.status}`, { defaultValue: filters.status }));
+  }
+  if (filters.types.length > 0) chips.push(t("filters.typesCount", { count: filters.types.length, defaultValue: "Types ({{count}})" }));
+  if (filters.priorityIds.length > 0) chips.push(t("filters.priorityCount", { count: filters.priorityIds.length, defaultValue: "Priority ({{count}})" }));
+  if (filters.due !== "any") chips.push(t(`filters.due.${filters.due}`, { defaultValue: filters.due }));
+  // Grouping (incl. "My groups") is shown by the dedicated toggle pill, not as a chip here.
+  if (filters.sortField !== "default") {
+    chips.push(t("filters.sortedBy", { field: t(`filters.sort.${filters.sortField}`, { defaultValue: filters.sortField }), defaultValue: "Sort: {{field}}" }));
+  }
+
+  if (chips.length === 0) return null;
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
+      {chips.map((label) => (
+        <QuickChip key={label} theme={theme} label={label} onPress={onPress} />
+      ))}
+      <QuickChip theme={theme} label={t("filters.clearAll", { defaultValue: "Clear all" })} onPress={onClearAll} emphasized />
+    </View>
+  );
+}
+
+function QuickChip({
+  theme,
+  label,
+  onPress,
+  selected = false,
+  emphasized = false,
+}: {
+  theme: Theme;
+  label: string;
+  onPress: () => void;
+  selected?: boolean;
+  emphasized?: boolean;
+}) {
+  const active = selected || emphasized;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: 6,
+        borderRadius: theme.borderRadius.full,
+        borderWidth: 1,
+        borderColor: active ? theme.colors.primary : theme.colors.border,
+        backgroundColor: selected ? theme.colors.primary : theme.colors.card,
+        opacity: pressed ? 0.95 : 1,
+      })}
+    >
+      <Text
+        style={{
+          ...theme.typography.caption,
+          color: selected ? theme.colors.textInverse : emphasized ? theme.colors.primary : theme.colors.text,
+          fontWeight: "600",
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Filters modal
+// ---------------------------------------------------------------------------
+
+function FiltersModal({
+  theme,
+  visible,
+  client,
+  apiKey,
+  filters,
+  setFilters,
+  resultsTotal,
+  resultsLoading,
+  onClose,
+}: {
+  theme: Theme;
+  visible: boolean;
+  client: ApiClient | null;
+  apiKey: string;
+  filters: ActivitiesFilterState;
+  setFilters: Dispatch<SetStateAction<ActivitiesFilterState>>;
+  resultsTotal: number | null;
+  resultsLoading: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("userActivities");
+  const insets = useSafeAreaInsets();
+
+  // The priority filter is only meaningful when scoped to a single prioritized type; load
+  // that type's real tenant priorities so a custom scheme (P1..P5, 1..5) is filterable.
+  const priorityItemType = scopedPriorityItemType(filters);
+  const [priorityOptions, setPriorityOptions] = useState<MobilePriority[]>([]);
+  const [prioritiesLoading, setPrioritiesLoading] = useState(false);
+  const [prioritiesError, setPrioritiesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let canceled = false;
+    const run = async () => {
+      if (!visible || !client || !priorityItemType) return;
+      setPrioritiesLoading(true);
+      setPrioritiesError(null);
+      const result = await listPriorities(client, { apiKey, itemType: priorityItemType });
+      if (canceled) return;
+      setPrioritiesLoading(false);
+      if (!result.ok) {
+        setPriorityOptions([]);
+        setPrioritiesError(t("filters.prioritiesError", { defaultValue: "Couldn't load priorities." }));
+        return;
+      }
+      setPriorityOptions(result.data.data);
+    };
+    void run();
+    return () => {
+      canceled = true;
+    };
+  }, [apiKey, client, priorityItemType, t, visible]);
+
+  const viewResultsLabel = resultsLoading
+    ? t("filters.viewResultsLoading", { defaultValue: "Loading…" })
+    : resultsTotal !== null
+      ? t("filters.viewResultsCount", { count: resultsTotal, defaultValue: "View {{count}} results" })
+      : t("filters.viewResults", { defaultValue: "View results" });
+
+  const toggleType = (type: MobileActivityType) =>
+    setFilters((prev) => {
+      const types = prev.types.includes(type) ? prev.types.filter((x) => x !== type) : [...prev.types, type];
+      // Priorities are per-type; any type change invalidates the selected priority IDs.
+      return { ...prev, types, priorityIds: [] };
+    });
+
+  const togglePriorityId = (priorityId: string) =>
+    setFilters((prev) => ({
+      ...prev,
+      priorityIds: prev.priorityIds.includes(priorityId)
+        ? prev.priorityIds.filter((x) => x !== priorityId)
+        : [...prev.priorityIds, priorityId],
+    }));
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingHorizontal: theme.spacing.lg,
+            paddingTop: insets.top + theme.spacing.sm,
+            paddingBottom: theme.spacing.sm,
+          }}
+        >
+          <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{t("filters.title", { defaultValue: "Filters" })}</Text>
+          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("common:close")} hitSlop={12}>
+            <Feather name="x" size={22} color={theme.colors.text} />
+          </Pressable>
+        </View>
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+          <FilterLabel theme={theme} text={t("filters.status", { defaultValue: "Status" })} />
+          <OptionRow
+            theme={theme}
+            options={[
+              { label: t("filters.open", { defaultValue: "Open" }), value: "open" },
+              { label: t("filters.closed", { defaultValue: "Closed" }), value: "closed" },
+              { label: t("filters.all", { defaultValue: "All" }), value: "all" },
+            ]}
+            value={filters.status}
+            onChange={(status) => setFilters((prev) => ({ ...prev, status }))}
+          />
+
+          <FilterLabel theme={theme} text={t("filters.types", { defaultValue: "Types" })} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
+            {ACTIVITY_TYPE_FILTERS.map((type) => (
+              <ToggleChip
+                key={type}
+                theme={theme}
+                label={t(`types.${type}`, { defaultValue: type })}
+                selected={filters.types.includes(type)}
+                onPress={() => toggleType(type)}
+              />
+            ))}
+          </View>
+
+          <FilterLabel theme={theme} text={t("filters.priority", { defaultValue: "Priority" })} />
+          {!priorityItemType ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+              {t("filters.priorityScopeHint", { defaultValue: "Select a single type — Tickets or Project tasks — to filter by priority." })}
+            </Text>
+          ) : prioritiesLoading ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+              {t("filters.prioritiesLoading", { defaultValue: "Loading priorities…" })}
+            </Text>
+          ) : prioritiesError ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.danger, marginTop: theme.spacing.sm }}>
+              {prioritiesError}
+            </Text>
+          ) : priorityOptions.length === 0 ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+              {t("filters.prioritiesEmpty", { defaultValue: "No priorities defined for this type." })}
+            </Text>
+          ) : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
+              {priorityOptions.map((p) => (
+                <ToggleChip
+                  key={p.priority_id}
+                  theme={theme}
+                  label={p.priority_name}
+                  selected={filters.priorityIds.includes(p.priority_id)}
+                  onPress={() => togglePriorityId(p.priority_id)}
+                />
+              ))}
+            </View>
+          )}
+
+          <FilterLabel theme={theme} text={t("filters.dueDate", { defaultValue: "Due date" })} />
+          <OptionRow
+            theme={theme}
+            options={DUE_FILTERS.map((due) => ({ label: t(`filters.due.${due}`, { defaultValue: due }), value: due }))}
+            value={filters.due}
+            onChange={(due) => setFilters((prev) => ({ ...prev, due }))}
+          />
+
+          <FilterLabel theme={theme} text={t("filters.groupByLabel", { defaultValue: "Group by" })} />
+          <OptionRow
+            theme={theme}
+            options={groupFieldsFor(filters).map((g) => ({ label: t(`filters.groupBy.${g}`, { defaultValue: g }), value: g }))}
+            value={filters.groupBy}
+            onChange={(groupBy) => setFilters((prev) => ({ ...prev, groupBy }))}
+          />
+
+          <FilterLabel theme={theme} text={t("filters.sortLabel", { defaultValue: "Sort by" })} />
+          <OptionRow
+            theme={theme}
+            options={ACTIVITY_SORT_FIELDS.map((s) => ({ label: t(`filters.sort.${s}`, { defaultValue: s }), value: s }))}
+            value={filters.sortField}
+            onChange={(sortField) => setFilters((prev) => ({ ...prev, sortField }))}
+          />
+
+          {filters.sortField !== "default" ? (
+            <>
+              <FilterLabel theme={theme} text={t("filters.order", { defaultValue: "Order" })} />
+              <OptionRow
+                theme={theme}
+                options={[
+                  { label: t("filters.asc", { defaultValue: "Ascending" }), value: "asc" },
+                  { label: t("filters.desc", { defaultValue: "Descending" }), value: "desc" },
+                ]}
+                value={filters.sortOrder}
+                onChange={(sortOrder) => setFilters((prev) => ({ ...prev, sortOrder }))}
+              />
+            </>
+          ) : null}
+        </ScrollView>
+
+        <View
+          style={{
+            flexDirection: "row",
+            gap: theme.spacing.sm,
+            padding: theme.spacing.lg,
+            paddingBottom: Math.max(insets.bottom, theme.spacing.lg),
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.border,
+            backgroundColor: theme.colors.background,
+          }}
+        >
+          <Pressable
+            onPress={() => setFilters(DEFAULT_ACTIVITY_FILTERS)}
+            accessibilityRole="button"
+            accessibilityLabel={t("filters.clearAll", { defaultValue: "Clear all" })}
+            style={({ pressed }) => ({
+              flex: 1,
+              paddingVertical: theme.spacing.md,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.card,
+              alignItems: "center",
+              opacity: pressed ? 0.9 : 1,
+            })}
+          >
+            <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>{t("filters.clearAll", { defaultValue: "Clear all" })}</Text>
+          </Pressable>
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={viewResultsLabel}
+            style={({ pressed }) => ({
+              flex: 1,
+              paddingVertical: theme.spacing.md,
+              borderRadius: 10,
+              backgroundColor: theme.colors.primary,
+              alignItems: "center",
+              opacity: pressed ? 0.9 : 1,
+            })}
+          >
+            <Text style={{ ...theme.typography.body, color: theme.colors.textInverse, fontWeight: "600" }}>{viewResultsLabel}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function FilterLabel({ theme, text }: { theme: Theme; text: string }) {
+  return (
+    <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{text}</Text>
+  );
+}
+
+function OptionRow<T extends string>({
+  theme,
+  options,
+  value,
+  onChange,
+}: {
+  theme: Theme;
+  options: { label: string; value: T }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
+      {options.map((opt) => (
+        <ToggleChip key={opt.value} theme={theme} label={opt.label} selected={value === opt.value} onPress={() => onChange(opt.value)} />
+      ))}
+    </View>
+  );
+}
+
+const ToggleChip = memo(function ToggleChip({
+  theme,
+  label,
+  selected,
+  onPress,
+}: {
+  theme: Theme;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.borderRadius.full,
+        borderWidth: 1,
+        borderColor: selected ? theme.colors.primary : theme.colors.border,
+        backgroundColor: selected ? theme.colors.primary : theme.colors.card,
+        opacity: pressed ? 0.95 : 1,
+      })}
+    >
+      <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
+        {selected ? "✓ " : ""}
+        {label}
+      </Text>
+    </Pressable>
+  );
+});
 
 function SearchField({
   theme,
@@ -635,61 +1447,6 @@ function SearchField({
           <Feather name="x" size={16} color={theme.colors.textSecondary} />
         </Pressable>
       ) : null}
-    </View>
-  );
-}
-
-const Chip = memo(function Chip({
-  theme,
-  label,
-  selected,
-  onPress,
-}: {
-  theme: Theme;
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityLabel={label}
-      style={({ pressed }) => ({
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
-        borderRadius: theme.borderRadius.full,
-        borderWidth: 1,
-        borderColor: selected ? theme.colors.primary : theme.colors.border,
-        backgroundColor: selected ? theme.colors.primary : theme.colors.card,
-        opacity: pressed ? 0.95 : 1,
-      })}
-    >
-      <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
-        {selected ? "✓ " : ""}
-        {label}
-      </Text>
-    </Pressable>
-  );
-});
-
-function ChipRow<T extends string>({
-  theme,
-  options,
-  selected,
-  onSelect,
-}: {
-  theme: Theme;
-  options: { label: string; value: T }[];
-  selected: T;
-  onSelect: (value: T) => void;
-}) {
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
-      {options.map((opt) => (
-        <Chip key={opt.value} theme={theme} label={opt.label} selected={selected === opt.value} onPress={() => onSelect(opt.value)} />
-      ))}
     </View>
   );
 }

@@ -137,6 +137,13 @@ export function isAdHocActivity(activity: Activity): boolean {
 
 export type ActivityStatusFilter = "open" | "closed" | "all";
 
+/** Sort columns the v1 list endpoint accepts (mirrors the server `ActivitySortBy`). */
+export type MobileActivitySortBy = "type" | "title" | "status" | "priority" | "dueDate";
+export type MobileActivitySortDirection = "asc" | "desc";
+
+/** Dimension the unified list can be grouped by server-side. */
+export type MobileActivityGroupBy = "type" | "priority" | "status" | "dueDate";
+
 export type ListActivitiesParams = {
   apiKey: string;
   page?: number;
@@ -145,11 +152,36 @@ export type ListActivitiesParams = {
   type?: MobileActivityType[];
   status?: ActivityStatusFilter;
   search?: string;
-  /** ISO-8601 with offset/Z. */
+  /** Normalized priority buckets (lossy; prefer priorityIds). Omit/empty for all. */
+  priority?: MobileActivityPriority[];
+  /** Exact tenant priority IDs (ticket/project-task scoped). Omit/empty for all. */
+  priorityIds?: string[];
+  /** ISO-8601 with offset/Z. Schedule/time-entry/notification window. */
   dateStart?: string;
   dateEnd?: string;
+  /** ISO-8601 with offset/Z. Due-date window (independent of the schedule window). */
+  dueDateStart?: string;
+  dueDateEnd?: string;
+  sortBy?: MobileActivitySortBy;
+  sortDirection?: MobileActivitySortDirection;
   signal?: AbortSignal;
 };
+
+function activitiesQuery(params: ListActivitiesParams): Record<string, unknown> {
+  return {
+    type: params.type && params.type.length > 0 ? params.type.join(",") : undefined,
+    status: params.status,
+    search: params.search,
+    priority: params.priority && params.priority.length > 0 ? params.priority.join(",") : undefined,
+    priorityIds: params.priorityIds && params.priorityIds.length > 0 ? params.priorityIds.join(",") : undefined,
+    dateStart: params.dateStart,
+    dateEnd: params.dateEnd,
+    dueDateStart: params.dueDateStart,
+    dueDateEnd: params.dueDateEnd,
+    sortBy: params.sortBy,
+    sortDirection: params.sortDirection,
+  };
+}
 
 export function listActivities(
   client: ApiClient,
@@ -160,14 +192,96 @@ export function listActivities(
     path: "/api/v1/activities",
     signal: params.signal,
     query: {
+      ...activitiesQuery(params),
       page: params.page,
       pageSize: params.pageSize,
-      type: params.type && params.type.length > 0 ? params.type.join(",") : undefined,
-      status: params.status,
-      search: params.search,
-      dateStart: params.dateStart,
-      dateEnd: params.dateEnd,
     },
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+/** One server-computed group bucket: a stable `key`, English `label`, count, and members. */
+export type ActivityGroup = {
+  key: string;
+  label: string;
+  count: number;
+  activities: Activity[];
+};
+
+export type GroupedActivitiesData = {
+  groupBy: MobileActivityGroupBy;
+  groups: ActivityGroup[];
+  totalCount: number;
+  /** True when the result set exceeded the server grouping cap and was truncated. */
+  truncated: boolean;
+};
+
+export type ListActivitiesGroupedParams = ListActivitiesParams & {
+  groupBy: MobileActivityGroupBy;
+};
+
+/**
+ * Grouped variant of {@link listActivities}: the server buckets the full filtered set by
+ * `groupBy` and returns ordered, counted groups (no pagination). Read via `.data.data`.
+ */
+export function listActivitiesGrouped(
+  client: ApiClient,
+  params: ListActivitiesGroupedParams,
+): Promise<ApiResult<SuccessResponse<GroupedActivitiesData>>> {
+  return client.request<SuccessResponse<GroupedActivitiesData>>({
+    method: "GET",
+    path: "/api/v1/activities",
+    signal: params.signal,
+    query: {
+      ...activitiesQuery(params),
+      groupBy: params.groupBy,
+    },
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+/** One item inside a user's saved custom group: an activity reference + its order. */
+export type CustomActivityGroupItem = {
+  itemId: string;
+  activityId: string;
+  activityType: string;
+  sortOrder: number;
+};
+
+/** A user's saved custom activity group (created/ordered on the web), read-only on mobile. */
+export type CustomActivityGroup = {
+  groupId: string;
+  groupName: string;
+  sortOrder: number;
+  isCollapsed: boolean;
+  items: CustomActivityGroupItem[];
+};
+
+export type ListActivityGroupsParams = {
+  apiKey: string;
+  /** Another user's groups (requires user_schedule:update/read_all); omit for self. */
+  targetUserId?: string;
+  signal?: AbortSignal;
+};
+
+/**
+ * Fetch the caller's saved custom activity groups (ordered, with ordered items). Read-only:
+ * the mobile "My groups" view buckets the unified activity list into these locally; editing
+ * stays on the web. Read via `.data.data`.
+ */
+export function listActivityGroups(
+  client: ApiClient,
+  params: ListActivityGroupsParams,
+): Promise<ApiResult<SuccessResponse<CustomActivityGroup[]>>> {
+  return client.request<SuccessResponse<CustomActivityGroup[]>>({
+    method: "GET",
+    path: "/api/v1/activities/groups",
+    signal: params.signal,
+    query: { targetUserId: params.targetUserId },
     headers: {
       "x-api-key": params.apiKey,
     },
@@ -242,5 +356,69 @@ export function deleteAdHocEntry(
     headers: {
       "x-api-key": params.apiKey,
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Custom-group organization (drag-to-organize the "My groups" view).
+//
+// Groups themselves are still created/renamed/deleted on the web; these mutate
+// only membership and ordering of the caller's own groups.
+// ---------------------------------------------------------------------------
+
+/** Move an activity into `groupId` at `sortOrder`, removing it from any other group first. */
+export function moveActivityToGroup(
+  client: ApiClient,
+  params: { apiKey: string; activityId: string; activityType: string; groupId: string; sortOrder: number },
+): Promise<ApiResult<unknown>> {
+  return client.request<unknown>({
+    method: "POST",
+    path: "/api/v1/activities/groups/items",
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+    body: {
+      activityId: params.activityId,
+      activityType: params.activityType,
+      groupId: params.groupId,
+      sortOrder: params.sortOrder,
+    },
+  });
+}
+
+/** Remove an activity from all of the caller's groups (makes it "ungrouped"). */
+export function removeActivityFromGroups(
+  client: ApiClient,
+  params: { apiKey: string; activityId: string; activityType: string },
+): Promise<ApiResult<unknown>> {
+  return client.request<unknown>({
+    method: "DELETE",
+    path: "/api/v1/activities/groups/items",
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+    body: {
+      activityId: params.activityId,
+      activityType: params.activityType,
+    },
+  });
+}
+
+/** Persist the full ordered membership of a group after a drag-to-reorder. */
+export function reorderActivitiesInGroup(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    groupId: string;
+    items: Array<{ activityId: string; activityType: string; sortOrder: number }>;
+  },
+): Promise<ApiResult<unknown>> {
+  return client.request<unknown>({
+    method: "PATCH",
+    path: `/api/v1/activities/groups/${params.groupId}/items`,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+    body: { items: params.items },
   });
 }

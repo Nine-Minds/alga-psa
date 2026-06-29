@@ -1,5 +1,5 @@
 import { createDrawerNavigator } from "@react-navigation/drawer";
-import { Feather } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { DrawerParamList } from "./types";
 import { TicketsStackNavigator } from "./TicketsStackNavigator";
 import { UserActivitiesScreen } from "../screens/UserActivitiesScreen";
@@ -50,7 +50,7 @@ export function DrawerNavigator() {
           title: tTickets("list.title", "Tickets"),
           headerShown: false,
           drawerIcon: ({ color, size }) => (
-            <Feather name="tag" size={size} color={color} />
+            <MaterialCommunityIcons name="ticket-outline" size={size} color={color} />
           ),
         }}
       />
@@ -60,7 +60,7 @@ export function DrawerNavigator() {
         options={{
           title: tUserActivities("title", "Activities"),
           drawerIcon: ({ color, size }) => (
-            <Feather name="check-circle" size={size} color={color} />
+            <MaterialCommunityIcons name="check-circle-outline" size={size} color={color} />
           ),
         }}
       />
@@ -70,7 +70,7 @@ export function DrawerNavigator() {
         options={{
           title: tSchedule("title", "Schedule"),
           drawerIcon: ({ color, size }) => (
-            <Feather name="calendar" size={size} color={color} />
+            <MaterialCommunityIcons name="calendar-blank-outline" size={size} color={color} />
           ),
         }}
       />
@@ -80,7 +80,7 @@ export function DrawerNavigator() {
         options={{
           title: tTimeEntries("title", "Time Entries"),
           drawerIcon: ({ color, size }) => (
-            <Feather name="clock" size={size} color={color} />
+            <MaterialCommunityIcons name="clock-outline" size={size} color={color} />
           ),
         }}
       />
@@ -90,7 +90,7 @@ export function DrawerNavigator() {
         options={{
           title: tClients("title", "Clients"),
           drawerIcon: ({ color, size }) => (
-            <Feather name="briefcase" size={size} color={color} />
+            <MaterialCommunityIcons name="briefcase-outline" size={size} color={color} />
           ),
         }}
       />
@@ -100,7 +100,7 @@ export function DrawerNavigator() {
         options={{
           title: tContacts("title", "Contacts"),
           drawerIcon: ({ color, size }) => (
-            <Feather name="users" size={size} color={color} />
+            <MaterialCommunityIcons name="account-multiple-outline" size={size} color={color} />
           ),
         }}
       />
@@ -110,7 +110,7 @@ export function DrawerNavigator() {
         options={{
           title: tSettings("title", "Settings"),
           drawerIcon: ({ color, size }) => (
-            <Feather name="settings" size={size} color={color} />
+            <MaterialCommunityIcons name="cog-outline" size={size} color={color} />
           ),
         }}
       />

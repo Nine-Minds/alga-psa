@@ -1,47 +1,101 @@
 import { useTranslation } from "react-i18next";
-import { Feather } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { Theme } from "../../ui/themes";
-import type { Activity, MobileActivityType } from "../../api/activities";
+import type {
+  Activity,
+  ActivityGroup,
+  CustomActivityGroup,
+  MobileActivityType,
+} from "../../api/activities";
 import { isAdHocActivity } from "../../api/activities";
+
+/** Section key for the synthetic "everything not in a saved group" bucket. */
+export const UNGROUPED_KEY = "__ungrouped__";
+
+/**
+ * Bucket the (already-filtered) activity list into the user's saved custom groups for the
+ * read-only "My groups" view. Groups and their items are emitted in saved order; activities
+ * not in any group fall into a trailing "Ungrouped" bucket. Items whose activity isn't in
+ * the current set (filtered out, or beyond the fetch) are skipped — mirroring the web,
+ * which buckets against the activities currently in view. Produces the same shape as the
+ * server's dimension grouping so the existing grouped renderer is reused unchanged.
+ */
+export function buildCustomGroups(
+  activities: Activity[],
+  customGroups: CustomActivityGroup[],
+): ActivityGroup[] {
+  const byKey = new Map<string, Activity>();
+  for (const a of activities) byKey.set(`${a.type}:${a.id}`, a);
+  const claimed = new Set<string>();
+
+  const groups: ActivityGroup[] = [...customGroups]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((g) => {
+      const groupActivities: Activity[] = [];
+      for (const item of [...g.items].sort((a, b) => a.sortOrder - b.sortOrder)) {
+        const key = `${item.activityType}:${item.activityId}`;
+        const activity = byKey.get(key);
+        if (activity && !claimed.has(key)) {
+          groupActivities.push(activity);
+          claimed.add(key);
+        }
+      }
+      return { key: g.groupId, label: g.groupName, count: groupActivities.length, activities: groupActivities };
+    });
+
+  const ungrouped = activities.filter((a) => !claimed.has(`${a.type}:${a.id}`));
+  if (ungrouped.length > 0) {
+    groups.push({ key: UNGROUPED_KEY, label: "Ungrouped", count: ungrouped.length, activities: ungrouped });
+  }
+  return groups;
+}
 
 /** Left color-bar accent for an activity type. */
 export function activityTypeColor(type: MobileActivityType, theme: Theme): string {
+  // Canonical activity-type accents — kept in lock-step with the web main-app list
+  // (packages/user-activities/src/components/constants.ts getActivityTypeColor).
   switch (type) {
     case "ticket":
-      return theme.colors.info;
+      return theme.colors.primary; // purple
     case "projectTask":
-      return theme.colors.primary;
+      return theme.colors.cyan; // matches web --color-secondary-500
     case "schedule":
-      return theme.colors.success;
+      return theme.colors.success; // green
     case "timeEntry":
-      return theme.colors.warning;
+      return theme.colors.orange; // #F97316
     case "workflowTask":
-      return theme.colors.secondary;
+      return theme.colors.accent; // orange (brand accent)
     case "notification":
-      return theme.colors.accent;
+      return theme.colors.indigo; // #6366F1
     case "document":
     default:
       return theme.colors.textSecondary;
   }
 }
 
-export function activityTypeIcon(activity: Activity): keyof typeof Feather.glyphMap {
+/**
+ * Activity-type icon, from a single MaterialCommunityIcons set — one consistent family whose
+ * outline glyphs read close to the web main-app's lucide icons. Kept in lock-step with the
+ * web list (ActivitiesDataTable / GroupedActivitiesView getTypeIcon): ticket, layers,
+ * calendar, clock, git-branch (source-branch), bell.
+ */
+export function activityTypeIcon(activity: Activity): keyof typeof MaterialCommunityIcons.glyphMap {
   switch (activity.type) {
     case "ticket":
-      return "tag";
+      return "ticket-outline";
     case "projectTask":
-      return "clipboard";
+      return "layers-outline";
     case "schedule":
-      return isAdHocActivity(activity) ? "check-square" : "calendar";
+      return "calendar-blank-outline";
     case "timeEntry":
-      return "clock";
+      return "clock-outline";
     case "workflowTask":
-      return "git-branch";
+      return "source-branch";
     case "notification":
-      return "bell";
+      return "bell-outline";
     case "document":
     default:
-      return "file-text";
+      return "file-document-outline";
   }
 }
 
