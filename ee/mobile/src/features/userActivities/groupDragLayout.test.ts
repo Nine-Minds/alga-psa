@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Activity, ActivityGroup } from "../../api/activities";
-import { UNGROUPED_KEY } from "./activityHelpers";
 import { computeDropLayout, headerRowKey, itemRowKey, nearestSlot } from "./groupDragLayout";
 
 const act = (id: string, type: Activity["type"] = "ticket"): Activity => ({ id, type }) as unknown as Activity;
