@@ -23,7 +23,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getHuduCompanyAssets } from './huduDataActions';
-import type { HuduCompanyFetchOptions, HuduLinkedItem } from './huduDataActions';
+import type { HuduCompanyFetchOptions, HuduLinkedItem } from '../../integrations/hudu/huduDataCore';
 import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import type { HuduAsset } from '../../integrations/hudu/contracts';
 import { resolveHuduCompanyIdForClient as resolveHuduCompanyIdForClientRow } from '../../integrations/hudu/companyMapping';

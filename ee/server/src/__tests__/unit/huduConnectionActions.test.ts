@@ -322,6 +322,11 @@ describe('T025: getHuduConnectionStatus', () => {
         connectedAt: '2026-06-09T00:00:00.000Z',
         lastSyncedAt: null,
         passwordAccess: true,
+        syncStatus: 'idle',
+        syncError: null,
+        lastFullSyncAt: null,
+        lastSync: null,
+        autoSync: { enabled: false, cadence: 'daily' },
       },
     });
 
@@ -347,6 +352,11 @@ describe('T025: getHuduConnectionStatus', () => {
         connectedAt: null,
         lastSyncedAt: null,
         passwordAccess: false,
+        syncStatus: 'idle',
+        syncError: null,
+        lastFullSyncAt: null,
+        lastSync: null,
+        autoSync: { enabled: false, cadence: 'daily' },
       },
     });
   });

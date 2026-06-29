@@ -25,6 +25,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
+const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -119,6 +120,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
   registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
+  registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
