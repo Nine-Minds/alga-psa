@@ -18,6 +18,7 @@ import type { HuduActionResult, HuduConnectionStatusData } from '../../../lib/ac
 import type { HuduErrorKind } from '../../../lib/integrations/hudu/huduClient';
 import HuduCompanyMappingManager from './hudu/HuduCompanyMappingManager';
 import HuduAssetLayoutMapManager from './hudu/HuduAssetLayoutMapManager';
+import HuduSyncAutomationManager from './hudu/HuduSyncAutomationManager';
 
 type ConnectionBadgeState = 'not_connected' | 'connected' | 'error';
 
@@ -407,6 +408,13 @@ export default function HuduIntegrationSettings() {
     {isConnected && (
       <div className="mt-6">
         <HuduAssetLayoutMapManager />
+      </div>
+    )}
+
+    {/* Tenant-wide import + daily auto-sync - shown when connected */}
+    {isConnected && (
+      <div className="mt-6">
+        <HuduSyncAutomationManager />
       </div>
     )}
     </>

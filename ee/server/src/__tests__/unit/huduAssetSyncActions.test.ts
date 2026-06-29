@@ -99,12 +99,17 @@ vi.mock('server/src/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
-vi.mock('@ee/lib/actions/integrations/huduDataActions', () => ({
-  getHuduCompanyAssets: getHuduCompanyAssetsMock,
+// The sync core fetches via the session-free huduDataCore now.
+vi.mock('@ee/lib/integrations/hudu/huduDataCore', () => ({
+  fetchHuduCompanyAssets: getHuduCompanyAssetsMock,
 }));
 
+// The core writes through the actor-injectable updateAssetRecord (knex, tenant,
+// actor, assetId, changes, opts). Forward (assetId, changes) to the existing
+// fake so the payload assertions stay as-is.
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({
-  updateAsset: updateAssetMock,
+  updateAssetRecord: (_knex: unknown, _tenant: unknown, _actor: unknown, assetId: unknown, changes: unknown) =>
+    updateAssetMock(assetId, changes),
 }));
 
 // Keep the REAL module (the DB block reaches it via importActual); fake only
@@ -398,7 +403,7 @@ describe('T224/T225: syncHuduClientAssets synced fields', () => {
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
     // The sync sees current data: cache bypassed via refresh.
-    expect(getHuduCompanyAssetsMock).toHaveBeenCalledWith(CLIENT_1, { refresh: true });
+    expect(getHuduCompanyAssetsMock).toHaveBeenCalledWith(TENANT, CLIENT_1, { refresh: true });
     expect(getHuduAssetMappingRowsMock).toHaveBeenCalledWith(knexCallableMock, TENANT, {
       huduCompanyId: HUDU_COMPANY_ID,
     });

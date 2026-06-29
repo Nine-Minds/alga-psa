@@ -14,6 +14,9 @@
 
 import type { Knex } from 'knex';
 
+/** Tenant-wide import/sync run status (mirrors rmm_integrations.sync_status). */
+export type HuduSyncStatus = 'idle' | 'syncing' | 'completed' | 'error';
+
 export interface HuduIntegrationRecord {
   tenant: string;
   integration_id: string;
@@ -21,6 +24,11 @@ export interface HuduIntegrationRecord {
   is_active: boolean;
   connected_at: Date | string | null;
   last_synced_at: Date | string | null;
+  /** Status of the last tenant-wide import/sync run. */
+  sync_status: HuduSyncStatus;
+  sync_error: string | null;
+  /** Timestamp of the last tenant-wide import/sync run. */
+  last_full_sync_at: Date | string | null;
   settings: Record<string, unknown>;
   created_at: Date | string;
   updated_at: Date | string;
@@ -111,4 +119,61 @@ export async function touchHuduIntegrationLastSynced(
       last_synced_at: at ?? knex.fn.now(),
       updated_at: knex.fn.now(),
     });
+}
+
+/**
+ * Shallow-merge a patch into the settings jsonb, preserving sibling keys
+ * (companies_cache / asset_layout_type_map / password_access). The `||`
+ * operator is IMMUTABLE-safe on the distributed table (no now()).
+ */
+export async function mergeHuduSettings(
+  knex: Knex,
+  tenant: string,
+  patch: Record<string, unknown>
+): Promise<void> {
+  await knex(TABLE)
+    .where({ tenant })
+    .update({
+      settings: knex.raw(`coalesce(settings, '{}'::jsonb) || ?::jsonb`, [JSON.stringify(patch)]),
+      updated_at: knex.fn.now(),
+    });
+}
+
+export interface HuduSyncRunState {
+  status: HuduSyncStatus;
+  error?: string | null;
+  /** Stamp last_full_sync_at; pass a value on terminal states. */
+  lastFullSyncAt?: Date | string | null;
+  /** Persisted under settings.last_sync (preserving sibling settings keys). */
+  summary?: Record<string, unknown>;
+}
+
+/**
+ * Record tenant-wide run progress: set the status columns and (on completion)
+ * the last-run summary. Status 'syncing' clears any prior error; terminal
+ * states also stamp last_full_sync_at and the summary blob.
+ */
+export async function setHuduSyncRunState(
+  knex: Knex,
+  tenant: string,
+  state: HuduSyncRunState
+): Promise<void> {
+  const update: Record<string, unknown> = {
+    sync_status: state.status,
+    updated_at: knex.fn.now(),
+  };
+  if (state.error !== undefined) {
+    update.sync_error = state.error;
+  } else if (state.status === 'syncing') {
+    update.sync_error = null;
+  }
+  if (state.lastFullSyncAt !== undefined) {
+    update.last_full_sync_at = state.lastFullSyncAt;
+  }
+  if (state.summary !== undefined) {
+    update.settings = knex.raw(`coalesce(settings, '{}'::jsonb) || ?::jsonb`, [
+      JSON.stringify({ last_sync: state.summary }),
+    ]);
+  }
+  await knex(TABLE).where({ tenant }).update(update);
 }
