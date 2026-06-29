@@ -1288,7 +1288,7 @@
       },
       "list": {
         "loading": "11111",
-        "templateCount": "11111",
+        "templateCount": "11111 {{templateCount}} 11111",
         "usingCustom": "11111",
         "usingStandard": "11111"
       },
@@ -1322,11 +1322,11 @@
         "reset": "11111"
       },
       "test": {
-        "sentTo": "11111",
+        "sentTo": "11111 {{recipient}} 11111",
         "failed": "11111"
       },
       "view": {
-        "title": "11111"
+        "title": "11111 {{name}} 11111"
       },
       "tabs": {
         "source": "11111",
@@ -1336,7 +1336,7 @@
         "notAvailable": "11111"
       },
       "edit": {
-        "title": "11111"
+        "title": "11111 {{name}} 11111"
       },
       "languages": {
         "en": "11111",

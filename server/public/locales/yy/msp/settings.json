@@ -1288,7 +1288,7 @@
       },
       "list": {
         "loading": "55555",
-        "templateCount": "55555",
+        "templateCount": "55555 {{templateCount}} 55555",
         "usingCustom": "55555",
         "usingStandard": "55555"
       },
@@ -1322,11 +1322,11 @@
         "reset": "55555"
       },
       "test": {
-        "sentTo": "55555",
+        "sentTo": "55555 {{recipient}} 55555",
         "failed": "55555"
       },
       "view": {
-        "title": "55555"
+        "title": "55555 {{name}} 55555"
       },
       "tabs": {
         "source": "55555",
@@ -1336,7 +1336,7 @@
         "notAvailable": "55555"
       },
       "edit": {
-        "title": "55555"
+        "title": "55555 {{name}} 55555"
       },
       "languages": {
         "en": "55555",

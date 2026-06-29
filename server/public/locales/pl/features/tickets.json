@@ -835,6 +835,7 @@
     "submit": "Dodaj zgłoszenie",
     "submitting": "Dodawanie...",
     "createAndView": "Utwórz + wyświetl zgłoszenie",
+    "openingTicket": "Otwieranie zgłoszenia…",
     "continueEditing": "Kontynuuj edycję",
     "clipboardDraftMessage": "Ten opis szybkiego dodawania zawiera wklejone obrazy, które nie zostały jeszcze dołączone do zapisanego zgłoszenia. Kontynuować edycję czy usunąć przygotowane obrazy i zamknąć?",
     "clipboardUploadSessionRequired": "Do przesłania obrazu z schowka wymagana jest sesja użytkownika.",

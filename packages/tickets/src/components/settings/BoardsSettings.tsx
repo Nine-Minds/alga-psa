@@ -26,6 +26,8 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -39,7 +41,8 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import Pagination from '@alga-psa/ui/components/Pagination';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -252,15 +255,6 @@ const EditorAccordionSection: React.FC<EditorSectionProps> = ({
 );
 
 /* ---- Boards list presentational helpers (tickets-style rich rows) ---- */
-const BOARD_LIST_COLORS = ['#6366f1', '#0ea5e9', '#22c55e', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6'];
-function boardColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return BOARD_LIST_COLORS[h % BOARD_LIST_COLORS.length];
-}
-function boardInitials(name: string): string {
-  return name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
-}
 const BOARD_PILL_TONES = {
   gray: 'bg-gray-100 text-gray-700 border-gray-200',
   green: 'bg-green-50 text-green-700 border-green-200',
@@ -271,14 +265,6 @@ const BOARD_PILL_TONES = {
 } as const;
 const ListPill: React.FC<{ tone?: keyof typeof BOARD_PILL_TONES; children: React.ReactNode }> = ({ tone = 'gray', children }) => (
   <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${BOARD_PILL_TONES[tone]}`}>{children}</span>
-);
-const BoardListAvatar: React.FC<{ name: string; isTeam?: boolean }> = ({ name, isTeam = false }) => (
-  <span
-    className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-[10px] font-semibold text-white"
-    style={{ background: boardColor(name), borderRadius: isTeam ? 6 : 9999 }}
-  >
-    {boardInitials(name)}
-  </span>
 );
 const BoardLoadBar: React.FC<{ open: number; total: number }> = ({ open, total }) => {
   const pct = total === 0 ? 0 : Math.round((open / total) * 100);
@@ -304,7 +290,7 @@ const collapsedExceptFirstSection = (): Set<string> => new Set<string>(EDITOR_SE
 const collapsedForCreate = (): Set<string> =>
   new Set<string>(EDITOR_SECTION_IDS.filter((id) => id !== 'general' && id !== 'statuses'));
 
-// Boards list pagination — matches the shared DataTable default page size.
+// Initial page size for the boards list.
 const BOARDS_PAGE_SIZE = 10;
 
 // Minimal SLA policy shape this component renders. Injected by the host so the
@@ -325,8 +311,6 @@ interface BoardsSettingsProps {
 
 const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
   const { t } = useTranslation('msp/settings');
-  // Pagination option labels live in the shared 'common' namespace (same as DataTable).
-  const { t: tCommon } = useTranslation('common');
   // Dark-release gate for the auto-close rules UI. Off by default (PostHog
   // returns false for an unknown flag); UI-only — the auto-close engine and
   // server actions stay live regardless.
@@ -357,6 +341,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
+  // Avatar URLs for the default agents/teams shown in the boards list, keyed by
+  // user/team id. Resolved via the same batch actions the pickers use so the
+  // list renders real avatars (with the shared initials/hue fallback) instead
+  // of a bespoke palette.
+  const [listUserAvatarUrls, setListUserAvatarUrls] = useState<Record<string, string | null>>({});
+  const [listTeamAvatarUrls, setListTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [slaPolicies, setSlaPolicies] = useState<BoardSlaPolicyOption[]>([]);
   const [boardStats, setBoardStats] = useState<Record<string, BoardListStats>>({});
@@ -449,6 +439,32 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     fetchSlaPolicies();
     fetchTeams();
   }, []);
+
+  // Resolve avatar URLs for the default agents/teams referenced by the boards
+  // list. Tenant is carried on the loaded users/teams (same source the pickers
+  // use). Runs whenever the set of boards/users/teams changes.
+  useEffect(() => {
+    const tenant = users[0]?.tenant || teams[0]?.tenant;
+    if (!tenant) return;
+
+    const userIds = Array.from(
+      new Set(boards.map((b) => b.default_assigned_to).filter((id): id is string => !!id))
+    );
+    const teamIds = Array.from(
+      new Set(boards.map((b) => b.default_assigned_team_id).filter((id): id is string => !!id))
+    );
+
+    if (userIds.length > 0) {
+      getUserAvatarUrlsBatchAction(userIds, tenant)
+        .then((map) => setListUserAvatarUrls((prev) => ({ ...prev, ...Object.fromEntries(map) })))
+        .catch((err) => console.error('Error fetching board agent avatars:', err));
+    }
+    if (teamIds.length > 0) {
+      getTeamAvatarUrlsBatchAction(teamIds, tenant)
+        .then((map) => setListTeamAvatarUrls((prev) => ({ ...prev, ...Object.fromEntries(map) })))
+        .catch((err) => console.error('Error fetching board team avatars:', err));
+    }
+  }, [boards, users, teams]);
 
   const fetchBoardStats = async () => {
     try {
@@ -1114,13 +1130,145 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     return (b.board_name || '').toLowerCase().includes(q) || (b.description || '').toLowerCase().includes(q);
   });
 
-  const boardsTotalPages = Math.max(1, Math.ceil(visibleBoards.length / boardsPageSize));
-  const safeBoardsPage = Math.min(boardsPage, boardsTotalPages);
-  const pagedBoards = visibleBoards.slice((safeBoardsPage - 1) * boardsPageSize, safeBoardsPage * boardsPageSize);
-  const boardsPageSizeOptions = [10, 25, 50, 100].map((n) => ({
-    value: String(n),
-    label: tCommon('pagination.itemsPerPageOption', { count: n, defaultValue: `${n} per page` }),
-  }));
+  // Columns for the boards DataTable. Derived per-board values (stats, assignee,
+  // SLA) are resolved inside each render from the component-scope lookups. Only
+  // the Name column is sortable; the composite/derived columns opt out so the
+  // list keeps its fetched (display_order) ordering. Each non-scalar column uses
+  // an array dataIndex purely to get a unique column id.
+  const boardColumns: ColumnDefinition<IBoard>[] = [
+    {
+      title: t('ticketing.boards.table.name'),
+      dataIndex: 'board_name',
+      render: (_value: string, board: IBoard) => {
+        const isItil = board.category_type === 'itil' && board.priority_type === 'itil';
+        return (
+          <div id={`board-row-${board.board_id}`} className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-gray-500">
+              <Inbox className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium text-gray-900">{board.board_name}</span>
+                {board.is_default && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
+                {isItil && <ListPill tone="violet">ITIL</ListPill>}
+                {board.is_inactive && <ListPill tone="gray">{t('ticketing.boards.statusLabels.inactive')}</ListPill>}
+              </div>
+              {board.description && <p className="truncate text-xs text-gray-500 max-w-[260px]">{board.description}</p>}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: t('ticketing.boards.table.defaultAgent'),
+      dataIndex: 'default_assigned_to',
+      sortable: false,
+      render: (_value: string, board: IBoard) => {
+        const team = board.default_assigned_team_id ? teams.find((tm) => tm.team_id === board.default_assigned_team_id) : null;
+        const agent = board.default_assigned_to ? users.find((u) => u.user_id === board.default_assigned_to) : null;
+        const assigneeName = team ? team.team_name : agent ? `${agent.first_name} ${agent.last_name}` : null;
+        if (!assigneeName) return <span className="text-xs text-gray-400">—</span>;
+        return (
+          <div className="flex items-center gap-2">
+            {team ? (
+              <TeamAvatar
+                teamId={team.team_id}
+                teamName={team.team_name}
+                avatarUrl={listTeamAvatarUrls[team.team_id] ?? null}
+                size="xs"
+              />
+            ) : agent ? (
+              <UserAvatar
+                userId={agent.user_id}
+                userName={assigneeName}
+                avatarUrl={listUserAvatarUrls[agent.user_id] ?? null}
+                size="xs"
+              />
+            ) : null}
+            <span className="text-gray-700">{assigneeName}</span>
+          </div>
+        );
+      },
+    },
+    {
+      title: t('ticketing.boards.fields.slaPolicy.label', 'SLA'),
+      dataIndex: 'sla_policy_id',
+      sortable: false,
+      render: (_value: string, board: IBoard) => {
+        const sla = board.sla_policy_id ? slaPolicies.find((s) => s.sla_policy_id === board.sla_policy_id) : null;
+        return sla ? <ListPill tone="green">{sla.policy_name}</ListPill> : <span className="text-xs text-gray-400">—</span>;
+      },
+    },
+    {
+      title: t('ticketing.boards.table.statuses', 'Statuses'),
+      dataIndex: ['board_id', 'statusCount'],
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => {
+        const stats = boardStats[board.board_id || ''];
+        return (
+          <span className="inline-flex items-center gap-1 text-gray-700">
+            <ListChecks className="h-3.5 w-3.5 text-gray-400" />{stats?.statusCount ?? 0}
+          </span>
+        );
+      },
+    },
+    {
+      title: t('ticketing.boards.table.ticketLoad', 'Ticket load'),
+      dataIndex: ['board_id', 'ticketLoad'],
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => {
+        const stats = boardStats[board.board_id || ''];
+        return <BoardLoadBar open={stats?.openTicketCount ?? 0} total={stats?.ticketCount ?? 0} />;
+      },
+    },
+    {
+      title: t('ticketing.boards.editor.sections.automation', 'Automation'),
+      dataIndex: ['board_id', 'automation'],
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => {
+        const stats = boardStats[board.board_id || ''];
+        const hasAutomation = stats?.closeRulesEnabled || (stats?.autoCloseRuleCount ?? 0) > 0 || board.inbound_reply_reopen_enabled;
+        if (!hasAutomation) return <span className="text-xs text-gray-400">—</span>;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {stats?.closeRulesEnabled && <ListPill tone="blue"><ListChecks className="h-3 w-3" />{t('ticketing.boards.editor.sections.close', 'Close rules')}</ListPill>}
+            {(stats?.autoCloseRuleCount ?? 0) > 0 && <ListPill tone="violet"><Zap className="h-3 w-3" />{stats?.autoCloseRuleCount}</ListPill>}
+            {board.inbound_reply_reopen_enabled && <ListPill tone="amber"><Mail className="h-3 w-3" />{t('ticketing.boards.editor.reopenBadge', 'reopen')}</ListPill>}
+          </div>
+        );
+      },
+    },
+    {
+      title: '',
+      dataIndex: 'actions',
+      width: '5%',
+      sortable: false,
+      render: (_value: unknown, board: IBoard) => (
+        <div className="text-right">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id={`board-actions-menu-${board.board_id}`} variant="ghost" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => startEditing(board)}>
+                {t('ticketing.boards.actions.edit')}
+              </DropdownMenuItem>
+              {!board.is_default && (
+                <DropdownMenuItem
+                  onClick={() => setDeleteDialog({ isOpen: true, boardId: board.board_id || '', boardName: board.board_name || '' })}
+                  className="text-destructive"
+                >
+                  {t('ticketing.boards.actions.delete')}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1198,129 +1346,24 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           <ListPill tone="gray">{boards.filter((b) => b.is_inactive).length} {t('ticketing.boards.statusLabels.inactive')}</ListPill>
         </div>
 
-        {/* Rich board table */}
-        <div className="overflow-hidden rounded-lg border border-gray-200">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                <th className="px-4 py-2.5">{t('ticketing.boards.table.name')}</th>
-                <th className="px-4 py-2.5">{t('ticketing.boards.table.defaultAgent')}</th>
-                <th className="px-4 py-2.5">{t('ticketing.boards.fields.slaPolicy.label', 'SLA')}</th>
-                <th className="px-4 py-2.5">{t('ticketing.boards.table.statuses', 'Statuses')}</th>
-                <th className="px-4 py-2.5">{t('ticketing.boards.table.ticketLoad', 'Ticket load')}</th>
-                <th className="px-4 py-2.5">{t('ticketing.boards.editor.sections.automation', 'Automation')}</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {pagedBoards.map((board) => {
-                const stats = boardStats[board.board_id || ''];
-                const team = board.default_assigned_team_id ? teams.find((tm) => tm.team_id === board.default_assigned_team_id) : null;
-                const agent = board.default_assigned_to ? users.find((u) => u.user_id === board.default_assigned_to) : null;
-                const assigneeName = team ? team.team_name : agent ? `${agent.first_name} ${agent.last_name}` : null;
-                const sla = board.sla_policy_id ? slaPolicies.find((s) => s.sla_policy_id === board.sla_policy_id) : null;
-                const isItil = board.category_type === 'itil' && board.priority_type === 'itil';
-                const hasAutomation = stats?.closeRulesEnabled || (stats?.autoCloseRuleCount ?? 0) > 0 || board.inbound_reply_reopen_enabled;
-                return (
-                  <tr
-                    key={board.board_id}
-                    id={`board-row-${board.board_id}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => startEditing(board)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        startEditing(board);
-                      }
-                    }}
-                    className={`group cursor-pointer hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${board.is_inactive ? 'opacity-60' : ''}`}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-gray-500">
-                          <Inbox className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-gray-900 group-hover:text-primary-700">{board.board_name}</span>
-                            {board.is_default && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
-                            {isItil && <ListPill tone="violet">ITIL</ListPill>}
-                            {board.is_inactive && <ListPill tone="gray">{t('ticketing.boards.statusLabels.inactive')}</ListPill>}
-                          </div>
-                          {board.description && <p className="truncate text-xs text-gray-500 max-w-[260px]">{board.description}</p>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {assigneeName ? (
-                        <div className="flex items-center gap-2">
-                          <BoardListAvatar name={assigneeName} isTeam={!!team} />
-                          <span className="text-gray-700">{assigneeName}</span>
-                        </div>
-                      ) : <span className="text-xs text-gray-400">—</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      {sla ? <ListPill tone="green">{sla.policy_name}</ListPill> : <span className="text-xs text-gray-400">—</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-gray-700"><ListChecks className="h-3.5 w-3.5 text-gray-400" />{stats?.statusCount ?? 0}</span>
-                    </td>
-                    <td className="px-4 py-3"><BoardLoadBar open={stats?.openTicketCount ?? 0} total={stats?.ticketCount ?? 0} /></td>
-                    <td className="px-4 py-3">
-                      {hasAutomation ? (
-                        <div className="flex flex-wrap gap-1">
-                          {stats?.closeRulesEnabled && <ListPill tone="blue"><ListChecks className="h-3 w-3" />{t('ticketing.boards.editor.sections.close', 'Close rules')}</ListPill>}
-                          {(stats?.autoCloseRuleCount ?? 0) > 0 && <ListPill tone="violet"><Zap className="h-3 w-3" />{stats?.autoCloseRuleCount}</ListPill>}
-                          {board.inbound_reply_reopen_enabled && <ListPill tone="amber"><Mail className="h-3 w-3" />{t('ticketing.boards.editor.reopenBadge', 'reopen')}</ListPill>}
-                        </div>
-                      ) : <span className="text-xs text-gray-400">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button id={`board-actions-menu-${board.board_id}`} variant="ghost" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => startEditing(board)}>
-                            {t('ticketing.boards.actions.edit')}
-                          </DropdownMenuItem>
-                          {!board.is_default && (
-                            <DropdownMenuItem
-                              onClick={() => setDeleteDialog({ isOpen: true, boardId: board.board_id || '', boardName: board.board_name || '' })}
-                              className="text-destructive"
-                            >
-                              {t('ticketing.boards.actions.delete')}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                );
-              })}
-              {visibleBoards.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-400">{t('ticketing.boards.empty', 'No boards found.')}</td></tr>
-              )}
-            </tbody>
-          </table>
-          {visibleBoards.length > 0 && (
-            <div className="border-t border-gray-200">
-              <Pagination
-                id="boards-list-pagination"
-                variant="clients"
-                currentPage={safeBoardsPage}
-                totalItems={visibleBoards.length}
-                itemsPerPage={boardsPageSize}
-                onPageChange={setBoardsPage}
-                onItemsPerPageChange={(size) => { setBoardsPageSize(size); setBoardsPage(1); }}
-                itemsPerPageOptions={boardsPageSizeOptions}
-              />
-            </div>
-          )}
-        </div>
+        {/* Rich board table — shared DataTable (consistent with the other settings tabs). */}
+        <DataTable
+          id="boards-settings-table"
+          data={visibleBoards}
+          columns={boardColumns}
+          pagination={true}
+          currentPage={boardsPage}
+          onPageChange={setBoardsPage}
+          pageSize={boardsPageSize}
+          onItemsPerPageChange={(size) => { setBoardsPageSize(size); setBoardsPage(1); }}
+          onRowClick={(board) => startEditing(board)}
+          rowClassName={(board) => (board.is_inactive ? 'opacity-60' : '')}
+        />
+        {visibleBoards.length === 0 && (
+          <p className="mt-3 text-center text-sm text-gray-400">
+            {t('ticketing.boards.empty', 'No boards found.')}
+          </p>
+        )}
       </div>
       )}
 
@@ -1544,6 +1587,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 onValueChange={(value) => setFormData({ ...formData, manager_user_id: value })}
                 users={users}
                 userTypeFilter="internal"
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 placeholder={t('ticketing.boards.fields.boardManager.placeholder')}
                 buttonWidth="full"
                 labelStyle="none"
