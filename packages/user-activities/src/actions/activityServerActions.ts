@@ -11,12 +11,9 @@ import {
   TimeEntryActivity,
   WorkflowTaskActivity,
   NotificationActivity,
-  scheduleEntryToActivity,
-  IUser,
-  IUserWithRoles
+  IUser
 } from "@alga-psa/types";
-import type { Knex } from "knex";
-import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
+import { createTenantKnex } from "@alga-psa/db";
 import {
   fetchUserActivities,
   fetchScheduleActivities as fetchScheduleActivitiesInternal,
@@ -28,14 +25,17 @@ import {
 } from "./activityAggregationActions";
 import { withAuth, hasPermission } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
-
-export interface CreateAdHocActivityInput {
-  title: string;
-  notes?: string;
-  /** Optional ISO timestamps — ad-hoc items may have no scheduled time. */
-  scheduledStart?: string | null;
-  scheduledEnd?: string | null;
-}
+import {
+  createAdHocActivityForApi,
+  getAdHocActivityForApi,
+  updateAdHocActivityForApi,
+  setAdHocActivityDoneForApi,
+  deleteAdHocActivityForApi,
+} from "./adHocActivityCore";
+import type {
+  CreateAdHocActivityInput,
+  UpdateAdHocActivityInput,
+} from "./adHocActivityCore";
 
 /**
  * Server action to fetch all activities for the current user with optional filters
@@ -332,108 +332,22 @@ export const fetchDashboardActivities = withAuth(async (
 });
 
 /**
- * Parse an optional ISO timestamp from client input. Returns null for an empty value,
- * a valid Date otherwise, and throws on an unparseable string so we never persist an
- * Invalid Date (which the pg driver would otherwise reject with an opaque error).
- */
-function parseOptionalTimestamp(value: string | null | undefined, field: string): Date | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw new Error(`Invalid ${field}`);
-  }
-  return date;
-}
-
-/**
  * Create an ad-hoc item (a schedule entry with work_item_type='ad_hoc', assigned to the
  * current user). Times are optional — an ad-hoc item is a lightweight personal to-do.
+ *
+ * Business logic + permission gate live in `createAdHocActivityForApi`; this wrapper only
+ * resolves the session user/tenant. The v1 REST API calls the core directly with an
+ * API-key-resolved identity so both paths stay identical.
  */
 export const createAdHocActivity = withAuth(async (
   user,
   { tenant },
   input: CreateAdHocActivityInput
 ): Promise<ScheduleActivity> => {
-  const title = (input?.title || "").trim();
-  if (!title) {
-    throw new Error("Title is required");
-  }
-
-  // Validate optional times up front so a bad value fails with a clear message instead
-  // of an opaque driver error at insert time.
-  const scheduledStart = parseOptionalTimestamp(input.scheduledStart, "start time");
-  const scheduledEnd = parseOptionalTimestamp(input.scheduledEnd, "end time");
-  if (scheduledStart && scheduledEnd && scheduledEnd <= scheduledStart) {
-    throw new Error("End time must be after start time");
-  }
-
-  const { knex } = await createTenantKnex(tenant);
-
-  // Mirror addScheduleEntry's gate: creating your own schedule entry requires at least
-  // user_schedule:read. (Assigning to others needs user_schedule:update, but an ad-hoc
-  // item is always self-assigned.)
-  if (!(await hasPermission(user, "user_schedule", "read", knex))) {
-    throw new Error("Permission denied: cannot create ad-hoc items");
-  }
-
-  const created = await withTransaction(knex, async (trx) => {
-    const scopedDb = tenantDb(trx, tenant);
-    const [entry] = await scopedDb.table("schedule_entries")
-      .insert({
-        tenant,
-        title,
-        notes: input.notes?.trim() || null,
-        work_item_id: null,
-        work_item_type: "ad_hoc",
-        status: "scheduled",
-        scheduled_start: scheduledStart,
-        scheduled_end: scheduledEnd,
-        recurrence_pattern: null,
-        is_recurring: false,
-        is_private: false,
-      })
-      .returning("*");
-
-    await scopedDb.table("schedule_entry_assignees").insert({
-      tenant,
-      entry_id: entry.entry_id,
-      user_id: user.user_id,
-    });
-
-    return { ...entry, assigned_user_ids: [user.user_id] };
-  });
-
+  const created = await createAdHocActivityForApi(user, tenant, input);
   revalidatePath("/msp/user-activities");
-  return scheduleEntryToActivity(created) as ScheduleActivity;
+  return created;
 });
-
-/**
- * Ensure the caller may modify the given ad-hoc entry: they must be an assignee, or
- * hold the "view/manage other users' schedule" capability (user_schedule:update or
- * user_schedule:read_all) to act on another user's entries. This mirrors the gate used
- * to view another user's activities, so a manager who can see a report's ad-hoc to-do
- * can also mark it done or convert it (creating the ticket/task is separately gated by
- * the relevant ticket:create / project_task:create permission).
- */
-async function assertCanModifyAdHoc(
-  trx: Knex.Transaction,
-  tenant: string,
-  entryId: string,
-  user: IUserWithRoles
-): Promise<void> {
-  const isAssignee = await tenantDb(trx, tenant).table("schedule_entry_assignees")
-    .where({ entry_id: entryId, user_id: user.user_id })
-    .first();
-  if (!isAssignee) {
-    const [canUpdate, canReadAll] = await Promise.all([
-      hasPermission(user, "user_schedule", "update", trx),
-      hasPermission(user, "user_schedule", "read_all", trx),
-    ]);
-    if (!canUpdate && !canReadAll) {
-      throw new Error("Permission denied: cannot modify another user's ad-hoc item");
-    }
-  }
-}
 
 /**
  * Mark an ad-hoc item Done (status='closed') or not done (status='scheduled').
@@ -446,38 +360,9 @@ export const setAdHocActivityDone = withAuth(async (
   entryId: string,
   done: boolean
 ): Promise<void> => {
-  if (!entryId) {
-    throw new Error("Entry id is required");
-  }
-
-  const { knex } = await createTenantKnex(tenant);
-  await withTransaction(knex, async (trx) => {
-    const entry = await tenantDb(trx, tenant).table("schedule_entries")
-      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
-      .first();
-    if (!entry) {
-      throw new Error("Ad-hoc item not found");
-    }
-
-    await assertCanModifyAdHoc(trx, tenant, entryId, user);
-
-    await tenantDb(trx, tenant).table("schedule_entries")
-      .where({ entry_id: entryId })
-      .update({ status: done ? "closed" : "scheduled", updated_at: trx.fn.now() });
-  });
-
+  await setAdHocActivityDoneForApi(user, tenant, entryId, done);
   revalidatePath("/msp/user-activities");
 });
-
-export interface AdHocActivityDetails {
-  entry_id: string;
-  title: string;
-  notes: string | null;
-  scheduled_start: string | null;
-  scheduled_end: string | null;
-  status: string;
-  assigned_user_ids: string[];
-}
 
 /**
  * Fetch a single ad-hoc item by id, independent of any schedule date window.
@@ -488,41 +373,9 @@ export const getAdHocActivity = withAuth(async (
   user,
   { tenant },
   entryId: string
-): Promise<AdHocActivityDetails> => {
-  if (!entryId) {
-    throw new Error("Entry id is required");
-  }
-
-  const { knex } = await createTenantKnex(tenant);
-  const entry = await tenantDb(knex, tenant).table("schedule_entries")
-    .where({ entry_id: entryId, work_item_type: "ad_hoc" })
-    .first();
-  if (!entry) {
-    throw new Error("Ad-hoc item not found");
-  }
-
-  const assignees: string[] = await tenantDb(knex, tenant).table("schedule_entry_assignees")
-    .where({ entry_id: entryId })
-    .pluck("user_id");
-
-  return {
-    entry_id: entry.entry_id,
-    title: entry.title,
-    notes: entry.notes ?? null,
-    scheduled_start: entry.scheduled_start ? new Date(entry.scheduled_start).toISOString() : null,
-    scheduled_end: entry.scheduled_end ? new Date(entry.scheduled_end).toISOString() : null,
-    status: entry.status,
-    assigned_user_ids: assignees,
-  };
+) => {
+  return getAdHocActivityForApi(user, tenant, entryId);
 });
-
-export interface UpdateAdHocActivityInput {
-  title?: string;
-  notes?: string | null;
-  /** Optional ISO timestamps. Pass null to clear; omit to leave unchanged. */
-  scheduledStart?: string | null;
-  scheduledEnd?: string | null;
-}
 
 /**
  * Update an ad-hoc item's title, notes and optional start/end times. Times remain
@@ -535,50 +388,7 @@ export const updateAdHocActivity = withAuth(async (
   entryId: string,
   input: UpdateAdHocActivityInput
 ): Promise<void> => {
-  if (!entryId) {
-    throw new Error("Entry id is required");
-  }
-
-  const start = parseOptionalTimestamp(input.scheduledStart, "start time");
-  const end = parseOptionalTimestamp(input.scheduledEnd, "end time");
-  if (start && end && end <= start) {
-    throw new Error("End time must be after start time");
-  }
-
-  const { knex } = await createTenantKnex(tenant);
-  await withTransaction(knex, async (trx) => {
-    const entry = await tenantDb(trx, tenant).table("schedule_entries")
-      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
-      .first();
-    if (!entry) {
-      throw new Error("Ad-hoc item not found");
-    }
-
-    await assertCanModifyAdHoc(trx, tenant, entryId, user);
-
-    const patch: Record<string, unknown> = { updated_at: trx.fn.now() };
-    if (input.title !== undefined) {
-      const title = input.title.trim();
-      if (!title) {
-        throw new Error("Title is required");
-      }
-      patch.title = title;
-    }
-    if (input.notes !== undefined) {
-      patch.notes = input.notes?.trim() || null;
-    }
-    if (input.scheduledStart !== undefined) {
-      patch.scheduled_start = start;
-    }
-    if (input.scheduledEnd !== undefined) {
-      patch.scheduled_end = end;
-    }
-
-    await tenantDb(trx, tenant).table("schedule_entries")
-      .where({ entry_id: entryId })
-      .update(patch);
-  });
-
+  await updateAdHocActivityForApi(user, tenant, entryId, input);
   revalidatePath("/msp/user-activities");
 });
 
@@ -591,29 +401,7 @@ export const deleteAdHocActivity = withAuth(async (
   { tenant },
   entryId: string
 ): Promise<void> => {
-  if (!entryId) {
-    throw new Error("Entry id is required");
-  }
-
-  const { knex } = await createTenantKnex(tenant);
-  await withTransaction(knex, async (trx) => {
-    const entry = await tenantDb(trx, tenant).table("schedule_entries")
-      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
-      .first();
-    if (!entry) {
-      throw new Error("Ad-hoc item not found");
-    }
-
-    await assertCanModifyAdHoc(trx, tenant, entryId, user);
-
-    await tenantDb(trx, tenant).table("schedule_entry_assignees")
-      .where({ entry_id: entryId })
-      .delete();
-    await tenantDb(trx, tenant).table("schedule_entries")
-      .where({ entry_id: entryId })
-      .delete();
-  });
-
+  await deleteAdHocActivityForApi(user, tenant, entryId);
   revalidatePath("/msp/user-activities");
 });
 
@@ -648,8 +436,8 @@ export const getActivityViewableUsers = withAuth(async (
   }
 
   // Select only non-sensitive columns (never hashed_password / two_factor_secret).
-  const rows = await tenantDb(knex, tenant).table("users")
-    .where({ user_type: "internal", is_inactive: false })
+  const rows = await knex("users")
+    .where({ tenant, user_type: "internal", is_inactive: false })
     .whereNot({ user_id: user.user_id })
     .orderBy([{ column: "first_name" }, { column: "last_name" }])
     .select(

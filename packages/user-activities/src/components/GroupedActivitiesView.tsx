@@ -34,8 +34,8 @@ import {
   GripVertical,
   Calendar,
   Layers,
-  MessageSquare,
-  ListChecks,
+  Ticket,
+  GitBranch,
   Pencil,
   Check,
   X,
@@ -132,9 +132,9 @@ function getTypeIcon(type: ActivityType) {
     case ActivityType.PROJECT_TASK:
       return <Layers className="h-4 w-4" style={{ color: 'rgb(var(--color-secondary-500))' }} />;
     case ActivityType.TICKET:
-      return <MessageSquare className="h-4 w-4 text-primary-500" />;
+      return <Ticket className="h-4 w-4 text-primary-500" />;
     case ActivityType.WORKFLOW_TASK:
-      return <ListChecks className="h-4 w-4 text-destructive" />;
+      return <GitBranch className="h-4 w-4" style={{ color: 'rgb(var(--color-accent-500))' }} />;
     default:
       return null;
   }

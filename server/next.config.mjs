@@ -424,6 +424,9 @@ const nextConfig = {
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? '../ee/server/src/user-activities/workflowTasks.server'
         : '../packages/user-activities/src/server/workflow-tasks',
+      '@alga-psa/user-activities/server/workflow-task-actions': isEE
+        ? '../ee/server/src/user-activities/workflowTaskActions.server'
+        : '../packages/user-activities/src/server/workflow-task-actions',
       '@alga-psa/user-activities/client/workflow-tasks': isEE
         ? '../ee/server/src/user-activities/workflowTasks.client'
         : '../packages/user-activities/src/client/workflow-tasks',
@@ -690,6 +693,9 @@ const nextConfig = {
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
         : path.join(__dirname, '../packages/user-activities/src/server/workflow-tasks.ts'),
+      '@alga-psa/user-activities/server/workflow-task-actions': isEE
+        ? path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts')
+        : path.join(__dirname, '../packages/user-activities/src/server/workflow-task-actions.ts'),
       '@alga-psa/user-activities/client/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx')
         : path.join(__dirname, '../packages/user-activities/src/client/workflow-tasks.tsx'),
@@ -1032,6 +1038,7 @@ const nextConfig = {
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
         const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
+        const userActivitiesWorkflowTaskActionsServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts');
         const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
         const authSsoButtonsEeEntry = path.join(
           __dirname,
@@ -1064,6 +1071,10 @@ const nextConfig = {
             // exports map before the webpack alias wins. Force the EE implementations.
             if (req === '@alga-psa/user-activities/server/workflow-tasks') {
               resource.request = userActivitiesWorkflowTasksServerEe;
+              return;
+            }
+            if (req === '@alga-psa/user-activities/server/workflow-task-actions') {
+              resource.request = userActivitiesWorkflowTaskActionsServerEe;
               return;
             }
             if (req === '@alga-psa/user-activities/client/workflow-tasks') {

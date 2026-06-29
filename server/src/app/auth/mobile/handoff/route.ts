@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@alga-psa/auth/nextauth/edge-auth';
+import { getSessionWithRevocationCheck } from '@alga-psa/auth';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import { enforceMobileOttIssueLimit } from '@/lib/security/mobileAuthRateLimiting';
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(signIn.toString(), { status: 302 });
   }
 
-  const session = await auth();
+  const session = await getSessionWithRevocationCheck();
   const user = session?.user as any;
   const userId = typeof user?.id === 'string' ? user.id : null;
   const tenantId = typeof user?.tenant === 'string' ? user.tenant : null;

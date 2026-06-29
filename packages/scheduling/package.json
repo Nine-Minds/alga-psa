@@ -25,6 +25,10 @@
       "import": "./src/components/schedule/AgentScheduleView.tsx",
       "types": "./src/components/schedule/AgentScheduleView.tsx"
     },
+    "./actions/scheduleActivityCore": {
+      "import": "./src/actions/scheduleActivityCore.ts",
+      "types": "./src/actions/scheduleActivityCore.ts"
+    },
     "./lib/timeEntryLauncher": {
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"
