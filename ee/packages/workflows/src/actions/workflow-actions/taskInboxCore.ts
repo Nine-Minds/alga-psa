@@ -155,25 +155,43 @@ export async function getUserTasksForApi(
     const { status = [WorkflowTaskStatus.PENDING, WorkflowTaskStatus.CLAIMED], page = 1, pageSize = 20 } =
       params || {};
 
-    // Get tasks assigned to the user
-    const tasks = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await WorkflowTaskModel.getTasksAssignedToUser(trx, tenant, userId, status);
-    });
-
-    // Get tasks assigned to user's roles
+    const statusList = Array.isArray(status) ? status : [status];
     const userRoles = user.roles || [];
-    const roleIds = userRoles.map((role) => role.role_id);
-    const roleTasks = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await WorkflowTaskModel.getTasksAssignedToRoles(trx, tenant, roleIds, status);
-    });
+    const roleIds = userRoles.map((role) => role.role_id).filter(Boolean);
 
-    // Combine and deduplicate tasks
-    const allTasks = [...tasks];
-    for (const roleTask of roleTasks) {
-      if (!allTasks.some((t) => t.task_id === roleTask.task_id)) {
-        allTasks.push(roleTask);
-      }
-    }
+    // A user's inbox is every active (non-hidden) task they can act on:
+    //   - assigned directly to them (assigned_users contains their id),
+    //   - assigned to one of their roles (assigned_roles intersects their role ids),
+    //   - the open claimable pool — PENDING tasks with no user/role assignment. Workflow
+    //     `human.task` nodes create tasks unassigned, and claimTaskForApi lets any user
+    //     claim any PENDING task, so these belong in everyone's inbox as claimable.
+    //   - tasks they have already claimed, so a pool task stays in their inbox after they
+    //     claim it (it is no longer PENDING and was never in assigned_users).
+    // jsonb `@>` is bound as a JSON string + ::jsonb cast — a raw JS-array bind is sent to
+    // Postgres as an array and rejected with "invalid input syntax for type json".
+    const allTasks = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('workflow_tasks')
+        .where('tenant', tenant)
+        .where('is_hidden', false)
+        .whereIn('status', statusList)
+        .where(function () {
+          this.whereRaw('assigned_users @> ?::jsonb', [JSON.stringify([userId])]);
+          for (const roleId of roleIds) {
+            this.orWhereRaw('assigned_roles @> ?::jsonb', [JSON.stringify([roleId])]);
+          }
+          this.orWhere(function () {
+            this.where('status', WorkflowTaskStatus.PENDING)
+              .where(function () {
+                this.whereNull('assigned_users').orWhereRaw("assigned_users = '[]'::jsonb");
+              })
+              .where(function () {
+                this.whereNull('assigned_roles').orWhereRaw("assigned_roles = '[]'::jsonb");
+              });
+          });
+          this.orWhere('claimed_by', userId);
+        })
+        .orderBy('due_date', 'asc');
+    });
 
     // Sort by due date (ascending) and created date (descending)
     allTasks.sort((a, b) => {

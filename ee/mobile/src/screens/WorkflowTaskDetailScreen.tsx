@@ -15,6 +15,7 @@ import {
   type WorkflowTaskDetail,
 } from "../api/workflowTasks";
 import { extractSimpleFields, isSimpleTaskForm, type SimpleFormField } from "../features/userActivities/formClassifier";
+import { workflowTaskGating } from "../features/userActivities/workflowTaskGating";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { Badge } from "../ui/components/Badge";
@@ -115,8 +116,10 @@ export function WorkflowTaskDetailScreen({ route }: Props) {
   }, [detail, fields]);
 
   const status = detail?.status;
-  const isOpen = status === "pending" || status === "claimed";
-  const claimedByMe = status === "claimed" && (detail?.claimedBy == null || detail?.claimedBy === session?.user?.id);
+  const { isOpen, assignedToMe, claimedByMe, canComplete } = workflowTaskGating(
+    { status: status ?? "pending", assignedUsers: detail?.assignedUsers, claimedBy: detail?.claimedBy },
+    session?.user?.id,
+  );
 
   const handleClaim = useCallback(async () => {
     if (!client || !session) return;
@@ -214,8 +217,8 @@ export function WorkflowTaskDetailScreen({ route }: Props) {
         {detail.description ?? t("workflowTask.noDescription", { defaultValue: "No description." })}
       </Text>
 
-      {/* Claim / unclaim affordances */}
-      {isOpen ? (
+      {/* Claim / unclaim affordances — pool tasks only; a directly-assigned task needs no claim. */}
+      {isOpen && !assignedToMe ? (
         <View style={{ marginTop: theme.spacing.xl, gap: theme.spacing.sm }}>
           {status === "pending" ? (
             <PrimaryButton onPress={() => void handleClaim()} disabled={busy} accessibilityLabel={t("workflowTask.claim", { defaultValue: "Claim task" })}>
@@ -241,7 +244,7 @@ export function WorkflowTaskDetailScreen({ route }: Props) {
             <Text style={{ ...theme.typography.subtitle, color: theme.colors.text }}>
               {t("workflowTask.formFieldsTitle", { defaultValue: "Complete task" })}
             </Text>
-            {status === "pending" ? (
+            {!canComplete ? (
               <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
                 {t("workflowTask.claimRequired", { defaultValue: "Claim this task before completing it." })}
               </Text>
@@ -255,7 +258,7 @@ export function WorkflowTaskDetailScreen({ route }: Props) {
               <Text style={{ ...theme.typography.caption, color: theme.colors.danger, marginTop: theme.spacing.md }}>{actionError}</Text>
             ) : null}
 
-            {status === "claimed" ? (
+            {canComplete ? (
               <View style={{ marginTop: theme.spacing.lg }}>
                 <PrimaryButton
                   onPress={() => void handleComplete()}
