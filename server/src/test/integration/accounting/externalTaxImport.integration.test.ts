@@ -29,7 +29,10 @@ let testTenant: string;
 // vi.restoreAllMocks() — needed for the fetchExternalInvoice spies — cannot
 // strip it: restore resets a mock to the implementation vi.fn() was created
 // with, which for .mockImplementation() is undefined.
-vi.mock('@alga-psa/db', () => ({
+// Keep the real module (TestContext uses tenantDb, withTransaction, etc.) and
+// override only createTenantKnex.
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal()),
   createTenantKnex: vi.fn(async () => ({
     knex: testDb,
     tenant: testTenant
