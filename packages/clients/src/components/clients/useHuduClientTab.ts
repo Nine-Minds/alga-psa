@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { isEnterprise } from '@alga-psa/core';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 export interface HuduClientTabGate {
   visible: boolean;
@@ -10,15 +9,12 @@ export interface HuduClientTabGate {
 }
 
 /**
- * Visibility gate for the client "Hudu" tab (F070): EE edition + the
- * `hudu-integration` feature flag (same gate as useHuduIntegrationEnabled in
- * @alga-psa/integrations, inlined here to avoid a package dependency), then a
- * light edition-swapped probe — Hudu connected AND this client mapped. Any
- * probe failure resolves hidden.
+ * Visibility gate for the client "Hudu" tab (F070): EE edition, then a light
+ * edition-swapped probe — Hudu connected AND this client mapped. Any probe
+ * failure resolves hidden.
  */
 export function useHuduClientTab(clientId: string): HuduClientTabGate {
-  const flag = useFeatureFlag('hudu-integration', { defaultValue: false });
-  const enabled = isEnterprise && !!flag.enabled;
+  const enabled = isEnterprise;
 
   const [context, setContext] = useState<{ connected: boolean; mapped: boolean } | null>(null);
   const [checking, setChecking] = useState(false);
@@ -50,6 +46,6 @@ export function useHuduClientTab(clientId: string): HuduClientTabGate {
 
   return {
     visible: enabled && context?.connected === true && context?.mapped === true,
-    loading: flag.loading || checking,
+    loading: checking,
   };
 }

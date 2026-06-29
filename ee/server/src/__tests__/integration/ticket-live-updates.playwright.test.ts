@@ -17,11 +17,6 @@ import {
 applyPlaywrightAuthEnvDefaults();
 
 const BASE_URL = resolvePlaywrightBaseUrl();
-const LIVE_UPDATES_ENABLED =
-  process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS === 'false' &&
-  (process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS ?? '')
-    .split(',')
-    .some((entry) => entry.trim() === 'live-ticket-updates:true');
 const LIVE_TICKET_PERF_SMOKE = process.env.LIVE_TICKET_PERF_SMOKE === 'true';
 const LIVE_TICKET_PERF_ITERATIONS = Number.parseInt(process.env.LIVE_TICKET_PERF_ITERATIONS ?? '50', 10);
 const LIVE_TICKET_PERF_THRESHOLD_MS = Number.parseInt(process.env.LIVE_TICKET_PERF_THRESHOLD_MS ?? '500', 10);
@@ -445,8 +440,6 @@ async function openContextWithUser(browserContext: BrowserContext, tenantData: T
 }
 
 test.describe('Ticket live updates (Playwright)', () => {
-  test.skip(!LIVE_UPDATES_ENABLED, 'Set NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false and NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true');
-
   test('T046: B saves status and A refreshes without losing a local title draft', async ({ browser }) => {
     test.setTimeout(300_000);
 

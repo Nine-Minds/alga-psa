@@ -5,7 +5,7 @@
  *
  * Thin `withAuth` wrappers over the session-free import core
  * (integrations/hudu/assetImportCore). The wrapper enforces EE tier +
- * `hudu-integration` flag + `asset` CREATE (FR6) and passes the clicking
+ * `asset` CREATE (FR6) and passes the clicking
  * user as the asset audit actor; the core does the work and is shared with the
  * tenant-wide auto-sync (runHuduTenantSync).
  */
@@ -14,7 +14,6 @@ import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import {
   importHuduAssetCore,
@@ -55,14 +54,6 @@ function withHuduAssetCreateAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
 
     return handler(user, context as { tenant: string }, ...args);
   });

@@ -35,8 +35,8 @@ import type { RmmOrganizationMapping } from '../../../interfaces/rmm.interfaces'
 
 const SETTINGS_PATH = '/msp/settings';
 
-// Huntress visibility is gated in the UI via the huntress-rmm-integration
-// feature flag; server actions enforce tier + permissions only.
+// Huntress visibility in the UI is EE-gated (requiresEnterprise); server
+// actions enforce tier + permissions only.
 function withHuntressAccess<TArgs extends unknown[], TResult>(
   handler: (user: any, context: { tenant: string }, ...args: TArgs) => Promise<TResult>
 ) {

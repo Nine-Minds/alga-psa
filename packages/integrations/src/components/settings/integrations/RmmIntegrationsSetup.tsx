@@ -6,10 +6,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { cn } from '@alga-psa/ui/lib/utils';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { RmmProvider } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -156,25 +155,11 @@ export default function RmmIntegrationsSetup() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
-  const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });
-  const levelIoFlag = useFeatureFlag('levelio-rmm-integration', { defaultValue: false });
-  const huntressFlag = useFeatureFlag('huntress-rmm-integration', { defaultValue: false });
-  const isTacticalEnabled = !!tacticalFlag?.enabled;
-  const isTaniumEnabled = !!taniumFlag?.enabled;
-  const isLevelIoEnabled = !!levelIoFlag?.enabled;
-  const isHuntressEnabled = !!huntressFlag?.enabled;
 
   const options = useMemo<RmmIntegrationOption[]>(
     () => {
       const availableProviders = getAvailableRmmProviderRegistry({
-        isEnterprise: isEEAvailable,
-        enabledFeatureFlags: {
-          'tactical-rmm-integration': isTacticalEnabled,
-          'tanium-rmm-integration': isTaniumEnabled,
-          'levelio-rmm-integration': isLevelIoEnabled,
-          'huntress-rmm-integration': isHuntressEnabled
-        }
+        isEnterprise: isEEAvailable
       });
 
       return availableProviders
@@ -188,7 +173,7 @@ export default function RmmIntegrationsSetup() {
         })
         .filter((option): option is RmmIntegrationOption => option !== null);
     },
-    [isEEAvailable, isTacticalEnabled, isTaniumEnabled, isLevelIoEnabled, isHuntressEnabled]
+    [isEEAvailable]
   );
 
   const [selected, setSelected] = useState<RmmProvider | null>(
@@ -240,16 +225,6 @@ export default function RmmIntegrationsSetup() {
 
   // In CE, Tactical is the only supported RMM provider UI we expose today.
   if (!isEEAvailable) {
-    if (!isTacticalEnabled) {
-      return (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('integrations.rmm.setup.title', { defaultValue: 'RMM Integrations' })}</CardTitle>
-            <CardDescription>{t('integrations.rmm.setup.comingSoon', { defaultValue: 'RMM integration coming soon' })}</CardDescription>
-          </CardHeader>
-        </Card>
-      );
-    }
     return <TacticalRmmIntegrationSettings />;
   }
 
