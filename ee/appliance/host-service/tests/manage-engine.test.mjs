@@ -230,6 +230,50 @@ test('collectManageStatus: app.updateAvailable false when channel digest matches
   assert.equal(status.app.availableVersion, null);
 });
 
+test('collectManageStatus clears a stale blocked app-update when the alga-core HelmRelease is Ready', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-stale-ok-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  const installStateFile = path.join(tmp, 'install-state.json');
+  fs.writeFileSync(installStateFile, JSON.stringify({ status: 'update-blocked', lastAction: 'HelmRelease reconcile failed during app update.' }));
+  const kube = fakeKube({
+    json: (args) => args.includes('helmrelease alga-core')
+      ? { ok: true, value: { status: { conditions: [{ type: 'Ready', status: 'True', reason: 'ReconciliationSucceeded' }] } } }
+      : { ok: true, value: {} }
+  });
+  const status = await collectManageStatus({
+    kube,
+    releaseSelectionFile,
+    installStateFile,
+    cpUpgradeStatusFile: path.join(tmp, 'cp.json'),
+    resolveControlPlaneRef: async () => null
+  });
+  // Healthy app + stale failure record -> show no error.
+  assert.equal(status.app.update.status, 'idle');
+  assert.equal(status.app.update.message, null);
+});
+
+test('collectManageStatus keeps a blocked app-update when the alga-core HelmRelease is not Ready', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-stale-bad-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  const installStateFile = path.join(tmp, 'install-state.json');
+  fs.writeFileSync(installStateFile, JSON.stringify({ status: 'update-blocked', lastAction: 'HelmRelease reconcile failed during app update.' }));
+  const kube = fakeKube({
+    json: (args) => args.includes('helmrelease alga-core')
+      ? { ok: true, value: { status: { conditions: [{ type: 'Ready', status: 'False', reason: 'UpgradeFailed' }] } } }
+      : { ok: true, value: {} }
+  });
+  const status = await collectManageStatus({
+    kube,
+    releaseSelectionFile,
+    installStateFile,
+    cpUpgradeStatusFile: path.join(tmp, 'cp.json'),
+    resolveControlPlaneRef: async () => null
+  });
+  assert.equal(status.app.update.status, 'blocked');
+});
+
 test('collectManageStatus: app.updateAvailable false (not a crash) when the registry is unreachable', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-app-err-'));
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');

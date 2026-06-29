@@ -287,6 +287,21 @@ function digestOf(imageRef) {
   return at >= 0 ? imageRef.slice(at + 1) : null;
 }
 
+// Live readiness of a HelmRelease's Ready condition. Returns true/false, or null
+// when it cannot be determined (kube error / not found) — callers must treat null
+// as "unknown" and not as a failure.
+async function isHelmReleaseReady(kube, namespace, name) {
+  try {
+    const res = await kube.json(`get helmrelease ${name} -n ${namespace}`);
+    if (!res || !res.ok || !res.value) return null;
+    const condition = (res.value.status?.conditions || []).find((c) => c.type === 'Ready');
+    if (!condition) return null;
+    return condition.status === 'True';
+  } catch {
+    return null;
+  }
+}
+
 export async function collectManageStatus(deps) {
   const {
     kube,
@@ -299,6 +314,8 @@ export async function collectManageStatus(deps) {
     cpDeployment = 'appliance-control-plane',
     resolveControlPlaneRef,
     resolveReleaseManifest,
+    appHelmReleaseNamespace = 'alga-system',
+    appHelmReleaseName = 'alga-core',
     licenseNamespace = 'msp',
     licenseSecretName = 'appliance-license-seed'
   } = deps;
@@ -365,6 +382,18 @@ export async function collectManageStatus(deps) {
     license = await readLicenseStatus({ kube, namespace: licenseNamespace, secretName: licenseSecretName });
   } catch { /* best effort */ }
 
+  // App-update status, reconciled against live reality. install-state persists the
+  // *last* update attempt's outcome, which goes stale: a block that has since
+  // converged (or a transient that recovered) must not keep showing as a current
+  // error. If the alga-core HelmRelease is actually Ready, the app is healthy and
+  // there is no error to show — surface no failure rather than a stale one.
+  let appUpdateStatus = mapUpdateStatus(installState.status);
+  let appUpdateMessage = installState.lastAction || null;
+  if (appUpdateStatus === 'blocked' && (await isHelmReleaseReady(kube, appHelmReleaseNamespace, appHelmReleaseName)) === true) {
+    appUpdateStatus = 'idle';
+    appUpdateMessage = null;
+  }
+
   return {
     app: {
       version: selection.selectedReleaseVersion || null,
@@ -373,7 +402,7 @@ export async function collectManageStatus(deps) {
       availableVersion: updateAvailable ? resolvedReleaseVersion : null,
       pinnedReleaseDigest: selection.manifestDigest || null,
       resolvedReleaseDigest,
-      update: { status: mapUpdateStatus(installState.status), message: installState.lastAction || null }
+      update: { status: appUpdateStatus, message: appUpdateMessage }
     },
     controlPlane: {
       channel,
