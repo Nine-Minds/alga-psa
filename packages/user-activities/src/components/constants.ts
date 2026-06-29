@@ -26,7 +26,7 @@ export function getActivityTypeColor(type: ActivityType): string {
     case ActivityType.TIME_ENTRY:
       return '#f97316'; // orange-500
     case ActivityType.WORKFLOW_TASK:
-      return '#ef4444'; // red (destructive)
+      return 'rgb(var(--color-accent-500))'; // orange (accent) — shared with the mobile list (theme.colors.accent)
     case ActivityType.NOTIFICATION:
       return '#6366f1'; // indigo-500
     default:
