@@ -115,13 +115,20 @@ vi.mock('server/src/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
-vi.mock('@ee/lib/actions/integrations/huduDataActions', () => ({
-  getHuduCompanyAssets: getHuduCompanyAssetsMock,
+// The import core fetches via the session-free huduDataCore now.
+vi.mock('@ee/lib/integrations/hudu/huduDataCore', () => ({
+  fetchHuduCompanyAssets: getHuduCompanyAssetsMock,
 }));
 
+// The core writes through the actor-injectable services (knex, tenant, actor,
+// data, options). Forward data/opts to the existing fakes so every payload
+// assertion below stays as-is.
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({
-  createAsset: createAssetMock,
-  deleteAsset: deleteAssetMock,
+  // Forward only the payload/asset-id so the single-arg call assertions below
+  // (which never inspect the options arg) stay as-is.
+  createAssetRecord: (_knex: unknown, _tenant: unknown, _actor: unknown, data: unknown) => createAssetMock(data),
+  deleteAssetRecord: (_knex: unknown, _tenant: unknown, _actor: unknown, assetId: unknown, opts: unknown) =>
+    deleteAssetMock(assetId, opts),
 }));
 
 // F315: the registry read is knex-level — fake it; the resolver stays REAL.

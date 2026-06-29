@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Hudu connection error"
+        },
+        "sync": {
+          "title": "Sync & automation",
+          "description": "Import assets for every mapped client at once, and keep them up to date automatically. Mapping a company or layout only configures the integration — assets appear only after an import.",
+          "summary": "{{created}} created · {{updated}} updated · {{skipped}} skipped · {{failed}} failed",
+          "toastErrorTitle": "Hudu sync error",
+          "importDoneTitle": "Hudu import finished",
+          "syncDoneTitle": "Hudu sync finished",
+          "importing": "Importing…",
+          "importAll": "Import all mapped clients",
+          "syncing2": "Syncing…",
+          "syncAll": "Sync all",
+          "autoSyncLabel": "Daily auto-sync",
+          "autoSyncHint": "Automatically import new assets and refresh existing ones once a day for every mapped client.",
+          "neverRun": "No tenant-wide run yet.",
+          "lastRun": "Last run {{at}}: {{created}} created · {{updated}} updated · {{skipped}} skipped · {{failed}} failed",
+          "status": {
+            "syncing": "Running…",
+            "completed": "Completed",
+            "error": "Error"
+          }
         }
       }
     },

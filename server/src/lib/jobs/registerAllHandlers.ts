@@ -77,6 +77,11 @@ import {
   AccountingSyncCycleJobData,
 } from './handlers/accountingSyncCycleHandler';
 import {
+  huduAutoSyncHandler,
+  HUDU_AUTO_SYNC_JOB,
+  HuduAutoSyncJobData,
+} from './handlers/huduAutoSyncHandler';
+import {
   SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
   searchVisibleUserReindexHandler,
   SearchVisibleUserReindexJobData,
@@ -340,6 +345,20 @@ export async function registerAllJobHandlers(
           await accountingSyncCycleHandler(data);
         },
         retry: { maxAttempts: 1 }, // cycles are self-healing on the next tick
+        timeoutMs: 600000, // 10 minutes
+      },
+      registerOpts
+    );
+
+    // Hudu daily auto-sync (import unmatched + refresh; no-op unless connected &
+    // settings.autoSync.enabled). Converged per-tenant by scheduleHuduAutoSyncJob.
+    JobHandlerRegistry.register<HuduAutoSyncJobData & BaseJobData>(
+      {
+        name: HUDU_AUTO_SYNC_JOB,
+        handler: async (_jobId, data) => {
+          await huduAutoSyncHandler(data);
+        },
+        retry: { maxAttempts: 2 },
         timeoutMs: 600000, // 10 minutes
       },
       registerOpts

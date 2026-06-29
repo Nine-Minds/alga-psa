@@ -32,6 +32,13 @@ import {
   setHuduIntegrationActive,
   upsertHuduIntegration,
 } from '../../integrations/hudu/huduIntegrationRepository';
+import type { HuduSyncStatus } from '../../integrations/hudu/huduIntegrationRepository';
+import type { HuduTenantSyncSummary } from '../../integrations/hudu/tenantSync';
+
+export interface HuduAutoSyncStatus {
+  enabled: boolean;
+  cadence: string;
+}
 
 export interface HuduConnectionStatusData {
   connected: boolean;
@@ -40,6 +47,28 @@ export interface HuduConnectionStatusData {
   connectedAt: string | null;
   lastSyncedAt: string | null;
   passwordAccess: boolean;
+  /** Tenant-wide import/sync run state (RMM-style). */
+  syncStatus: HuduSyncStatus;
+  syncError: string | null;
+  lastFullSyncAt: string | null;
+  lastSync: HuduTenantSyncSummary | null;
+  autoSync: HuduAutoSyncStatus;
+}
+
+const DEFAULT_AUTO_SYNC: HuduAutoSyncStatus = { enabled: false, cadence: 'daily' };
+
+function settingsAutoSync(settings: Record<string, unknown> | null | undefined): HuduAutoSyncStatus {
+  const raw = settings?.autoSync as Partial<HuduAutoSyncStatus> | undefined;
+  if (!raw || typeof raw !== 'object') return DEFAULT_AUTO_SYNC;
+  return {
+    enabled: raw.enabled === true,
+    cadence: typeof raw.cadence === 'string' ? raw.cadence : 'daily',
+  };
+}
+
+function settingsLastSync(settings: Record<string, unknown> | null | undefined): HuduTenantSyncSummary | null {
+  const raw = settings?.last_sync as HuduTenantSyncSummary | undefined;
+  return raw && typeof raw === 'object' ? raw : null;
 }
 
 export interface HuduTestConnectionData {
@@ -105,6 +134,20 @@ function toErrorMessage(error: unknown): string {
 function toIso(value: Date | string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
   return value instanceof Date ? value.toISOString() : String(value);
+}
+
+/**
+ * Converge the daily auto-sync schedule to the tenant's current desired state
+ * (settings.autoSync + is_active). Best-effort: a scheduling blip must never
+ * fail the connect/disconnect flow. Mirrors the RMM connect→reconcile call.
+ */
+async function convergeHuduAutoSyncSchedule(tenant: string): Promise<void> {
+  try {
+    const { scheduleHuduAutoSyncJob } = await import('server/src/lib/jobs/handlers/huduAutoSyncHandler');
+    await scheduleHuduAutoSyncJob(tenant);
+  } catch (error) {
+    logger.warn('[HuduActions] auto-sync schedule converge skipped', { tenant, error: toErrorMessage(error) });
+  }
 }
 
 function sameHuduBaseUrl(left: string, right: string): boolean {
@@ -188,6 +231,10 @@ export const connectHudu = withHuduSettingsAccess(
         settings: { password_access: validation.passwordAccess },
       });
 
+      // Connecting doesn't enable auto-sync (opt-in), but converge so a
+      // previously-enabled toggle is honored on reconnect.
+      await convergeHuduAutoSyncSchedule(tenant);
+
       logger.info('[HuduActions] Hudu connected', { tenant });
 
       return {
@@ -199,6 +246,11 @@ export const connectHudu = withHuduSettingsAccess(
           connectedAt: toIso(row.connected_at),
           lastSyncedAt: toIso(row.last_synced_at),
           passwordAccess: validation.passwordAccess,
+          syncStatus: row.sync_status ?? 'idle',
+          syncError: row.sync_error ?? null,
+          lastFullSyncAt: toIso(row.last_full_sync_at),
+          lastSync: settingsLastSync(row.settings),
+          autoSync: settingsAutoSync(row.settings),
         },
       };
     } catch (error) {
@@ -271,6 +323,11 @@ export const getHuduConnectionStatus = withHuduSettingsAccess(
             connectedAt: null,
             lastSyncedAt: null,
             passwordAccess: false,
+            syncStatus: 'idle',
+            syncError: null,
+            lastFullSyncAt: null,
+            lastSync: null,
+            autoSync: DEFAULT_AUTO_SYNC,
           },
         };
       }
@@ -284,6 +341,11 @@ export const getHuduConnectionStatus = withHuduSettingsAccess(
           connectedAt: toIso(row.connected_at),
           lastSyncedAt: toIso(row.last_synced_at),
           passwordAccess: settingsPasswordAccess(row.settings),
+          syncStatus: row.sync_status ?? 'idle',
+          syncError: row.sync_error ?? null,
+          lastFullSyncAt: toIso(row.last_full_sync_at),
+          lastSync: settingsLastSync(row.settings),
+          autoSync: settingsAutoSync(row.settings),
         },
       };
     } catch (error) {
@@ -312,6 +374,9 @@ export const disconnectHudu = withHuduSettingsAccess(
       // T111: drop this tenant's cached Hudu lists so a reconnect with a new
       // key can never be served data fetched under the old credentials.
       clearHuduReferenceCacheForTenant(tenant);
+
+      // Inactive connection ⇒ cancel any recurring auto-sync schedule.
+      await convergeHuduAutoSyncSchedule(tenant);
 
       logger.info('[HuduActions] Hudu disconnected', { tenant });
 

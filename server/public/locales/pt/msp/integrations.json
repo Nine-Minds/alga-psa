@@ -1017,6 +1017,27 @@
         },
         "toasts": {
           "errorTitle": "Erro de conexão Hudu"
+        },
+        "sync": {
+          "title": "Sincronização e automação",
+          "description": "Importe ativos de todos os clientes mapeados de uma só vez e mantenha-os atualizados automaticamente. Mapear uma empresa ou layout apenas configura a integração — os ativos só aparecem após uma importação.",
+          "summary": "{{created}} criados · {{updated}} atualizados · {{skipped}} ignorados · {{failed}} com falha",
+          "toastErrorTitle": "Erro de sincronização do Hudu",
+          "importDoneTitle": "Importação do Hudu concluída",
+          "syncDoneTitle": "Sincronização do Hudu concluída",
+          "importing": "Importando…",
+          "importAll": "Importar todos os clientes mapeados",
+          "syncing2": "Sincronizando…",
+          "syncAll": "Sincronizar tudo",
+          "autoSyncLabel": "Sincronização automática diária",
+          "autoSyncHint": "Importa automaticamente novos ativos e atualiza os existentes uma vez por dia para cada cliente mapeado.",
+          "neverRun": "Nenhuma execução em todo o locatário ainda.",
+          "lastRun": "Última execução {{at}}: {{created}} criados · {{updated}} atualizados · {{skipped}} ignorados · {{failed}} com falha",
+          "status": {
+            "syncing": "Em execução…",
+            "completed": "Concluída",
+            "error": "Erro"
+          }
         }
       }
     },
