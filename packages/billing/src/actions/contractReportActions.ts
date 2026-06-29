@@ -93,6 +93,7 @@ type ContractExpirationRow = {
   client_contract_id: string;
   contract_id: string;
   contract_name: string;
+  client_id: string | null;
   client_name: string | null;
   is_active: boolean | null;
   start_date: string | Date | null;

@@ -109,6 +109,17 @@ async function isDistributed(knex, table) {
   return Boolean(res.rows?.[0]?.distributed);
 }
 
+async function isReferenceTable(knex, table) {
+  const res = await knex.raw(
+    `SELECT EXISTS (
+       SELECT 1 FROM pg_dist_partition
+       WHERE logicalrelid = ?::regclass AND partmethod = 'n'
+     ) AS is_reference`,
+    [table]
+  );
+  return Boolean(res.rows?.[0]?.is_reference);
+}
+
 // Restore the standard_status_id primary key. In Citus every key must include
 // the distribution column, so standard_statuses' primary key was composite with
 // `tenant` and got dropped together with that column above, leaving no unique
@@ -209,20 +220,24 @@ exports.up = async function up(knex) {
     // tenant deletion before this migration) are recovered via custom_name.
     await recoverOrphanedProjectTaskMappings(knex);
 
-    // standard_statuses is the last per-tenant standard_* catalog. In Citus it is
-    // distributed on `tenant` while its sibling standard_* tables are reference
-    // tables, and the distribution column cannot be dropped while the table is
-    // distributed (Citus: "cannot execute ALTER TABLE command involving partition
-    // column"). Undistribute it first, drop the column, then turn it into a
-    // reference table so it matches every other standard_* catalog. On plain
-    // Postgres these Citus steps are skipped and the table is altered in place.
+    // standard_statuses is the last per-tenant standard_* catalog. Its sibling
+    // standard_* tables are Citus reference tables, and its FK children
+    // (statuses, project_status_mappings) are distributed — so on Citus it MUST
+    // become a reference table, whether it is currently distributed (drop its
+    // distribution column requires undistribute first) or just a coordinator-local
+    // table (a distributed child cannot FK to a local table). Convert it whenever
+    // it is not already a reference table; on plain Postgres all of this is skipped
+    // and the table is altered in place.
     const wasDistributed = onCitus && (await isDistributed(knex, 'standard_statuses'));
+    const needsReferenceConversion =
+      onCitus && !(await isReferenceTable(knex, 'standard_statuses'));
 
-    if (wasDistributed) {
+    if (needsReferenceConversion) {
       // Both inbound FKs (child -> standard_statuses) and standard_statuses' own
-      // FKs (e.g. tenant -> tenants) block undistribute_table(); drop them first.
-      // Inbound FKs are restored against the reference table below; the outbound
-      // FKs referenced the tenant column and disappear together with it.
+      // FKs (e.g. tenant -> tenants) block undistribute_table() and
+      // create_reference_table(); drop them first. Inbound FKs are restored against
+      // the reference table below; the outbound FKs referenced the tenant column
+      // and disappear together with it.
       const blockingFks = await knex.raw(`
         SELECT conrelid::regclass::text AS owner_table, conname
         FROM pg_constraint
@@ -234,7 +249,9 @@ exports.up = async function up(knex) {
         await knex.raw(`ALTER TABLE ${fk.owner_table} DROP CONSTRAINT IF EXISTS "${fk.conname}"`);
       }
 
-      await knex.raw("SELECT undistribute_table('standard_statuses')");
+      if (wasDistributed) {
+        await knex.raw("SELECT undistribute_table('standard_statuses')");
+      }
     }
 
     await knex.raw('ALTER TABLE standard_statuses DROP CONSTRAINT IF EXISTS standard_statuses_name_item_type_tenant_key');
@@ -254,7 +271,7 @@ exports.up = async function up(knex) {
       $$
     `);
 
-    if (wasDistributed) {
+    if (needsReferenceConversion) {
       // Reference tables are replicated to every node, so distributed children can
       // keep foreign keys into standard_statuses (matching the other standard_*).
       await knex.raw("SELECT create_reference_table('standard_statuses')");

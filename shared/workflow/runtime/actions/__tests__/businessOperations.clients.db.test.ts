@@ -487,7 +487,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(mappings.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['automation', 'vip']);
+    expect(mappings.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['automation', 'vip']);
   });
 
   it('T005: clients.update applies patch and rejects cross-tenant client id as not found', async () => {
@@ -628,7 +628,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(cloneTagTexts.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['gold', 'managed']);
+    expect(cloneTagTexts.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['gold', 'managed']);
   });
 
   it('T008: clients.add_tag creates missing definitions and no-ops duplicate mappings', async () => {
@@ -650,7 +650,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(mappings.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['managed', 'priority']);
+    expect(mappings.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['managed', 'priority']);
     expect(mappings.length).toBe(2);
   });
 
