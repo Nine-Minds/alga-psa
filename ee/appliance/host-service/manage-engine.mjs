@@ -292,6 +292,7 @@ export async function collectManageStatus(deps) {
     cpNamespace = 'alga-appliance-control-plane',
     cpDeployment = 'appliance-control-plane',
     resolveControlPlaneRef,
+    resolveReleaseManifest,
     licenseNamespace = 'msp',
     licenseSecretName = 'appliance-license-seed'
   } = deps;
@@ -317,6 +318,32 @@ export async function collectManageStatus(deps) {
   const resolvedDigest = digestOf(resolvedRef) || (resolvedRef && resolvedRef.includes('sha256:') ? resolvedRef.split('@').pop() : null);
   const upgradeAvailable = Boolean(runningDigest && resolvedDigest && runningDigest !== resolvedDigest);
 
+  // App release update availability. The box pins the channel -> release-manifest
+  // digest at install time (selection.manifestDigest). Re-resolve the channel's
+  // *current* manifest digest and compare: a moved channel tag (e.g. a published
+  // pointer-update) points at new app images but never reaches an installed box
+  // until an operator runs an update. Without this, app.updateAvailable was a
+  // hardcoded false, so the Manage UI could never surface — or offer — an update.
+  // LEVERAGE: pattern appliance-channel-digest-drift — "resolve channel ref, diff
+  // against the installed/pinned digest -> available?" is now written twice here
+  // (control-plane image above, app release below). A shared helper
+  // (installedDigest + resolver -> { available, resolvedDigest }) would dedupe it.
+  let resolvedReleaseDigest = null;
+  let resolvedReleaseVersion = null;
+  try {
+    if (resolveReleaseManifest && selection.manifestDigest) {
+      const resolved = await resolveReleaseManifest(channel, {
+        registryHost: selection.registryHost,
+        releaseRepository: selection.repository
+      });
+      resolvedReleaseDigest = resolved?.manifestDigest || null;
+      resolvedReleaseVersion = resolved?.manifest?.version || null;
+    }
+  } catch { /* best effort — leave updateAvailable false when the registry is unreachable */ }
+  const updateAvailable = Boolean(
+    selection.manifestDigest && resolvedReleaseDigest && selection.manifestDigest !== resolvedReleaseDigest
+  );
+
   // App URL / DNS (from persisted operator intent).
   const runtime = selection.runtime || {};
   const appUrl = {
@@ -336,7 +363,10 @@ export async function collectManageStatus(deps) {
     app: {
       version: selection.selectedReleaseVersion || null,
       channel,
-      updateAvailable: false,
+      updateAvailable,
+      availableVersion: updateAvailable ? resolvedReleaseVersion : null,
+      pinnedReleaseDigest: selection.manifestDigest || null,
+      resolvedReleaseDigest,
       update: { status: mapUpdateStatus(installState.status), message: installState.lastAction || null }
     },
     controlPlane: {

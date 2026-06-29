@@ -13,6 +13,9 @@ type ManageStatus = {
     version: string;
     channel: "stable" | "nightly";
     updateAvailable: boolean;
+    availableVersion?: string | null;
+    pinnedReleaseDigest?: string | null;
+    resolvedReleaseDigest?: string | null;
     update: { status: "idle" | "running" | "complete" | "blocked"; message: string | null };
   };
   controlPlane: {
@@ -136,7 +139,11 @@ function UpdatesTab({
         </div>
         <div>
           <dt>Update available</dt>
-          <dd>{app.updateAvailable ? "Yes" : "No"}</dd>
+          <dd>
+            {app.updateAvailable
+              ? `Yes${app.availableVersion ? ` — ${app.availableVersion}` : ""}`
+              : "No"}
+          </dd>
         </div>
         {(updateRunning || updateDone || updateBlocked || app.update.message) ? (
           <div>
