@@ -91,7 +91,20 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string, options?: Record<string, unknown>) => {
+    t: (
+      _key: string,
+      fallbackOrOptions?: string | Record<string, unknown>,
+      maybeOptions?: Record<string, unknown>,
+    ) => {
+      // i18next's `t` accepts either `t(key, fallbackString, options)` or
+      // `t(key, optionsObject)` where the options object carries `defaultValue`.
+      const fallback =
+        typeof fallbackOrOptions === 'string'
+          ? fallbackOrOptions
+          : (fallbackOrOptions?.defaultValue as string | undefined);
+      const options =
+        typeof fallbackOrOptions === 'string' ? maybeOptions : fallbackOrOptions;
+
       if (!fallback) {
         return _key;
       }
