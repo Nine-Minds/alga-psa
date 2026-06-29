@@ -20,6 +20,8 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   resolveUserTimeZone: (...args: any[]) => resolveUserTimeZoneMock(...args),
   computeWorkDateFields: (...args: any[]) => computeWorkDateFieldsMock(...args),
+  truncateToMinute: (value: string | Date) =>
+    new Date(Math.floor(new Date(value).getTime() / 60000) * 60000),
 }));
 
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
