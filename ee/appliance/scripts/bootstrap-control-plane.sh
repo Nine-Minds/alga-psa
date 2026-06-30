@@ -302,6 +302,47 @@ control_plane_image_overlay() {
   printf '%s\n' "$overlay"
 }
 
+# Print the image the control-plane Deployment is currently running, or empty if
+# the Deployment does not exist yet (true first boot). Used so a transient
+# registry failure holds the running image instead of downgrading it.
+current_control_plane_image() {
+  kubectl_cmd get deployment "$CONTROL_PLANE_DEPLOYMENT" \
+    -n "$CONTROL_PLANE_NAMESPACE" \
+    -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true
+}
+
+# True when $1 is already in the local containerd image store, so it can be
+# applied without a registry round-trip (the Deployment pulls IfNotPresent).
+control_plane_image_present_locally() {
+  local ref="$1"
+  [ -n "$ref" ] || return 1
+  k3s_cmd ctr images ls -q 2>/dev/null | grep -Fxq "$ref"
+}
+
+# True when $1 is empty or refers to the baked baseline image.
+is_baked_control_plane_image() {
+  local ref="$1"
+  [ -z "$ref" ] || [ "$ref" = "$BAKED_CONTROL_PLANE_IMAGE" ] || [ "$ref" = "$BAKED_CONTROL_PLANE_IMAGE:baked" ]
+}
+
+# Apply the control-plane manifests with the image overridden to $1. When $1 is
+# empty or the baked baseline, apply the baseline manifests unchanged. Returns
+# non-zero only when the kubectl apply itself fails.
+apply_control_plane_with_image() {
+  local ref="$1" overlay rc
+  if is_baked_control_plane_image "$ref"; then
+    log "kubectl apply -k $CONTROL_PLANE_MANIFESTS (baked baseline)"
+    kubectl_cmd apply -k "$CONTROL_PLANE_MANIFESTS"
+    return $?
+  fi
+  overlay="$(control_plane_image_overlay "$ref")"
+  log "kubectl apply -k (control-plane image -> $ref)"
+  kubectl_cmd apply -k "$overlay"
+  rc=$?
+  rm -rf "$overlay"
+  return $rc
+}
+
 apply_control_plane() {
   log "Control plane: applying Kubernetes-hosted setup/status manifests"
   require_dir "$CONTROL_PLANE_MANIFESTS"
@@ -317,38 +358,54 @@ apply_control_plane() {
   # Kubernetes Secret is created here. This keeps the host-side reset CLI a pure
   # filesystem operation with no kubectl/secret-sync round trip.
   if [ "$DRY_RUN" = "true" ]; then
-    plan "resolve channel-pinned control-plane image (fall back to baked baseline)"
+    plan "resolve channel-pinned control-plane image; prefer local cache; hold current image on registry failure; baked baseline only on first boot"
     plan "kubectl --kubeconfig $KUBECONFIG_PATH apply -k $CONTROL_PLANE_MANIFESTS"
     return 0
   fi
 
   # Registry-metadata: prefer the channel-pinned control-plane image so setup-UI /
-  # host-service updates ship via the registry (no ISO re-burn). The baked image
-  # is the baseline/fallback -- it always serves if ghcr is unreachable.
-  local ref overlay
-  ref="$(resolve_control_plane_image || true)"
-  if [ -n "${ref:-}" ] && [ "$ref" != "$BAKED_CONTROL_PLANE_IMAGE:baked" ]; then
-    log "resolved channel control-plane image: $ref"
-    # Pre-pull into the kubelet's containerd so the Recreate rollout never blocks
-    # on a registry fetch (IfNotPresent finds it locally; baked stays if pull fails).
-    if k3s_cmd ctr images pull "$ref" >/dev/null 2>&1; then
-      overlay="$(control_plane_image_overlay "$ref")"
-      log "kubectl apply -k (control-plane image -> $ref)"
-      if kubectl_cmd apply -k "$overlay"; then
-        rm -rf "$overlay"
-        return 0
-      fi
-      rm -rf "$overlay"
-      log "registry-image apply failed; falling back to baked baseline"
+  # host-service updates ship via the registry (no ISO re-burn). Reboots must be
+  # deterministic and offline-safe, so a transient ghcr failure must NEVER
+  # downgrade an already-updated control plane back to the baked baseline (that
+  # regression silently reverted the setup UI to the old "Setup" view on reboot).
+  # Selection order:
+  #   1. live-resolved channel image, if it is already cached locally or can be
+  #      pulled now -- this is how updates roll out and steady state holds;
+  #   2. otherwise the image the Deployment already runs, when it is not baked
+  #      (HOLD: a registry hiccup keeps the last-good image instead of rolling
+  #      back -- also the only path an air-gapped appliance ever takes);
+  #   3. the baked baseline only on a true first boot (no Deployment yet) or when
+  #      the Deployment is already on the baked image.
+  local resolved current
+  resolved="$(resolve_control_plane_image || true)"
+  current="$(current_control_plane_image)"
+
+  if [ -n "${resolved:-}" ] && ! is_baked_control_plane_image "$resolved"; then
+    log "resolved channel control-plane image: $resolved"
+    if control_plane_image_present_locally "$resolved"; then
+      log "channel image already cached locally; applying without a registry pull"
+      if apply_control_plane_with_image "$resolved"; then return 0; fi
+      log "apply of locally-cached channel image failed"
+    elif k3s_cmd ctr images pull "$resolved" >/dev/null 2>&1; then
+      if apply_control_plane_with_image "$resolved"; then return 0; fi
+      log "apply of pulled channel image failed"
     else
-      log "could not pull $ref (registry unreachable / not public?); using baked baseline"
+      log "could not pull $resolved (registry unreachable / not public?)"
     fi
   else
-    log "no channel control-plane image resolved; using baked baseline"
+    log "no channel control-plane image resolved (registry unreachable?)"
   fi
 
-  log "kubectl apply -k $CONTROL_PLANE_MANIFESTS (baked baseline)"
-  kubectl_cmd apply -k "$CONTROL_PLANE_MANIFESTS"
+  # Did not land a channel image. Do NOT downgrade: hold the current non-baked
+  # image when the Deployment already runs one.
+  if [ -n "${current:-}" ] && ! is_baked_control_plane_image "$current"; then
+    log "holding current control-plane image (no downgrade): $current"
+    if apply_control_plane_with_image "$current"; then return 0; fi
+    log "hold apply failed; falling back to baked baseline"
+  fi
+
+  log "applying baked baseline control-plane image (first boot or already baseline)"
+  apply_control_plane_with_image ""
 }
 
 report_handoff() {
