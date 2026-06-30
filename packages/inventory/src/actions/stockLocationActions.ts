@@ -16,13 +16,55 @@ async function requireLocationPerm(user: any, action: 'create' | 'read' | 'updat
 }
 
 export const listStockLocations = withAuth(
-  async (user, { tenant }, opts?: { includeInactive?: boolean }): Promise<IStockLocation[]> => {
+  async (
+    user,
+    { tenant },
+    opts?: { includeInactive?: boolean; includeStock?: boolean },
+  ): Promise<IStockLocation[]> => {
     await requireLocationPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = trx('stock_locations').where({ tenant });
-      if (!opts?.includeInactive) q.andWhere({ is_active: true });
-      return (await q.orderBy('name', 'asc')) as IStockLocation[];
+      // Plain list (most callers): no occupancy join, so the dropdowns/pickers stay cheap.
+      if (!opts?.includeStock) {
+        const q = trx('stock_locations').where({ tenant });
+        if (!opts?.includeInactive) q.andWhere({ is_active: true });
+        return (await q.orderBy('name', 'asc')) as IStockLocation[];
+      }
+
+      // Occupancy per location in one round-trip — bulk on-hand sum + count of present serialized
+      // units (the same two facts the deactivate guard checks). COALESCE so empty locations read 0.
+      const levelAgg = trx('stock_levels')
+        .select('location_id')
+        .sum({ on_hand_qty: 'quantity_on_hand' })
+        .where({ tenant })
+        .groupBy('location_id')
+        .as('lvl');
+      const unitAgg = trx('stock_units')
+        .select('location_id')
+        .count({ unit_count: '*' })
+        .where({ tenant })
+        .whereIn('status', ['in_stock', 'allocated', 'in_transit'])
+        .groupBy('location_id')
+        .as('un');
+
+      const q = trx('stock_locations as loc')
+        .leftJoin(levelAgg, 'lvl.location_id', 'loc.location_id')
+        .leftJoin(unitAgg, 'un.location_id', 'loc.location_id')
+        .where('loc.tenant', tenant);
+      if (!opts?.includeInactive) q.andWhere('loc.is_active', true);
+
+      const rows = await q
+        .orderBy('loc.name', 'asc')
+        .select(
+          'loc.*',
+          trx.raw('COALESCE(lvl.on_hand_qty, 0) as on_hand_qty'),
+          trx.raw('COALESCE(un.unit_count, 0) as unit_count'),
+        );
+      return rows.map((r: any) => ({
+        ...r,
+        on_hand_qty: Number(r.on_hand_qty),
+        unit_count: Number(r.unit_count),
+      })) as IStockLocation[];
     });
   },
 );

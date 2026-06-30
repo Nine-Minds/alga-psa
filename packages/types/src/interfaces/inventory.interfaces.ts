@@ -88,6 +88,9 @@ export interface IStockLocation extends TenantEntity {
   is_active: boolean;
   created_at?: string | Date;
   updated_at?: string | Date;
+  /** Occupancy, populated only on list reads with includeStock: bulk on-hand qty + serialized units. */
+  on_hand_qty?: number;
+  unit_count?: number;
 }
 
 export interface IProductInventorySettings extends TenantEntity {

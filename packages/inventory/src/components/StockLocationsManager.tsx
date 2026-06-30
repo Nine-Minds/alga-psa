@@ -20,6 +20,7 @@ import {
   updateStockLocation,
   deactivateStockLocation,
 } from '../actions';
+import { formatOnHand, isLocationOccupied } from '../lib/stockLocationDisplay';
 
 const LOCATION_TYPE_LABELS: Record<StockLocationType, string> = {
   warehouse: 'Warehouse',
@@ -61,7 +62,7 @@ export function StockLocationsManager({
 
   const reload = useCallback(async () => {
     try {
-      setLocations(await listStockLocations({ includeInactive: true }));
+      setLocations(await listStockLocations({ includeInactive: true, includeStock: true }));
       setLoadFailed(false);
     } catch (e) {
       console.error(e);
@@ -150,6 +151,16 @@ export function StockLocationsManager({
       render: (v: any) => LOCATION_TYPE_LABELS[v as StockLocationType] ?? v,
     },
     {
+      title: 'On hand',
+      dataIndex: 'on_hand_qty',
+      render: (_: any, rec: IStockLocation) =>
+        isLocationOccupied(rec) ? (
+          <span>{formatOnHand(rec)}</span>
+        ) : (
+          <span className="text-gray-400">Empty</span>
+        ),
+    },
+    {
       title: 'Default',
       dataIndex: 'is_default',
       render: (v: any) =>
@@ -187,9 +198,17 @@ export function StockLocationsManager({
             </Button>
           )}
           {rec.is_active ? (
-            <Button id={`deactivate-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => setPendingDeactivate(rec)}>
-              Deactivate
-            </Button>
+            <span title={isLocationOccupied(rec) ? 'Holds stock — move it out before deactivating' : undefined}>
+              <Button
+                id={`deactivate-location-${rec.location_id}`}
+                variant="ghost"
+                size="sm"
+                disabled={isLocationOccupied(rec)}
+                onClick={() => setPendingDeactivate(rec)}
+              >
+                Deactivate
+              </Button>
+            </span>
           ) : (
             <Button id={`reactivate-location-${rec.location_id}`} variant="soft" size="sm" onClick={() => reactivate(rec)}>
               Reactivate
