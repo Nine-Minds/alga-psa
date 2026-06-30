@@ -31,8 +31,12 @@ export const listStockLocations = withAuth(
         return (await q.orderBy('name', 'asc')) as IStockLocation[];
       }
 
-      // Occupancy per location in one round-trip — bulk on-hand sum + count of present serialized
-      // units (the same two facts the deactivate guard checks). COALESCE so empty locations read 0.
+      // Occupancy per location in one round-trip. on_hand_qty (SUM of quantity_on_hand) is the
+      // CANONICAL total — the on-hand cache already folds serialized in-stock units in (it's
+      // recomputed from their count), so this alone is what the column displays. unit_count (present
+      // serialized units) is NOT added to it (that would double-count serialized stock); it exists
+      // only to gate Deactivate and to flag units present-but-not-on-hand (allocated / in transit).
+      // Both mirror what the deactivate guard checks. COALESCE so empty locations read 0.
       const levelAgg = trx('stock_levels')
         .select('location_id')
         .sum({ on_hand_qty: 'quantity_on_hand' })

@@ -20,15 +20,17 @@ describe('stock location occupancy display', () => {
       expect(formatOnHand({ on_hand_qty: 0, unit_count: 0 })).toBe('Empty');
       expect(formatOnHand({})).toBe('Empty');
     });
-    it('shows bulk quantity alone', () => {
+    it('shows the canonical on-hand total', () => {
       expect(formatOnHand({ on_hand_qty: 142, unit_count: 0 })).toBe('142');
     });
-    it('shows serialized units alone, singular vs plural', () => {
-      expect(formatOnHand({ on_hand_qty: 0, unit_count: 1 })).toBe('1 unit');
-      expect(formatOnHand({ on_hand_qty: 0, unit_count: 12 })).toBe('12 units');
+    it('does NOT add serialized units to the on-hand total (they are already in it)', () => {
+      // 15 phones + 3 SSDs (serialized) + 4 cables (bulk) = 22 on hand; the 18 serialized units are
+      // already counted in quantity_on_hand, so the cell must read "22", never "22 · 18 units".
+      expect(formatOnHand({ on_hand_qty: 22, unit_count: 18 })).toBe('22');
     });
-    it('shows both, separated', () => {
-      expect(formatOnHand({ on_hand_qty: 142, unit_count: 12 })).toBe('142 · 12 units');
+    it('surfaces units only when present but not on hand (allocated / in transit)', () => {
+      expect(formatOnHand({ on_hand_qty: 0, unit_count: 1 })).toBe('1 unit');
+      expect(formatOnHand({ on_hand_qty: 0, unit_count: 3 })).toBe('3 units');
     });
   });
 });
