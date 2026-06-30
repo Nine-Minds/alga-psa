@@ -4,7 +4,7 @@
  * Runtime-safe exports for worker/shared server execution contexts.
  */
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export { GmailAdapter } from './services/email/providers/GmailAdapter';
 
@@ -30,8 +30,7 @@ export async function getXeroCsvSettingsForTenant(
     return { ...DEFAULT_XERO_CSV_SETTINGS };
   }
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await tenantDb(knex, tenant).table('tenant_settings')
     .select('settings')
     .first();
 

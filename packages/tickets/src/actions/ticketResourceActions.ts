@@ -3,11 +3,19 @@
 
 import { ITicketResource } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { withAuth } from '@alga-psa/auth';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 export const addTicketResource = withAuth(async (
   user,
@@ -24,10 +32,9 @@ export const addTicketResource = withAuth(async (
       }
 
       // First, verify that the ticket exists and has the correct assigned_to
-      const ticket = await trx('tickets')
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
         .where({
           ticket_id: ticketId,
-          tenant: tenant
         })
         .first();
 
@@ -37,10 +44,9 @@ export const addTicketResource = withAuth(async (
 
       // If the ticket has no primary assignment yet, promote this user to primary
       if (!ticket.assigned_to) {
-        const [updatedTicket] = await trx('tickets')
+        const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
           .where({
             ticket_id: ticketId,
-            tenant: tenant
           })
           .update({
             assigned_to: additionalUserId,
@@ -67,11 +73,10 @@ export const addTicketResource = withAuth(async (
       }
 
       // Check if resource already exists
-      const existingResource = await trx('ticket_resources')
+      const existingResource = await tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
           ticket_id: ticketId,
           additional_user_id: additionalUserId,
-          tenant: tenant
         })
         .first();
 
@@ -80,7 +85,7 @@ export const addTicketResource = withAuth(async (
       }
 
       // Create the resource with the ticket's assigned_to
-      const [resource] = await trx('ticket_resources')
+      const [resource] = await tenantScopedTable(trx, 'ticket_resources', tenant)
         .insert({
           ticket_id: ticketId,
           assigned_to: ticket.assigned_to,
@@ -130,10 +135,9 @@ export const removeTicketResource = withAuth(async (
       }
 
       // Verify the resource exists before attempting to delete
-      const resource = await trx('ticket_resources')
+      const resource = await tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
           assignment_id: assignmentId,
-          tenant: tenant
         })
         .first();
 
@@ -141,10 +145,9 @@ export const removeTicketResource = withAuth(async (
         throw new Error(`Ticket resource not found in tenant ${tenant}`);
       }
 
-    await trx('ticket_resources')
+    await tenantScopedTable(trx, 'ticket_resources', tenant)
       .where({
         assignment_id: assignmentId,
-        tenant: tenant
       })
         .delete();
     } catch (error) {
@@ -171,10 +174,9 @@ export const getTicketResources = withAuth(async (
       }
 
       // First verify the ticket exists
-      const ticket = await trx('tickets')
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
         .where({
           ticket_id: ticketId,
-          tenant: tenant
         })
         .first();
 
@@ -182,10 +184,9 @@ export const getTicketResources = withAuth(async (
         throw new Error(`Ticket not found in tenant ${tenant}`);
       }
 
-    const resources = await trx('ticket_resources')
+    const resources = await tenantScopedTable(trx, 'ticket_resources', tenant)
       .where({
         ticket_id: ticketId,
-        tenant: tenant
       })
       .select('*')
       .orderBy('assigned_at', 'desc');
@@ -213,10 +214,9 @@ export const canAddAsAdditionalAgent = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // First verify the ticket exists
-    const ticket = await trx('tickets')
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
       .where({
         ticket_id: ticketId,
-        tenant: tenant
       })
       .first();
 
@@ -225,11 +225,10 @@ export const canAddAsAdditionalAgent = withAuth(async (
     }
 
     // Check if user is already an additional agent
-    const existingResource = await trx('ticket_resources')
+    const existingResource = await tenantScopedTable(trx, 'ticket_resources', tenant)
       .where({
         ticket_id: ticketId,
         additional_user_id: userId,
-        tenant: tenant
       })
       .first();
 
@@ -238,11 +237,10 @@ export const canAddAsAdditionalAgent = withAuth(async (
     }
 
     // Check if user is the primary assigned agent
-    const isPrimaryAgent = await trx('tickets')
+    const isPrimaryAgent = await tenantScopedTable(trx, 'tickets', tenant)
       .where({
         ticket_id: ticketId,
         assigned_to: userId,
-        tenant: tenant
       })
       .first();
 

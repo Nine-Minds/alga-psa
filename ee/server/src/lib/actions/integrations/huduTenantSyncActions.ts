@@ -8,7 +8,7 @@
  * toggle. All run the shared runHuduTenantSync engine and report an
  * RMM-style summary; the toggle persists settings.autoSync and converges the
  * recurring job schedule. Gating mirrors the per-client Hudu actions: EE tier +
- * `hudu-integration` flag, `asset` create/update for the runs, `system_settings`
+ * `asset` create/update for the runs, `system_settings`
  * update for the toggle.
  */
 
@@ -16,7 +16,6 @@ import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import { runHuduTenantSync } from '../../integrations/hudu/tenantSync';
@@ -54,14 +53,6 @@ function withHuduAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
 
     return handler(user, context as { tenant: string }, ...args);
   });

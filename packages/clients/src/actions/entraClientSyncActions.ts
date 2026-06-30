@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { isFeatureFlagEnabled } from '@alga-psa/core';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasMspPermission } from '../lib/authHelpers';
 
 /**
@@ -36,12 +36,12 @@ export const startClientEntraSync = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const mapping = await knex('entra_client_tenant_mappings as m')
-    .join('entra_managed_tenants as t', function joinManagedTenants() {
-      this.on('m.tenant', '=', 't.tenant').andOn('m.managed_tenant_id', '=', 't.managed_tenant_id');
-    })
+  const db = tenantDb(knex, tenant);
+  const query = db.table('entra_client_tenant_mappings as m');
+  db.tenantJoin(query, 'entra_managed_tenants as t', 'm.managed_tenant_id', 't.managed_tenant_id');
+
+  const mapping = await query
     .where({
-      'm.tenant': tenant,
       'm.client_id': clientId,
       'm.is_active': true,
       'm.mapping_state': 'mapped',

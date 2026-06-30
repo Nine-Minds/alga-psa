@@ -12,6 +12,7 @@ import logger from '@alga-psa/core/logger';
 import axios from 'axios';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneSoftware } from '../../../../interfaces/ninjaone.interfaces';
 import type {
@@ -142,11 +143,11 @@ async function findOrCreateSoftwareCatalogEntry(
 ): Promise<string> {
   const normalizedName = normalizeName(software.name);
   const publisher = software.publisher?.trim() || null;
+  const db = tenantDb(knex, tenant);
 
   // Try to find existing entry
-  const existing = await knex('software_catalog')
+  const existing = await db.table('software_catalog')
     .where({
-      tenant,
       normalized_name: normalizedName,
       publisher,
     })
@@ -157,7 +158,7 @@ async function findOrCreateSoftwareCatalogEntry(
   }
 
   // Create new entry
-  const [entry] = await knex('software_catalog')
+  const [entry] = await db.table('software_catalog')
     .insert({
       tenant,
       name: software.name.trim(),
@@ -185,10 +186,11 @@ async function syncAssetSoftwareToNormalizedTables(
   syncTimestamp: Date
 ): Promise<{ installed: number; uninstalled: number; catalogCreated: number }> {
   const stats = { installed: 0, uninstalled: 0, catalogCreated: 0 };
+  const db = tenantDb(knex, tenant);
 
   // Get current software IDs for this asset
-  const currentSoftware = await knex('asset_software')
-    .where({ tenant, asset_id: assetId, is_current: true })
+  const currentSoftware = await db.table('asset_software')
+    .where({ asset_id: assetId, is_current: true })
     .select('software_id');
   const currentSoftwareIds = new Set(currentSoftware.map(s => s.software_id));
 
@@ -208,8 +210,8 @@ async function syncAssetSoftwareToNormalizedTables(
     seenSoftwareIds.add(softwareId);
 
     // Check if already exists for this asset
-    const existing = await knex('asset_software')
-      .where({ tenant, asset_id: assetId, software_id: softwareId })
+    const existing = await db.table('asset_software')
+      .where({ asset_id: assetId, software_id: softwareId })
       .first();
 
     if (existing) {
@@ -228,12 +230,12 @@ async function syncAssetSoftwareToNormalizedTables(
         stats.installed++;
       }
 
-      await knex('asset_software')
-        .where({ tenant, asset_id: assetId, software_id: softwareId })
+      await db.table('asset_software')
+        .where({ asset_id: assetId, software_id: softwareId })
         .update(updateData);
     } else {
       // New software installation
-      await knex('asset_software').insert({
+      await db.table('asset_software').insert({
         tenant,
         asset_id: assetId,
         software_id: softwareId,
@@ -253,8 +255,8 @@ async function syncAssetSoftwareToNormalizedTables(
   // Mark software that's no longer present as uninstalled (soft delete)
   for (const softwareId of currentSoftwareIds) {
     if (!seenSoftwareIds.has(softwareId)) {
-      await knex('asset_software')
-        .where({ tenant, asset_id: assetId, software_id: softwareId, is_current: true })
+      await db.table('asset_software')
+        .where({ asset_id: assetId, software_id: softwareId, is_current: true })
         .update({
           is_current: false,
           uninstalled_at: syncTimestamp,
@@ -300,15 +302,12 @@ export async function syncSoftwareInventory(
       batchSize,
     });
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
     const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
 
     // Build query for assets to sync
-    let assetsQuery = knex('assets')
-      .where({ tenant })
+    let assetsQuery = db.table('assets')
       .where('rmm_provider', 'ninjaone')
       .whereNotNull('rmm_device_id')
       .whereIn('asset_type', ['workstation', 'server']);
@@ -346,7 +345,7 @@ export async function syncSoftwareInventory(
             // Sync to normalized tables
             const stats = await syncAssetSoftwareToNormalizedTables(
               knex,
-              tenant,
+              tenantId,
               asset.asset_id,
               software,
               syncTimestamp
@@ -362,23 +361,23 @@ export async function syncSoftwareInventory(
               ? 'workstation_assets'
               : 'server_assets';
 
-            await knex(extensionTable)
-              .where({ tenant, asset_id: asset.asset_id })
+            await db.table(extensionTable)
+              .where({ asset_id: asset.asset_id })
               .update({
                 installed_software: JSON.stringify(software),
               });
 
             // Update the main asset's last sync timestamp
-            await knex('assets')
-              .where({ tenant, asset_id: asset.asset_id })
+            await db.table('assets')
+              .where({ asset_id: asset.asset_id })
               .update({
                 last_rmm_sync_at: syncTimestamp.toISOString(),
               });
 
             // Track changes in asset history if enabled
             if (trackChanges && (stats.installed > 0 || stats.uninstalled > 0)) {
-              await knex('asset_history').insert({
-                tenant,
+              await db.table('asset_history').insert({
+                tenant: tenantId,
                 asset_id: asset.asset_id,
                 changed_by: performedBy || 'system',
                 change_type: 'software_update',
@@ -461,14 +460,12 @@ export async function syncDeviceSoftware(
   error?: string;
 }> {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
 
     // Get the asset
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .first();
 
     if (!asset) {
@@ -493,7 +490,7 @@ export async function syncDeviceSoftware(
     // Sync to normalized tables
     const stats = await syncAssetSoftwareToNormalizedTables(
       knex,
-      tenant,
+      tenantId,
       assetId,
       software,
       syncTimestamp
@@ -504,15 +501,15 @@ export async function syncDeviceSoftware(
       ? 'workstation_assets'
       : 'server_assets';
 
-    await knex(extensionTable)
-      .where({ tenant, asset_id: assetId })
+    await db.table(extensionTable)
+      .where({ asset_id: assetId })
       .update({
         installed_software: JSON.stringify(software),
       });
 
     // Update main asset
-    await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    await db.table('assets')
+      .where({ asset_id: assetId })
       .update({
         last_rmm_sync_at: syncTimestamp.toISOString(),
       });
@@ -590,11 +587,11 @@ export async function searchSoftwareAcrossAssets(
   const { companyId, category, limit = 100 } = options;
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
 
     // Use the view for efficient querying
-    let query = knex('v_asset_software_details')
-      .where('tenant', tenant)
+    let query = db.table('v_asset_software_details')
       .where('is_current', true)
       .where(function() {
         this.whereILike('software_name', `%${searchTerm}%`)
@@ -660,12 +657,12 @@ export async function getFleetSoftwareSummary(
   const { companyId } = options;
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
 
     // Base query for current software
     const baseQuery = () => {
-      let q = knex('v_asset_software_details')
-        .where('tenant', tenant)
+      let q = db.table('v_asset_software_details')
         .where('is_current', true);
       if (companyId) {
         q = q.where('client_id', companyId);

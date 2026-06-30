@@ -6,7 +6,7 @@ import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getProject } from '@alga-psa/projects/actions/projectActions';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
-import { findCommentsByTicketId } from '@alga-psa/tickets/actions/comment-actions';
+import { findCommentsByTicketId } from '@alga-psa/tickets/actions/comment-actions/commentActions';
 import { getCurrentUser, findUserById } from '@alga-psa/user-composition/actions';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';

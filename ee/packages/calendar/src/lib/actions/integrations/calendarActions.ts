@@ -1,7 +1,7 @@
 'use server';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
 import {
   generateGoogleCalendarAuthUrl,
   generateMicrosoftCalendarAuthUrl,
@@ -395,12 +395,11 @@ export async function resolveCalendarConflictImpl(
 
     const { knex } = await createTenantKnex();
     const mapping = await withTransaction(knex, async (trx) => {
-      return trx('calendar_event_mappings as cem')
-        .join('calendar_providers as cp', function (this: any) {
-          this.on('cp.id', '=', 'cem.calendar_provider_id').andOn('cp.tenant', '=', 'cem.tenant');
-        })
-        .where('cem.tenant', tenant)
-        .andWhere('cem.id', resolution.mappingId)
+      const db = tenantDb(trx, tenant);
+      const query = db.table<any>('calendar_event_mappings as cem');
+      db.tenantJoin(query, 'calendar_providers as cp', 'cp.id', 'cem.calendar_provider_id');
+      return query
+        .where('cem.id', resolution.mappingId)
         .andWhere('cp.user_id', user.user_id)
         .first(['cem.id']);
     });
@@ -433,12 +432,11 @@ export async function getScheduleEntrySyncStatusImpl(
 
     const { knex } = await createTenantKnex();
     const mappings = await withTransaction(knex, async (trx) => {
-      return trx('calendar_event_mappings as cem')
-        .join('calendar_providers as cp', function (this: any) {
-          this.on('cp.id', '=', 'cem.calendar_provider_id').andOn('cp.tenant', '=', 'cem.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const query = db.table<any>('calendar_event_mappings as cem');
+      db.tenantJoin(query, 'calendar_providers as cp', 'cp.id', 'cem.calendar_provider_id');
+      return query
         .where('cem.schedule_entry_id', entryId)
-        .andWhere('cem.tenant', tenant)
         .andWhere('cp.user_id', user.user_id)
         .select('cem.*');
     });
@@ -524,12 +522,11 @@ export async function syncCalendarProviderImpl(
           const windowEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
 
           const mappings = await withTransaction(knex, async (trx) => {
-            return trx('calendar_event_mappings as cem')
-              .join('schedule_entries as se', function (this: any) {
-                this.on('se.entry_id', '=', 'cem.schedule_entry_id').andOn('se.tenant', '=', 'cem.tenant');
-              })
-              .where('cem.tenant', tenantId)
-              .andWhere('cem.calendar_provider_id', calendarProviderId)
+            const db = tenantDb(trx, tenantId);
+            const query = db.table<any>('calendar_event_mappings as cem');
+            db.tenantJoin(query, 'schedule_entries as se', 'se.entry_id', 'cem.schedule_entry_id');
+            return query
+              .where('cem.calendar_provider_id', calendarProviderId)
               .andWhere(function (this: any) {
                 this.where('se.scheduled_start', '<=', windowEnd).andWhere('se.scheduled_end', '>=', windowStart);
               })
@@ -566,15 +563,17 @@ export async function syncCalendarProviderImpl(
 
           if (allowPush) {
             const recentEntries = await withTransaction(knex, async (trx) => {
-              return trx('schedule_entries')
-                .where('schedule_entries.tenant', tenantId)
-                .andWhere('schedule_entries.scheduled_start', '<=', windowEnd)
-                .andWhere('schedule_entries.scheduled_end', '>=', windowStart)
-                .leftJoin('calendar_event_mappings as cem', function (this: any) {
-                  this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
-                    .andOn('cem.tenant', '=', 'schedule_entries.tenant')
-                    .andOn('cem.calendar_provider_id', '=', trx.raw('?', [calendarProviderId]));
-                })
+              const db = tenantDb(trx, tenantId);
+              const query = db.table<any>('schedule_entries')
+                .where('schedule_entries.scheduled_start', '<=', windowEnd)
+                .andWhere('schedule_entries.scheduled_end', '>=', windowStart);
+              db.tenantJoin(query, 'calendar_event_mappings as cem', 'cem.schedule_entry_id', 'schedule_entries.entry_id', {
+                type: 'left',
+                on(join: any) {
+                  join.andOn('cem.calendar_provider_id', '=', trx.raw('?', [calendarProviderId]));
+                },
+              });
+              return query
                 .whereNull('cem.id')
                 .limit(100)
                 .select('schedule_entries.entry_id as entry_id');
@@ -660,7 +659,7 @@ export async function retryMicrosoftCalendarSubscriptionRenewalImpl(
     }
 
     const { knex } = await createTenantKnex();
-    const provider = await knex('calendar_providers').where({ id: providerId, tenant }).first();
+    const provider = await tenantDb(knex, tenant).table('calendar_providers').where({ id: providerId }).first();
 
     if (!provider) {
       return { success: false, error: 'Provider not found or access denied' };

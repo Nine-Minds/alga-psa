@@ -1,6 +1,7 @@
 import type { IQuote, QuoteViewModel, QuoteViewModelLineItem, QuoteViewModelLocation, QuoteViewModelLocationGroup, QuoteViewModelParty, QuoteViewModelPhase } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import Quote from '../../models/quote';
 import { fetchTenantParty } from './tenantPartyAdapter';
@@ -138,7 +139,7 @@ async function fetchQuoteItemLocations(
   locationIds: string[],
 ): Promise<QuoteViewModelLocation[]> {
   if (locationIds.length === 0) return [];
-  const rows = await knexOrTrx('client_locations')
+  const rows = await tenantDb(knexOrTrx, tenant).table('client_locations')
     .select(
       'location_id as id',
       'location_name',
@@ -152,7 +153,6 @@ async function fetchQuoteItemLocations(
       'country_name',
       'region_code',
     )
-    .where({ tenant })
     .whereIn('location_id', locationIds);
 
   return rows.map((row: Record<string, unknown>) => {
@@ -217,15 +217,19 @@ async function fetchClientParty(
     return null;
   }
 
-  const client = await knexOrTrx('clients as c')
-    .leftJoin('client_locations as cl', function joinLocations() {
-      this.on('c.client_id', '=', 'cl.client_id')
-        .andOn('c.tenant', '=', 'cl.tenant')
-        .andOn(function preferredLocation() {
-          this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
-            .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
-        });
-    })
+  const db = tenantDb(knexOrTrx, tenant);
+  const query = db.table('clients as c');
+  db.tenantJoin(query, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+    type: 'left',
+    on(join) {
+      join.andOn(function preferredLocation() {
+        this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+          .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+      });
+    },
+  });
+
+  const client = await query
     .select(
       'c.client_name',
       'c.billing_email',
@@ -239,7 +243,7 @@ async function fetchClientParty(
       'cl.postal_code',
       'cl.country_name'
     )
-    .where({ 'c.tenant': tenant, 'c.client_id': clientId })
+    .where({ 'c.client_id': clientId })
     .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
     .first<Record<string, unknown>>();
 
@@ -267,9 +271,10 @@ async function fetchContactParty(
     return null;
   }
 
-  const contact = await knexOrTrx('contacts')
+  const db = tenantDb(knexOrTrx, tenant);
+  const contact = await db.table<Record<string, unknown>>('contacts')
     .select('full_name', 'email')
-    .where({ tenant, contact_name_id: contactId })
+    .where({ contact_name_id: contactId })
     .first<Record<string, unknown>>();
 
   if (!contact) {
@@ -279,9 +284,9 @@ async function fetchContactParty(
   let phoneNumber: string | null = null;
   const hasContactPhoneNumbersTable = await knexOrTrx.schema.hasTable('contact_phone_numbers');
   if (hasContactPhoneNumbersTable) {
-    const phoneRecord = await knexOrTrx('contact_phone_numbers')
+    const phoneRecord = await db.table<Record<string, unknown>>('contact_phone_numbers')
       .select('phone_number')
-      .where({ tenant, contact_name_id: contactId })
+      .where({ contact_name_id: contactId })
       .orderBy('is_default', 'desc')
       .orderBy('display_order', 'asc')
       .first<Record<string, unknown>>();
@@ -309,18 +314,20 @@ async function resolveAcceptedByName(
   if (!acceptedBy) return null;
 
   try {
+    const db = tenantDb(knexOrTrx, tenant);
+
     // Try contacts first (client portal users link to a contact)
-    const contact = await knexOrTrx('contacts')
+    const contact = await db.table<{ full_name?: string }>('contacts')
       .select('full_name')
-      .where({ tenant, contact_name_id: acceptedBy })
-      .first<{ full_name?: string }>();
+      .where('contact_name_id', acceptedBy)
+      .first();
     if (contact?.full_name) return contact.full_name;
 
     // Fall back to internal users table
-    const user = await knexOrTrx('users')
+    const user = await db.table<{ first_name?: string; last_name?: string }>('users')
       .select('first_name', 'last_name')
-      .where({ tenant, user_id: acceptedBy })
-      .first<{ first_name?: string; last_name?: string }>();
+      .where('user_id', acceptedBy)
+      .first();
     if (user) {
       const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
       if (name) return name;

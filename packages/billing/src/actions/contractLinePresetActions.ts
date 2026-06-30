@@ -5,7 +5,7 @@ import ContractLinePreset from '../models/contractLinePreset';
 import ContractLinePresetService from '../models/contractLinePresetService';
 import ContractLinePresetFixedConfig from '../models/contractLinePresetFixedConfig';
 import { CadenceOwner, IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig, IContractLine, IContractLineService, IContractLineFixedConfig } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -369,8 +369,8 @@ export const copyPresetToContractLine = withAuth(async (
 
             // 3. Link the contract line to the contract by updating contract_lines directly
             // After migration 20251028090000, data is stored directly in contract_lines
-            const countResult = await trx('contract_lines')
-                .where({ tenant: tenantId, contract_id: contractId })
+            const countResult = await tenantDb(trx, tenantId).table('contract_lines')
+                .where({ contract_id: contractId })
                 .count<{ count: string | number }>('contract_line_id as count')
                 .first();
 
@@ -381,8 +381,8 @@ export const copyPresetToContractLine = withAuth(async (
                         : Number(countResult.count)
                     : 0;
 
-            await trx('contract_lines')
-                .where({ tenant: tenantId, contract_line_id: contractLineId })
+            await tenantDb(trx, tenantId).table('contract_lines')
+                .where({ contract_line_id: contractLineId })
                 .update({
                     contract_id: contractId,
                     display_order: existingCount,
@@ -402,7 +402,7 @@ export const copyPresetToContractLine = withAuth(async (
                     console.log(`[copyPresetToContractLine] Copying service ${presetService.service_id}, override:`, serviceOverride);
 
                     // Insert into contract_line_services table
-                    await trx('contract_line_services').insert({
+                    await tenantDb(trx, tenantId).table('contract_line_services').insert({
                         contract_line_id: contractLineId,
                         service_id: presetService.service_id,
                         tenant: tenantId
@@ -636,8 +636,8 @@ export const createCustomContractLine = withAuth(async (
             const contractLineId = contractLine.contract_line_id;
 
             // 3. Link the contract line to the contract
-            const countResult = await trx('contract_lines')
-                .where({ tenant: tenantId, contract_id: contractId })
+            const countResult = await tenantDb(trx, tenantId).table('contract_lines')
+                .where({ contract_id: contractId })
                 .count<{ count: string | number }>('contract_line_id as count')
                 .first();
 
@@ -648,8 +648,8 @@ export const createCustomContractLine = withAuth(async (
                         : Number(countResult.count)
                     : 0;
 
-            await trx('contract_lines')
-                .where({ tenant: tenantId, contract_line_id: contractLineId })
+            await tenantDb(trx, tenantId).table('contract_lines')
+                .where({ contract_line_id: contractLineId })
                 .update({
                     contract_id: contractId,
                     display_order: existingCount,
@@ -662,7 +662,7 @@ export const createCustomContractLine = withAuth(async (
 
             for (const serviceConfig of input.services) {
                 // Insert into contract_line_services table
-                await trx('contract_line_services').insert({
+                await tenantDb(trx, tenantId).table('contract_line_services').insert({
                     contract_line_id: contractLineId,
                     service_id: serviceConfig.service_id,
                     tenant: tenantId

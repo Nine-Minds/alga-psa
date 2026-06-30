@@ -5,7 +5,7 @@
  */
 
 import type { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { hasPermission } from '../../auth/rbac';
 import { Quote, QuoteItem, QuoteActivity } from '@alga-psa/billing/models';
@@ -84,8 +84,7 @@ export class QuoteService extends BaseService<IQuote> {
       const sortOrder = options.order ?? 'desc';
       const isTemplate = options.is_template ?? filters?.is_template ?? false;
 
-      const baseQuery = trx('quotes as q')
-        .where('q.tenant', context.tenant)
+      const baseQuery = tenantDb(trx, context.tenant).table('quotes as q')
         .andWhere('q.is_template', isTemplate);
 
       if (options.status || filters?.status) {
@@ -105,8 +104,8 @@ export class QuoteService extends BaseService<IQuote> {
       }
 
       if (options.include_client !== false) {
-        baseQuery.leftJoin('clients as c', function () {
-          this.on('q.client_id', '=', 'c.client_id').andOn('q.tenant', '=', 'c.tenant');
+        tenantDb(knex, context.tenant).tenantJoin(baseQuery, 'clients as c', 'q.client_id', 'c.client_id', {
+          type: 'left',
         });
       }
 
@@ -164,15 +163,14 @@ export class QuoteService extends BaseService<IQuote> {
       let currencyCode = quoteData.currency_code;
       if (!currencyCode) {
         if (quoteData.client_id) {
-          const client = await trx('clients')
-            .where({ tenant: context.tenant, client_id: quoteData.client_id })
+          const client = await tenantDb(trx, context.tenant).table('clients')
+            .where('client_id', quoteData.client_id)
             .select('default_currency_code')
             .first();
           currencyCode = client?.default_currency_code ?? undefined;
         }
         if (!currencyCode) {
-          const billingSettings = await trx('default_billing_settings')
-            .where({ tenant: context.tenant })
+          const billingSettings = await tenantDb(trx, context.tenant).table('default_billing_settings')
             .select('default_currency_code')
             .first();
           currencyCode = billingSettings?.default_currency_code ?? 'USD';
@@ -266,8 +264,8 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const item = await trx('quote_items')
-        .where({ tenant: context.tenant, quote_item_id: itemId })
+      const item = await tenantDb(trx, context.tenant).table('quote_items')
+        .where('quote_item_id', itemId)
         .first<{ quote_id: string }>('quote_id');
 
       if (!item || item.quote_id !== quoteId) {
@@ -286,8 +284,8 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     await withTransaction(knex, async (trx) => {
-      const item = await trx('quote_items')
-        .where({ tenant: context.tenant, quote_item_id: itemId })
+      const item = await tenantDb(trx, context.tenant).table('quote_items')
+        .where('quote_item_id', itemId)
         .first<{ quote_id: string }>('quote_id');
 
       if (!item || item.quote_id !== quoteId) {

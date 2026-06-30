@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 export interface TicketTestData {
   title: string;
@@ -92,7 +93,7 @@ export async function createTestTicket(
     closed_at: null
   };
 
-  const [ticket] = await db('tickets').insert(ticketData).returning('*');
+  const [ticket] = await tenantDb(db, tenant).table('tickets').insert(ticketData).returning('*');
   
   // Tags are now handled through tag_definitions and tag_mappings tables
   // Skip tag insertion for now as it requires more complex logic
@@ -245,6 +246,6 @@ export async function createTestTicketComment(
     updated_at: new Date().toISOString()
   };
 
-  const [comment] = await db('comments').insert(commentData).returning('*');
+  const [comment] = await tenantDb(db, tenant).table('comments').insert(commentData).returning('*');
   return comment;
 }

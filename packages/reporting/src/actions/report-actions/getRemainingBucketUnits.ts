@@ -1,17 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type {
-  IBucketUsage,
-  IContractLine,
-  IContractLineService,
-  IContractLineServiceBucketConfig,
-  IContractLineServiceConfiguration,
-  IService // Added IService for service_catalog join
-} from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type for query builder
 
 // Define the schema for the input parameters
@@ -65,44 +57,41 @@ export const getRemainingBucketUnits = withAuth(async (
     const results: RemainingBucketUnitsResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Query contract lines via client_contracts -> contracts -> contract_lines
       // This replaces the old client_contract_lines-based query
-      const query = trx('client_contracts as cc')
-      .join('contracts as c', function() {
-        this.on('c.contract_id', '=', trx.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
-            .andOn('c.tenant', '=', 'cc.tenant');
-      })
-      .join<IContractLine>('contract_lines as cl', function() {
-        this.on('cl.contract_id', '=', 'c.contract_id')
-            .andOn('cl.tenant', '=', 'c.tenant');
-      })
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('client_contracts as cc');
+
+      scopedDb.tenantJoin(
+        query,
+        'contracts as c',
+        'c.contract_id',
+        trx.raw('coalesce(cc.template_contract_id, cc.contract_id)') as unknown as string,
+        { rootTenantColumn: 'cc.tenant' }
+      );
+      scopedDb.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
       // Add joins for configuration structure
-      .join<IContractLineService>('contract_line_services as ps', function() {
-        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
-            .andOn('cl.tenant', '=', 'ps.tenant');
-      })
+      scopedDb.tenantJoin(query, 'contract_line_services as ps', 'cl.contract_line_id', 'ps.contract_line_id');
       // Join to service_catalog to get service_name
-      .join<IService>('service_catalog as sc', function() {
-        this.on('ps.service_id', '=', 'sc.service_id')
-            .andOn('ps.tenant', '=', 'sc.tenant');
-      })
-      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() {
-        this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
-            .andOn('ps.service_id', '=', 'psc.service_id')
-            .andOn('ps.tenant', '=', 'psc.tenant');
-      })
-      .join<IContractLineServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
-        this.on('psc.config_id', '=', 'psbc.config_id')
-            .andOn('psc.tenant', '=', 'psbc.tenant');
-      })
-      .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
-        this.on('cl.contract_line_id', '=', 'bu.contract_line_id')
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'ps.service_id', 'sc.service_id');
+      scopedDb.tenantJoin(query, 'contract_line_service_configuration as psc', 'ps.contract_line_id', 'psc.contract_line_id', {
+        on: (join) => {
+          join.andOn('ps.service_id', '=', 'psc.service_id');
+        },
+      });
+      scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+      scopedDb.tenantJoin(query, 'bucket_usage as bu', 'cl.contract_line_id', 'bu.contract_line_id', {
+        type: 'left',
+        rootTenantColumn: 'cc.tenant',
+        on: (join) => {
+          join
             .andOn('cc.client_id', '=', 'bu.client_id')
-            .andOn('cc.tenant', '=', 'bu.tenant')
             // Filter bucket_usage for the period containing currentDate
             .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
-      })
+        },
+      });
+
+      query
       .where('cc.client_id', clientId)
-      .andWhere('cc.tenant', tenant)
       .andWhere('cc.is_active', true)
       .andWhere('cc.start_date', '<=', trx.raw('?', [currentDate]))
       .andWhere(function() {

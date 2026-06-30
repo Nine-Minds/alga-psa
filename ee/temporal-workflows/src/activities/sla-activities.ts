@@ -1,6 +1,6 @@
 import { Context } from '@temporalio/activity';
 import { v4 as uuidv4 } from 'uuid';
-import { withTenantTransactionRetryReadOnly } from '@alga-psa/db';
+import { tenantDb, withTenantTransactionRetryReadOnly } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type {
   IBusinessHoursScheduleWithEntries,
@@ -136,9 +136,10 @@ export async function updateSlaStatus(input: {
   });
 
   await withTenantTransaction(input.tenantId, async (trx) => {
+    const db = tenantDb(trx, input.tenantId);
     if (input.phase === 'response') {
-      await trx('tickets')
-        .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+      await db.table('tickets')
+        .where({ ticket_id: input.ticketId })
         .update({
           sla_response_met: input.breached ? false : true,
           sla_response_at: input.breached ? new Date() : null,
@@ -146,8 +147,8 @@ export async function updateSlaStatus(input: {
       return;
     }
 
-    await trx('tickets')
-      .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+    await db.table('tickets')
+      .where({ ticket_id: input.ticketId })
       .update({
         sla_resolution_met: input.breached ? false : true,
       });
@@ -161,7 +162,7 @@ export async function recordSlaAuditLog(input: {
   eventData: Record<string, unknown>;
 }): Promise<void> {
   await withTenantTransaction(input.tenantId, async (trx) => {
-    await trx('sla_audit_log').insert({
+    await tenantDb(trx, input.tenantId).table('sla_audit_log').insert({
       tenant: input.tenantId,
       ticket_id: input.ticketId,
       event_type: input.eventType,
@@ -197,8 +198,9 @@ export async function completeIfTicketClosed(input: {
   };
 
   await withTenantTransaction(input.tenantId, async (trx) => {
-    const ticket = await trx('tickets')
-      .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+    const db = tenantDb(trx, input.tenantId);
+    const ticket = await db.table('tickets')
+      .where({ ticket_id: input.ticketId })
       .select(
         'closed_at',
         'sla_response_due_at',
@@ -257,14 +259,14 @@ export async function completeIfTicketClosed(input: {
     }
 
     if (Object.keys(updates).length > 0) {
-      await trx('tickets')
-        .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+      await db.table('tickets')
+        .where({ ticket_id: input.ticketId })
         .update(updates);
 
       // Only record an audit row when self-heal actually changed something.
       // Avoids duplicate audit noise if this activity runs again (e.g. a
       // restarted workflow with the same workflowId) and finds nothing to do.
-      await trx('sla_audit_log').insert({
+      await db.table('sla_audit_log').insert({
         tenant: input.tenantId,
         ticket_id: input.ticketId,
         event_type: 'self_healed_on_closed',

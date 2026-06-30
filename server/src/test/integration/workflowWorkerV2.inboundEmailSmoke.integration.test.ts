@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import { tenantDb } from '@alga-psa/db';
 
 let db: Knex;
 let tenantId: string;
@@ -23,29 +24,33 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
     process.env.WORKFLOW_WORKER_MODE = 'v2';
     db = await createTestDbConnection();
 
-    const tenant = await db('tenants').first<{ tenant: string }>('tenant');
+    const tenant = await tenantDb(db, '__test_discovery__')
+      .unscoped('tenants', 'test discovery of seeded tenant for workflow inbound email smoke')
+      .first<{ tenant: string }>('tenant');
     if (!tenant?.tenant) throw new Error('Expected seeded tenant');
     tenantId = tenant.tenant;
 
-    const client = await db('clients').where({ tenant: tenantId }).first<{ client_id: string }>('client_id');
+    const scopedDb = tenantDb(db, tenantId);
+
+    const client = await scopedDb.table('clients').first<{ client_id: string }>('client_id');
     if (!client?.client_id) throw new Error('Expected seeded client');
     clientId = client.client_id;
 
-    const board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+    const board = await scopedDb.table('boards').first<{ board_id: string }>('board_id');
     if (!board?.board_id) throw new Error('Expected seeded board');
     boardId = board.board_id;
 
-    const status = await db('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket', board_id: boardId })
+    const status = await scopedDb.table('statuses')
+      .where({ status_type: 'ticket', board_id: boardId })
       .first<{ status_id: string; board_id: string }>('status_id', 'board_id');
     if (!status?.status_id) throw new Error('Expected seeded ticket status');
     statusId = status.status_id;
 
-    const priority = await db('priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
+    const priority = await scopedDb.table('priorities').first<{ priority_id: string }>('priority_id');
     if (!priority?.priority_id) throw new Error('Expected seeded priority');
     priorityId = priority.priority_id;
 
-    const user = await db('users').where({ tenant: tenantId }).first<{ user_id: string }>('user_id');
+    const user = await scopedDb.table('users').first<{ user_id: string }>('user_id');
     if (!user?.user_id) throw new Error('Expected seeded user');
     enteredByUserId = user.user_id;
   }, 180_000);
@@ -68,7 +73,8 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
     }
 
     const defaultsId = uuidv4();
-    await db('inbound_ticket_defaults').insert({
+    const scopedDb = tenantDb(db, tenantId);
+    await scopedDb.table('inbound_ticket_defaults').insert({
       id: defaultsId,
       tenant: tenantId,
       short_name: `email-${defaultsId.slice(0, 6)}`,
@@ -87,7 +93,7 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
 
     const providerId = uuidv4();
     const mailbox = `support-smoke-${uuidv4().slice(0, 6)}@example.com`;
-    await db('email_providers').insert({
+    await scopedDb.table('email_providers').insert({
       id: providerId,
       tenant: tenantId,
       provider_type: 'google',
@@ -121,20 +127,20 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
 
     expect(result.outcome).toBe('created');
 
-    const ticket = await db('tickets').where({ tenant: tenantId, title: 'Smoke inbound subject' }).first<any>();
+    const ticket = await scopedDb.table('tickets').where({ title: 'Smoke inbound subject' }).first<any>();
     expect(ticket).toBeDefined();
-    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
+    const comments = await scopedDb.table('comments').where({ ticket_id: ticket.ticket_id });
     expect(comments).toHaveLength(1);
 
-    await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
-    await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
-    await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
-    await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    await scopedDb.table('comments').where({ ticket_id: ticket.ticket_id }).delete();
+    await scopedDb.table('tickets').where({ ticket_id: ticket.ticket_id }).delete();
+    await scopedDb.table('email_providers').where({ id: providerId }).delete();
+    await scopedDb.table('inbound_ticket_defaults').where({ id: defaultsId }).delete();
   });
 
   it('T054: workflow smoke setup resolves a board-owned ticket status for the seeded board', async () => {
-    const status = await db('statuses')
-      .where({ tenant: tenantId, status_id: statusId })
+    const status = await tenantDb(db, tenantId).table('statuses')
+      .where({ status_id: statusId })
       .first<{ board_id: string; status_type: string }>('board_id', 'status_type');
 
     expect(status?.status_type).toBe('ticket');

@@ -1,4 +1,5 @@
 const { randomUUID } = require('crypto');
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
 /**
  * Seed KB articles for development.
@@ -6,11 +7,13 @@ const { randomUUID } = require('crypto');
  * Themed around the Oz / Wonderland universe to match other dev seeds.
  */
 exports.seed = async function (knex) {
-  const tenant = await knex('tenants').select('tenant').first();
-  if (!tenant) return;
+  const context = await getFirstTenantSeedContext(knex);
+  if (!context) return;
 
-  const user = await knex('users')
-    .where({ tenant: tenant.tenant, username: 'glinda' })
+  const { db, tenantId } = context;
+
+  const user = await db.table('users')
+    .where({ username: 'glinda' })
     .select('user_id')
     .first();
   if (!user) return;
@@ -137,8 +140,8 @@ exports.seed = async function (knex) {
     const documentId = randomUUID();
     const articleId = randomUUID();
 
-    await knex('documents').insert({
-      tenant: tenant.tenant,
+    await db.table('documents').insert({
+      tenant: tenantId,
       document_id: documentId,
       document_name: article.title,
       user_id: user.user_id,
@@ -150,10 +153,10 @@ exports.seed = async function (knex) {
       is_client_visible: article.audience === 'client' && article.status === 'published',
     });
 
-    await knex('document_block_content').insert({
+    await db.table('document_block_content').insert({
       content_id: randomUUID(),
       document_id: documentId,
-      tenant: tenant.tenant,
+      tenant: tenantId,
       block_data: JSON.stringify(article.content),
       created_at: now,
       updated_at: now,
@@ -163,8 +166,8 @@ exports.seed = async function (knex) {
       ? new Date(now.getTime() + article.review_cycle_days * 24 * 60 * 60 * 1000)
       : null;
 
-    await knex('kb_articles').insert({
-      tenant: tenant.tenant,
+    await db.table('kb_articles').insert({
+      tenant: tenantId,
       article_id: articleId,
       document_id: documentId,
       slug: article.slug,

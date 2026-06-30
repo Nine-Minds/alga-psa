@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 
@@ -13,6 +14,17 @@ import { EmailProviderService } from '../../services/email/EmailProviderService'
 let testDb: Knex;
 let testTenant: string;
 let emailProviderService: EmailProviderService;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Google provider database save test fixture creates and removes tenant rows'
+  );
+}
 
 // Mock createTenantKnex to use our test database
 vi.mock('../../lib/db', () => ({
@@ -31,7 +43,7 @@ describe('Google Provider Database Save Integration Tests', () => {
     
     // Create test tenant
     try {
-      await testDb('tenants').insert({
+      await tenantFixtureTable().insert({
         tenant: testTenant,
         client_name: 'Google Save Test Client',
         email: 'save-test@client.com',
@@ -46,8 +58,8 @@ describe('Google Provider Database Save Integration Tests', () => {
   afterAll(async () => {
     // Cleanup
     try {
-      await testDb('email_provider_configs').where('tenant', testTenant).delete();
-      await testDb('tenants').where('tenant', testTenant).delete();
+      await tenantTable('email_provider_configs').delete();
+      await tenantFixtureTable().where('tenant', testTenant).delete();
     } catch (error) {
       // Ignore cleanup errors
     }
@@ -60,9 +72,7 @@ describe('Google Provider Database Save Integration Tests', () => {
   beforeEach(async () => {
     // Clean up any existing test data
     try {
-      await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .delete();
+      await tenantTable('email_provider_configs').delete();
     } catch (error) {
       console.warn('Could not clean up email_provider_configs:', error);
     }
@@ -98,7 +108,7 @@ describe('Google Provider Database Save Integration Tests', () => {
       expect(result.mailbox).toBe('support@client.com');
 
       // Verify in database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', result.id)
         .first();
 
@@ -152,7 +162,7 @@ describe('Google Provider Database Save Integration Tests', () => {
       expect(provider.provider_type).toBe('google');
       
       // Verify persisted data
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', provider.id)
         .first();
         
@@ -216,7 +226,7 @@ describe('Google Provider Database Save Integration Tests', () => {
       expect(provider.provider_config.tokenExpiry).toBeDefined();
       
       // Verify in database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', provider.id)
         .first();
         
@@ -274,7 +284,7 @@ describe('Google Provider Database Save Integration Tests', () => {
       expect(provider.provider_config.redirectUri).toBe('https://app.example.com/api/auth/google/callback');
       
       // Verify in database
-      const dbRecord = await testDb('email_provider_configs')
+      const dbRecord = await tenantTable('email_provider_configs')
         .where('id', provider.id)
         .first();
         

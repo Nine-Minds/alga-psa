@@ -1,4 +1,5 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { TeamsMicrosoftProviderResolution } from '@alga-psa/auth/sso/teamsMicrosoftProviderResolution';
 
@@ -30,9 +31,9 @@ function isConfigured(value?: string | null): boolean {
 export async function resolveTeamsMicrosoftProviderConfigImpl(
   tenantId: string
 ): Promise<TeamsMicrosoftProviderResolution> {
-  const db = await getAdminConnection();
-  const integration = await db<TeamsIntegrationRow>('teams_integrations')
-    .where({ tenant: tenantId })
+  const conn = await getAdminConnection();
+  const db = tenantDb(conn, tenantId);
+  const integration = await db.table<TeamsIntegrationRow>('teams_integrations')
     .first();
 
   if (!integration || integration.install_status === 'not_configured' || !integration.selected_profile_id) {
@@ -43,8 +44,8 @@ export async function resolveTeamsMicrosoftProviderConfigImpl(
     };
   }
 
-  const profile = await db<MicrosoftProfileRow>('microsoft_profiles')
-    .where({ tenant: tenantId, profile_id: integration.selected_profile_id })
+  const profile = await db.table<MicrosoftProfileRow>('microsoft_profiles')
+    .where({ profile_id: integration.selected_profile_id })
     .first();
 
   if (!profile || profile.is_archived) {

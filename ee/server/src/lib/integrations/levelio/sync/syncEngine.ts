@@ -6,6 +6,7 @@
 
 import { randomUUID } from 'crypto';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getRedisStreamClient } from '@alga-psa/workflow-streams';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
 import type { NormalizedRmmIngestionResult } from '@alga-psa/shared/rmm/contracts';
@@ -64,8 +65,8 @@ async function emitSyncEvent(
 }
 
 async function setSyncStatus(knex: Knex, tenant: string, patch: Record<string, unknown>): Promise<void> {
-  await knex('rmm_integrations')
-    .where({ tenant, provider: PROVIDER })
+  await tenantDb(knex, tenant).table('rmm_integrations')
+    .where({ provider: PROVIDER })
     .update({ ...patch, updated_at: knex.fn.now() });
 }
 
@@ -83,12 +84,13 @@ export async function runLevelIoScopeSync(args: LevelIoSyncArgs, deps: LevelIoSy
 
   try {
     await setSyncStatus(deps.knex, args.tenant, { sync_status: 'syncing', sync_error: null });
+    const db = tenantDb(deps.knex, args.tenant);
 
     const groups = await deps.client.listGroups();
     const groupsById = new Map(groups.map((group) => [group.id, group]));
 
-    const existing = await deps.knex('rmm_organization_mappings')
-      .where({ tenant: args.tenant, integration_id: args.integrationId })
+    const existing = await db.table('rmm_organization_mappings')
+      .where({ integration_id: args.integrationId })
       .select(['mapping_id', 'external_organization_id']);
     const byExternalId = new Map(existing.map((row: any) => [String(row.external_organization_id), row]));
 
@@ -102,8 +104,8 @@ export async function runLevelIoScopeSync(args: LevelIoSyncArgs, deps: LevelIoSy
       };
       const prior = byExternalId.get(group.id);
       if (prior) {
-        await deps.knex('rmm_organization_mappings')
-          .where({ tenant: args.tenant, mapping_id: prior.mapping_id })
+        await db.table('rmm_organization_mappings')
+          .where({ mapping_id: prior.mapping_id })
           .update({
             external_organization_name: group.name,
             metadata,
@@ -112,7 +114,7 @@ export async function runLevelIoScopeSync(args: LevelIoSyncArgs, deps: LevelIoSy
           });
         updated += 1;
       } else {
-        await deps.knex('rmm_organization_mappings').insert({
+        await db.table('rmm_organization_mappings').insert({
           tenant: args.tenant,
           integration_id: args.integrationId,
           external_organization_id: group.id,
@@ -196,9 +198,10 @@ export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyn
 
   try {
     await setSyncStatus(deps.knex, args.tenant, { sync_status: 'syncing', sync_error: null });
+    const db = tenantDb(deps.knex, args.tenant);
 
-    const mappings = await deps.knex('rmm_organization_mappings')
-      .where({ tenant: args.tenant, integration_id: args.integrationId })
+    const mappings = await db.table('rmm_organization_mappings')
+      .where({ integration_id: args.integrationId })
       .whereNotNull('client_id')
       .andWhere('auto_sync_assets', true)
       .select(['external_organization_id', 'client_id']);
@@ -321,12 +324,13 @@ export async function runLevelIoDeviceSync(
   deps: LevelIoSyncDeps
 ): Promise<NormalizedRmmIngestionResult> {
   const ingest = deps.ingest ?? ingestNormalizedRmmDeviceSnapshot;
+  const db = tenantDb(deps.knex, args.tenant);
 
   const [device, groups, mappings, availableUpdates] = await Promise.all([
     deps.client.getDevice(args.deviceId),
     deps.client.listGroups(),
-    deps.knex('rmm_organization_mappings')
-      .where({ tenant: args.tenant, integration_id: args.integrationId })
+    db.table('rmm_organization_mappings')
+      .where({ integration_id: args.integrationId })
       .whereNotNull('client_id')
       .andWhere('auto_sync_assets', true)
       .select(['external_organization_id', 'client_id']),
@@ -385,9 +389,10 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
     const alerts: LevelIoAlert[] = [...active, ...resolved];
 
     const deviceIds = Array.from(new Set(alerts.map((alert) => alert.device_id)));
+    const db = tenantDb(deps.knex, args.tenant);
     const mappingRows = deviceIds.length
-      ? await deps.knex('tenant_external_entity_mappings')
-          .where({ tenant: args.tenant, integration_type: PROVIDER, alga_entity_type: 'asset' })
+      ? await db.table('tenant_external_entity_mappings')
+          .where({ integration_type: PROVIDER, alga_entity_type: 'asset' })
           .whereIn('external_entity_id', deviceIds)
           .select(['external_entity_id', 'alga_entity_id'])
       : [];
@@ -421,14 +426,14 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
       };
 
       try {
-        const existing = await deps.knex('rmm_alerts')
-          .where({ tenant: args.tenant, integration_id: args.integrationId, external_alert_id: alert.id })
+        const existing = await db.table('rmm_alerts')
+          .where({ integration_id: args.integrationId, external_alert_id: alert.id })
           .first(['alert_id']);
         if (existing?.alert_id) {
-          await deps.knex('rmm_alerts').where({ tenant: args.tenant, alert_id: existing.alert_id }).update(row);
+          await db.table('rmm_alerts').where({ alert_id: existing.alert_id }).update(row);
           updated += 1;
         } else {
-          await deps.knex('rmm_alerts').insert({ ...row, created_at: deps.knex.fn.now() });
+          await db.table('rmm_alerts').insert({ ...row, created_at: deps.knex.fn.now() });
           created += 1;
         }
       } catch (error) {

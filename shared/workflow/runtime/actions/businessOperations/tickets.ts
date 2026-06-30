@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
@@ -112,12 +113,19 @@ const buildWorkflowTicketAssignmentSchema = ({
 
 const uniqueStrings = (values: string[]): string[] => Array.from(new Set(values));
 
+function tenantScopedTable(
+  tx: Pick<TenantTxContext, 'tenantId' | 'trx'>,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(tx.trx, tx.tenantId).table(table);
+}
+
 const getCurrentTicketAdditionalUserIds = async (
   tx: { tenantId: string; trx: any },
   ticketId: string
 ): Promise<string[]> => {
-  const rows = await tx.trx('ticket_resources')
-    .where({ tenant: tx.tenantId, ticket_id: ticketId })
+  const rows = await tenantScopedTable(tx, 'ticket_resources')
+    .where('ticket_id', ticketId)
     .whereNotNull('additional_user_id')
     .select('additional_user_id');
 
@@ -161,9 +169,8 @@ const resolveWorkflowTicketAssignment = async (
   const implicitAdditionalUsers: WorkflowTicketResolvedAdditionalUser[] = [];
 
   if (primary.type === 'user') {
-    const user = await tx.trx('users')
+    const user = await tenantScopedTable(tx, 'users')
       .where({
-        tenant: tx.tenantId,
         user_id: primary.id,
         user_type: 'internal',
         is_inactive: false,
@@ -181,8 +188,8 @@ const resolveWorkflowTicketAssignment = async (
 
     assignedTo = primary.id;
   } else if (primary.type === 'team') {
-    const team = await tx.trx('teams')
-      .where({ tenant: tx.tenantId, team_id: primary.id })
+    const team = await tenantScopedTable(tx, 'teams')
+      .where('team_id', primary.id)
       .first();
 
     if (!team) {
@@ -203,9 +210,8 @@ const resolveWorkflowTicketAssignment = async (
       });
     }
 
-    const manager = await tx.trx('users')
+    const manager = await tenantScopedTable(tx, 'users')
       .where({
-        tenant: tx.tenantId,
         user_id: team.manager_id,
         user_type: 'internal',
         is_inactive: false,
@@ -224,18 +230,14 @@ const resolveWorkflowTicketAssignment = async (
     assignedTo = team.manager_id;
     assignedTeamId = team.team_id;
 
-    const teamMembers = await tx.trx('team_members')
-      .join('users', function (this: Knex.JoinClause) {
-        this.on('team_members.user_id', 'users.user_id')
-          .andOn('team_members.tenant', 'users.tenant');
-      })
-      .where({
-        'team_members.tenant': tx.tenantId,
-        'team_members.team_id': primary.id,
-      })
+    const db = tenantDb(tx.trx, tx.tenantId);
+    const teamMembersQuery = db.table('team_members');
+    db.tenantJoin(teamMembersQuery, 'users', 'team_members.user_id', 'users.user_id');
+    const teamMembers = await teamMembersQuery
+      .where('team_members.team_id', primary.id)
       .andWhere('users.user_type', 'internal')
       .andWhere('users.is_inactive', false)
-      .select('team_members.user_id');
+      .select('team_members.user_id as user_id') as Array<{ user_id: string }>;
 
     implicitAdditionalUsers.push(
       ...teamMembers
@@ -244,8 +246,8 @@ const resolveWorkflowTicketAssignment = async (
         .map((userId: string) => ({ userId, role: 'team_member' as const }))
     );
   } else {
-    const member = await tx.trx('team_members')
-      .where({ tenant: tx.tenantId, team_id: primary.id })
+    const member = await tenantScopedTable(tx, 'team_members')
+      .where('team_id', primary.id)
       .orderBy('created_at', 'asc')
       .first();
 
@@ -258,9 +260,8 @@ const resolveWorkflowTicketAssignment = async (
       });
     }
 
-    const resolvedUser = await tx.trx('users')
+    const resolvedUser = await tenantScopedTable(tx, 'users')
       .where({
-        tenant: tx.tenantId,
         user_id: member.user_id,
         user_type: 'internal',
         is_inactive: false,
@@ -280,8 +281,8 @@ const resolveWorkflowTicketAssignment = async (
   }
 
   const validExplicitUsers = explicitAdditionalUserIds.length > 0
-    ? await tx.trx('users')
-        .where({ tenant: tx.tenantId, user_type: 'internal', is_inactive: false })
+    ? await tenantScopedTable(tx, 'users')
+        .where({ user_type: 'internal', is_inactive: false })
         .whereIn('user_id', explicitAdditionalUserIds)
         .select('user_id')
     : [];
@@ -335,15 +336,15 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   assignedTo: string | null,
   additionalUsers: WorkflowTicketResolvedAdditionalUser[]
 ): Promise<void> => {
-  await tx.trx('ticket_resources')
-    .where({ tenant: tx.tenantId, ticket_id: ticketId })
+  await tenantScopedTable(tx, 'ticket_resources')
+    .where('ticket_id', ticketId)
     .delete();
 
   if (!assignedTo || additionalUsers.length === 0) {
     return;
   }
 
-  await tx.trx('ticket_resources').insert(
+  await tenantScopedTable(tx, 'ticket_resources').insert(
     additionalUsers.map((additionalUser) => ({
       tenant: tx.tenantId,
       ticket_id: ticketId,
@@ -412,9 +413,8 @@ const ensureTicketTagMappings = async (
   for (const tagText of normalizedTags) {
     const { backgroundColor, textColor } = generateTagColors(tagText);
 
-    let definition = await tx.trx('tag_definitions')
+    let definition = await tenantScopedTable(tx, 'tag_definitions')
       .where({
-        tenant: tx.tenantId,
         tag_text: tagText,
         tagged_type: 'ticket',
       })
@@ -432,7 +432,7 @@ const ensureTicketTagMappings = async (
       };
 
       try {
-        await tx.trx('tag_definitions').insert(definitionRow);
+        await tenantScopedTable(tx, 'tag_definitions').insert(definitionRow);
         definition = definitionRow;
       } catch (error: unknown) {
         const errorCode =
@@ -442,9 +442,8 @@ const ensureTicketTagMappings = async (
         const errorMessage = error instanceof Error ? error.message : String(error);
 
         if (errorCode === '23505' || /duplicate|unique/i.test(errorMessage)) {
-          definition = await tx.trx('tag_definitions')
+          definition = await tenantScopedTable(tx, 'tag_definitions')
             .where({
-              tenant: tx.tenantId,
               tag_text: tagText,
               tagged_type: 'ticket',
             })
@@ -460,7 +459,7 @@ const ensureTicketTagMappings = async (
     }
 
     try {
-      await tx.trx('tag_mappings').insert({
+      await tenantScopedTable(tx, 'tag_mappings').insert({
         tenant: tx.tenantId,
         mapping_id: uuidv4(),
         tag_id: definition.tag_id,
@@ -582,9 +581,8 @@ export function registerTicketActions(): void {
       if (input.custom_fields) mergedAttributes.custom_fields = input.custom_fields;
 
       if (input.status_id) {
-        const status = await tx.trx('statuses')
+        const status = await tenantScopedTable(tx, 'statuses')
           .where({
-            tenant: tx.tenantId,
             status_id: input.status_id,
             status_type: 'ticket',
             board_id: input.board_id
@@ -840,7 +838,7 @@ export function registerTicketActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const current = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+      const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!current) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
       }
@@ -858,9 +856,8 @@ export function registerTicketActions(): void {
       }
 
       if (input.patch.status_id) {
-        const status = await tx.trx('statuses')
+        const status = await tenantScopedTable(tx, 'statuses')
           .where({
-            tenant: tx.tenantId,
             status_id: input.patch.status_id,
             status_type: 'ticket',
             board_id: current.board_id,
@@ -875,7 +872,7 @@ export function registerTicketActions(): void {
         }
       }
       if (input.patch.priority_id) {
-        const priority = await tx.trx('priorities').where({ tenant: tx.tenantId, priority_id: input.patch.priority_id }).first();
+        const priority = await tenantScopedTable(tx, 'priorities').where('priority_id', input.patch.priority_id).first();
         if (!priority) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid priority_id for ticket' });
         }
@@ -926,8 +923,8 @@ export function registerTicketActions(): void {
       let updated: any;
       try {
         if (resolvedAssignment) {
-          await tx.trx('ticket_resources')
-            .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
+          await tenantScopedTable(tx, 'ticket_resources')
+            .where('ticket_id', input.ticket_id)
             .delete();
         }
 
@@ -1043,7 +1040,7 @@ export function registerTicketActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
       }
@@ -1084,8 +1081,8 @@ export function registerTicketActions(): void {
 
       let updated: any;
       try {
-        await tx.trx('ticket_resources')
-          .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
+        await tenantScopedTable(tx, 'ticket_resources')
+          .where('ticket_id', input.ticket_id)
           .delete();
 
         updated = await TicketModel.updateTicket(
@@ -1198,7 +1195,7 @@ export function registerTicketActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
       }
@@ -1208,9 +1205,8 @@ export function registerTicketActions(): void {
       }
 
       const currentStatus = ticket.status_id
-        ? await tx.trx('statuses')
+        ? await tenantScopedTable(tx, 'statuses')
           .where({
-            tenant: tx.tenantId,
             status_id: ticket.status_id,
             status_type: 'ticket',
             board_id: ticket.board_id,
@@ -1222,9 +1218,8 @@ export function registerTicketActions(): void {
       }
 
       // Choose a closed status.
-      const closedStatus = await tx.trx('statuses')
+      const closedStatus = await tenantScopedTable(tx, 'statuses')
         .where({
-          tenant: tx.tenantId,
           status_type: 'ticket',
           board_id: ticket.board_id,
         })
@@ -1251,8 +1246,8 @@ export function registerTicketActions(): void {
       );
 
       // Update ticket closure fields.
-      await tx.trx('tickets')
-        .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
+      await tenantScopedTable(tx, 'tickets')
+        .where('ticket_id', input.ticket_id)
         .update({
           status_id: closedStatus.status_id,
           is_closed: true,
@@ -1306,7 +1301,7 @@ export function registerTicketActions(): void {
         if (!contactId) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Ticket has no requester contact to notify' });
         }
-        const contact = await tx.trx('contacts').where({ tenant: tx.tenantId, contact_name_id: contactId }).first();
+        const contact = await tenantScopedTable(tx, 'contacts').where('contact_name_id', contactId).first();
         const email = contact?.email ? String(contact.email) : null;
         if (!email) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Requester contact has no email address' });
@@ -1382,7 +1377,7 @@ export function registerTicketActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
       }
@@ -1396,7 +1391,7 @@ export function registerTicketActions(): void {
 
       // Entity existence checks
       if (input.entity_type === 'project') {
-        const project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: input.entity_id }).first();
+        const project = await tenantScopedTable(tx, 'projects').where('project_id', input.entity_id).first();
         if (!project) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project not found' });
         linkedEntitySummary = {
           type: 'project',
@@ -1405,7 +1400,7 @@ export function registerTicketActions(): void {
           url: null
         };
       } else if (input.entity_type === 'project_task') {
-        const task = await tx.trx('project_tasks').where({ tenant: tx.tenantId, task_id: input.entity_id }).first();
+        const task = await tenantScopedTable(tx, 'project_tasks').where('task_id', input.entity_id).first();
         if (!task) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project task not found' });
         linkedEntitySummary = {
           type: 'project_task',
@@ -1414,7 +1409,7 @@ export function registerTicketActions(): void {
           url: null
         };
       } else if (input.entity_type === 'asset') {
-        const asset = await tx.trx('assets').where({ tenant: tx.tenantId, asset_id: input.entity_id }).first();
+        const asset = await tenantScopedTable(tx, 'assets').where('asset_id', input.entity_id).first();
         if (!asset) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Asset not found' });
         const assetName =
           (asset.asset_name as string | null | undefined) ??
@@ -1423,7 +1418,7 @@ export function registerTicketActions(): void {
           null;
         linkedEntitySummary = { type: 'asset', id: input.entity_id, name: assetName, url: null };
       } else if (input.entity_type === 'contract') {
-        const contract = await tx.trx('contracts').where({ tenant: tx.tenantId, contract_id: input.entity_id }).first().catch(() => null);
+        const contract = await tenantScopedTable(tx, 'contracts').where('contract_id', input.entity_id).first().catch(() => null);
         if (!contract) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Contract not found' });
         const contractName =
           (contract.contract_name as string | null | undefined) ??
@@ -1438,7 +1433,7 @@ export function registerTicketActions(): void {
 
       // Generic polymorphic link table (added via migration in this plan).
       try {
-        await tx.trx('ticket_entity_links').insert({
+        await tenantScopedTable(tx, 'ticket_entity_links').insert({
           tenant: tx.tenantId,
           link_id: linkId,
           ticket_id: input.ticket_id,
@@ -1611,12 +1606,11 @@ export function registerTicketActions(): void {
       const startedAt = Date.now();
       let ticket: any = null;
       if (input.ticket_id) {
-        ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+        ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       } else if (input.ticket_number) {
-        ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_number: input.ticket_number }).first();
+        ticket = await tenantScopedTable(tx, 'tickets').where('ticket_number', input.ticket_number).first();
       } else if (input.external_ref) {
-        ticket = await tx.trx('tickets')
-          .where({ tenant: tx.tenantId })
+        ticket = await tenantScopedTable(tx, 'tickets')
           .andWhereRaw(`(attributes->>'external_ref') = ?`, [String(input.external_ref)])
           .first();
       }
@@ -1654,8 +1648,8 @@ export function registerTicketActions(): void {
       const result: any = { ticket: parsedTicket };
 
       if (include.comments) {
-        const rows = await tx.trx('comments')
-          .where({ tenant: tx.tenantId, ticket_id: ticket.ticket_id })
+        const rows = await tenantScopedTable(tx, 'comments')
+          .where('ticket_id', ticket.ticket_id)
           .orderBy('created_at', 'asc')
           .limit(include.comments_limit ?? 50);
         result.comments = rows.map((row: any) => ticketCommentSchema.parse({
@@ -1671,11 +1665,13 @@ export function registerTicketActions(): void {
       }
 
       if (include.attachments) {
-        const rows = await tx.trx('document_associations as da')
-          .join('documents as d', function joinDocs() {
-            this.on('da.tenant', 'd.tenant').andOn('da.document_id', 'd.document_id');
-          })
-          .where({ 'da.tenant': tx.tenantId, 'da.entity_type': 'ticket', 'da.entity_id': ticket.ticket_id })
+        const db = tenantDb(tx.trx, tx.tenantId);
+        const attachmentQuery = db.table('document_associations as da');
+        db.tenantJoin(attachmentQuery, 'documents as d', 'da.document_id', 'd.document_id', {
+          rootTenantColumn: 'da.tenant'
+        });
+        const rows = await attachmentQuery
+          .where({ 'da.entity_type': 'ticket', 'da.entity_id': ticket.ticket_id })
           .select('d.document_id', 'd.document_name', 'd.file_id', 'd.mime_type', 'da.created_at as associated_at');
         result.attachments = rows.slice(0, include.attachments_limit ?? 50).map((row: any) => ticketAttachmentSchema.parse({
           document_id: row.document_id,
@@ -1725,7 +1721,7 @@ export function registerTicketActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
       }

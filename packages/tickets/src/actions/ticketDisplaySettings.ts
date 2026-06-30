@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth';
 import { resolveTicketColumnVisibility, type TicketListColumnKey } from '../lib/ticketColumnCatalog';
@@ -22,7 +22,10 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
   // Prefer dedicated column if present; fallback to nested settings for backward compatibility
   try {
     const { knex } = await createTenantKnex();
-    const row = await knex('tenant_settings').select('ticket_display_settings', 'settings').where({ tenant }).first();
+    const row = await tenantDb(knex, tenant)
+      .table('tenant_settings')
+      .select('ticket_display_settings', 'settings')
+      .first();
     const fromColumn = (row?.ticket_display_settings as any) || {};
     const nested = ((row?.settings as any)?.ticketing?.display) || {};
     const display = Object.keys(fromColumn).length ? fromColumn : nested;
@@ -59,9 +62,9 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
   }
 
   // Read existing values for both the dedicated column and the legacy nested settings path.
-  const existingRow = await knex('tenant_settings')
+  const existingRow = await tenantDb(knex, tenant)
+    .table('tenant_settings')
     .select('ticket_display_settings', 'settings')
-    .where({ tenant })
     .first();
 
   const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
@@ -87,7 +90,8 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
   // Use a literal timestamp for Citus compatibility
   const now = new Date();
 
-  await knex('tenant_settings')
+  await tenantDb(knex, tenant)
+    .table('tenant_settings')
     .insert({
       tenant,
       ticket_display_settings: JSON.stringify(mergedDisplay),

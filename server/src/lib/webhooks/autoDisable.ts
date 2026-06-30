@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { getSystemEmailService } from '@alga-psa/email';
 
 import { getConnection } from '@/lib/db/db';
@@ -14,9 +15,9 @@ export async function maybeAutoDisable(webhook: WebhookRecord): Promise<void> {
   }
 
   const knex = await getConnection(webhook.tenant);
-  const firstFailureSinceLastSuccess = await knex('webhook_deliveries')
+  const db = tenantDb(knex, webhook.tenant);
+  const firstFailureSinceLastSuccess = await db.table('webhook_deliveries')
     .where({
-      tenant: webhook.tenant,
       webhook_id: webhook.webhookId,
     })
     .modify((query) => {
@@ -43,9 +44,8 @@ export async function maybeAutoDisable(webhook: WebhookRecord): Promise<void> {
   }
 
   const autoDisabledAt = new Date();
-  const [updated] = await knex('webhooks')
+  const [updated] = await db.table('webhooks')
     .where({
-      tenant: webhook.tenant,
       webhook_id: webhook.webhookId,
       is_active: true,
     })
@@ -87,10 +87,9 @@ async function notifyWebhookOwner(input: {
   autoDisabledAt: Date;
 }): Promise<void> {
   const knex = await getConnection(input.tenantId);
-  const user = await knex('users')
+  const user = await tenantDb(knex, input.tenantId).table('users')
     .select('user_id', 'email', 'first_name', 'last_name')
     .where({
-      tenant: input.tenantId,
       user_id: input.userId,
     })
     .first<{

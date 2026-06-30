@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
@@ -103,7 +104,9 @@ export async function GET(req: NextRequest) {
 
     const knex = await getAdminConnection();
 
-    const tenants = await knex('tenants as t')
+    const adminDb = tenantDb(knex, MASTER_BILLING_TENANT_ID || '__tenant_management_admin_listing__');
+    const tenants = await adminDb
+      .unscoped('tenants as t', 'tenant management admin listing spans all tenants')
       .select([
         't.tenant',
         't.client_name',
@@ -116,16 +119,13 @@ export async function GET(req: NextRequest) {
 
     const tenantIds = tenants.map((tenant) => tenant.tenant);
 
+    const subscriptionQuery = adminDb
+      .unscoped('stripe_subscriptions as s', 'tenant management admin listing aggregates subscriptions across tenants');
+    adminDb.tenantJoin(subscriptionQuery, 'stripe_prices as p', 's.stripe_price_id', 'p.stripe_price_id', { type: 'left' });
+    adminDb.tenantJoin(subscriptionQuery, 'stripe_products as pr', 'p.stripe_product_id', 'pr.stripe_product_id', { type: 'left' });
+
     const subscriptionRows = tenantIds.length > 0
-      ? await knex('stripe_subscriptions as s')
-          .leftJoin('stripe_prices as p', function () {
-            this.on('s.tenant', '=', 'p.tenant')
-              .andOn('s.stripe_price_id', '=', 'p.stripe_price_id');
-          })
-          .leftJoin('stripe_products as pr', function () {
-            this.on('p.tenant', '=', 'pr.tenant')
-              .andOn('p.stripe_product_id', '=', 'pr.stripe_product_id');
-          })
+      ? await subscriptionQuery
           .whereIn('s.tenant', tenantIds)
           .whereIn('s.status', ['active', 'trialing', 'past_due', 'unpaid'])
           .select([
@@ -153,7 +153,8 @@ export async function GET(req: NextRequest) {
     }
 
     const addOnRows = tenantIds.length > 0
-      ? await knex('tenant_addons')
+      ? await adminDb
+          .unscoped('tenant_addons', 'tenant management admin listing aggregates add-ons across tenants')
           .whereIn('tenant', tenantIds)
           .andWhere(function () {
             this.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());

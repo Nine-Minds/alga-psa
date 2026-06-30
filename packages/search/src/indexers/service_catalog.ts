@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface ServiceCatalogSearchRow {
@@ -36,9 +37,8 @@ export const serviceCatalogIndexer: EntityIndexer = {
   sourceEvents: ['SERVICE_CATALOG_CREATED', 'SERVICE_CATALOG_UPDATED', 'SERVICE_CATALOG_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<ServiceCatalogSearchRow>('service_catalog')
+    const row = await createTenantScopedIndexerQuery<ServiceCatalogSearchRow>(knex, 'service_catalog', 'service_catalog', tenant)
       .select('service_id', 'service_name', 'description', 'sku', 'vendor', 'manufacturer')
-      .where('tenant', tenant)
       .andWhere('service_id', id)
       .first();
 
@@ -51,9 +51,8 @@ export const serviceCatalogIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<ServiceCatalogSearchRow>('service_catalog')
+    const query = createTenantScopedIndexerQuery<ServiceCatalogSearchRow>(knex, 'service_catalog', 'service_catalog', tenant)
       .select('service_id', 'service_name', 'description', 'sku', 'vendor', 'manufacturer')
-      .where('tenant', tenant)
       .orderBy('service_id', 'asc')
       .limit(limit);
 

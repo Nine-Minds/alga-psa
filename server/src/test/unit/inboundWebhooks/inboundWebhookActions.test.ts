@@ -13,6 +13,29 @@ const featureMocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnex(...args),
+  tenantDb: (knex: any, tenant: string) => ({
+    table: (table: string) => {
+      const builder = knex(table);
+      if (!builder || typeof builder.where !== 'function') {
+        return builder;
+      }
+
+      builder.where({ tenant });
+      return {
+        ...builder,
+        where: (criteriaOrColumn: unknown, ...args: unknown[]) => {
+          if (
+            criteriaOrColumn &&
+            typeof criteriaOrColumn === 'object' &&
+            !Array.isArray(criteriaOrColumn)
+          ) {
+            return builder.where({ tenant, ...(criteriaOrColumn as Record<string, unknown>) });
+          }
+          return builder.where(criteriaOrColumn, ...args);
+        },
+      };
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({

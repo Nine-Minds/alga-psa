@@ -2,9 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
-import { getConnection } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { getConnection, createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   IClientContractLine,
@@ -43,10 +41,9 @@ async function getClientIdFromUser(
 ): Promise<string | null> {
   if (!user.contact_id) return null;
 
-  const contact = await trx('contacts')
+  const contact = await tenantDb(trx, tenant).table('contacts')
     .where({
       contact_name_id: user.contact_id,
-      tenant
     })
     .select('client_id')
     .first();
@@ -62,19 +59,17 @@ async function hasBillingPermission(
   user: IUserWithRoles,
   tenant: string
 ): Promise<boolean> {
-  const permissions = await trx('role_permissions as rp')
-    .join('permissions as p', 'rp.permission_id', 'p.permission_id')
-    .join('user_roles as ur', function() {
-      this.on('rp.role_id', '=', 'ur.role_id')
-        .andOn('rp.tenant', '=', 'ur.tenant');
-    })
+  const scopedDb = tenantDb(trx, tenant);
+  const permissionsQuery = scopedDb.table('role_permissions as rp')
     .where({
       'ur.user_id': user.user_id,
-      'ur.tenant': tenant,
       'p.resource': 'billing',
       'p.action': 'read'
     })
     .first();
+  scopedDb.tenantJoin(permissionsQuery, 'permissions as p', 'rp.permission_id', 'p.permission_id');
+  scopedDb.tenantJoin(permissionsQuery, 'user_roles as ur', 'rp.role_id', 'ur.role_id');
+  const permissions = await permissionsQuery;
 
   return !!permissions;
 }
@@ -121,8 +116,8 @@ async function persistOptionalQuoteSelections(
   const selectedSet = new Set(selectedIds);
 
   for (const item of optionalItems) {
-    await trx('quote_items')
-      .where({ tenant, quote_item_id: item.quote_item_id })
+    await tenantDb(trx, tenant).table('quote_items')
+      .where({ quote_item_id: item.quote_item_id })
       .update({
         is_selected: selectedSet.has(item.quote_item_id),
         updated_at: trx.fn.now(),
@@ -151,22 +146,10 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
 
       // Query via client_contracts -> contracts -> contract_lines
       // (contracts are client-specific via client_contracts)
-      return await trx('client_contracts as cc')
-        .join('contracts as c', function() {
-          this.on('cc.contract_id', '=', 'c.contract_id')
-            .andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .join('contract_lines as cl', function() {
-          this.on('c.contract_id', '=', 'cl.contract_id')
-            .andOn('c.tenant', '=', 'cl.tenant');
-        })
-        .leftJoin('service_categories as sc', function() {
-          this.on('cl.service_category', '=', 'sc.category_id')
-            .andOn('sc.tenant', '=', 'cl.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const planQuery = scopedDb.table('client_contracts as cc')
         .where({
           'cc.client_id': clientId,
-          'cc.tenant': tenant
         })
         .select(
           'cl.contract_line_id',
@@ -184,9 +167,13 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'sc.category_name as service_category_name'
         )
         .first();
+      scopedDb.tenantJoin(planQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+      scopedDb.tenantJoin(planQuery, 'contract_lines as cl', 'c.contract_id', 'cl.contract_id');
+      scopedDb.tenantJoin(planQuery, 'service_categories as sc', 'cl.service_category', 'sc.category_id', { type: 'left' });
+      return await planQuery as any;
     });
 
-    return plan ? normalizeLiveRecurringStorage(plan) : null;
+    return plan ? normalizeLiveRecurringStorage(plan as any) as IClientContractLine : null;
   } catch (error) {
     console.error('Error fetching client contract line:', error);
     throw new Error('Failed to fetch contract line');
@@ -262,8 +249,8 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
       if (!quote.viewed_at) {
         const viewedAt = new Date().toISOString();
 
-        const markedViewed = await trx('quotes')
-          .where({ tenant, quote_id: quoteId })
+        const markedViewed = await tenantDb(trx, tenant).table('quotes')
+          .where({ quote_id: quoteId })
           .whereNull('viewed_at')
           .update({
             viewed_at: viewedAt,
@@ -450,11 +437,10 @@ export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId:
       }
 
       // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
+      const invoiceCheck = await tenantDb(trx, tenant).table('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
-          tenant
         })
         .whereNot('status', 'draft')
         .first();
@@ -492,11 +478,10 @@ export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoi
       }
 
       // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
+      const invoiceCheck = await tenantDb(trx, tenant).table('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
-          tenant
         })
         .whereNot('status', 'draft')
         .first();
@@ -556,11 +541,10 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
       }
 
       // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
+      const invoiceCheck = await tenantDb(trx, tenant).table('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
-          tenant
         })
         .whereNot('status', 'draft')
         .first();
@@ -619,11 +603,10 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
       }
 
       // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
+      const invoiceCheck = await tenantDb(trx, tenant).table('invoices')
         .where({
           invoice_id: invoiceId,
           client_id: clientId,
-          tenant
         })
         .whereNot('status', 'draft')
         .first();
@@ -670,8 +653,10 @@ async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobSta
   const { knex } = await createTenantKnex(tenant);
 
   // Get job record
-  const job = await knex('jobs')
-    .where({ job_id: jobId, tenant })
+  const scopedDb = tenantDb(knex, tenant);
+
+  const job = await scopedDb.table('jobs')
+    .where({ job_id: jobId })
     .first();
 
   if (!job) {
@@ -691,8 +676,8 @@ async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobSta
   // If completed, get the file_id from job details
   let fileId: string | undefined;
   if (status === 'completed') {
-    const details = await knex('job_details')
-      .where({ job_id: jobId, tenant })
+    const details = await scopedDb.table('job_details')
+      .where({ job_id: jobId })
       .select('metadata');
     // Look for file_id in the metadata of completed steps
     for (const detail of details) {
@@ -769,13 +754,13 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
       }
 
       const currentDate = new Date().toISOString().slice(0, 10);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Get current bucket usage if any
-      const bucketUsage = await trx('bucket_usage')
+      const bucketUsage = await scopedDb.table('bucket_usage')
         .select('*')
         .where({
           client_id: clientId,
-          tenant
         })
         .andWhere('period_start', '<=', currentDate)
         .andWhere('period_end', '>', currentDate)
@@ -783,32 +768,20 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
         .first();
 
       // Get all services associated with the client's plan
-      const services = await trx('service_catalog')
+      const servicesQuery = scopedDb.table('service_catalog')
         .select('service_catalog.*')
-        .join('contract_line_services', function() {
-          this.on('service_catalog.service_id', '=', 'contract_line_services.service_id')
-            .andOn('service_catalog.tenant', '=', 'contract_line_services.tenant')
-        })
-        .join('contract_lines as cl', function() {
-          this.on('contract_line_services.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('contract_line_services.tenant', '=', 'cl.tenant')
-        })
-        .join('client_contracts as cc', function() {
-          this.on('cl.contract_id', '=', 'cc.contract_id')
-            .andOn('cl.tenant', '=', 'cc.tenant')
-        })
         .where({
           'cc.client_id': clientId,
           'cc.is_active': true,
-          'service_catalog.tenant': tenant,
-          'contract_line_services.tenant': tenant,
-          'cl.tenant': tenant,
-          'cc.tenant': tenant
         });
+      scopedDb.tenantJoin(servicesQuery, 'contract_line_services', 'service_catalog.service_id', 'contract_line_services.service_id');
+      scopedDb.tenantJoin(servicesQuery, 'contract_lines as cl', 'contract_line_services.contract_line_id', 'cl.contract_line_id');
+      scopedDb.tenantJoin(servicesQuery, 'client_contracts as cc', 'cl.contract_id', 'cc.contract_id');
+      const services = await servicesQuery;
 
       return {
-        bucketUsage,
-        services
+        bucketUsage: (bucketUsage ?? null) as IBucketUsage | null,
+        services: services as unknown as IService[]
       };
     });
 
@@ -837,20 +810,18 @@ export const downloadClientQuotePdf = withAuth(async (
     });
 
     // Look for an existing stored PDF document
-    const doc = await knex('document_associations as da')
-      .join('documents as d', function () {
-        this.on('da.document_id', 'd.document_id')
-          .andOn('da.tenant', 'd.tenant');
-      })
+    const scopedDb = tenantDb(knex, tenant);
+    const docQuery = scopedDb.table('document_associations as da')
       .where({
         'da.entity_id': quoteId,
         'da.entity_type': 'quote',
-        'da.tenant': tenant,
       })
       .whereNotNull('d.file_id')
       .orderBy('da.created_at', 'desc')
       .select('d.file_id')
       .first<{ file_id: string } | undefined>();
+    scopedDb.tenantJoin(docQuery, 'documents as d', 'da.document_id', 'd.document_id');
+    const doc = await docQuery;
 
     if (doc?.file_id) {
       return { success: true, fileId: doc.file_id };
@@ -903,7 +874,7 @@ export const getLocationsForClientQuote = withAuth(async (
     const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId);
     if (!quote.client_id) return [];
 
-    return trx('client_locations')
+    return tenantDb(trx, tenant).table('client_locations')
       .select<ClientPortalLocationSummary[]>(
         'location_id',
         'location_name',
@@ -917,7 +888,7 @@ export const getLocationsForClientQuote = withAuth(async (
         'country_name',
         'region_code',
       )
-      .where({ tenant, client_id: quote.client_id, is_active: true })
+      .where({ client_id: quote.client_id, is_active: true })
       .orderBy('is_default', 'desc')
       .orderBy('location_name', 'asc');
   });

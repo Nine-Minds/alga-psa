@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ADD_ON_LABELS, ADD_ONS, type AddOnKey } from '@alga-psa/types';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
@@ -92,8 +93,9 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
     }
 
     const knex = await getAdminConnection();
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const targetTenantDb = tenantDb(knex, tenantId);
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
+    const tenant = await targetTenantDb.table('tenants')
       .select(['tenant', 'client_name'])
       .first();
 
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
     if (action === 'grant') {
       // Citus rejects STABLE functions (knex.fn.now() → CURRENT_TIMESTAMP) inside
       // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
-      await knex('tenant_addons')
+      await targetTenantDb.table('tenant_addons')
         .insert({
           tenant: tenantId,
           addon_key: addonKey,
@@ -128,15 +130,15 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
           metadata: JSON.stringify(metadata),
         });
     } else {
-      await knex('tenant_addons')
-        .where({ tenant: tenantId, addon_key: addonKey })
+      await targetTenantDb.table('tenant_addons')
+        .where({ addon_key: addonKey })
         .update({
           expires_at: nowIso,
           metadata: JSON.stringify(metadata),
         });
     }
 
-    await knex('extension_audit_logs').insert({
+    await auditLogs.insert({
       tenant: MASTER_BILLING_TENANT_ID,
       event_type: action === 'grant' ? 'tenant.addon_grant' : 'tenant.addon_revoke',
       user_id: userId,

@@ -7,8 +7,13 @@
  * This is an EE-only feature for Nine Minds internal use via the tenant management extension.
  */
 
+import {
+  getTenantTableScope,
+  tenantDb,
+  type TenantDb,
+  type TenantTableScope,
+} from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { Knex } from 'knex';
 import { observabilityLogger } from '@/lib/observability/logging';
 
 export type ISO8601String = string;
@@ -31,6 +36,23 @@ export interface ExportTenantDataResult {
   recordCount?: number;
   error?: string;
 }
+
+type DynamicExportRow = Record<string, unknown>;
+
+interface TenantExportTenantRow {
+  tenant: string;
+  company_name?: string | null;
+  client_name?: string | null;
+}
+
+interface ColumnMetadataRow {
+  column_name: string;
+  table_name: string;
+  table_schema: string;
+}
+
+const TENANT_EXPORT_DISCOVERY_TENANT = '__tenant_export_discovery__';
+type TenantColumnName = 'tenant' | 'tenant_id';
 
 /**
  * Tables to export for tenant data export.
@@ -116,26 +138,65 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
  * Check if a table exists and has a tenant column
  */
 async function getTableTenantColumn(
-  knex: Knex,
+  db: TenantDb,
   tableName: string
 ): Promise<string | null> {
   try {
-    const result = await knex.raw(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = ?
-        AND column_name IN ('tenant', 'tenant_id')
-        AND table_schema = 'public'
-      LIMIT 1
-    `, [tableName]);
+    const [result] = await db
+      .unscoped<ColumnMetadataRow>(
+        'information_schema.columns',
+        'tenant export inspects public schema metadata before dynamic table export'
+      )
+      .select('column_name')
+      .where({
+        table_name: tableName,
+        table_schema: 'public',
+      })
+      .whereIn('column_name', ['tenant', 'tenant_id'])
+      .limit(1);
 
-    if (result.rows && result.rows.length > 0) {
-      return result.rows[0].column_name;
-    }
-    return null;
+    return result?.column_name ?? null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Tenant export is intentionally schema-introspective: table names come from the
+ * export manifest and are checked for a tenant column at runtime. Keep this
+ * unscoped boundary explicit, then apply the discovered tenant predicate.
+ */
+function dynamicTenantExportTable(
+  discoveryDb: TenantDb,
+  scopedDb: TenantDb,
+  tableName: string,
+  tenantColumn: TenantColumnName
+) {
+  const metadataScope = getTenantTableScope(tableName);
+
+  if (metadataScope?.scope === 'tenant') {
+    const expectedTenantColumn = tenantMetadataColumn(metadataScope);
+    if (tenantColumn !== expectedTenantColumn) {
+      throw new Error(
+        `Tenant export metadata/schema mismatch for ${tableName}: metadata expects ${expectedTenantColumn}, information_schema found ${tenantColumn}`
+      );
+    }
+
+    return scopedDb.table<DynamicExportRow>(tableName);
+  }
+
+  if (metadataScope?.scope === 'admin') {
+    throw new Error(`Admin table ${tableName} cannot be exported through tenant export`);
+  }
+
+  return discoveryDb.unscoped<DynamicExportRow>(
+    tableName,
+    'tenant export reads schema-discovered dynamic tables with an explicit tenant predicate'
+  ).where({ [tenantColumn]: scopedDb.tenant });
+}
+
+function tenantMetadataColumn(scope: Extract<TenantTableScope, { scope: 'tenant' }>): TenantColumnName {
+  return scope.tenantColumn === 'tenant_id' ? 'tenant_id' : 'tenant';
 }
 
 /**
@@ -160,9 +221,13 @@ export async function exportTenantData(
 
   try {
     const adminKnex = await getAdminConnection();
+    const exportDb = tenantDb(adminKnex, TENANT_EXPORT_DISCOVERY_TENANT);
+    const scopedExportDb = tenantDb(adminKnex, tenantId);
 
     // Get tenant info for the export metadata
-    const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
+    const tenant = await scopedExportDb
+      .table<TenantExportTenantRow>('tenants')
+      .first();
     if (!tenant) {
       return { success: false, error: 'Tenant not found' };
     }
@@ -186,11 +251,15 @@ export async function exportTenantData(
     // Export each table
     for (const tableName of TENANT_TABLES_EXPORT_ORDER) {
       try {
-        const tenantColumn = await getTableTenantColumn(adminKnex, tableName);
+        const tenantColumn = await getTableTenantColumn(exportDb, tableName);
 
         if (tenantColumn) {
-          const records = await adminKnex(tableName)
-            .where({ [tenantColumn]: tenantId })
+          const records = await dynamicTenantExportTable(
+            exportDb,
+            scopedExportDb,
+            tableName,
+            tenantColumn as TenantColumnName
+          )
             .select('*');
 
           if (records.length > 0) {

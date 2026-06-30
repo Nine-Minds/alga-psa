@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ADD_ONS } from '@alga-psa/types';
 
 export type TeamsAvailabilityDisabledReason =
@@ -70,8 +70,8 @@ export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = 
 
 async function tenantHasTeamsAddOn(tenantId: string): Promise<boolean> {
   const { knex } = await createTenantKnex();
-  const row = await knex('tenant_addons')
-    .where({ tenant: tenantId, addon_key: ADD_ONS.TEAMS })
+  const row = await tenantDb(knex, tenantId).table('tenant_addons')
+    .where({ addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
     })

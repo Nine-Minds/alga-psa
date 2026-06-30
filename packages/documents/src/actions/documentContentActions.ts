@@ -1,7 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -40,7 +39,7 @@ export const createContentDocument = withAuth(async (
 
         // Create the document content
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('document_content').insert({
+            return await tenantDb(trx, tenant).table('document_content').insert({
                 id: uuidv4(),
                 document_id: documentResult._id,
                 content: initialContent,
@@ -78,8 +77,8 @@ export const getDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot read documents');
             }
 
-            return trx('document_content')
-                .where({ document_id: documentId, tenant })
+            return tenantDb(trx, tenant).table<IDocumentContent>('document_content')
+                .where({ document_id: documentId })
                 .first();
         });
 
@@ -114,20 +113,22 @@ export const updateDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot update documents');
             }
 
-            const existingContent = await trx('document_content')
-                .where({ document_id: documentId, tenant })
+            const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
+            const existingContent = await tenantScopedTable('document_content')
+                .where({ document_id: documentId })
                 .first();
 
             if (existingContent) {
-                return await trx('document_content')
-                    .where({ document_id: documentId, tenant })
+                return await tenantScopedTable('document_content')
+                    .where({ document_id: documentId })
                     .update({
                         content: data.content,
                         updated_at: trx.fn.now(),
                         updated_by_id: data.updated_by_id
                     });
             } else {
-                return await trx('document_content').insert({
+                return await tenantScopedTable('document_content').insert({
                     id: uuidv4(),
                     document_id: documentId,
                     content: data.content,
@@ -168,8 +169,8 @@ export const deleteDocumentContent = withAuth(async (
                 return permissionError('Permission denied: Cannot delete documents');
             }
 
-            return trx('document_content')
-                .where({ document_id: documentId, tenant })
+            return tenantDb(trx, tenant).table('document_content')
+                .where({ document_id: documentId })
                 .delete();
         });
 

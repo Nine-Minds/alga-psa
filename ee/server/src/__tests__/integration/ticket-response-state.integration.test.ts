@@ -3,6 +3,7 @@
  * Tests T001-T026, T054-T076 from the feature test plan
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
@@ -16,6 +17,10 @@ type CreateCommentInput = Omit<IComment, 'tenant'> & { author_type?: IComment['a
 let db: Knex;
 let tenantData: TenantTestData;
 let tenantId: string;
+
+function tenantTable(activeTenantId: string, table: string) {
+  return tenantDb(db, activeTenantId).table(table);
+}
 
 // Mock createTenantKnex to return our test database, but keep other exports
 vi.mock('../../../../../server/src/lib/db', async (importOriginal) => {
@@ -114,13 +119,13 @@ describe('Ticket Response State Integration Tests', () => {
     const ticketId = uuidv4();
 
     // Get or create a status
-    let status = await db('statuses')
+    let status = await tenantTable(tenantId, 'statuses')
       .where({ tenant: tenantId, is_closed: options.statusIsClosed ?? false })
       .first();
 
     if (!status) {
       const statusId = uuidv4();
-      await db('statuses').insert({
+      await tenantTable(tenantId, 'statuses').insert({
         status_id: statusId,
         tenant: tenantId,
         name: options.statusIsClosed ? 'Closed' : 'Open',
@@ -132,15 +137,15 @@ describe('Ticket Response State Integration Tests', () => {
     }
 
     // Get or create a priority
-    let priority = await db('priorities')
+    let priority = await tenantTable(tenantId, 'priorities')
       .where({ tenant: tenantId })
       .first();
 
     if (!priority) {
       const priorityId = uuidv4();
       // Get a user for created_by
-      const user = await db('users').where({ tenant: tenantId }).first();
-      await db('priorities').insert({
+      const user = await tenantTable(tenantId, 'users').where({ tenant: tenantId }).first();
+      await tenantTable(tenantId, 'priorities').insert({
         priority_id: priorityId,
         tenant: tenantId,
         priority_name: 'Normal',
@@ -152,7 +157,7 @@ describe('Ticket Response State Integration Tests', () => {
     }
 
     // Get or create a client for the ticket
-    let client = await db('clients')
+    let client = await tenantTable(tenantId, 'clients')
       .where({ tenant: tenantId })
       .first();
 
@@ -163,7 +168,7 @@ describe('Ticket Response State Integration Tests', () => {
     if (!client) {
       // Create a client if none exists
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'Test Client',
@@ -173,7 +178,7 @@ describe('Ticket Response State Integration Tests', () => {
       client = { client_id: clientId };
     }
 
-    await db('tickets').insert({
+    await tenantTable(tenantId, 'tickets').insert({
       ticket_id: ticketId,
       tenant: tenantId,
       ticket_number: `TEST-${Date.now()}`,
@@ -192,7 +197,7 @@ describe('Ticket Response State Integration Tests', () => {
   // Helper to create a test user
   async function createTestUser(userType: 'internal' | 'client'): Promise<string> {
     const userId = uuidv4();
-    await db('users').insert({
+    await tenantTable(tenantId, 'users').insert({
       user_id: userId,
       tenant: tenantId,
       username: `test-${userType}-${userId.slice(0, 6)}`,
@@ -272,7 +277,7 @@ describe('Ticket Response State Integration Tests', () => {
 
     it('T004: New tickets have null response_state by default', async () => {
       const ticketId = await createTestTicket();
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBeNull();
     });
   });
@@ -287,9 +292,9 @@ describe('Ticket Response State Integration Tests', () => {
       const ticketId2 = await createTestTicket({ responseState: 'awaiting_internal' });
       const ticketId3 = await createTestTicket({ responseState: null });
 
-      const ticket1 = await db('tickets').where({ ticket_id: ticketId1 }).first();
-      const ticket2 = await db('tickets').where({ ticket_id: ticketId2 }).first();
-      const ticket3 = await db('tickets').where({ ticket_id: ticketId3 }).first();
+      const ticket1 = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId1 }).first();
+      const ticket2 = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId2 }).first();
+      const ticket3 = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId3 }).first();
 
       expect(ticket1.response_state).toBe('awaiting_client');
       expect(ticket2.response_state).toBe('awaiting_internal');
@@ -315,7 +320,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: false,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_client');
     });
 
@@ -330,7 +335,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: false,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_client');
     });
 
@@ -345,7 +350,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: false,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_client');
     });
 
@@ -360,7 +365,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: false,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_internal');
     });
 
@@ -375,7 +380,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: false,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_internal');
     });
 
@@ -390,7 +395,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: false,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_internal');
     });
 
@@ -405,7 +410,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: true,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBeNull();
     });
 
@@ -420,7 +425,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: true,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_client');
     });
 
@@ -435,7 +440,7 @@ describe('Ticket Response State Integration Tests', () => {
         isInternal: true,
       });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_internal');
     });
 
@@ -448,7 +453,7 @@ describe('Ticket Response State Integration Tests', () => {
       const staffUserId = await createTestUser('internal');
 
       // Store original state
-      const originalTicket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const originalTicket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(originalTicket.response_state).toBeNull();
 
       // Attempting to create a comment with invalid data should not change state
@@ -464,7 +469,7 @@ describe('Ticket Response State Integration Tests', () => {
       }
 
       // Verify state hasn't changed unexpectedly (should still be null or awaiting_client if comment succeeded)
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       // Either null (if failed) or awaiting_client (if empty note was accepted)
       expect(ticket.response_state === null || ticket.response_state === 'awaiting_client').toBe(true);
     });
@@ -477,45 +482,45 @@ describe('Ticket Response State Integration Tests', () => {
     it('T018: updateTicket with response_state=awaiting_client updates ticket', async () => {
       const ticketId = await createTestTicket({ responseState: null });
 
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId })
         .update({ response_state: 'awaiting_client' });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_client');
     });
 
     it('T019: updateTicket with response_state=awaiting_internal updates ticket', async () => {
       const ticketId = await createTestTicket({ responseState: null });
 
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId })
         .update({ response_state: 'awaiting_internal' });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBe('awaiting_internal');
     });
 
     it('T020: updateTicket with response_state=null clears response state', async () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_client' });
 
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId })
         .update({ response_state: null });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBeNull();
     });
 
     it('T022-T024: Closing ticket clears response_state', async () => {
       // Get or create a closed status
-      let closedStatus = await db('statuses')
+      let closedStatus = await tenantTable(tenantId, 'statuses')
         .where({ tenant: tenantId, is_closed: true })
         .first();
 
       if (!closedStatus) {
         const statusId = uuidv4();
-        await db('statuses').insert({
+        await tenantTable(tenantId, 'statuses').insert({
           status_id: statusId,
           tenant: tenantId,
           name: 'Closed',
@@ -528,40 +533,40 @@ describe('Ticket Response State Integration Tests', () => {
 
       // T022: From awaiting_client
       const ticketId1 = await createTestTicket({ responseState: 'awaiting_client' });
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId1 })
         .update({ status_id: closedStatus.status_id, response_state: null });
 
-      const ticket1 = await db('tickets').where({ ticket_id: ticketId1 }).first();
+      const ticket1 = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId1 }).first();
       expect(ticket1.response_state).toBeNull();
 
       // T023: From awaiting_internal
       const ticketId2 = await createTestTicket({ responseState: 'awaiting_internal' });
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId2 })
         .update({ status_id: closedStatus.status_id, response_state: null });
 
-      const ticket2 = await db('tickets').where({ ticket_id: ticketId2 }).first();
+      const ticket2 = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId2 }).first();
       expect(ticket2.response_state).toBeNull();
 
       // T024: From null (stays null)
       const ticketId3 = await createTestTicket({ responseState: null });
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId3 })
         .update({ status_id: closedStatus.status_id });
 
-      const ticket3 = await db('tickets').where({ ticket_id: ticketId3 }).first();
+      const ticket3 = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId3 }).first();
       expect(ticket3.response_state).toBeNull();
     });
 
     it('T025: Closing ticket with null response_state keeps response_state null', async () => {
-      let closedStatus = await db('statuses')
+      let closedStatus = await tenantTable(tenantId, 'statuses')
         .where({ tenant: tenantId, is_closed: true })
         .first();
 
       if (!closedStatus) {
         const statusId = uuidv4();
-        await db('statuses').insert({
+        await tenantTable(tenantId, 'statuses').insert({
           status_id: statusId,
           tenant: tenantId,
           name: 'Closed',
@@ -573,27 +578,27 @@ describe('Ticket Response State Integration Tests', () => {
       }
 
       const ticketId = await createTestTicket({ responseState: null });
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId })
         .update({ status_id: closedStatus.status_id });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBeNull();
     });
 
     it('T026: Reopening closed ticket does not set response_state', async () => {
       // Get open and closed statuses
-      let openStatus = await db('statuses')
+      let openStatus = await tenantTable(tenantId, 'statuses')
         .where({ tenant: tenantId, is_closed: false })
         .first();
 
-      let closedStatus = await db('statuses')
+      let closedStatus = await tenantTable(tenantId, 'statuses')
         .where({ tenant: tenantId, is_closed: true })
         .first();
 
       if (!closedStatus) {
         const statusId = uuidv4();
-        await db('statuses').insert({
+        await tenantTable(tenantId, 'statuses').insert({
           status_id: statusId,
           tenant: tenantId,
           name: 'Closed',
@@ -608,16 +613,16 @@ describe('Ticket Response State Integration Tests', () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_client' });
 
       // Close it
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId })
         .update({ status_id: closedStatus.status_id, response_state: null });
 
       // Reopen it
-      await db('tickets')
+      await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId })
         .update({ status_id: openStatus.status_id });
 
-      const ticket = await db('tickets').where({ ticket_id: ticketId }).first();
+      const ticket = await tenantTable(tenantId, 'tickets').where({ ticket_id: ticketId }).first();
       expect(ticket.response_state).toBeNull();
     });
   });
@@ -747,7 +752,7 @@ describe('Ticket Response State Integration Tests', () => {
       const ticketId1 = await createTestTicket({ responseState: 'awaiting_client' });
 
       // Try to query the ticket from tenant 2's perspective
-      const ticketFromTenant2 = await db('tickets')
+      const ticketFromTenant2 = await tenantTable(tenant2Data.tenant.tenantId, 'tickets')
         .where({ ticket_id: ticketId1, tenant: tenant2Data.tenant.tenantId })
         .first();
 
@@ -755,10 +760,10 @@ describe('Ticket Response State Integration Tests', () => {
 
       // Create ticket in tenant 2
       const ticketId2 = uuidv4();
-      const status = await db('statuses').where({ tenant: tenant2Data.tenant.tenantId }).first()
+      const status = await tenantTable(tenant2Data.tenant.tenantId, 'statuses').where({ tenant: tenant2Data.tenant.tenantId }).first()
         || await (async () => {
           const statusId = uuidv4();
-          await db('statuses').insert({
+          await tenantTable(tenant2Data.tenant.tenantId, 'statuses').insert({
             status_id: statusId,
             tenant: tenant2Data.tenant.tenantId,
             name: 'Open',
@@ -769,10 +774,10 @@ describe('Ticket Response State Integration Tests', () => {
           return { status_id: statusId };
         })();
 
-      const priority = await db('priorities').where({ tenant: tenant2Data.tenant.tenantId }).first()
+      const priority = await tenantTable(tenant2Data.tenant.tenantId, 'priorities').where({ tenant: tenant2Data.tenant.tenantId }).first()
         || await (async () => {
           const priorityId = uuidv4();
-          await db('priorities').insert({
+          await tenantTable(tenant2Data.tenant.tenantId, 'priorities').insert({
             priority_id: priorityId,
             tenant: tenant2Data.tenant.tenantId,
             priority_name: 'Normal',
@@ -784,7 +789,7 @@ describe('Ticket Response State Integration Tests', () => {
         })();
 
       // Get or create a client for tenant 2
-      let client2 = await db('clients')
+      let client2 = await tenantTable(tenant2Data.tenant.tenantId, 'clients')
         .where({ tenant: tenant2Data.tenant.tenantId })
         .first();
 
@@ -794,7 +799,7 @@ describe('Ticket Response State Integration Tests', () => {
 
       if (!client2) {
         const clientId = uuidv4();
-        await db('clients').insert({
+        await tenantTable(tenant2Data.tenant.tenantId, 'clients').insert({
           client_id: clientId,
           tenant: tenant2Data.tenant.tenantId,
           client_name: 'Test Client 2',
@@ -804,7 +809,7 @@ describe('Ticket Response State Integration Tests', () => {
         client2 = { client_id: clientId };
       }
 
-      await db('tickets').insert({
+      await tenantTable(tenant2Data.tenant.tenantId, 'tickets').insert({
         ticket_id: ticketId2,
         tenant: tenant2Data.tenant.tenantId,
         ticket_number: `T2-${Date.now()}`,
@@ -818,7 +823,7 @@ describe('Ticket Response State Integration Tests', () => {
       });
 
       // Try to query from tenant 1's perspective
-      const ticketFromTenant1 = await db('tickets')
+      const ticketFromTenant1 = await tenantTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId2, tenant: tenantId })
         .first();
 

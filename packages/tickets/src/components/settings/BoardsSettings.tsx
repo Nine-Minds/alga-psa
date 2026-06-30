@@ -11,7 +11,11 @@ import {
   createBoard,
   updateBoard,
   deleteBoard,
+} from '@alga-psa/tickets/actions/board-actions/boardActions';
+import {
   getBoardTicketStatuses,
+} from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
+import {
   getBoardCloseRules,
   upsertBoardCloseRules,
   getBoardAutoCloseRules,
@@ -50,7 +54,6 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
 type ManagedTicketStatus = {
@@ -311,10 +314,6 @@ interface BoardsSettingsProps {
 
 const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
   const { t } = useTranslation('msp/settings');
-  // Dark-release gate for the auto-close rules UI. Off by default (PostHog
-  // returns false for an unknown flag); UI-only — the auto-close engine and
-  // server actions stay live regardless.
-  const { enabled: autoCloseRulesUiEnabled } = useFeatureFlag('ticket-auto-close-rules');
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -846,7 +845,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         return;
       }
 
-      if (editingBoard && autoCloseRulesUiEnabled) {
+      if (editingBoard) {
         for (const rule of autoCloseRulesForm) {
           if (!rule.trigger_status_id || !rule.close_to_status_id) {
             failInSection('automation', t('ticketing.boards.closeRules.messages.autoCloseStatusRequired'));
@@ -892,23 +891,21 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
 
         await upsertBoardCloseRules(editingBoard.board_id!, closeRulesForm);
 
-        if (autoCloseRulesUiEnabled) {
-          for (const ruleId of removedAutoCloseRuleIds) {
-            await deleteBoardAutoCloseRule(ruleId);
-          }
-          for (const rule of autoCloseRulesForm) {
-            const payload = {
-              trigger_status_id: rule.trigger_status_id,
-              inactivity_days: rule.inactivity_days,
-              warning_days_before: rule.warning_days_before,
-              close_to_status_id: rule.close_to_status_id,
-              is_enabled: rule.is_enabled,
-            };
-            if (rule.rule_id) {
-              await updateBoardAutoCloseRule(rule.rule_id, payload);
-            } else {
-              await createBoardAutoCloseRule(editingBoard.board_id!, payload);
-            }
+        for (const ruleId of removedAutoCloseRuleIds) {
+          await deleteBoardAutoCloseRule(ruleId);
+        }
+        for (const rule of autoCloseRulesForm) {
+          const payload = {
+            trigger_status_id: rule.trigger_status_id,
+            inactivity_days: rule.inactivity_days,
+            warning_days_before: rule.warning_days_before,
+            close_to_status_id: rule.close_to_status_id,
+            is_enabled: rule.is_enabled,
+          };
+          if (rule.rule_id) {
+            await updateBoardAutoCloseRule(rule.rule_id, payload);
+          } else {
+            await createBoardAutoCloseRule(editingBoard.board_id!, payload);
           }
         }
 
@@ -1789,7 +1786,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               </EditorAccordionSection>
             )}
 
-            {editingBoard && autoCloseRulesUiEnabled && (
+            {editingBoard && (
               <EditorAccordionSection
                 id="automation"
             error={sectionErrors['automation']}

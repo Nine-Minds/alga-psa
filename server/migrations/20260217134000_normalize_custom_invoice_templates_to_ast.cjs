@@ -9,6 +9,13 @@
 
 const INVOICE_TEMPLATES_TABLE = 'invoice_templates';
 const ASSIGNMENTS_TABLE = 'invoice_template_assignments';
+const MIGRATION_TENANT = 'migration:20260217134000_normalize_custom_invoice_templates_to_ast';
+const TEMPLATE_AST_BACKFILL_REASON = 'all-tenant invoice template AST backfill';
+const CUSTOM_SIGNAL_TENANT_DISCOVERY_REASON = 'discover tenants with custom invoice template signals';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
 
 const TRANSPARENT_PIXEL_DATA_URI = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
@@ -519,16 +526,17 @@ async function ensureTemplateAstColumn(knex) {
   }
 }
 
-async function backfillMissingTemplateAst(knex) {
-  const missingRows = await knex(INVOICE_TEMPLATES_TABLE)
+async function backfillMissingTemplateAst(knex, tenantDb, migrationDb) {
+  const missingRows = await migrationDb.unscoped(INVOICE_TEMPLATES_TABLE, TEMPLATE_AST_BACKFILL_REASON)
     .select('tenant', 'template_id', 'name')
     .whereNull('templateAst');
 
   for (const row of missingRows) {
+    const db = tenantDb(knex, row.tenant);
     const inferredCode = inferStandardCodeFromName(row.name);
     const astJson = getCanonicalAstJsonForCode(inferredCode);
-    await knex(INVOICE_TEMPLATES_TABLE)
-      .where({ tenant: row.tenant, template_id: row.template_id })
+    await db.table(INVOICE_TEMPLATES_TABLE)
+      .where('template_id', row.template_id)
       .update({
         templateAst: knex.raw('?::jsonb', [astJson]),
         updated_at: knex.fn.now(),
@@ -536,30 +544,24 @@ async function backfillMissingTemplateAst(knex) {
   }
 }
 
-async function getCustomSignalTenants(knex) {
-  const rows = await knex
-    .select('tenant')
-    .from(function customSignalTenantUnion() {
-      this.select('tenant')
-        .from(INVOICE_TEMPLATES_TABLE)
-        .whereRaw('COALESCE(is_default, false) = false')
-        .union(function unionCustomAssignments() {
-          this.select('tenant')
-            .from(ASSIGNMENTS_TABLE)
-            .where({ template_source: 'custom' });
-        })
-        .as('custom_signal_tenants');
-    })
-    .groupBy('tenant');
+async function getCustomSignalTenants(migrationDb) {
+  const templateTenants = await migrationDb.unscoped(INVOICE_TEMPLATES_TABLE, CUSTOM_SIGNAL_TENANT_DISCOVERY_REASON)
+    .distinct('tenant')
+    .whereRaw('COALESCE(is_default, false) = false')
+    .pluck('tenant');
+  const assignmentTenants = await migrationDb.unscoped(ASSIGNMENTS_TABLE, CUSTOM_SIGNAL_TENANT_DISCOVERY_REASON)
+    .distinct('tenant')
+    .where({ template_source: 'custom' })
+    .pluck('tenant');
 
-  return rows.map((row) => row.tenant);
+  return Array.from(new Set([...templateTenants, ...assignmentTenants]));
 }
 
-async function getTenantTemplates(knex, tenant) {
+async function getTenantTemplates(knex, db) {
   const standardDefaultAst = getCanonicalAstJsonForCode(STANDARD_DEFAULT_CODE);
   const standardDetailedAst = getCanonicalAstJsonForCode(STANDARD_DETAILED_CODE);
 
-  return knex(INVOICE_TEMPLATES_TABLE)
+  return db.table(INVOICE_TEMPLATES_TABLE)
     .select(
       'template_id',
       'name',
@@ -574,19 +576,17 @@ async function getTenantTemplates(knex, tenant) {
         [standardDefaultAst, STANDARD_DEFAULT_CODE, standardDetailedAst, STANDARD_DETAILED_CODE]
       )
     )
-    .where({ tenant })
     .orderBy('created_at', 'asc');
 }
 
-async function ensureTenantTemplateCopy(knex, tenant, standardCode) {
+async function ensureTenantTemplateCopy(knex, db, tenant, standardCode) {
   const resolvedCode = STANDARD_TEMPLATE_DEFS[standardCode] ? standardCode : STANDARD_DEFAULT_CODE;
   const templateDef = STANDARD_TEMPLATE_DEFS[resolvedCode];
   const astJson = JSON.stringify(templateDef.templateAst);
   const preferredName = `${templateDef.name} (Copy)`;
 
-  let existing = await knex(INVOICE_TEMPLATES_TABLE)
+  let existing = await db.table(INVOICE_TEMPLATES_TABLE)
     .select('template_id')
-    .where({ tenant })
     .whereRaw('"templateAst" = ?::jsonb', [astJson])
     .orderBy('created_at', 'asc')
     .first();
@@ -595,14 +595,14 @@ async function ensureTenantTemplateCopy(knex, tenant, standardCode) {
     return existing.template_id;
   }
 
-  existing = await knex(INVOICE_TEMPLATES_TABLE)
+  existing = await db.table(INVOICE_TEMPLATES_TABLE)
     .select('template_id')
-    .where({ tenant, name: preferredName })
+    .where('name', preferredName)
     .first();
 
   if (existing?.template_id) {
-    await knex(INVOICE_TEMPLATES_TABLE)
-      .where({ tenant, template_id: existing.template_id })
+    await db.table(INVOICE_TEMPLATES_TABLE)
+      .where('template_id', existing.template_id)
       .update({
         version: 1,
         templateAst: knex.raw('?::jsonb', [astJson]),
@@ -611,7 +611,7 @@ async function ensureTenantTemplateCopy(knex, tenant, standardCode) {
     return existing.template_id;
   }
 
-  const created = await knex(INVOICE_TEMPLATES_TABLE)
+  const created = await db.table(INVOICE_TEMPLATES_TABLE)
     .insert({
       tenant,
       template_id: knex.raw('gen_random_uuid()'),
@@ -651,15 +651,15 @@ function choosePreferredTemplateId(templates) {
   return templates[0].template_id;
 }
 
-async function upsertTenantScopeCustomAssignment(knex, tenant, templateId) {
-  const tenantScopeRows = await knex(ASSIGNMENTS_TABLE)
+async function upsertTenantScopeCustomAssignment(knex, db, tenant, templateId) {
+  const tenantScopeRows = await db.table(ASSIGNMENTS_TABLE)
     .select('assignment_id')
-    .where({ tenant, scope_type: 'tenant' })
+    .where('scope_type', 'tenant')
     .whereNull('scope_id')
     .orderBy('created_at', 'asc');
 
   if (tenantScopeRows.length === 0) {
-    await knex(ASSIGNMENTS_TABLE).insert({
+    await db.table(ASSIGNMENTS_TABLE).insert({
       tenant,
       scope_type: 'tenant',
       scope_id: null,
@@ -675,7 +675,7 @@ async function upsertTenantScopeCustomAssignment(knex, tenant, templateId) {
 
   const [primary, ...duplicates] = tenantScopeRows;
 
-  await knex(ASSIGNMENTS_TABLE)
+  await db.table(ASSIGNMENTS_TABLE)
     .where({ assignment_id: primary.assignment_id })
     .update({
       template_source: 'custom',
@@ -686,28 +686,30 @@ async function upsertTenantScopeCustomAssignment(knex, tenant, templateId) {
 
   if (duplicates.length > 0) {
     const duplicateIds = duplicates.map((row) => row.assignment_id);
-    await knex(ASSIGNMENTS_TABLE)
+    await db.table(ASSIGNMENTS_TABLE)
       .whereIn('assignment_id', duplicateIds)
       .del();
   }
 }
 
-async function healBrokenCustomAssignments(knex, tenant, fallbackTemplateId) {
-  const brokenAssignments = await knex(`${ASSIGNMENTS_TABLE} as ita`)
-    .leftJoin(`${INVOICE_TEMPLATES_TABLE} as it`, function joinTemplate() {
-      this.on('it.tenant', '=', 'ita.tenant').andOn('it.template_id', '=', 'ita.invoice_template_id');
-    })
-    .select('ita.assignment_id')
-    .where('ita.tenant', tenant)
-    .where('ita.template_source', 'custom')
-    .whereNull('it.template_id');
+async function healBrokenCustomAssignments(knex, db, fallbackTemplateId) {
+  const brokenAssignments = await db.tenantJoin(
+    db.table(`${ASSIGNMENTS_TABLE} as ita`)
+      .select('ita.assignment_id')
+      .where('ita.template_source', 'custom')
+      .whereNull('it.template_id'),
+    `${INVOICE_TEMPLATES_TABLE} as it`,
+    'it.template_id',
+    'ita.invoice_template_id',
+    { type: 'left' }
+  );
 
   if (brokenAssignments.length === 0) {
     return;
   }
 
   const assignmentIds = brokenAssignments.map((row) => row.assignment_id);
-  await knex(ASSIGNMENTS_TABLE)
+  await db.table(ASSIGNMENTS_TABLE)
     .whereIn('assignment_id', assignmentIds)
     .update({
       invoice_template_id: fallbackTemplateId,
@@ -716,22 +718,23 @@ async function healBrokenCustomAssignments(knex, tenant, fallbackTemplateId) {
     });
 }
 
-async function normalizeTenantAssignments(knex, tenant) {
-  let templates = await getTenantTemplates(knex, tenant);
+async function normalizeTenantAssignments(knex, tenantDb, tenant) {
+  const db = tenantDb(knex, tenant);
+  let templates = await getTenantTemplates(knex, db);
 
   if (templates.length === 0) {
-    const defaultCopyId = await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE);
-    templates = await getTenantTemplates(knex, tenant);
-    await upsertTenantScopeCustomAssignment(knex, tenant, defaultCopyId);
+    const defaultCopyId = await ensureTenantTemplateCopy(knex, db, tenant, STANDARD_DEFAULT_CODE);
+    templates = await getTenantTemplates(knex, db);
+    await upsertTenantScopeCustomAssignment(knex, db, tenant, defaultCopyId);
   } else {
-    const tenantScopeAssignment = await knex(ASSIGNMENTS_TABLE)
+    const tenantScopeAssignment = await db.table(ASSIGNMENTS_TABLE)
       .select(
         'assignment_id',
         'template_source',
         'standard_invoice_template_code',
         'invoice_template_id'
       )
-      .where({ tenant, scope_type: 'tenant' })
+      .where('scope_type', 'tenant')
       .whereNull('scope_id')
       .orderBy('created_at', 'asc')
       .first();
@@ -740,28 +743,27 @@ async function normalizeTenantAssignments(knex, tenant) {
 
     if (!tenantScopeAssignment) {
       const preferredTemplateId = choosePreferredTemplateId(templates);
-      const targetTemplateId = preferredTemplateId || (await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE));
-      await upsertTenantScopeCustomAssignment(knex, tenant, targetTemplateId);
+      const targetTemplateId = preferredTemplateId || (await ensureTenantTemplateCopy(knex, db, tenant, STANDARD_DEFAULT_CODE));
+      await upsertTenantScopeCustomAssignment(knex, db, tenant, targetTemplateId);
     } else if (tenantScopeAssignment.template_source === 'standard') {
       const standardCode = tenantScopeAssignment.standard_invoice_template_code || STANDARD_DEFAULT_CODE;
-      const copyTemplateId = await ensureTenantTemplateCopy(knex, tenant, standardCode);
-      await upsertTenantScopeCustomAssignment(knex, tenant, copyTemplateId);
+      const copyTemplateId = await ensureTenantTemplateCopy(knex, db, tenant, standardCode);
+      await upsertTenantScopeCustomAssignment(knex, db, tenant, copyTemplateId);
     } else {
       let targetTemplateId = tenantScopeAssignment.invoice_template_id;
       if (!targetTemplateId || !validTemplateIds.has(targetTemplateId)) {
         targetTemplateId = choosePreferredTemplateId(templates);
       }
       if (!targetTemplateId) {
-        targetTemplateId = await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE);
+        targetTemplateId = await ensureTenantTemplateCopy(knex, db, tenant, STANDARD_DEFAULT_CODE);
       }
-      await upsertTenantScopeCustomAssignment(knex, tenant, targetTemplateId);
+      await upsertTenantScopeCustomAssignment(knex, db, tenant, targetTemplateId);
     }
   }
 
-  const tenantScopeAfter = await knex(ASSIGNMENTS_TABLE)
+  const tenantScopeAfter = await db.table(ASSIGNMENTS_TABLE)
     .select('invoice_template_id')
     .where({
-      tenant,
       scope_type: 'tenant',
       template_source: 'custom',
     })
@@ -770,24 +772,23 @@ async function normalizeTenantAssignments(knex, tenant) {
 
   let fallbackTemplateId = tenantScopeAfter?.invoice_template_id || null;
   if (!fallbackTemplateId) {
-    fallbackTemplateId = choosePreferredTemplateId(await getTenantTemplates(knex, tenant));
+    fallbackTemplateId = choosePreferredTemplateId(await getTenantTemplates(knex, db));
   }
   if (!fallbackTemplateId) {
-    fallbackTemplateId = await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE);
-    await upsertTenantScopeCustomAssignment(knex, tenant, fallbackTemplateId);
+    fallbackTemplateId = await ensureTenantTemplateCopy(knex, db, tenant, STANDARD_DEFAULT_CODE);
+    await upsertTenantScopeCustomAssignment(knex, db, tenant, fallbackTemplateId);
   }
 
-  await healBrokenCustomAssignments(knex, tenant, fallbackTemplateId);
+  await healBrokenCustomAssignments(knex, db, fallbackTemplateId);
 
-  await knex(INVOICE_TEMPLATES_TABLE)
-    .where({ tenant })
+  await db.table(INVOICE_TEMPLATES_TABLE)
     .update({
       is_default: false,
       updated_at: knex.fn.now(),
     });
 
-  await knex(INVOICE_TEMPLATES_TABLE)
-    .where({ tenant, template_id: fallbackTemplateId })
+  await db.table(INVOICE_TEMPLATES_TABLE)
+    .where('template_id', fallbackTemplateId)
     .update({
       is_default: true,
       updated_at: knex.fn.now(),
@@ -795,6 +796,8 @@ async function normalizeTenantAssignments(knex, tenant) {
 }
 
 exports.up = async function up(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   const hasTemplatesTable = await knex.schema.hasTable(INVOICE_TEMPLATES_TABLE);
   const hasAssignmentsTable = await knex.schema.hasTable(ASSIGNMENTS_TABLE);
   if (!hasTemplatesTable || !hasAssignmentsTable) {
@@ -802,11 +805,11 @@ exports.up = async function up(knex) {
   }
 
   await ensureTemplateAstColumn(knex);
-  await backfillMissingTemplateAst(knex);
+  await backfillMissingTemplateAst(knex, tenantDb, migrationDb);
 
-  const customSignalTenants = await getCustomSignalTenants(knex);
+  const customSignalTenants = await getCustomSignalTenants(migrationDb);
   for (const tenant of customSignalTenants) {
-    await normalizeTenantAssignments(knex, tenant);
+    await normalizeTenantAssignments(knex, tenantDb, tenant);
   }
 };
 

@@ -19,6 +19,8 @@ const BUILTIN_ASSET_TYPES = [
 ];
 
 exports.seed = async function (knex, tenantId) {
+  const { tenantDb } = await import('@alga-psa/db');
+
   // Use provided tenantId or fall back to first tenant
   if (!tenantId) {
     const tenant = await knex('tenants').select('tenant').first();
@@ -29,7 +31,9 @@ exports.seed = async function (knex, tenantId) {
     tenantId = tenant.tenant;
   }
 
-  await knex('asset_type_registry')
+  const db = tenantDb(knex, tenantId);
+
+  await db.table('asset_type_registry')
     .insert(BUILTIN_ASSET_TYPES.map((type) => ({
       tenant: tenantId,
       slug: type.slug,

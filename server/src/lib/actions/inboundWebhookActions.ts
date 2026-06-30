@@ -6,7 +6,7 @@ import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 import type {
@@ -423,8 +423,8 @@ export const listInboundWebhooks = withAuth(async (user, { tenant }): Promise<In
   const { knex } = await createTenantKnex(tenant);
   await assertInboundWebhookPermission(user, 'read', knex);
 
-  const rows = await knex<InboundWebhookRow>('inbound_webhooks')
-    .where({ tenant })
+  const db = tenantDb(knex, tenant);
+  const rows = await db.table<InboundWebhookRow>('inbound_webhooks')
     .orderBy('updated_at', 'desc')
     .orderBy('name', 'asc');
 
@@ -453,17 +453,27 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
     return [];
   }
 
-  const publishedVersions = knex('workflow_definition_versions')
+  const db = tenantDb(knex, tenant);
+  const publishedVersions = db.table('workflow_definition_versions')
     .select('tenant', 'workflow_id')
     .max('version as published_version')
     .groupBy('tenant', 'workflow_id')
     .as('published_versions');
 
-  const rows = await knex('workflow_definitions as workflow_definitions')
-    .leftJoin(publishedVersions, function () {
-      this.on('published_versions.workflow_id', 'workflow_definitions.workflow_id')
-        .andOn('published_versions.tenant', 'workflow_definitions.tenant');
-    })
+  const workflowDefinitionsQuery = db.table('workflow_definitions as workflow_definitions');
+  db.tenantJoinSubquery(
+    workflowDefinitionsQuery,
+    publishedVersions,
+    'published_versions.workflow_id',
+    'workflow_definitions.workflow_id',
+    {
+      type: 'left',
+      rootTenantColumn: 'workflow_definitions.tenant',
+      joinedTenantColumn: 'published_versions.tenant',
+    }
+  );
+
+  const rows = await workflowDefinitionsQuery
     .select(
       'workflow_definitions.workflow_id',
       'workflow_definitions.name',
@@ -471,7 +481,6 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
       'workflow_definitions.status',
       knex.raw('published_versions.published_version as published_version'),
     )
-    .where('workflow_definitions.tenant', tenant)
     .where((query) => {
       query.whereNull('workflow_definitions.is_visible').orWhere('workflow_definitions.is_visible', true);
     })
@@ -497,9 +506,9 @@ export const getInboundWebhook = withAuth(
     const { knex } = await createTenantKnex(tenant);
     await assertInboundWebhookPermission(user, 'read', knex);
 
-    const row = await knex<InboundWebhookRow>('inbound_webhooks')
+    const db = tenantDb(knex, tenant);
+    const row = await db.table<InboundWebhookRow>('inbound_webhooks')
       .where({
-        tenant,
         inbound_webhook_id: inboundWebhookId,
       })
       .first();
@@ -522,9 +531,10 @@ export const upsertInboundWebhook = withAuth(
       assertInboundWebhookWorkflowHandlersAvailable();
     }
 
+    const db = tenantDb(knex, tenant);
     const existing = parsed.inbound_webhook_id
-      ? await knex<InboundWebhookRow>('inbound_webhooks')
-          .where({ tenant, inbound_webhook_id: parsed.inbound_webhook_id })
+      ? await db.table<InboundWebhookRow>('inbound_webhooks')
+          .where({ inbound_webhook_id: parsed.inbound_webhook_id })
           .first()
       : null;
 
@@ -532,8 +542,8 @@ export const upsertInboundWebhook = withAuth(
       throw new Error('Inbound webhook not found');
     }
 
-    const slugCollision = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, slug: parsed.slug })
+    const slugCollision = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ slug: parsed.slug })
       .modify((query) => {
         if (parsed.inbound_webhook_id) {
           query.andWhereNot('inbound_webhook_id', parsed.inbound_webhook_id);
@@ -570,11 +580,11 @@ export const upsertInboundWebhook = withAuth(
     };
 
     const [row] = parsed.inbound_webhook_id
-      ? await knex<InboundWebhookRow>('inbound_webhooks')
-          .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      ? await db.table<InboundWebhookRow>('inbound_webhooks')
+          .where({ inbound_webhook_id: inboundWebhookId })
           .update(rowPayload)
           .returning('*')
-      : await knex<InboundWebhookRow>('inbound_webhooks')
+      : await db.table<InboundWebhookRow>('inbound_webhooks')
           .insert({
             tenant,
             inbound_webhook_id: inboundWebhookId,
@@ -596,8 +606,9 @@ export const deleteInboundWebhook = withAuth(
     const { knex } = await createTenantKnex(tenant);
     await assertInboundWebhookPermission(user, 'delete', knex);
 
-    const existing = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    const db = tenantDb(knex, tenant);
+    const existing = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .first();
 
     if (!existing) {
@@ -607,12 +618,12 @@ export const deleteInboundWebhook = withAuth(
     // Citus does not allow ON DELETE SET NULL when the distribution column is
     // part of the foreign key, so null out the link on delivery rows here
     // before the parent row is removed.
-    await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    await db.table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .update({ inbound_webhook_id: null });
 
-    await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .delete();
 
     await deleteAuthSecretsForRow(existing);
@@ -630,8 +641,9 @@ export const rotateInboundWebhookSecret = withAuth(
     const { knex } = await createTenantKnex(tenant);
     await assertInboundWebhookPermission(user, 'update', knex);
 
-    const existing = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    const db = tenantDb(knex, tenant);
+    const existing = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .first();
 
     if (!existing) {
@@ -670,8 +682,8 @@ export const rotateInboundWebhookSecret = withAuth(
 
     await writeTenantSecret(tenant, vaultPath, secret);
 
-    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    const [row] = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .update({
         auth_config: authConfig,
         updated_at: knex.fn.now(),
@@ -703,8 +715,9 @@ export const setInboundWebhookActiveState = withAuth(
       updatePayload.auto_disabled_at = null;
     }
 
-    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    const db = tenantDb(knex, tenant);
+    const [row] = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .update(updatePayload)
       .returning('*');
 
@@ -733,8 +746,6 @@ export const listInboundDeliveries = withAuth(
     const applyFilters = <TRecord extends {} = any, TResult = any>(
       query: Knex.QueryBuilder<TRecord, TResult>,
     ): Knex.QueryBuilder<TRecord, TResult> => {
-      query.where('tenant', tenant);
-
       if (filter.inboundWebhookId) {
         query.andWhere('inbound_webhook_id', filter.inboundWebhookId);
       }
@@ -754,11 +765,12 @@ export const listInboundDeliveries = withAuth(
       return query;
     };
 
-    const totalRow = await applyFilters(knex('inbound_webhook_deliveries'))
+    const db = tenantDb(knex, tenant);
+    const totalRow = await applyFilters(db.table('inbound_webhook_deliveries'))
       .count<{ count: string | number }[]>({ count: '*' })
       .first();
 
-    const rows = await applyFilters(knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries'))
+    const rows = await applyFilters(db.table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries'))
       .orderBy('received_at', 'desc')
       .limit(safeLimit)
       .offset((safePage - 1) * safeLimit);
@@ -777,8 +789,9 @@ export const getInboundDelivery = withAuth(
     const { knex } = await createTenantKnex(tenant);
     await assertInboundWebhookPermission(user, 'read', knex);
 
-    const row = await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
-      .where({ tenant, delivery_id: deliveryId })
+    const db = tenantDb(knex, tenant);
+    const row = await db.table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+      .where({ delivery_id: deliveryId })
       .first();
 
     return row ? mapInboundDelivery(row) : null;
@@ -791,8 +804,9 @@ export const captureSamplePayload = withAuth(
     await assertInboundWebhookPermission(user, 'update', knex);
 
     const captureExpiresAt = new Date(Date.now() + SAMPLE_CAPTURE_WINDOW_MS);
-    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    const db = tenantDb(knex, tenant);
+    const [row] = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .update({
         sample_capture_expires_at: captureExpiresAt,
         updated_at: knex.fn.now(),
@@ -812,8 +826,9 @@ export const clearSamplePayload = withAuth(
     const { knex } = await createTenantKnex(tenant);
     await assertInboundWebhookPermission(user, 'update', knex);
 
-    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    const db = tenantDb(knex, tenant);
+    const [row] = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .update({
         sample_payload: null,
         sample_capture_expires_at: null,
@@ -834,8 +849,8 @@ async function fetchInboundDeliveryById(
   tenant: string,
   deliveryId: string,
 ): Promise<InboundWebhookDelivery> {
-  const row = await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
-    .where({ tenant, delivery_id: deliveryId })
+  const row = await tenantDb(knex, tenant).table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+    .where({ delivery_id: deliveryId })
     .first();
 
   if (!row) {
@@ -895,8 +910,9 @@ export const replayInboundDelivery = withAuth(
     const { knex } = await createTenantKnex(tenant);
     await assertInboundWebhookPermission(user, 'replay', knex);
 
-    const original = await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
-      .where({ tenant, delivery_id: deliveryId })
+    const db = tenantDb(knex, tenant);
+    const original = await db.table<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+      .where({ delivery_id: deliveryId })
       .first();
 
     if (!original) {
@@ -907,8 +923,8 @@ export const replayInboundDelivery = withAuth(
       throw new Error('Cannot replay an inbound delivery without a webhook config');
     }
 
-    const webhook = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: original.inbound_webhook_id })
+    const webhook = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: original.inbound_webhook_id })
       .first();
 
     if (!webhook || !webhook.is_active) {
@@ -955,8 +971,9 @@ export const sendInboundWebhookTest = withAuth(
     const { knex } = await createTenantKnex(tenant);
     await assertInboundWebhookPermission(user, 'update', knex);
 
-    const webhook = await knex<InboundWebhookRow>('inbound_webhooks')
-      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+    const db = tenantDb(knex, tenant);
+    const webhook = await db.table<InboundWebhookRow>('inbound_webhooks')
+      .where({ inbound_webhook_id: inboundWebhookId })
       .first();
 
     if (!webhook || !webhook.is_active) {

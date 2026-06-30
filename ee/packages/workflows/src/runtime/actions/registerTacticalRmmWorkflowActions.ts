@@ -4,6 +4,7 @@ import { throwActionError } from '../../../../../../shared/workflow/runtime/acti
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
 import type { TacticalAuthMode } from './tacticalRmmWorkflowRuntimeSupport';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadTacticalRuntimeSupport = () => import('./tacticalRmmWorkflowRuntimeSupport');
 
@@ -64,8 +65,8 @@ async function requireTacticalIntegration(ctx: ActionContext): Promise<{
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  const integration = await knex('rmm_integrations')
-    .where({ tenant: tenantId, provider: PROVIDER, is_active: true })
+  const integration = await workflowTenantTable(knex, tenantId, 'rmm_integrations')
+    .where({ provider: PROVIDER, is_active: true })
     .whereNotNull('connected_at')
     .first();
   if (!integration) {
@@ -166,8 +167,8 @@ export function registerTacticalRmmWorkflowActionsV2(): void {
     },
     handler: async (input, ctx) => {
       const { tenantId, knex, instanceUrl, authMode } = await requireTacticalIntegration(ctx);
-      const rows = await knex('assets')
-        .where({ tenant: tenantId, rmm_provider: PROVIDER })
+      const rows = await workflowTenantTable(knex, tenantId, 'assets')
+        .where({ rmm_provider: PROVIDER })
         .whereNotNull('rmm_device_id')
         .modify((qb: any) => {
           if (input.asset_id) qb.andWhere('asset_id', input.asset_id);

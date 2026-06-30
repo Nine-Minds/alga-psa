@@ -1,7 +1,6 @@
 'use server'
 
-import { createTenantKnex } from "@alga-psa/db";
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -11,6 +10,14 @@ import { assertBoardScopedTicketStatusSelection } from '@shared/lib/boardScopedT
 import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
 import type { CadenceOwner } from '@alga-psa/types';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 type RenewalMode = 'none' | 'manual' | 'auto';
 type RenewalDueDateActionPolicy = 'queue_only' | 'create_ticket';
@@ -57,8 +64,7 @@ export const getDefaultBillingSettings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('default_billing_settings')
-      .where({ tenant })
+    return await tenantScopedTable(trx, tenant, 'default_billing_settings')
       .first();
   });
 
@@ -128,8 +134,7 @@ export const updateDefaultBillingSettings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const existingSettings = await trx('default_billing_settings')
-      .where({ tenant })
+    const existingSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
       .first();
 
     await assertBoardScopedTicketStatusSelection({
@@ -170,8 +175,7 @@ export const updateDefaultBillingSettings = withAuth(async (
     };
 
     if (existingSettings) {
-      return await trx('default_billing_settings')
-        .where({ tenant })
+      return await tenantScopedTable(trx, tenant, 'default_billing_settings')
         .update({
           zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
           suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
@@ -182,7 +186,7 @@ export const updateDefaultBillingSettings = withAuth(async (
           updated_at: trx.fn.now()
         });
     } else {
-      return await trx('default_billing_settings').insert({
+      return await tenantScopedTable(trx, tenant, 'default_billing_settings').insert({
         tenant,
         zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
         suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
@@ -208,10 +212,9 @@ export const getClientContractLineSettings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_settings')
+    return await tenantScopedTable(trx, tenant, 'client_billing_settings')
       .where({
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
       .first();
   });

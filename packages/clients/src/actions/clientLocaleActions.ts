@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
@@ -34,10 +34,9 @@ export const updateClientLocaleAction = withAuth(async (
     }
 
     // Get existing client
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .where({
         client_id: clientId,
-        tenant
       })
       .first();
 
@@ -51,10 +50,9 @@ export const updateClientLocaleAction = withAuth(async (
       defaultLocale: locale
     };
 
-    await trx('clients')
+    await tenantDb(trx, tenant).table('clients')
       .where({
         client_id: clientId,
-        tenant
       })
       .update({
         properties: updatedProperties,
@@ -91,10 +89,9 @@ export const getClientLocaleAction = withOptionalAuth(async (
       trx
     );
 
-    return await trx('clients')
+    return await tenantDb(trx, tenant).table('clients')
       .where({
         client_id: clientId,
-        tenant
       })
       .first();
   });

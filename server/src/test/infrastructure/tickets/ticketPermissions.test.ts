@@ -25,6 +25,7 @@ import {
   expectPermissionDenied,
   expectError
 } from '../../../../test-utils/errorUtils';
+import { tenantDb } from '@alga-psa/db';
 
 describe('Ticket Permissions Infrastructure', () => {
   const context = new TestContext({
@@ -39,6 +40,14 @@ describe('Ticket Permissions Infrastructure', () => {
   let contactId: string;
   let statusId: string;
   let priorityId: string;
+
+  function tenantScope(tenantId: string) {
+    return tenantDb(context.db, tenantId);
+  }
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantScope(tenantId).table(table);
+  }
 
   // Set up test context with database connection
   beforeAll(async () => {
@@ -76,23 +85,23 @@ describe('Ticket Permissions Infrastructure', () => {
     });
 
     // Get complete user objects from database
-    regularUser = await context.db('users')
+    const regularUserQuery = tenantTable(tenantId, 'users')
       .select('users.*')
-      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-      .where('users.user_id', regularUserId)
-      .first();
+      .where('users.user_id', regularUserId);
+    tenantScope(tenantId).tenantJoin(regularUserQuery, 'user_roles', 'users.user_id', 'user_roles.user_id', { type: 'left' });
+    tenantScope(tenantId).tenantJoin(regularUserQuery, 'roles', 'user_roles.role_id', 'roles.role_id', { type: 'left' });
+    regularUser = await regularUserQuery.first();
 
-    adminUser = await context.db('users')
+    const adminUserQuery = tenantTable(tenantId, 'users')
       .select('users.*')
-      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-      .where('users.user_id', adminUserId)
-      .first();
+      .where('users.user_id', adminUserId);
+    tenantScope(tenantId).tenantJoin(adminUserQuery, 'user_roles', 'users.user_id', 'user_roles.user_id', { type: 'left' });
+    tenantScope(tenantId).tenantJoin(adminUserQuery, 'roles', 'user_roles.role_id', 'roles.role_id', { type: 'left' });
+    adminUser = await adminUserQuery.first();
 
     // Create board
     boardId = uuidv4();
-    await context.db('boards').insert({
+    await tenantTable(tenantId, 'boards').insert({
       board_id: boardId,
       board_name: 'Test Board',
       tenant: tenantId,
@@ -100,7 +109,7 @@ describe('Ticket Permissions Infrastructure', () => {
 
     // Create contact
     contactId = uuidv4();
-    await context.db('contacts').insert({
+    await tenantTable(tenantId, 'contacts').insert({
       contact_name_id: contactId,
       full_name: 'Test Contact',
       email: 'test@example.com',
@@ -109,11 +118,11 @@ describe('Ticket Permissions Infrastructure', () => {
     });
 
     // Get priority ID from seeded data
-    priorityId = (await context.db('priorities'))[0].priority_id;
+    priorityId = (await tenantTable(tenantId, 'priorities'))[0].priority_id;
 
     // Create category
     categoryId = uuidv4();
-    await context.db('categories').insert({
+    await tenantTable(tenantId, 'categories').insert({
       category_id: categoryId,
       category_name: 'Test Category',
       tenant: tenantId,
@@ -124,7 +133,7 @@ describe('Ticket Permissions Infrastructure', () => {
     // Create status
     statusId = uuidv4();
     const uniqueOrderNumber = Math.floor(Date.now() / 1000) % 1000000 + Math.floor(Math.random() * 1000);
-    await context.db('statuses').insert({
+    await tenantTable(tenantId, 'statuses').insert({
       status_id: statusId,
       name: `Test Status ${uniqueOrderNumber}`,
       tenant: tenantId,
@@ -171,7 +180,7 @@ describe('Ticket Permissions Infrastructure', () => {
       estimated_hours: undefined
     };
 
-    await context.db('tickets').insert(testTicket);
+    await tenantTable(tenantId, 'tickets').insert(testTicket);
   });
 
   // Use cleanup hook for test isolation
@@ -195,7 +204,7 @@ describe('Ticket Permissions Infrastructure', () => {
     const result = await ticketActions.updateTicket(testTicket.ticket_id!, updateData, adminUser);
     expect(result).toBe('success');
 
-    const updatedTicket = await context.db('tickets').where('ticket_id', testTicket.ticket_id).first();
+    const updatedTicket = await tenantTable(testTicket.tenant, 'tickets').where('ticket_id', testTicket.ticket_id).first();
     expect(updatedTicket.status_id).toBe(updateData.status_id);
   });
 
@@ -209,7 +218,7 @@ describe('Ticket Permissions Infrastructure', () => {
       () => ticketActions.updateTicket(testTicket.ticket_id!, updateData, regularUser)
     );
 
-    const unchangedTicket = await context.db('tickets').where('ticket_id', testTicket.ticket_id).first();
+    const unchangedTicket = await tenantTable(testTicket.tenant, 'tickets').where('ticket_id', testTicket.ticket_id).first();
     expect(unchangedTicket.status_id).toBe(testTicket.status_id);
   });
 
@@ -229,7 +238,7 @@ describe('Ticket Permissions Infrastructure', () => {
     expect(newTicket?.title).toBe('New Test Ticket');
 
     if (newTicket?.ticket_id) {
-      const retrievedTicket = await context.db('tickets').where('ticket_id', newTicket.ticket_id).first();
+      const retrievedTicket = await tenantTable(testTicket.tenant, 'tickets').where('ticket_id', newTicket.ticket_id).first();
       expect(retrievedTicket.ticket_id).toEqual(newTicket.ticket_id);
     } else {
       throw new Error('New ticket was not created successfully');

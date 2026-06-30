@@ -4,8 +4,8 @@
  * Hudu manual pull-sync server action (F219–F222, EE-only).
  *
  * Thin `withAuth` wrapper over the session-free sync core
- * (integrations/hudu/assetSyncCore). Enforces EE tier + `hudu-integration`
- * flag + `asset` UPDATE and passes the clicking user as the asset audit actor;
+ * (integrations/hudu/assetSyncCore). Enforces EE tier + `asset` UPDATE and
+ * passes the clicking user as the asset audit actor;
  * the core does the work and is shared with the tenant-wide auto-sync.
  */
 
@@ -13,7 +13,6 @@ import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { syncHuduClientAssetsCore } from '../../integrations/hudu/assetSyncCore';
 import type { HuduAssetSyncResult } from '../../integrations/hudu/assetSyncCore';
@@ -42,14 +41,6 @@ function withHuduAssetAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
 
     return handler(user, context as { tenant: string }, ...args);
   });

@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction, normalizeIanaTimeZone } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, normalizeIanaTimeZone } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +18,10 @@ import {
   getNextBusinessHoursStart as calculatorGetNextBusinessHoursStart
 } from '../services/businessHoursCalculator';
 
+function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
+  return tenantDb(trx, tenant).table(table);
+}
+
 // ============================================================================
 // Business Hours Schedules
 // ============================================================================
@@ -29,8 +33,7 @@ export const getBusinessHoursSchedules = withAuth(async (_user, { tenant }): Pro
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const schedules = await trx('business_hours_schedules')
-      .where({ tenant })
+    const schedules = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
       .select('*')
       .orderBy('schedule_name', 'asc');
 
@@ -45,20 +48,20 @@ export const getBusinessHoursScheduleById = withAuth(async (_user, { tenant }, s
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const schedule = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .first();
 
     if (!schedule) {
       return null;
     }
 
-    const entries = await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId })
+    const entries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('schedule_id', scheduleId)
       .orderBy('day_of_week', 'asc');
 
-    const holidays = await trx('holidays')
-      .where({ tenant, schedule_id: scheduleId })
+    const holidays = await tenantScopedTable(trx, 'holidays', tenant)
+      .where('schedule_id', scheduleId)
       .orderBy('holiday_date', 'asc');
 
     return {
@@ -76,8 +79,8 @@ export const getDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const schedule = await trx('business_hours_schedules')
-      .where({ tenant, is_default: true })
+    const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('is_default', true)
       .first();
 
     return schedule || null;
@@ -100,13 +103,13 @@ export const createBusinessHoursSchedule = withAuth(async (
 
     // If this schedule should be default, unset any existing default first
     if (input.is_default) {
-      await trx('business_hours_schedules')
-        .where({ tenant, is_default: true })
+      await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+        .where('is_default', true)
         .update({ is_default: false, updated_at: trx.fn.now() });
     }
 
     // Create the schedule
-    const [schedule] = await trx('business_hours_schedules')
+    const [schedule] = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
       .insert({
         tenant,
         schedule_id: scheduleId,
@@ -132,7 +135,7 @@ export const createBusinessHoursSchedule = withAuth(async (
         is_enabled: entry.is_enabled
       }));
 
-      createdEntries = await trx('business_hours_entries')
+      createdEntries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
         .insert(entryRecords)
         .returning('*');
     }
@@ -159,8 +162,8 @@ export const updateBusinessHoursSchedule = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // If this schedule should be default, unset any existing default first
     if (input.is_default) {
-      await trx('business_hours_schedules')
-        .where({ tenant, is_default: true })
+      await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+        .where('is_default', true)
         .whereNot({ schedule_id: scheduleId })
         .update({ is_default: false, updated_at: trx.fn.now() });
     }
@@ -174,8 +177,8 @@ export const updateBusinessHoursSchedule = withAuth(async (
     if (input.is_default !== undefined) updateData.is_default = input.is_default;
     if (input.is_24x7 !== undefined) updateData.is_24x7 = input.is_24x7;
 
-    const [schedule] = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    const [schedule] = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .update(updateData)
       .returning('*');
 
@@ -195,8 +198,8 @@ export const deleteBusinessHoursSchedule = withAuth(async (_user, { tenant }, sc
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if schedule is in use by SLA policies
-    const slaPoliciesCount = await trx('sla_policies')
-      .where({ tenant, business_hours_schedule_id: scheduleId })
+    const slaPoliciesCount = await tenantScopedTable(trx, 'sla_policies', tenant)
+      .where('business_hours_schedule_id', scheduleId)
       .count('* as count')
       .first();
 
@@ -205,18 +208,18 @@ export const deleteBusinessHoursSchedule = withAuth(async (_user, { tenant }, sc
     }
 
     // Delete associated holidays
-    await trx('holidays')
-      .where({ tenant, schedule_id: scheduleId })
+    await tenantScopedTable(trx, 'holidays', tenant)
+      .where('schedule_id', scheduleId)
       .delete();
 
     // Delete associated entries
-    await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId })
+    await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('schedule_id', scheduleId)
       .delete();
 
     // Delete the schedule
-    const deletedCount = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    const deletedCount = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .delete();
 
     if (deletedCount === 0) {
@@ -233,8 +236,8 @@ export const setDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Verify schedule exists
-    const schedule = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .first();
 
     if (!schedule) {
@@ -242,13 +245,13 @@ export const setDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }
     }
 
     // Unset any existing default
-    await trx('business_hours_schedules')
-      .where({ tenant, is_default: true })
+    await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('is_default', true)
       .update({ is_default: false, updated_at: trx.fn.now() });
 
     // Set new default
-    await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .update({ is_default: true, updated_at: trx.fn.now() });
   });
 });
@@ -264,8 +267,8 @@ export const getBusinessHoursEntries = withAuth(async (_user, { tenant }, schedu
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const entries = await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId })
+    const entries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('schedule_id', scheduleId)
       .orderBy('day_of_week', 'asc');
 
     return entries;
@@ -286,8 +289,8 @@ export const upsertBusinessHoursEntries = withAuth(async (
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Verify schedule exists
-    const schedule = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .first();
 
     if (!schedule) {
@@ -296,8 +299,8 @@ export const upsertBusinessHoursEntries = withAuth(async (
 
     // Delete existing entries for the days we're updating
     const daysToUpdate = entries.map(e => e.day_of_week);
-    await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId })
+    await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('schedule_id', scheduleId)
       .whereIn('day_of_week', daysToUpdate)
       .delete();
 
@@ -312,13 +315,13 @@ export const upsertBusinessHoursEntries = withAuth(async (
       is_enabled: entry.is_enabled
     }));
 
-    const createdEntries = await trx('business_hours_entries')
+    const createdEntries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
       .insert(entryRecords)
       .returning('*');
 
     // Update schedule's updated_at
-    await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .update({ updated_at: trx.fn.now() });
 
     return createdEntries;
@@ -332,21 +335,21 @@ export const deleteBusinessHoursEntry = withAuth(async (_user, { tenant }, entry
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const entry = await trx('business_hours_entries')
-      .where({ tenant, entry_id: entryId })
+    const entry = await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('entry_id', entryId)
       .first();
 
     if (!entry) {
       throw new Error('Business hours entry not found');
     }
 
-    await trx('business_hours_entries')
-      .where({ tenant, entry_id: entryId })
+    await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('entry_id', entryId)
       .delete();
 
     // Update schedule's updated_at
-    await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: entry.schedule_id })
+    await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', entry.schedule_id)
       .update({ updated_at: trx.fn.now() });
   });
 });
@@ -362,7 +365,7 @@ export const getHolidays = withAuth(async (_user, { tenant }, scheduleId?: strin
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = trx('holidays').where({ tenant });
+    let query = tenantScopedTable(trx, 'holidays', tenant);
 
     if (scheduleId) {
       query = query.where({ schedule_id: scheduleId });
@@ -383,8 +386,8 @@ export const createHoliday = withAuth(async (_user, { tenant }, input: IHolidayI
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // If schedule_id provided, verify it exists
     if (input.schedule_id) {
-      const schedule = await trx('business_hours_schedules')
-        .where({ tenant, schedule_id: input.schedule_id })
+      const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+        .where('schedule_id', input.schedule_id)
         .first();
 
       if (!schedule) {
@@ -392,7 +395,7 @@ export const createHoliday = withAuth(async (_user, { tenant }, input: IHolidayI
       }
     }
 
-    const [holiday] = await trx('holidays')
+    const [holiday] = await tenantScopedTable(trx, 'holidays', tenant)
       .insert({
         tenant,
         holiday_id: uuidv4(),
@@ -422,8 +425,8 @@ export const updateHoliday = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // If schedule_id is being updated, verify it exists
     if (input.schedule_id) {
-      const schedule = await trx('business_hours_schedules')
-        .where({ tenant, schedule_id: input.schedule_id })
+      const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+        .where('schedule_id', input.schedule_id)
         .first();
 
       if (!schedule) {
@@ -438,8 +441,8 @@ export const updateHoliday = withAuth(async (
     if (input.is_recurring !== undefined) updateData.is_recurring = input.is_recurring;
     if (input.schedule_id !== undefined) updateData.schedule_id = input.schedule_id;
 
-    const [holiday] = await trx('holidays')
-      .where({ tenant, holiday_id: holidayId })
+    const [holiday] = await tenantScopedTable(trx, 'holidays', tenant)
+      .where('holiday_id', holidayId)
       .update(updateData)
       .returning('*');
 
@@ -458,8 +461,8 @@ export const deleteHoliday = withAuth(async (_user, { tenant }, holidayId: strin
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const deletedCount = await trx('holidays')
-      .where({ tenant, holiday_id: holidayId })
+    const deletedCount = await tenantScopedTable(trx, 'holidays', tenant)
+      .where('holiday_id', holidayId)
       .delete();
 
     if (deletedCount === 0) {
@@ -476,12 +479,17 @@ export const bulkCreateHolidays = withAuth(async (_user, { tenant }, holidays: I
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Verify all schedule_ids exist
-    const scheduleIds = [...new Set(holidays.filter(h => h.schedule_id).map(h => h.schedule_id))];
+    const scheduleIds = [
+      ...new Set(
+        holidays
+          .map((holiday) => holiday.schedule_id)
+          .filter((scheduleId): scheduleId is string => Boolean(scheduleId))
+      ),
+    ];
     if (scheduleIds.length > 0) {
-      const existingSchedules = await trx('business_hours_schedules')
-        .where({ tenant })
+      const existingSchedules = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
         .whereIn('schedule_id', scheduleIds as string[])
-        .select('schedule_id');
+        .select('schedule_id') as Array<{ schedule_id: string }>;
 
       const existingIds = new Set(existingSchedules.map(s => s.schedule_id));
       const missingIds = scheduleIds.filter(id => !existingIds.has(id));
@@ -501,7 +509,7 @@ export const bulkCreateHolidays = withAuth(async (_user, { tenant }, holidays: I
       created_at: trx.fn.now()
     }));
 
-    const createdHolidays = await trx('holidays')
+    const createdHolidays = await tenantScopedTable(trx, 'holidays', tenant)
       .insert(holidayRecords)
       .returning('*');
 
@@ -534,8 +542,7 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
     const scheduleId = uuidv4();
 
     // Resolve tenant timezone (falls back to browser timezone, then UTC)
-    const settingsRow = await trx('tenant_settings')
-      .where({ tenant })
+    const settingsRow = await tenantScopedTable(trx, 'tenant_settings', tenant)
       .select('settings')
       .first();
     const rawTz = settingsRow?.settings?.timezone;
@@ -543,12 +550,12 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
     const timezone = normalizeIanaTimeZone(tenantTz || browserTimezone || null);
 
     // Unset any existing default
-    await trx('business_hours_schedules')
-      .where({ tenant, is_default: true })
+    await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('is_default', true)
       .update({ is_default: false, updated_at: trx.fn.now() });
 
     // Create the schedule
-    const [schedule] = await trx('business_hours_schedules')
+    const [schedule] = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
       .insert({
         tenant,
         schedule_id: scheduleId,
@@ -572,7 +579,7 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
       is_enabled: entry.is_enabled
     }));
 
-    const createdEntries = await trx('business_hours_entries')
+    const createdEntries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
       .insert(entryRecords)
       .returning('*');
 
@@ -591,20 +598,19 @@ export const isWithinBusinessHours = withAuth(async (_user, { tenant }, schedule
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const schedule = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .first();
 
     if (!schedule) {
       throw new Error('Business hours schedule not found');
     }
 
-    const entries = await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId })
+    const entries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('schedule_id', scheduleId)
       .orderBy('day_of_week', 'asc');
 
-    const holidays = await trx('holidays')
-      .where({ tenant })
+    const holidays = await tenantScopedTable(trx, 'holidays', tenant)
       .where(function() {
         this.where({ schedule_id: scheduleId }).orWhereNull('schedule_id');
       });
@@ -626,20 +632,19 @@ export const getNextBusinessHourStart = withAuth(async (_user, { tenant }, sched
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const schedule = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: scheduleId })
+    const schedule = await tenantScopedTable(trx, 'business_hours_schedules', tenant)
+      .where('schedule_id', scheduleId)
       .first();
 
     if (!schedule) {
       throw new Error('Business hours schedule not found');
     }
 
-    const entries = await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId })
+    const entries = await tenantScopedTable(trx, 'business_hours_entries', tenant)
+      .where('schedule_id', scheduleId)
       .orderBy('day_of_week', 'asc');
 
-    const holidays = await trx('holidays')
-      .where({ tenant })
+    const holidays = await tenantScopedTable(trx, 'holidays', tenant)
       .where(function() {
         this.where({ schedule_id: scheduleId }).orWhereNull('schedule_id');
       });
@@ -660,8 +665,9 @@ export const getNextBusinessHourStart = withAuth(async (_user, { tenant }, sched
 export const getTenantTimezoneForSla = withAuth(async (_user, { tenant }): Promise<string> => {
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
-    const settingsRow = await trx('tenant_settings')
-      .where({ tenant }).select('settings').first();
+    const settingsRow = await tenantScopedTable(trx, 'tenant_settings', tenant)
+      .select('settings')
+      .first();
     const rawTz = settingsRow?.settings?.timezone;
     return normalizeIanaTimeZone(typeof rawTz === 'string' ? rawTz : null);
   });

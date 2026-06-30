@@ -1,5 +1,7 @@
+const { getTenantDb } = require('./_tenant.cjs');
+
 exports.seed = async function(knex) {
-    // Get all tenants
+    // This seed provisions every tenant; only tenant-owned permission work uses the facade.
     const tenants = await knex('tenants').select('tenant');
     if (!tenants.length) return;
 
@@ -258,9 +260,11 @@ exports.seed = async function(knex) {
     ];
 
     // Process each tenant
-    for (const { tenant } of tenants) {
+    for (const { tenant: tenantId } of tenants) {
+        const db = await getTenantDb(knex, tenantId);
+
         // Check which permissions already exist
-        const existingPermissions = await knex('permissions').where({ tenant });
+        const existingPermissions = await db.table('permissions');
         const existingPermMap = new Map();
         existingPermissions.forEach(p => {
             const key = `${p.resource}:${p.action}`;
@@ -277,7 +281,7 @@ exports.seed = async function(knex) {
 
             if (!existing) {
                 permissionsToInsert.push({
-                    tenant,
+                    tenant: tenantId,
                     resource: perm.resource,
                     action: perm.action,
                     msp: perm.msp,
@@ -308,14 +312,14 @@ exports.seed = async function(knex) {
         }
 
         if (permissionsToInsert.length > 0) {
-            await knex('permissions').insert(permissionsToInsert);
-            console.log(`Inserted ${permissionsToInsert.length} new permissions for tenant ${tenant}`);
+            await db.table('permissions').insert(permissionsToInsert);
+            console.log(`Inserted ${permissionsToInsert.length} new permissions for tenant ${tenantId}`);
         } else {
-            console.log(`All permissions already exist for tenant ${tenant}`);
+            console.log(`All permissions already exist for tenant ${tenantId}`);
         }
 
         for (const update of permissionsToUpdate) {
-            await knex('permissions')
+            await db.table('permissions')
                 .where({ permission_id: update.permission_id })
                 .update({
                     msp: update.msp,

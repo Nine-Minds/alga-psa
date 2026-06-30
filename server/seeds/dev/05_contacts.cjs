@@ -1,20 +1,22 @@
 const { randomUUID } = require('crypto');
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
 exports.seed = async function seed(knex) {
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
 
     const dorothyContactId = randomUUID();
     const aliceContactId = randomUUID();
 
-    await knex('contacts').insert([
+    await db.table('contacts').insert([
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contact_name_id: dorothyContactId,
             full_name: 'Dorothy Gale',
-            client_id: knex('clients')
+            client_id: db.table('clients')
                 .where({
-                    tenant: tenant.tenant,
                     client_name: 'Emerald City'
                 })
                 .select('client_id')
@@ -25,12 +27,11 @@ exports.seed = async function seed(knex) {
             updated_at: knex.fn.now()
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contact_name_id: aliceContactId,
             full_name: 'Alice in Wonderland',
-            client_id: knex('clients')
+            client_id: db.table('clients')
                 .where({
-                    tenant: tenant.tenant,
                     client_name: 'Wonderland'
                 })
                 .select('client_id')
@@ -42,9 +43,9 @@ exports.seed = async function seed(knex) {
         }
     ]);
 
-    await knex('contact_additional_email_addresses').insert([
+    await db.table('contact_additional_email_addresses').insert([
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contact_additional_email_address_id: randomUUID(),
             contact_name_id: dorothyContactId,
             email_address: 'dorothy.billing@oz.com',
@@ -55,9 +56,9 @@ exports.seed = async function seed(knex) {
         }
     ]);
 
-    await knex('contact_phone_numbers').insert([
+    await db.table('contact_phone_numbers').insert([
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contact_name_id: dorothyContactId,
             contact_phone_number_id: randomUUID(),
             phone_number: '+1-555-987-6543',
@@ -68,7 +69,7 @@ exports.seed = async function seed(knex) {
             updated_at: knex.fn.now()
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contact_name_id: aliceContactId,
             contact_phone_number_id: randomUUID(),
             phone_number: '+1-555-246-8135',

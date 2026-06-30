@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { ITransaction, TransactionType } from 'server/src/interfaces/billing.interfaces';
 
 export async function recordTransaction(
@@ -15,7 +16,7 @@ export async function recordTransaction(
   },
   tenant: string
 ): Promise<ITransaction> {
-  const [transaction] = await trx('transactions').insert({
+  const [transaction] = await tenantDb(trx, tenant).table('transactions').insert({
     transaction_id: uuidv4(),
     client_id: data.clientId,
     invoice_id: data.invoiceId,

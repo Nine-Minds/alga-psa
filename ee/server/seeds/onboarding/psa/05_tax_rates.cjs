@@ -1,6 +1,8 @@
 const { v4: uuidv4 } = require('uuid');
 
 exports.seed = async function (knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     // Use provided tenantId or fall back to first tenant
     if (!tenantId) {
         const tenant = await knex('tenants').select('tenant').first();
@@ -11,10 +13,11 @@ exports.seed = async function (knex, tenantId) {
         tenantId = tenant.tenant;
     }
 
+    const db = tenantDb(knex, tenantId);
+
     // Check if non-taxable rate already exists
-    const existingRate = await knex('tax_rates')
+    const existingRate = await db.table('tax_rates')
         .where({ 
-            tenant: tenantId, 
             description: 'Non-taxable',
             tax_percentage: 0 
         })
@@ -22,7 +25,7 @@ exports.seed = async function (knex, tenantId) {
 
     if (!existingRate) {
         const taxRateId = uuidv4();
-        await knex('tax_rates').insert({
+        await db.table('tax_rates').insert({
             tax_rate_id: taxRateId,
             tenant: tenantId,
             tax_percentage: 0,

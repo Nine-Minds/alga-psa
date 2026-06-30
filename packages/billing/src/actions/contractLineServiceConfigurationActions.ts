@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import {
   IContractLineServiceConfiguration,
@@ -18,14 +18,14 @@ async function assertContractLineIsAuthorableByLineId(
   tenant: string,
   contractLineId: string,
 ): Promise<void> {
-  const row = await knex('contract_lines as cl')
-    .join('contracts as c', function joinContracts(this: any) {
-      this.on('cl.contract_id', '=', 'c.contract_id')
-        .andOn('cl.tenant', '=', 'c.tenant');
-    })
-    .where('cl.tenant', tenant)
-    .andWhere('cl.contract_line_id', contractLineId)
-    .first('c.is_system_managed_default');
+  const db = tenantDb(knex, tenant);
+  const query = db.table('contract_lines as cl');
+  db.tenantJoin(query, 'contracts as c', 'cl.contract_id', 'c.contract_id');
+
+  const row = await query
+    .where('cl.contract_line_id', contractLineId)
+    .select({ is_system_managed_default: 'c.is_system_managed_default' })
+    .first();
 
   if (row?.is_system_managed_default === true) {
     throw new Error('System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.');
@@ -37,18 +37,15 @@ async function assertContractLineIsAuthorableByConfigId(
   tenant: string,
   configId: string,
 ): Promise<void> {
-  const row = await knex('contract_line_service_configuration as cfg')
-    .join('contract_lines as cl', function joinLines(this: any) {
-      this.on('cfg.contract_line_id', '=', 'cl.contract_line_id')
-        .andOn('cfg.tenant', '=', 'cl.tenant');
-    })
-    .join('contracts as c', function joinContracts(this: any) {
-      this.on('cl.contract_id', '=', 'c.contract_id')
-        .andOn('cl.tenant', '=', 'c.tenant');
-    })
-    .where('cfg.tenant', tenant)
-    .andWhere('cfg.config_id', configId)
-    .first('c.is_system_managed_default');
+  const db = tenantDb(knex, tenant);
+  const query = db.table('contract_line_service_configuration as cfg');
+  db.tenantJoin(query, 'contract_lines as cl', 'cfg.contract_line_id', 'cl.contract_line_id');
+  db.tenantJoin(query, 'contracts as c', 'cl.contract_id', 'c.contract_id');
+
+  const row = await query
+    .where('cfg.config_id', configId)
+    .select({ is_system_managed_default: 'c.is_system_managed_default' })
+    .first();
 
   if (row?.is_system_managed_default === true) {
     throw new Error('System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.');

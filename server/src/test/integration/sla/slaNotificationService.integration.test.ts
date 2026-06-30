@@ -11,6 +11,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTenant, createUser, createClient } from '../../../../test-utils/testDataFactory';
@@ -88,6 +89,9 @@ vi.mock('@alga-psa/notifications/notifications/email', () => ({
 let startSlaForTicket: typeof import('@alga-psa/sla/services').startSlaForTicket;
 let sendSlaNotification: typeof import('@alga-psa/sla/services').sendSlaNotification;
 let checkAndSendThresholdNotifications: typeof import('@alga-psa/sla/services').checkAndSendThresholdNotifications;
+
+const tenantTable = (dbOrTrx: Knex | Knex.Transaction, tenant: string, tableName: string) =>
+  tenantDb(dbOrTrx, tenant).table(tableName);
 
 describe('SLA Notification Service Integration Tests', () => {
   let db: Knex;
@@ -181,8 +185,8 @@ describe('SLA Notification Service Integration Tests', () => {
   beforeEach(async () => {
     // Clean up before each test
     createdNotifications.length = 0;
-    await db('sla_audit_log').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable(db, tenantId, 'sla_audit_log').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
   });
 
   // ==========================================================================
@@ -238,7 +242,7 @@ describe('SLA Notification Service Integration Tests', () => {
       expect(createdNotifications.some(n => n.user_id === boardManagerId)).toBe(true);
 
       // Verify audit log
-      const auditLog = await db('sla_audit_log')
+      const auditLog = await tenantTable(db, tenantId, 'sla_audit_log')
         .where({ tenant: tenantId, ticket_id: ticketId, event_type: 'notification_sent' })
         .first();
       expect(auditLog).toBeDefined();
@@ -451,7 +455,7 @@ describe('SLA Notification Service Integration Tests', () => {
       });
 
       // Update ticket to have response_due_at and proper SLA fields
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
 
       await db.transaction(async (trx) => {
         // Check at 60% elapsed (past 50% threshold, not yet at 75%)
@@ -610,7 +614,7 @@ describe('SLA Notification Service Integration Tests', () => {
 
 async function createContact(db: Knex, tenant: string, clientId: string, email: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenant, 'contacts').insert({
     tenant,
     contact_name_id: contactId,
     full_name: 'Notification Test Contact',
@@ -624,7 +628,7 @@ async function createContact(db: Knex, tenant: string, clientId: string, email: 
 
 async function createBoard(db: Knex, tenant: string, name: string, managerUserId: string): Promise<string> {
   const boardId = uuidv4();
-  await db('boards').insert({
+  await tenantTable(db, tenant, 'boards').insert({
     tenant,
     board_id: boardId,
     name,
@@ -638,7 +642,7 @@ async function createBoard(db: Knex, tenant: string, name: string, managerUserId
 
 async function createStatus(db: Knex, tenant: string, name: string, isClosed: boolean): Promise<string> {
   const statusId = uuidv4();
-  await db('statuses').insert({
+  await tenantTable(db, tenant, 'statuses').insert({
     tenant,
     status_id: statusId,
     name,
@@ -651,7 +655,7 @@ async function createStatus(db: Knex, tenant: string, name: string, isClosed: bo
 
 async function createPriority(db: Knex, tenant: string, name: string, orderNumber: number, createdBy: string): Promise<string> {
   const priorityId = uuidv4();
-  await db('priorities').insert({
+  await tenantTable(db, tenant, 'priorities').insert({
     tenant,
     priority_id: priorityId,
     priority_name: name,
@@ -665,7 +669,7 @@ async function createPriority(db: Knex, tenant: string, name: string, orderNumbe
 
 async function createBusinessHoursSchedule(db: Knex, tenant: string, name: string): Promise<string> {
   const scheduleId = uuidv4();
-  await db('business_hours_schedules').insert({
+  await tenantTable(db, tenant, 'business_hours_schedules').insert({
     tenant,
     schedule_id: scheduleId,
     schedule_name: name,
@@ -687,7 +691,7 @@ async function createSlaPolicy(
   escalationManagerId?: string
 ): Promise<string> {
   const policyId = uuidv4();
-  await db('sla_policies').insert({
+  await tenantTable(db, tenant, 'sla_policies').insert({
     tenant,
     sla_policy_id: policyId,
     policy_name: name,
@@ -710,7 +714,7 @@ async function createSlaPolicyTarget(
   resolutionTimeMinutes: number
 ): Promise<string> {
   const targetId = uuidv4();
-  await db('sla_policy_targets').insert({
+  await tenantTable(db, tenant, 'sla_policy_targets').insert({
     tenant,
     target_id: targetId,
     sla_policy_id: slaPolicyId,
@@ -738,7 +742,7 @@ async function createNotificationThreshold(
   notifyEscalationManager: boolean
 ): Promise<string> {
   const thresholdId = uuidv4();
-  await db('sla_notification_thresholds').insert({
+  await tenantTable(db, tenant, 'sla_notification_thresholds').insert({
     tenant,
     threshold_id: thresholdId,
     sla_policy_id: slaPolicyId,
@@ -765,7 +769,7 @@ async function insertTicket(db: Knex, params: {
   boardId: string;
   assignedTo: string | null;
 }): Promise<void> {
-  await db('tickets').insert({
+  await tenantTable(db, params.tenant, 'tickets').insert({
     tenant: params.tenant,
     ticket_id: params.ticketId,
     ticket_number: params.ticketNumber,

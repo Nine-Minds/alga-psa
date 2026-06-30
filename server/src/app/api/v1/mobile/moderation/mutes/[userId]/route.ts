@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
 import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 
 /**
@@ -27,8 +28,8 @@ export async function DELETE(
     }
 
     const knex = await getConnection(null);
-    await knex('user_content_mutes')
-      .where({ tenant, user_id: userId, muted_user_id: mutedUserId })
+    await tenantDb(knex, tenant).table('user_content_mutes')
+      .where({ user_id: userId, muted_user_id: mutedUserId })
       .del();
 
     return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);

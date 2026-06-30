@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate, toPlainDate } from '@alga-psa/core';
@@ -50,6 +51,11 @@ type ContractLineCandidate = {
   bucket_overlay?: {
     config_id: string;
   } | null;
+};
+
+type DefaultContractLineRow = {
+  client_contract_line_id: string;
+  bucket_config_id?: string | null;
 };
 
 type BucketUsagePeriod = {
@@ -195,6 +201,26 @@ function hasOwnProperty(obj: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function tenantJoin(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  query: Knex.QueryBuilder,
+  table: string,
+  left: string,
+  right: string,
+  options?: Parameters<ReturnType<typeof tenantDb>['tenantJoin']>[4]
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).tenantJoin(query, table, left, right, options);
+}
+
 function ensureValidDate(value: string, field: string): Date {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -225,13 +251,11 @@ async function isManagerOfSubject(
   actorUserId: string,
   subjectUserId: string
 ): Promise<boolean> {
-  const teamManagerRow = await trx('teams')
-    .join('team_members', function joinTeamMembers() {
-      this.on('teams.team_id', '=', 'team_members.team_id')
-        .andOn('teams.tenant', '=', 'team_members.tenant');
-    })
+  const teamManagerQuery = tenantScopedTable(trx, 'teams', tenantId);
+  tenantJoin(trx, tenantId, teamManagerQuery, 'team_members', 'teams.team_id', 'team_members.team_id');
+
+  const teamManagerRow = await teamManagerQuery
     .where({
-      'teams.tenant': tenantId,
       'teams.manager_id': actorUserId,
       'team_members.user_id': subjectUserId,
     })
@@ -241,8 +265,8 @@ async function isManagerOfSubject(
     return true;
   }
 
-  const reportsToRow = await trx('users')
-    .where({ tenant: tenantId, user_id: subjectUserId, reports_to: actorUserId })
+  const reportsToRow = await tenantScopedTable(trx, 'users', tenantId)
+    .where({ user_id: subjectUserId, reports_to: actorUserId })
     .first('user_id');
 
   return Boolean(reportsToRow);
@@ -254,27 +278,27 @@ async function hasAssignedNotSelfApproverBundleRuleForWorkflowTime(
   actorUserId: string
 ): Promise<boolean> {
   const [roleRows, teamRows] = await Promise.all([
-    trx('user_roles')
-      .where({ tenant: tenantId, user_id: actorUserId })
+    tenantScopedTable(trx, 'user_roles', tenantId)
+      .where({ user_id: actorUserId })
       .select<Array<{ role_id: string }>>('role_id'),
-    trx('team_members')
-      .where({ tenant: tenantId, user_id: actorUserId })
+    tenantScopedTable(trx, 'team_members', tenantId)
+      .where({ user_id: actorUserId })
       .select<Array<{ team_id: string }>>('team_id'),
   ]);
 
   const roleIds = roleRows.map((row) => row.role_id).filter(Boolean);
   const teamIds = teamRows.map((row) => row.team_id).filter(Boolean);
 
-  const rule = await trx('authorization_bundle_assignments as a')
-    .join('authorization_bundles as b', function joinBundles() {
-      this.on('b.tenant', '=', 'a.tenant').andOn('b.bundle_id', '=', 'a.bundle_id');
-    })
-    .join('authorization_bundle_rules as r', function joinRules() {
-      this.on('r.tenant', '=', 'b.tenant')
-        .andOn('r.bundle_id', '=', 'b.bundle_id')
-        .andOn('r.revision_id', '=', 'b.published_revision_id');
-    })
-    .where('a.tenant', tenantId)
+  const ruleQuery = tenantScopedTable(trx, 'authorization_bundle_assignments as a', tenantId);
+  tenantJoin(trx, tenantId, ruleQuery, 'authorization_bundles as b', 'b.bundle_id', 'a.bundle_id');
+  tenantJoin(trx, tenantId, ruleQuery, 'authorization_bundle_rules as r', 'r.bundle_id', 'b.bundle_id', {
+    rootTenantColumn: 'b.tenant',
+    on: (join) => {
+      join.andOn('r.revision_id', '=', 'b.published_revision_id');
+    },
+  });
+
+  const rule = await ruleQuery
     .andWhere('a.status', 'active')
     .andWhere('b.status', 'active')
     .whereNotNull('b.published_revision_id')
@@ -379,8 +403,7 @@ async function scopeFindEntriesInputForActor<T extends WorkflowTimeFindEntriesIn
 
   const entryIds = (input as { entry_ids?: string[] }).entry_ids;
   if (entryIds?.length) {
-    const rows = await trx('time_entries')
-      .where({ tenant: tenantId })
+    const rows = await tenantScopedTable(trx, 'time_entries', tenantId)
       .whereIn('entry_id', entryIds)
       .distinct<{ user_id: string }[]>('user_id');
     for (const row of rows) {
@@ -390,8 +413,8 @@ async function scopeFindEntriesInputForActor<T extends WorkflowTimeFindEntriesIn
   }
 
   if (input.time_sheet_id) {
-    const sheet = await trx('time_sheets')
-      .where({ tenant: tenantId, id: input.time_sheet_id })
+    const sheet = await tenantScopedTable(trx, 'time_sheets', tenantId)
+      .where({ id: input.time_sheet_id })
       .first<{ user_id: string }>('user_id');
     if (sheet?.user_id) {
       await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(sheet.user_id));
@@ -434,8 +457,8 @@ async function getWorkItemClientContext(
 
   switch (link.type) {
     case 'ticket': {
-      const ticket = await trx('tickets')
-        .where({ tenant: tenantId, ticket_id: link.id })
+      const ticket = await tenantScopedTable(trx, 'tickets', tenantId)
+        .where({ ticket_id: link.id })
         .select('ticket_id', 'client_id', 'assigned_to')
         .first();
 
@@ -454,14 +477,12 @@ async function getWorkItemClientContext(
       };
     }
     case 'project_task': {
-      const task = await trx('project_tasks as pt')
-        .join('project_phases as pp', function joinPhases() {
-          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-        })
-        .join('projects as p', function joinProjects() {
-          this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-        })
-        .where({ 'pt.tenant': tenantId, 'pt.task_id': link.id })
+      const taskQuery = tenantScopedTable(trx, 'project_tasks as pt', tenantId);
+      tenantJoin(trx, tenantId, taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      tenantJoin(trx, tenantId, taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+
+      const task = await taskQuery
+        .where({ 'pt.task_id': link.id })
         .select('pt.task_id', 'pt.assigned_to', 'p.client_id')
         .first();
 
@@ -480,8 +501,8 @@ async function getWorkItemClientContext(
       };
     }
     case 'project': {
-      const project = await trx('projects')
-        .where({ tenant: tenantId, project_id: link.id })
+      const project = await tenantScopedTable(trx, 'projects', tenantId)
+        .where({ project_id: link.id })
         .select('project_id', 'client_id')
         .first();
 
@@ -497,8 +518,8 @@ async function getWorkItemClientContext(
       return { clientId: (project.client_id as string | null) ?? null };
     }
     case 'interaction': {
-      const interaction = await trx('interactions')
-        .where({ tenant: tenantId, interaction_id: link.id })
+      const interaction = await tenantScopedTable(trx, 'interactions', tenantId)
+        .where({ interaction_id: link.id })
         .select('interaction_id', 'client_id')
         .first();
 
@@ -514,8 +535,8 @@ async function getWorkItemClientContext(
       return { clientId: (interaction.client_id as string | null) ?? null };
     }
     case 'ad_hoc': {
-      const adHoc = await trx('schedule_entries')
-        .where({ tenant: tenantId, entry_id: link.id })
+      const adHoc = await tenantScopedTable(trx, 'schedule_entries', tenantId)
+        .where({ entry_id: link.id })
         .select('entry_id')
         .first();
 
@@ -573,29 +594,23 @@ async function determineDefaultContractLineForWorkflow(params: {
   const rangeStart = `${effectiveDate}T00:00:00.000Z`;
   const rangeEnd = `${effectiveDate}T23:59:59.999Z`;
 
-  const rows = await trx('client_contracts')
-    .join('contracts', function joinContracts() {
-      this.on('client_contracts.contract_id', '=', 'contracts.contract_id')
-        .andOn('contracts.tenant', '=', 'client_contracts.tenant');
-    })
-    .join('contract_lines', function joinContractLines() {
-      this.on('contracts.contract_id', '=', 'contract_lines.contract_id')
-        .andOn('contract_lines.tenant', '=', 'contracts.tenant');
-    })
-    .join('contract_line_services', function joinContractLineServices() {
-      this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id')
-        .andOn('contract_line_services.tenant', '=', 'contract_lines.tenant');
-    })
-    .leftJoin('contract_line_service_configuration as bucket_config', function joinBucketConfig() {
-      this.on('bucket_config.contract_line_id', '=', 'contract_lines.contract_line_id')
-        .andOn('bucket_config.tenant', '=', 'contract_lines.tenant')
+  const contractQuery = tenantScopedTable(trx, 'client_contracts', tenantId);
+  tenantJoin(trx, tenantId, contractQuery, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
+  tenantJoin(trx, tenantId, contractQuery, 'contract_lines', 'contracts.contract_id', 'contract_lines.contract_id');
+  tenantJoin(trx, tenantId, contractQuery, 'contract_line_services', 'contract_lines.contract_line_id', 'contract_line_services.contract_line_id');
+  tenantJoin(trx, tenantId, contractQuery, 'contract_line_service_configuration as bucket_config', 'bucket_config.contract_line_id', 'contract_lines.contract_line_id', {
+    type: 'left',
+    on: (join) => {
+      join
         .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
         .andOnVal('bucket_config.configuration_type', 'Bucket');
-    })
+    },
+  });
+
+  const rows = await contractQuery
     .where({
       'client_contracts.client_id': clientId,
       'client_contracts.is_active': true,
-      'client_contracts.tenant': tenantId,
       'contract_line_services.service_id': serviceId,
     })
     .where(function withinRange(this: Knex.QueryBuilder) {
@@ -610,7 +625,7 @@ async function determineDefaultContractLineForWorkflow(params: {
     .select(
       'contract_lines.contract_line_id as client_contract_line_id',
       'bucket_config.config_id as bucket_config_id'
-    );
+    ) as DefaultContractLineRow[];
 
   const candidates: ContractLineCandidate[] = rows.map((row) => ({
     client_contract_line_id: String(row.client_contract_line_id),
@@ -672,9 +687,8 @@ async function resolveBucketUsagePeriod(params: {
   const targetDate = toPlainDate(startTimeIso);
   const targetDateIso = toISODate(targetDate);
 
-  const matchingBillingCycle = await trx('client_billing_cycles')
+  const matchingBillingCycle = await tenantScopedTable(trx, 'client_billing_cycles', tenantId)
     .where({
-      tenant: tenantId,
       client_id: clientId,
     })
     .whereNotNull('period_start_date')
@@ -691,12 +705,11 @@ async function resolveBucketUsagePeriod(params: {
     };
   }
 
-  const contractAssignment = await trx('client_contract_lines as ccl')
-    .join('contract_lines as cl', function joinContractLines() {
-      this.on('ccl.contract_line_id', '=', 'cl.contract_line_id').andOn('ccl.tenant', '=', 'cl.tenant');
-    })
+  const contractAssignmentQuery = tenantScopedTable(trx, 'client_contract_lines as ccl', tenantId);
+  tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl', 'ccl.contract_line_id', 'cl.contract_line_id');
+
+  const contractAssignment = await contractAssignmentQuery
     .where({
-      'ccl.tenant': tenantId,
       'ccl.client_id': clientId,
       'ccl.contract_line_id': contractLineId,
       'ccl.is_active': true,
@@ -753,9 +766,8 @@ async function findOrCreateBucketUsageForEntry(params: {
     });
   }
 
-  const existing = await trx('bucket_usage')
+  const existing = await tenantScopedTable(trx, 'bucket_usage', tenantId)
     .where({
-      tenant: tenantId,
       client_id: clientId,
       contract_line_id: contractLineId,
       service_catalog_id: serviceId,
@@ -769,7 +781,7 @@ async function findOrCreateBucketUsageForEntry(params: {
     return existing.usage_id;
   }
 
-  const [inserted] = await trx('bucket_usage')
+  const [inserted] = await tenantScopedTable(trx, 'bucket_usage', tenantId)
     .insert({
       usage_id: uuidv4(),
       tenant: tenantId,
@@ -804,12 +816,11 @@ async function applyBucketUsageDeltaForEntry(params: {
     return;
   }
 
-  const overlayConfig = await trx('contract_line_service_configuration as cfg')
-    .join('contract_line_service_bucket_config as bucket_cfg', function joinBucketConfig() {
-      this.on('cfg.config_id', '=', 'bucket_cfg.config_id').andOn('cfg.tenant', '=', 'bucket_cfg.tenant');
-    })
+  const overlayConfigQuery = tenantScopedTable(trx, 'contract_line_service_configuration as cfg', tenantId);
+  tenantJoin(trx, tenantId, overlayConfigQuery, 'contract_line_service_bucket_config as bucket_cfg', 'cfg.config_id', 'bucket_cfg.config_id');
+
+  const overlayConfig = await overlayConfigQuery
     .where({
-      'cfg.tenant': tenantId,
       'cfg.contract_line_id': contractLineId,
       'cfg.service_id': serviceId,
       'cfg.configuration_type': 'Bucket',
@@ -830,8 +841,8 @@ async function applyBucketUsageDeltaForEntry(params: {
     startTimeIso,
   });
 
-  const usageRecord = await trx('bucket_usage')
-    .where({ tenant: tenantId, usage_id: usageId })
+  const usageRecord = await tenantScopedTable(trx, 'bucket_usage', tenantId)
+    .where({ usage_id: usageId })
     .select('minutes_used', 'rolled_over_minutes')
     .first<{ minutes_used: number; rolled_over_minutes: number }>();
 
@@ -848,8 +859,8 @@ async function applyBucketUsageDeltaForEntry(params: {
   const totalAvailableMinutes = Number(overlayConfig.total_minutes ?? 0) + Number(usageRecord.rolled_over_minutes ?? 0);
   const newOverageMinutes = Math.max(0, newMinutesUsed - totalAvailableMinutes);
 
-  await trx('bucket_usage')
-    .where({ tenant: tenantId, usage_id: usageId })
+  await tenantScopedTable(trx, 'bucket_usage', tenantId)
+    .where({ usage_id: usageId })
     .update({
       minutes_used: newMinutesUsed,
       overage_minutes: newOverageMinutes,
@@ -879,11 +890,11 @@ async function resolveOrCreateTimeSheet(params: {
   } = params;
 
   if (providedTimeSheetId) {
-    const timeSheet = await trx('time_sheets as ts')
-      .join('time_periods as tp', function joinTimePeriods() {
-        this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
-      })
-      .where({ 'ts.tenant': tenantId, 'ts.id': providedTimeSheetId })
+    const timeSheetQuery = tenantScopedTable(trx, 'time_sheets as ts', tenantId);
+    tenantJoin(trx, tenantId, timeSheetQuery, 'time_periods as tp', 'ts.period_id', 'tp.period_id');
+
+    const timeSheet = await timeSheetQuery
+      .where({ 'ts.id': providedTimeSheetId })
       .select('ts.id', 'ts.user_id', 'tp.start_date', 'tp.end_date')
       .first();
 
@@ -924,8 +935,8 @@ async function resolveOrCreateTimeSheet(params: {
     return null;
   }
 
-  const period = await trx('time_periods')
-    .where({ tenant: tenantId, is_closed: false })
+  const period = await tenantScopedTable(trx, 'time_periods', tenantId)
+    .where({ is_closed: false })
     .andWhere('start_date', '<=', workDate)
     .andWhere('end_date', '>', workDate)
     .orderBy('start_date', 'desc')
@@ -941,13 +952,13 @@ async function resolveOrCreateTimeSheet(params: {
     });
   }
 
-  let timeSheet = await trx('time_sheets')
-    .where({ tenant: tenantId, user_id: userId, period_id: period.period_id })
+  let timeSheet = await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ user_id: userId, period_id: period.period_id })
     .select('id')
     .first();
 
   if (!timeSheet?.id) {
-    const inserted = await trx('time_sheets')
+    const inserted = await tenantScopedTable(trx, 'time_sheets', tenantId)
       .insert({
         id: uuidv4(),
         tenant: tenantId,
@@ -972,8 +983,8 @@ async function applyTicketAssignmentSideEffects(params: {
 }): Promise<void> {
   const { trx, tenantId, actorUserId, ticketId, entryUserId } = params;
 
-  const existingResource = await trx('ticket_resources')
-    .where({ tenant: tenantId, ticket_id: ticketId })
+  const existingResource = await tenantScopedTable(trx, 'ticket_resources', tenantId)
+    .where({ ticket_id: ticketId })
     .where((query) => {
       query.where('assigned_to', entryUserId).orWhere('additional_user_id', entryUserId);
     })
@@ -983,8 +994,8 @@ async function applyTicketAssignmentSideEffects(params: {
     return;
   }
 
-  const ticket = await trx('tickets')
-    .where({ tenant: tenantId, ticket_id: ticketId })
+  const ticket = await tenantScopedTable(trx, 'tickets', tenantId)
+    .where({ ticket_id: ticketId })
     .select('assigned_to')
     .first();
 
@@ -993,7 +1004,7 @@ async function applyTicketAssignmentSideEffects(params: {
   }
 
   if (ticket.assigned_to && ticket.assigned_to !== entryUserId) {
-    await trx('ticket_resources').insert({
+    await tenantScopedTable(trx, 'ticket_resources', tenantId).insert({
       tenant: tenantId,
       ticket_id: ticketId,
       assigned_to: ticket.assigned_to,
@@ -1004,8 +1015,8 @@ async function applyTicketAssignmentSideEffects(params: {
   }
 
   if (!ticket.assigned_to) {
-    await trx('tickets')
-      .where({ tenant: tenantId, ticket_id: ticketId })
+    await tenantScopedTable(trx, 'tickets', tenantId)
+      .where({ ticket_id: ticketId })
       .update({
         assigned_to: entryUserId,
         updated_at: new Date().toISOString(),
@@ -1019,14 +1030,17 @@ async function recalculateProjectTaskActualMinutes(
   tenantId: string,
   taskId: string
 ): Promise<void> {
-  const rows = await trx('time_entries')
-    .where({ tenant: tenantId, work_item_type: 'project_task', work_item_id: taskId })
+  const rows = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ work_item_type: 'project_task', work_item_id: taskId })
     .select('billable_duration');
 
-  const totalMinutes = rows.reduce((acc, row) => acc + Number(row.billable_duration ?? 0), 0);
+  const totalMinutes = rows.reduce(
+    (acc: number, row: { billable_duration?: unknown }) => acc + Number(row.billable_duration ?? 0),
+    0
+  );
 
-  await trx('project_tasks')
-    .where({ tenant: tenantId, task_id: taskId })
+  await tenantScopedTable(trx, 'project_tasks', tenantId)
+    .where({ task_id: taskId })
     .update({
       actual_hours: totalMinutes,
       updated_at: new Date().toISOString(),
@@ -1041,8 +1055,8 @@ async function applyProjectTaskAssignmentSideEffects(params: {
 }): Promise<void> {
   const { trx, tenantId, taskId, entryUserId } = params;
 
-  const task = await trx('project_tasks')
-    .where({ tenant: tenantId, task_id: taskId })
+  const task = await tenantScopedTable(trx, 'project_tasks', tenantId)
+    .where({ task_id: taskId })
     .select('assigned_to')
     .first();
 
@@ -1050,8 +1064,8 @@ async function applyProjectTaskAssignmentSideEffects(params: {
     return;
   }
 
-  const existingResource = await trx('task_resources')
-    .where({ tenant: tenantId, task_id: taskId })
+  const existingResource = await tenantScopedTable(trx, 'task_resources', tenantId)
+    .where({ task_id: taskId })
     .where((query) => {
       query.where('assigned_to', entryUserId).orWhere('additional_user_id', entryUserId);
     })
@@ -1059,7 +1073,7 @@ async function applyProjectTaskAssignmentSideEffects(params: {
 
   if (task.assigned_to && task.assigned_to !== entryUserId) {
     if (!existingResource) {
-      await trx('task_resources').insert({
+      await tenantScopedTable(trx, 'task_resources', tenantId).insert({
         tenant: tenantId,
         task_id: taskId,
         assigned_to: task.assigned_to,
@@ -1071,8 +1085,8 @@ async function applyProjectTaskAssignmentSideEffects(params: {
   }
 
   if (!task.assigned_to) {
-    await trx('project_tasks')
-      .where({ tenant: tenantId, task_id: taskId })
+    await tenantScopedTable(trx, 'project_tasks', tenantId)
+      .where({ task_id: taskId })
       .update({
         assigned_to: entryUserId,
         updated_at: new Date().toISOString(),
@@ -1088,8 +1102,8 @@ export async function createWorkflowTimeEntry(params: {
 }): Promise<WorkflowTimeCreatedEntrySummary> {
   const { trx, tenantId, actorUserId, input } = params;
 
-  const user = await trx('users')
-    .where({ tenant: tenantId, user_id: input.user_id })
+  const user = await tenantScopedTable(trx, 'users', tenantId)
+    .where({ user_id: input.user_id })
     .select('user_id')
     .first();
 
@@ -1104,8 +1118,8 @@ export async function createWorkflowTimeEntry(params: {
 
   await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, input.user_id);
 
-  const service = await trx('service_catalog')
-    .where({ tenant: tenantId, service_id: input.service_id })
+  const service = await tenantScopedTable(trx, 'service_catalog', tenantId)
+    .where({ service_id: input.service_id })
     .select('service_id')
     .first();
 
@@ -1191,7 +1205,7 @@ export async function createWorkflowTimeEntry(params: {
   const startIso = startMinute.toISOString();
   const endIso = endMinute.toISOString();
 
-  const inserted = await trx('time_entries')
+  const inserted = await tenantScopedTable(trx, 'time_entries', tenantId)
     .insert({
       tenant: tenantId,
       entry_id: entryId,
@@ -1355,8 +1369,8 @@ export async function updateWorkflowTimeEntry(params: {
 }): Promise<WorkflowTimeCreatedEntrySummary> {
   const { trx, tenantId, actorUserId, input } = params;
 
-  const existing = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: input.entry_id })
+  const existing = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: input.entry_id })
     .select(
       'entry_id',
       'user_id',
@@ -1407,8 +1421,8 @@ export async function updateWorkflowTimeEntry(params: {
   const resolvedWorkItem = await getWorkItemClientContext(trx, tenantId, effectiveLink);
   const resolvedServiceId = input.service_id ?? String(existing.service_id);
 
-  const service = await trx('service_catalog')
-    .where({ tenant: tenantId, service_id: resolvedServiceId })
+  const service = await tenantScopedTable(trx, 'service_catalog', tenantId)
+    .where({ service_id: resolvedServiceId })
     .select('service_id')
     .first();
 
@@ -1505,8 +1519,8 @@ export async function updateWorkflowTimeEntry(params: {
     attachToTimeSheet,
   });
 
-  const updatedRows = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: input.entry_id })
+  const updatedRows = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: input.entry_id })
     .update({
       work_item_id: effectiveLink?.id ?? null,
       work_item_type: effectiveLink?.type ?? null,
@@ -1621,8 +1635,8 @@ export async function deleteWorkflowTimeEntry(params: {
 }): Promise<WorkflowTimeDeletedEntrySummary> {
   const { trx, tenantId, actorUserId, entryId } = params;
 
-  const existing = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  const existing = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .select(
       'entry_id',
       'user_id',
@@ -1672,8 +1686,8 @@ export async function deleteWorkflowTimeEntry(params: {
     minutesDelta: -Number(existing.billable_duration ?? 0),
   });
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .delete();
 
   if (oldLink?.type === 'project_task') {
@@ -1700,8 +1714,8 @@ export async function getWorkflowTimeEntry(params: {
 }): Promise<WorkflowTimeCreatedEntrySummary> {
   const { trx, tenantId, actorUserId, entryId } = params;
 
-  const entry = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  const entry = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .select(
       'entry_id',
       'user_id',
@@ -1753,11 +1767,10 @@ export async function getWorkflowTimeEntry(params: {
 
 function applyFindEntriesFilters(
   query: Knex.QueryBuilder,
+  trx: Knex.Transaction,
   tenantId: string,
   filters: WorkflowTimeFindEntriesInput
 ): void {
-  query.where('te.tenant', tenantId);
-
   if (filters.user_id) {
     query.andWhere('te.user_id', filters.user_id);
   }
@@ -1808,46 +1821,39 @@ function applyFindEntriesFilters(
   }
 
   if (filters.client_id) {
+    const db = tenantDb(trx, tenantId);
     query.andWhere((builder) => {
+      const ticketClientQuery = db.subquery('tickets as t')
+        .select(trx.raw('1'))
+        .whereRaw('t.ticket_id = te.work_item_id')
+        .where('te.work_item_type', 'ticket')
+        .andWhere('t.client_id', filters.client_id as string);
+
+      const taskClientQuery = db.subquery('project_tasks as pt')
+        .select(trx.raw('1'))
+        .whereRaw('pt.task_id = te.work_item_id')
+        .where('te.work_item_type', 'project_task')
+        .andWhere('p.client_id', filters.client_id as string);
+      db.tenantJoin(taskClientQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+      db.tenantJoin(taskClientQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+
+      const projectClientQuery = db.subquery('projects as p')
+        .select(trx.raw('1'))
+        .whereRaw('p.project_id = te.work_item_id')
+        .where('te.work_item_type', 'project')
+        .andWhere('p.client_id', filters.client_id as string);
+
+      const interactionClientQuery = db.subquery('interactions as i')
+        .select(trx.raw('1'))
+        .whereRaw('i.interaction_id = te.work_item_id')
+        .where('te.work_item_type', 'interaction')
+        .andWhere('i.client_id', filters.client_id as string);
+
       builder
-        .whereExists(function ticketClientFilter() {
-          this.select(1)
-            .from('tickets as t')
-            .whereRaw('t.tenant = te.tenant')
-            .whereRaw('t.ticket_id = te.work_item_id')
-            .where('te.work_item_type', 'ticket')
-            .andWhere('t.client_id', filters.client_id as string);
-        })
-        .orWhereExists(function taskClientFilter() {
-          this.select(1)
-            .from('project_tasks as pt')
-            .join('project_phases as pp', function joinPhases() {
-              this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-            })
-            .join('projects as p', function joinProjects() {
-              this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-            })
-            .whereRaw('pt.tenant = te.tenant')
-            .whereRaw('pt.task_id = te.work_item_id')
-            .where('te.work_item_type', 'project_task')
-            .andWhere('p.client_id', filters.client_id as string);
-        })
-        .orWhereExists(function projectClientFilter() {
-          this.select(1)
-            .from('projects as p')
-            .whereRaw('p.tenant = te.tenant')
-            .whereRaw('p.project_id = te.work_item_id')
-            .where('te.work_item_type', 'project')
-            .andWhere('p.client_id', filters.client_id as string);
-        })
-        .orWhereExists(function interactionClientFilter() {
-          this.select(1)
-            .from('interactions as i')
-            .whereRaw('i.tenant = te.tenant')
-            .whereRaw('i.interaction_id = te.work_item_id')
-            .where('te.work_item_type', 'interaction')
-            .andWhere('i.client_id', filters.client_id as string);
-        });
+        .whereExists(ticketClientQuery)
+        .orWhereExists(taskClientQuery)
+        .orWhereExists(projectClientQuery)
+        .orWhereExists(interactionClientQuery);
     });
   }
 }
@@ -1863,7 +1869,7 @@ export async function findWorkflowTimeEntries(params: {
 
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
 
-  const listQuery = trx('time_entries as te')
+  const listQuery = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .select(
       'te.entry_id',
       'te.user_id',
@@ -1884,16 +1890,16 @@ export async function findWorkflowTimeEntries(params: {
     .orderBy('te.start_time', 'desc')
     .limit(limit);
 
-  applyFindEntriesFilters(listQuery, tenantId, input);
+  applyFindEntriesFilters(listQuery, trx, tenantId, input);
 
-  const aggregateQuery = trx('time_entries as te')
+  const aggregateQuery = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .count<{ count: string }[]>('* as count')
     .sum<{ total_minutes: string | null }[]>({
       total_minutes: trx.raw('EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 60'),
     })
     .sum<{ billable_minutes: string | null }[]>('te.billable_duration as billable_minutes');
 
-  applyFindEntriesFilters(aggregateQuery, tenantId, input);
+  applyFindEntriesFilters(aggregateQuery, trx, tenantId, input);
 
   const [rows, aggregateRows] = await Promise.all([listQuery, aggregateQuery]);
   const aggregate = (Array.isArray(aggregateRows) ? aggregateRows[0] : aggregateRows) as unknown as {
@@ -1902,7 +1908,7 @@ export async function findWorkflowTimeEntries(params: {
     billable_minutes?: string | number | null;
   } | undefined;
 
-  const entries = rows.map((row) => normalizeEntrySummary({
+  const entries = rows.map((row: Record<string, unknown>) => normalizeEntrySummary({
     entry_id: String(row.entry_id),
     user_id: String(row.user_id),
     work_item_id: (row.work_item_id as string | null) ?? null,
@@ -1940,8 +1946,8 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
 }): Promise<WorkflowTimeEntryApprovalResult> {
   const { trx, tenantId, actorUserId, entryId, approvalStatus, changeRequestComment } = params;
 
-  const existing = await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  const existing = await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id')
     .first();
 
@@ -1969,8 +1975,8 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
     await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
   }
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, entry_id: entryId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ entry_id: entryId })
     .update({
       approval_status: approvalStatus,
       updated_at: new Date().toISOString(),
@@ -1978,8 +1984,8 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
     });
 
   if (approvalStatus === 'CHANGES_REQUESTED' && existing.time_sheet_id) {
-    await trx('time_sheets')
-      .where({ tenant: tenantId, id: existing.time_sheet_id })
+    await tenantScopedTable(trx, 'time_sheets', tenantId)
+      .where({ id: existing.time_sheet_id })
       .update({
         approval_status: 'CHANGES_REQUESTED',
         approved_at: null,
@@ -1989,7 +1995,7 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
 
   let changeRequestId: string | null = null;
   if (approvalStatus === 'CHANGES_REQUESTED' && changeRequestComment && existing.time_sheet_id) {
-    const inserted = await trx('time_entry_change_requests')
+    const inserted = await tenantScopedTable(trx, 'time_entry_change_requests', tenantId)
       .insert({
         tenant: tenantId,
         change_request_id: trx.raw('gen_random_uuid()'),
@@ -2051,12 +2057,11 @@ async function summarizeTimeSheet(
   tenantId: string,
   timeSheetId: string
 ): Promise<WorkflowTimeSheetSummary> {
-  const row = await trx('time_sheets as ts')
-    .join('time_periods as tp', function joinPeriods() {
-      this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
-    })
+  const summaryQuery = tenantScopedTable(trx, 'time_sheets as ts', tenantId);
+  tenantJoin(trx, tenantId, summaryQuery, 'time_periods as tp', 'ts.period_id', 'tp.period_id');
+
+  const row = await summaryQuery
     .where({
-      'ts.tenant': tenantId,
       'ts.id': timeSheetId,
     })
     .select(
@@ -2082,16 +2087,16 @@ async function summarizeTimeSheet(
   }
 
   const [entryAggregate, commentAggregate] = await Promise.all([
-    trx('time_entries')
-      .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    tenantScopedTable(trx, 'time_entries', tenantId)
+      .where({ time_sheet_id: timeSheetId })
       .countDistinct<{ entry_count: string | number }>('entry_id as entry_count')
       .sum<{ total_minutes: string | number | null }>({
         total_minutes: trx.raw('EXTRACT(EPOCH FROM (end_time - start_time)) / 60'),
       })
       .sum<{ billable_minutes: string | number | null }>('billable_duration as billable_minutes')
       .first(),
-    trx('time_sheet_comments')
-      .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    tenantScopedTable(trx, 'time_sheet_comments', tenantId)
+      .where({ time_sheet_id: timeSheetId })
       .count<{ comment_count: string | number }>('comment_id as comment_count')
       .first(),
   ]);
@@ -2139,8 +2144,8 @@ export async function findOrCreateWorkflowTimeSheet(params: {
         message: 'Provide period_id or work_date',
       });
     }
-    const period = await trx('time_periods')
-      .where({ tenant: tenantId, is_closed: false })
+    const period = await tenantScopedTable(trx, 'time_periods', tenantId)
+      .where({ is_closed: false })
       .andWhere('start_date', '<=', workDate)
       .andWhere('end_date', '>', workDate)
       .orderBy('start_date', 'desc')
@@ -2156,9 +2161,8 @@ export async function findOrCreateWorkflowTimeSheet(params: {
     resolvedPeriodId = String(period.period_id);
   }
 
-  const existing = await trx('time_sheets')
+  const existing = await tenantScopedTable(trx, 'time_sheets', tenantId)
     .where({
-      tenant: tenantId,
       user_id: userId,
       period_id: resolvedPeriodId,
     })
@@ -2166,7 +2170,7 @@ export async function findOrCreateWorkflowTimeSheet(params: {
 
   const timeSheetId = existing?.id
     ? String(existing.id)
-    : String((await trx('time_sheets')
+    : String((await tenantScopedTable(trx, 'time_sheets', tenantId)
       .insert({
         tenant: tenantId,
         id: uuidv4(),
@@ -2192,9 +2196,8 @@ export async function getWorkflowTimeSheet(params: {
   const summary = await summarizeTimeSheet(trx, tenantId, timeSheetId);
   await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, summary.user_id);
 
-  const comments = await trx('time_sheet_comments')
+  const comments = await tenantScopedTable(trx, 'time_sheet_comments', tenantId)
     .where({
-      tenant: tenantId,
       time_sheet_id: timeSheetId,
     })
     .orderBy('created_at', 'desc')
@@ -2202,7 +2205,7 @@ export async function getWorkflowTimeSheet(params: {
 
   return {
     time_sheet: summary,
-    comments: comments.map((comment) => ({
+    comments: comments.map((comment: Record<string, unknown>) => ({
       comment_id: String(comment.comment_id),
       user_id: String(comment.user_id),
       comment: String(comment.comment),
@@ -2234,11 +2237,8 @@ export async function findWorkflowTimeSheets(params: {
   const input = await scopeFindTimeSheetsInputForActor(trx, tenantId, actorUserId, params.input);
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
 
-  const base = trx('time_sheets as ts')
-    .join('time_periods as tp', function joinPeriods() {
-      this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
-    })
-    .where('ts.tenant', tenantId);
+  const base = tenantScopedTable(trx, 'time_sheets as ts', tenantId);
+  tenantJoin(trx, tenantId, base, 'time_periods as tp', 'ts.period_id', 'tp.period_id');
 
   if (input.user_ids?.length) {
     base.whereIn('ts.user_id', input.user_ids);
@@ -2262,8 +2262,8 @@ export async function findWorkflowTimeSheets(params: {
     .limit(limit)
     .select('ts.id');
 
-  const ids = rows.map((row) => String(row.id));
-  const summaries = await Promise.all(ids.map((id) => summarizeTimeSheet(trx, tenantId, id)));
+  const ids = rows.map((row: { id: unknown }) => String(row.id));
+  const summaries = await Promise.all(ids.map((id: string) => summarizeTimeSheet(trx, tenantId, id)));
 
   const countRow = await base.clone().count<{ count: string }[]>('* as count').first();
 
@@ -2283,8 +2283,8 @@ export async function submitWorkflowTimeSheet(params: {
 }): Promise<WorkflowTimeSheetMutationResult> {
   const { trx, tenantId, actorUserId, timeSheetId } = params;
 
-  const timeSheet = await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  const timeSheet = await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .select('id', 'user_id', 'approval_status')
     .first();
 
@@ -2309,15 +2309,15 @@ export async function submitWorkflowTimeSheet(params: {
     });
   }
 
-  await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .update({
       approval_status: 'SUBMITTED',
       submitted_at: trx.fn.now(),
     });
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ time_sheet_id: timeSheetId })
     .update({
       approval_status: 'SUBMITTED',
       updated_at: new Date().toISOString(),
@@ -2337,8 +2337,8 @@ export async function approveWorkflowTimeSheet(params: {
 }): Promise<WorkflowTimeSheetMutationResult> {
   const { trx, tenantId, actorUserId, timeSheetId, comment } = params;
 
-  const timeSheet = await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  const timeSheet = await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .select('id', 'user_id', 'approval_status')
     .first();
 
@@ -2362,22 +2362,22 @@ export async function approveWorkflowTimeSheet(params: {
     });
   }
 
-  await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .update({
       approval_status: 'APPROVED',
       approved_at: trx.fn.now(),
       approved_by: actorUserId,
     });
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ time_sheet_id: timeSheetId })
     .update({
       approval_status: 'APPROVED',
       updated_at: new Date().toISOString(),
     });
 
-  await trx('time_sheet_comments').insert({
+  await tenantScopedTable(trx, 'time_sheet_comments', tenantId).insert({
     tenant: tenantId,
     comment_id: uuidv4(),
     time_sheet_id: timeSheetId,
@@ -2401,8 +2401,8 @@ export async function requestWorkflowTimeSheetChanges(params: {
 }): Promise<WorkflowTimeSheetMutationResult> {
   const { trx, tenantId, actorUserId, timeSheetId, comment } = params;
 
-  const timeSheet = await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  const timeSheet = await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .select('id', 'user_id')
     .first();
 
@@ -2417,22 +2417,22 @@ export async function requestWorkflowTimeSheetChanges(params: {
 
   await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(timeSheet.user_id));
 
-  await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .update({
       approval_status: 'CHANGES_REQUESTED',
       approved_at: null,
       approved_by: null,
     });
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ time_sheet_id: timeSheetId })
     .update({
       approval_status: 'CHANGES_REQUESTED',
       updated_at: new Date().toISOString(),
     });
 
-  await trx('time_sheet_comments').insert({
+  await tenantScopedTable(trx, 'time_sheet_comments', tenantId).insert({
     tenant: tenantId,
     comment_id: uuidv4(),
     time_sheet_id: timeSheetId,
@@ -2456,8 +2456,8 @@ export async function reverseWorkflowTimeSheetApproval(params: {
 }): Promise<WorkflowTimeSheetMutationResult> {
   const { trx, tenantId, actorUserId, timeSheetId, reason } = params;
 
-  const timeSheet = await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  const timeSheet = await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .select('id', 'user_id', 'approval_status')
     .first();
 
@@ -2481,9 +2481,8 @@ export async function reverseWorkflowTimeSheetApproval(params: {
     });
   }
 
-  const invoicedEntry = await trx('time_entries')
+  const invoicedEntry = await tenantScopedTable(trx, 'time_entries', tenantId)
     .where({
-      tenant: tenantId,
       time_sheet_id: timeSheetId,
       invoiced: true,
     })
@@ -2498,22 +2497,22 @@ export async function reverseWorkflowTimeSheetApproval(params: {
     });
   }
 
-  await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .update({
       approval_status: 'CHANGES_REQUESTED',
       approved_at: null,
       approved_by: null,
     });
 
-  await trx('time_entries')
-    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+  await tenantScopedTable(trx, 'time_entries', tenantId)
+    .where({ time_sheet_id: timeSheetId })
     .update({
       approval_status: 'CHANGES_REQUESTED',
       updated_at: new Date().toISOString(),
     });
 
-  await trx('time_sheet_comments').insert({
+  await tenantScopedTable(trx, 'time_sheet_comments', tenantId).insert({
     tenant: tenantId,
     comment_id: uuidv4(),
     time_sheet_id: timeSheetId,
@@ -2540,8 +2539,8 @@ export async function addWorkflowTimeSheetComment(params: {
   time_sheet: WorkflowTimeSheetSummary;
 }> {
   const { trx, tenantId, actorUserId, timeSheetId, comment, isApprover } = params;
-  const existing = await trx('time_sheets')
-    .where({ tenant: tenantId, id: timeSheetId })
+  const existing = await tenantScopedTable(trx, 'time_sheets', tenantId)
+    .where({ id: timeSheetId })
     .first('id', 'user_id');
   if (!existing) {
     throw new WorkflowTimeDomainError({
@@ -2554,7 +2553,7 @@ export async function addWorkflowTimeSheetComment(params: {
 
   await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
 
-  const [inserted] = await trx('time_sheet_comments')
+  const [inserted] = await tenantScopedTable(trx, 'time_sheet_comments', tenantId)
     .insert({
       tenant: tenantId,
       comment_id: uuidv4(),
@@ -2622,7 +2621,7 @@ export async function summarizeWorkflowTimeEntries(params: {
   const limit = Math.min(Math.max(input.limit ?? 200, 1), 500);
   const groupBy = input.group_by ?? [];
 
-  const query = trx('time_entries as te')
+  const query = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .select(
       'te.entry_id',
       'te.user_id',
@@ -2640,7 +2639,7 @@ export async function summarizeWorkflowTimeEntries(params: {
     .orderBy('te.start_time', 'desc')
     .limit(limit);
 
-  applyFindEntriesFilters(query, tenantId, input);
+  applyFindEntriesFilters(query, trx, tenantId, input);
 
   const rows = await query;
   const cache = new Map<string, string | null>();
@@ -2742,7 +2741,7 @@ async function findBillingBlockersInternal(params: {
 }): Promise<WorkflowBillingBlocker[]> {
   const { trx, tenantId, filters, entryIds, requireTimesheet, limit } = params;
 
-  const query = trx('time_entries as te')
+  const query = tenantScopedTable(trx, 'time_entries as te', tenantId)
     .select(
       'te.entry_id',
       'te.approval_status',
@@ -2757,7 +2756,7 @@ async function findBillingBlockersInternal(params: {
     )
     .limit(limit);
 
-  applyFindEntriesFilters(query, tenantId, filters);
+  applyFindEntriesFilters(query, trx, tenantId, filters);
   if (entryIds?.length) {
     query.whereIn('te.entry_id', entryIds);
   }

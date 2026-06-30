@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import type { CadenceOwner } from '@alga-psa/types';
+import type { Knex } from 'knex';
 import type { TestContext } from './testContext';
 
 interface SetupTaxOptions {
@@ -21,6 +23,24 @@ const serviceTypeCache = new Map<string, string>();
 const debugFlags = {
   createServiceLogCount: 0
 };
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
+
+function dynamicTenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string,
+  tenantColumn: string,
+  reason: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(context.db, context.tenantId)
+    .unscoped<Row>(tableExpression, reason)
+    .where(tenantColumn, context.tenantId);
+}
 
 /**
  * Clears the service type cache. Useful when tests reset their context/tenant
@@ -52,10 +72,10 @@ export async function setupClientTaxConfiguration(
 
   const targetClientId = options.clientId ?? context.clientId;
 
-  const existingActiveRate = await context.db('tax_rates')
-    .where({ tenant: context.tenantId, region_code: regionCode, is_active: true })
+  const existingActiveRate = await tenantTable(context, 'tax_rates')
+    .where({ region_code: regionCode, is_active: true })
     .orderBy('start_date', 'desc')
-    .first();
+    .first<{ tax_rate_id: string; tax_percentage?: number }>();
 
   const shouldCreateNewRate = typeof taxPercentage === 'number';
 
@@ -63,12 +83,12 @@ export async function setupClientTaxConfiguration(
 
   if (shouldCreateNewRate) {
     // Deactivate any existing tax rates for this region within the tenant so the new rate becomes authoritative
-    await context.db('tax_rates')
-      .where({ tenant: context.tenantId, region_code: regionCode })
+    await tenantTable(context, 'tax_rates')
+      .where({ region_code: regionCode })
       .update({ is_active: false });
   }
 
-  await context.db('tax_regions')
+  await tenantTable(context, 'tax_regions')
     .insert({
       tenant: context.tenantId,
       region_code: regionCode,
@@ -80,7 +100,7 @@ export async function setupClientTaxConfiguration(
 
   if (shouldCreateNewRate || !existingActiveRate) {
     try {
-      await context.db('tax_rates')
+      await tenantTable(context, 'tax_rates')
         .insert({
           tax_rate_id: taxRateId,
           tenant: context.tenantId,
@@ -113,17 +133,16 @@ export async function assignServiceTaxRate(
   region: string,
   options: AssignServiceTaxRateOptions = {}
 ): Promise<void> {
-  const taxRate = await context.db('tax_rates')
-    .where({ tenant: context.tenantId, region_code: region })
+  const taxRate = await tenantTable(context, 'tax_rates')
+    .where({ region_code: region })
     .orderBy('start_date', 'desc')
-    .first();
+    .first<{ tax_rate_id: string }>();
 
   if (!taxRate) {
     return;
   }
 
-  const query = context.db('service_catalog')
-    .where({ tenant: context.tenantId });
+  const query = tenantTable(context, 'service_catalog');
 
   if (serviceId !== '*') {
     query.andWhere({ service_id: serviceId });
@@ -153,8 +172,8 @@ async function upsertClientTaxSettings(
     return;
   }
 
-  const clientExists = await context.db('clients')
-    .where({ tenant: context.tenantId, client_id: clientId })
+  const clientExists = await tenantTable(context, 'clients')
+    .where({ client_id: clientId })
     .first();
 
   if (!clientExists) {
@@ -171,7 +190,7 @@ async function upsertClientTaxSettings(
     baseData.tax_rate_id = taxRateId;
   }
 
-  await context.db('client_tax_settings')
+  await tenantTable(context, 'client_tax_settings')
     .insert(baseData)
     .onConflict(['tenant', 'client_id'])
     .merge(baseData);
@@ -194,8 +213,8 @@ async function upsertClientDefaultTaxRate(
     return;
   }
 
-  const clientExists = await context.db('clients')
-    .where({ tenant: context.tenantId, client_id: clientId })
+  const clientExists = await tenantTable(context, 'clients')
+    .where({ client_id: clientId })
     .first();
 
   if (!clientExists) {
@@ -203,8 +222,8 @@ async function upsertClientDefaultTaxRate(
   }
 
   if ('is_default' in clientTaxRatesColumnsCache) {
-    await context.db('client_tax_rates')
-      .where({ tenant: context.tenantId, client_id: clientId })
+    await tenantTable(context, 'client_tax_rates')
+      .where({ client_id: clientId })
       .update({ is_default: false });
   }
 
@@ -222,18 +241,16 @@ async function upsertClientDefaultTaxRate(
     rateData.location_id = null;
   }
 
-  const existingRate = await context.db('client_tax_rates')
+  const existingRate = await tenantTable(context, 'client_tax_rates')
     .where({
-      tenant: context.tenantId,
       client_id: clientId,
       tax_rate_id: taxRateId
     })
-    .first();
+    .first<{ client_tax_rates_id: string }>();
 
   if (existingRate) {
-    await context.db('client_tax_rates')
+    await tenantTable(context, 'client_tax_rates')
       .where({
-        tenant: context.tenantId,
         client_tax_rates_id: existingRate.client_tax_rates_id
       })
       .update({
@@ -241,7 +258,7 @@ async function upsertClientDefaultTaxRate(
         updated_at: context.db.fn.now()
       });
   } else {
-    await context.db('client_tax_rates').insert({
+    await tenantTable(context, 'client_tax_rates').insert({
       ...rateData,
       created_at: context.db.fn.now(),
       updated_at: context.db.fn.now()
@@ -340,7 +357,7 @@ async function ensureServiceType(
     return serviceTypeCache.get(cacheKey)!;
   }
 
-  const columns = await context.db('service_types').columnInfo();
+  const columns = await tenantTable(context, 'service_types').columnInfo();
   const tenantColumn = columns.tenant ? 'tenant' : columns.tenant_id ? 'tenant_id' : null;
   // Newer schemas dropped billing_method from service_types; key off the
   // generated name instead so the helper works on both shapes.
@@ -357,13 +374,20 @@ async function ensureServiceType(
         ? 'Hourly Service Type'
         : 'Usage Service Type';
 
-  const existingType = await context.db('service_types')
+  const serviceTypes = () => dynamicTenantTable(
+    context,
+    'service_types',
+    tenantColumn,
+    'billing test helper supports service_types schemas with tenant or tenant_id'
+  );
+
+  const existingType = await serviceTypes()
     .where(
       hasBillingMethodColumn
-        ? { [tenantColumn]: context.tenantId, billing_method: billingMethod }
-        : { [tenantColumn]: context.tenantId, name: typeName }
+        ? { billing_method: billingMethod }
+        : { name: typeName }
     )
-    .first('id');
+    .first<{ id: string }>('id');
 
   if (existingType?.id) {
     serviceTypeCache.set(cacheKey, existingType.id);
@@ -385,9 +409,9 @@ async function ensureServiceType(
 
   // Leave order_number null to avoid collisions with unique constraints in legacy schemas.
 
-  await context.db('service_types').insert(typeData);
+  await serviceTypes().insert(typeData);
   if (process.env.DEBUG_SERVICE_TYPES === 'true' && debugFlags.createServiceLogCount < 5) {
-    const row = await context.db('service_types').where({ id: typeId }).first();
+    const row = await serviceTypes().where({ id: typeId }).first();
     console.log('Inserted service_type row', row);
   }
   serviceTypeCache.set(cacheKey, typeId);
@@ -408,14 +432,19 @@ async function getStandardServiceTypeId(
     const tenantColumn = columns.tenant ? 'tenant' : columns.tenant_id ? 'tenant_id' : null;
     const hasBillingMethodColumn = 'billing_method' in columns;
 
-    let query = hasBillingMethodColumn
-      ? context.db('standard_service_types').where({ billing_method: billingMethod })
+    let query = tenantColumn
+      ? dynamicTenantTable(
+        context,
+        'standard_service_types',
+        tenantColumn,
+        'billing test helper supports tenant-scoped standard_service_types on legacy schemas'
+      )
       : context.db('standard_service_types');
-    if (tenantColumn) {
-      query = query.andWhere(tenantColumn, context.tenantId);
+    if (hasBillingMethodColumn) {
+      query = query.where({ billing_method: billingMethod });
     }
 
-    const record = await query.first('id');
+    const record = await query.first<{ id: string }>('id');
     if (record?.id) {
       return record.id as string;
     }
@@ -446,14 +475,14 @@ export async function createTestService(
     }
   }
 
-  const serviceCatalogColumns = await context.db('service_catalog').columnInfo();
+  const serviceCatalogColumns = await tenantTable(context, 'service_catalog').columnInfo();
 
   const hasCustomServiceTypeColumn = 'custom_service_type_id' in serviceCatalogColumns;
   const hasStandardServiceTypeColumn = 'standard_service_type_id' in serviceCatalogColumns;
 
   let resolvedCustomServiceTypeId: string | null = serviceTypeId;
   if (hasCustomServiceTypeColumn && resolvedCustomServiceTypeId) {
-    const typeExists = await context.db('service_types')
+    const typeExists = await tenantTable(context, 'service_types')
       .where({ id: resolvedCustomServiceTypeId })
       .first('id')
       .catch(() => null);
@@ -471,7 +500,7 @@ export async function createTestService(
 
   if (process.env.DEBUG_SERVICE_TYPES === 'true' && debugFlags.createServiceLogCount < 5) {
     const hasServiceTypesTable = await context.db.schema.hasTable('service_types');
-    const serviceTypesColumns = hasServiceTypesTable ? await context.db('service_types').columnInfo() : null;
+    const serviceTypesColumns = hasServiceTypesTable ? await tenantTable(context, 'service_types').columnInfo() : null;
     const hasStandardTable = await context.db.schema.hasTable('standard_service_types');
     const standardColumns = hasStandardTable ? await context.db('standard_service_types').columnInfo() : null;
     console.log('service_catalog columns', serviceCatalogColumns);
@@ -502,7 +531,7 @@ export async function createTestService(
     serviceData.standard_service_type_id = resolvedStandardServiceTypeId;
   }
 
-  await context.db('service_catalog').insert(serviceData);
+  await tenantTable(context, 'service_catalog').insert(serviceData);
 
   if (overrides.tax_region) {
     await assignServiceTaxRate(context, serviceId, overrides.tax_region);
@@ -564,7 +593,7 @@ export async function createFixedPlanAssignment(
       contractData.owner_client_id = targetClientId;
     }
 
-    await context.db('contracts')
+    await tenantTable(context, 'contracts')
       .insert(contractData)
       .onConflict(['tenant', 'contract_id'])
       .merge({
@@ -581,7 +610,7 @@ export async function createFixedPlanAssignment(
   }
 
   if (await context.db.schema.hasTable('client_contracts')) {
-    await context.db('client_contracts')
+    await tenantTable(context, 'client_contracts')
       .insert({
         tenant: context.tenantId,
         client_contract_id: clientContractId,
@@ -637,7 +666,7 @@ export async function createFixedPlanAssignment(
   }
 
   // Primary contract line tables
-  await context.db('contract_lines')
+  await tenantTable(context, 'contract_lines')
     .insert(contractLineData)
     .onConflict(['tenant', 'contract_line_id'])
     .merge({
@@ -652,7 +681,7 @@ export async function createFixedPlanAssignment(
       ...(contractLineData.cadence_owner ? { cadence_owner: cadenceOwner } : {}),
     });
 
-  await context.db('contract_line_service_configuration')
+  await tenantTable(context, 'contract_line_service_configuration')
     .insert({
       config_id: configId,
       contract_line_id: contractLineId,
@@ -671,7 +700,7 @@ export async function createFixedPlanAssignment(
       quantity
     });
 
-  await context.db('contract_line_service_fixed_config')
+  await tenantTable(context, 'contract_line_service_fixed_config')
     .insert({
       config_id: configId,
       tenant: context.tenantId,
@@ -680,7 +709,7 @@ export async function createFixedPlanAssignment(
     .onConflict(['tenant', 'config_id'])
     .merge({ base_rate: baseRateDollars });
 
-  await context.db('contract_line_services')
+  await tenantTable(context, 'contract_line_services')
     .insert({
       tenant: context.tenantId,
       contract_line_id: contractLineId,
@@ -692,7 +721,7 @@ export async function createFixedPlanAssignment(
     .merge({ quantity, custom_rate: null });
 
   if (await context.db.schema.hasTable('client_contract_lines')) {
-    await context.db('client_contract_lines')
+    await tenantTable(context, 'client_contract_lines')
       .insert({
         tenant: context.tenantId,
         client_contract_line_id: clientContractLineId,
@@ -819,9 +848,27 @@ export async function createFixedPlanAssignment(
     (await context.db.schema.hasTable('client_contract_service_fixed_config'));
 
   if (hasLegacyClientServiceTables) {
-    let existingClientService = await context.db('client_contract_services')
+    const legacyClientContractServices = () => dynamicTenantTable(
+      context,
+      'client_contract_services',
+      'tenant',
+      'billing test helper writes legacy client_contract_services before facade metadata exists'
+    );
+    const legacyClientContractServiceConfiguration = () => dynamicTenantTable(
+      context,
+      'client_contract_service_configuration',
+      'tenant',
+      'billing test helper writes legacy client_contract_service_configuration before facade metadata exists'
+    );
+    const legacyClientContractServiceFixedConfig = () => dynamicTenantTable(
+      context,
+      'client_contract_service_fixed_config',
+      'tenant',
+      'billing test helper writes legacy client_contract_service_fixed_config before facade metadata exists'
+    );
+
+    let existingClientService = await legacyClientContractServices()
       .where({
-        tenant: context.tenantId,
         client_contract_line_id: clientContractLineId,
         service_id: serviceId
       })
@@ -830,9 +877,8 @@ export async function createFixedPlanAssignment(
     const clientContractServiceId = existingClientService?.client_contract_service_id ?? uuidv4();
 
     if (existingClientService) {
-      await context.db('client_contract_services')
+      await legacyClientContractServices()
         .where({
-          tenant: context.tenantId,
           client_contract_service_id: clientContractServiceId
         })
         .update({
@@ -841,7 +887,7 @@ export async function createFixedPlanAssignment(
           updated_at: now
         });
     } else {
-      await context.db('client_contract_services').insert({
+      await legacyClientContractServices().insert({
         tenant: context.tenantId,
         client_contract_service_id: clientContractServiceId,
         client_contract_line_id: clientContractLineId,
@@ -854,9 +900,8 @@ export async function createFixedPlanAssignment(
       });
     }
 
-    let existingClientConfig = await context.db('client_contract_service_configuration')
+    let existingClientConfig = await legacyClientContractServiceConfiguration()
       .where({
-        tenant: context.tenantId,
         client_contract_service_id: clientContractServiceId
       })
       .first<{ config_id: string }>('config_id');
@@ -864,9 +909,8 @@ export async function createFixedPlanAssignment(
     const clientConfigId = existingClientConfig?.config_id ?? uuidv4();
 
     if (existingClientConfig) {
-      await context.db('client_contract_service_configuration')
+      await legacyClientContractServiceConfiguration()
         .where({
-          tenant: context.tenantId,
           config_id: clientConfigId
         })
         .update({
@@ -876,7 +920,7 @@ export async function createFixedPlanAssignment(
           updated_at: now
         });
     } else {
-      await context.db('client_contract_service_configuration').insert({
+      await legacyClientContractServiceConfiguration().insert({
         tenant: context.tenantId,
         config_id: clientConfigId,
         client_contract_service_id: clientContractServiceId,
@@ -888,7 +932,7 @@ export async function createFixedPlanAssignment(
       });
     }
 
-    await context.db('client_contract_service_fixed_config')
+    await legacyClientContractServiceFixedConfig()
       .insert({
         tenant: context.tenantId,
         config_id: clientConfigId,
@@ -1051,7 +1095,7 @@ export async function ensureDefaultBillingSettings(
 
   const hasDefaultSettingsTable = await context.db.schema.hasTable('default_billing_settings');
   if (hasDefaultSettingsTable) {
-    await context.db('default_billing_settings')
+    await tenantTable(context, 'default_billing_settings')
       .insert({
         tenant: context.tenantId,
         zero_dollar_invoice_handling: zeroDollarInvoiceHandling,
@@ -1111,7 +1155,7 @@ export async function addServiceToFixedPlan(
   const detailBaseRateDollars = detailBaseRateCents / 100;
 
   // Insert into new contract line tables
-  await context.db('contract_line_service_configuration')
+  await tenantTable(context, 'contract_line_service_configuration')
     .insert({
       config_id: configId,
       contract_line_id: planId,
@@ -1122,14 +1166,14 @@ export async function addServiceToFixedPlan(
       tenant: context.tenantId
     });
 
-  await context.db('contract_line_service_fixed_config')
+  await tenantTable(context, 'contract_line_service_fixed_config')
     .insert({
       config_id: configId,
       tenant: context.tenantId,
       base_rate: detailBaseRateDollars
     });
 
-  await context.db('contract_line_services')
+  await tenantTable(context, 'contract_line_services')
     .insert({
       tenant: context.tenantId,
       contract_line_id: planId,
@@ -1256,23 +1300,21 @@ export async function createBucketOverlayForPlan(
   let contractBaseConfig;
 
   if (serviceId) {
-    contractBaseConfig = await context.db('contract_line_service_configuration')
+    contractBaseConfig = await tenantTable(context, 'contract_line_service_configuration')
       .where({
-        tenant: context.tenantId,
         contract_line_id: planId,
         service_id: serviceId
       })
       .whereNot('configuration_type', 'Bucket')
-      .first();
+      .first<{ service_id: string; quantity?: number | null; custom_rate?: number | null }>();
   } else {
-    contractBaseConfig = await context.db('contract_line_service_configuration')
+    contractBaseConfig = await tenantTable(context, 'contract_line_service_configuration')
       .where({
-        tenant: context.tenantId,
         contract_line_id: planId
       })
       .whereNot('configuration_type', 'Bucket')
       .orderBy('created_at', 'asc')
-      .first();
+      .first<{ service_id: string; quantity?: number | null; custom_rate?: number | null }>();
 
     if (contractBaseConfig) {
       serviceId = contractBaseConfig.service_id;
@@ -1285,15 +1327,20 @@ export async function createBucketOverlayForPlan(
   }
 
   let planBaseConfig;
+  const legacyPlanServiceConfiguration = () => dynamicTenantTable(
+    context,
+    'plan_service_configuration',
+    'tenant',
+    'billing test helper reads legacy plan_service_configuration before facade metadata exists'
+  );
   if (!serviceId) {
-    planBaseConfig = await context.db('plan_service_configuration')
+    planBaseConfig = await legacyPlanServiceConfiguration()
       .where({
-        tenant: context.tenantId,
         plan_id: planId
       })
       .whereNot('configuration_type', 'Bucket')
       .orderBy('created_at', 'asc')
-      .first();
+      .first<{ service_id: string; quantity?: number | null; custom_rate?: number | null }>();
 
     if (planBaseConfig) {
       serviceId = planBaseConfig.service_id;
@@ -1301,14 +1348,13 @@ export async function createBucketOverlayForPlan(
       customRate = planBaseConfig.custom_rate ?? customRate;
     }
   } else if (!contractBaseConfig) {
-    planBaseConfig = await context.db('plan_service_configuration')
+    planBaseConfig = await legacyPlanServiceConfiguration()
       .where({
-        tenant: context.tenantId,
         plan_id: planId,
         service_id: serviceId
       })
       .whereNot('configuration_type', 'Bucket')
-      .first();
+      .first<{ service_id: string; quantity?: number | null; custom_rate?: number | null }>();
 
     if (planBaseConfig) {
       quantity = planBaseConfig.quantity ?? quantity;
@@ -1321,18 +1367,17 @@ export async function createBucketOverlayForPlan(
   }
 
   // Reuse existing overlay config if one exists so tests can update settings idempotently.
-  const existingOverlayConfig = await context.db('contract_line_service_configuration')
+  const existingOverlayConfig = await tenantTable(context, 'contract_line_service_configuration')
     .where({
-      tenant: context.tenantId,
       contract_line_id: planId,
       service_id: serviceId,
       configuration_type: 'Bucket'
     })
-    .first();
+    .first<{ config_id: string }>();
 
   const configId = options.configId ?? existingOverlayConfig?.config_id ?? uuidv4();
 
-  await context.db('contract_line_services')
+  await tenantTable(context, 'contract_line_services')
     .insert({
       tenant: context.tenantId,
       contract_line_id: planId,
@@ -1343,7 +1388,7 @@ export async function createBucketOverlayForPlan(
     .onConflict(['tenant', 'service_id', 'contract_line_id'])
     .merge({ quantity, custom_rate: customRate });
 
-  await context.db('contract_line_service_configuration')
+  await tenantTable(context, 'contract_line_service_configuration')
     .insert({
       config_id: configId,
       contract_line_id: planId,
@@ -1401,7 +1446,7 @@ export async function createBucketOverlayForPlan(
     contractBucketUpdate.total_hours = contractBucketData.total_hours;
   }
 
-  await context.db('contract_line_service_bucket_config')
+  await tenantTable(context, 'contract_line_service_bucket_config')
     .insert(contractBucketData)
     .onConflict(['tenant', 'config_id'])
     .merge(contractBucketUpdate);
@@ -1487,26 +1532,47 @@ export async function createBucketOverlayForPlan(
     }
   }
 
-  const clientServices = await context.db('client_contract_services as ccs')
-    .join('client_contract_lines as ccl', function () {
-      this.on('ccs.client_contract_line_id', '=', 'ccl.client_contract_line_id')
-        .andOn('ccs.tenant', '=', 'ccl.tenant');
-    })
+  const legacyClientContractServicesForOverlay = () => dynamicTenantTable(
+    context,
+    'client_contract_services as ccs',
+    'ccs.tenant',
+    'billing test helper reads legacy client_contract_services before facade metadata exists'
+  );
+  const legacyClientContractServiceConfigurationForOverlay = () => dynamicTenantTable(
+    context,
+    'client_contract_service_configuration',
+    'tenant',
+    'billing test helper writes legacy client_contract_service_configuration before facade metadata exists'
+  );
+  const legacyClientContractServiceBucketConfigForOverlay = () => dynamicTenantTable(
+    context,
+    'client_contract_service_bucket_config',
+    'tenant',
+    'billing test helper writes legacy client_contract_service_bucket_config before facade metadata exists'
+  );
+
+  const clientServicesQuery = legacyClientContractServicesForOverlay();
+  tenantDb(context.db, context.tenantId).tenantJoin(
+    clientServicesQuery,
+    'client_contract_lines as ccl',
+    'ccs.client_contract_line_id',
+    'ccl.client_contract_line_id'
+  );
+
+  const clientServices = await clientServicesQuery
     .where({
       'ccl.contract_line_id': planId,
-      'ccs.service_id': serviceId,
-      'ccs.tenant': context.tenantId
+      'ccs.service_id': serviceId
     })
-    .select('ccs.client_contract_service_id');
+    .select<{ client_contract_service_id: string }[]>('ccs.client_contract_service_id');
 
   if (clientServices.length > 0) {
     const clientBucketColumns = await ensureClientContractBucketConfigColumns(context);
     const now = context.db.fn.now();
 
     for (const clientService of clientServices) {
-      const existingClientBucketConfig = await context.db('client_contract_service_configuration')
+      const existingClientBucketConfig = await legacyClientContractServiceConfigurationForOverlay()
         .where({
-          tenant: context.tenantId,
           client_contract_service_id: clientService.client_contract_service_id,
           configuration_type: 'Bucket'
         })
@@ -1515,9 +1581,8 @@ export async function createBucketOverlayForPlan(
       const clientConfigId = existingClientBucketConfig?.config_id ?? uuidv4();
 
       if (existingClientBucketConfig) {
-        await context.db('client_contract_service_configuration')
+        await legacyClientContractServiceConfigurationForOverlay()
           .where({
-            tenant: context.tenantId,
             config_id: clientConfigId
           })
           .update({
@@ -1527,7 +1592,7 @@ export async function createBucketOverlayForPlan(
             updated_at: now
           });
       } else {
-        await context.db('client_contract_service_configuration').insert({
+        await legacyClientContractServiceConfigurationForOverlay().insert({
           tenant: context.tenantId,
           config_id: clientConfigId,
           client_contract_service_id: clientService.client_contract_service_id,
@@ -1566,7 +1631,7 @@ export async function createBucketOverlayForPlan(
           clientBucketUpdate.total_hours = totalHours;
         }
 
-        await context.db('client_contract_service_bucket_config')
+        await legacyClientContractServiceBucketConfigForOverlay()
           .insert(clientBucketData)
           .onConflict(['tenant', 'config_id'])
           .merge(clientBucketUpdate);
@@ -1635,7 +1700,7 @@ export async function createBucketUsageRecord(
     record[rolledOverColumn] = options.rolledOverMinutes ?? 0;
   }
 
-  await context.db('bucket_usage').insert(record);
+  await tenantTable(context, 'bucket_usage').insert(record);
 
   return usageId;
 }

@@ -1,7 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,6 +35,14 @@ interface CreateBlockDocumentInput extends BlockContentInput {
   entityId?: string;
   entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
   folder_path?: string | null;
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
 }
 
 async function publishDocumentUpdatedSearchEvent(
@@ -99,7 +106,7 @@ export const createBlockDocument = withAuth(async (
       const documentResult = await Document.insert(trx, documentData);
 
       // Create the block content
-      const [blockContent] = await trx('document_block_content')
+      const [blockContent] = await tenantScopedTable(trx, 'document_block_content', tenant)
         .insert({
           content_id: uuidv4(),
           document_id: documentResult.document_id,
@@ -161,9 +168,9 @@ export const createBlockDocument = withAuth(async (
     }
 
     // After transaction commits successfully, publish event for mention notifications
-    const dbUser = await knex('users')
+    const dbUser = await tenantScopedTable(knex, 'users', tenant)
       .select('first_name', 'last_name')
-      .where({ user_id: input.user_id || user.user_id, tenant })
+      .where({ user_id: input.user_id || user.user_id })
       .first();
 
     const authorName = dbUser ? `${dbUser.first_name} ${dbUser.last_name}` : 'Unknown User';
@@ -219,11 +226,8 @@ export const getBlockContent = withAuth(async (user, { tenant }, documentId: str
         return permissionError('Permission denied: Cannot read documents');
       }
 
-      return trx('document_block_content')
-        .where({
-          document_id: documentId,
-          tenant
-        })
+      return tenantScopedTable(trx, 'document_block_content', tenant)
+        .where({ document_id: documentId })
         .select('content_id', 'block_data', 'version_id', 'created_at', 'updated_at')
         .first();
     });
@@ -261,11 +265,8 @@ export const updateBlockContent = withAuth(async (
       }
 
       // Check if block content exists
-      const existingContent = await trx('document_block_content')
-        .where({
-          document_id: documentId,
-          tenant
-        })
+      const existingContent = await tenantScopedTable(trx, 'document_block_content', tenant)
+        .where({ document_id: documentId })
         .first();
 
       if (existingContent) {
@@ -273,11 +274,8 @@ export const updateBlockContent = withAuth(async (
         const oldContent = existingContent.block_data;
 
         // Update existing content
-        const [updatedContent] = await trx('document_block_content')
-          .where({
-            document_id: documentId,
-            tenant
-          })
+        const [updatedContent] = await tenantScopedTable(trx, 'document_block_content', tenant)
+          .where({ document_id: documentId })
           .update({
             block_data: typeof input.block_data === 'string' ? input.block_data : JSON.stringify(input.block_data),
             version_id: input.version_id,
@@ -286,11 +284,8 @@ export const updateBlockContent = withAuth(async (
           .returning(['content_id', 'block_data', 'version_id']);
 
         // Update document's updated_at and edited_by
-        await trx('documents')
-          .where({
-            document_id: documentId,
-            tenant
-          })
+        await tenantScopedTable(trx, 'documents', tenant)
+          .where({ document_id: documentId })
           .update({
             updated_at: trx.fn.now(),
             edited_by: input.user_id
@@ -304,7 +299,7 @@ export const updateBlockContent = withAuth(async (
         return { updatedContent, document, oldContent };
       } else {
         // Create new block content record
-        const [newContent] = await trx('document_block_content')
+        const [newContent] = await tenantScopedTable(trx, 'document_block_content', tenant)
           .insert({
             content_id: uuidv4(),
             document_id: documentId,
@@ -326,9 +321,9 @@ export const updateBlockContent = withAuth(async (
 
     // After transaction commits successfully, publish event
     // Get user details for event
-    const dbUser = await knex('users')
+    const dbUser = await tenantScopedTable(knex, 'users', tenant)
       .select('first_name', 'last_name')
-      .where({ user_id: input.user_id, tenant })
+      .where({ user_id: input.user_id })
       .first();
 
     const authorName = dbUser ? `${dbUser.first_name} ${dbUser.last_name}` : 'Unknown User';
@@ -393,11 +388,8 @@ export const deleteBlockContent = withAuth(async (_user, { tenant }, documentId:
         return permissionError('Permission denied: Cannot delete documents');
       }
 
-      return trx('document_block_content')
-        .where({
-          document_id: documentId,
-          tenant
-        })
+      return tenantScopedTable(trx, 'document_block_content', tenant)
+        .where({ document_id: documentId })
         .delete();
     });
 

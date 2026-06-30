@@ -21,7 +21,7 @@ describe('clipboardImageDraftActions contract', () => {
   it('T023: rejects delete when artifact is already referenced by saved comment content', () => {
     const source = getActionSource();
 
-    expect(source).toContain("trx('comments')");
+    expect(source).toContain("tenantScopedTable(trx, 'comments', tenant)");
     expect(source).toContain('note::text LIKE ?');
     expect(source).toContain("reason: 'already_referenced'");
   });
@@ -29,7 +29,7 @@ describe('clipboardImageDraftActions contract', () => {
   it('guards against deleting documents still associated to non-ticket entities', () => {
     const source = getActionSource();
 
-    expect(source).toContain("trx('document_associations')");
+    expect(source).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
     expect(source).toContain("association.entity_type === 'ticket'");
     expect(source).toContain("reason: 'has_other_associations'");
   });

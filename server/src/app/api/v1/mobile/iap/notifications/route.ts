@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import {
   getAppleIapConfig,
@@ -27,6 +28,8 @@ import { getStripeService } from '@ee/lib/stripe/StripeService';
 const notificationBodySchema = z.object({
   signedPayload: z.string().min(1),
 });
+
+const MOBILE_TENANT_DISCOVERY = 'tenant-discovery';
 
 type SubscriptionStatus = 'active' | 'grace_period' | 'expired' | 'revoked' | 'refunded';
 
@@ -91,21 +94,24 @@ async function recordNotification(
   // arrives before /provision finishes (unusual but possible for SUBSCRIBED).
   let tenantId: string | null = null;
   if (transaction?.originalTransactionId) {
-    const sub = await knex('apple_iap_subscriptions')
+    const sub = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+      .unscoped('apple_iap_subscriptions', 'tenant discovery from Apple original transaction id for notification audit')
       .where({ original_transaction_id: transaction.originalTransactionId })
       .first('tenant');
     tenantId = (sub as any)?.tenant ?? null;
   }
 
   try {
-    await knex('apple_iap_notifications').insert({
-      notification_uuid: notification.notificationUUID,
-      notification_type: notification.notificationType,
-      subtype: notification.subtype ?? null,
-      original_transaction_id: transaction?.originalTransactionId ?? null,
-      tenant: tenantId,
-      payload: payload as any,
-    });
+    await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+      .unscoped('apple_iap_notifications', 'Apple notification ledger is tenant-optional reference data')
+      .insert({
+        notification_uuid: notification.notificationUUID,
+        notification_type: notification.notificationType,
+        subtype: notification.subtype ?? null,
+        original_transaction_id: transaction?.originalTransactionId ?? null,
+        tenant: tenantId,
+        payload: payload as any,
+      });
     return true;
   } catch (err: any) {
     // Duplicate notification_uuid → already processed. Acknowledge successfully.
@@ -133,7 +139,8 @@ async function applyStatusUpdate(
 
   // Look up the tenant and transition state first so the UPDATE is single-shard
   // on Citus (apple_iap_subscriptions is distributed by tenant).
-  const sub = await knex('apple_iap_subscriptions')
+  const sub = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+    .unscoped('apple_iap_subscriptions', 'tenant discovery from Apple original transaction id before status update')
     .where({ original_transaction_id: transaction.originalTransactionId })
     .first<IapSubscriptionRow | undefined>(
       'tenant',
@@ -151,8 +158,8 @@ async function applyStatusUpdate(
   // Apply the status/expiry update. Renewal-info fields (auto_renew_status)
   // are folded in via applyRenewalInfo below so they stay in sync on every
   // notification that carries renewalInfo, regardless of status change.
-  await knex('apple_iap_subscriptions')
-    .where({ tenant: tenantId, original_transaction_id: transaction.originalTransactionId })
+  await tenantDb(knex, tenantId).table('apple_iap_subscriptions')
+    .where({ original_transaction_id: transaction.originalTransactionId })
     .update({
       status: nextStatus,
       expires_at: expiresAt,
@@ -259,14 +266,15 @@ async function applyRenewalInfo(
   if (!renewalInfo) return;
   const knex = await getConnection(null);
 
-  const sub = await knex('apple_iap_subscriptions')
+  const sub = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+    .unscoped('apple_iap_subscriptions', 'tenant discovery from Apple original transaction id before renewal update')
     .where({ original_transaction_id: transaction.originalTransactionId })
     .first<{ tenant: string } | undefined>('tenant');
 
   if (!sub) return;
 
-  await knex('apple_iap_subscriptions')
-    .where({ tenant: sub.tenant, original_transaction_id: transaction.originalTransactionId })
+  await tenantDb(knex, sub.tenant).table('apple_iap_subscriptions')
+    .where({ original_transaction_id: transaction.originalTransactionId })
     .update({
       auto_renew_status: renewalInfo.autoRenewStatus === 1,
       auto_renew_status_updated_at: new Date(),
@@ -279,7 +287,8 @@ async function markNotificationProcessed(
   error?: string,
 ): Promise<void> {
   const knex = await getConnection(null);
-  await knex('apple_iap_notifications')
+  await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+    .unscoped('apple_iap_notifications', 'Apple notification ledger is tenant-optional reference data')
     .where({ notification_uuid: notificationUuid })
     .update({
       processed_at: new Date(),

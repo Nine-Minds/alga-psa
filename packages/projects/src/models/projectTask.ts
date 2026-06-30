@@ -8,7 +8,16 @@ import type {
   IProjectTaskCardInfo,
   ITicketLinkedTask,
 } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import ProjectModel from './project';
+
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder<Row, any[]> {
+  return tenantDb(conn, tenant).table<Row>(table) as Knex.QueryBuilder<Row, any[]>;
+}
 
 const ProjectTaskModel = {
   addTask: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'> & { order_key?: string }): Promise<IProjectTask> => {
@@ -28,18 +37,17 @@ const ProjectTaskModel = {
       let orderKey = taskData.order_key;
       if (!orderKey) {
         const { generateKeyBetween } = await import('fractional-indexing');
-        const lastTask = await knexOrTrx('project_tasks')
+        const lastTask = await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
           .where({ 
             phase_id: phaseId, 
-            project_status_mapping_id: taskData.project_status_mapping_id,
-            tenant 
+            project_status_mapping_id: taskData.project_status_mapping_id
           })
           .orderBy('order_key', 'desc')
           .first();
         orderKey = generateKeyBetween(lastTask?.order_key || null, null);
       }
   
-      const [newTask] = await knexOrTrx<IProjectTask>('project_tasks')
+      const [newTask] = await tenantScopedTable<IProjectTask>(knexOrTrx, 'project_tasks', tenant)
         .insert({
           ...taskData,
           task_id: uuidv4(),
@@ -132,9 +140,8 @@ const ProjectTaskModel = {
         }
       }
 
-      const [updatedTask] = await knexOrTrx<IProjectTask>('project_tasks')
+      const [updatedTask] = await tenantScopedTable<IProjectTask>(knexOrTrx, 'project_tasks', tenant)
         .where('task_id', taskId)
-        .andWhere('tenant', tenant)
         .update(finalTaskData)
         .returning('*');
 
@@ -152,10 +159,9 @@ const ProjectTaskModel = {
       }
       
       // Get current task to preserve phase information
-      const task = await knexOrTrx<IProjectTask>('project_tasks')
+      const task = await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
         .where('task_id', taskId)
-        .andWhere('tenant', tenant)
-        .first();
+        .first() as IProjectTask | undefined;
       
       if (!task) {
         throw new Error('Task not found');
@@ -165,9 +171,8 @@ const ProjectTaskModel = {
       const parentWbs = task.wbs_code.split('.').slice(0, -1).join('.');
       const newWbsCode = await ProjectModel.generateNextWbsCode(knexOrTrx, tenant, parentWbs);
 
-      const [updatedTask] = await knexOrTrx<IProjectTask>('project_tasks')
+      const [updatedTask] = await tenantScopedTable<IProjectTask>(knexOrTrx, 'project_tasks', tenant)
         .where('task_id', taskId)
-        .andWhere('tenant', tenant)
         .update({
           project_status_mapping_id: projectStatusMappingId,
           wbs_code: newWbsCode,
@@ -186,10 +191,9 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const task = await knexOrTrx<IProjectTask>('project_tasks')
+      const task = await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
         .where('task_id', taskId)
-        .andWhere('tenant', tenant)
-        .first();
+        .first() as IProjectTask | undefined;
       return task || null;
     } catch (error) {
       console.error('Error getting task by ID:', error);
@@ -208,44 +212,37 @@ const ProjectTaskModel = {
       
       try {
         // Delete task dependencies (both as predecessor and successor)
-        await trx('project_task_dependencies')
+        await tenantScopedTable(trx, 'project_task_dependencies', tenant)
           .where(function() {
             this.where('predecessor_task_id', taskId)
               .orWhere('successor_task_id', taskId);
           })
-          .andWhere('tenant', tenant)
           .del();
 
         // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
-        const taskCommentIds = await trx('project_task_comments')
+        const taskCommentIds = await tenantScopedTable(trx, 'project_task_comments', tenant)
           .where('task_id', taskId)
-          .andWhere('tenant', tenant)
           .pluck('task_comment_id');
         if (taskCommentIds.length > 0) {
-          await trx('project_task_comment_reactions')
-            .where('tenant', tenant)
+          await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
             .whereIn('task_comment_id', taskCommentIds)
             .del();
         }
 
         // Delete task comments
-        await trx('project_task_comments')
+        await tenantScopedTable(trx, 'project_task_comments', tenant)
           .where('task_id', taskId)
-          .andWhere('tenant', tenant)
           .del();
 
-        await trx('task_resources')
+        await tenantScopedTable(trx, 'task_resources', tenant)
           .where('task_id', taskId)
-          .andWhere('tenant', tenant)
           .del();
-        await trx('task_checklist_items')
+        await tenantScopedTable(trx, 'task_checklist_items', tenant)
           .where('task_id', taskId)
-          .andWhere('tenant', tenant)
           .del();
 
-        await trx<IProjectTask>('project_tasks')
+        await tenantScopedTable(trx, 'project_tasks', tenant)
           .where('task_id', taskId)
-          .andWhere('tenant', tenant)
           .del();
           
         if (!isTransaction) {
@@ -268,24 +265,19 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const tasks = await knexOrTrx<IProjectTask>('project_tasks')
-        .join('project_phases', function() {
-          this.on('project_tasks.phase_id', 'project_phases.phase_id')
-              .andOn('project_tasks.tenant', 'project_phases.tenant')
-        })
-        .leftJoin('users', function() {
-          this.on('project_tasks.assigned_to', 'users.user_id')
-              .andOn('project_tasks.tenant', 'users.tenant')
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const tasksQuery = tenantScopedTable(knexOrTrx, 'project_tasks', tenant);
+      db.tenantJoin(tasksQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      db.tenantJoin(tasksQuery, 'users', 'project_tasks.assigned_to', 'users.user_id', { type: 'left' });
+      const tasks = await tasksQuery
         .where('project_phases.project_id', projectId)
         .andWhere('project_tasks.phase_id', knexOrTrx.ref('project_phases.phase_id')) // Ensure phase matches
-        .andWhere('project_tasks.tenant', tenant) // Explicit tenant filter on main table
         .select(
           'project_tasks.*',
           'project_phases.project_id',
           knexOrTrx.raw('CONCAT(users.first_name, \' \', users.last_name) as assigned_to_name')
         )
-        .orderBy('project_tasks.wbs_code');
+        .orderBy('project_tasks.wbs_code') as IProjectTaskCardInfo[];
       return tasks.sort((a, b) => {
         const aNumbers = a.wbs_code.split('.').map((n: string): number => parseInt(n));
         const bNumbers = b.wbs_code.split('.').map((n: string): number => parseInt(n));
@@ -316,10 +308,9 @@ const ProjectTaskModel = {
       const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
-        const taskRecords = await trx('project_tasks')
+        const taskRecords = await tenantScopedTable(trx, 'project_tasks', tenant)
           .whereIn('task_id', tasks.map((t): string => t.taskId))
-          .andWhere('tenant', tenant)
-          .select('task_id', 'phase_id');
+          .select('task_id', 'phase_id') as Array<{ task_id: string; phase_id: string }>;
 
         if (taskRecords.length !== tasks.length) {
           throw new Error('Some tasks not found');
@@ -331,9 +322,8 @@ const ProjectTaskModel = {
         }
 
         await Promise.all(tasks.map(({taskId, newWbsCode}): Promise<number> =>
-          trx('project_tasks')
+          tenantScopedTable(trx, 'project_tasks', tenant)
             .where('task_id', taskId)
-            .andWhere('tenant', tenant)
             .update({
               wbs_code: newWbsCode,
               updated_at: trx.fn.now()
@@ -360,7 +350,7 @@ const ProjectTaskModel = {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    const [newItem] = await knexOrTrx('task_checklist_items')
+    const [newItem] = await tenantScopedTable<ITaskChecklistItem>(knexOrTrx, 'task_checklist_items', tenant)
       .insert({
         ...itemData,
         task_id: taskId,
@@ -375,8 +365,8 @@ const ProjectTaskModel = {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    const [updatedItem] = await knexOrTrx('task_checklist_items')
-      .where({ checklist_item_id: checklistItemId, tenant })
+    const [updatedItem] = await tenantScopedTable<ITaskChecklistItem>(knexOrTrx, 'task_checklist_items', tenant)
+      .where({ checklist_item_id: checklistItemId })
       .update({
         ...itemData,
         updated_at: knexOrTrx.fn.now()
@@ -389,10 +379,9 @@ const ProjectTaskModel = {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    await knexOrTrx('task_checklist_items')
+    await tenantScopedTable(knexOrTrx, 'task_checklist_items', tenant)
       .where({
-        checklist_item_id: checklistItemId,
-        tenant
+        checklist_item_id: checklistItemId
       })
       .delete();
   },
@@ -401,10 +390,9 @@ const ProjectTaskModel = {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    const items = await knexOrTrx('task_checklist_items')
+    const items = await tenantScopedTable(knexOrTrx, 'task_checklist_items', tenant)
       .where({
-        task_id: taskId,
-        tenant
+        task_id: taskId
       })
       .orderBy('order_number', 'asc');
     return items;
@@ -415,9 +403,8 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      await knexOrTrx('task_checklist_items')
+      await tenantScopedTable(knexOrTrx, 'task_checklist_items', tenant)
         .where('task_id', taskId)
-        .andWhere('tenant', tenant)
         .delete();
     } catch (error) {
       console.error('Error deleting checklist items:', error);
@@ -430,19 +417,14 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const items = await knexOrTrx('task_checklist_items')
-        .join('project_tasks', function() {
-          this.on('task_checklist_items.task_id', 'project_tasks.task_id')
-              .andOn('task_checklist_items.tenant', 'project_tasks.tenant')
-        })
-        .join('project_phases', function() {
-          this.on('project_tasks.phase_id', 'project_phases.phase_id')
-              .andOn('project_tasks.tenant', 'project_phases.tenant')
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const itemsQuery = tenantScopedTable(knexOrTrx, 'task_checklist_items', tenant);
+      db.tenantJoin(itemsQuery, 'project_tasks', 'task_checklist_items.task_id', 'project_tasks.task_id');
+      db.tenantJoin(itemsQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      const items = await itemsQuery
         .where('project_phases.project_id', projectId)
-        .andWhere('task_checklist_items.tenant', tenant)
         .orderBy('task_checklist_items.order_number', 'asc')
-        .select('task_checklist_items.*');
+        .select('task_checklist_items.*') as ITaskChecklistItem[];
 
       return items.reduce((acc: { [taskId: string]: ITaskChecklistItem[] }, item) => {
         if (!acc[item.task_id]) {
@@ -464,17 +446,16 @@ const ProjectTaskModel = {
         throw new Error('Tenant context is required');
       }
 
-      const task = await knexOrTrx('project_tasks')
+      const task = await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
         .where('task_id', taskId)
-        .andWhere('tenant', tenant)
         .first();
 
       if (!task) {
         throw new Error('Task not found');
       }
 
-      const existingResource = await knexOrTrx('task_resources')
-        .where({ task_id: taskId, additional_user_id: userId, tenant })
+      const existingResource = await tenantScopedTable(knexOrTrx, 'task_resources', tenant)
+        .where({ task_id: taskId, additional_user_id: userId })
         .first();
 
       if (existingResource) {
@@ -485,7 +466,7 @@ const ProjectTaskModel = {
       // or we fall back to the additional user being added.
       const assignedTo: string = (task.assigned_to as string | null) || userId;
 
-      await knexOrTrx('task_resources').insert({
+      await tenantScopedTable(knexOrTrx, 'task_resources', tenant).insert({
         tenant,
         task_id: taskId,
         assigned_to: assignedTo,
@@ -503,9 +484,8 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      await knexOrTrx('task_resources')
+      await tenantScopedTable(knexOrTrx, 'task_resources', tenant)
         .where('assignment_id', assignmentId)
-        .andWhere('tenant', tenant)
         .del();
     } catch (error) {
       console.error('Error removing task resource:', error);
@@ -527,18 +507,16 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const resources = await knexOrTrx('task_resources')
+      const db = tenantDb(knexOrTrx, tenant);
+      const resourcesQuery = tenantScopedTable(knexOrTrx, 'task_resources', tenant)
         .select(
           'task_resources.*',
           'users.first_name',
           'users.last_name'
-        )
-        .leftJoin('users', function() {
-          this.on('task_resources.additional_user_id', 'users.user_id')
-              .andOn('task_resources.tenant', 'users.tenant')
-        })
-        .where('task_id', taskId)
-        .andWhere('task_resources.tenant', tenant);
+        );
+      db.tenantJoin(resourcesQuery, 'users', 'task_resources.additional_user_id', 'users.user_id', { type: 'left' });
+      const resources = await resourcesQuery
+        .where('task_id', taskId);
       return resources;
     } catch (error) {
       console.error('Error getting task resources:', error);
@@ -553,13 +531,12 @@ const ProjectTaskModel = {
         throw new Error('Tenant context is required');
       }
 
-      const existingLink = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+      const existingLink = await tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant)
         .where({
           project_id: projectId,
           phase_id: phaseId,
           task_id: taskId,
-          ticket_id: ticketId,
-          tenant
+          ticket_id: ticketId
         })
         .first();
 
@@ -567,7 +544,7 @@ const ProjectTaskModel = {
         throw new Error('This ticket is already linked to this task');
       }
 
-      const [newLink] = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+      const [newLink] = await tenantScopedTable<IProjectTicketLink>(knexOrTrx, 'project_ticket_links', tenant)
         .insert({
           link_id: uuidv4(),
           project_id: projectId,
@@ -590,24 +567,19 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const links = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+      const db = tenantDb(knexOrTrx, tenant);
+      const linksQuery = tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant);
+      db.tenantJoin(linksQuery, 'tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'statuses', 'tickets.status_id', 'statuses.status_id', { type: 'left' });
+      const links = await linksQuery
         .where('task_id', taskId)
-        .andWhere('project_ticket_links.tenant', tenant)
-        .leftJoin('tickets', function() {
-          this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
-              .andOn('project_ticket_links.tenant', 'tickets.tenant')
-        })
-        .leftJoin('statuses', function() {
-          this.on('tickets.status_id', 'statuses.status_id')
-              .andOn('tickets.tenant', 'statuses.tenant')
-        })
         .select(
           'project_ticket_links.*',
           'tickets.ticket_number',
           'tickets.title',
           'statuses.name as status_name',
           'statuses.is_closed'
-        );
+        ) as IProjectTicketLinkWithDetails[];
       return links;
     } catch (error) {
       console.error('Error getting task ticket links:', error);
@@ -622,8 +594,8 @@ const ProjectTaskModel = {
       }
       
       // Get phase to find its WBS code
-      const phase = await knexOrTrx('project_phases')
-        .where({ phase_id: phaseId, tenant })
+      const phase = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
+        .where({ phase_id: phaseId })
         .first();
         
       if (!phase) {
@@ -631,8 +603,7 @@ const ProjectTaskModel = {
       }
       
       // Get all tasks that belong to this phase (based on WBS code)
-      const tasks = await knexOrTrx<IProjectTask>('project_tasks')
-        .where('tenant', tenant)
+      const tasks = await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
         .where('wbs_code', 'like', `${phase.wbs_code}.%`)
         .orderBy('order_key');
         
@@ -653,24 +624,19 @@ const ProjectTaskModel = {
         return [];
       }
       
-      const links = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+      const db = tenantDb(knexOrTrx, tenant);
+      const linksQuery = tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant);
+      db.tenantJoin(linksQuery, 'tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'statuses', 'tickets.status_id', 'statuses.status_id', { type: 'left' });
+      const links = await linksQuery
         .whereIn('task_id', taskIds)
-        .andWhere('project_ticket_links.tenant', tenant)
-        .leftJoin('tickets', function() {
-          this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
-              .andOn('project_ticket_links.tenant', 'tickets.tenant')
-        })
-        .leftJoin('statuses', function() {
-          this.on('tickets.status_id', 'statuses.status_id')
-              .andOn('tickets.tenant', 'statuses.tenant')
-        })
         .select(
           'project_ticket_links.*',
           'tickets.ticket_number',
           'tickets.title',
           'statuses.name as status_name',
           'statuses.is_closed'
-        );
+        ) as IProjectTicketLinkWithDetails[];
       return links;
     } catch (error) {
       console.error('Error getting task ticket links for tasks:', error);
@@ -688,9 +654,8 @@ const ProjectTaskModel = {
         return [];
       }
       
-      const resources = await knexOrTrx('task_resources')
-        .whereIn('task_id', taskIds)
-        .andWhere('tenant', tenant);
+      const resources = await tenantScopedTable(knexOrTrx, 'task_resources', tenant)
+        .whereIn('task_id', taskIds);
         
       return resources;
     } catch (error) {
@@ -704,9 +669,8 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+      await tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant)
         .where('link_id', linkId)
-        .andWhere('tenant', tenant)
         .del();
     } catch (error) {
       console.error('Error deleting ticket link:', error);
@@ -719,9 +683,8 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+      await tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant)
         .where('ticket_id', ticketId)
-        .andWhere('tenant', tenant)
         .del();
     } catch (error) {
       console.error('Error deleting ticket links by ticket_id:', error);
@@ -734,9 +697,8 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      await knexOrTrx('project_ticket_links')
+      await tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant)
         .where('link_id', linkId)
-        .andWhere('tenant', tenant)
         .update(updateData);
     } catch (error) {
       console.error('Error updating task ticket link:', error);
@@ -749,24 +711,19 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const links = await knexOrTrx('project_ticket_links')
+      const db = tenantDb(knexOrTrx, tenant);
+      const linksQuery = tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant);
+      db.tenantJoin(linksQuery, 'tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'statuses', 'tickets.status_id', 'statuses.status_id', { type: 'left' });
+      const links = await linksQuery
         .where('project_ticket_links.project_id', projectId)
-        .andWhere('project_ticket_links.tenant', tenant)
-        .leftJoin('tickets', function() {
-          this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
-              .andOn('project_ticket_links.tenant', 'tickets.tenant')
-        })
-        .leftJoin('statuses', function() {
-          this.on('tickets.status_id', 'statuses.status_id')
-              .andOn('tickets.tenant', 'statuses.tenant')
-        })
         .select(
           'project_ticket_links.*',
           'tickets.ticket_number',
           'tickets.title',
           'statuses.name as status_name',
           'statuses.is_closed'
-        );
+        ) as IProjectTicketLinkWithDetails[];
 
       return links.reduce((acc: { [taskId: string]: IProjectTicketLinkWithDetails[] }, link) => {
         if (link.task_id) {
@@ -788,33 +745,17 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const links = await knexOrTrx('project_ticket_links')
+      const db = tenantDb(knexOrTrx, tenant);
+      const linksQuery = tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant);
+      db.tenantJoin(linksQuery, 'project_tasks', 'project_ticket_links.task_id', 'project_tasks.task_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'projects', 'project_ticket_links.project_id', 'projects.project_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'project_status_mappings as psm', 'project_tasks.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      db.tenantJoin(linksQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+      const links = await linksQuery
         .where('project_ticket_links.ticket_id', ticketId)
-        .andWhere('project_ticket_links.tenant', tenant)
         .whereNotNull('project_ticket_links.task_id')
-        .leftJoin('project_tasks', function() {
-          this.on('project_ticket_links.task_id', 'project_tasks.task_id')
-              .andOn('project_ticket_links.tenant', 'project_tasks.tenant');
-        })
-        .leftJoin('projects', function() {
-          this.on('project_ticket_links.project_id', 'projects.project_id')
-              .andOn('project_ticket_links.tenant', 'projects.tenant');
-        })
-        .leftJoin('project_phases', function() {
-          this.on('project_tasks.phase_id', 'project_phases.phase_id')
-              .andOn('project_tasks.tenant', 'project_phases.tenant');
-        })
-        .leftJoin('project_status_mappings as psm', function() {
-          this.on('project_tasks.project_status_mapping_id', 'psm.project_status_mapping_id')
-              .andOn('project_tasks.tenant', 'psm.tenant');
-        })
-        .leftJoin('statuses as s', function() {
-          this.on('psm.status_id', 's.status_id')
-              .andOn('psm.tenant', 's.tenant');
-        })
-        .leftJoin('standard_statuses as ss', function() {
-          this.on('psm.standard_status_id', 'ss.standard_status_id');
-        })
         .select(
           'project_ticket_links.link_id',
           'project_tasks.task_id',
@@ -838,26 +779,18 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      const resources = await knexOrTrx('task_resources')
-        .join('project_tasks', function() {
-          this.on('task_resources.task_id', 'project_tasks.task_id')
-              .andOn('task_resources.tenant', 'project_tasks.tenant')
-        })
-        .join('project_phases', function() {
-          this.on('project_tasks.phase_id', 'project_phases.phase_id')
-              .andOn('project_tasks.tenant', 'project_phases.tenant')
-        })
-        .leftJoin('users', function() {
-          this.on('task_resources.additional_user_id', 'users.user_id')
-              .andOn('task_resources.tenant', 'users.tenant')
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const resourcesQuery = tenantScopedTable(knexOrTrx, 'task_resources', tenant);
+      db.tenantJoin(resourcesQuery, 'project_tasks', 'task_resources.task_id', 'project_tasks.task_id');
+      db.tenantJoin(resourcesQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      db.tenantJoin(resourcesQuery, 'users', 'task_resources.additional_user_id', 'users.user_id', { type: 'left' });
+      const resources = await resourcesQuery
         .where('project_phases.project_id', projectId)
-        .andWhere('task_resources.tenant', tenant)
         .select(
           'task_resources.*',
           'users.first_name',
           'users.last_name'
-        );
+        ) as any[];
 
       return resources.reduce((acc: { [taskId: string]: any[] }, resource) => {
         if (!acc[resource.task_id]) {

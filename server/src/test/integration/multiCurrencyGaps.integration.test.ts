@@ -20,6 +20,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 
@@ -52,6 +53,19 @@ let createdIds: CreatedIds = {
   transactionIds: [],
   creditIds: [],
 };
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -114,7 +128,7 @@ describe('Multi-Currency Gap Tests', () => {
     it('createPrepaymentInvoice should record currency on the credit transaction', async () => {
       // Setup: Create a client with EUR as default currency
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(db, tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'EUR Prepayment Client',
@@ -130,7 +144,7 @@ describe('Multi-Currency Gap Tests', () => {
       createdIds.invoiceIds.push(prepaymentInvoice.invoice_id);
 
       // Verify: The transaction should have currency_code = 'EUR'
-      const transaction = await db('transactions')
+      const transaction = await tenantTable(db, tenantId, 'transactions')
         .where({
           client_id: clientId,
           tenant: tenantId,
@@ -148,7 +162,7 @@ describe('Multi-Currency Gap Tests', () => {
     it('createPrepaymentInvoice should record currency on the credit_tracking entry', async () => {
       // Setup: Create a client with GBP as default currency
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(db, tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'GBP Prepayment Client',
@@ -164,7 +178,7 @@ describe('Multi-Currency Gap Tests', () => {
       createdIds.invoiceIds.push(prepaymentInvoice.invoice_id);
 
       // Verify: The credit tracking entry should have currency_code = 'GBP'
-      const creditEntry = await db('credit_tracking')
+      const creditEntry = await tenantTable(db, tenantId, 'credit_tracking')
         .where({ client_id: clientId, tenant: tenantId })
         .first();
 
@@ -184,7 +198,7 @@ describe('Multi-Currency Gap Tests', () => {
     it('applyCreditToInvoice should reject applying USD credit to EUR invoice', async () => {
       // Setup: Create client with USD credit
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(db, tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'Cross-Currency Credit Client',
@@ -201,7 +215,7 @@ describe('Multi-Currency Gap Tests', () => {
 
       // Create an EUR invoice (different currency!)
       const eurInvoiceId = uuidv4();
-      await db('invoices').insert({
+      await tenantTable(db, tenantId, 'invoices').insert({
         invoice_id: eurInvoiceId,
         tenant: tenantId,
         client_id: clientId,
@@ -239,7 +253,7 @@ describe('Multi-Currency Gap Tests', () => {
     it('listClientCredits should be able to filter credits by currency', async () => {
       // Setup: Create client with credits in multiple currencies
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(db, tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'Multi-Currency Credits Client',
@@ -251,13 +265,13 @@ describe('Multi-Currency Gap Tests', () => {
       createdIds.clientIds.push(clientId);
 
       // Create USD credit
-      await db('clients').where({ client_id: clientId, tenant: tenantId })
+      await tenantTable(db, tenantId, 'clients').where({ client_id: clientId, tenant: tenantId })
         .update({ default_currency_code: 'USD' });
       const usdPrepayment = await createPrepaymentInvoice(clientId, 10000);
       createdIds.invoiceIds.push(usdPrepayment.invoice_id);
 
       // Update client to EUR and create EUR credit
-      await db('clients').where({ client_id: clientId, tenant: tenantId })
+      await tenantTable(db, tenantId, 'clients').where({ client_id: clientId, tenant: tenantId })
         .update({ default_currency_code: 'EUR', credit_balance: 10000 });
       const eurPrepayment = await createPrepaymentInvoice(clientId, 5000);
       createdIds.invoiceIds.push(eurPrepayment.invoice_id);
@@ -282,7 +296,7 @@ describe('Multi-Currency Gap Tests', () => {
     it('getCreditHistory should return transactions with currency information', async () => {
       // Setup: Create client and some credit transactions
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(db, tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'Credit History Client',
@@ -323,7 +337,7 @@ describe('Multi-Currency Gap Tests', () => {
 
       // Create client
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(db, tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'Multi-Contract Client',
@@ -393,7 +407,7 @@ describe('Multi-Currency Gap Tests', () => {
       createdIds.serviceId = serviceId;
 
       const clientId = uuidv4();
-      await db('clients').insert({
+      await tenantTable(db, tenantId, 'clients').insert({
         client_id: clientId,
         tenant: tenantId,
         client_name: 'Billing Engine Test Client',
@@ -422,15 +436,12 @@ describe('Multi-Currency Gap Tests', () => {
       }
 
       // Verify: Query the way billing engine does
-      const lines = await db('client_contracts as cc')
-        .join('contracts as c', function() {
-          this.on('c.contract_id', '=', 'cc.contract_id')
-            .andOn('c.tenant', '=', 'cc.tenant');
-        })
-        .join('contract_lines as cl', function() {
-          this.on('cl.contract_id', '=', 'c.contract_id')
-            .andOn('cl.tenant', '=', 'c.tenant');
-        })
+      const linesQuery = tenantTable(db, tenantId, 'client_contracts as cc');
+      const scopedDb = tenantDb(db, tenantId);
+      scopedDb.tenantJoin(linesQuery, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+      scopedDb.tenantJoin(linesQuery, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
+
+      const lines = await linesQuery
         .where({ 'cc.client_id': clientId, 'cc.tenant': tenantId, 'cc.is_active': true })
         .select('c.currency_code');
 
@@ -444,7 +455,7 @@ describe('Multi-Currency Gap Tests', () => {
       let error: Error | null = null;
 
       try {
-        await db('clients').insert({
+        await tenantTable(db, tenantId, 'clients').insert({
           client_id: clientId,
           tenant: tenantId,
           client_name: 'No Currency Client',
@@ -468,13 +479,13 @@ describe('Multi-Currency Gap Tests', () => {
 // =============================================================================
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Multi-Currency Gap Test Tenant',
     email: 'multi-currency-gap-test@test.co',
@@ -487,7 +498,7 @@ async function ensureTenant(connection: Knex): Promise<string> {
 async function createTestService(db: Knex, tenantId: string): Promise<{ serviceTypeId: string; serviceId: string }> {
   const serviceTypeId = uuidv4();
   const serviceTypeName = `Service Type ${serviceTypeId.slice(0, 8)}`;
-  await db('service_types').insert({
+  await tenantTable(db, tenantId, 'service_types').insert({
     id: serviceTypeId,
     tenant: tenantId,
     name: serviceTypeName,
@@ -498,7 +509,7 @@ async function createTestService(db: Knex, tenantId: string): Promise<{ serviceT
   });
 
   const serviceId = uuidv4();
-  await db('service_catalog').insert({
+  await tenantTable(db, tenantId, 'service_catalog').insert({
     tenant: tenantId,
     service_id: serviceId,
     service_name: `Test Service ${serviceId.slice(0, 8)}`,
@@ -517,7 +528,7 @@ async function createTestService(db: Knex, tenantId: string): Promise<{ serviceT
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds) {
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTable(db, tenantId, table).where(where).del();
     } catch {
       // ignore cleanup issues
     }
@@ -526,7 +537,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   const safeDeleteIn = async (table: string, column: string, values: string[]) => {
     if (!values || values.length === 0) return;
     try {
-      await db(table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
+      await tenantTable(db, tenantId, table).whereIn(column, values).del();
     } catch {
       // ignore cleanup issues
     }

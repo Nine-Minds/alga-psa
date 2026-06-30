@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientContract } from '@alga-psa/types';
 import {
@@ -25,6 +25,14 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 async function attachClientLogos(clients: IClient[], tenant: string): Promise<IClient[]> {
   if (clients.length === 0) {
     return clients;
@@ -44,12 +52,10 @@ async function assertClientContractAssignmentIsAuthorable(
   tenant: string,
   clientContractId: string,
 ): Promise<void> {
-  const row = await trx('client_contracts as cc')
-    .join('contracts as c', function joinContracts() {
-      this.on('cc.contract_id', '=', 'c.contract_id')
-        .andOn('cc.tenant', '=', 'c.tenant');
-    })
-    .where('cc.tenant', tenant)
+  const query = tenantScopedTable(trx, tenant, 'client_contracts as cc');
+  tenantDb(trx, tenant).tenantJoin(query, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+
+  const row = await query
     .andWhere('cc.client_contract_id', clientContractId)
     .first('c.is_system_managed_default');
 
@@ -167,8 +173,8 @@ export const createClientContractForBilling = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const contract = await trx('contracts')
-      .where({ tenant, contract_id: input.contract_id })
+    const contract = await tenantScopedTable(trx, tenant, 'contracts')
+      .where({ contract_id: input.contract_id })
       .first('is_system_managed_default');
     if (contract?.is_system_managed_default === true) {
       throw new Error(

@@ -9,7 +9,7 @@ import logger from '@alga-psa/core/logger';
 import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
 import { createPDFGenerationService } from '@alga-psa/billing/services';
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { withTransaction, runWithTenant } from '@alga-psa/db';
+import { tenantDb, withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getSession } from '@alga-psa/auth';
 
@@ -31,8 +31,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
     return NextResponse.json({ error: 'Invalid document ID.' }, { status: 400 });
   }
 
+  const tenant = session.user.tenant;
+
   // Wrap in runWithTenant to ensure tenant context persists across async boundaries
-  return await runWithTenant(session.user.tenant, async () => {
+  return await runWithTenant(tenant, async () => {
     // --- Markdown Export Logic ---
     if (format === 'markdown' || format === 'md') {
       logger.info(`Markdown export requested for document ID: ${lookupId}`);
@@ -40,23 +42,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
       try {
         const { knex } = await createTenantKnex();
         const { document, blockRow, textRow } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          const db = tenantDb(trx, tenant);
           const doc =
             (await Document.get(trx, lookupId)) ||
-            (await trx('documents')
-              .where({ file_id: lookupId, tenant: session.user.tenant })
+            (await db.table('documents')
+              .where({ file_id: lookupId })
               .first());
 
-          if (!doc || doc.tenant !== session.user.tenant) {
+          if (!doc || doc.tenant !== tenant) {
             return { document: null, blockRow: null, textRow: null };
           }
 
           const [block, text] = await Promise.all([
-            trx('document_block_content')
-              .where({ document_id: doc.document_id, tenant: session.user.tenant })
+            db.table('document_block_content')
+              .where({ document_id: doc.document_id })
               .select('block_data')
               .first<{ block_data: unknown }>(),
-            trx('document_content')
-              .where({ document_id: doc.document_id, tenant: session.user.tenant })
+            db.table('document_content')
+              .where({ document_id: doc.document_id })
               .select('content')
               .first<{ content: string | null }>(),
           ]);
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         });
 
         if (!document) {
-          logger.warn(`Document not found or tenant mismatch for markdown export. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
+          logger.warn(`Document not found or tenant mismatch for markdown export. ID: ${lookupId}, Tenant: ${tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
@@ -137,16 +140,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         // Get document to verify it exists and belongs to the user's tenant
         const { knex } = await createTenantKnex();
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          const db = tenantDb(trx, tenant);
           // Try by document_id first, then by file_id
           const doc = await Document.get(trx, lookupId);
           if (doc) return doc;
-          return await trx('documents')
-            .where({ file_id: lookupId, tenant: session.user.tenant })
+          return await db.table('documents')
+            .where({ file_id: lookupId })
             .first();
         });
 
-        if (!document || document.tenant !== session.user.tenant) {
-          logger.warn(`Document not found or tenant mismatch for PDF generation. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
+        if (!document || document.tenant !== tenant) {
+          logger.warn(`Document not found or tenant mismatch for PDF generation. ID: ${lookupId}, Tenant: ${tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
@@ -190,15 +194,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         // First, get the document to find its file_id (lookup by document_id or file_id)
         const { knex } = await createTenantKnex();
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          const db = tenantDb(trx, tenant);
           const doc = await Document.get(trx, lookupId);
           if (doc) return doc;
-          return await trx('documents')
-            .where({ file_id: lookupId, tenant: session.user.tenant })
+          return await db.table('documents')
+            .where({ file_id: lookupId })
             .first();
         });
 
-        if (!document || document.tenant !== session.user.tenant) {
-          logger.warn(`Document not found or tenant mismatch. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
+        if (!document || document.tenant !== tenant) {
+          logger.warn(`Document not found or tenant mismatch. ID: ${lookupId}, Tenant: ${tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 

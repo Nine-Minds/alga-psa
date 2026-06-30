@@ -1,11 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type { IDocument, IDocumentAssociation, IDocumentAssociationInput } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+
+function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder<any, any> {
+    return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
 
 export const associateDocumentWithAsset = withAuth(async (
     user,
@@ -22,7 +25,7 @@ export const associateDocumentWithAsset = withAuth(async (
     try {
         // Create association in the standard document_associations table
         const [association] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('document_associations')
+            return await tenantScopedTable(trx, tenant, 'document_associations')
                 .insert({
                     tenant,
                     entity_id: input.entity_id,
@@ -57,14 +60,14 @@ export const removeDocumentFromAsset = withAuth(async (
     try {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             // First get the entity_id for revalidation
-            const association = await trx('document_associations')
-                .where({ tenant, association_id })
+            const association = await tenantScopedTable(trx, tenant, 'document_associations')
+                .where({ association_id })
                 .first();
 
             if (association) {
                 // Then delete the association
-                await trx('document_associations')
-                    .where({ tenant, association_id })
+                await tenantScopedTable(trx, tenant, 'document_associations')
+                    .where({ association_id })
                     .delete();
 
                 revalidatePath(`/assets/${association.entity_id}`);
@@ -90,7 +93,18 @@ export const getAssetDocuments = withAuth(async (
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('document_associations as da')
+            const db = tenantDb(trx, tenant);
+            const query = db.table('document_associations as da');
+            db.tenantJoin(query, 'documents', 'documents.document_id', 'da.document_id');
+            db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', {
+                type: 'left',
+                rootTenantColumn: 'documents.tenant',
+            });
+            db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', {
+                type: 'left',
+                rootTenantColumn: 'documents.tenant',
+            });
+            return await query
             .select(
                 'documents.*',
                 'da.association_id',
@@ -103,21 +117,8 @@ export const getAssetDocuments = withAuth(async (
                     CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name
                 `)
             )
-            .join('documents', function() {
-                this.on('documents.document_id', '=', 'da.document_id')
-                    .andOn('documents.tenant', '=', 'da.tenant');
-            })
-            .leftJoin('users', function() {
-                this.on('documents.created_by', '=', 'users.user_id')
-                    .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-            })
-            .leftJoin('document_types as dt', function() {
-                this.on('documents.type_id', '=', 'dt.type_id')
-                    .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-            })
             .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
             .where({
-                'da.tenant': tenant,
                 'da.entity_id': asset_id,
                 'da.entity_type': 'asset'
             })
@@ -143,8 +144,8 @@ export const updateAssetDocumentNotes = withAuth(async (
     }
 
     try {
-        const [association] = await knex('document_associations')
-            .where({ tenant, association_id })
+        const [association] = await tenantScopedTable(knex, tenant, 'document_associations')
+            .where({ association_id })
             .update({ notes })
             .returning(['association_id', 'tenant', 'entity_id', 'entity_type', 'document_id', 'notes', 'created_by', 'entered_at']);
 

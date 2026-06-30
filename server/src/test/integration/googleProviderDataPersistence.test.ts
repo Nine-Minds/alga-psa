@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 
@@ -13,6 +14,17 @@ import { EmailProviderService } from '../../services/email/EmailProviderService'
 let testDb: Knex;
 let testTenant: string;
 let emailProviderService: EmailProviderService;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Google provider data persistence test fixture creates and removes tenant rows'
+  );
+}
 
 // Mock createTenantKnex to use our test database
 vi.mock('../../lib/db', () => ({
@@ -42,7 +54,7 @@ describe('Google Provider Data Persistence Tests', () => {
     
     try {
       // Create tenant record
-      await testDb('tenants').insert({
+      await tenantFixtureTable().insert({
         tenant: testTenant,
         client_name: 'Integration Test Client',
         email: 'integration-test@client.com',
@@ -58,11 +70,9 @@ describe('Google Provider Data Persistence Tests', () => {
   afterEach(async () => {
     // Clean up test data
     try {
-      await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .delete();
+      await tenantTable('email_provider_configs').delete();
         
-      await testDb('tenants')
+      await tenantFixtureTable()
         .where('tenant', testTenant)
         .delete();
     } catch (error) {
@@ -106,9 +116,8 @@ describe('Google Provider Data Persistence Tests', () => {
     });
 
     // Assert - Verify database record
-    const dbRecord = await testDb('email_provider_configs')
+    const dbRecord = await tenantTable('email_provider_configs')
       .where('id', createdProvider.id)
-      .where('tenant', testTenant)
       .first();
 
     expect(dbRecord).toBeDefined();
@@ -168,7 +177,7 @@ describe('Google Provider Data Persistence Tests', () => {
     const createdProvider = await emailProviderService.createProvider(workspaceConfig);
 
     // Assert - Verify custom domain is properly stored
-    const dbRecord = await testDb('email_provider_configs')
+    const dbRecord = await tenantTable('email_provider_configs')
       .where('id', createdProvider.id)
       .first();
 
@@ -209,7 +218,7 @@ describe('Google Provider Data Persistence Tests', () => {
     const createdProvider = await emailProviderService.createProvider(configWithAuth);
 
     // Assert - Verify tokens are persisted
-    const dbRecord = await testDb('email_provider_configs')
+    const dbRecord = await tenantTable('email_provider_configs')
       .where('id', createdProvider.id)
       .first();
 
@@ -238,8 +247,7 @@ describe('Google Provider Data Persistence Tests', () => {
     ).rejects.toThrow(/Provider type must be either "google" or "microsoft"/);
 
     // Verify no records were created with invalid provider type
-    const count = await testDb('email_provider_configs')
-      .where('tenant', testTenant)
+    const count = await tenantTable('email_provider_configs')
       .where('provider_type', 'invalid')
       .count('* as count')
       .first();
@@ -315,7 +323,7 @@ describe('Google Provider Data Persistence Tests', () => {
     });
 
     // Assert - Verify updates in database
-    const dbRecord = await testDb('email_provider_configs')
+    const dbRecord = await tenantTable('email_provider_configs')
       .where('id', provider.id)
       .first();
 

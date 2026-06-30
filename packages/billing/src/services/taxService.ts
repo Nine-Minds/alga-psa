@@ -8,7 +8,7 @@ import type {
   ISO8601String,
 } from '@alga-psa/types';
 import ClientTaxSettings from '../models/clientTaxSettings';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuid4 } from 'uuid';
 
 export class TaxService {
@@ -23,10 +23,9 @@ export class TaxService {
     }
 
     // Check for overlapping date ranges in the same region
-    const query = knex('tax_rates')
+    const query = tenantDb(knex, tenant).table('tax_rates')
       .where({
-        region_code: regionCode,
-        tenant
+        region_code: regionCode
       })
       .andWhere(function() {
         this.where(function() {
@@ -61,10 +60,9 @@ export class TaxService {
     console.log(`Calculating tax for client ${clientId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}, currency ${currencyCode}`);
 
     // Check if client is tax exempt
-    const client = await knex('clients')
+    const client = await tenantDb(knex, tenant).table('clients')
       .where({
-        client_id: clientId,
-        tenant
+        client_id: clientId
       })
       .select('is_tax_exempt')
       .first();
@@ -91,10 +89,9 @@ export class TaxService {
       console.log(`Calculating tax directly for regionCode: ${regionCode}, amount: ${netAmount}, date: ${date}`);
       
       // Explicitly type the result array
-      const applicableRates: Pick<ITaxRate, 'tax_percentage'>[] = await knex('tax_rates')
+      const applicableRates: Pick<ITaxRate, 'tax_percentage'>[] = await tenantDb(knex, tenant).table('tax_rates')
         .where({
           region_code: regionCode,
-          tenant,
           is_active: true
         })
         .andWhere('start_date', '<=', date)
@@ -114,7 +111,7 @@ export class TaxService {
       if (!applicableRates || applicableRates.length === 0) {
         console.error(`No active tax rate(s) found for regionCode ${regionCode} on date ${date}`);
         // Optional: Log all rates for debugging
-        // const allTaxRates = await knex('tax_rates').where({ tenant }).select('*');
+        // Debug option: inspect all tenant tax rates through the tenantDb facade.
         // console.log('All tax rates:', allTaxRates);
         throw new Error(`No active tax rate(s) found for region ${regionCode} on date ${date}`);
       }
@@ -150,10 +147,9 @@ export class TaxService {
     // Note: Reverse charge was already checked at the top of this method
 
     // Find the default tax rate association
-    const defaultRateAssoc = await knex('client_tax_rates')
+    const defaultRateAssoc = await tenantDb(knex, tenant).table('client_tax_rates')
       .where({
         client_id: clientId,
-        tenant: tenant,
         is_default: true,
       })
       .whereNull('location_id')
@@ -170,10 +166,9 @@ export class TaxService {
     }
 
     // Fetch the actual tax rate details using the ID found
-    const taxRate = await knex<ITaxRate>('tax_rates')
+    const taxRate = await tenantDb(knex, tenant).table<ITaxRate>('tax_rates')
       .where({
         tax_rate_id: defaultRateAssoc.tax_rate_id,
-        tenant: tenant,
         is_active: true // Ensure the default rate is active
       })
       // Add date validity check similar to regionCode logic
@@ -347,13 +342,17 @@ export class TaxService {
 
   async createDefaultTaxSettings(clientId: string): Promise<IClientTaxSettings> {
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for creating default tax settings');
+    }
     const trx = await knex.transaction();
 
     try {
+      const db = tenantDb(trx, tenant);
+
       // Get the first active tax rate to use as the default
-      const defaultTaxRate = await trx<ITaxRate>('tax_rates')
-        .where('tenant', tenant!) // Use non-null assertion
-        .andWhere('is_active', true)
+      const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
+        .where('is_active', true)
         .orderBy('created_at', 'asc')
         .first(); // Use first() instead of limit(1) which returns array
 
@@ -362,30 +361,30 @@ export class TaxService {
       }
 
       // Create default client tax settings (without tax_rate_id)
-      const [taxSettings] = await trx<IClientTaxSettings>('client_tax_settings')
+      const [taxSettings] = await db.table<IClientTaxSettings>('client_tax_settings')
         .insert({
           client_id: clientId,
           // tax_rate_id: defaultTaxRate.tax_rate_id, // Removed
           is_reverse_charge_applicable: false,
-          tenant: tenant!
+          tenant
         })
         .returning('*');
 
       // Create the default association in client_tax_rates
-      await trx('client_tax_rates')
+      await db.table('client_tax_rates')
         .insert({
           // client_tax_rate_id: uuid4(), // Assuming auto-generated or sequence
           client_id: clientId,
           tax_rate_id: defaultTaxRate.tax_rate_id,
           is_default: true,
           location_id: null,
-          tenant: tenant!
+          tenant
         });
 
       // Create a default tax component (linked to the tax_rate, not settings)
       // This part remains largely the same, assuming components are tied to rates
       const tax_component_id = uuid4();
-      await trx<ITaxComponent>('tax_components')
+      await db.table<ITaxComponent>('tax_components')
         .insert({
           tax_component_id,
           tax_rate_id: defaultTaxRate.tax_rate_id, // Link component to the chosen default rate
@@ -393,7 +392,7 @@ export class TaxService {
           rate: Math.ceil(defaultTaxRate.tax_percentage),
           sequence: 1,
           is_compound: false,
-          tenant: tenant!
+          tenant
         });
         // Removed .returning('*') as it wasn't used
 
@@ -414,8 +413,9 @@ export class TaxService {
     }
 
     await knex.transaction(async (trx) => {
-      const existingDefault = await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant, is_default: true })
+      const db = tenantDb(trx, tenant);
+      const existingDefault = await db.table('client_tax_rates')
+        .where({ client_id: clientId, is_default: true })
         .whereNull('location_id')
         .first();
 
@@ -423,9 +423,8 @@ export class TaxService {
         return;
       }
 
-      const defaultTaxRate = await trx<ITaxRate>('tax_rates')
-        .where('tenant', tenant)
-        .andWhere('is_active', true)
+      const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
+        .where('is_active', true)
         .whereNotNull('region_code')
         .orderBy('created_at', 'asc')
         .first();
@@ -434,33 +433,33 @@ export class TaxService {
         throw new Error('No active tax rates found in the system to assign as default.');
       }
 
-      const existingSettings = await trx<IClientTaxSettings>('client_tax_settings')
-        .where({ client_id: clientId, tenant })
+      const existingSettings = await db.table<IClientTaxSettings>('client_tax_settings')
+        .where({ client_id: clientId })
         .first();
 
       if (!existingSettings) {
-        await trx<IClientTaxSettings>('client_tax_settings').insert({
+        await db.table<IClientTaxSettings>('client_tax_settings').insert({
           client_id: clientId,
           is_reverse_charge_applicable: false,
           tenant
         });
       }
 
-      const association = await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant })
+      const association = await db.table('client_tax_rates')
+        .where({ client_id: clientId })
         .whereNull('location_id')
         .first();
 
       if (association) {
-        await trx('client_tax_rates')
-          .where({ client_id: clientId, tenant })
+        await db.table('client_tax_rates')
+          .where({ client_id: clientId })
           .whereNull('location_id')
           .update({
             tax_rate_id: defaultTaxRate.tax_rate_id,
             is_default: true
           });
       } else {
-        await trx('client_tax_rates').insert({
+        await db.table('client_tax_rates').insert({
           client_id: clientId,
           tax_rate_id: defaultTaxRate.tax_rate_id,
           is_default: true,
@@ -483,10 +482,9 @@ export class TaxService {
     }
 
     // Find the default tax rate association for the client
-    const defaultRateAssoc = await knex('client_tax_rates')
+    const defaultRateAssoc = await tenantDb(knex, tenant).table('client_tax_rates')
       .where({
         client_id: clientId,
-        tenant: tenant,
         is_default: true,
       })
       .whereNull('location_id')
@@ -503,10 +501,9 @@ export class TaxService {
     }
 
     // Fetch the actual tax rate details using the ID found
-    const taxRate = await knex<ITaxRate>('tax_rates')
+    const taxRate = await tenantDb(knex, tenant).table<ITaxRate>('tax_rates')
       .where({
-        tax_rate_id: defaultRateAssoc.tax_rate_id,
-        tenant: tenant
+        tax_rate_id: defaultRateAssoc.tax_rate_id
         // Assuming we don't need activity/date check just to get the type
       })
       .select('tax_type')

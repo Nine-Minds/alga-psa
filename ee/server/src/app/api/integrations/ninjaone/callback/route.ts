@@ -11,6 +11,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import axios from 'axios';
 import fs from 'fs';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import {
@@ -291,10 +292,11 @@ export async function GET(request: NextRequest) {
     // Use runWithTenant since this is an OAuth callback without a session
     const integrationId = await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
+      const db = tenantDb(knex, tenantId);
 
       // Check if integration already exists
-      const existingIntegration = await knex('rmm_integrations')
-        .where({ tenant: tenantId, provider: 'ninjaone' })
+      const existingIntegration = await db.table('rmm_integrations')
+        .where({ provider: 'ninjaone' })
         .first();
 
       if (existingIntegration) {
@@ -314,8 +316,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Update existing integration
-        await knex('rmm_integrations')
-          .where({ tenant: tenantId, provider: 'ninjaone' })
+        await db.table('rmm_integrations')
+          .where({ provider: 'ninjaone' })
           .update({
             instance_url: instanceUrl,
             is_active: true,
@@ -333,7 +335,7 @@ export async function GET(request: NextRequest) {
         return existingIntegration.integration_id as string;
       } else {
         // Create new integration record
-        await knex('rmm_integrations').insert({
+        await db.table('rmm_integrations').insert({
           tenant: tenantId,
           provider: 'ninjaone',
           instance_url: instanceUrl,
@@ -344,8 +346,8 @@ export async function GET(request: NextRequest) {
         });
         console.log(`[NinjaOne Callback] Created new integration for tenant ${tenantId}.`);
 
-        const createdIntegration = await knex('rmm_integrations')
-          .where({ tenant: tenantId, provider: 'ninjaone' })
+        const createdIntegration = await db.table('rmm_integrations')
+          .where({ provider: 'ninjaone' })
           .first();
         return createdIntegration?.integration_id as string | undefined;
       }
@@ -410,8 +412,9 @@ export async function GET(request: NextRequest) {
         // Update integration settings with webhook registration timestamp
         await runWithTenant(tenantId, async () => {
           const { knex } = await createTenantKnex();
-          const integration = await knex('rmm_integrations')
-            .where({ tenant: tenantId, provider: 'ninjaone' })
+          const db = tenantDb(knex, tenantId);
+          const integration = await db.table('rmm_integrations')
+            .where({ provider: 'ninjaone' })
             .first();
 
           if (integration) {
@@ -432,8 +435,8 @@ export async function GET(request: NextRequest) {
             settings.webhookRegisteredAt = new Date().toISOString();
             settings.webhookSecret = webhookSecret;
 
-            await knex('rmm_integrations')
-              .where({ tenant: tenantId, provider: 'ninjaone' })
+            await db.table('rmm_integrations')
+              .where({ provider: 'ninjaone' })
               .update({
                 settings: JSON.stringify(settings),
                 updated_at: knex.fn.now(),

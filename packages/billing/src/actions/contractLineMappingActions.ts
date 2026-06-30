@@ -3,7 +3,7 @@
 
 import ContractLineMapping from '../models/contractLineMapping';
 import { IContractLineMapping } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
@@ -18,9 +18,19 @@ import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/r
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
-async function isTemplateContract(knex: Knex, tenant: string, contractId: string): Promise<boolean> {
-  const record = await knex('contract_templates')
-    .where({ tenant, template_id: contractId })
+type TenantScopedKnex = Knex | Knex.Transaction;
+
+function tenantScopedTable(
+  conn: TenantScopedKnex,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
+  const record = await tenantScopedTable(knex, tenant, 'contract_templates')
+    .where({ template_id: contractId })
     .first();
   return Boolean(record);
 }
@@ -30,8 +40,8 @@ async function assertContractIsAuthorable(
   tenant: string,
   contractId: string,
 ): Promise<void> {
-  const contract = await trx('contracts')
-    .where({ tenant, contract_id: contractId })
+  const contract = await tenantScopedTable(trx, tenant, 'contracts')
+    .where({ contract_id: contractId })
     .first('is_system_managed_default');
   if (contract?.is_system_managed_default === true) {
     throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
@@ -62,14 +72,14 @@ type DetailedContractLineResultRow =
   };
 
 export async function ensureTemplateLineSnapshot(
-  knex: Knex,
+  knex: TenantScopedKnex,
   tenant: string,
   templateId: string,
   contractLineId: string,
   customRate?: number
 ): Promise<void> {
-  const contractLine = await knex('contract_lines')
-    .where({ tenant, contract_line_id: contractLineId })
+  const contractLine = await tenantScopedTable(knex, tenant, 'contract_lines')
+    .where({ contract_line_id: contractLineId })
     .first();
 
   if (!contractLine) {
@@ -80,7 +90,7 @@ export async function ensureTemplateLineSnapshot(
   const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);
 
   // All terms columns are now stored directly on contract_lines
-  await knex('contract_template_lines')
+  await tenantScopedTable(knex, tenant, 'contract_template_lines')
     .insert({
       tenant,
       template_line_id: contractLine.contract_line_id,
@@ -124,19 +134,18 @@ export async function ensureTemplateLineSnapshot(
       updated_at: now,
     });
 
-  const services = await knex('contract_line_services')
-    .where({ tenant, contract_line_id: contractLineId });
+  const services = await tenantScopedTable(knex, tenant, 'contract_line_services')
+    .where({ contract_line_id: contractLineId });
 
   for (const service of services) {
-    const templateService = await knex('contract_template_services')
+    const templateService = await tenantScopedTable(knex, tenant, 'contract_template_services')
       .where({
-        tenant,
         contract_line_id: contractLineId,
         service_id: service.service_id,
       })
       .first();
 
-    await knex('contract_template_line_services')
+    await tenantScopedTable(knex, tenant, 'contract_template_line_services')
       .insert({
         tenant,
         template_line_id: contractLineId,
@@ -158,11 +167,11 @@ export async function ensureTemplateLineSnapshot(
       });
   }
 
-  const configs = await knex('contract_line_service_configuration')
-    .where({ tenant, contract_line_id: contractLineId });
+  const configs = await tenantScopedTable(knex, tenant, 'contract_line_service_configuration')
+    .where({ contract_line_id: contractLineId });
 
   for (const config of configs) {
-    await knex('contract_template_line_service_configuration')
+    await tenantScopedTable(knex, tenant, 'contract_template_line_service_configuration')
       .insert({
         tenant,
         config_id: config.config_id,
@@ -186,14 +195,13 @@ export async function ensureTemplateLineSnapshot(
   }
 
   if (configs.length > 0) {
-    const configIds = configs.map((c) => c.config_id);
+    const configIds = (configs as any[]).map((c: any) => c.config_id);
 
-    const bucketConfigs = await knex('contract_line_service_bucket_config')
-      .where({ tenant })
+    const bucketConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_bucket_config')
       .whereIn('config_id', configIds);
 
     for (const bucket of bucketConfigs) {
-      await knex('contract_template_line_service_bucket_config')
+      await tenantScopedTable(knex, tenant, 'contract_template_line_service_bucket_config')
         .insert({
           tenant,
           config_id: bucket.config_id,
@@ -214,12 +222,11 @@ export async function ensureTemplateLineSnapshot(
         });
     }
 
-    const hourlyConfigs = await knex('contract_line_service_hourly_config')
-      .where({ tenant })
+    const hourlyConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_hourly_config')
       .whereIn('config_id', configIds);
 
     for (const hourly of hourlyConfigs) {
-      await knex('contract_template_line_service_hourly_config')
+      await tenantScopedTable(knex, tenant, 'contract_template_line_service_hourly_config')
         .insert({
           tenant,
           config_id: hourly.config_id,
@@ -246,12 +253,11 @@ export async function ensureTemplateLineSnapshot(
         });
     }
 
-    const usageConfigs = await knex('contract_line_service_usage_config')
-      .where({ tenant })
+    const usageConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_usage_config')
       .whereIn('config_id', configIds);
 
     for (const usage of usageConfigs) {
-      await knex('contract_template_line_service_usage_config')
+      await tenantScopedTable(knex, tenant, 'contract_template_line_service_usage_config')
         .insert({
           tenant,
           config_id: usage.config_id,
@@ -269,11 +275,11 @@ export async function ensureTemplateLineSnapshot(
     }
   }
 
-  const defaults = await knex('contract_line_service_defaults')
-    .where({ tenant, contract_line_id: contractLineId });
+  const defaults = await tenantScopedTable(knex, tenant, 'contract_line_service_defaults')
+    .where({ contract_line_id: contractLineId });
 
   for (const def of defaults) {
-    await knex('contract_template_line_defaults')
+    await tenantScopedTable(knex, tenant, 'contract_template_line_defaults')
       .insert({
         tenant,
         default_id: def.default_id,
@@ -299,7 +305,7 @@ export async function ensureTemplateLineSnapshot(
   // After migration 20251028120000, contract_line_fixed_config was merged into contract_lines
   // Read fixed config data directly from contract_lines
   if (contractLine.contract_line_type === 'Fixed') {
-    await knex('contract_template_line_fixed_config')
+    await tenantScopedTable(knex, tenant, 'contract_template_line_fixed_config')
       .insert({
         tenant,
         template_line_id: contractLineId,
@@ -344,8 +350,8 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
         // Query contract_template_lines directly (mapping data now inlined)
-        const rows = await trx('contract_template_lines')
-          .where({ tenant, template_id: contractId })
+        const rows = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+          .where({ template_id: contractId })
           .select({
             tenant: 'tenant',
             contract_id: 'template_id',
@@ -356,7 +362,7 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
             created_at: 'created_at',
           });
 
-        return rows.map((row) => normalizeContractLineMapping(row as IContractLineMapping));
+        return (rows as any[]).map((row: any) => normalizeContractLineMapping(row as IContractLineMapping));
       }
 
       const rows = await ContractLineMapping.getByContractId(contractId);
@@ -387,14 +393,13 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
         // Query contract_template_lines directly (mapping data now inlined)
-        const rows = await trx('contract_template_lines as lines')
-          .leftJoin('contract_template_line_fixed_config as tfc', function joinTemplateFixedConfig() {
-            this.on('lines.template_line_id', '=', 'tfc.template_line_id')
-              .andOn('lines.tenant', '=', 'tfc.tenant');
-          })
+        const facade = tenantDb(trx, tenant);
+        const query = facade.table('contract_template_lines as lines');
+        facade.tenantJoin(query, 'contract_template_line_fixed_config as tfc', 'lines.template_line_id', 'tfc.template_line_id', { type: 'left' });
+
+        const rows = await query
           .where({
             'lines.template_id': contractId,
-            'lines.tenant': tenant,
           })
           .select([
             'lines.tenant as tenant',
@@ -452,8 +457,8 @@ export const addContractLine = withAuth(async (
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
         // Count existing template lines for display_order
-        const countResult = await trx('contract_template_lines')
-          .where({ tenant, template_id: contractId })
+        const countResult = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+          .where({ template_id: contractId })
           .count<{ count: string | number }>('template_line_id as count')
           .first();
 
@@ -469,9 +474,8 @@ export const addContractLine = withAuth(async (
         await ensureTemplateLineSnapshot(trx, tenant, contractId, contractLineId, customRate);
 
         // Update the display_order and custom_rate on the template line directly
-        await trx('contract_template_lines')
+        await tenantScopedTable(trx, tenant, 'contract_template_lines')
           .where({
-            tenant,
             template_line_id: contractLineId,
           })
           .update({
@@ -481,9 +485,8 @@ export const addContractLine = withAuth(async (
             updated_at: trx.fn.now(),
           });
 
-        const row = await trx('contract_template_lines')
+        const row = await tenantScopedTable(trx, tenant, 'contract_template_lines')
           .where({
-            tenant,
             template_line_id: contractLineId,
           })
           .first();
@@ -530,9 +533,8 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
         // Unlink by setting template_id to NULL in contract_template_lines
-        await trx('contract_template_lines')
+        await tenantScopedTable(trx, tenant, 'contract_template_lines')
           .where({
-            tenant,
             template_id: contractId,
             template_line_id: contractLineId,
           })
@@ -589,9 +591,8 @@ export const updateContractLineAssociation = withAuth(async (
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
-        const existingTemplateLine = await trx('contract_template_lines')
+        const existingTemplateLine = await tenantScopedTable(trx, tenant, 'contract_template_lines')
           .where({
-            tenant,
             template_id: contractId,
             template_line_id: contractLineId,
           })
@@ -604,9 +605,8 @@ export const updateContractLineAssociation = withAuth(async (
         });
 
         // Update contract_template_lines directly (mapping data now inlined)
-        await trx('contract_template_lines')
+        await tenantScopedTable(trx, tenant, 'contract_template_lines')
           .where({
-            tenant,
             template_id: contractId,
             template_line_id: contractLineId,
           })
@@ -617,9 +617,8 @@ export const updateContractLineAssociation = withAuth(async (
             updated_at: trx.fn.now(),
           });
 
-        const row = await trx('contract_template_lines')
+        const row = await tenantScopedTable(trx, tenant, 'contract_template_lines')
           .where({
-            tenant,
             template_id: contractId,
             template_line_id: contractLineId,
           })

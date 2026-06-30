@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
@@ -59,6 +60,10 @@ function defaultTokenExpiry(): Date {
 
 async function getKnex(knex?: KnexLike): Promise<KnexLike> {
   return knex ?? getAdminConnection();
+}
+
+function tenantReactivationTokens(knex: KnexLike, tenantId: string) {
+  return tenantDb(knex, tenantId).table('tenant_reactivation_tokens');
 }
 
 export function hashTenantReactivationToken(token: string): string {
@@ -129,7 +134,7 @@ export async function createTenantReactivationToken(
   const tokenHash = hashTenantReactivationToken(token);
   const knex = await getKnex(input.knex);
 
-  await knex('tenant_reactivation_tokens').insert({
+  await tenantReactivationTokens(knex, input.tenantId).insert({
     tenant: input.tenantId,
     deletion_id: input.deletionId,
     token_hash: tokenHash,
@@ -156,10 +161,9 @@ export async function reserveTenantReactivationToken(
 
   const knex = await getKnex(knexOverride);
   const tokenHash = hashTenantReactivationToken(token);
-  const rows = await knex('tenant_reactivation_tokens')
+  const rows = await tenantReactivationTokens(knex, payload.tenant_id)
     .where({
       token_hash: tokenHash,
-      tenant: payload.tenant_id,
       deletion_id: payload.deletion_id,
     })
     .whereNull('reserved_at')
@@ -194,10 +198,9 @@ export async function attachCheckoutSessionToReactivationToken(
   }
 
   const knex = await getKnex(knexOverride);
-  const updated = await knex('tenant_reactivation_tokens')
+  const updated = await tenantReactivationTokens(knex, payload.tenant_id)
     .where({
       token_hash: hashTenantReactivationToken(token),
-      tenant: payload.tenant_id,
       deletion_id: payload.deletion_id,
     })
     .whereNotNull('reserved_at')
@@ -220,7 +223,11 @@ export async function consumeTenantReactivationTokenByCheckoutSession(
   }
 
   const knex = await getKnex(knexOverride);
-  const updated = await knex('tenant_reactivation_tokens')
+  const updated = await tenantDb(knex, '__tenant_reactivation_checkout_session_consume__')
+    .unscoped(
+      'tenant_reactivation_tokens',
+      'tenant reactivation checkout completion resolves token by checkout session before tenant context exists',
+    )
     .where({ checkout_session_id: checkoutSessionId })
     .whereNotNull('reserved_at')
     .whereNull('consumed_at')

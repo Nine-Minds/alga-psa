@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { submitPortalServiceRequest } from '../../lib/service-requests/submissionService';
 import {
@@ -17,8 +18,22 @@ describe('service request submission attachments', () => {
     return Object.prototype.hasOwnProperty.call(columns, columnName);
   }
 
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
+
+  function schemaTable(table: string) {
+    return tenantDb(db, '__test_schema__')
+      .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+  }
+
   async function insertTenant(tenant: string): Promise<void> {
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       ...(hasColumn(tenantColumns, 'company_name')
         ? { company_name: `Tenant ${tenant.slice(0, 8)}` }
@@ -30,7 +45,7 @@ describe('service request submission attachments', () => {
   }
 
   async function insertUser(tenant: string, userId: string): Promise<void> {
-    await db('users').insert({
+    await tenantTable(tenant, 'users').insert({
       tenant,
       user_id: userId,
       username: `requester-${userId.slice(0, 8)}`,
@@ -50,7 +65,7 @@ describe('service request submission attachments', () => {
     mimeType?: string;
     fileSize?: number;
   }): Promise<void> {
-    await db('external_files').insert({
+    await tenantTable(params.tenant, 'external_files').insert({
       tenant: params.tenant,
       file_id: params.fileId,
       file_name: params.fileName ?? 'attachment.bin',
@@ -66,8 +81,8 @@ describe('service request submission attachments', () => {
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
   });
 
   afterAll(async () => {
@@ -88,7 +103,7 @@ describe('service request submission attachments', () => {
     await insertTenant(tenant);
     await insertUser(tenant, requesterUserId);
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Hardware Request',
@@ -102,7 +117,7 @@ describe('service request submission attachments', () => {
       lifecycle_state: 'published',
     });
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,
@@ -152,7 +167,7 @@ describe('service request submission attachments', () => {
       ],
     });
 
-    const submission = await db('service_request_submissions')
+    const submission = await tenantTable(tenant, 'service_request_submissions')
       .where({ tenant, submission_id: result.submissionId })
       .first();
     expect(submission).toBeDefined();
@@ -166,7 +181,7 @@ describe('service request submission attachments', () => {
       device_model: 'ThinkPad X1',
     });
 
-    const attachmentRows = await db('service_request_submission_attachments')
+    const attachmentRows = await tenantTable(tenant, 'service_request_submission_attachments')
       .where({ tenant, submission_id: result.submissionId })
       .select('field_key', 'file_id', 'file_name', 'mime_type', 'file_size');
     expect(attachmentRows).toEqual([
@@ -190,7 +205,7 @@ describe('service request submission attachments', () => {
 
     await insertTenant(tenant);
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Hardware Request',
@@ -204,7 +219,7 @@ describe('service request submission attachments', () => {
       lifecycle_state: 'published',
     });
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,
@@ -247,7 +262,7 @@ describe('service request submission attachments', () => {
       })
     ).rejects.toThrow('Submission attachments reference unknown files');
 
-    const submissions = await db('service_request_submissions').where({ tenant, definition_id: definitionId });
+    const submissions = await tenantTable(tenant, 'service_request_submissions').where({ tenant, definition_id: definitionId });
     expect(submissions).toHaveLength(0);
   });
 
@@ -259,13 +274,13 @@ describe('service request submission attachments', () => {
     const clientId = uuidv4();
     const contactId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Access Request (Draft Diverged)',
@@ -281,7 +296,7 @@ describe('service request submission attachments', () => {
       lifecycle_state: 'published',
     });
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,
@@ -312,7 +327,7 @@ describe('service request submission attachments', () => {
       })
     ).rejects.toThrow('Required field missing: "access_target"');
 
-    const submissions = await db('service_request_submissions').where({ tenant, definition_id: definitionId });
+    const submissions = await tenantTable(tenant, 'service_request_submissions').where({ tenant, definition_id: definitionId });
     expect(submissions).toHaveLength(0);
   });
 
@@ -343,7 +358,7 @@ describe('service request submission attachments', () => {
     try {
       await insertTenant(tenant);
 
-      await db('service_request_definitions').insert({
+      await tenantTable(tenant, 'service_request_definitions').insert({
         tenant,
         definition_id: definitionId,
         name: 'Restricted Request',
@@ -357,7 +372,7 @@ describe('service request submission attachments', () => {
         lifecycle_state: 'published',
       });
 
-      await db('service_request_definition_versions').insert({
+      await tenantTable(tenant, 'service_request_definition_versions').insert({
         tenant,
         version_id: versionId,
         definition_id: definitionId,
@@ -388,7 +403,7 @@ describe('service request submission attachments', () => {
         })
       ).rejects.toThrow('Service request is not visible or not published');
 
-      const submissions = await db('service_request_submissions').where({ tenant, definition_id: definitionId });
+      const submissions = await tenantTable(tenant, 'service_request_submissions').where({ tenant, definition_id: definitionId });
       expect(submissions).toHaveLength(0);
     } finally {
       resetServiceRequestProviderRegistry();
@@ -405,7 +420,7 @@ describe('service request submission attachments', () => {
 
     await insertTenant(tenant);
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Laptop Setup Request',
@@ -419,7 +434,7 @@ describe('service request submission attachments', () => {
       lifecycle_state: 'published',
     });
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,
@@ -452,7 +467,7 @@ describe('service request submission attachments', () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
 
-    const submission = await db('service_request_submissions')
+    const submission = await tenantTable(tenant, 'service_request_submissions')
       .where({ tenant, submission_id: result.submissionId })
       .first();
     expect(submission).toBeDefined();

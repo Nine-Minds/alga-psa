@@ -13,7 +13,10 @@ const h = vi.hoisted(() => {
   let idCounter = 0;
 
   const matches = (row: Row, where: Record<string, any>) =>
-    Object.entries(where).every(([k, v]) => row[k] === v);
+    Object.entries(where).every(([k, v]) => {
+      const key = k.includes('.') ? k.split('.').pop()! : k;
+      return row[key] === v;
+    });
 
   class QB {
     private whereClauses: Array<Record<string, any>> = [];
@@ -25,8 +28,12 @@ const h = vi.hoisted(() => {
       return dbState[this.table];
     }
 
-    where(where: Record<string, any>) {
-      this.whereClauses.push(where);
+    where(where: Record<string, any> | string, value?: any) {
+      if (typeof where === 'string') {
+        this.whereClauses.push({ [where]: value });
+      } else {
+        this.whereClauses.push(where);
+      }
       return this;
     }
 
@@ -113,6 +120,9 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knexMock, tenant: 'tenant_a' })),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: 'asset_type_registry' | 'assets') => conn(table).where(`${table}.tenant`, tenant),
+  }),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(h.knexMock)),
 }));
 

@@ -4,16 +4,16 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import {
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -73,20 +73,29 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
 function applyDefaultContactPhoneJoin(
   query: Knex.QueryBuilder,
   knex: Knex,
+  tenant: string,
   ticketAlias = 't',
   contactAlias = 'cont',
   phoneAlias = 'cpn_default'
 ): Knex.QueryBuilder {
-  return query
-    .leftJoin(`contacts as ${contactAlias}`, function joinContacts() {
-      this.on(`${ticketAlias}.contact_name_id`, '=', `${contactAlias}.contact_name_id`)
-        .andOn(`${ticketAlias}.tenant`, '=', `${contactAlias}.tenant`);
-    })
-    .leftJoin(`contact_phone_numbers as ${phoneAlias}`, function joinDefaultContactPhone() {
-      this.on(`${contactAlias}.contact_name_id`, '=', `${phoneAlias}.contact_name_id`)
-        .andOn(`${contactAlias}.tenant`, '=', `${phoneAlias}.tenant`)
-        .andOn(`${phoneAlias}.is_default`, '=', knex.raw('true'));
-    });
+  const scopedDb = tenantDb(knex, tenant);
+  scopedDb.tenantJoin(query, `contacts as ${contactAlias}`, `${ticketAlias}.contact_name_id`, `${contactAlias}.contact_name_id`, { type: 'left' });
+  scopedDb.tenantJoin(query, `contact_phone_numbers as ${phoneAlias}`, `${contactAlias}.contact_name_id`, `${phoneAlias}.contact_name_id`, {
+    type: 'left',
+    rootTenantColumn: `${contactAlias}.tenant`,
+    on(join) {
+      join.andOn(`${phoneAlias}.is_default`, '=', knex.raw('true'));
+    },
+  });
+  return query;
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
 }
 
 export type BundleMode = 'link_only' | 'sync_updates';
@@ -139,8 +148,8 @@ export class TicketService extends BaseService<ITicket> {
       knex,
       context.tenant,
       async (trx, tenant) => {
-        const ticket = await trx('tickets')
-          .where({ ticket_id: id, tenant })
+        const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .first();
 
         if (!ticket) {
@@ -149,8 +158,8 @@ export class TicketService extends BaseService<ITicket> {
 
         await deleteTicketChildRecords(trx, id, tenant, ticket);
 
-        await trx('tickets')
-          .where({ ticket_id: id, tenant })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .delete();
       }
     );
@@ -193,20 +202,21 @@ export class TicketService extends BaseService<ITicket> {
     const selectedFields = this.normalizeTicketListFields(fields);
 
     // Build base query with all necessary joins
-    let dataQuery = knex('tickets as t').where('t.tenant', context.tenant);
-
-    let countQuery = knex('tickets as t')
-      .where('t.tenant', context.tenant);
+    const scopedDb = tenantDb(knex, context.tenant);
+    const dataScopedQuery = scopedDb.scoped('tickets as t');
+    const countScopedQuery = scopedDb.scoped('tickets as t');
+    let dataQuery = dataScopedQuery.builder;
+    let countQuery = countScopedQuery.builder;
 
     // Apply filters
-    dataQuery = this.applyTicketFilters(dataQuery, filters);
-    countQuery = this.applyTicketFilters(countQuery, filters);
+    dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant);
+    countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant);
 
     // Push row-level read authorization into SQL (when the caller provides it)
     // so both the page and the total count reflect only authorized rows.
     if (options.applyAuthorization) {
-      options.applyAuthorization(dataQuery);
-      options.applyAuthorization(countQuery);
+      options.applyAuthorization(dataScopedQuery.withBuilder(dataQuery));
+      options.applyAuthorization(countScopedQuery.withBuilder(countQuery));
     }
 
     // Apply sorting
@@ -224,33 +234,23 @@ export class TicketService extends BaseService<ITicket> {
     const needsAssignedUser = !selectedFields || wants('assigned_to_name');
 
     if (needsClients) {
-      dataQuery = dataQuery.leftJoin('clients as comp', function () {
-        this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
-      });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
     }
 
     if (needsContacts) {
-      dataQuery = dataQuery.leftJoin('contacts as cont', function () {
-        this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
-      });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'contacts as cont', 't.contact_name_id', 'cont.contact_name_id', { type: 'left' });
     }
 
     if (needsStatuses) {
-      dataQuery = dataQuery.leftJoin('statuses as stat', function () {
-        this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
-      });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
     }
 
     if (needsPriorities) {
-      dataQuery = dataQuery.leftJoin('priorities as pri', function () {
-        this.on('t.priority_id', '=', 'pri.priority_id').andOn('t.tenant', '=', 'pri.tenant');
-      });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
     }
 
     if (needsAssignedUser) {
-      dataQuery = dataQuery.leftJoin('users as assigned_user', function () {
-        this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
-      });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
     }
 
     // Handle sorting by related fields
@@ -271,19 +271,11 @@ export class TicketService extends BaseService<ITicket> {
     // Select fields
     if (!selectedFields) {
       // Full payload (backward-compatible default)
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'categories as subcat', 't.subcategory_id', 'subcat.category_id', { type: 'left' });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'boards as board', 't.board_id', 'board.board_id', { type: 'left' });
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'users as entered_user', 't.entered_by', 'entered_user.user_id', { type: 'left' });
       dataQuery = dataQuery
-        .leftJoin('categories as cat', function () {
-          this.on('t.category_id', '=', 'cat.category_id').andOn('t.tenant', '=', 'cat.tenant');
-        })
-        .leftJoin('categories as subcat', function () {
-          this.on('t.subcategory_id', '=', 'subcat.category_id').andOn('t.tenant', '=', 'subcat.tenant');
-        })
-        .leftJoin('boards as board', function () {
-          this.on('t.board_id', '=', 'board.board_id').andOn('t.tenant', '=', 'board.tenant');
-        })
-        .leftJoin('users as entered_user', function () {
-          this.on('t.entered_by', '=', 'entered_user.user_id').andOn('t.tenant', '=', 'entered_user.tenant');
-        })
         .select(
           't.*',
           'comp.client_name',
@@ -372,11 +364,10 @@ export class TicketService extends BaseService<ITicket> {
     }
     if (ticketIds.length === 0) return;
 
-    const rows = await knex('tag_mappings as tm')
-      .join('tag_definitions as td', function joinDefinitions() {
-        this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
-      })
-      .where('tm.tenant', tenant)
+    const scopedDb = tenantDb(knex, tenant);
+    const rowsQuery = tenantScopedTable(knex, 'tag_mappings as tm', tenant);
+    scopedDb.tenantJoin(rowsQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+    const rows = await rowsQuery
       .where('tm.tagged_type', 'ticket')
       .whereIn('tm.tagged_id', ticketIds)
       .select(
@@ -428,39 +419,27 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(id);
 
-    const ticket = await knex('tickets as t')
-      .leftJoin('clients as comp', function() {
-        this.on('t.client_id', '=', 'comp.client_id')
-            .andOn('t.tenant', '=', 'comp.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.tenant', '=', 'cl.tenant')
-            .andOn('t.client_id', '=', 'cl.client_id')
-            .andOn(function() {
-              this.on('t.location_id', '=', 'cl.location_id')
-                  .orOn(function() {
-                    this.onNull('t.location_id')
-                        .andOn('cl.is_default', '=', knex.raw('true'));
-                  });
-            });
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, knex))
-      .leftJoin('statuses as stat', function() {
-        this.on('t.status_id', '=', 'stat.status_id')
-            .andOn('t.tenant', '=', 'stat.tenant');
-      })
-      .leftJoin('priorities as pri', function() {
-        this.on('t.priority_id', '=', 'pri.priority_id')
-            .andOn('t.tenant', '=', 'pri.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', '=', 'cat.category_id')
-            .andOn('t.tenant', '=', 'cat.tenant');
-      })
-      .leftJoin('users as assigned_user', function() {
-        this.on('t.assigned_to', '=', 'assigned_user.user_id')
-            .andOn('t.tenant', '=', 'assigned_user.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const ticketQuery = tenantScopedTable(knex, 'tickets as t', context.tenant);
+    scopedDb.tenantJoin(ticketQuery, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'client_locations as cl', 't.client_id', 'cl.client_id', {
+      type: 'left',
+      on(join) {
+        join.andOn(function() {
+          this.on('t.location_id', '=', 'cl.location_id')
+              .orOn(function() {
+                this.onNull('t.location_id')
+                    .andOn('cl.is_default', '=', knex.raw('true'));
+              });
+        });
+      },
+    });
+    applyDefaultContactPhoneJoin(ticketQuery, knex, context.tenant);
+    scopedDb.tenantJoin(ticketQuery, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
+    const ticket = await ticketQuery
       .select(
         't.*',
         'comp.client_name',
@@ -480,7 +459,7 @@ export class TicketService extends BaseService<ITicket> {
           ELSE NULL 
         END as assigned_to_name`)
       )
-      .where({ 't.ticket_id': id, 't.tenant': context.tenant })
+      .where({ 't.ticket_id': id })
       .first();
 
     if (!ticket) {
@@ -505,25 +484,16 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const documents = await knex('documents as d')
-      .join('document_associations as da', function () {
-        this.on('d.document_id', '=', 'da.document_id')
-          .andOn('d.tenant', '=', 'da.tenant');
-      })
-      .leftJoin('users as u', function () {
-        this.on('d.created_by', '=', 'u.user_id')
-          .andOn('d.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('document_types as dt', function () {
-        this.on('d.type_id', '=', 'dt.type_id')
-          .andOn('d.tenant', '=', 'dt.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const documentQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(documentQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+    scopedDb.tenantJoin(documentQuery, 'users as u', 'd.created_by', 'u.user_id', { type: 'left' });
+    scopedDb.tenantJoin(documentQuery, 'document_types as dt', 'd.type_id', 'dt.type_id', { type: 'left' });
+    const documents = await documentQuery
       .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
       .where({
         'da.entity_id': ticketId,
-        'da.entity_type': 'ticket',
-        'da.tenant': context.tenant,
-        'd.tenant': context.tenant
+        'da.entity_type': 'ticket'
       })
       .select(
         'd.*',
@@ -545,20 +515,14 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const assets = await knex('asset_associations as aa')
-      .join('assets as a', function joinAssets(this: Knex.JoinClause) {
-        this.on('aa.asset_id', '=', 'a.asset_id')
-          .andOn('aa.tenant', '=', 'a.tenant');
-      })
-      .leftJoin('clients as c', function joinClients(this: Knex.JoinClause) {
-        this.on('a.client_id', '=', 'c.client_id')
-          .andOn('a.tenant', '=', 'c.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const assetQuery = tenantScopedTable(knex, 'asset_associations as aa', context.tenant);
+    scopedDb.tenantJoin(assetQuery, 'assets as a', 'aa.asset_id', 'a.asset_id');
+    scopedDb.tenantJoin(assetQuery, 'clients as c', 'a.client_id', 'c.client_id', { type: 'left' });
+    const assets = await assetQuery
       .where({
         'aa.entity_id': ticketId,
-        'aa.entity_type': 'ticket',
-        'aa.tenant': context.tenant,
-        'a.tenant': context.tenant
+        'aa.entity_type': 'ticket'
       })
       .select(
         'a.*',
@@ -585,23 +549,22 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const ticket = await knex('tickets')
-      .where({ tenant: context.tenant, ticket_id: ticketId })
+    const ticket = await tenantScopedTable(knex, 'tickets', context.tenant)
+      .where({ ticket_id: ticketId })
       .first();
     if (!ticket) {
       throw new NotFoundError('Ticket not found');
     }
 
-    const asset = await knex('assets')
-      .where({ tenant: context.tenant, asset_id: data.asset_id })
+    const asset = await tenantScopedTable(knex, 'assets', context.tenant)
+      .where({ asset_id: data.asset_id })
       .first();
     if (!asset) {
       throw new NotFoundError('Asset not found');
     }
 
-    const existing = await knex('asset_associations')
+    const existing = await tenantScopedTable(knex, 'asset_associations', context.tenant)
       .where({
-        tenant: context.tenant,
         asset_id: data.asset_id,
         entity_id: ticketId,
         entity_type: 'ticket'
@@ -611,7 +574,7 @@ export class TicketService extends BaseService<ITicket> {
       throw new ConflictError('Asset is already linked to this ticket');
     }
 
-    const [created] = await knex('asset_associations')
+    const [created] = await tenantScopedTable(knex, 'asset_associations', context.tenant)
       .insert({
         tenant: context.tenant,
         asset_id: data.asset_id,
@@ -634,9 +597,8 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const deleted = await knex('asset_associations')
+    const deleted = await tenantScopedTable(knex, 'asset_associations', context.tenant)
       .where({
-        tenant: context.tenant,
         asset_id: assetId,
         entity_id: ticketId,
         entity_type: 'ticket'
@@ -652,9 +614,9 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const existingTicket = await knex('tickets')
+    const existingTicket = await tenantScopedTable(knex, 'tickets', context.tenant)
       .select('ticket_id')
-      .where({ ticket_id: ticketId, tenant: context.tenant })
+      .where({ ticket_id: ticketId })
       .first();
 
     if (!existingTicket) {
@@ -676,9 +638,8 @@ export class TicketService extends BaseService<ITicket> {
       uploaded_by_id: context.userId,
     });
 
-    const folderRecord = await knex('document_folders')
+    const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
       .where({
-        tenant: context.tenant,
         entity_id: ticketId,
         entity_type: 'ticket',
         folder_path: '/Tickets/Attachments',
@@ -705,8 +666,8 @@ export class TicketService extends BaseService<ITicket> {
     };
 
     await withTransaction(knex, async (trx) => {
-      await trx('documents').insert(document);
-      await trx('document_associations').insert({
+      await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
+      await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
         association_id: uuidv4(),
         document_id: documentId,
         entity_id: ticketId,
@@ -753,15 +714,14 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     // Verify the document belongs to this ticket and tenant
-    const doc = await knex('documents as d')
-      .join('document_associations as da', function () {
-        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+    const doc = await docQuery
       .where({
         'da.entity_id': ticketId,
         'da.entity_type': 'ticket',
         'd.document_id': documentId,
-        'd.tenant': context.tenant,
       })
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
@@ -786,15 +746,14 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const doc = await knex('documents as d')
-      .join('document_associations as da', function () {
-        this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+    const doc = await docQuery
       .where({
         'da.entity_id': ticketId,
         'da.entity_type': 'ticket',
         'd.document_id': documentId,
-        'd.tenant': context.tenant,
       })
       .select('d.document_id', 'd.file_id', 'da.association_id')
       .first();
@@ -804,19 +763,19 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     await withTransaction(knex, async (trx) => {
-      await trx('document_associations')
-        .where({ association_id: doc.association_id, tenant: context.tenant })
+      await tenantScopedTable(trx, 'document_associations', context.tenant)
+        .where({ association_id: doc.association_id })
         .del();
 
       // Only delete the document itself if no other associations remain
-      const remaining = await trx('document_associations')
-        .where({ document_id: documentId, tenant: context.tenant })
+      const remaining = await tenantScopedTable(trx, 'document_associations', context.tenant)
+        .where({ document_id: documentId })
         .count('* as count')
         .first();
 
       if (!remaining || Number(remaining.count) === 0) {
-        await trx('documents')
-          .where({ document_id: documentId, tenant: context.tenant })
+        await tenantScopedTable(trx, 'documents', context.tenant)
+          .where({ document_id: documentId })
           .del();
       }
 
@@ -842,14 +801,12 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const materials = await knex('ticket_materials as tm')
-      .leftJoin('service_catalog as sc', function () {
-        this.on('tm.service_id', '=', 'sc.service_id')
-          .andOn('tm.tenant', '=', 'sc.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const materialQuery = tenantScopedTable(knex, 'ticket_materials as tm', context.tenant);
+    scopedDb.tenantJoin(materialQuery, 'service_catalog as sc', 'tm.service_id', 'sc.service_id', { type: 'left' });
+    const materials = await materialQuery
       .where({
         'tm.ticket_id': ticketId,
-        'tm.tenant': context.tenant,
       })
       .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
       .orderBy('tm.created_at', 'desc');
@@ -879,8 +836,8 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
-    const ticket = await knex('tickets')
-      .where({ ticket_id: ticketId, tenant: context.tenant })
+    const ticket = await tenantScopedTable(knex, 'tickets', context.tenant)
+      .where({ ticket_id: ticketId })
       .select('ticket_id', 'client_id')
       .first();
 
@@ -894,9 +851,8 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
-    const product = await knex('service_catalog')
+    const product = await tenantScopedTable(knex, 'service_catalog', context.tenant)
       .where({
-        tenant: context.tenant,
         service_id: data.service_id,
         item_kind: 'product',
       })
@@ -909,7 +865,7 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
-    const [createdMaterial] = await knex('ticket_materials')
+    const [createdMaterial] = await tenantScopedTable(knex, 'ticket_materials', context.tenant)
       .insert({
         tenant: context.tenant,
         ticket_id: ticketId,
@@ -938,19 +894,14 @@ export class TicketService extends BaseService<ITicket> {
   private async getDocumentById(documentId: string, context: ServiceContext): Promise<IDocument | null> {
     const { knex } = await this.getKnex();
 
-    const document = await knex('documents as d')
-      .leftJoin('users as u', function () {
-        this.on('d.created_by', '=', 'u.user_id')
-          .andOn('d.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('document_types as dt', function () {
-        this.on('d.type_id', '=', 'dt.type_id')
-          .andOn('d.tenant', '=', 'dt.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const documentQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(documentQuery, 'users as u', 'd.created_by', 'u.user_id', { type: 'left' });
+    scopedDb.tenantJoin(documentQuery, 'document_types as dt', 'd.type_id', 'dt.type_id', { type: 'left' });
+    const document = await documentQuery
       .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
       .where({
         'd.document_id': documentId,
-        'd.tenant': context.tenant,
       })
       .select(
         'd.*',
@@ -969,14 +920,12 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<ITicketMaterial | null> {
     const { knex } = await this.getKnex();
 
-    const material = await knex('ticket_materials as tm')
-      .leftJoin('service_catalog as sc', function () {
-        this.on('tm.service_id', '=', 'sc.service_id')
-          .andOn('tm.tenant', '=', 'sc.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const materialQuery = tenantScopedTable(knex, 'ticket_materials as tm', context.tenant);
+    scopedDb.tenantJoin(materialQuery, 'service_catalog as sc', 'tm.service_id', 'sc.service_id', { type: 'left' });
+    const material = await materialQuery
       .where({
         'tm.ticket_material_id': ticketMaterialId,
-        'tm.tenant': context.tenant,
       })
       .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
       .first();
@@ -989,15 +938,16 @@ export class TicketService extends BaseService<ITicket> {
     tenant: string,
     mimeType: string,
   ): Promise<{ typeId: string; isShared: boolean }> {
-    const tenantType = await knex('document_types')
-      .where({ tenant, type_name: mimeType })
+    const scopedDb = tenantDb(knex, tenant);
+    const tenantType = await tenantScopedTable(knex, 'document_types', tenant)
+      .where({ type_name: mimeType })
       .first();
 
     if (tenantType) {
       return { typeId: tenantType.type_id, isShared: false };
     }
 
-    const sharedType = await knex('shared_document_types')
+    const sharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: mimeType })
       .first();
 
@@ -1007,15 +957,15 @@ export class TicketService extends BaseService<ITicket> {
 
     const generalType = `${mimeType.split('/')[0]}/*`;
 
-    const generalTenantType = await knex('document_types')
-      .where({ tenant, type_name: generalType })
+    const generalTenantType = await tenantScopedTable(knex, 'document_types', tenant)
+      .where({ type_name: generalType })
       .first();
 
     if (generalTenantType) {
       return { typeId: generalTenantType.type_id, isShared: false };
     }
 
-    const generalSharedType = await knex('shared_document_types')
+    const generalSharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: generalType })
       .first();
 
@@ -1023,7 +973,7 @@ export class TicketService extends BaseService<ITicket> {
       return { typeId: generalSharedType.type_id, isShared: true };
     }
 
-    const unknownType = await knex('shared_document_types')
+    const unknownType = await scopedDb.table('shared_document_types')
       .where({ type_name: 'application/octet-stream' })
       .first();
 
@@ -1125,8 +1075,8 @@ export class TicketService extends BaseService<ITicket> {
         }
 
         // Get the full ticket data for return
-        const fullTicket = await trx('tickets')
-          .where({ ticket_id: ticketResult.ticket_id, tenant: context.tenant })
+        const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
+          .where({ ticket_id: ticketResult.ticket_id })
           .first();
 
         if (!fullTicket) {
@@ -1189,8 +1139,8 @@ export class TicketService extends BaseService<ITicket> {
 
     return withTransaction(knex, async (trx) => {
       // Get current ticket for event comparison
-      const currentTicket = await trx('tickets')
-        .where({ ticket_id: id, tenant: context.tenant })
+      const currentTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: id })
         .first();
 
       if (!currentTicket) {
@@ -1246,11 +1196,11 @@ export class TicketService extends BaseService<ITicket> {
       // open to a closed status, enforce the board's close rules before any
       // writes. Surfaces as a 422 with structured failure details.
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const nextStatus = await trx('statuses')
-          .where({ status_id: cleanedData.status_id, tenant: context.tenant })
+        const nextStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: cleanedData.status_id })
           .first();
-        const previousStatus = await trx('statuses')
-          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+        const previousStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: currentTicket.status_id })
           .first();
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
           const merged = { ...currentTicket, ...cleanedData };
@@ -1298,8 +1248,8 @@ export class TicketService extends BaseService<ITicket> {
       };
 
       // Update ticket
-      const [ticket] = await trx('tickets')
-        .where({ ticket_id: id, tenant: context.tenant })
+      const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: id })
         .update(updateData)
         .returning('*');
 
@@ -1311,26 +1261,26 @@ export class TicketService extends BaseService<ITicket> {
       // Publish appropriate events
       if (data.status_id && data.status_id !== currentTicket.status_id) {
         // Check if ticket is being closed or reopened
-        const newStatus = await trx('statuses')
-          .where({ status_id: data.status_id, tenant: context.tenant })
+        const newStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: data.status_id })
           .first();
-        const oldStatus = await trx('statuses')
-          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+        const oldStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: currentTicket.status_id })
           .first();
 
         // Keep the ticket row's denormalized close flag aligned with the selected status.
-        await trx('tickets')
-          .where({ ticket_id: id, tenant: context.tenant })
+        await tenantScopedTable(trx, 'tickets', context.tenant)
+          .where({ ticket_id: id })
           .update({ is_closed: !!newStatus?.is_closed });
 
         // Record closed_at / closed_by when transitioning to/from closed status
         if (newStatus?.is_closed && !oldStatus?.is_closed) {
-          await trx('tickets')
-            .where({ ticket_id: id, tenant: context.tenant })
+          await tenantScopedTable(trx, 'tickets', context.tenant)
+            .where({ ticket_id: id })
             .update({ closed_at: new Date(), closed_by: context.userId });
         } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-          await trx('tickets')
-            .where({ ticket_id: id, tenant: context.tenant })
+          await tenantScopedTable(trx, 'tickets', context.tenant)
+            .where({ ticket_id: id })
             .update({ closed_at: null, closed_by: null });
         }
 
@@ -1431,8 +1381,8 @@ export class TicketService extends BaseService<ITicket> {
 
     const fullTicket = await withTransaction(knex, async (trx) => {
       // Verify asset exists
-      const asset = await trx('assets')
-        .where({ asset_id: data.asset_id, tenant: context.tenant })
+      const asset = await tenantScopedTable(trx, 'assets', context.tenant)
+        .where({ asset_id: data.asset_id })
         .first();
 
       if (!asset) {
@@ -1477,7 +1427,7 @@ export class TicketService extends BaseService<ITicket> {
       // Link the asset to the new ticket in asset_associations — the same table
       // the UI and the ticket/asset association endpoints read. (The shared model
       // only records created_from_asset in the ticket attributes.)
-      await trx('asset_associations').insert({
+      await tenantScopedTable(trx, 'asset_associations', context.tenant).insert({
         tenant: context.tenant,
         asset_id: data.asset_id,
         entity_id: ticketResult.ticket_id,
@@ -1488,8 +1438,8 @@ export class TicketService extends BaseService<ITicket> {
       });
 
       // Get the full ticket data for return
-      const fullTicket = await trx('tickets')
-        .where({ ticket_id: ticketResult.ticket_id, tenant: context.tenant })
+      const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketResult.ticket_id })
         .first();
 
       if (!fullTicket) {
@@ -1525,15 +1475,11 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any[]> {
     const { knex } = await this.getKnex();
 
-    const comments = await knex('comments as tc')
-      .leftJoin('users as u', function() {
-        this.on('tc.user_id', '=', 'u.user_id')
-            .andOn('tc.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('contacts as c', function() {
-        this.on('tc.contact_id', '=', 'c.contact_name_id')
-            .andOn('tc.tenant', '=', 'c.tenant');
-      })
+    const scopedDb = tenantDb(knex, context.tenant);
+    const commentsQuery = tenantScopedTable(knex, 'comments as tc', context.tenant);
+    scopedDb.tenantJoin(commentsQuery, 'users as u', 'tc.user_id', 'u.user_id', { type: 'left' });
+    scopedDb.tenantJoin(commentsQuery, 'contacts as c', 'tc.contact_id', 'c.contact_name_id', { type: 'left' });
+    const comments = await commentsQuery
       .select(
         'tc.*',
         knex.raw(`CASE 
@@ -1547,7 +1493,6 @@ export class TicketService extends BaseService<ITicket> {
       )
       .where({
         'tc.ticket_id': ticketId,
-        'tc.tenant': context.tenant
       })
       .orderBy('tc.created_at', options?.order ?? 'asc')
       .modify((query) => {
@@ -1573,18 +1518,16 @@ export class TicketService extends BaseService<ITicket> {
     let reactionsMap: Record<string, any[]> = {};
     let reactionUserNames: Record<string, string> = {};
     if (commentIds.length > 0) {
-      const reactionRows = await knex('comment_reactions')
-        .where({ tenant: context.tenant })
+      const reactionRows = await tenantScopedTable(knex, 'comment_reactions', context.tenant)
         .whereIn('comment_id', commentIds)
         .select('comment_id', 'emoji', 'user_id')
         .orderBy('created_at', 'asc');
 
       reactionsMap = aggregateReactions(reactionRows, 'comment_id', context.userId);
 
-      const reactionUserIds = [...new Set(reactionRows.map(r => r.user_id))];
+      const reactionUserIds = [...new Set(reactionRows.map((r: any) => r.user_id))] as string[];
       if (reactionUserIds.length > 0) {
-        const reactionUsers = await knex('users')
-          .where({ tenant: context.tenant })
+        const reactionUsers = await tenantScopedTable(knex, 'users', context.tenant)
           .whereIn('user_id', reactionUserIds)
           .select('user_id', 'first_name', 'last_name');
         for (const u of reactionUsers) {
@@ -1651,8 +1594,8 @@ export class TicketService extends BaseService<ITicket> {
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
-      const ticket = await trx('tickets')
-        .where({ ticket_id: ticketId, tenant: context.tenant })
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
         .first();
 
       if (!ticket) {
@@ -1673,18 +1616,16 @@ export class TicketService extends BaseService<ITicket> {
         // native composer never sends is_internal for replies, so the
         // schema-defaulted false is intentionally ignored here and the thread
         // root's visibility is inherited instead.
-        const parent = await trx('comments as parent')
-          .join('comment_threads as thread', function () {
-            this.on('parent.tenant', 'thread.tenant')
-              .andOn('parent.thread_id', 'thread.thread_id');
-          })
+        const scopedDb = tenantDb(trx, context.tenant);
+        const parentQuery = tenantScopedTable(trx, 'comments as parent', context.tenant);
+        scopedDb.tenantJoin(parentQuery, 'comment_threads as thread', 'parent.thread_id', 'thread.thread_id');
+        const parent = await parentQuery
           .select(
             'parent.ticket_id',
             'parent.thread_id',
             'parent.deleted_at',
             'thread.is_internal as thread_is_internal'
           )
-          .where('parent.tenant', context.tenant)
           .where('parent.comment_id', apiParentCommentId)
           .first();
 
@@ -1723,7 +1664,7 @@ export class TicketService extends BaseService<ITicket> {
         apiThreadId = apiGeneratedIds.thread_id;
         apiIsInternal = data.is_internal || false;
 
-        await trx('comment_threads').insert({
+        await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
           tenant: context.tenant,
           thread_id: apiThreadId,
           ticket_id: ticketId,
@@ -1752,11 +1693,11 @@ export class TicketService extends BaseService<ITicket> {
         metadata: data.metadata,
       };
 
-      const [comment] = await trx('comments').insert(commentData).returning('*');
+      const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
 
       if (apiIsReply) {
-        await trx('comment_threads')
-          .where({ tenant: context.tenant, thread_id: apiThreadId })
+        await tenantScopedTable(trx, 'comment_threads', context.tenant)
+          .where({ thread_id: apiThreadId })
           .update({
             reply_count: trx.raw('reply_count + 1'),
             last_activity_at: apiNowIso,
@@ -1768,17 +1709,17 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       // Update ticket updated_at
-      await trx('tickets')
-        .where({ ticket_id: ticketId, tenant: context.tenant })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
         .update({
           updated_by: context.userId,
           updated_at: knex.raw('now()')
         });
 
       // Get user details for event
-      const user = await trx('users')
+      const user = await tenantScopedTable(trx, 'users', context.tenant)
         .select('first_name', 'last_name')
-        .where({ user_id: context.userId, tenant: context.tenant })
+        .where({ user_id: context.userId })
         .first();
 
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
@@ -1828,8 +1769,8 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const comment = await trx('comments')
-        .where({ comment_id: commentId, ticket_id: ticketId, tenant: context.tenant })
+      const comment = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, ticket_id: ticketId })
         .first();
 
       if (!comment) {
@@ -1844,8 +1785,8 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('You can only edit your own comments');
       }
 
-      const [updated] = await trx('comments')
-        .where({ comment_id: commentId, tenant: context.tenant })
+      const [updated] = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId })
         .update({
           note: data.comment_text,
           updated_at: knex.raw('now()'),
@@ -1869,20 +1810,11 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     const searchStartTime = Date.now();
 
-    let query = knex('tickets as t')
-      .leftJoin('clients as comp', function() {
-        this.on('t.client_id', '=', 'comp.client_id')
-            .andOn('t.tenant', '=', 'comp.tenant');
-      })
-      .leftJoin('contacts as cont', function() {
-        this.on('t.contact_name_id', '=', 'cont.contact_name_id')
-            .andOn('t.tenant', '=', 'cont.tenant');
-      })
-      .leftJoin('statuses as stat', function() {
-        this.on('t.status_id', '=', 'stat.status_id')
-            .andOn('t.tenant', '=', 'stat.tenant');
-      })
-      .where('t.tenant', context.tenant);
+    const scopedDb = tenantDb(knex, context.tenant);
+    let query = tenantScopedTable(knex, 'tickets as t', context.tenant);
+    query = scopedDb.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
+    query = scopedDb.tenantJoin(query, 'contacts as cont', 't.contact_name_id', 'cont.contact_name_id', { type: 'left' });
+    query = scopedDb.tenantJoin(query, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
 
     // Apply search filters
     if (!searchData.include_closed) {
@@ -1986,6 +1918,7 @@ export class TicketService extends BaseService<ITicket> {
    */
   async getTicketStats(context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+    const scopedDb = tenantDb(knex, context.tenant);
 
     const [
       totalStats,
@@ -1996,12 +1929,8 @@ export class TicketService extends BaseService<ITicket> {
       timeStats
     ] = await Promise.all([
       // Total and basic counts
-      knex('tickets as t')
-        .leftJoin('statuses as s', function() {
-          this.on('t.status_id', '=', 's.status_id')
-              .andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', context.tenant)
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
+        .modify((q) => scopedDb.tenantJoin(q, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' }))
         .select(
           knex.raw('COUNT(*) as total_tickets'),
           knex.raw('COUNT(CASE WHEN s.is_closed = false THEN 1 END) as open_tickets'),
@@ -2011,49 +1940,32 @@ export class TicketService extends BaseService<ITicket> {
         .first(),
 
       // Tickets by status
-      knex('tickets as t')
-        .leftJoin('statuses as s', function() {
-          this.on('t.status_id', '=', 's.status_id')
-              .andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', context.tenant)
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
+        .modify((q) => scopedDb.tenantJoin(q, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' }))
         .groupBy('s.status_id', 's.name')
         .select('s.status_id', 's.name as status_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by priority
-      knex('tickets as t')
-        .leftJoin('priorities as p', function() {
-          this.on('t.priority_id', '=', 'p.priority_id')
-              .andOn('t.tenant', '=', 'p.tenant');
-        })
-        .where('t.tenant', context.tenant)
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
+        .modify((q) => scopedDb.tenantJoin(q, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' }))
         .groupBy('p.priority_name')
         .select('p.priority_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by category
-      knex('tickets as t')
-        .leftJoin('categories as c', function() {
-          this.on('t.category_id', '=', 'c.category_id')
-              .andOn('t.tenant', '=', 'c.tenant');
-        })
-        .where('t.tenant', context.tenant)
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
+        .modify((q) => scopedDb.tenantJoin(q, 'categories as c', 't.category_id', 'c.category_id', { type: 'left' }))
         .whereNotNull('t.category_id')
         .groupBy('c.category_name')
         .select('c.category_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by board
-      knex('tickets as t')
-        .leftJoin('boards as ch', function() {
-          this.on('t.board_id', '=', 'ch.board_id')
-              .andOn('t.tenant', '=', 'ch.tenant');
-        })
-        .where('t.tenant', context.tenant)
+      tenantScopedTable(knex, 'tickets as t', context.tenant)
+        .modify((q) => scopedDb.tenantJoin(q, 'boards as ch', 't.board_id', 'ch.board_id', { type: 'left' }))
         .groupBy('ch.board_name')
         .select('ch.board_name', knex.raw('COUNT(*) as count')),
 
       // Time-based statistics
-      knex('tickets')
-        .where('tenant', context.tenant)
+      tenantScopedTable(knex, 'tickets', context.tenant)
         .select(
           knex.raw("COUNT(CASE WHEN entered_at >= CURRENT_DATE THEN 1 END) as tickets_created_today"),
           knex.raw("COUNT(CASE WHEN entered_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as tickets_created_this_week"),
@@ -2095,7 +2007,8 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Apply ticket-specific filters
    */
-  private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData): Knex.QueryBuilder {
+  private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
+    const scopedDb = tenantDb(knex, tenant);
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -2127,24 +2040,22 @@ export class TicketService extends BaseService<ITicket> {
           break;
         case 'is_open':
           if (value) {
-            query.whereExists(function() {
-              this.select('*')
-                  .from('statuses as s')
-                  .whereRaw('s.status_id = t.status_id')
-                  .andWhere('s.tenant', query.client.raw('t.tenant'))
-                  .andWhere('s.is_closed', false);
-            });
+            query.whereExists(
+              scopedDb.subquery('statuses as s')
+                .select('*')
+                .whereRaw('s.status_id = t.status_id')
+                .andWhere('s.is_closed', false)
+            );
           }
           break;
         case 'is_closed':
           if (value) {
-            query.whereExists(function() {
-              this.select('*')
-                  .from('statuses as s')
-                  .whereRaw('s.status_id = t.status_id')
-                  .andWhere('s.tenant', query.client.raw('t.tenant'))
-                  .andWhere('s.is_closed', true);
-            });
+            query.whereExists(
+              scopedDb.subquery('statuses as s')
+                .select('*')
+                .whereRaw('s.status_id = t.status_id')
+                .andWhere('s.is_closed', true)
+            );
           }
           break;
         case 'has_assignment':
@@ -2155,59 +2066,50 @@ export class TicketService extends BaseService<ITicket> {
           }
           break;
         case 'client_name':
-          query.whereExists(function() {
-            this.select('*')
-                .from('clients as c')
-                .whereRaw('c.client_id = t.client_id')
-                .andWhere('c.tenant', query.client.raw('t.tenant'))
-                .andWhere('c.client_name', value);
-          });
+          query.whereExists(
+            scopedDb.subquery('clients as c')
+              .select('*')
+              .whereRaw('c.client_id = t.client_id')
+              .andWhere('c.client_name', value)
+          );
           break;
         case 'contact_name':
-          query.whereExists(function() {
-            this.select('*')
-                .from('contacts as cn')
-                .whereRaw('cn.contact_name_id = t.contact_name_id')
-                .andWhere('cn.tenant', query.client.raw('t.tenant'))
-                .andWhere('cn.full_name', value);
-          });
+          query.whereExists(
+            scopedDb.subquery('contacts as cn')
+              .select('*')
+              .whereRaw('cn.contact_name_id = t.contact_name_id')
+              .andWhere('cn.full_name', value)
+          );
           break;
         case 'board_name':
-          query.whereExists(function() {
-            this.select('*')
-                .from('boards as b')
-                .whereRaw('b.board_id = t.board_id')
-                .andWhere('b.tenant', query.client.raw('t.tenant'))
-                .andWhere('b.board_name', value);
-          });
+          query.whereExists(
+            scopedDb.subquery('boards as b')
+              .select('*')
+              .whereRaw('b.board_id = t.board_id')
+              .andWhere('b.board_name', value)
+          );
           break;
         case 'category_name':
-          query.whereExists(function() {
-            this.select('*')
-                .from('categories as cat')
-                .whereRaw('cat.category_id = t.category_id')
-                .andWhere('cat.tenant', query.client.raw('t.tenant'))
-                .andWhere('cat.category_name', value);
-          });
+          query.whereExists(
+            scopedDb.subquery('categories as cat')
+              .select('*')
+              .whereRaw('cat.category_id = t.category_id')
+              .andWhere('cat.category_name', value)
+          );
           break;
         case 'tags':
           if (Array.isArray(value) && value.length > 0) {
             const tagTexts = (value as string[]).map(tag => tag.toLowerCase());
-            query.whereExists(function() {
-              this.select('*')
-                  .from('tag_mappings as tm')
-                  .join('tag_definitions as td', function() {
-                    this.on('tm.tenant', '=', 'td.tenant')
-                        .andOn('tm.tag_id', '=', 'td.tag_id');
-                  })
-                  .whereRaw('tm.tagged_id = t.ticket_id')
-                  .andWhere('tm.tenant', query.client.raw('t.tenant'))
-                  .andWhere('tm.tagged_type', 'ticket')
-                  .whereRaw(
-                    `LOWER(td.tag_text) IN (${tagTexts.map(() => '?').join(', ')})`,
-                    tagTexts
-                  );
-            });
+            const tagSubquery = scopedDb.subquery('tag_mappings as tm')
+              .select('*')
+              .whereRaw('tm.tagged_id = t.ticket_id')
+              .andWhere('tm.tagged_type', 'ticket')
+              .whereRaw(
+                `LOWER(td.tag_text) IN (${tagTexts.map(() => '?').join(', ')})`,
+                tagTexts
+              );
+            scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+            query.whereExists(tagSubquery);
           }
           break;
         case 'search':
@@ -2222,13 +2124,12 @@ export class TicketService extends BaseService<ITicket> {
               });
               
               // Also search in client name
-              subQuery.orWhereExists(function() {
-                this.select('*')
-                    .from('clients as c')
-                    .whereRaw('c.client_id = t.client_id')
-                    .andWhere('c.tenant', query.client.raw('t.tenant'))
-                    .andWhereILike('c.client_name', `%${value}%`);
-              });
+              subQuery.orWhereExists(
+                scopedDb.subquery('clients as c')
+                  .select('*')
+                  .whereRaw('c.client_id = t.client_id')
+                  .andWhereILike('c.client_name', `%${value}%`)
+              );
             });
           }
           break;
@@ -2239,22 +2140,20 @@ export class TicketService extends BaseService<ITicket> {
           query.whereRaw('COALESCE(t.updated_at, t.entered_at) <= ?', [value]);
           break;
         case 'priority_name':
-          query.whereExists(function() {
-            this.select('*')
-                .from('priorities as p')
-                .whereRaw('p.priority_id = t.priority_id')
-                .andWhere('p.tenant', query.client.raw('t.tenant'))
-                .andWhere('p.priority_name', value);
-          });
+          query.whereExists(
+            scopedDb.subquery('priorities as p')
+              .select('*')
+              .whereRaw('p.priority_id = t.priority_id')
+              .andWhere('p.priority_name', value)
+          );
           break;
         case 'status_name':
-          query.whereExists(function() {
-            this.select('*')
-                .from('statuses as s')
-                .whereRaw('s.status_id = t.status_id')
-                .andWhere('s.tenant', query.client.raw('t.tenant'))
-                .andWhere('s.name', value);
-          });
+          query.whereExists(
+            scopedDb.subquery('statuses as s')
+              .select('*')
+              .whereRaw('s.status_id = t.status_id')
+              .andWhere('s.name', value)
+          );
           break;
         case 'entered_from':
           query.where('t.entered_at', '>=', value);
@@ -2330,9 +2229,8 @@ export class TicketService extends BaseService<ITicket> {
 
   private async findBundleMasterIds(trx: Knex.Transaction, tenant: string, ticketIds: string[]): Promise<string[]> {
     if (ticketIds.length === 0) return [];
-    const rows = await trx('tickets')
+    const rows = await tenantScopedTable(trx, 'tickets', tenant)
       .distinct('master_ticket_id')
-      .where({ tenant })
       .whereIn('master_ticket_id', ticketIds);
     return rows.map((r: any) => r.master_ticket_id).filter(Boolean);
   }
@@ -2341,9 +2239,8 @@ export class TicketService extends BaseService<ITicket> {
     const offending = await this.findBundleMasterIds(trx, tenant, childIds);
     if (offending.length === 0) return;
 
-    const rows = await trx('tickets')
+    const rows = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_number')
-      .where({ tenant })
       .whereIn('ticket_id', offending);
     const labels = rows
       .map((r: any) => r.ticket_number)
@@ -2368,12 +2265,11 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const tickets = await trx('tickets')
+      const tickets = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
-        .where({ tenant: context.tenant })
         .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
 
-      const byId = new Map(tickets.map((t: any) => [t.ticket_id, t]));
+      const byId = new Map<string, any>(tickets.map((t: any) => [t.ticket_id, t]));
       if (!byId.has(params.masterTicketId)) {
         throw new NotFoundError('Master ticket not found.');
       }
@@ -2397,8 +2293,7 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      const updatedChildrenCount = await trx('tickets')
-        .where({ tenant: context.tenant })
+      const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', context.tenant)
         .whereIn('ticket_id', uniqueChildIds)
         .whereNull('master_ticket_id')
         .update({
@@ -2410,7 +2305,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new ConflictError('One or more selected tickets were bundled concurrently. Please refresh and try again.');
       }
 
-      await trx('ticket_bundle_settings')
+      await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .insert({
           tenant: context.tenant,
           master_ticket_id: params.masterTicketId,
@@ -2447,18 +2342,17 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const master = await trx('tickets')
+      const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .where({ ticket_id: params.masterTicketId })
         .first();
       if (!master) throw new NotFoundError('Master ticket not found.');
       if (master.master_ticket_id) throw new ValidationError('Cannot add children to a bundled child ticket.');
 
-      const children = await trx('tickets')
+      const children = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
-        .where({ tenant: context.tenant })
         .whereIn('ticket_id', childIds);
-      const byId = new Map(children.map((t: any) => [t.ticket_id, t]));
+      const byId = new Map<string, any>(children.map((t: any) => [t.ticket_id, t]));
       for (const childId of childIds) {
         const child = byId.get(childId);
         if (!child) throw new NotFoundError(`Child ticket not found: ${childId}`);
@@ -2467,8 +2361,7 @@ export class TicketService extends BaseService<ITicket> {
 
       await this.assertChildrenAreNotMasters(trx, context.tenant, childIds);
 
-      const updatedChildrenCount = await trx('tickets')
-        .where({ tenant: context.tenant })
+      const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', context.tenant)
         .whereIn('ticket_id', childIds)
         .whereNull('master_ticket_id')
         .update({
@@ -2506,16 +2399,16 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const oldMaster = await trx('tickets')
+      const oldMaster = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+        .where({ ticket_id: params.oldMasterTicketId })
         .first();
       if (!oldMaster) throw new NotFoundError('Old master ticket not found');
       if (oldMaster.master_ticket_id) throw new ValidationError('Old master ticket is not a master');
 
-      const newMaster = await trx('tickets')
+      const newMaster = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+        .where({ ticket_id: params.newMasterTicketId })
         .first();
       if (!newMaster) throw new NotFoundError('New master ticket not found');
       if (newMaster.master_ticket_id !== params.oldMasterTicketId) {
@@ -2529,30 +2422,30 @@ export class TicketService extends BaseService<ITicket> {
 
       const now = new Date().toISOString();
 
-      const settings = await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+      const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.oldMasterTicketId })
         .first();
       if (settings) {
-        await trx('ticket_bundle_settings')
-          .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+        await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+          .where({ master_ticket_id: params.oldMasterTicketId })
           .delete();
-        await trx('ticket_bundle_settings')
+        await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
           .insert({ ...settings, master_ticket_id: params.newMasterTicketId })
           .onConflict(['tenant', 'master_ticket_id'])
           .merge({ mode: settings.mode, reopen_on_child_reply: settings.reopen_on_child_reply });
       }
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ master_ticket_id: params.oldMasterTicketId })
         .andWhereNot({ ticket_id: params.newMasterTicketId })
         .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: params.newMasterTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: now });
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: params.oldMasterTicketId })
         .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
 
       return { oldMasterTicketId: params.oldMasterTicketId, newMasterTicketId: params.newMasterTicketId };
@@ -2575,8 +2468,8 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const existing = await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .first();
       if (!existing) throw new NotFoundError('Bundle settings not found');
 
@@ -2592,8 +2485,8 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
-      const [updated] = await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .update(update)
         .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
 
@@ -2607,9 +2500,9 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketId: string; remainingChildren: number }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const child = await trx('tickets')
+      const child = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+        .where({ ticket_id: params.childTicketId })
         .first();
 
       if (!child) throw new NotFoundError('Ticket not found');
@@ -2617,17 +2510,17 @@ export class TicketService extends BaseService<ITicket> {
 
       const masterTicketId = child.master_ticket_id;
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: params.childTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
-      const [{ count }] = await trx('tickets')
-        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+      const [{ count }] = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ master_ticket_id: masterTicketId })
         .count('ticket_id as count');
       const remaining = Number.parseInt(String(count), 10) || 0;
       if (remaining === 0) {
-        await trx('ticket_bundle_settings')
-          .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+          .where({ master_ticket_id: masterTicketId })
           .delete();
       }
 
@@ -2650,24 +2543,24 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const master = await trx('tickets')
+      const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .where({ ticket_id: params.masterTicketId })
         .first();
       if (!master) throw new NotFoundError('Master ticket not found');
       if (master.master_ticket_id) throw new ValidationError('Cannot unbundle from a child ticket id');
 
-      const childTicketRows = await trx('tickets')
+      const childTicketRows = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId });
+        .where({ master_ticket_id: params.masterTicketId });
       const childTicketIds = childTicketRows.map((r: any) => r.ticket_id);
 
-      await trx('tickets')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
-      await trx('ticket_bundle_settings')
-        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+      await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+        .where({ master_ticket_id: params.masterTicketId })
         .delete();
 
       return { masterTicketId: params.masterTicketId, childTicketIds };
@@ -2690,27 +2583,27 @@ export class TicketService extends BaseService<ITicket> {
     const memberColumns = ['ticket_id', 'ticket_number', 'title', 'status_id', 'client_id'];
 
     return withTransaction(knex, async (trx) => {
-      const ticket = await trx('tickets')
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
-        .where({ tenant: context.tenant, ticket_id: ticketId })
+        .where({ ticket_id: ticketId })
         .first();
       if (!ticket) throw new NotFoundError('Ticket not found');
 
       const masterTicketId: string = ticket.master_ticket_id || ticket.ticket_id;
 
-      const master = await trx('tickets')
+      const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select(memberColumns)
-        .where({ tenant: context.tenant, ticket_id: masterTicketId })
+        .where({ ticket_id: masterTicketId })
         .first();
 
-      const children = await trx('tickets')
+      const children = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select(memberColumns)
-        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .where({ master_ticket_id: masterTicketId })
         .orderBy('ticket_number', 'asc');
 
-      const settingsRow = await trx('ticket_bundle_settings')
+      const settingsRow = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .select('mode', 'reopen_on_child_reply')
-        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .where({ master_ticket_id: masterTicketId })
         .first();
 
       let role: BundleView['role'];

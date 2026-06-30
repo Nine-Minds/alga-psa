@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getClientBillingCycleAnchor } from '@shared/billingClients/billingSchedule';
 import {
   materializeContractCadenceServicePeriodsForContractLine,
@@ -18,18 +19,17 @@ async function loadLiveContractLineCadenceRow(
   trx: Knex.Transaction,
   params: { tenant: string; contractLineId: string },
 ): Promise<LiveContractLineCadenceRow | null> {
-  const row = await trx('contract_lines as cl')
-    .leftJoin('contracts as ct', function joinContracts(this: any) {
-      this.on('ct.contract_id', '=', 'cl.contract_id')
-        .andOn('ct.tenant', '=', 'cl.tenant');
-    })
-    .where('cl.tenant', params.tenant)
+  const db = tenantDb(trx, params.tenant);
+  const query = db.table('contract_lines as cl');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id', { type: 'left' });
+
+  const row = await query
     .andWhere('cl.contract_line_id', params.contractLineId)
     .first(
-      'cl.contract_line_id',
-      'cl.cadence_owner',
-      'ct.owner_client_id',
-    );
+      'cl.contract_line_id as contract_line_id',
+      'cl.cadence_owner as cadence_owner',
+      'ct.owner_client_id as owner_client_id',
+    ) as LiveContractLineCadenceRow | undefined;
 
   if (!row) {
     return null;
@@ -101,11 +101,8 @@ export async function syncRecurringServicePeriodsForContract(
     sourceRunPrefix: string;
   },
 ): Promise<void> {
-  const lineIds = await trx('contract_lines')
-    .where({
-      tenant: params.tenant,
-      contract_id: params.contractId,
-    })
+  const lineIds = await tenantDb(trx, params.tenant).table('contract_lines')
+    .where({ contract_id: params.contractId })
     .pluck('contract_line_id');
 
   for (const contractLineId of lineIds) {

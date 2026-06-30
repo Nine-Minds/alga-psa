@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 // Sibling handlers live in this same package; imported relatively so the
@@ -91,7 +92,9 @@ export async function runMaintenanceJob(
   }
 
   const knex = await getAdminConnection();
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await tenantDb(knex, '__maintenance_job_fanout_tenant_enumeration__')
+    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
+    .select('tenant');
   let succeeded = 0;
   let failed = 0;
 

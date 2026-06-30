@@ -7,7 +7,7 @@
  * T320 — custom-target import: registry-validated resolve (F315) + schema-key
  * projection alongside hudu_fields (F317).
  *
- * Unit-mocked like huduAssetMappingActions.test.ts: auth, flag, tiers, knex,
+ * Unit-mocked like huduAssetMappingActions.test.ts: auth, tiers, knex,
  * the Phase 1 fetch (huduDataActions), createAsset/deleteAsset, the registry
  * read (listAssetTypes) and the mapping-row writes are fakes; the matcher
  * (assetMatching), the layout-type resolver and the import/attributes/
@@ -28,7 +28,6 @@ const HUDU_COMPANY_ID = '55';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
@@ -101,10 +100,6 @@ vi.mock('@alga-psa/auth', () => ({
     (...args: unknown[]) =>
       handler(internalUser, { tenant: TENANT }, ...args),
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -229,7 +224,6 @@ beforeEach(() => {
   attributeUpdates = [];
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
@@ -432,7 +426,7 @@ describe('T220: status default', () => {
 });
 
 // ============================================================================
-// T221 — guard chain (asset create RBAC + flag)
+// T221 — guard chain (asset create RBAC)
 // ============================================================================
 
 describe('T221: guards', () => {
@@ -449,15 +443,6 @@ describe('T221: guards', () => {
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'asset', 'create');
     expect(createAssetMock).not.toHaveBeenCalled();
     expect(setHuduAssetMappingRowMock).not.toHaveBeenCalled();
-  });
-
-  it('rejects both actions when the hudu-integration flag is off (404 semantics)', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { importHuduAsset, importAllUnmatchedHuduAssets } = await importActions();
-
-    await expect(importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 })).rejects.toThrow(/disabled for this tenant/);
-    await expect(importAllUnmatchedHuduAssets({ clientId: CLIENT_1 })).rejects.toThrow(/disabled for this tenant/);
-    expect(createAssetMock).not.toHaveBeenCalled();
   });
 });
 

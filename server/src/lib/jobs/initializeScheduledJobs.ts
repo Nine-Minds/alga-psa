@@ -3,6 +3,7 @@ import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHa
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 
 const isEnterpriseWorkflowEdition = (): boolean =>
   process.env.EDITION === 'enterprise'
@@ -21,7 +22,9 @@ export async function initializeScheduledJobs(): Promise<void> {
     
     // Get all tenants using root connection
     const knex = await getConnection(null);
-    const tenants = await knex('tenants').select('tenant');
+    const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
+      .unscoped('tenants', 'scheduler enumerates all tenants to register recurring jobs')
+      .select('tenant');
     logger.info(`Preparing to schedule jobs for ${tenants.length} tenants`);
     
     // Set up expired credits job for each tenant

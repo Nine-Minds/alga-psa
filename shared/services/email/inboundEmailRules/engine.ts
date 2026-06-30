@@ -136,11 +136,11 @@ const INBOUND_DEFAULTS_SELECT_COLUMNS = [
 function createDefaultDeps(): InboundEmailRuleEngineDeps {
   return {
     async loadRules(tenantId) {
-      const { withAdminTransaction } = await import('@alga-psa/db');
+      const { tenantDb, withAdminTransaction } = await import('@alga-psa/db');
       return withAdminTransaction(async (trx: Knex.Transaction) => {
         try {
-          const rows = await trx('inbound_email_rules')
-            .where({ tenant: tenantId, is_active: true })
+          const rows = await tenantDb(trx, tenantId).table('inbound_email_rules')
+            .where({ is_active: true })
             .orderBy('position', 'asc')
             .orderBy('id', 'asc');
           return rows.map((row: Record<string, unknown>) => mapRuleRow(row));
@@ -157,17 +157,17 @@ function createDefaultDeps(): InboundEmailRuleEngineDeps {
 
     async matchClientByName(tenantId, normalizedName) {
       if (!normalizedName) return null;
-      const { withAdminTransaction } = await import('@alga-psa/db');
+      const { tenantDb, withAdminTransaction } = await import('@alga-psa/db');
       return withAdminTransaction(async (trx: Knex.Transaction) => {
+        const db = tenantDb(trx, tenantId);
         const activeClients = (builder: Knex.QueryBuilder) =>
           builder.where(function (this: Knex.QueryBuilder) {
             this.where('clients.is_inactive', false).orWhereNull('clients.is_inactive');
           });
 
         const byName = await activeClients(
-          trx('clients')
+          db.table('clients')
             .select('client_id')
-            .where('tenant', tenantId)
             .andWhereRaw('lower(regexp_replace(trim(client_name), \'\\s+\', \' \', \'g\')) = ?', [normalizedName])
         ).first();
 
@@ -175,20 +175,13 @@ function createDefaultDeps(): InboundEmailRuleEngineDeps {
           return { clientId: (byName as any).client_id, matchedBy: 'client_name' as const };
         }
 
-        const byAlias = await activeClients(
-          trx('client_name_aliases')
-            .select('client_name_aliases.client_id')
-            .join('clients', function (this: Knex.JoinClause) {
-              this.on('clients.client_id', 'client_name_aliases.client_id').andOn(
-                'clients.tenant',
-                'client_name_aliases.tenant'
-              );
-            })
-            .where('client_name_aliases.tenant', tenantId)
-            .andWhereRaw('lower(regexp_replace(trim(client_name_aliases.alias), \'\\s+\', \' \', \'g\')) = ?', [
-              normalizedName,
-            ])
-        ).first();
+        const aliasQuery = db.table('client_name_aliases')
+          .select('client_name_aliases.client_id')
+          .andWhereRaw('lower(regexp_replace(trim(client_name_aliases.alias), \'\\s+\', \' \', \'g\')) = ?', [
+            normalizedName,
+          ]);
+        db.tenantJoin(aliasQuery, 'clients', 'client_name_aliases.client_id', 'clients.client_id');
+        const byAlias = await activeClients(aliasQuery).first();
 
         return (byAlias as any)?.client_id
           ? { clientId: (byAlias as any).client_id, matchedBy: 'alias' as const }
@@ -198,10 +191,10 @@ function createDefaultDeps(): InboundEmailRuleEngineDeps {
 
     async resolveDefaultsById(tenantId, defaultsId) {
       if (!defaultsId) return null;
-      const { withAdminTransaction } = await import('@alga-psa/db');
+      const { tenantDb, withAdminTransaction } = await import('@alga-psa/db');
       return withAdminTransaction(async (trx: Knex.Transaction) => {
-        const row = await trx('inbound_ticket_defaults')
-          .where({ tenant: tenantId, id: defaultsId, is_active: true })
+        const row = await tenantDb(trx, tenantId).table('inbound_ticket_defaults')
+          .where({ id: defaultsId, is_active: true })
           .select(...INBOUND_DEFAULTS_SELECT_COLUMNS)
           .first();
         return row ?? null;

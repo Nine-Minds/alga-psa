@@ -1,4 +1,5 @@
 import type { NormalizedRmmAlertEvent, RmmAlertProcessingContext } from './contracts';
+import { tenantDb } from '@alga-psa/db';
 import { processRmmAlertEvent } from './processRmmAlertEvent';
 
 /**
@@ -71,8 +72,9 @@ export async function runRmmAlertReconciliation(
   }
 
   const remoteIds = new Set(remote.map((event) => event.externalAlertId));
-  const locals = await ctx.knex('rmm_alerts')
-    .where({ tenant: args.tenantId, integration_id: args.integrationId })
+  const db = tenantDb(ctx.knex, args.tenantId);
+  const locals = await db.table('rmm_alerts')
+    .where({ integration_id: args.integrationId })
     .whereIn('status', ['active', 'acknowledged', 'suppressed'])
     .select('external_alert_id', 'metadata');
 

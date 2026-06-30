@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { getSecret } from '@alga-psa/core/secrets';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerCrmActions } from '../businessOperations/crm';
@@ -17,6 +18,15 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const TEST_DB_NAME = 'test_database';
 const PRODUCTION_DB_NAMES = new Set(['sebastian_prod', 'production', 'prod', 'server']);
+const GLOBAL_FIXTURE_TENANT = '__workflow_crm_db_test_global__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, GLOBAL_FIXTURE_TENANT).unscoped(table, reason);
+}
 
 type PublishedWorkflowEvent = {
   eventType?: string;
@@ -137,7 +147,7 @@ async function createTenant(db: Knex, name = 'Test Tenant'): Promise<string> {
   const tenantId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('tenants').insert({
+  await tenantTable(db, tenantId, 'tenants').insert({
     tenant: tenantId,
     client_name: name,
     phone_number: '555-0100',
@@ -156,7 +166,7 @@ async function createTenant(db: Knex, name = 'Test Tenant'): Promise<string> {
 async function createUser(db: Knex, tenantId: string, options: { email?: string; first_name?: string; last_name?: string } = {}): Promise<string> {
   const userId = uuidv4();
 
-  await db('users').insert({
+  await tenantTable(db, tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantId,
     username: `test.user.${userId}`,
@@ -178,7 +188,7 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
   const clientId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     client_name: name,
     tenant: tenantId,
@@ -195,7 +205,7 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
 
 async function createContact(db: Knex, tenantId: string, clientId: string, name: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     full_name: name,
@@ -209,13 +219,13 @@ async function createContact(db: Knex, tenantId: string, clientId: string, name:
 }
 
 async function getTicketStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses')
+  const existing = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket' })
     .orderBy('order_number', 'asc')
     .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [inserted] = await db('statuses')
+  const [inserted] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Open',
@@ -233,7 +243,7 @@ async function createTicket(db: Knex, params: { tenantId: string; actorUserId: s
   const ticketId = uuidv4();
   const statusId = await getTicketStatusId(db, params.tenantId, params.actorUserId);
 
-  await db('tickets').insert({
+  await tenantTable(db, params.tenantId, 'tickets').insert({
     ticket_id: ticketId,
     tenant: params.tenantId,
     ticket_number: `WF-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
@@ -248,10 +258,12 @@ async function createTicket(db: Knex, params: { tenantId: string; actorUserId: s
 }
 
 async function getDefaultInteractionStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses').where({ tenant: tenantId, status_type: 'interaction', is_default: true }).first();
+  const existing = await tenantTable(db, tenantId, 'statuses')
+    .where({ tenant: tenantId, status_type: 'interaction', is_default: true })
+    .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [created] = await db('statuses')
+  const [created] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Logged',
@@ -267,7 +279,7 @@ async function getDefaultInteractionStatusId(db: Knex, tenantId: string, actorUs
 }
 
 async function createInteractionStatus(db: Knex, tenantId: string, actorUserId: string, name: string): Promise<string> {
-  const [status] = await db('statuses')
+  const [status] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name,
@@ -282,10 +294,11 @@ async function createInteractionStatus(db: Knex, tenantId: string, actorUserId: 
 }
 
 async function getAnyInteractionTypeId(db: Knex, tenantId: string): Promise<string> {
-  const tenantType = await db('interaction_types').where({ tenant: tenantId }).first();
+  const tenantType = await tenantTable(db, tenantId, 'interaction_types').where({ tenant: tenantId }).first();
   if (tenantType?.type_id) return tenantType.type_id;
 
-  const systemType = await db('system_interaction_types').first();
+  const systemType = await unscopedTable(db, 'system_interaction_types', 'global interaction type fallback for CRM workflow DB fixture')
+    .first();
   if (!systemType?.type_id) {
     throw new Error('Expected at least one system_interaction_types row in seeded DB');
   }
@@ -294,7 +307,7 @@ async function getAnyInteractionTypeId(db: Knex, tenantId: string): Promise<stri
 
 async function createInteractionType(db: Knex, tenantId: string, name: string): Promise<string> {
   const typeId = uuidv4();
-  await db('interaction_types').insert({
+  await tenantTable(db, tenantId, 'interaction_types').insert({
     tenant: tenantId,
     type_id: typeId,
     type_name: name,
@@ -321,7 +334,7 @@ async function createInteraction(
   const interactionId = uuidv4();
   const interactionDate = params.interactionDate ?? new Date().toISOString();
 
-  await db('interactions').insert({
+  await tenantTable(db, params.tenantId, 'interactions').insert({
     tenant: params.tenantId,
     interaction_id: interactionId,
     type_id: params.typeId,
@@ -357,7 +370,7 @@ async function createQuote(
   }
 ): Promise<string> {
   const quoteId = uuidv4();
-  await db('quotes').insert({
+  await tenantTable(db, params.tenantId, 'quotes').insert({
     tenant: params.tenantId,
     quote_id: quoteId,
     quote_number: `Q-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
@@ -404,7 +417,7 @@ async function createQuoteItemRecord(
   const unitPrice = params.unitPrice ?? 1000;
   const displayOrder = params.displayOrder ?? 0;
   const total = quantity * unitPrice;
-  await db('quote_items').insert({
+  await tenantTable(db, params.tenantId, 'quote_items').insert({
     tenant: params.tenantId,
     quote_item_id: quoteItemId,
     quote_id: params.quoteId,
@@ -582,7 +595,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       })
     ).rejects.toMatchObject({ code: 'CONFLICT' });
 
-    const audit = await db('audit_logs')
+    const audit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_interaction_type' })
       .first();
     expect(audit).toBeTruthy();
@@ -741,7 +754,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       })
     ).rejects.toThrow();
 
-    const quoteAudit = await db('audit_logs')
+    const quoteAudit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_quote' })
       .first();
     expect(quoteAudit).toBeTruthy();
@@ -864,11 +877,11 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     expect(tagged.added_count).toBe(2);
     expect(tagged.existing_count).toBe(0);
 
-    const unsupportedInteractionMappings = await db('tag_mappings')
+    const unsupportedInteractionMappings = await tenantTable(db, runtimeState.tenantId, 'tag_mappings')
       .where({ tenant: runtimeState.tenantId, tagged_id: activityId, tagged_type: 'interaction' });
     expect(unsupportedInteractionMappings).toHaveLength(0);
 
-    const clientMappings = await db('tag_mappings')
+    const clientMappings = await tenantTable(db, runtimeState.tenantId, 'tag_mappings')
       .where({ tenant: runtimeState.tenantId, tagged_id: clientId, tagged_type: 'client' });
     expect(clientMappings).toHaveLength(2);
 
@@ -902,7 +915,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
     runtimeState.deniedPermissions.clear();
 
-    const audit = await db('audit_logs')
+    const audit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.tag_activity' })
       .first();
     expect(audit).toBeTruthy();
@@ -1000,7 +1013,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     expect(updated.activity_after.type_id).toBe(nextTypeId);
     expect(updated.changed_fields).toEqual(expect.arrayContaining(['title', 'notes', 'status_id', 'type_id', 'visibility', 'category', 'tags']));
 
-    const audit = await db('audit_logs')
+    const audit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.update_activity' })
       .orderBy('timestamp', 'desc')
       .first();
@@ -1081,13 +1094,13 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     expect(scheduled.activity.ticket_id).toBe(ticketId);
     expect(scheduled.activity.duration).toBe(60);
 
-    const stored = await db('interactions')
+    const stored = await tenantTable(db, runtimeState.tenantId, 'interactions')
       .where({ tenant: runtimeState.tenantId, interaction_id: scheduled.activity.activity_id })
       .first();
 
     expect(stored).toBeTruthy();
 
-    const audit = await db('audit_logs')
+    const audit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.schedule_activity' })
       .orderBy('timestamp', 'desc')
       .first();
@@ -1178,16 +1191,18 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     expect(sent.recipients).toEqual(expect.arrayContaining(['custom@example.com']));
     expect(sent.message_id).toBe('msg-test-1');
 
-    const updated = await db('quotes').where({ tenant: runtimeState.tenantId, quote_id: quoteId }).first();
+    const updated = await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where({ tenant: runtimeState.tenantId, quote_id: quoteId })
+      .first();
     expect(updated.status).toBe('sent');
     expect(updated.sent_at).toBeTruthy();
 
-    const sentActivity = await db('quote_activities')
+    const sentActivity = await tenantTable(db, runtimeState.tenantId, 'quote_activities')
       .where({ tenant: runtimeState.tenantId, quote_id: quoteId, activity_type: 'sent' })
       .first();
     expect(sentActivity).toBeTruthy();
 
-    const sendAudit = await db('audit_logs')
+    const sendAudit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.send_quote' })
       .orderBy('timestamp', 'desc')
       .first();
@@ -1218,7 +1233,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       invokeAction('crm.send_quote', { quote_id: rejectedQuoteId })
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
 
-    await db('tenant_settings')
+    await tenantTable(db, runtimeState.tenantId, 'tenant_settings')
       .insert({
         tenant: runtimeState.tenantId,
         settings: JSON.stringify({ billing: { quotes: { approvalRequired: true } } }),
@@ -1323,7 +1338,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
 
     expect(note.note_id).toBeTruthy();
 
-    const stored = await db('interactions')
+    const stored = await tenantTable(db, runtimeState.tenantId, 'interactions')
       .where({ tenant: runtimeState.tenantId, interaction_id: note.note_id })
       .first();
 

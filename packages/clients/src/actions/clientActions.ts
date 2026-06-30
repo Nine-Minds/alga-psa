@@ -1,8 +1,9 @@
 'use server'
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
-import { deleteEntityWithValidation, unparseCSV, isEnterprise } from '@alga-psa/core';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { unparseCSV, isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
@@ -16,7 +17,6 @@ import {
 } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
-import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTag } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
@@ -40,6 +40,64 @@ const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'company_size',
   'annual_revenue',
 ]);
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function tenantScopedDerivedTableSql(
+  facade: ReturnType<typeof tenantDb>,
+  tableName: string,
+  alias: string
+): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
+  const subquery = facade
+    .subquery(tableName)
+    .select('*')
+    .as(alias);
+  const scoped = subquery.toSQL();
+
+  return {
+    subquery,
+    sql: scoped.sql,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: Knex | Knex.Transaction,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Unable to compile tenant join subquery SQL fragment');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
 
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
@@ -111,36 +169,34 @@ async function cleanupEntraReferencesBeforeClientDelete(
   const now = trx.fn.now();
 
   if (existingTables.has('entra_sync_run_tenants')) {
-    await trx('entra_sync_run_tenants')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_sync_run_tenants', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_links')) {
-    await trx('entra_contact_links')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_contact_links', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_reconciliation_queue')) {
-    await trx('entra_contact_reconciliation_queue')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_client_tenant_mappings')) {
-    const activeMappings = await trx('entra_client_tenant_mappings')
+    const activeMappings = await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
       .where({
-        tenant: tenantId,
         client_id: clientId,
         is_active: true,
       })
       .select('managed_tenant_id');
 
     if (activeMappings.length > 0) {
-      await trx('entra_client_tenant_mappings')
+      await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
         .where({
-          tenant: tenantId,
           client_id: clientId,
           is_active: true,
         })
@@ -162,11 +218,11 @@ async function cleanupEntraReferencesBeforeClientDelete(
         updated_at: now,
       }));
 
-      await trx('entra_client_tenant_mappings').insert(unmappedRows);
+      await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId).insert(unmappedRows);
     }
 
-    await trx('entra_client_tenant_mappings')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 }
@@ -198,8 +254,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       };
 
       // First, get the current client data to properly merge properties
-      const currentClient = await trx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const currentClient = await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
 
       if (!currentClient) {
@@ -262,8 +318,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
       console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
 
-      const [updatedClient] = await trx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const [updatedClient] = await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .update(updateObject)
         .returning('*');
 
@@ -417,15 +473,14 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     // (default_billing_settings.default_currency_code) instead of leaving it null and
     // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
     if (!clientData.default_currency_code) {
-      const billingSettings = await knex('default_billing_settings')
-        .where({ tenant })
+      const billingSettings = await tenantScopedTable(knex, 'default_billing_settings', tenant)
         .select('default_currency_code')
         .first();
       clientData.default_currency_code = billingSettings?.default_currency_code || 'USD';
     }
 
     const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await trx<IClient>('clients')
+      const [created] = await tenantScopedTable(trx, 'clients', tenant)
         .insert({
           ...clientData,
           tenant,
@@ -554,6 +609,7 @@ function buildClientListSearchPrefixTsquery(raw: string): string | null {
 }
 
 function applyClientListIndexedSearchFilter(
+  trx: Knex.Transaction,
   baseQuery: Knex.QueryBuilder,
   tenant: string,
   user: { user_id: string; user_type?: string; clientId?: string | null },
@@ -575,6 +631,37 @@ function applyClientListIndexedSearchFilter(
       : 'si.client_scope_id IS NULL';
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
   const ilikePattern = `%${rawSearch}%`;
+  const scopedDb = tenantDb(trx, tenant);
+  const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
+  const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'im');
+  const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'da');
+  const titleSearchClients = tenantScopedDerivedTableSql(scopedDb, 'clients', 'c2');
+  const locationSearchClients = tenantScopedDerivedTableSql(scopedDb, 'client_locations', 'cl_search');
+  const interactionJoin = tenantJoinSubquerySql(
+    scopedDb,
+    trx,
+    interactions.subquery,
+    trx.raw('??::text', ['im.interaction_id']),
+    'si.object_id',
+    {
+      rootTenantColumn: 'si.tenant',
+      joinedTenantColumn: 'im.tenant',
+    }
+  );
+  const documentAssociationJoin = tenantJoinSubquerySql(
+    scopedDb,
+    trx,
+    documentAssociations.subquery,
+    trx.raw('??::text', ['da.document_id']),
+    'si.object_id',
+    {
+      rootTenantColumn: 'si.tenant',
+      joinedTenantColumn: 'da.tenant',
+      on: (join) => {
+        join.andOn('da.entity_type', '=', trx.raw("'client'"));
+      },
+    }
+  );
 
   // Citus cannot push down an OR that mixes correlated EXISTS across multiple
   // distributed tables (app_search_index, interactions, document_associations,
@@ -620,59 +707,69 @@ function applyClientListIndexedSearchFilter(
 
   const legA = `
     SELECT si.object_id::uuid AS client_id, si.tenant
-    FROM app_search_index si
+    FROM ${searchIndex.sql}
     ${qCte}
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'client'
+    WHERE si.object_type = 'client'
       ${siFilters}
   `;
-  const legABindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+  const legABindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
+    ...qBindings,
+    ...siFilterBindings,
+  ];
 
   const legB = `
     SELECT im.client_id AS client_id, im.tenant
-    FROM app_search_index si
+    FROM ${searchIndex.sql}
     ${qCte}
-    JOIN interactions im
-      ON im.tenant = si.tenant
-     AND im.interaction_id::text = si.object_id
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'interaction'
+    ${interactionJoin.sql}
+    WHERE si.object_type = 'interaction'
       ${siFilters}
   `;
-  const legBBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+  const legBBindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
+    ...qBindings,
+    ...interactionJoin.bindings,
+    ...siFilterBindings,
+  ];
 
   const legC = `
     SELECT da.entity_id::uuid AS client_id, da.tenant
-    FROM app_search_index si
+    FROM ${searchIndex.sql}
     ${qCte}
-    JOIN document_associations da
-      ON da.tenant = si.tenant
-     AND da.document_id::text = si.object_id
-     AND da.entity_type = 'client'
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'document'
+    ${documentAssociationJoin.sql}
+    WHERE si.object_type = 'document'
       ${siFilters}
   `;
-  const legCBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+  const legCBindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
+    ...qBindings,
+    ...documentAssociationJoin.bindings,
+    ...siFilterBindings,
+  ];
 
   const legD = `
     SELECT c2.client_id, c2.tenant
-    FROM clients c2
-    WHERE c2.tenant = ?::uuid
-      AND (
+    FROM ${titleSearchClients.sql}
+    WHERE (
         c2.client_name ILIKE ?
         OR c2.billing_email ILIKE ?
         OR c2.url ILIKE ?
         OR c2.notes ILIKE ?
       )
   `;
-  const legDBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern, ilikePattern, ilikePattern];
+  const legDBindings: Knex.RawBinding[] = [
+    ...titleSearchClients.bindings,
+    ilikePattern,
+    ilikePattern,
+    ilikePattern,
+    ilikePattern,
+  ];
 
   const legE = `
     SELECT cl_search.client_id, cl_search.tenant
-    FROM client_locations cl_search
-    WHERE cl_search.tenant = ?::uuid
-      AND (
+    FROM ${locationSearchClients.sql}
+    WHERE (
         cl_search.phone ILIKE ?
         OR cl_search.email ILIKE ?
         OR cl_search.address_line1 ILIKE ?
@@ -684,13 +781,13 @@ function applyClientListIndexedSearchFilter(
       )
   `;
   const legEBindings: Knex.RawBinding[] = [
-    tenant,
+    ...locationSearchClients.bindings,
     ilikePattern, ilikePattern, ilikePattern, ilikePattern,
     ilikePattern, ilikePattern, ilikePattern, ilikePattern,
   ];
 
-  const unionSql = `
-    INNER JOIN (
+  const searchMatchesSql = `
+    (
       SELECT DISTINCT client_id, tenant FROM (
         ${legA}
         UNION ALL
@@ -702,20 +799,32 @@ function applyClientListIndexedSearchFilter(
         UNION ALL
         ${legE}
       ) u
-    ) as sm ON sm.client_id = c.client_id AND sm.tenant = c.tenant
+    ) as sm
   `;
-
-  return baseQuery.joinRaw(unionSql, [
+  const searchMatchesBindings: Knex.RawBinding[] = [
     ...legABindings,
     ...legBBindings,
     ...legCBindings,
     ...legDBindings,
     ...legEBindings,
-  ] as unknown as Knex.Value[]);
+  ];
+  const searchMatchesJoin = tenantJoinSubquerySql(
+    scopedDb,
+    trx,
+    trx.raw(searchMatchesSql, searchMatchesBindings),
+    'sm.client_id',
+    'c.client_id',
+    {
+      rootTenantColumn: 'c.tenant',
+      joinedTenantColumn: 'sm.tenant',
+    }
+  );
+
+  return baseQuery.joinRaw(searchMatchesJoin.sql, searchMatchesJoin.bindings as unknown as Knex.Value[]);
 }
 
 function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
-  return trx('client_locations')
+  return tenantScopedTable(trx, 'client_locations', tenant)
     .select(
       'tenant',
       'client_id',
@@ -736,7 +845,7 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
         ) as rn
       `)
     )
-    .where({ tenant, is_default: true })
+    .where({ is_default: true })
     .as('cl');
 }
 
@@ -771,17 +880,17 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     // Use a transaction to get paginated client data
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build the base query with client_locations join
-      let baseQuery = trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.rn', '=', trx.raw('1'));
-        })
-        .where({ 'c.tenant': tenant });
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
+      scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        joinedTenantColumn: 'cl.tenant',
+        on(join) {
+          join.andOn('cl.rn', '=', trx.raw('1'));
+        },
+      });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -792,7 +901,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       }
 
       // Apply filters
-      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
+      baseQuery = applyClientListIndexedSearchFilter(trx, baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
@@ -800,17 +909,13 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
 
       // Apply tag filter using new tag structure
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagSubquery = scopedDb.table('tag_mappings as tm')
+          .select('tm.tagged_id');
+        scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagSubquery
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
       }
 
       // Get total count
@@ -818,11 +923,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
       // Get paginated clients with location data and default flag
-      let clientsQuery = baseQuery
-        .leftJoin('tenant_companies as tc', function() {
-          this.on('c.client_id', '=', 'tc.client_id')
-              .andOn('c.tenant', '=', 'tc.tenant');
-        })
+      let clientsQuery = scopedDb
+        .tenantJoin(baseQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' })
         .select(
           'c.*',
           'tc.is_default',
@@ -877,20 +979,20 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     });
 
     // Process clients to add logoUrl if requested
-    let clientsWithLogos = result.clients;
+    let clientsWithLogos = result.clients as IClientWithLocation[];
 
     if (loadLogos && clientsWithLogos.length > 0) {
-      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const clientIds = clientsWithLogos.map((c: IClientWithLocation) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: logoUrlsMap.get(client.client_id) || null,
       }));
     } else {
       // If not loading logos, ensure logoUrl is null
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: null,
@@ -944,17 +1046,17 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const offset = (page - 1) * pageSize;
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      let baseQuery = trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.rn', '=', trx.raw('1'));
-        })
-        .where({ 'c.tenant': tenant });
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
+      scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        joinedTenantColumn: 'cl.tenant',
+        on(join) {
+          join.andOn('cl.rn', '=', trx.raw('1'));
+        },
+      });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -964,54 +1066,46 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
-      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
+      baseQuery = applyClientListIndexedSearchFilter(trx, baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
       }
 
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagSubquery = scopedDb.table('tag_mappings as tm')
+          .select('tm.tagged_id');
+        scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagSubquery
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
       }
 
       if (dateRange?.from || dateRange?.to) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('cbc.client_id')
-            .from('client_billing_cycles as cbc')
-            .where('cbc.tenant', tenant);
+        const billingCycleSubquery = tenantScopedTable(trx, 'client_billing_cycles as cbc', tenant)
+          .select('cbc.client_id');
 
-          if (dateRange?.from) {
-            const rangeFrom = dateRange.from;
-            this.andWhere(function() {
-              this.whereNull('cbc.period_end_date')
-                .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
-            });
-          }
+        if (dateRange?.from) {
+          const rangeFrom = dateRange.from;
+          billingCycleSubquery.andWhere(function() {
+            this.whereNull('cbc.period_end_date')
+              .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
+          });
+        }
 
-          if (dateRange?.to) {
-            this.andWhere('cbc.period_start_date', '<=', dateRange.to);
-          }
-        });
+        if (dateRange?.to) {
+          billingCycleSubquery.andWhere('cbc.period_start_date', '<=', dateRange.to);
+        }
+
+        baseQuery = baseQuery.whereIn('c.client_id', billingCycleSubquery);
       }
 
       const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
-      let clientsQuery = baseQuery
-        .leftJoin('tenant_companies as tc', function() {
-          this.on('c.client_id', '=', 'tc.client_id')
-              .andOn('c.tenant', '=', 'tc.tenant');
-        })
+      let clientsQuery = scopedDb
+        .tenantJoin(baseQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' })
         .select(
           'c.*',
           'tc.is_default',
@@ -1057,19 +1151,19 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
       return { clients, totalCount };
     });
 
-    let clientsWithLogos = result.clients;
+    let clientsWithLogos = result.clients as IClientWithLocation[];
 
     if (loadLogos && clientsWithLogos.length > 0) {
-      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const clientIds = clientsWithLogos.map((c: IClientWithLocation) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: logoUrlsMap.get(client.client_id) || null,
       }));
     } else {
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: null,
@@ -1107,8 +1201,8 @@ export const validateClientDeletion = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('clients')
-      .where({ client_id: clientId, tenant })
+    return await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: clientId })
       .first();
   });
 
@@ -1123,10 +1217,9 @@ export const validateClientDeletion = withAuth(async (
   }
 
   const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const tenantClient = await trx('tenant_companies')
+    const tenantClient = await tenantScopedTable(trx, 'tenant_companies', tenant)
       .where({
         client_id: clientId,
-        tenant,
         is_default: true
       })
       .first();
@@ -1192,8 +1285,8 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     const { knex: db } = await createTenantKnex();
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
+      return await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
     });
 
@@ -1209,10 +1302,9 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     }
 
     const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantClient = await trx('tenant_companies')
+      const tenantClient = await tenantScopedTable(trx, 'tenant_companies', tenant)
         .where({
           client_id: clientId,
-          tenant,
           is_default: true
         })
         .first();
@@ -1233,40 +1325,40 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     const result = await deleteEntityWithValidation('client', clientId, db, tenant, async (trx, tenantId) => {
       await deleteEntityTags(trx, clientId, 'client');
 
-      const deletedTaxSettings = await trx('client_tax_settings')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedTaxSettings = await tenantScopedTable(trx, 'client_tax_settings', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedTaxSettings > 0) {
         console.log(`Deleted ${deletedTaxSettings} client tax settings records`);
       }
 
-      const deletedTaxRates = await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedTaxRates = await tenantScopedTable(trx, 'client_tax_rates', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedTaxRates > 0) {
         console.log(`Deleted ${deletedTaxRates} client tax rate records`);
       }
 
-      const deletedContracts = await trx('client_contracts')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedContracts = await tenantScopedTable(trx, 'client_contracts', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedContracts > 0) {
         console.log(`Deleted ${deletedContracts} client contract records`);
       }
 
-      const deletedBillingCycles = await trx('client_billing_cycles')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedBillingCycles = await tenantScopedTable(trx, 'client_billing_cycles', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedBillingCycles > 0) {
         console.log(`Deleted ${deletedBillingCycles} client billing cycle records`);
       }
 
-      const deletedBillingSettings = await trx('client_billing_settings')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedBillingSettings = await tenantScopedTable(trx, 'client_billing_settings', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedBillingSettings > 0) {
@@ -1274,8 +1366,8 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       }
 
       if (isEnterprise) {
-        const deletedPaymentCustomers = await trx('client_payment_customers')
-          .where({ client_id: clientId, tenant: tenantId })
+        const deletedPaymentCustomers = await tenantScopedTable(trx, 'client_payment_customers', tenantId)
+          .where({ client_id: clientId })
           .delete();
 
         if (deletedPaymentCustomers > 0) {
@@ -1283,39 +1375,39 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
         }
       }
 
-      const deletedLocations = await trx('client_locations')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedLocations = await tenantScopedTable(trx, 'client_locations', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedLocations > 0) {
         console.log(`Deleted ${deletedLocations} client location records`);
       }
 
-      const clientRecord = await trx('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const clientRecord = await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ client_id: clientId })
         .select('notes_document_id')
         .first();
 
       if (clientRecord?.notes_document_id) {
         console.log(`Cleaning up notes document: ${clientRecord.notes_document_id}`);
 
-        await trx('document_block_content')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_block_content', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
 
-        await trx('document_associations')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_associations', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
 
-        await trx('documents')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'documents', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
       }
 
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
 
-      const deleted = await trx('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deleted = await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (!deleted || deleted === 0) {
@@ -1374,14 +1466,13 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
   const exportData = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Fetch location data for all clients
     const clientIds = clients.map(c => c.client_id);
-    const locations = await trx('client_locations')
+    const locations = await tenantScopedTable(trx, 'client_locations', tenant)
       .whereIn('client_id', clientIds)
-      .andWhere('tenant', tenant)
       .andWhere('is_default', true);
 
     // Create a map of client_id to location
     const locationMap = new Map();
-    locations.forEach(loc => {
+    locations.forEach((loc: { client_id: string }) => {
       locationMap.set(loc.client_id, loc);
     });
 
@@ -1509,15 +1600,16 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build the base query - same filtering logic as getAllClientsPaginated
-      let baseQuery = trx('clients as c')
-        .where({ 'c.tenant': tenant });
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
 
       // Join with locations for search if needed
       if (searchTerm) {
-        baseQuery = baseQuery.leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
+        baseQuery = scopedDb.tenantJoin(baseQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+          type: 'left',
+          on: (join) => {
+            join.andOn('cl.is_default', '=', trx.raw('true'));
+          },
         });
       }
 
@@ -1546,21 +1638,16 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
 
       // Apply tag filter using new tag structure
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagQuery = scopedDb.table('tag_mappings as tm').select('tm.tagged_id');
+        scopedDb.tenantJoin(tagQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagQuery
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagQuery);
       }
 
       // Get all client IDs
-      const clients = await baseQuery.select('c.client_id');
+      const clients: Array<{ client_id: string }> = await baseQuery.select({ client_id: 'c.client_id' });
       return clients.map(c => c.client_id);
     });
   } catch (error) {
@@ -1579,10 +1666,9 @@ export const checkExistingClients = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const existingClients = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantScopedTable(trx, 'clients', tenant)
       .select('*')
       .whereIn('client_name', clientNames)
-      .andWhere('tenant', tenant);
   });
 
   return existingClients;
@@ -1612,8 +1698,7 @@ export const importClientsFromCSV = withAuth(async (
 
   // Resolve the tenant's configured default currency once for the whole import so new
   // clients adopt it instead of inserting null (which downstream resolves to 'USD').
-  const tenantDefaultBillingSettings = await db('default_billing_settings')
-    .where({ tenant })
+  const tenantDefaultBillingSettings = await tenantScopedTable(db, 'default_billing_settings', tenant)
     .select('default_currency_code')
     .first();
   const tenantDefaultCurrencyCode = tenantDefaultBillingSettings?.default_currency_code || 'USD';
@@ -1626,8 +1711,8 @@ export const importClientsFromCSV = withAuth(async (
           throw new Error('Client name is required');
         }
 
-        const existingClient = await trx('clients')
-          .where({ client_name: clientData.client_name, tenant })
+        const existingClient = await tenantScopedTable(trx, 'clients', tenant)
+          .where({ client_name: clientData.client_name })
           .first();
 
         if (existingClient && !updateExisting) {
@@ -1652,7 +1737,7 @@ export const importClientsFromCSV = withAuth(async (
             updated_at: new Date().toISOString()
           };
 
-          [savedClient] = await trx('clients')
+          [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .where({ client_id: existingClient.client_id })
             .update(updateData)
             .returning('*');
@@ -1701,7 +1786,7 @@ export const importClientsFromCSV = withAuth(async (
             updated_at: new Date().toISOString()
           };
 
-          [savedClient] = await trx('clients')
+          [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .insert(clientToCreate)
             .returning('*');
 
@@ -1709,7 +1794,7 @@ export const importClientsFromCSV = withAuth(async (
           if (clientData.email || clientData.phone_number || clientData.address_line1 ||
               clientData.city || clientData.location_name) {
             try {
-              await trx('client_locations').insert({
+              await tenantScopedTable(trx, 'client_locations', tenant).insert({
                 location_id: trx.raw('gen_random_uuid()'),
                 client_id: savedClient.client_id,
                 tenant: tenant,
@@ -1878,10 +1963,12 @@ export const deactivateClientContacts = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Get all active contact IDs for this client
-      const activeContacts = await trx('contacts')
+      const activeContacts = await db.table('contacts')
         .select('contact_name_id')
-        .where({ client_id: clientId, tenant, is_inactive: false });
+        .where({ client_id: clientId, is_inactive: false });
 
       const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
@@ -1890,14 +1977,14 @@ export const deactivateClientContacts = withAuth(async (
       }
 
       // Deactivate all contacts
-      await trx('contacts')
-        .where({ client_id: clientId, tenant, is_inactive: false })
+      await db.table('contacts')
+        .where({ client_id: clientId, is_inactive: false })
         .update({ is_inactive: true });
 
       // Deactivate all users associated with these contacts
-      await trx('users')
+      await db.table('users')
         .whereIn('contact_id', contactIds)
-        .andWhere({ tenant, user_type: 'client' })
+        .andWhere({ user_type: 'client' })
         .update({ is_inactive: true });
 
       return { contactsDeactivated: contactIds.length };
@@ -1938,26 +2025,27 @@ export const markClientInactiveWithContacts = withAuth(async (
   try {
     const occurredAt = new Date().toISOString();
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       let contactsDeactivated = 0;
 
       if (deactivateContacts) {
         // Get all active contact IDs for this client
-        const activeContacts = await trx('contacts')
+        const activeContacts = await db.table('contacts')
           .select('contact_name_id')
-          .where({ client_id: clientId, tenant, is_inactive: false });
+          .where({ client_id: clientId, is_inactive: false });
 
         const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
         if (contactIds.length > 0) {
           // Deactivate all contacts
-          await trx('contacts')
-            .where({ client_id: clientId, tenant, is_inactive: false })
+          await db.table('contacts')
+            .where({ client_id: clientId, is_inactive: false })
             .update({ is_inactive: true });
 
           // Deactivate all users associated with these contacts
-          await trx('users')
+          await db.table('users')
             .whereIn('contact_id', contactIds)
-            .andWhere({ tenant, user_type: 'client' })
+            .andWhere({ user_type: 'client' })
             .update({ is_inactive: true });
 
           contactsDeactivated = contactIds.length;
@@ -1965,8 +2053,8 @@ export const markClientInactiveWithContacts = withAuth(async (
       }
 
       // Mark the client as inactive
-      await trx('clients')
-        .where({ client_id: clientId, tenant })
+      await db.table('clients')
+        .where({ client_id: clientId })
         .update({ is_inactive: true, updated_at: occurredAt });
 
       return { contactsDeactivated };
@@ -2017,31 +2105,32 @@ export const markClientActiveWithContacts = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       let contactsReactivated = 0;
 
       // Mark the client as active first
-      await trx('clients')
-        .where({ client_id: clientId, tenant })
+      await db.table('clients')
+        .where({ client_id: clientId })
         .update({ is_inactive: false, updated_at: new Date().toISOString() });
 
       if (reactivateContacts) {
         // Get all inactive contact IDs for this client
-        const inactiveContacts = await trx('contacts')
+        const inactiveContacts = await db.table('contacts')
           .select('contact_name_id')
-          .where({ client_id: clientId, tenant, is_inactive: true });
+          .where({ client_id: clientId, is_inactive: true });
 
         const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
         if (contactIds.length > 0) {
           // Reactivate all contacts
-          await trx('contacts')
-            .where({ client_id: clientId, tenant, is_inactive: true })
+          await db.table('contacts')
+            .where({ client_id: clientId, is_inactive: true })
             .update({ is_inactive: false });
 
           // Reactivate all users associated with these contacts
-          await trx('users')
+          await db.table('users')
             .whereIn('contact_id', contactIds)
-            .andWhere({ tenant, user_type: 'client' })
+            .andWhere({ user_type: 'client' })
             .update({ is_inactive: false });
 
           contactsReactivated = contactIds.length;
@@ -2078,10 +2167,12 @@ export const reactivateClientContacts = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Get all inactive contact IDs for this client
-      const inactiveContacts = await trx('contacts')
+      const inactiveContacts = await db.table('contacts')
         .select('contact_name_id')
-        .where({ client_id: clientId, tenant, is_inactive: true });
+        .where({ client_id: clientId, is_inactive: true });
 
       const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
@@ -2090,14 +2181,14 @@ export const reactivateClientContacts = withAuth(async (
       }
 
       // Reactivate all contacts
-      await trx('contacts')
-        .where({ client_id: clientId, tenant, is_inactive: true })
+      await db.table('contacts')
+        .where({ client_id: clientId, is_inactive: true })
         .update({ is_inactive: false });
 
       // Reactivate all users associated with these contacts
-      await trx('users')
+      await db.table('users')
         .whereIn('contact_id', contactIds)
-        .andWhere({ tenant, user_type: 'client' })
+        .andWhere({ user_type: 'client' })
         .update({ is_inactive: false });
 
       return { contactsReactivated: contactIds.length };

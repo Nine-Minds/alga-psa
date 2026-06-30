@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import { setupE2ETestEnvironment, E2ETestEnvironment } from './e2eTestSetup';
 import { createTestContact, createTestContacts, generateContactData } from './contactTestDataFactory';
 import { assertSuccess, assertError, buildQueryString } from './apiTestHelpers';
@@ -34,38 +35,35 @@ describe('E2E Test Utilities', () => {
     });
 
     it('should have created a tenant', async () => {
-      const tenant = await env.db('tenants')
-        .where('tenant', env.tenant)
+      const tenant = await tenantDb(env.db, env.tenant).table('tenants')
         .first();
       expect(tenant).toBeDefined();
     });
 
     it('should have created a user', async () => {
-      const user = await env.db('users')
+      const user = await tenantDb(env.db, env.tenant).table('users')
         .where('user_id', env.userId)
-        .where('tenant', env.tenant)
         .first();
       expect(user).toBeDefined();
     });
 
     it('should have created an API key', async () => {
-      const apiKey = await env.db('api_keys')
+      const apiKey = await tenantDb(env.db, env.tenant).table('api_keys')
         .where('user_id', env.userId)
-        .where('tenant', env.tenant)
         .where('active', true)
         .first();
       expect(apiKey).toBeDefined();
     });
 
     it('T053: should create board-owned ticket statuses for the default board', async () => {
-      const defaultBoard = await env.db('boards')
-        .where({ tenant: env.tenant, is_default: true })
+      const defaultBoard = await tenantDb(env.db, env.tenant).table('boards')
+        .where({ is_default: true })
         .first<{ board_id: string }>('board_id');
 
       expect(defaultBoard?.board_id).toBeDefined();
 
-      const ticketStatuses = await env.db('statuses')
-        .where({ tenant: env.tenant, status_type: 'ticket' })
+      const ticketStatuses = await tenantDb(env.db, env.tenant).table('statuses')
+        .where({ status_type: 'ticket' })
         .select('status_id', 'board_id', 'is_default');
 
       expect(ticketStatuses.length).toBeGreaterThan(0);

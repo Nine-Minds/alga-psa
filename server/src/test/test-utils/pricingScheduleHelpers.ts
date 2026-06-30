@@ -9,6 +9,7 @@ import type {
   IRecurringInvoiceWindow,
   IRecurringServicePeriod,
 } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { TestContext } from './testContext';
 import { ISO8601String } from 'server/src/types/types.d';
 import { buildMonthlyRecurringFixture } from './recurringTimingFixtures';
@@ -39,6 +40,10 @@ export interface RecurringPricingScheduleFixtureOptions {
   notes?: string;
   durationValue?: number;
   durationUnit?: 'days' | 'weeks' | 'months' | 'years';
+}
+
+function contractPricingSchedules(context: TestContext) {
+  return tenantDb(context.db, context.tenantId).table('contract_pricing_schedules');
 }
 
 export function buildRecurringPricingScheduleFixture(
@@ -82,7 +87,7 @@ export async function createPricingSchedule(
 ): Promise<string> {
   const scheduleId = uuidv4();
 
-  await context.db('contract_pricing_schedules').insert({
+  await contractPricingSchedules(context).insert({
     schedule_id: scheduleId,
     contract_id: contractId,
     tenant: context.tenantId,
@@ -111,10 +116,9 @@ export async function getPricingSchedules(
   context: TestContext,
   contractId: string
 ): Promise<any[]> {
-  return context.db('contract_pricing_schedules')
+  return contractPricingSchedules(context)
     .where({
-      contract_id: contractId,
-      tenant: context.tenantId
+      contract_id: contractId
     })
     .orderBy('effective_date', 'asc')
     .select('*');
@@ -132,10 +136,9 @@ export async function getActivePricingSchedule(
   contractId: string,
   date: ISO8601String
 ): Promise<any | null> {
-  const schedule = await context.db('contract_pricing_schedules')
+  const schedule = await contractPricingSchedules(context)
     .where({
-      contract_id: contractId,
-      tenant: context.tenantId
+      contract_id: contractId
     })
     .where('effective_date', '<=', date)
     .where(function(builder) {
@@ -162,10 +165,9 @@ export async function getActiveScheduleForPeriod(
   startDate: ISO8601String,
   endDate: ISO8601String
 ): Promise<any | null> {
-  const schedule = await context.db('contract_pricing_schedules')
+  const schedule = await contractPricingSchedules(context)
     .where({
-      contract_id: contractId,
-      tenant: context.tenantId
+      contract_id: contractId
     })
     .where('effective_date', '<=', endDate)
     .where(function(builder) {
@@ -209,10 +211,9 @@ export async function deletePricingSchedule(
   context: TestContext,
   scheduleId: string
 ): Promise<void> {
-  await context.db('contract_pricing_schedules')
+  await contractPricingSchedules(context)
     .where({
-      schedule_id: scheduleId,
-      tenant: context.tenantId
+      schedule_id: scheduleId
     })
     .delete();
 }
@@ -226,10 +227,9 @@ export async function deleteContractSchedules(
   context: TestContext,
   contractId: string
 ): Promise<void> {
-  await context.db('contract_pricing_schedules')
+  await contractPricingSchedules(context)
     .where({
-      contract_id: contractId,
-      tenant: context.tenantId
+      contract_id: contractId
     })
     .delete();
 }

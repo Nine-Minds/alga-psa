@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrl, type EntityType } from '@alga-psa/formatting/avatarUtils';
@@ -43,6 +43,14 @@ function getImageFolderName(entityType: EntityType): string {
   }
 }
 
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
+
 async function ensureImageFolder(
   trx: Knex.Transaction,
   tenant: string,
@@ -51,9 +59,8 @@ async function ensureImageFolder(
 ): Promise<string> {
   const folderPath = getImageFolderPath(entityType);
 
-  const existing = await trx('document_folders')
+  const existing = await tenantScopedTable(trx, 'document_folders', tenant)
     .where({
-      tenant,
       folder_path: folderPath,
       entity_id: entityId,
       entity_type: entityType,
@@ -61,7 +68,7 @@ async function ensureImageFolder(
     .first();
 
   if (!existing) {
-    await trx('document_folders').insert({
+    await tenantScopedTable(trx, 'document_folders', tenant).insert({
       tenant,
       folder_id: uuidv4(),
       folder_path: folderPath,
@@ -81,15 +88,16 @@ async function getDocumentTypeForMimeType(
   tenant: string,
   mimeType: string,
 ): Promise<{ typeId: string; isShared: boolean }> {
-  const tenantType = await knexOrTrx('document_types')
-    .where({ tenant, type_name: mimeType })
+  const db = tenantDb(knexOrTrx, tenant);
+  const tenantType = await tenantScopedTable(knexOrTrx, 'document_types', tenant)
+    .where({ type_name: mimeType })
     .first();
 
   if (tenantType) {
     return { typeId: tenantType.type_id, isShared: false };
   }
 
-  const sharedType = await knexOrTrx('shared_document_types')
+  const sharedType = await db.table('shared_document_types')
     .where({ type_name: mimeType })
     .first();
 
@@ -99,15 +107,15 @@ async function getDocumentTypeForMimeType(
 
   const generalType = `${mimeType.split('/')[0]}/*`;
 
-  const generalTenantType = await knexOrTrx('document_types')
-    .where({ tenant, type_name: generalType })
+  const generalTenantType = await tenantScopedTable(knexOrTrx, 'document_types', tenant)
+    .where({ type_name: generalType })
     .first();
 
   if (generalTenantType) {
     return { typeId: generalTenantType.type_id, isShared: false };
   }
 
-  const generalSharedType = await knexOrTrx('shared_document_types')
+  const generalSharedType = await db.table('shared_document_types')
     .where({ type_name: generalType })
     .first();
 
@@ -115,7 +123,7 @@ async function getDocumentTypeForMimeType(
     return { typeId: generalSharedType.type_id, isShared: true };
   }
 
-  const unknownType = await knexOrTrx('shared_document_types')
+  const unknownType = await db.table('shared_document_types')
     .where({ type_name: 'application/octet-stream' })
     .first();
 
@@ -132,8 +140,8 @@ async function deleteEntityImageDocument(
   documentId: string,
   userId: string,
 ): Promise<boolean> {
-  const document = await knex('documents')
-    .where({ document_id: documentId, tenant })
+  const document = await tenantScopedTable(knex, 'documents', tenant)
+    .where({ document_id: documentId })
     .first(['document_id', 'file_id', 'thumbnail_file_id', 'preview_file_id']);
 
   if (!document) {
@@ -141,12 +149,12 @@ async function deleteEntityImageDocument(
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx('document_associations')
-      .where({ document_id: documentId, tenant })
+    await tenantScopedTable(trx, 'document_associations', tenant)
+      .where({ document_id: documentId })
       .delete();
 
-    await trx('documents')
-      .where({ document_id: documentId, tenant })
+    await tenantScopedTable(trx, 'documents', tenant)
+      .where({ document_id: documentId })
       .delete();
   });
 
@@ -232,7 +240,7 @@ export async function uploadEntityImage(
         folderPath = undefined;
       }
 
-      const [document] = await trx('documents')
+      const [document] = await tenantScopedTable(trx, 'documents', tenant)
         .insert({ ...documentData, folder_path: folderPath })
         .returning(['document_id']);
 
@@ -241,17 +249,16 @@ export async function uploadEntityImage(
       }
 
       if (isLogoUpload) {
-        await trx('document_associations')
+        await tenantScopedTable(trx, 'document_associations', tenant)
           .where({
             entity_id: entityId,
             entity_type: entityType,
-            tenant,
             is_entity_logo: true,
           })
           .update({ is_entity_logo: false });
       }
 
-      await trx('document_associations').insert({
+      await tenantScopedTable(trx, 'document_associations', tenant).insert({
         document_id: document.document_id,
         entity_id: entityId,
         entity_type: entityType,
@@ -309,21 +316,19 @@ export async function deleteEntityImage(
 
   try {
     const associationToDelete = documentIdToDelete
-      ? await knex('document_associations')
+      ? await tenantScopedTable(knex, 'document_associations', tenant)
           .select('association_id', 'document_id')
           .where({
             document_id: documentIdToDelete,
             entity_id: entityId,
             entity_type: entityType,
-            tenant,
           })
           .first()
-      : await knex('document_associations')
+      : await tenantScopedTable(knex, 'document_associations', tenant)
           .select('association_id', 'document_id')
           .where({
             entity_id: entityId,
             entity_type: entityType,
-            tenant,
             is_entity_logo: true,
           })
           .first();

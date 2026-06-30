@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -99,11 +99,11 @@ export async function getEligibleContractLines(
   effectiveDate?: string | Date
 ): Promise<EligibleContractLine[]> {
   const { rangeStart, rangeEnd } = resolveEffectiveDateRange(effectiveDate);
+  const db = tenantDb(knex, tenant);
 
-  const serviceInfo = await knex('service_catalog')
+  const serviceInfo = await db.table('service_catalog')
     .where({
       'service_catalog.service_id': serviceId,
-      'service_catalog.tenant': tenant,
     })
     .first('category_id', 'custom_service_type_id as service_type_id');
 
@@ -112,41 +112,36 @@ export async function getEligibleContractLines(
     return [];
   }
 
-  const query = knex('client_contracts')
-    .join('contracts', function () {
-      this.on('client_contracts.contract_id', '=', 'contracts.contract_id').andOn(
-        'contracts.tenant',
-        '=',
-        'client_contracts.tenant'
-      );
-    })
-    .join('contract_lines', function () {
-      this.on('contracts.contract_id', '=', 'contract_lines.contract_id').andOn(
-        'contract_lines.tenant',
-        '=',
-        'contracts.tenant'
-      );
-    })
-    .join('contract_line_services', function () {
-      this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id').andOn(
-        'contract_line_services.tenant',
-        '=',
-        'contract_lines.tenant'
-      );
-    })
-    .leftJoin('contract_line_service_configuration as bucket_config', function () {
-      this.on('bucket_config.contract_line_id', '=', 'contract_lines.contract_line_id')
-        .andOn('bucket_config.tenant', '=', 'contract_lines.tenant')
-        .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
-        .andOnVal('bucket_config.configuration_type', 'Bucket');
-    })
-    .leftJoin('contract_line_service_bucket_config as bucket_details', function () {
-      this.on('bucket_details.config_id', '=', 'bucket_config.config_id').andOn('bucket_details.tenant', '=', 'bucket_config.tenant');
-    })
+  const query = db.table('client_contracts');
+  db.tenantJoin(query, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
+  db.tenantJoin(query, 'contract_lines', 'contracts.contract_id', 'contract_lines.contract_id');
+  db.tenantJoin(query, 'contract_line_services', 'contract_lines.contract_line_id', 'contract_line_services.contract_line_id');
+  db.tenantJoin(
+    query,
+    'contract_line_service_configuration as bucket_config',
+    'bucket_config.contract_line_id',
+    'contract_lines.contract_line_id',
+    {
+      type: 'left',
+      on(join) {
+        join
+          .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
+          .andOnVal('bucket_config.configuration_type', 'Bucket');
+      },
+    }
+  );
+  db.tenantJoin(
+    query,
+    'contract_line_service_bucket_config as bucket_details',
+    'bucket_details.config_id',
+    'bucket_config.config_id',
+    { type: 'left' }
+  );
+
+  query
     .where({
       'client_contracts.client_id': clientId,
       'client_contracts.is_active': true,
-      'client_contracts.tenant': tenant,
       'contract_line_services.service_id': serviceId,
     })
     .where(function (this: Knex.QueryBuilder) {
@@ -271,25 +266,25 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
   }
 
   try {
+    const db = tenantDb(knex, tenant);
+
     if (workItemType === 'project_task') {
-      const result = await knex('project_tasks')
-        .join('project_phases', function () {
-          this.on('project_tasks.phase_id', '=', 'project_phases.phase_id').andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-        })
-        .join('projects', function () {
-          this.on('project_phases.project_id', '=', 'projects.project_id').andOn('project_phases.tenant', '=', 'projects.tenant');
-        })
-        .where({ 'project_tasks.task_id': workItemId, 'project_tasks.tenant': tenant })
-        .first('projects.client_id');
+      const query = db.table('project_tasks');
+      db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      db.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id');
+
+      const result = await query
+        .where({ 'project_tasks.task_id': workItemId })
+        .first<{ client_id: string }>('projects.client_id as client_id');
 
       return result?.client_id || null;
     }
     if (workItemType === 'ticket') {
-      const result = await knex('tickets').where({ ticket_id: workItemId, tenant }).first('client_id');
+      const result = await db.table('tickets').where({ ticket_id: workItemId }).first('client_id');
       return result?.client_id || null;
     }
     if (workItemType === 'interaction') {
-      const result = await knex('interactions').where({ interaction_id: workItemId, tenant }).first('client_id');
+      const result = await db.table('interactions').where({ interaction_id: workItemId }).first('client_id');
       return result?.client_id || null;
     }
     return null;

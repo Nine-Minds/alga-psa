@@ -4,6 +4,7 @@ import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { existsSync, promises as fs } from 'fs';
 import { createRequire } from 'module';
 import process from 'process';
@@ -340,9 +341,9 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
     }
 
     try {
-      const fileRecord = await knex('external_files')
+      const fileRecord = await tenantDb(knex, tenant).table('external_files')
         .select('storage_path', 'mime_type')
-        .where({ tenant, file_id: document.file_id, is_deleted: false })
+        .where({ file_id: document.file_id, is_deleted: false })
         .first();
 
       if (!fileRecord) {

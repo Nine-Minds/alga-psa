@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { syncTacticalSingleAgentForTenant } from '@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -74,8 +74,9 @@ export async function POST(req: Request) {
     const triggeredAt = body.alert_time ? String(body.alert_time) : new Date().toISOString();
 
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const db = tenantDb(knex, tenant);
+    const integration = await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .first(['integration_id']);
 
     if (!integration?.integration_id) {
@@ -85,9 +86,8 @@ export async function POST(req: Request) {
 
     // Associate to asset when possible via external entity mapping.
     let assetId: string | undefined;
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await db.table('tenant_external_entity_mappings')
       .where({
-        tenant,
         integration_type: PROVIDER,
         alga_entity_type: 'asset',
         external_entity_id: agentId,

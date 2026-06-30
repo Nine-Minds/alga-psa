@@ -1,7 +1,12 @@
 import type { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
+const PORTAL_DOMAIN_HOSTNAME_DISCOVERY_TENANT = '__portal_domain_hostname_discovery__';
+const PORTAL_DOMAIN_HOSTNAME_DISCOVERY_REASON = 'Tenant discovery by portal hostname before tenant context exists';
+
+const portalDomainsQuery = (knex: Knex, tenant: string) =>
+  tenantDb(knex, tenant).table<PortalDomainRecord>(PORTAL_DOMAIN_TABLE);
 
 export const PORTAL_DOMAIN_STATUSES = [
   'pending_dns',
@@ -144,7 +149,7 @@ async function getTenantAndKnex(): Promise<{ knex: Knex; tenant: string }> {
 }
 
 export async function getPortalDomain(knex: Knex, tenant: string): Promise<PortalDomain | null> {
-  const record = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE).where({ tenant }).first();
+  const record = await portalDomainsQuery(knex, tenant).first() as PortalDomainRecord | undefined;
 
   if (!record) {
     return null;
@@ -155,7 +160,10 @@ export async function getPortalDomain(knex: Knex, tenant: string): Promise<Porta
 
 export async function getPortalDomainByHostname(knex: Knex, domain: string): Promise<PortalDomain | null> {
   const normalized = normalizeHostname(domain);
-  const record = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE).where({ domain: normalized }).first();
+  const record = await tenantDb(knex, PORTAL_DOMAIN_HOSTNAME_DISCOVERY_TENANT)
+    .unscoped<PortalDomainRecord>(PORTAL_DOMAIN_TABLE, PORTAL_DOMAIN_HOSTNAME_DISCOVERY_REASON)
+    .where({ domain: normalized })
+    .first();
 
   return record ? mapRow(record) : null;
 }
@@ -186,7 +194,7 @@ export async function upsertPortalDomain(knex: Knex, tenant: string, input: Upse
     updated_at: now,
   };
 
-  const [record] = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
+  const [record] = await portalDomainsQuery(knex, tenant)
     .insert(payload)
     .onConflict('tenant')
     .merge({
@@ -252,7 +260,7 @@ export async function updatePortalDomain(knex: Knex, tenant: string, patch: Upda
     return getPortalDomain(knex, tenant);
   }
 
-  const [record] = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE).where({ tenant }).update(updates).returning('*');
+  const [record] = await portalDomainsQuery(knex, tenant).update(updates).returning('*') as PortalDomainRecord[];
 
   return record ? mapRow(record) : null;
 }
@@ -263,7 +271,7 @@ export async function updateCurrentTenantPortalDomain(patch: UpdatePortalDomainI
 }
 
 export async function deletePortalDomain(knex: Knex, tenant: string): Promise<void> {
-  await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE).where({ tenant }).delete();
+  await portalDomainsQuery(knex, tenant).delete();
 }
 
 export async function deleteCurrentTenantPortalDomain(): Promise<void> {
@@ -274,4 +282,3 @@ export async function deleteCurrentTenantPortalDomain(): Promise<void> {
 export function isTerminalStatus(status: PortalDomainStatus): boolean {
   return TERMINAL_STATUSES.includes(status);
 }
-

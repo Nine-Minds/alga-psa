@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 
 import { getEventBus } from '../index';
 import { EventSchemas, type TicketClosedEvent, type ProjectClosedEvent } from '@alga-psa/event-schemas';
+import { tenantDb } from '@alga-psa/db';
 import { getSurveyTriggersForTenant, type SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import { createTenantKnex, runWithTenant } from '../../db';
 import { sendSurveyInvitation } from '../../../services/surveyService';
@@ -214,10 +215,9 @@ function matchesConditions(
 async function loadTicketSnapshot(tenantId: string, ticketId: string): Promise<TicketSnapshot | null> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const result = await knex<TicketSnapshot>('tickets')
+    const result = await tenantDb(knex, tenantId).table<TicketSnapshot>('tickets')
       .select('ticket_id', 'board_id', 'status_id', 'priority_id', 'client_id', 'contact_name_id')
-      .where('tenant', tenantId)
-      .andWhere('ticket_id', ticketId)
+      .where('ticket_id', ticketId)
       .first();
     return result || null;
   });
@@ -241,10 +241,9 @@ function collectMatchingTemplatesForProject(triggers: SurveyTrigger[]): Set<stri
 async function loadProjectSnapshot(tenantId: string, projectId: string): Promise<ProjectSnapshot | null> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const result = await knex<ProjectSnapshot>('projects')
+    const result = await tenantDb(knex, tenantId).table<ProjectSnapshot>('projects')
       .select('project_id', 'client_id', 'contact_name_id')
-      .where('tenant', tenantId)
-      .andWhere('project_id', projectId)
+      .where('project_id', projectId)
       .first();
     return result || null;
   });

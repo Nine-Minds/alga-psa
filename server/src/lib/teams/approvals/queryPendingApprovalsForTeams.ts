@@ -1,4 +1,4 @@
-import { createTenantKnex, User } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
@@ -18,17 +18,13 @@ export async function listPendingApprovalsForTeams(params: {
   query?: string;
 }): Promise<TeamsPendingApprovalRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
+  const db = tenantDb(knex, params.tenantId);
   const canReadAll = await hasPermission(params.user, 'timesheet', 'read_all', knex);
   const normalizedQuery = params.query?.trim();
 
-  let query = knex('time_sheets')
-    .join('users', function joinUsers() {
-      this.on('time_sheets.user_id', '=', 'users.user_id').andOn('time_sheets.tenant', '=', 'users.tenant');
-    })
-    .join('time_periods', function joinPeriods() {
-      this.on('time_sheets.period_id', '=', 'time_periods.period_id').andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-    })
-    .where('time_sheets.tenant', params.tenantId)
+  let query = db.table('time_sheets')
+    .modify((builder) => db.tenantJoin(builder, 'users', 'time_sheets.user_id', 'users.user_id'))
+    .modify((builder) => db.tenantJoin(builder, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id'))
     .whereIn('time_sheets.approval_status', ['SUBMITTED', 'CHANGES_REQUESTED'])
     .select(
       'time_sheets.id',
@@ -56,16 +52,12 @@ export async function listPendingApprovalsForTeams(params: {
 
     query = query
       .where((builder) => {
-        builder.whereExists(function managerScope() {
-          this.select(1)
-            .from('team_members')
-            .join('teams', function joinTeams() {
-              this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
-            })
-            .where('team_members.user_id', knex.ref('users.user_id'))
-            .andWhere('teams.manager_id', params.user.user_id)
-            .andWhere('teams.tenant', params.tenantId);
-        });
+        const managerScope = db.table('team_members').select(1);
+        db.tenantJoin(managerScope, 'teams', 'team_members.team_id', 'teams.team_id');
+        managerScope
+          .where('team_members.user_id', knex.ref('users.user_id'))
+          .andWhere('teams.manager_id', params.user.user_id);
+        builder.whereExists(managerScope);
 
         if (reportsToUserIds.length > 0) {
           builder.orWhereIn('users.user_id', reportsToUserIds);

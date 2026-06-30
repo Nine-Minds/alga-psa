@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
@@ -16,6 +17,10 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 const ADMIN_PERMISSIONS = [
   {
@@ -129,7 +134,7 @@ test.describe('Workflow Designer UI - publish', () => {
       const errorBadge = workflowPage.stepSelectButton(stepId).getByText(/\d+ errors/);
       await expect(errorBadge).toBeVisible();
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -166,7 +171,7 @@ test.describe('Workflow Designer UI - publish', () => {
       expect(match).not.toBeNull();
       expect(Number(match?.[1] ?? 0)).toBeGreaterThan(0);
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -206,7 +211,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await expect(page.getByRole('heading', { name: 'Publish Errors' })).toHaveCount(0);
       await expect(page.getByText(/\d+ warnings/)).toHaveCount(0);
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -240,7 +245,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await expect(page.getByRole('heading', { name: 'Publish Errors' })).toHaveCount(0);
       await expect(page.getByText(/\d+ warnings/)).toHaveCount(0);
     } finally {
-      await db('workflow_definitions').whereIn('name', [workflowNameA, workflowNameB]).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').whereIn('name', [workflowNameA, workflowNameB]).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -265,7 +270,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await expect(page.getByText('Workflow published')).toBeVisible();
       await expect(workflowPage.publishButton).toBeEnabled();
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -291,7 +296,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await expect(workflowPage.nameInput).toHaveValue(workflowName);
       await expect(workflowPage.stepSelectButton(stepId)).toBeVisible();
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -314,7 +319,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await expect(page.getByText('Workflow published')).toBeVisible();
       await expect(page.locator('#workflow-designer-published-version')).toContainText('2');
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -341,11 +346,11 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.publishButton.click();
       await expect(page.getByText('Workflow published')).toBeVisible();
 
-      const record = await db('workflow_definitions').where({ name: workflowName }).first();
+      const record = await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).first();
       expect(record).toBeTruthy();
       expect(record.is_paused).toBe(true);
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }

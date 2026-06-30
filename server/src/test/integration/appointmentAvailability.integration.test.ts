@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks';
@@ -22,6 +23,15 @@ type CreatedIds = {
   scheduleEntryIds: string[];
 };
 let createdIds: CreatedIds = { availabilitySettingIds: [], exceptionIds: [], scheduleEntryIds: [] };
+
+function tenantTableFor(connection: Knex, tenant: string, table: string) {
+  return tenantDb(connection, tenant).table(table);
+}
+
+function tenantRows(connection: Knex) {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
 
 // Mock the database module to return test database
 vi.mock('server/src/lib/db', async () => {
@@ -694,7 +704,7 @@ describe('Appointment Availability Integration Tests', () => {
     it('should handle no availability settings (use defaults)', async () => {
       // Create minimal test data without availability settings
       const serviceTypeId = uuidv4();
-      await db('service_types').insert({
+      await tenantTableFor(db, tenantId, 'service_types').insert({
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
@@ -706,7 +716,7 @@ describe('Appointment Availability Integration Tests', () => {
       createdIds.serviceTypeId = serviceTypeId;
 
       const serviceId = uuidv4();
-      await db('service_catalog').insert({
+      await tenantTableFor(db, tenantId, 'service_catalog').insert({
         tenant: tenantId,
         service_id: serviceId!,
         service_name: 'Test Service',
@@ -717,7 +727,7 @@ describe('Appointment Availability Integration Tests', () => {
       createdIds.serviceId = serviceId;
 
       const userId = uuidv4();
-      await db('users').insert({
+      await tenantTableFor(db, tenantId, 'users').insert({
         tenant: tenantId,
         user_id: userId,
         username: 'testuser',
@@ -1047,7 +1057,7 @@ describe('Appointment Availability Integration Tests', () => {
 
       // Create a second user available on Wednesday
       const user2Id = uuidv4();
-      await db('users').insert({
+      await tenantTableFor(db, tenantId, 'users').insert({
         tenant: tenantId,
         user_id: user2Id,
         username: `user2_${user2Id.slice(0, 8)}`,
@@ -1061,7 +1071,7 @@ describe('Appointment Availability Integration Tests', () => {
       createdIds.user2Id = user2Id;
 
       const user2SettingId = uuidv4();
-      await db('availability_settings').insert({
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
         availability_setting_id: user2SettingId,
         tenant: tenantId,
         setting_type: 'user_hours',
@@ -1102,7 +1112,7 @@ describe('Appointment Availability Integration Tests', () => {
 
       // Add afternoon shift for same user
       const afternoonSettingId = uuidv4();
-      await db('availability_settings').insert({
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
         availability_setting_id: afternoonSettingId,
         tenant: tenantId,
         setting_type: 'user_hours',
@@ -1150,7 +1160,7 @@ describe('Appointment Availability Integration Tests', () => {
       const { serviceId, userId } = await setupTestData(db, tenantId);
 
       // Update service to be unavailable
-      await db('availability_settings')
+      await tenantTableFor(db, tenantId, 'availability_settings')
         .where({ service_id: serviceId, tenant: tenantId })
         .update({ is_available: false });
 
@@ -1184,7 +1194,7 @@ describe('Appointment Availability Integration Tests', () => {
     it('should handle service with no assigned technicians', async () => {
       // Create service without user availability
       const serviceTypeId = uuidv4();
-      await db('service_types').insert({
+      await tenantTableFor(db, tenantId, 'service_types').insert({
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
@@ -1196,7 +1206,7 @@ describe('Appointment Availability Integration Tests', () => {
       createdIds.serviceTypeId = serviceTypeId;
 
       const serviceId = uuidv4();
-      await db('service_catalog').insert({
+      await tenantTableFor(db, tenantId, 'service_catalog').insert({
         tenant: tenantId,
         service_id: serviceId!,
         service_name: 'Service With No Techs',
@@ -1207,7 +1217,7 @@ describe('Appointment Availability Integration Tests', () => {
       createdIds.serviceId = serviceId;
 
       const serviceSettingId = uuidv4();
-      await db('availability_settings').insert({
+      await tenantTableFor(db, tenantId, 'availability_settings').insert({
         availability_setting_id: serviceSettingId,
         tenant: tenantId,
         setting_type: 'service_rules',
@@ -1358,13 +1368,13 @@ describe('Appointment Availability Integration Tests', () => {
  * Helper function to ensure a tenant exists
  */
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Availability Test Tenant',
     email: 'availability-test@test.com',
@@ -1411,7 +1421,7 @@ async function setupTestData(
 }> {
   // Create service type
   const serviceTypeId = uuidv4();
-  await db('service_types').insert({
+  await tenantTableFor(db, tenantId, 'service_types').insert({
     id: serviceTypeId,
     tenant: tenantId,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
@@ -1424,7 +1434,7 @@ async function setupTestData(
 
   // Create service
   const serviceId = uuidv4();
-  await db('service_catalog').insert({
+  await tenantTableFor(db, tenantId, 'service_catalog').insert({
     tenant: tenantId,
     service_id: serviceId!,
     service_name: 'Test Service',
@@ -1436,7 +1446,7 @@ async function setupTestData(
 
   // Create user
   const userId = uuidv4();
-  await db('users').insert({
+  await tenantTableFor(db, tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user_${userId.slice(0, 8)}`,
@@ -1451,7 +1461,7 @@ async function setupTestData(
 
   // Create service rules
   const serviceSettingId = uuidv4();
-  await db('availability_settings').insert({
+  await tenantTableFor(db, tenantId, 'availability_settings').insert({
     availability_setting_id: serviceSettingId,
     tenant: tenantId,
     setting_type: 'service_rules',
@@ -1466,7 +1476,7 @@ async function setupTestData(
   // Create user availability
   const dayOfWeek = options.dayOfWeek ?? 1; // Default to Monday
   const userSettingId = uuidv4();
-  await db('availability_settings').insert({
+  await tenantTableFor(db, tenantId, 'availability_settings').insert({
     availability_setting_id: userSettingId,
     tenant: tenantId,
     setting_type: 'user_hours',
@@ -1497,7 +1507,7 @@ async function setupTestDataMultipleUsers(
 }> {
   // Create service type
   const serviceTypeId = uuidv4();
-  await db('service_types').insert({
+  await tenantTableFor(db, tenantId, 'service_types').insert({
     id: serviceTypeId,
     tenant: tenantId,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
@@ -1510,7 +1520,7 @@ async function setupTestDataMultipleUsers(
 
   // Create service
   const serviceId = uuidv4();
-  await db('service_catalog').insert({
+  await tenantTableFor(db, tenantId, 'service_catalog').insert({
     tenant: tenantId,
     service_id: serviceId!,
     service_name: 'Test Service',
@@ -1522,7 +1532,7 @@ async function setupTestDataMultipleUsers(
 
   // Create service rules
   const serviceSettingId = uuidv4();
-  await db('availability_settings').insert({
+  await tenantTableFor(db, tenantId, 'availability_settings').insert({
     availability_setting_id: serviceSettingId,
     tenant: tenantId,
     setting_type: 'service_rules',
@@ -1536,7 +1546,7 @@ async function setupTestDataMultipleUsers(
 
   // Create user 1
   const userId = uuidv4();
-  await db('users').insert({
+  await tenantTableFor(db, tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user1_${userId.slice(0, 8)}`,
@@ -1551,7 +1561,7 @@ async function setupTestDataMultipleUsers(
 
   // Create user 2
   const user2Id = uuidv4();
-  await db('users').insert({
+  await tenantTableFor(db, tenantId, 'users').insert({
     tenant: tenantId,
     user_id: user2Id,
     username: `user2_${user2Id.slice(0, 8)}`,
@@ -1566,7 +1576,7 @@ async function setupTestDataMultipleUsers(
 
   // Create availability for both users (Monday)
   const user1SettingId = uuidv4();
-  await db('availability_settings').insert({
+  await tenantTableFor(db, tenantId, 'availability_settings').insert({
     availability_setting_id: user1SettingId,
     tenant: tenantId,
     setting_type: 'user_hours',
@@ -1579,7 +1589,7 @@ async function setupTestDataMultipleUsers(
   createdIds.availabilitySettingIds.push(user1SettingId);
 
   const user2SettingId = uuidv4();
-  await db('availability_settings').insert({
+  await tenantTableFor(db, tenantId, 'availability_settings').insert({
     availability_setting_id: user2SettingId,
     tenant: tenantId,
     setting_type: 'user_hours',
@@ -1605,7 +1615,7 @@ async function createScheduleEntry(
   endTime: Date
 ): Promise<string> {
   const entryId = uuidv4();
-  await db('schedule_entries').insert({
+  await tenantTableFor(db, tenantId, 'schedule_entries').insert({
     entry_id: entryId,
     tenant: tenantId,
     title: 'Test Appointment',
@@ -1615,7 +1625,7 @@ async function createScheduleEntry(
     work_item_type: 'appointment_request'
   });
 
-  await db('schedule_entry_assignees').insert({
+  await tenantTableFor(db, tenantId, 'schedule_entry_assignees').insert({
     tenant: tenantId,
     entry_id: entryId,
     user_id: userId
@@ -1636,7 +1646,7 @@ async function createAvailabilityException(
   reason: string
 ): Promise<string> {
   const exceptionId = uuidv4();
-  await db('availability_exceptions').insert({
+  await tenantTableFor(db, tenantId, 'availability_exceptions').insert({
     exception_id: exceptionId,
     tenant: tenantId,
     user_id: userId,
@@ -1658,7 +1668,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
 
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTableFor(db, tenantId, table).where(where).del();
     } catch {
       // Ignore cleanup issues
     }
@@ -1669,7 +1679,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       return;
     }
     try {
-      await db(table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
+      await tenantTableFor(db, tenantId, table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
     } catch {
       // Ignore cleanup issues
     }

@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 
 interface ApiKey {
@@ -51,11 +52,10 @@ export class ApiKeyServiceForApi {
       const knex = await getConnection(tenantId);
       
       // Find the API key record using the hashed value
-      const record = await knex('api_keys')
+      const record = await tenantDb(knex, tenantId).table<ApiKey>('api_keys')
         .where({
           api_key: hashedKey,
-          active: true,
-          tenant: tenantId
+          active: true
         })
         .where((builder) => {
           builder.whereNull('expires_at')
@@ -76,10 +76,9 @@ export class ApiKeyServiceForApi {
       }
       
       if (record.usage_limit !== null && record.usage_limit !== undefined && record.usage_count >= record.usage_limit) {
-        await knex('api_keys')
+        await tenantDb(knex, tenantId).table('api_keys')
           .where({
-            api_key_id: record.api_key_id,
-            tenant: tenantId
+            api_key_id: record.api_key_id
           })
           .update({
             active: false,
@@ -89,10 +88,9 @@ export class ApiKeyServiceForApi {
       }
 
       // Update last_used_at timestamp
-      await knex('api_keys')
+      await tenantDb(knex, tenantId).table('api_keys')
         .where({
-          api_key_id: record.api_key_id,
-          tenant: tenantId
+          api_key_id: record.api_key_id
         })
         .update({
           last_used_at: knex.fn.now(),
@@ -118,7 +116,11 @@ export class ApiKeyServiceForApi {
       const knex = await getConnection(null);
       
       // Find the API key record in any tenant
-      const record = await knex('api_keys')
+      const record = await tenantDb(knex, '__api_key_any_tenant_validation__')
+        .unscoped<ApiKey>(
+          'api_keys',
+          'API key middleware validates a plaintext key before the tenant is known'
+        )
         .where({
           api_key: hashedKey,
           active: true
@@ -142,10 +144,9 @@ export class ApiKeyServiceForApi {
       }
       
       if (record.usage_limit !== null && record.usage_limit !== undefined && record.usage_count >= record.usage_limit) {
-        await knex('api_keys')
+        await tenantDb(knex, record.tenant).table('api_keys')
           .where({
-            api_key_id: record.api_key_id,
-            tenant: record.tenant
+            api_key_id: record.api_key_id
           })
           .update({
             active: false,
@@ -155,10 +156,9 @@ export class ApiKeyServiceForApi {
       }
 
       // Update last_used_at timestamp
-      await knex('api_keys')
+      await tenantDb(knex, record.tenant).table('api_keys')
         .where({
-          api_key_id: record.api_key_id,
-          tenant: record.tenant
+          api_key_id: record.api_key_id
         })
         .update({
           last_used_at: knex.fn.now(),
@@ -178,10 +178,9 @@ export class ApiKeyServiceForApi {
     tenantId: string,
     increment: number = 1
   ): Promise<{ active: boolean; usageCount: number; usageLimit: number | null }> {
-    const updated = await knex('api_keys')
+    const updated = await tenantDb(knex, tenantId).table('api_keys')
       .where({
         api_key_id: apiKeyId,
-        tenant: tenantId,
         active: true,
       })
       .increment('usage_count', increment)
@@ -197,10 +196,9 @@ export class ApiKeyServiceForApi {
     }>;
 
     if (usageLimit !== null && usageLimit !== undefined && usageCount >= usageLimit) {
-      await knex('api_keys')
+      await tenantDb(knex, tenantId).table('api_keys')
         .where({
           api_key_id: apiKeyId,
-          tenant: tenantId,
         })
         .update({
           active: false,

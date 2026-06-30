@@ -1,8 +1,7 @@
 'use server'
 
 import type { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { BillingCycleType } from '@alga-psa/types';
 import type { ISO8601String } from '@alga-psa/types';
 import {
@@ -53,20 +52,20 @@ export const getClientBillingScheduleSummaries = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients as c')
-      .leftJoin('client_billing_settings as s', function () {
-        this.on('s.client_id', '=', 'c.client_id').andOn('s.tenant', '=', 'c.tenant');
-      })
-      .where('c.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('clients as c');
+    db.tenantJoin(query, 'client_billing_settings as s', 's.client_id', 'c.client_id', { type: 'left' });
+
+    return await query
       .whereIn('c.client_id', clientIds)
-      .select(
-        'c.client_id',
-        'c.billing_cycle',
-        's.billing_cycle_anchor_day_of_month',
-        's.billing_cycle_anchor_month_of_year',
-        's.billing_cycle_anchor_day_of_week',
-        's.billing_cycle_anchor_reference_date'
-      );
+      .select({
+        client_id: 'c.client_id',
+        billing_cycle: 'c.billing_cycle',
+        billing_cycle_anchor_day_of_month: 's.billing_cycle_anchor_day_of_month',
+        billing_cycle_anchor_month_of_year: 's.billing_cycle_anchor_month_of_year',
+        billing_cycle_anchor_day_of_week: 's.billing_cycle_anchor_day_of_week',
+        billing_cycle_anchor_reference_date: 's.billing_cycle_anchor_reference_date',
+      });
   });
 
   const summaries: Record<string, ClientBillingScheduleConfig> = {};
@@ -137,8 +136,8 @@ export const previewClientCadenceChange = withAuth(async (
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     let anchorInput = input.anchor;
     if (!anchorInput) {
-      const settings = await trx('client_billing_settings')
-        .where({ tenant, client_id: input.clientId })
+      const settings = await tenantDb(trx, tenant).table('client_billing_settings')
+        .where({ client_id: input.clientId })
         .first()
         .select(
           'billing_cycle_anchor_day_of_month',

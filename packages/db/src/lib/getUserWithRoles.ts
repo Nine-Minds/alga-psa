@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import type { IUser, IRole, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex } from './tenant';
 import { withTransaction } from './tenant';
+import { tenantDb } from './tenantDb';
 
 /**
  * Session-independent function to get a user with their roles.
@@ -28,33 +29,33 @@ export async function getUserWithRoles(
   }
 
   const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const user = await trx<IUser>('users')
+    const scopedDb = tenantDb(trx, tenantId);
+
+    const user = await scopedDb.table<IUser>('users')
       .select('*')
       .where('user_id', userId)
-      .where('tenant', tenantId)
       .first();
 
     if (!user) {
       return null;
     }
 
-    const roles = await trx<IRole>('roles')
-      .join('user_roles', function () {
-        this.on('roles.role_id', '=', 'user_roles.role_id')
-          .andOn('roles.tenant', '=', 'user_roles.tenant');
-      })
+    const rolesBase = scopedDb.table<IRole>('roles');
+    const roles = await scopedDb.tenantJoin(
+      rolesBase,
+      'user_roles',
+      'roles.role_id',
+      'user_roles.role_id'
+    )
       .where('user_roles.user_id', user.user_id)
-      .where('user_roles.tenant', tenantId)
-      .where('roles.tenant', tenantId)
       .select('roles.*');
 
     // Look up clientId from contacts table if user has a contact_id
     let clientId: string | undefined;
     if (user.contact_id) {
-      const contact = await trx('contacts')
+      const contact = await scopedDb.table('contacts')
         .select('client_id')
         .where('contact_name_id', user.contact_id)
-        .where('tenant', tenantId)
         .first();
       if (contact?.client_id) {
         clientId = contact.client_id;
@@ -90,10 +91,11 @@ export async function getUserWithRolesByEmail(
   const { knex } = await createTenantKnex(tenantId);
 
   const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = trx<IUser>('users')
+    const scopedDb = tenantDb(trx, tenantId);
+
+    let query = scopedDb.table<IUser>('users')
       .select('*')
-      .where('email', email.toLowerCase())
-      .where('tenant', tenantId);
+      .where('email', email.toLowerCase());
 
     if (userType) {
       query = query.where('user_type', userType);
@@ -105,23 +107,22 @@ export async function getUserWithRolesByEmail(
       return null;
     }
 
-    const roles = await trx<IRole>('roles')
-      .join('user_roles', function () {
-        this.on('roles.role_id', '=', 'user_roles.role_id')
-          .andOn('roles.tenant', '=', 'user_roles.tenant');
-      })
+    const rolesBase = scopedDb.table<IRole>('roles');
+    const roles = await scopedDb.tenantJoin(
+      rolesBase,
+      'user_roles',
+      'roles.role_id',
+      'user_roles.role_id'
+    )
       .where('user_roles.user_id', user.user_id)
-      .where('user_roles.tenant', tenantId)
-      .where('roles.tenant', tenantId)
       .select('roles.*');
 
     // Look up clientId from contacts table if user has a contact_id
     let clientId: string | undefined;
     if (user.contact_id) {
-      const contact = await trx('contacts')
+      const contact = await scopedDb.table('contacts')
         .select('client_id')
         .where('contact_name_id', user.contact_id)
-        .where('tenant', tenantId)
         .first();
       if (contact?.client_id) {
         clientId = contact.client_id;

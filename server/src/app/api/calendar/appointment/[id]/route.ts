@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { generateICS, type ICSEventData } from '@alga-psa/scheduling';
 
@@ -26,7 +26,8 @@ export async function GET(
 
     const scheduleEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get schedule entry with appointment request details
-      const entry = await trx('schedule_entries')
+      const entry = await tenantDb(trx, '__appointment_ics_entry_discovery__')
+        .unscoped('schedule_entries', 'tenant discovery for public appointment ICS by schedule entry id')
         .where({ entry_id: scheduleEntryId })
         .first();
 
@@ -34,10 +35,12 @@ export async function GET(
         return null;
       }
 
+      const scopedDb = tenantDb(trx, entry.tenant);
+
       // Get appointment request details if this is an appointment
       let appointmentRequest: any = null;
       if (entry.work_item_type === 'appointment_request' && entry.work_item_id) {
-        appointmentRequest = await trx('appointment_requests')
+        appointmentRequest = await scopedDb.table('appointment_requests')
           .where({ appointment_request_id: entry.work_item_id })
           .first();
       }
@@ -45,32 +48,28 @@ export async function GET(
       // Get service details
       let service: any = null;
       if (appointmentRequest?.service_id) {
-        service = await trx('service_catalog')
+        service = await scopedDb.table('service_catalog')
           .where({ service_id: appointmentRequest.service_id })
           .first();
       }
 
       // Get assigned user (technician)
-      const assignee = await trx('schedule_entry_assignees')
-        .join('users', function() {
-          this.on('schedule_entry_assignees.user_id', 'users.user_id')
-            .andOn('schedule_entry_assignees.tenant', 'users.tenant');
-        })
+      const assigneeQuery = scopedDb.table('schedule_entry_assignees')
         .where({ 'schedule_entry_assignees.entry_id': scheduleEntryId })
-        .select('users.user_id', 'users.first_name', 'users.last_name', 'users.email')
-        .first();
+        .select('users.user_id', 'users.first_name', 'users.last_name', 'users.email');
+      scopedDb.tenantJoin(assigneeQuery, 'users', 'schedule_entry_assignees.user_id', 'users.user_id');
+      const assignee = await assigneeQuery.first();
 
       // Get client/contact info
       let contact: any = null;
       if (appointmentRequest?.contact_id) {
-        contact = await trx('contacts')
+        contact = await scopedDb.table('contacts')
           .where({ contact_name_id: appointmentRequest.contact_id })
           .first();
       }
 
       // Get tenant settings for company name
-      const tenantSettings = await trx('tenant_settings')
-        .where({ tenant: entry.tenant })
+      const tenantSettings = await scopedDb.table('tenant_settings')
         .first();
 
       return {

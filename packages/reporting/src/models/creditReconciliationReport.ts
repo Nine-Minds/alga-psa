@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 
 interface ListReportsOptions {
@@ -10,6 +10,13 @@ interface ListReportsOptions {
   endDate?: string;
   page?: number;
   pageSize?: number;
+}
+
+function tenantScopedReports(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+): Knex.QueryBuilder<ICreditReconciliationReport, ICreditReconciliationReport[]> {
+  return tenantDb(conn, tenant).table<ICreditReconciliationReport>('credit_reconciliation_reports');
 }
 
 class CreditReconciliationReport {
@@ -43,7 +50,7 @@ class CreditReconciliationReport {
       }
 
       const dbInstance = trx || knex;
-      const [createdReport] = await dbInstance('credit_reconciliation_reports')
+      const [createdReport] = await tenantScopedReports(dbInstance, tenant)
         .insert({
           report_id: reportId,
           ...dataWithProcessedMetadata,
@@ -85,10 +92,9 @@ class CreditReconciliationReport {
     }
 
     try {
-      const report = await knex('credit_reconciliation_reports')
+      const report = await tenantScopedReports(knex, tenant)
         .where({
           report_id: reportId,
-          tenant
         })
         .first();
 
@@ -124,10 +130,9 @@ class CreditReconciliationReport {
     }
 
     try {
-      const query = knex('credit_reconciliation_reports')
+      const query = tenantScopedReports(knex, tenant)
         .where({
           client_id: clientId,
-          tenant
         })
         .orderBy('detection_date', 'desc');
 
@@ -188,10 +193,9 @@ class CreditReconciliationReport {
       }
 
       const dbInstance = trx || knex;
-      const [updatedReport] = await dbInstance('credit_reconciliation_reports')
+      const [updatedReport] = await tenantScopedReports(dbInstance, tenant)
         .where({
           report_id: reportId,
-          tenant
         })
         .update({
           ...dataWithProcessedMetadata,
@@ -247,8 +251,7 @@ class CreditReconciliationReport {
 
     try {
       // Build base query
-      const baseQuery = knex('credit_reconciliation_reports')
-        .where({ tenant });
+      const baseQuery = tenantScopedReports(knex, tenant);
 
       // Apply filters
       if (clientId) {
@@ -272,8 +275,8 @@ class CreditReconciliationReport {
       }
 
       // Get total count for pagination
-      const [{ count }] = await baseQuery.clone().count('report_id as count');
-      const total = parseInt(count as string);
+      const [{ count }] = await baseQuery.clone().count('report_id as count') as Array<{ count: string | number }>;
+      const total = parseInt(String(count));
       const totalPages = Math.ceil(total / pageSize);
 
       // Get paginated results
@@ -334,10 +337,9 @@ class CreditReconciliationReport {
       const dbInstance = trx || knex;
       const now = new Date().toISOString();
 
-      const [resolvedReport] = await dbInstance('credit_reconciliation_reports')
+      const [resolvedReport] = await tenantScopedReports(dbInstance, tenant)
         .where({
           report_id: reportId,
-          tenant
         })
         .update({
           status: 'resolved',
@@ -380,15 +382,14 @@ class CreditReconciliationReport {
     }
 
     try {
-      const [{ count }] = await knex('credit_reconciliation_reports')
+      const [{ count }] = await tenantScopedReports(knex, tenant)
         .where({
           client_id: clientId,
-          tenant,
           status: 'open'
         })
-        .count('report_id as count');
+        .count('report_id as count') as Array<{ count: string | number }>;
 
-      return parseInt(count as string);
+      return parseInt(String(count));
     } catch (error) {
       console.error(`Error counting open reconciliation reports for client ${clientId}:`, error);
       throw error;
@@ -407,14 +408,13 @@ class CreditReconciliationReport {
     }
 
     try {
-      const [{ count }] = await knex('credit_reconciliation_reports')
+      const [{ count }] = await tenantScopedReports(knex, tenant)
         .where({
-          tenant,
           status
         })
-        .count('report_id as count');
+        .count('report_id as count') as Array<{ count: string | number }>;
 
-      return parseInt(count as string);
+      return parseInt(String(count));
     } catch (error) {
       console.error(`Error counting reconciliation reports with status ${status}:`, error);
       throw error;
@@ -432,11 +432,10 @@ class CreditReconciliationReport {
     }
 
     try {
-      const result = await knex('credit_reconciliation_reports')
-        .where({ tenant })
-        .sum('difference as total');
+      const result = await tenantScopedReports(knex, tenant)
+        .sum('difference as total') as Array<{ total: string | number | null }>;
 
-      return parseFloat(result[0].total || '0');
+      return parseFloat(String(result[0]?.total || '0'));
     } catch (error) {
       console.error('Error getting total discrepancy amount:', error);
       throw error;

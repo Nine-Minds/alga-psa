@@ -9,6 +9,7 @@ import type {
   IPermission,
 } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
+import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
 import { verifyPassword } from '@alga-psa/core/encryption';
 
@@ -18,12 +19,17 @@ interface IUserRoleWithOptionalTenant extends Omit<IUserRole, 'tenant'> {
   tenant?: string | null;
 }
 
+const USER_MODEL_DISCOVERY_TENANT = '__user_model_discovery__';
+const USER_DISCOVERY_BY_EMAIL_REASON = 'user discovery by email before tenant context exists';
+const USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON = 'user discovery by email and type before tenant context exists';
+const USER_PASSWORD_VERIFY_REASON = 'password verification by user id before tenant context exists';
+const USER_REGISTRATION_LOOKUP_REASON = 'registration lookup by user id before tenant context exists';
+
 const User = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive = false): Promise<IUser[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      let query = knexOrTrx<IUser>('users').select('*');
-      query = query.andWhere('tenant', tenant);
+      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*');
       if (!includeInactive) {
         query = query.andWhere('is_inactive', false);
       }
@@ -43,7 +49,11 @@ const User = {
   findUserByEmail: async (email: string): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('*').where({ email: email.toLowerCase() }).first();
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_REASON)
+        .select('*')
+        .where({ email: email.toLowerCase() })
+        .first();
       return user;
     } catch (error) {
       logger.error(`Error finding user with email ${email}:`, error);
@@ -54,7 +64,8 @@ const User = {
   findUserByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users')
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON)
         .select('*')
         .where({ email: email.toLowerCase(), user_type: userType })
         .first();
@@ -72,12 +83,11 @@ const User = {
   ): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users')
+      const user = await tenantDb(db, tenantId).table<IUser>('users')
         .select('*')
         .where({
           email: email.toLowerCase(),
           user_type: userType,
-          tenant: tenantId,
         })
         .first();
       return user;
@@ -90,10 +100,9 @@ const User = {
   findUserByUsername: async (knexOrTrx: Knex | Knex.Transaction, username: string): Promise<IUser | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await knexOrTrx<IUser>('users')
+      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
         .where('username', username.toLowerCase())
-        .andWhere('tenant', tenant)
         .first();
       return user;
     } catch (error) {
@@ -105,9 +114,8 @@ const User = {
   findOldestUser: async (knexOrTrx: Knex | Knex.Transaction): Promise<IUser | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const oldestUser = await knexOrTrx<IUser>('users')
+      const oldestUser = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
-        .where('tenant', tenant)
         .orderBy('created_at', 'asc')
         .first();
       return oldestUser;
@@ -120,10 +128,9 @@ const User = {
   get: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUser | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await knexOrTrx<IUser>('users')
+      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
         .where('user_id', user_id)
-        .andWhere('tenant', tenant)
         .first();
       return user;
     } catch (error) {
@@ -146,7 +153,7 @@ const User = {
       }
 
       return await knexOrTrx.transaction(async (trx) => {
-        const [insertedUser] = await trx<IUser>('users')
+        const [insertedUser] = await tenantDb(trx, tenant).table<IUser>('users')
           .insert({
             ...userData,
             is_inactive: false,
@@ -161,7 +168,7 @@ const User = {
           return { user_id: insertedUser.user_id, role_id: role.role_id, tenant };
         });
 
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
 
         return insertedUser;
       });
@@ -174,10 +181,9 @@ const User = {
   getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserWithRoles | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await knexOrTrx<IUser>('users')
+      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
         .select('*')
         .where('user_id', user_id)
-        .andWhere('tenant', tenant)
         .first();
       if (user) {
         const roles = await User.getUserRoles(knexOrTrx, user_id);
@@ -193,7 +199,7 @@ const User = {
   update: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, user: Partial<IUser>): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await knexOrTrx<IUser>('users').where('user_id', user_id).andWhere('tenant', tenant).update(user);
+      await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).update(user);
     } catch (error) {
       logger.error(`Error updating user with id ${user_id}:`, error);
       throw error;
@@ -206,26 +212,34 @@ const User = {
     employeeUserId: string
   ): Promise<boolean> => {
     const tenant = await requireTenantId(knexOrTrx);
+    const db = tenantDb(knexOrTrx, tenant);
+    const chainRoot = db.table('users as u')
+      .select('u.reports_to')
+      .where('u.user_id', employeeUserId)
+      .toSQL();
+    const chainStep = db.table('users as u2')
+      .select('u2.reports_to')
+      .join('chain as c', 'u2.user_id', 'c.reports_to')
+      .whereNotNull('c.reports_to')
+      .toSQL();
+
     const { rows } = await knexOrTrx.raw(
       `
         WITH RECURSIVE chain AS (
-          SELECT u.reports_to
-          FROM users u
-          WHERE u.user_id = ?
-            AND u.tenant = ?
+          ${chainRoot.sql}
           UNION ALL
-          SELECT u2.reports_to
-          FROM users u2
-          JOIN chain c ON u2.user_id = c.reports_to
-          WHERE u2.tenant = ?
-            AND c.reports_to IS NOT NULL
+          ${chainStep.sql}
         )
         SELECT 1
         FROM chain
         WHERE reports_to = ?
         LIMIT 1
       `,
-      [employeeUserId, tenant, tenant, managerUserId]
+      [
+        ...(chainRoot.bindings ?? []),
+        ...(chainStep.bindings ?? []),
+        managerUserId,
+      ]
     );
 
     return rows.length > 0;
@@ -236,23 +250,30 @@ const User = {
     managerUserId: string
   ): Promise<string[]> => {
     const tenant = await requireTenantId(knexOrTrx);
+    const db = tenantDb(knexOrTrx, tenant);
+    const subordinateRoot = db.table('users as u')
+      .select('u.user_id', knexOrTrx.raw('1 AS depth'))
+      .where('u.reports_to', managerUserId)
+      .toSQL();
+    const subordinateStep = db.table('users as u2')
+      .select('u2.user_id', knexOrTrx.raw('rtc.depth + 1 AS depth'))
+      .join('reports_to_chain as rtc', 'u2.reports_to', 'rtc.user_id')
+      .where('rtc.depth', '<', 20)
+      .toSQL();
+
     const { rows } = await knexOrTrx.raw(
       `
         WITH RECURSIVE reports_to_chain AS (
-          SELECT u.user_id, 1 AS depth
-          FROM users u
-          WHERE u.reports_to = ?
-            AND u.tenant = ?
+          ${subordinateRoot.sql}
           UNION ALL
-          SELECT u2.user_id, rtc.depth + 1
-          FROM users u2
-          JOIN reports_to_chain rtc ON u2.reports_to = rtc.user_id
-          WHERE u2.tenant = ?
-            AND rtc.depth < 20
+          ${subordinateStep.sql}
         )
         SELECT user_id FROM reports_to_chain
       `,
-      [managerUserId, tenant, tenant]
+      [
+        ...(subordinateRoot.bindings ?? []),
+        ...(subordinateStep.bindings ?? []),
+      ]
     );
     return rows.map((row: { user_id: string }) => row.user_id);
   },
@@ -260,7 +281,7 @@ const User = {
   updatePassword: async (user_id: string, tenant: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await db<IUser>('users').where({ user_id, tenant }).update({ hashed_password });
+      await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
       logger.system(`Password updated for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
       logger.error(`Error updating password for user ${user_id} in tenant ${tenant}:`, error);
@@ -271,7 +292,11 @@ const User = {
   verifyPassword: async (user_id: string, password: string): Promise<boolean> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('hashed_password').where({ user_id }).first();
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_PASSWORD_VERIFY_REASON)
+        .select('hashed_password')
+        .where({ user_id })
+        .first();
       if (!user?.hashed_password) {
         return false;
       }
@@ -285,7 +310,7 @@ const User = {
   delete: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await knexOrTrx<IUser>('users').where('user_id', user_id).andWhere('tenant', tenant).del();
+      await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).del();
     } catch (error) {
       logger.error(`Error deleting user with id ${user_id}:`, error);
       throw error;
@@ -295,7 +320,7 @@ const User = {
   getMultiple: async (knexOrTrx: Knex | Knex.Transaction, userIds: string[]): Promise<IUser[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const users = await knexOrTrx<IUser>('users').select('*').where('tenant', tenant).whereIn('user_id', userIds);
+      const users = await tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*').whereIn('user_id', userIds);
       return users;
     } catch (error) {
       logger.error('Error getting multiple users:', error);
@@ -310,14 +335,9 @@ const User = {
   ): Promise<IRole[]> => {
     const tenant = tenantOverride ?? (await requireTenantId(knexOrTrx));
     try {
-      const query = knexOrTrx<IRole>('roles')
-        .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id')
-            .andOn('roles.tenant', '=', 'user_roles.tenant')
-            .andOnVal('user_roles.tenant', tenant);
-        })
-        .where('user_roles.user_id', user_id)
-        .where('roles.tenant', tenant);
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table<IRole>('roles').where('user_roles.user_id', user_id);
+      db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
 
       const roles = await query.select('*');
       return roles;
@@ -336,13 +356,12 @@ const User = {
     }
 
     try {
-      const rows = await knexOrTrx('roles')
-        .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id').andOn('roles.tenant', '=', 'user_roles.tenant');
-        })
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table('roles')
         .whereIn('user_roles.user_id', userIds)
-        .where('roles.tenant', tenant)
         .select('user_roles.user_id', 'roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client');
+      db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
+      const rows = await query;
 
       for (const row of rows as any[]) {
         const userId = row.user_id;
@@ -380,27 +399,18 @@ const User = {
   ): Promise<IRoleWithPermissions[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const query = knexOrTrx<IRole>('roles')
-        .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id')
-            .andOn('roles.tenant', '=', 'user_roles.tenant')
-            .andOn('user_roles.tenant', '=', knexOrTrx.raw('?', [tenant]));
-        })
-        .where('user_roles.user_id', user_id)
-        .andWhere('roles.tenant', tenant);
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = db.table<IRole>('roles')
+        .where('user_roles.user_id', user_id);
+      db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
 
       const roles = await query.select(['roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client']);
 
       const rolesWithPermissions = await Promise.all(
         roles.map(async (role: any): Promise<IRoleWithPermissions> => {
-          const permissionQuery = knexOrTrx<IPermission>('permissions')
-            .join('role_permissions', function () {
-              this.on('permissions.permission_id', '=', 'role_permissions.permission_id')
-                .andOn('permissions.tenant', '=', 'role_permissions.tenant')
-                .andOn('role_permissions.tenant', '=', knexOrTrx.raw('?', [tenant]));
-            })
-            .where('role_permissions.role_id', role.role_id)
-            .andWhere('permissions.tenant', tenant);
+          const permissionQuery = db.table<IPermission>('permissions')
+            .where('role_permissions.role_id', role.role_id);
+          db.tenantJoin(permissionQuery, 'role_permissions', 'permissions.permission_id', 'role_permissions.permission_id');
 
           const permissions = await permissionQuery.select([
             'permissions.permission_id',
@@ -425,13 +435,14 @@ const User = {
   updateUserRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, roles: IRole[]): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await knexOrTrx('user_roles').where({ user_id, tenant }).del();
+      const db = tenantDb(knexOrTrx, tenant);
+      await db.table('user_roles').where({ user_id }).del();
       const userRoles = roles.map((role): IUserRoleWithOptionalTenant => ({
         user_id,
         role_id: role.role_id,
         tenant,
       }));
-      await knexOrTrx('user_roles').insert(userRoles);
+      await db.table('user_roles').insert(userRoles);
     } catch (error) {
       logger.error(`Error updating roles for user with id ${user_id}:`, error);
       throw error;
@@ -441,7 +452,11 @@ const User = {
   getForRegistration: async (user_id: string): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('*').where('user_id', user_id).first();
+      const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_REGISTRATION_LOOKUP_REASON)
+        .select('*')
+        .where('user_id', user_id)
+        .first();
       return user;
     } catch (error) {
       logger.error(`Error getting user for registration with id ${user_id}:`, error);
@@ -452,9 +467,8 @@ const User = {
   updateLastLogin: async (userId: string, tenant: string, loginMethod: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      const updated = await db<IUser>('users')
+      const updated = await tenantDb(db, tenant).table<IUser>('users')
         .where('user_id', userId)
-        .andWhere('tenant', tenant)
         .update({
           last_login_at: db.fn.now(),
           last_login_method: loginMethod,

@@ -1,8 +1,19 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
+
+const SCHEMA_INTROSPECTION_TENANT = '__workflow_time_db_test_schema__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, SCHEMA_INTROSPECTION_TENANT).unscoped(table, reason);
+}
 
 const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
@@ -75,7 +86,7 @@ async function invokeAction(actionId: string, input: Record<string, unknown>, ct
 
 async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, userId: string): Promise<void> {
   const roleId = uuidv4();
-  await db('roles').insert({
+  await tenantTable(db, tenantId, 'roles').insert({
     tenant: tenantId,
     role_id: roleId,
     role_name: `Workflow Time Test Role ${userId}`,
@@ -97,12 +108,12 @@ async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, user
   ] as const;
 
   for (const [resource, action] of permissions) {
-    let permission = await db('permissions')
+    let permission = await tenantTable(db, tenantId, 'permissions')
       .where({ tenant: tenantId, resource, action, msp: true })
       .first('permission_id');
 
     if (!permission?.permission_id) {
-      [permission] = await db('permissions')
+      [permission] = await tenantTable(db, tenantId, 'permissions')
         .insert({
           tenant: tenantId,
           permission_id: uuidv4(),
@@ -114,14 +125,14 @@ async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, user
         .returning('permission_id');
     }
 
-    await db('role_permissions').insert({
+    await tenantTable(db, tenantId, 'role_permissions').insert({
       tenant: tenantId,
       role_id: roleId,
       permission_id: permission.permission_id,
     });
   }
 
-  await db('user_roles').insert({
+  await tenantTable(db, tenantId, 'user_roles').insert({
     tenant: tenantId,
     user_id: userId,
     role_id: roleId,
@@ -134,6 +145,10 @@ type BillingFixtureContext = {
   clientId: string;
   userId?: string;
 };
+
+function contextTable(context: BillingFixtureContext, table: string) {
+  return tenantTable(context.db, context.tenantId, table);
+}
 
 type FixedPlanFixtureOptions = {
   clientId?: string;
@@ -174,7 +189,7 @@ async function createFixedPlanAssignment(
   const baseRateDollars = (options.baseRateCents ?? 1000) / 100;
   const now = context.db.fn.now();
 
-  await context.db('contracts').insert({
+  await contextTable(context, 'contracts').insert({
     tenant: context.tenantId,
     contract_id: contractId,
     contract_name: planName,
@@ -189,7 +204,7 @@ async function createFixedPlanAssignment(
     updated_at: now,
   });
 
-  await context.db('client_contracts').insert({
+  await contextTable(context, 'client_contracts').insert({
     tenant: context.tenantId,
     client_contract_id: clientContractId,
     client_id: targetClientId,
@@ -206,7 +221,7 @@ async function createFixedPlanAssignment(
     updated_at: now,
   });
 
-  await context.db('contract_lines').insert({
+  await contextTable(context, 'contract_lines').insert({
     contract_line_id: contractLineId,
     tenant: context.tenantId,
     contract_id: contractId,
@@ -221,7 +236,7 @@ async function createFixedPlanAssignment(
     cadence_owner: 'client',
   });
 
-  await context.db('contract_line_services').insert({
+  await contextTable(context, 'contract_line_services').insert({
     tenant: context.tenantId,
     contract_line_id: contractLineId,
     service_id: serviceId,
@@ -229,7 +244,7 @@ async function createFixedPlanAssignment(
     custom_rate: null,
   });
 
-  await context.db('contract_line_service_configuration').insert({
+  await contextTable(context, 'contract_line_service_configuration').insert({
     config_id: configId,
     contract_line_id: contractLineId,
     service_id: serviceId,
@@ -239,13 +254,13 @@ async function createFixedPlanAssignment(
     tenant: context.tenantId,
   });
 
-  await context.db('contract_line_service_fixed_config').insert({
+  await contextTable(context, 'contract_line_service_fixed_config').insert({
     config_id: configId,
     tenant: context.tenantId,
     base_rate: baseRateDollars,
   });
 
-  await context.db('client_contract_lines').insert({
+  await contextTable(context, 'client_contract_lines').insert({
     tenant: context.tenantId,
     client_contract_line_id: clientContractLineId,
     client_id: targetClientId,
@@ -264,7 +279,7 @@ async function createBucketOverlayForPlan(
   options: BucketOverlayFixtureOptions = {}
 ): Promise<{ configId: string; serviceId: string }> {
   const baseConfig = options.serviceId
-    ? await context.db('contract_line_service_configuration')
+    ? await contextTable(context, 'contract_line_service_configuration')
       .where({
         tenant: context.tenantId,
         contract_line_id: contractLineId,
@@ -272,7 +287,7 @@ async function createBucketOverlayForPlan(
       })
       .whereNot('configuration_type', 'Bucket')
       .first()
-    : await context.db('contract_line_service_configuration')
+    : await contextTable(context, 'contract_line_service_configuration')
       .where({ tenant: context.tenantId, contract_line_id: contractLineId })
       .whereNot('configuration_type', 'Bucket')
       .first();
@@ -284,13 +299,17 @@ async function createBucketOverlayForPlan(
 
   const configId = options.configId ?? uuidv4();
   const totalMinutes = options.totalMinutes ?? Math.round((options.totalHours ?? 40) * 60);
-  const bucketColumns = await context.db('contract_line_service_bucket_config').columnInfo();
+  const bucketColumns = await unscopedTable(
+    context.db,
+    'contract_line_service_bucket_config',
+    'columnInfo reads contract bucket config schema metadata, not tenant rows'
+  ).columnInfo();
   const totalColumn = bucketColumns.total_minutes ? 'total_minutes' : bucketColumns.total_hours ? 'total_hours' : null;
   if (!totalColumn) {
     throw new Error('Unable to determine total capacity column for contract bucket config');
   }
 
-  await context.db('contract_line_services')
+  await contextTable(context, 'contract_line_services')
     .insert({
       tenant: context.tenantId,
       contract_line_id: contractLineId,
@@ -301,7 +320,7 @@ async function createBucketOverlayForPlan(
     .onConflict(['tenant', 'service_id', 'contract_line_id'])
     .merge({ quantity: baseConfig?.quantity ?? null, custom_rate: baseConfig?.custom_rate ?? null });
 
-  await context.db('contract_line_service_configuration').insert({
+  await contextTable(context, 'contract_line_service_configuration').insert({
     config_id: configId,
     contract_line_id: contractLineId,
     service_id: serviceId,
@@ -320,7 +339,7 @@ async function createBucketOverlayForPlan(
   };
   bucketConfig[totalColumn] = totalColumn === 'total_minutes' ? totalMinutes : Math.round(totalMinutes / 60);
 
-  await context.db('contract_line_service_bucket_config').insert(bucketConfig);
+  await contextTable(context, 'contract_line_service_bucket_config').insert(bucketConfig);
 
   return { configId, serviceId };
 }
@@ -329,7 +348,7 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
   const clientId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     client_name: name,
     tenant: tenantId,
@@ -346,13 +365,13 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
 }
 
 async function createTicketStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses')
+  const existing = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket' })
     .orderBy('order_number', 'asc')
     .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [inserted] = await db('statuses')
+  const [inserted] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Open',
@@ -368,13 +387,13 @@ async function createTicketStatusId(db: Knex, tenantId: string, actorUserId: str
 }
 
 async function createProjectStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses')
+  const existing = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'project' })
     .orderBy('order_number', 'asc')
     .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [inserted] = await db('statuses')
+  const [inserted] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Project Open',
@@ -390,13 +409,13 @@ async function createProjectStatusId(db: Knex, tenantId: string, actorUserId: st
 }
 
 async function createProjectTaskStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses')
+  const existing = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'project_task' })
     .orderBy('order_number', 'asc')
     .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [inserted] = await db('statuses')
+  const [inserted] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Task Open',
@@ -423,7 +442,7 @@ async function createTicket(
   const ticketId = uuidv4();
   const statusId = await createTicketStatusId(db, params.tenantId, params.actorUserId);
 
-  await db('tickets').insert({
+  await tenantTable(db, params.tenantId, 'tickets').insert({
     ticket_id: ticketId,
     tenant: params.tenantId,
     ticket_number: `WF-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
@@ -437,11 +456,11 @@ async function createTicket(
 }
 
 async function createService(db: Knex, tenantId: string): Promise<string> {
-  const existingType = await db('service_types').where({ tenant: tenantId }).first();
+  const existingType = await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).first();
   const serviceTypeId = existingType?.id ?? uuidv4();
 
   if (!existingType) {
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: 'Workflow Time Service Type',
@@ -452,7 +471,7 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
   }
 
   const serviceId = uuidv4();
-  await db('service_catalog').insert({
+  await tenantTable(db, tenantId, 'service_catalog').insert({
     service_id: serviceId,
     tenant: tenantId,
     service_name: 'Workflow Time Service',
@@ -481,7 +500,7 @@ async function createProjectTask(
   const phaseId = uuidv4();
   const taskId = uuidv4();
 
-  await db('projects').insert({
+  await tenantTable(db, params.tenantId, 'projects').insert({
     project_id: projectId,
     tenant: params.tenantId,
     project_name: 'Workflow Time Project',
@@ -491,7 +510,7 @@ async function createProjectTask(
     project_number: `P-${Date.now()}`,
   });
 
-  await db('project_phases').insert({
+  await tenantTable(db, params.tenantId, 'project_phases').insert({
     phase_id: phaseId,
     tenant: params.tenantId,
     project_id: projectId,
@@ -501,7 +520,7 @@ async function createProjectTask(
     wbs_code: '1',
   });
 
-  const [mapping] = await db('project_status_mappings')
+  const [mapping] = await tenantTable(db, params.tenantId, 'project_status_mappings')
     .insert({
       tenant: params.tenantId,
       project_id: projectId,
@@ -511,7 +530,7 @@ async function createProjectTask(
     })
     .returning('project_status_mapping_id');
 
-  await db('project_tasks').insert({
+  await tenantTable(db, params.tenantId, 'project_tasks').insert({
     task_id: taskId,
     tenant: params.tenantId,
     phase_id: phaseId,
@@ -535,7 +554,7 @@ async function createTimePeriod(
   endDate: string
 ): Promise<string> {
   const periodId = uuidv4();
-  await db('time_periods').insert({
+  await tenantTable(db, tenantId, 'time_periods').insert({
     period_id: periodId,
     tenant: tenantId,
     start_date: startDate,
@@ -621,7 +640,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(result.time_entry.work_timezone).toBe('America/Los_Angeles');
     expect(result.time_entry.time_sheet_id).toBeTruthy();
 
-    const stored = await db('time_entries')
+    const stored = await tenantTable(db, runtimeState.tenantId, 'time_entries')
       .where({ tenant: runtimeState.tenantId, entry_id: result.time_entry.entry_id })
       .first();
 
@@ -635,7 +654,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(stored.billable_duration).toBe(60);
     expect(stored.time_sheet_id).toBe(result.time_entry.time_sheet_id);
 
-    const sheet = await db('time_sheets')
+    const sheet = await tenantTable(db, runtimeState.tenantId, 'time_sheets')
       .where({ tenant: runtimeState.tenantId, id: result.time_entry.time_sheet_id })
       .first();
 
@@ -696,7 +715,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(result.time_entry.contract_line_id).toBe(assignment.contractLineId);
     expect(result.time_entry.billable_minutes).toBe(30);
 
-    const usageRecord = await db('bucket_usage')
+    const usageRecord = await tenantTable(db, runtimeState.tenantId, 'bucket_usage')
       .where({
         tenant: runtimeState.tenantId,
         client_id: clientId,
@@ -739,7 +758,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
       notes: 'Project task entry',
     });
 
-    const afterCreate = await db('project_tasks')
+    const afterCreate = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('actual_hours');
     expect(Number(afterCreate.actual_hours ?? 0)).toBe(30);
@@ -751,7 +770,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(updated.time_entry.total_minutes).toBe(90);
     expect(updated.time_entry.billable_minutes).toBe(90);
 
-    const afterUpdate = await db('project_tasks')
+    const afterUpdate = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('actual_hours');
     expect(Number(afterUpdate.actual_hours ?? 0)).toBe(90);
@@ -761,7 +780,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     });
     expect(deleted.time_entry.deleted).toBe(true);
 
-    const afterDelete = await db('project_tasks')
+    const afterDelete = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('actual_hours');
     expect(Number(afterDelete.actual_hours ?? 0)).toBe(0);
@@ -814,14 +833,14 @@ describe('time workflow runtime DB-backed action handlers', () => {
       },
     });
 
-    await db('time_entries')
+    await tenantTable(db, runtimeState.tenantId, 'time_entries')
       .where({ tenant: runtimeState.tenantId, entry_id: created.time_entry.entry_id })
       .update({ invoiced: true });
 
-    const beforeTask = await db('project_tasks')
+    const beforeTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('actual_hours');
-    const beforeUsage = await db('bucket_usage')
+    const beforeUsage = await tenantTable(db, runtimeState.tenantId, 'bucket_usage')
       .where({
         tenant: runtimeState.tenantId,
         client_id: clientId,
@@ -843,10 +862,10 @@ describe('time workflow runtime DB-backed action handlers', () => {
       code: 'VALIDATION_ERROR',
     });
 
-    const afterTask = await db('project_tasks')
+    const afterTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('actual_hours');
-    const afterUsage = await db('bucket_usage')
+    const afterUsage = await tenantTable(db, runtimeState.tenantId, 'bucket_usage')
       .where({
         tenant: runtimeState.tenantId,
         client_id: clientId,
@@ -926,7 +945,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     const otherServiceId = await createService(db, otherTenantId);
     const otherEntryId = uuidv4();
 
-    await db('time_entries').insert({
+    await tenantTable(db, otherTenantId, 'time_entries').insert({
       tenant: otherTenantId,
       entry_id: otherEntryId,
       user_id: otherUserId,
@@ -1015,7 +1034,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(requestResult.entries).toHaveLength(2);
     expect(requestResult.entries.every((entry: any) => entry.approval_status === 'CHANGES_REQUESTED')).toBe(true);
 
-    const changedRows = await db('time_entries')
+    const changedRows = await tenantTable(db, runtimeState.tenantId, 'time_entries')
       .where({
         tenant: runtimeState.tenantId,
         approval_status: 'CHANGES_REQUESTED',
@@ -1024,7 +1043,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
       .select('entry_id');
     expect(changedRows).toHaveLength(2);
 
-    const changeRequests = await db('time_entry_change_requests')
+    const changeRequests = await tenantTable(db, runtimeState.tenantId, 'time_entry_change_requests')
       .where({ tenant: runtimeState.tenantId })
       .whereIn('time_entry_id', [first.time_entry.entry_id, second.time_entry.entry_id]);
     expect(changeRequests.length).toBeGreaterThanOrEqual(2);
@@ -1072,7 +1091,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
       time_sheet_id: createdSheet.time_sheet.time_sheet_id,
     });
 
-    await db('time_sheet_comments').insert({
+    await tenantTable(db, runtimeState.tenantId, 'time_sheet_comments').insert({
       comment_id: uuidv4(),
       time_sheet_id: createdSheet.time_sheet.time_sheet_id,
       user_id: runtimeState.actorUserId,
@@ -1141,7 +1160,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     });
     expect(submitted.time_sheet.approval_status).toBe('SUBMITTED');
 
-    const entryStatuses = await db('time_entries')
+    const entryStatuses = await tenantTable(db, runtimeState.tenantId, 'time_entries')
       .where({
         tenant: runtimeState.tenantId,
         time_sheet_id: first.time_entry.time_sheet_id,
@@ -1199,7 +1218,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     });
     expect(changesRequested.time_sheet.approval_status).toBe('CHANGES_REQUESTED');
 
-    const changedStatuses = await db('time_entries')
+    const changedStatuses = await tenantTable(db, runtimeState.tenantId, 'time_entries')
       .where({ tenant: runtimeState.tenantId, time_sheet_id: timeSheetId })
       .select('approval_status');
     expect(changedStatuses.every((row) => row.approval_status === 'CHANGES_REQUESTED')).toBe(true);
@@ -1207,7 +1226,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     await invokeAction('time.submit_timesheet', { time_sheet_id: timeSheetId });
     await invokeAction('time.approve_timesheet', { time_sheet_id: timeSheetId });
 
-    await db('time_entries')
+    await tenantTable(db, runtimeState.tenantId, 'time_entries')
       .where({ tenant: runtimeState.tenantId, time_sheet_id: timeSheetId })
       .limit(1)
       .update({ invoiced: true });
@@ -1246,7 +1265,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
     });
 
     const entryB = uuidv4();
-    await db('time_entries').insert({
+    await tenantTable(db, runtimeState.tenantId, 'time_entries').insert({
       tenant: runtimeState.tenantId,
       entry_id: entryB,
       user_id: entryUserId,
@@ -1421,7 +1440,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
       link: { type: 'ticket', id: ticketId },
     }, { runId: runIdCreate });
 
-    const createAudit = await db('audit_logs')
+    const createAudit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({
         tenant: runtimeState.tenantId,
         record_id: runIdCreate,
@@ -1437,7 +1456,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
       time_sheet_id: created.time_entry.time_sheet_id,
     }, { runId: runIdSubmit });
 
-    const submitAudit = await db('audit_logs')
+    const submitAudit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({
         tenant: runtimeState.tenantId,
         record_id: runIdSubmit,

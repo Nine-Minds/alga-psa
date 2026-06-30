@@ -3,6 +3,7 @@ import { ZodError, z } from 'zod';
 import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
 import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 
 /**
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const parsed = reportSchema.parse(body);
 
     const knex = await getConnection(null);
-    await knex('content_reports').insert({
+    await tenantDb(knex, tenant).table('content_reports').insert({
       tenant,
       reporter_user_id: userId,
       content_type: parsed.contentType,

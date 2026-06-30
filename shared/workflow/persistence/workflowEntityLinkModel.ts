@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowEntityRef = {
   type: string;
@@ -87,6 +88,13 @@ const targetFromRight = (row: WorkflowEntityLinkRecord): WorkflowEntityLinkMatch
   attributes: row.attributes ?? {},
 });
 
+function workflowEntityLinks(
+  knex: Knex,
+  tenant: string,
+): Knex.QueryBuilder<WorkflowEntityLinkRecord, WorkflowEntityLinkRecord[]> {
+  return tenantDb(knex, tenant).table<WorkflowEntityLinkRecord>(TABLE);
+}
+
 const WorkflowEntityLinkModel = {
   upsert: async (
     knex: Knex,
@@ -115,7 +123,7 @@ const WorkflowEntityLinkModel = {
       updated_at: timestamp,
     };
 
-    const inserted = await knex<WorkflowEntityLinkRecord>(TABLE)
+    const inserted = await workflowEntityLinks(knex, tenant)
       .insert(insertData)
       .onConflict(UNIQUE_COLUMNS)
       .ignore()
@@ -125,9 +133,8 @@ const WorkflowEntityLinkModel = {
       return { record: inserted[0], created: true };
     }
 
-    const [record] = await knex<WorkflowEntityLinkRecord>(TABLE)
+    const [record] = await workflowEntityLinks(knex, tenant)
       .where({
-        tenant,
         namespace: insertData.namespace,
         left_type: insertData.left_type,
         left_id: insertData.left_id,
@@ -161,9 +168,8 @@ const WorkflowEntityLinkModel = {
     const matches: WorkflowEntityLinkMatch[] = [];
 
     if (direction === 'forward' || direction === 'either') {
-      const query = knex<WorkflowEntityLinkRecord>(TABLE)
+      const query = workflowEntityLinks(knex, tenant)
         .where({
-          tenant,
           namespace: input.namespace,
           left_type: input.from.type,
           left_id: input.from.id,
@@ -178,9 +184,8 @@ const WorkflowEntityLinkModel = {
     }
 
     if (matches.length < limit && (direction === 'reverse' || direction === 'either')) {
-      const query = knex<WorkflowEntityLinkRecord>(TABLE)
+      const query = workflowEntityLinks(knex, tenant)
         .where({
-          tenant,
           namespace: input.namespace,
           right_type: input.from.type,
           right_id: input.from.id,
@@ -211,8 +216,7 @@ const WorkflowEntityLinkModel = {
       throw new Error('WORKFLOW_ENTITY_LINK_DELETE_REQUIRES_LEFT_OR_RIGHT');
     }
 
-    const query = knex<WorkflowEntityLinkRecord>(TABLE).where({
-      tenant,
+    const query = workflowEntityLinks(knex, tenant).where({
       namespace: input.namespace,
     });
     if (input.left) {
@@ -236,7 +240,7 @@ const WorkflowEntityLinkModel = {
   ): Promise<WorkflowEntityLinkListResult> => {
     const limit = normalizeLimit(options.limit);
     const cursor = normalizeCursor(options.cursor);
-    const query = knex<WorkflowEntityLinkRecord>(TABLE).where({ tenant, namespace });
+    const query = workflowEntityLinks(knex, tenant).where({ namespace });
     if (options.left_type) query.andWhere({ left_type: options.left_type });
     if (options.right_type) query.andWhere({ right_type: options.right_type });
     if (options.relation) query.andWhere({ relation: options.relation });
@@ -255,8 +259,7 @@ const WorkflowEntityLinkModel = {
   },
 
   listNamespaces: async (knex: Knex, tenant: string): Promise<WorkflowEntityLinkNamespace[]> => {
-    const rows = (await knex<WorkflowEntityLinkRecord>(TABLE)
-      .where({ tenant })
+    const rows = (await workflowEntityLinks(knex, tenant)
       .select('namespace')
       .count<{ link_count: string | number }[]>({ link_count: '*' })
       .groupBy('namespace')

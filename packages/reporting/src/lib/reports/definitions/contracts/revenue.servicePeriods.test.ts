@@ -13,4 +13,16 @@ describe('contract revenue report definition service-period wiring', () => {
     expect(source).toContain('contract_revenue_facts.reporting_period_end >= {{start_of_year}}');
     expect(source).toContain('contract_revenue_facts.reporting_period_end < {{end_of_year}}');
   });
+
+  it('uses tenant-table placeholders instead of hand-coded raw SQL tenant predicates', () => {
+    expect(source).toContain('{{tenant_table:invoice_charges AS ic}}');
+    expect(source).toContain('{{tenant_table:invoices AS inv}}');
+    expect(source).toContain('{{tenant_table:invoice_charge_details AS iid}}');
+    expect(source).toContain('{{tenant_table:invoice_charge_fixed_details AS iifd}}');
+
+    expect(source).not.toContain('WHERE ic.tenant = {{tenant}}');
+    expect(source).not.toContain('inv.tenant = ic.tenant');
+    expect(source).not.toContain('iid.tenant = ic.tenant');
+    expect(source).not.toContain('iifd.tenant = iid.tenant');
+  });
 });

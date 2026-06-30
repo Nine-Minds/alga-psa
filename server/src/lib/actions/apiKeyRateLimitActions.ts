@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IRole } from '@alga-psa/types';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 
@@ -53,9 +53,9 @@ async function assertTenantAdmin(userId: string): Promise<void> {
 
 async function assertApiKeyExists(tenant: string, apiKeyId: string): Promise<void> {
   const { knex } = await createTenantKnex(tenant);
-  const apiKey = await knex('api_keys')
+  const apiKey = await tenantDb(knex, tenant).table('api_keys')
     .select('api_key_id')
-    .where({ tenant, api_key_id: apiKeyId })
+    .where({ api_key_id: apiKeyId })
     .first();
 
   if (!apiKey) {
@@ -122,9 +122,8 @@ export const getApiRateLimitsForKeys = withAuth(
     const uniqueIds = Array.from(new Set(apiKeyIds));
 
     const { knex } = await createTenantKnex(tenant);
-    const existingRows = await knex('api_keys')
+    const existingRows = await tenantDb(knex, tenant).table('api_keys')
       .select('api_key_id')
-      .where({ tenant })
       .whereIn('api_key_id', uniqueIds);
     const existingIds = new Set(existingRows.map((row: { api_key_id: string }) => row.api_key_id));
 

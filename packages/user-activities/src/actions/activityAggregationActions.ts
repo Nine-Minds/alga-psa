@@ -1,6 +1,6 @@
 // @ts-nocheck
 // TODO: Argument count issues
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   Activity,
@@ -110,24 +110,30 @@ async function filterScheduleEntriesByClient<T extends ScheduleEntryWorkItemLink
     ),
   ];
 
+  const scopedDb = tenantDb(knex, tenant);
   const [matchingTicketIds, matchingProjectTaskIds] = await Promise.all([
     ticketIds.length > 0
-      ? knex('tickets')
-          .where({ tenant, client_id: clientId })
+      ? scopedDb.table('tickets')
+          .where({ client_id: clientId })
           .whereIn('ticket_id', ticketIds)
           .pluck('ticket_id')
       : Promise.resolve([]),
     projectTaskIds.length > 0
-      ? knex('project_tasks')
-          .join('project_phases', function() {
-            this.on('project_tasks.phase_id', 'project_phases.phase_id')
-              .andOn('project_tasks.tenant', 'project_phases.tenant');
+      ? scopedDb.table('project_tasks')
+          .modify((queryBuilder) => {
+            scopedDb.tenantJoin(
+              queryBuilder,
+              'project_phases',
+              'project_tasks.phase_id',
+              'project_phases.phase_id'
+            );
+            scopedDb.tenantJoin(
+              queryBuilder,
+              'projects',
+              'project_phases.project_id',
+              'projects.project_id'
+            );
           })
-          .join('projects', function() {
-            this.on('project_phases.project_id', 'projects.project_id')
-              .andOn('project_phases.tenant', 'projects.tenant');
-          })
-          .where('project_tasks.tenant', tenant)
           .where('projects.client_id', clientId)
           .whereIn('project_tasks.task_id', projectTaskIds)
           .pluck('project_tasks.task_id')
@@ -172,8 +178,8 @@ async function resolveActivityTarget(
     throw new Error("Permission denied: cannot view another user's activities");
   }
 
-  const target = await knex('users')
-    .where({ tenant, user_id: targetUserId, user_type: 'internal' })
+  const target = await tenantDb(knex, tenant).table('users')
+    .where({ user_id: targetUserId, user_type: 'internal' })
     .first();
   if (!target) {
     throw new Error('User not found');
@@ -487,11 +493,13 @@ async function fetchAdHocEntriesForUser(
   tenant: string,
   userId: string
 ): Promise<any[]> {
-  const rows = await knex('schedule_entries as se')
-    .join('schedule_entry_assignees as sea', function () {
-      this.on('se.entry_id', 'sea.entry_id').andOn('se.tenant', 'sea.tenant');
-    })
-    .where('se.tenant', tenant)
+  const scopedDb = tenantDb(knex, tenant);
+  const rows = await scopedDb.tenantJoin(
+    scopedDb.table('schedule_entries as se'),
+    'schedule_entry_assignees as sea',
+    'se.entry_id',
+    'sea.entry_id'
+  )
     .andWhere('se.work_item_type', 'ad_hoc')
     .andWhere('sea.user_id', userId)
     .whereNull('se.original_entry_id')
@@ -504,8 +512,7 @@ async function fetchAdHocEntriesForUser(
 
   // Resolve the full assignee list for each entry
   const entryIds = rows.map((r: any) => r.entry_id);
-  const assigneeRows = await knex('schedule_entry_assignees')
-    .where('tenant', tenant)
+  const assigneeRows = await scopedDb.table('schedule_entry_assignees')
     .whereIn('entry_id', entryIds)
     .select('entry_id', 'user_id');
   const assigneesByEntry = new Map<string, string[]>();
@@ -626,77 +633,84 @@ export async function fetchProjectActivities(
 
     // Query for project tasks assigned to the user
     const tasks = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("project_tasks")
-      .select(
-        "project_tasks.*",
-        "project_phases.phase_name",
-        "project_phases.project_id",
-        "projects.project_name",
-        // Resolve status name and is_closed from either custom or standard status,
-        // preferring psm.custom_name if provided.
-        db.raw(
-          "COALESCE(project_status_mappings.custom_name, custom_statuses.name, standard_statuses.name) as status_name"
-        ),
-        db.raw(
-          "COALESCE(custom_statuses.is_closed, standard_statuses.is_closed, false) as is_closed"
-        ),
-        "priorities.priority_name",
-        "priorities.color as priority_color",
-        db.raw("'#3b82f6' as status_color") // Blue color for consistency
-      )
-      .leftJoin("project_phases", function() {
-        this.on("project_tasks.phase_id", "project_phases.phase_id")
-            .andOn("project_tasks.tenant", "project_phases.tenant");
-      })
-      .leftJoin("projects", function() {
-        this.on("project_phases.project_id", "projects.project_id")
-            .andOn("project_phases.tenant", "projects.tenant");
-      })
-      .leftJoin("priorities", function() {
-        this.on("project_tasks.priority_id", "priorities.priority_id")
-            .andOn("project_tasks.tenant", "priorities.tenant");
-      })
-      .leftJoin("project_status_mappings", function() {
-        this.on("project_tasks.project_status_mapping_id", "project_status_mappings.project_status_mapping_id")
-            .andOn("project_tasks.tenant", "project_status_mappings.tenant");
-      })
-      .leftJoin("standard_statuses", function() {
-        this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
-      })
-      .leftJoin({ custom_statuses: "statuses" }, function() {
-        this.on("project_status_mappings.status_id", "custom_statuses.status_id")
-            .andOn("project_status_mappings.tenant", "custom_statuses.tenant");
-      })
-      .where("project_tasks.tenant", tenant)
-      .where(function() {
-        // Tasks directly assigned to the user
-        this.where("project_tasks.assigned_to", userId);
-        
-        // Or tasks where the user is an additional resource
-        this.orWhereExists(function() {
-          this.select(db.raw(1))
-            .from("task_resources")
-            .whereRaw("task_resources.task_id = project_tasks.task_id")
-            .andWhere("task_resources.tenant", tenant)
-            .andWhere(function() {
-              this.where("task_resources.assigned_to", userId)
-                .orWhere("task_resources.additional_user_id", userId);
-            });
-        });
-      })
+      const scopedDb = tenantDb(trx, tenant);
+      const projectTasksQuery = scopedDb.table("project_tasks")
+        .select(
+          "project_tasks.*",
+          "project_phases.phase_name",
+          "project_phases.project_id",
+          "projects.project_name",
+          // Resolve status name and is_closed from either custom or standard status,
+          // preferring psm.custom_name if provided.
+          db.raw(
+            "COALESCE(project_status_mappings.custom_name, custom_statuses.name, standard_statuses.name) as status_name"
+          ),
+          db.raw(
+            "COALESCE(custom_statuses.is_closed, standard_statuses.is_closed, false) as is_closed"
+          ),
+          "priorities.priority_name",
+          "priorities.color as priority_color",
+          db.raw("'#3b82f6' as status_color") // Blue color for consistency
+        );
+
+      scopedDb.tenantJoin(projectTasksQuery, "project_phases", "project_tasks.phase_id", "project_phases.phase_id", { type: "left" });
+      scopedDb.tenantJoin(projectTasksQuery, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
+      scopedDb.tenantJoin(projectTasksQuery, "priorities", "project_tasks.priority_id", "priorities.priority_id", { type: "left" });
+      scopedDb.tenantJoin(
+        projectTasksQuery,
+        "project_status_mappings",
+        "project_tasks.project_status_mapping_id",
+        "project_status_mappings.project_status_mapping_id",
+        { type: "left" }
+      );
+      scopedDb.tenantJoin(
+        projectTasksQuery,
+        "standard_statuses",
+        "project_status_mappings.standard_status_id",
+        "standard_statuses.standard_status_id",
+        { type: "left" }
+      );
+      scopedDb.tenantJoin(
+        projectTasksQuery,
+        "statuses as custom_statuses",
+        "project_status_mappings.status_id",
+        "custom_statuses.status_id",
+        { type: "left" }
+      );
+
+      return await projectTasksQuery
+        .where(function() {
+          // Tasks directly assigned to the user
+          this.where("project_tasks.assigned_to", userId);
+
+          // Or tasks where the user is an additional resource
+          this.orWhereExists(
+            scopedDb.table("task_resources")
+              .select(db.raw(1))
+              .whereRaw("task_resources.task_id = project_tasks.task_id")
+              .andWhere(function() {
+                this.where("task_resources.assigned_to", userId)
+                  .orWhere("task_resources.additional_user_id", userId);
+              })
+          );
+        })
       // Apply filters
       .modify(function(queryBuilder) {
         // Apply status filter if provided
         if (filters.status && filters.status.length > 0) {
-          queryBuilder.whereIn("project_tasks.project_status_mapping_id", function() {
-            this.select("project_status_mappings.project_status_mapping_id")
-              .from("project_status_mappings")
-              .join("standard_statuses", function() {
-                this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
-              })
-              .where("project_status_mappings.tenant", tenant)
-              .whereIn("standard_statuses.name", filters.status || []);
-          });
+          const statusMappingIdsForNames = scopedDb.table("project_status_mappings")
+            .select("project_status_mappings.project_status_mapping_id")
+            .whereIn("standard_statuses.name", filters.status || []);
+          scopedDb.tenantJoin(
+            statusMappingIdsForNames,
+            "standard_statuses",
+            "project_status_mappings.standard_status_id",
+            "standard_statuses.standard_status_id"
+          );
+          queryBuilder.whereIn(
+            "project_tasks.project_status_mapping_id",
+            statusMappingIdsForNames
+          );
         }
         
         // Apply due date filter if provided
@@ -714,20 +728,22 @@ export async function fetchProjectActivities(
           // its mapping resolves to a status (custom OR standard) with is_closed=true.
           // Tasks with NULL project_status_mapping_id are treated as open.
           queryBuilder.where(function() {
+            const openStatusMappingIds = scopedDb.table("project_status_mappings as psm")
+              .select("psm.project_status_mapping_id")
+              .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false");
+            scopedDb.tenantJoin(openStatusMappingIds, "statuses as cs", "psm.status_id", "cs.status_id", { type: "left" });
+            scopedDb.tenantJoin(
+              openStatusMappingIds,
+              "standard_statuses as ss",
+              "psm.standard_status_id",
+              "ss.standard_status_id",
+              { type: "left" }
+            );
             this.whereNull("project_tasks.project_status_mapping_id")
-              .orWhereIn("project_tasks.project_status_mapping_id", function() {
-                this.select("psm.project_status_mapping_id")
-                  .from({ psm: "project_status_mappings" })
-                  .leftJoin({ ss: "standard_statuses" }, function() {
-                    this.on("psm.standard_status_id", "ss.standard_status_id");
-                  })
-                  .leftJoin({ cs: "statuses" }, function() {
-                    this.on("psm.status_id", "cs.status_id")
-                        .andOn("psm.tenant", "cs.tenant");
-                  })
-                  .where("psm.tenant", tenant)
-                  .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false");
-              });
+              .orWhereIn(
+                "project_tasks.project_status_mapping_id",
+                openStatusMappingIds
+              );
           });
         }
         
@@ -744,26 +760,24 @@ export async function fetchProjectActivities(
         if (hasProjectIds || hasPhaseIds) {
           queryBuilder.where(function() {
             if (hasProjectIds) {
-              this.whereExists(function() {
-                this.select(db.raw(1))
-                  .from("project_phases")
+              this.whereExists(
+                tenantDb(trx, tenant).table("project_phases")
+                  .select(db.raw(1))
                   .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-                  .andWhere("project_phases.tenant", tenant)
-                  .whereIn("project_phases.project_id", filters.projectIds!);
-              });
+                  .whereIn("project_phases.project_id", filters.projectIds!)
+              );
             }
             if (hasPhaseIds) {
               this.orWhereIn("project_tasks.phase_id", filters.phaseIds!);
             }
           });
         } else if (filters.projectId) {
-          queryBuilder.whereExists(function() {
-            this.select(db.raw(1))
-              .from("project_phases")
+          queryBuilder.whereExists(
+            tenantDb(trx, tenant).table("project_phases")
+              .select(db.raw(1))
               .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-              .andWhere("project_phases.tenant", tenant)
-              .andWhere("project_phases.project_id", filters.projectId);
-          });
+              .andWhere("project_phases.project_id", filters.projectId)
+          );
         }
 
         // Apply singular phase filter if provided (backward compat, combined with AND)
@@ -778,13 +792,12 @@ export async function fetchProjectActivities(
 
         // Exclude tasks whose project is in the excluded set
         if (filters.excludeProjectIds && filters.excludeProjectIds.length > 0) {
-          queryBuilder.whereNotExists(function() {
-            this.select(db.raw(1))
-              .from("project_phases")
+          queryBuilder.whereNotExists(
+            tenantDb(trx, tenant).table("project_phases")
+              .select(db.raw(1))
               .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-              .andWhere("project_phases.tenant", tenant)
-              .whereIn("project_phases.project_id", filters.excludeProjectIds!);
-          });
+              .whereIn("project_phases.project_id", filters.excludeProjectIds!)
+          );
         }
 
         // Exclude tasks in the excluded phases
@@ -804,14 +817,13 @@ export async function fetchProjectActivities(
 
         // Tag filter: task must have at least one of the requested tags
         if (filters.projectTaskTagIds && filters.projectTaskTagIds.length > 0) {
-          queryBuilder.whereExists(function() {
-            this.select(db.raw(1))
-              .from("tag_mappings")
+          queryBuilder.whereExists(
+            tenantDb(trx, tenant).table("tag_mappings")
+              .select(db.raw(1))
               .whereRaw("tag_mappings.tagged_id = project_tasks.task_id::text")
-              .andWhere("tag_mappings.tenant", tenant)
               .andWhere("tag_mappings.tagged_type", "project_task")
-              .whereIn("tag_mappings.tag_id", filters.projectTaskTagIds!);
-          });
+              .whereIn("tag_mappings.tag_id", filters.projectTaskTagIds!)
+          );
         }
 
         // Apply search filter if provided
@@ -913,49 +925,39 @@ export async function fetchTicketActivities(
 
     // Query for tickets assigned to the user
     const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("tickets")
-      .select(
-        "tickets.*",
-        "clients.client_name",
-        "contacts.full_name as contact_name",
-        "statuses.name as status_name",
-        "statuses.is_closed",
-        "priorities.priority_name",
-        "priorities.color as priority_color"
-      )
-      .leftJoin("clients", function() {
-        this.on("tickets.client_id", "clients.client_id")
-            .andOn("tickets.tenant", "clients.tenant");
-      })
-      .leftJoin("contacts", function() {
-        this.on("tickets.contact_name_id", "contacts.contact_name_id")
-            .andOn("tickets.tenant", "contacts.tenant");
-      })
-      .leftJoin("statuses", function() {
-        this.on("tickets.status_id", "statuses.status_id")
-            .andOn("tickets.tenant", "statuses.tenant");
-      })
-      .leftJoin("priorities", function() {
-        this.on("tickets.priority_id", "priorities.priority_id")
-            .andOn("tickets.tenant", "priorities.tenant");
-      })
-      .where("tickets.tenant", tenant)
-      .where(function() {
-        // Tickets directly assigned to the user
-        this.where("tickets.assigned_to", userId);
-        
-        // Or tickets where the user is an additional resource
-        this.orWhereExists(function() {
-          this.select(db.raw(1))
-            .from("ticket_resources")
-            .whereRaw("ticket_resources.ticket_id = tickets.ticket_id")
-            .andWhere("ticket_resources.tenant", tenant)
-            .andWhere(function() {
-              this.where("ticket_resources.assigned_to", userId)
-                .orWhere("ticket_resources.additional_user_id", userId);
-            });
-        });
-      })
+      const scopedDb = tenantDb(trx, tenant);
+      const ticketsQuery = scopedDb.table("tickets")
+        .select(
+          "tickets.*",
+          "clients.client_name",
+          "contacts.full_name as contact_name",
+          "statuses.name as status_name",
+          "statuses.is_closed",
+          "priorities.priority_name",
+          "priorities.color as priority_color"
+        );
+
+      scopedDb.tenantJoin(ticketsQuery, "clients", "tickets.client_id", "clients.client_id", { type: "left" });
+      scopedDb.tenantJoin(ticketsQuery, "contacts", "tickets.contact_name_id", "contacts.contact_name_id", { type: "left" });
+      scopedDb.tenantJoin(ticketsQuery, "statuses", "tickets.status_id", "statuses.status_id", { type: "left" });
+      scopedDb.tenantJoin(ticketsQuery, "priorities", "tickets.priority_id", "priorities.priority_id", { type: "left" });
+
+      return await ticketsQuery
+        .where(function() {
+          // Tickets directly assigned to the user
+          this.where("tickets.assigned_to", userId);
+
+          // Or tickets where the user is an additional resource
+          this.orWhereExists(
+            scopedDb.table("ticket_resources")
+              .select(db.raw(1))
+              .whereRaw("ticket_resources.ticket_id = tickets.ticket_id")
+              .andWhere(function() {
+                this.where("ticket_resources.assigned_to", userId)
+                  .orWhere("ticket_resources.additional_user_id", userId);
+              })
+          );
+        })
       // Apply filters
       .modify(function(queryBuilder) {
         if (filters.status && filters.status.length > 0) {
@@ -1015,14 +1017,13 @@ export async function fetchTicketActivities(
 
         // Tag filter: ticket must have at least one of the requested tags
         if (filters.ticketTagIds && filters.ticketTagIds.length > 0) {
-          queryBuilder.whereExists(function() {
-            this.select(db.raw(1))
-              .from("tag_mappings")
+          queryBuilder.whereExists(
+            tenantDb(trx, tenant).table("tag_mappings")
+              .select(db.raw(1))
               .whereRaw("tag_mappings.tagged_id = tickets.ticket_id::text")
-              .andWhere("tag_mappings.tenant", tenant)
               .andWhere("tag_mappings.tagged_type", "ticket")
-              .whereIn("tag_mappings.tag_id", filters.ticketTagIds!);
-          });
+              .whereIn("tag_mappings.tag_id", filters.ticketTagIds!)
+          );
         }
 
         // Text search filter
@@ -1124,56 +1125,60 @@ export async function fetchTimeEntryActivities(
 
     // Query for time entries created by the user
     const timeEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("time_entries")
-      .where("time_entries.tenant", tenant)
-      .where("time_entries.user_id", userId)
-      // Apply date range filter if provided
-      .modify(function(queryBuilder) {
-        if (filters.dateRangeStart) {
-          queryBuilder.where("time_entries.start_time", ">=", filters.dateRangeStart);
-        }
-        
-        if (filters.dateRangeEnd) {
-          queryBuilder.where("time_entries.end_time", "<=", filters.dateRangeEnd);
-        }
-        
-        // Apply status filter if provided
-        if (filters.status && filters.status.length > 0) {
-          queryBuilder.whereIn("time_entries.approval_status", filters.status);
-        }
+      const scopedDb = tenantDb(trx, tenant);
+      return await scopedDb.table("time_entries")
+        .where("time_entries.user_id", userId)
+        // Apply date range filter if provided
+        .modify(function(queryBuilder) {
+          if (filters.dateRangeStart) {
+            queryBuilder.where("time_entries.start_time", ">=", filters.dateRangeStart);
+          }
 
-        if (filters.clientId) {
-          queryBuilder.where(function() {
-            this.where(function() {
-              this.where("time_entries.work_item_type", "ticket")
-                .whereExists(function() {
-                  this.select(db.raw(1))
-                    .from("tickets")
-                    .whereRaw("tickets.ticket_id = time_entries.work_item_id")
-                    .andWhere("tickets.tenant", tenant)
-                    .andWhere("tickets.client_id", filters.clientId);
-                });
-            }).orWhere(function() {
-              this.where("time_entries.work_item_type", "project_task")
-                .whereExists(function() {
-                  this.select(db.raw(1))
-                    .from("project_tasks")
-                    .join("project_phases", function() {
-                      this.on("project_tasks.phase_id", "project_phases.phase_id")
-                        .andOn("project_tasks.tenant", "project_phases.tenant");
-                    })
-                    .join("projects", function() {
-                      this.on("project_phases.project_id", "projects.project_id")
-                        .andOn("project_phases.tenant", "projects.tenant");
-                    })
-                    .whereRaw("project_tasks.task_id = time_entries.work_item_id")
-                    .andWhere("project_tasks.tenant", tenant)
-                    .andWhere("projects.client_id", filters.clientId);
-                });
+          if (filters.dateRangeEnd) {
+            queryBuilder.where("time_entries.end_time", "<=", filters.dateRangeEnd);
+          }
+
+          // Apply status filter if provided
+          if (filters.status && filters.status.length > 0) {
+            queryBuilder.whereIn("time_entries.approval_status", filters.status);
+          }
+
+          if (filters.clientId) {
+            queryBuilder.where(function() {
+              this.where(function() {
+                this.where("time_entries.work_item_type", "ticket")
+                  .whereExists(
+                    scopedDb.table("tickets")
+                      .select(db.raw(1))
+                      .whereRaw("tickets.ticket_id = time_entries.work_item_id")
+                      .andWhere("tickets.client_id", filters.clientId)
+                  );
+              }).orWhere(function() {
+                this.where("time_entries.work_item_type", "project_task")
+                  .whereExists(
+                    scopedDb.table("project_tasks")
+                      .select(db.raw(1))
+                      .modify((projectTaskQuery) => {
+                        scopedDb.tenantJoin(
+                          projectTaskQuery,
+                          "project_phases",
+                          "project_tasks.phase_id",
+                          "project_phases.phase_id"
+                        );
+                        scopedDb.tenantJoin(
+                          projectTaskQuery,
+                          "projects",
+                          "project_phases.project_id",
+                          "projects.project_id"
+                        );
+                      })
+                      .whereRaw("project_tasks.task_id = time_entries.work_item_id")
+                      .andWhere("projects.client_id", filters.clientId)
+                  );
+              });
             });
-          });
-        }
-      });
+          }
+        });
     });
 
     // Convert to activities
@@ -1371,8 +1376,7 @@ export async function fetchNotificationActivities(
 
     // Query for notifications for the user
     const notifications = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("internal_notifications")
-        .where("internal_notifications.tenant", tenant)
+      return await tenantDb(trx, tenant).table("internal_notifications")
         .where("internal_notifications.user_id", userId)
         .whereNull("internal_notifications.deleted_at")
         .modify(function(queryBuilder) {

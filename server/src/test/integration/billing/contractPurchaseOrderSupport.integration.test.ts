@@ -2,6 +2,7 @@ import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import {
   assignServiceTaxRate,
@@ -19,6 +20,27 @@ let createContract: typeof import('@alga-psa/billing/actions/contractActions').c
 let assignContractToClient: typeof import('@alga-psa/clients/actions/clientContractActions').assignContractToClient;
 let getPurchaseOrderConsumedCents: typeof import('@alga-psa/billing/services/purchaseOrderService').getPurchaseOrderConsumedCents;
 let computePurchaseOrderOverage: typeof import('@alga-psa/billing/services/purchaseOrderService').computePurchaseOrderOverage;
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+async function hasSchemaColumn(connection: Knex, tableName: string, columnName: string): Promise<boolean> {
+  const row = await tenantDb(connection, '__test_schema__')
+    .unscoped('information_schema.columns', 'test schema column existence assertion')
+    .where({ table_schema: 'public', table_name: tableName, column_name: columnName })
+    .first('column_name');
+  return Boolean(row);
+}
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -126,8 +148,8 @@ describe('Contract Purchase Order Support', () => {
   }, HOOK_TIMEOUT);
 
   it('T001: invoices table includes po_number + client_contract_id', async () => {
-    expect(await db.schema.hasColumn('invoices', 'po_number')).toBe(true);
-    expect(await db.schema.hasColumn('invoices', 'client_contract_id')).toBe(true);
+    expect(await hasSchemaColumn(db, 'invoices', 'po_number')).toBe(true);
+    expect(await hasSchemaColumn(db, 'invoices', 'client_contract_id')).toBe(true);
   });
 
   it('T055: wizard and quick-add/action paths can both create active contracts for the same client', async () => {
@@ -176,7 +198,7 @@ describe('Contract Purchase Order Support', () => {
       null
     );
 
-    const activeAssignments = await db('client_contracts')
+    const activeAssignments = await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, client_id: clientId, is_active: true })
       .select('client_contract_id', 'contract_id');
 
@@ -217,14 +239,14 @@ describe('Contract Purchase Order Support', () => {
     const invoice = await generateInvoice(billingCycleId);
     expect(invoice).toBeTruthy();
 
-    const invoiceRow = await db('invoices')
+    const invoiceRow = await tenantTable(db, tenantId, 'invoices')
       .where({ tenant: tenantId, invoice_id: invoice!.invoice_id })
       .select(['po_number', 'client_contract_id'])
       .first();
     expect(invoiceRow?.po_number).toBe(poNumber);
     expect(invoiceRow?.client_contract_id).toBeTruthy();
 
-    const contractRow = await db('client_contracts')
+    const contractRow = await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, client_id: clientId, contract_id: wizardResult.contract_id })
       .first();
     expect(invoiceRow?.client_contract_id).toBe(contractRow?.client_contract_id);
@@ -297,23 +319,26 @@ describe('Contract Purchase Order Support', () => {
     const invoice = await generateInvoice(billingCycleId);
     expect(invoice).toBeTruthy();
 
-    const invoiceRow = await db('invoices')
+    const invoiceRow = await tenantTable(db, tenantId, 'invoices')
       .where({ tenant: tenantId, invoice_id: invoice!.invoice_id })
       .select(['po_number', 'client_contract_id', 'subtotal'])
       .first();
     expect(invoiceRow?.po_number).toBe(poNumber);
     expect(invoiceRow?.client_contract_id).toBeTruthy();
 
-    const fixedChargeRow = await db('invoice_charges')
+    const fixedChargeRow = await tenantTable(db, tenantId, 'invoice_charges')
       .where({ tenant: tenantId, invoice_id: invoice!.invoice_id })
       .select(['item_id', 'client_contract_id', 'net_amount'])
       .first();
     expect(fixedChargeRow?.client_contract_id).toBe(invoiceRow?.client_contract_id);
 
-    const fixedDetailRows = await db('invoice_charge_details as iid')
-      .join('invoice_charge_fixed_details as iifd', function () {
-        this.on('iid.item_detail_id', '=', 'iifd.item_detail_id').andOn('iid.tenant', '=', 'iifd.tenant');
-      })
+    const fixedDetailRows = await tenantDb(db, tenantId)
+      .tenantJoin(
+        tenantTable(db, tenantId, 'invoice_charge_details as iid'),
+        'invoice_charge_fixed_details as iifd',
+        'iid.item_detail_id',
+        'iifd.item_detail_id'
+      )
       .where({ 'iid.tenant': tenantId, 'iid.item_id': fixedChargeRow?.item_id })
       .select([
         'iid.service_id',
@@ -355,7 +380,7 @@ describe('Contract Purchase Order Support', () => {
     const otherClientContractId = uuidv4();
     const clientId = uuidv4();
 
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: `Consumption Client ${clientId.slice(0, 6)}`,
@@ -421,7 +446,7 @@ describe('Contract Purchase Order Support', () => {
     });
     expect(consumed1).toBe(10000 + 2000 + 3000);
 
-    await db('invoices')
+    await tenantTable(db, tenantId, 'invoices')
       .where({ tenant: tenantId, invoice_id: sentInvoiceId })
       .update({ status: 'draft', finalized_at: null, updated_at: db.fn.now() });
 
@@ -469,7 +494,7 @@ describe('Contract Purchase Order Support', () => {
     clientName = 'PO Billing Client'
   ): Promise<{ clientId: string; billingCycleId: string }> {
     const clientId = uuidv4();
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: clientName,
@@ -479,7 +504,7 @@ describe('Contract Purchase Order Support', () => {
       updated_at: db.fn.now(),
     });
 
-    await db('client_locations').insert({
+    await tenantTable(db, tenantId, 'client_locations').insert({
       location_id: uuidv4(),
       tenant: tenantId,
       client_id: clientId,
@@ -498,7 +523,7 @@ describe('Contract Purchase Order Support', () => {
     });
 
     const billingCycleId = uuidv4();
-    await db('client_billing_cycles').insert({
+    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
       billing_cycle_id: billingCycleId,
       tenant: tenantId,
       client_id: clientId,
@@ -517,7 +542,7 @@ describe('Contract Purchase Order Support', () => {
     serviceName = 'PO Fixed Service'
   ): Promise<{ serviceTypeId: string; serviceId: string }> {
     const serviceTypeId = uuidv4();
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: `Fixed Type ${serviceName}`,
@@ -527,7 +552,7 @@ describe('Contract Purchase Order Support', () => {
     });
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: serviceName,
@@ -551,7 +576,7 @@ describe('Contract Purchase Order Support', () => {
     status: string;
     finalizedAt: string | null;
   }): Promise<string> {
-    await db('invoices').insert({
+    await tenantTable(db, tenantId, 'invoices').insert({
       invoice_id: options.invoiceId,
       tenant: tenantId,
       client_id: options.clientId,
@@ -574,13 +599,13 @@ describe('Contract Purchase Order Support', () => {
 });
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Contract PO Integration Tenant',
     email: 'contract-po@test.co',

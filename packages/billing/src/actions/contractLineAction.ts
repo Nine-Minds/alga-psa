@@ -2,7 +2,7 @@
 'use server'
 import ContractLine from '../models/contractLine';
 import { DeletionValidationResult, IContractLine, IContractLineFixedConfig } from '@alga-psa/types'; // Added IContractLineFixedConfig
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex'; // Import Knex type
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceFixedConfig } from '@alga-psa/types';
@@ -11,7 +11,7 @@ import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 import {
     DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -28,14 +28,13 @@ async function assertContractLineIsAuthorable(
     tenant: string,
     contractLineId: string,
 ): Promise<void> {
-    const contract = await trx('contract_lines as cl')
-        .join('contracts as c', function joinContracts() {
-            this.on('cl.contract_id', '=', 'c.contract_id')
-                .andOn('cl.tenant', '=', 'c.tenant');
-        })
-        .where('cl.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('contract_lines as cl');
+    db.tenantJoin(query, 'contracts as c', 'cl.contract_id', 'c.contract_id');
+
+    const contract = await query
         .andWhere('cl.contract_line_id', contractLineId)
-        .first('c.is_system_managed_default');
+        .first('c.is_system_managed_default as is_system_managed_default') as { is_system_managed_default?: boolean } | undefined;
 
     if (contract?.is_system_managed_default === true) {
         throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
@@ -94,8 +93,8 @@ export const getContractLineById = withAuth(async (
                 throw new Error('Permission denied: Cannot read contract lines');
             }
 
-            const templateLine = await trx('contract_template_lines')
-                .where({ tenant, template_line_id: planId })
+            const templateLine = await tenantDb(trx, tenant).table('contract_template_lines')
+                .where({ template_line_id: planId })
                 .first();
 
             if (templateLine) {
@@ -304,8 +303,8 @@ export const upsertContractLineTerms = withAuth(async (
 
         // Update billing_timing directly on contract_lines table
         // (migration 20251025120000 added this column)
-        await trx('contract_lines')
-            .where({ tenant, contract_line_id: contractLineId })
+        await tenantDb(trx, tenant).table('contract_lines')
+            .where({ contract_line_id: contractLineId })
             .update({
                 billing_timing: billingTiming,
                 updated_at: trx.fn.now(),
@@ -343,21 +342,19 @@ export const deleteContractLine = withAuth(async (
                 throw new Error('Permission denied: Cannot delete contract lines');
             }
 
-            return await trx('contract_lines as cl')
-                .join('contracts as c', function() {
-                    this.on('cl.contract_id', '=', 'c.contract_id')
-                        .andOn('cl.tenant', '=', 'c.tenant');
-                })
-                .leftJoin('client_contracts as cc', function() {
-                    this.on('c.contract_id', '=', 'cc.contract_id')
-                        .andOn('cc.is_active', '=', trx.raw('?', [true]));
-                })
-                .leftJoin('clients as cli', function() {
-                    this.on('cc.client_id', '=', 'cli.client_id')
-                        .andOn('cli.tenant', '=', trx.raw('?', [tenant]));
-                })
+            const db = tenantDb(trx, tenant);
+            const query = db.table('contract_lines as cl');
+            db.tenantJoin(query, 'contracts as c', 'cl.contract_id', 'c.contract_id');
+            db.tenantJoin(query, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', {
+                type: 'left',
+                on(join) {
+                    join.andOn('cc.is_active', '=', trx.raw('?', [true]));
+                },
+            });
+            db.tenantJoin(query, 'clients as cli', 'cc.client_id', 'cli.client_id', { type: 'left' });
+
+            return await query
                 .where('cl.contract_line_id', planId)
-                .where('cl.tenant', tenant)
                 .whereNotNull('cl.contract_id')
                 .select('c.contract_id');
         });

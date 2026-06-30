@@ -17,6 +17,7 @@ import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import type { Knex } from 'knex';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 // Mock Stripe before any imports that use it
 vi.mock('stripe', () => {
@@ -121,6 +122,19 @@ vi.mock('server/src/lib/utils/transactionUtils', () => ({
 
 import { knex } from 'knex';
 
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
 describe('Stripe Payment Integration - Vulnerability Tests', () => {
   const HOOK_TIMEOUT = 180_000;
 
@@ -194,7 +208,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result2.success).toBe(true);
 
       // Verify both payments were recorded
-      const payments = await mockDb('invoice_payments')
+      const payments = await tenantTable(mockDb, testTenantId, 'invoice_payments')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .select('*');
       expect(payments.length).toBe(2);
@@ -202,7 +216,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
 
       // CORRECT BEHAVIOR: Invoice should be marked as 'paid' since total payments = invoice amount
       // BUG: Due to race condition, this may fail with status = 'partially_applied'
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
       expect(invoice.status).toBe('paid');
@@ -239,7 +253,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result2.paymentRecorded).toBe(false); // Should not record again
 
       // Verify only one payment was recorded
-      const payments = await mockDb('invoice_payments')
+      const payments = await tenantTable(mockDb, testTenantId, 'invoice_payments')
         .where({ invoice_id: invoiceId, tenant: testTenantId });
       expect(payments.length).toBe(1);
     }, HOOK_TIMEOUT);
@@ -322,9 +336,9 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result.success).toBe(false);
 
       // Verify no payment was recorded in either tenant
-      const paymentsA = await mockDb('invoice_payments')
+      const paymentsA = await tenantTable(mockDb, testTenantId, 'invoice_payments')
         .where({ invoice_id: invoiceId, tenant: tenantA });
-      const paymentsB = await mockDb('invoice_payments')
+      const paymentsB = await tenantTable(mockDb, testTenantId, 'invoice_payments')
         .where({ invoice_id: invoiceId, tenant: tenantB });
 
       expect(paymentsA.length).toBe(0);
@@ -364,7 +378,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result.paymentRecorded).toBe(true);
 
       // Invoice should be marked as partially_applied
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
       expect(invoice.status).toBe('partially_applied');
@@ -435,7 +449,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       await paymentService.processWebhookEvent(paymentEvent);
 
       // Verify invoice is paid
-      let invoice = await mockDb('invoices')
+      let invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
       expect(invoice.status).toBe('paid');
@@ -456,7 +470,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(refundResult.paymentRecorded).toBe(true); // Should record the refund
 
       // Invoice should be updated to reflect the refund
-      invoice = await mockDb('invoices')
+      invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -507,7 +521,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result.paymentRecorded).toBe(true);
 
       // Invoice should reflect partial refund - now only $50 paid of $100
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -551,7 +565,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result.error).toContain('cancelled');
 
       // Invoice should remain cancelled
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
       expect(invoice.status).toBe('cancelled');
@@ -587,7 +601,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result.error).toContain('draft');
 
       // Invoice should remain in draft
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
       expect(invoice.status).toBe('draft');
@@ -666,7 +680,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result.success).toBe(true);
 
       // Check the webhook event was recorded
-      const eventRecord = await mockDb('payment_webhook_events')
+      const eventRecord = await tenantTable(mockDb, testTenantId, 'payment_webhook_events')
         .where({
           tenant: testTenantId,
           external_event_id: eventId,
@@ -726,7 +740,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
 
       // Insert an already-expired payment link
       const expiredLinkId = uuidv4();
-      await mockDb('invoice_payment_links').insert({
+      await tenantTable(mockDb, testTenantId, 'invoice_payment_links').insert({
         link_id: expiredLinkId,
         tenant: testTenantId,
         invoice_id: invoiceId,
@@ -741,7 +755,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       });
 
       // The link is expired but database says 'active'
-      const link = await mockDb('invoice_payment_links')
+      const link = await tenantTable(mockDb, testTenantId, 'invoice_payment_links')
         .where({ link_id: expiredLinkId })
         .first();
 
@@ -784,7 +798,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       }
 
       // Check if precision was maintained in payment totals
-      const totalPayments = await mockDb('invoice_payments')
+      const totalPayments = await tenantTable(mockDb, testTenantId, 'invoice_payments')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .sum('amount as total')
         .first();
@@ -793,7 +807,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(total).toBeGreaterThan(9999999999);
 
       // Verify invoice status was correctly calculated despite large amounts
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -966,7 +980,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       await paymentService.processWebhookEvent(paymentEvent);
 
       // Verify invoice is paid
-      let invoice = await mockDb('invoices')
+      let invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
       expect(invoice.status).toBe('paid');
@@ -1004,7 +1018,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(refundResult.paymentRecorded).toBe(true);
 
       // Invoice should no longer be 'paid' after full refund
-      invoice = await mockDb('invoices')
+      invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
       expect(invoice.status).toBe('sent'); // Back to sent after full refund
@@ -1085,7 +1099,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       expect(result.paymentRecorded).toBe(true);
 
       // Check the recorded payment method
-      const payment = await mockDb('invoice_payments')
+      const payment = await tenantTable(mockDb, testTenantId, 'invoice_payments')
         .where({
           tenant: testTenantId,
           invoice_id: invoiceId,
@@ -1122,7 +1136,7 @@ async function createTestInvoiceWithClient(
   const invoiceId = uuidv4();
 
   // Create client - uses client_id column
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     tenant: tenantId,
     client_name: `Test Company ${clientId.slice(0, 8)}`,
@@ -1132,7 +1146,7 @@ async function createTestInvoiceWithClient(
   });
 
   // Create invoice - uses client_id column (renamed from company_id)
-  await db('invoices').insert({
+  await tenantTable(db, tenantId, 'invoices').insert({
     invoice_id: invoiceId,
     tenant: tenantId,
     client_id: clientId,
@@ -1155,7 +1169,7 @@ async function createClientForTenant(
 ): Promise<string> {
   const clientId = uuidv4();
 
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     tenant: tenantId,
     client_name: `Client ${clientId.slice(0, 8)}`,
@@ -1180,7 +1194,7 @@ async function setupPaymentProviderConfig(
 ): Promise<void> {
   const configId = uuidv4();
 
-  await db('payment_provider_configs')
+  await tenantTable(db, tenantId, 'payment_provider_configs')
     .insert({
       config_id: configId,
       tenant: tenantId,
@@ -1309,13 +1323,13 @@ async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Payment Test Tenant',
     email: 'payment-test@test.co',
@@ -1326,7 +1340,7 @@ async function ensureTenant(connection: Knex): Promise<string> {
 }
 
 async function ensureSecondTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants')
+  const existing = await tenantRows(connection)
     .whereNot('tenant', testTenantId)
     .first<{ tenant: string }>('tenant');
 
@@ -1335,7 +1349,7 @@ async function ensureSecondTenant(connection: Knex): Promise<string> {
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Second Test Tenant',
     email: 'second-tenant@test.co',

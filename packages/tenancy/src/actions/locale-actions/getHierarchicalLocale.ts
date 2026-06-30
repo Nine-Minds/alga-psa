@@ -1,9 +1,13 @@
 'use server';
 
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import type { Knex } from 'knex';
+
+const tenantScopedTable = (knex: Knex, table: string, tenant: string) =>
+  tenantDb(knex, tenant).table(table);
 
 /**
  * Get the user's client ID from their contact
@@ -12,20 +16,18 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
   const knex = await getConnection(tenantId);
 
   // Get user's contact_id
-  const user = await knex('users')
+  const user = await tenantScopedTable(knex, 'users', tenantId)
     .where({
-      user_id: userId,
-      tenant: tenantId
+      user_id: userId
     })
     .first();
 
   if (!user?.contact_id) return null;
 
   // Get contact's client
-  const contact = await knex('contacts')
+  const contact = await tenantScopedTable(knex, 'contacts', tenantId)
     .where({
-      contact_name_id: user.contact_id,
-      tenant: tenantId
+      contact_name_id: user.contact_id
     })
     .first();
 
@@ -53,11 +55,10 @@ export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWi
   const knex = await getConnection(tenant);
 
   // 1. Check user preference
-  const userPref = await knex('user_preferences')
+  const userPref = await tenantScopedTable(knex, 'user_preferences', tenant)
     .where({
       user_id: user.user_id,
-      setting_name: 'locale',
-      tenant
+      setting_name: 'locale'
     })
     .first();
 
@@ -71,16 +72,15 @@ export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWi
     }
   }
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenant)
     .first();
 
   // 2–3. Client-portal users: client-specific default, then client-portal default
   if (user.user_type === 'client') {
     const clientId = await getUserClientId(user.user_id, tenant);
     if (clientId) {
-      const client = await knex('clients')
-        .where({ client_id: clientId, tenant })
+      const client = await tenantScopedTable(knex, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
 
       const clientLocale = client?.properties?.defaultLocale;

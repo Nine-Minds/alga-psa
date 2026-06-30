@@ -12,7 +12,7 @@ import {
 } from '../helpers/workflowRuntimeV2TestHelpers';
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
 import { ensureWorkflowScheduleStateTable, resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { createTenantKnex, getCurrentTenantId, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth';
 import {
   createTenantKnex as createCompatibilityTenantKnex,
@@ -97,6 +97,10 @@ const mockedGetCompatibilityCurrentTenantId = vi.mocked(getCompatibilityCurrentT
 let db: Knex;
 let tenantId: string;
 let userId: string;
+
+function tenantTable(table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 const normalizeBundleForComparison = (bundle: any) => {
   const copy = JSON.parse(JSON.stringify(bundle));
@@ -312,7 +316,7 @@ describe('workflow bundle v1 import/export', () => {
     const summary = await response.json();
     expect(summary.createdWorkflows?.[0]?.key).toBe('test.http-import');
 
-    const rows = await db('workflow_definitions').where({ key: 'test.http-import' });
+    const rows = await tenantTable('workflow_definitions').where({ key: 'test.http-import' });
     expect(rows).toHaveLength(1);
   });
 
@@ -408,13 +412,13 @@ describe('workflow bundle v1 import/export', () => {
     expect(result.createdWorkflows[0].key).toBe('test.import-basic');
 
     const createdId = result.createdWorkflows[0].workflowId;
-    const definitionRow = await db('workflow_definitions').where({ workflow_id: createdId }).first();
+    const definitionRow = await tenantTable('workflow_definitions').where({ workflow_id: createdId }).first();
     expect(definitionRow).toBeTruthy();
     expect(definitionRow.key).toBe('test.import-basic');
     expect(definitionRow.status).toBe('published');
     expect(definitionRow.draft_definition?.id).toBe(createdId);
 
-    const versionRow = await db('workflow_definition_versions').where({ workflow_id: createdId, version: 1 }).first();
+    const versionRow = await tenantTable('workflow_definition_versions').where({ workflow_id: createdId, version: 1 }).first();
     expect(versionRow).toBeTruthy();
     expect(versionRow.definition_json?.id).toBe(createdId);
   });
@@ -470,7 +474,7 @@ describe('workflow bundle v1 import/export', () => {
       status: 409
     });
 
-    const rows = await db('workflow_definitions').where({ key: 'test.conflict' });
+    const rows = await tenantTable('workflow_definitions').where({ key: 'test.conflict' });
     expect(rows).toHaveLength(1);
   });
 
@@ -538,11 +542,11 @@ describe('workflow bundle v1 import/export', () => {
 
     expect(secondId).toBe(firstId);
 
-    const row = await db('workflow_definitions').where({ workflow_id: secondId }).first();
+    const row = await tenantTable('workflow_definitions').where({ workflow_id: secondId }).first();
     expect(row).toBeTruthy();
     expect(row.key).toBe('test.force-overwrite');
 
-    const versions = await db('workflow_definition_versions')
+    const versions = await tenantTable('workflow_definition_versions')
       .where({ workflow_id: secondId })
       .orderBy('version', 'asc');
     expect(versions).toHaveLength(1);
@@ -618,7 +622,7 @@ describe('workflow bundle v1 import/export', () => {
 
     await expect(importWorkflowBundleV1(db, tenantId, bundle)).rejects.toBeTruthy();
 
-    const rows = await db('workflow_definitions').where({ key: 'test.transactional' });
+    const rows = await tenantTable('workflow_definitions').where({ key: 'test.transactional' });
     expect(rows).toHaveLength(0);
   });
 

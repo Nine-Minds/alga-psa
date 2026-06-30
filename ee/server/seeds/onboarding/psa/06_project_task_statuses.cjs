@@ -1,6 +1,8 @@
 const { v4: uuidv4 } = require('uuid');
 
 exports.seed = async function (knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     // Use provided tenantId or fall back to first tenant
     if (!tenantId) {
         const tenant = await knex('tenants').select('tenant').first();
@@ -11,10 +13,11 @@ exports.seed = async function (knex, tenantId) {
         tenantId = tenant.tenant;
     }
 
+    const db = tenantDb(knex, tenantId);
+
     // Check if project task statuses already exist for this tenant
-    const existingStatuses = await knex('statuses')
+    const existingStatuses = await db.table('statuses')
         .where({
-            tenant: tenantId,
             status_type: 'project_task'
         })
         .first();
@@ -79,7 +82,7 @@ exports.seed = async function (knex, tenantId) {
             }
         ];
 
-        await knex('statuses').insert(defaultStatuses);
+        await db.table('statuses').insert(defaultStatuses);
         console.log(`Created default project task statuses in statuses table for tenant ${tenantId}`);
     } else {
         console.log(`Project task statuses already exist for tenant ${tenantId}`);

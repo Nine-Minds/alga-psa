@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
+import { tenantDb } from '@alga-psa/db';
 
 interface ApiKeyRecord {
   api_key_id: string;
@@ -169,7 +170,7 @@ export async function createTestApiKey(
   const plaintextKey = crypto.randomBytes(32).toString('hex');
   const hashedKey = crypto.createHash('sha256').update(plaintextKey).digest('hex');
   
-  const [record] = await db('api_keys')
+  const [record] = await tenantDb(db, tenant).table('api_keys')
     .insert({
       api_key: hashedKey,
       user_id: userId,
@@ -198,8 +199,7 @@ export async function createTestApiKey(
  * @param tenant Tenant ID
  */
 export async function cleanupTestApiKeys(db: Knex, tenant: string): Promise<void> {
-  await db('api_keys')
-    .where('tenant', tenant)
+  await tenantDb(db, tenant).table('api_keys')
     .where('description', 'like', 'Test%')
     .delete();
 }

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IClient } from '@alga-psa/types';
 import type { ClientPaginationParams, PaginatedClientsResponse } from './types';
 
@@ -7,8 +8,8 @@ export async function getClientById(
   tenant: string,
   clientId: string
 ): Promise<IClient | null> {
-  const client = await knexOrTrx<IClient>('clients')
-    .where({ tenant, client_id: clientId })
+  const client = await tenantDb(knexOrTrx, tenant).table<IClient>('clients')
+    .where({ client_id: clientId })
     .first();
 
   if (!client) return null;
@@ -20,8 +21,7 @@ export async function getAllClients(
   tenant: string,
   includeInactive: boolean = true
 ): Promise<IClient[]> {
-  const query = knexOrTrx<IClient>('clients')
-    .where({ tenant })
+  const query = tenantDb(knexOrTrx, tenant).table<IClient>('clients')
     .orderBy('client_name', 'asc')
     .select('*');
 
@@ -51,16 +51,13 @@ export async function getAllClientsPaginated(
 
   const offset = (page - 1) * pageSize;
 
-  let baseQuery = knexOrTrx('clients as c')
-    .leftJoin('users as u', function joinUsers() {
-      this.on('c.account_manager_id', '=', 'u.user_id').andOn('c.tenant', '=', 'u.tenant');
-    })
-    .leftJoin('client_locations as cl', function joinLocations() {
-      this.on('c.client_id', '=', 'cl.client_id')
-        .andOn('c.tenant', '=', 'cl.tenant')
-        .andOn('cl.is_default', '=', knexOrTrx.raw('true'));
-    })
-    .where({ 'c.tenant': tenant });
+  const db = tenantDb(knexOrTrx, tenant);
+  let baseQuery = db.table('clients as c');
+  db.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+  db.tenantJoin(baseQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+    type: 'left',
+    on: (join) => join.andOn('cl.is_default', '=', knexOrTrx.raw('true')),
+  });
 
   if (statusFilter === 'active') {
     baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -87,11 +84,9 @@ export async function getAllClientsPaginated(
   const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
   const totalCount = parseInt((countResult?.count as string) || '0', 10);
 
-  let clientsQuery = baseQuery
-    .leftJoin('tenant_companies as tc', function joinTenantCompanies() {
-      this.on('c.client_id', '=', 'tc.client_id').andOn('c.tenant', '=', 'tc.tenant');
-    })
-    .select(
+  let clientsQuery = baseQuery;
+  db.tenantJoin(clientsQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' });
+  clientsQuery = clientsQuery.select(
       'c.*',
       'tc.is_default',
       knexOrTrx.raw(
@@ -158,16 +153,13 @@ export async function getClientsWithBillingCycleRangePaginated(
 
   const offset = (page - 1) * pageSize;
 
-  let baseQuery = knexOrTrx('clients as c')
-    .leftJoin('users as u', function joinUsers() {
-      this.on('c.account_manager_id', '=', 'u.user_id').andOn('c.tenant', '=', 'u.tenant');
-    })
-    .leftJoin('client_locations as cl', function joinLocations() {
-      this.on('c.client_id', '=', 'cl.client_id')
-        .andOn('c.tenant', '=', 'cl.tenant')
-        .andOn('cl.is_default', '=', knexOrTrx.raw('true'));
-    })
-    .where({ 'c.tenant': tenant });
+  const db = tenantDb(knexOrTrx, tenant);
+  let baseQuery = db.table('clients as c');
+  db.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+  db.tenantJoin(baseQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+    type: 'left',
+    on: (join) => join.andOn('cl.is_default', '=', knexOrTrx.raw('true')),
+  });
 
   if (statusFilter === 'active') {
     baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -192,30 +184,28 @@ export async function getClientsWithBillingCycleRangePaginated(
   }
 
   if (dateRange?.from || dateRange?.to) {
-    baseQuery = baseQuery.whereIn('c.client_id', function selectClientIds() {
-      this.select('cbc.client_id').from('client_billing_cycles as cbc').where('cbc.tenant', tenant);
+    const billingCycleClientIds = db.subquery('client_billing_cycles as cbc').select('cbc.client_id');
 
-      if (dateRange?.from) {
-        const rangeFrom = dateRange.from;
-        this.andWhere(function endAfterFrom() {
-          this.whereNull('cbc.period_end_date').orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
-        });
-      }
+    if (dateRange?.from) {
+      const rangeFrom = dateRange.from;
+      billingCycleClientIds.andWhere(function endAfterFrom() {
+        this.whereNull('cbc.period_end_date').orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
+      });
+    }
 
-      if (dateRange?.to) {
-        this.andWhere('cbc.period_start_date', '<=', dateRange.to);
-      }
-    });
+    if (dateRange?.to) {
+      billingCycleClientIds.andWhere('cbc.period_start_date', '<=', dateRange.to);
+    }
+
+    baseQuery = baseQuery.whereIn('c.client_id', billingCycleClientIds);
   }
 
   const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
   const totalCount = parseInt((countResult?.count as string) || '0', 10);
 
-  let clientsQuery = baseQuery
-    .leftJoin('tenant_companies as tc', function joinTenantCompanies() {
-      this.on('c.client_id', '=', 'tc.client_id').andOn('c.tenant', '=', 'tc.tenant');
-    })
-    .select(
+  let clientsQuery = baseQuery;
+  db.tenantJoin(clientsQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' });
+  clientsQuery = clientsQuery.select(
       'c.*',
       'tc.is_default',
       knexOrTrx.raw(

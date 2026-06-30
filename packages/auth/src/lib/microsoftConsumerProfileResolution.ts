@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 // Kept local to @alga-psa/auth to avoid a package cycle through @alga-psa/integrations.
@@ -114,8 +115,12 @@ function getConsumerLabel(consumerType: MicrosoftProfileConsumer): string {
   }
 }
 
+function tenantScopedTable<Row extends object = Record<string, any>>(db: any, table: string, tenant: string) {
+  return tenantDb(db, tenant).table<Row>(table);
+}
+
 async function getTenantMicrosoftProfiles(db: any, tenant: string): Promise<MicrosoftProfileRow[]> {
-  const rows = (await db('microsoft_profiles').where({ tenant }).select('*')) as MicrosoftProfileRow[];
+  const rows = await tenantScopedTable<MicrosoftProfileRow>(db, 'microsoft_profiles', tenant).select('*');
   return [...rows].sort((left, right) => {
     if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
     if (left.is_archived !== right.is_archived) return left.is_archived ? 1 : -1;
@@ -128,8 +133,8 @@ async function getMicrosoftConsumerBindingRow(
   tenant: string,
   consumerType: MicrosoftProfileConsumer
 ): Promise<MicrosoftConsumerBindingRow | undefined> {
-  const row = await db('microsoft_profile_consumer_bindings')
-    .where({ tenant, consumer_type: consumerType })
+  const row = await tenantScopedTable<MicrosoftConsumerBindingRow>(db, 'microsoft_profile_consumer_bindings', tenant)
+    .where({ consumer_type: consumerType })
     .first();
 
   return row || undefined;
@@ -140,7 +145,7 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | undefined> {
-  const row = await db('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  const row = await tenantScopedTable<MicrosoftProfileRow>(db, 'microsoft_profiles', tenant).where({ profile_id: profileId }).first();
   return row || undefined;
 }
 
@@ -227,7 +232,7 @@ async function ensureLegacyMicrosoftProfileBackfill(
   const clientSecretRef = getMicrosoftProfileSecretRef(profileId);
   const now = new Date();
 
-  await db('microsoft_profiles').insert({
+  await tenantScopedTable<MicrosoftProfileRow>(db, 'microsoft_profiles', tenant).insert({
     tenant,
     profile_id: profileId,
     display_name: DEFAULT_MICROSOFT_PROFILE_NAME,
@@ -255,22 +260,22 @@ async function tenantHasLegacyUsage(
   consumerType: MicrosoftProfileConsumer
 ): Promise<boolean> {
   if (consumerType === 'msp_sso') {
-    const activeDomain = await db('msp_sso_tenant_login_domains')
-      .where({ tenant, is_active: true })
+    const activeDomain = await tenantScopedTable(db, 'msp_sso_tenant_login_domains', tenant)
+      .where({ is_active: true })
       .first();
     return Boolean(activeDomain);
   }
 
   if (consumerType === 'email') {
-    const provider = await db('email_providers')
-      .where({ tenant, provider_type: 'microsoft' })
+    const provider = await tenantScopedTable(db, 'email_providers', tenant)
+      .where({ provider_type: 'microsoft' })
       .first();
     return Boolean(provider);
   }
 
   if (consumerType === 'calendar') {
-    const provider = await db('calendar_providers')
-      .where({ tenant, provider_type: 'microsoft' })
+    const provider = await tenantScopedTable(db, 'calendar_providers', tenant)
+      .where({ provider_type: 'microsoft' })
       .first();
     return Boolean(provider);
   }
@@ -315,7 +320,11 @@ async function ensureMicrosoftConsumerBindingMigration(
     updated_at: new Date(),
   };
 
-  await db('microsoft_profile_consumer_bindings').insert(binding);
+  await tenantScopedTable<MicrosoftConsumerBindingRow>(
+    db,
+    'microsoft_profile_consumer_bindings',
+    tenant
+  ).insert(binding);
   return binding;
 }
 

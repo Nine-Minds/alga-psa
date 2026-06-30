@@ -1,8 +1,17 @@
+const MIGRATION_TENANT = 'migration:20250627234131_add_order_to_service_types';
+const SERVICE_TYPE_TENANT_DISCOVERY_REASON = 'discover tenants with service types for order backfill';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // Check if display_order column exists, if not add it
   const hasDisplayOrderColumn = await knex.schema.hasColumn('standard_service_types', 'display_order');
   if (!hasDisplayOrderColumn) {
@@ -12,9 +21,9 @@ exports.up = async function(knex) {
     });
     
     // Set sequential values
-    const standardTypes = await knex('standard_service_types').orderBy('name');
+    const standardTypes = await migrationDb.table('standard_service_types').orderBy('name');
     for (let i = 0; i < standardTypes.length; i++) {
-      await knex('standard_service_types')
+      await migrationDb.table('standard_service_types')
         .where('id', standardTypes[i].id)
         .update({ display_order: i + 1 });
     }
@@ -22,9 +31,9 @@ exports.up = async function(knex) {
     // Skip the NOT NULL constraint for now - can be added manually later
   } else {
     // Column exists, ensure no duplicates
-    const standardTypes = await knex('standard_service_types').orderBy('name');
+    const standardTypes = await migrationDb.table('standard_service_types').orderBy('name');
     for (let i = 0; i < standardTypes.length; i++) {
-      await knex('standard_service_types')
+      await migrationDb.table('standard_service_types')
         .where('id', standardTypes[i].id)
         .update({ display_order: i + 1 });
     }
@@ -39,14 +48,15 @@ exports.up = async function(knex) {
     });
     
     // Set sequential values per tenant
-    const tenants = await knex('service_types').distinct('tenant').pluck('tenant');
+    const tenants = await migrationDb.unscoped('service_types', SERVICE_TYPE_TENANT_DISCOVERY_REASON).distinct('tenant').pluck('tenant');
     for (const tenantId of tenants) {
-      const tenantTypes = await knex('service_types')
+      const db = tenantDb(knex, tenantId);
+      const tenantTypes = await db.table('service_types')
         .where('tenant', tenantId)
         .orderBy('name');
       
       for (let i = 0; i < tenantTypes.length; i++) {
-        await knex('service_types')
+        await db.table('service_types')
           .where('id', tenantTypes[i].id)
           .update({ order_number: i + 1 });
       }
@@ -55,14 +65,15 @@ exports.up = async function(knex) {
     // Skip the NOT NULL constraint for now - can be added manually later
   } else {
     // Column exists, ensure no duplicates per tenant
-    const tenants = await knex('service_types').distinct('tenant').pluck('tenant');
+    const tenants = await migrationDb.unscoped('service_types', SERVICE_TYPE_TENANT_DISCOVERY_REASON).distinct('tenant').pluck('tenant');
     for (const tenantId of tenants) {
-      const tenantTypes = await knex('service_types')
+      const db = tenantDb(knex, tenantId);
+      const tenantTypes = await db.table('service_types')
         .where('tenant', tenantId)
         .orderBy('name');
       
       for (let i = 0; i < tenantTypes.length; i++) {
-        await knex('service_types')
+        await db.table('service_types')
           .where('id', tenantTypes[i].id)
           .update({ order_number: i + 1 });
       }

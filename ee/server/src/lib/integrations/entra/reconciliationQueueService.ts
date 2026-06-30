@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { EntraSyncUser } from './sync/types';
 import type { EntraContactMatchCandidate } from './sync/contactMatcher';
@@ -55,6 +56,7 @@ export async function queueAmbiguousEntraMatch(
 ): Promise<{ queueItemId: string }> {
   return runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, input.tenantId);
     const now = knex.fn.now();
     const payload = {
       reason: 'multiple_email_matches',
@@ -62,9 +64,8 @@ export async function queueAmbiguousEntraMatch(
     };
     const serializedCandidates = serializeCandidates(input.candidates);
 
-    const existing = await knex('entra_contact_reconciliation_queue')
+    const existing = await db.table('entra_contact_reconciliation_queue')
       .where({
-        tenant: input.tenantId,
         entra_tenant_id: input.user.entraTenantId,
         entra_object_id: input.user.entraObjectId,
         status: 'open',
@@ -72,9 +73,8 @@ export async function queueAmbiguousEntraMatch(
       .first(['queue_item_id']);
 
     if (existing?.queue_item_id) {
-      await knex('entra_contact_reconciliation_queue')
+      await db.table('entra_contact_reconciliation_queue')
         .where({
-          tenant: input.tenantId,
           queue_item_id: existing.queue_item_id,
         })
         .update({
@@ -92,7 +92,7 @@ export async function queueAmbiguousEntraMatch(
     }
 
     const queueItemId = randomUUID();
-    await knex('entra_contact_reconciliation_queue').insert({
+    await db.table('entra_contact_reconciliation_queue').insert({
       tenant: input.tenantId,
       queue_item_id: queueItemId,
       managed_tenant_id: input.managedTenantId || null,
@@ -119,8 +119,8 @@ export async function listOpenEntraReconciliationQueue(
 ): Promise<EntraReconciliationQueueItem[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const rows = await knex('entra_contact_reconciliation_queue')
-      .where({ tenant: tenantId, status: 'open' })
+    const rows = await tenantDb(knex, tenantId).table('entra_contact_reconciliation_queue')
+      .where({ status: 'open' })
       .orderBy('created_at', 'desc')
       .limit(Math.max(1, Math.min(200, Math.floor(limit || 50))))
       .select('*');
@@ -149,9 +149,8 @@ async function loadOpenQueueItem(
   tenantId: string,
   queueItemId: string
 ): Promise<QueueRow> {
-  const queueRow = await trx('entra_contact_reconciliation_queue')
+  const queueRow = await tenantDb(trx, tenantId).table('entra_contact_reconciliation_queue')
     .where({
-      tenant: tenantId,
       queue_item_id: queueItemId,
       status: 'open',
     })
@@ -190,9 +189,8 @@ async function resolveQueueItem(
   resolvedBy?: string
 ): Promise<void> {
   const now = trx.fn.now();
-  await trx('entra_contact_reconciliation_queue')
+  await tenantDb(trx, tenantId).table('entra_contact_reconciliation_queue')
     .where({
-      tenant: tenantId,
       queue_item_id: queueItemId,
     })
     .update({
@@ -216,9 +214,8 @@ export async function resolveEntraQueueToExistingContact(input: {
 
     return knex.transaction(async (trx) => {
       const queueRow = await loadOpenQueueItem(trx, input.tenantId, input.queueItemId);
-      const contactRow = await trx('contacts')
+      const contactRow = await tenantDb(trx, input.tenantId).table('contacts')
         .where({
-          tenant: input.tenantId,
           contact_name_id: input.contactNameId,
         })
         .first(['contact_name_id', 'client_id']);

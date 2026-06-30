@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export interface AlgaDeskDashboardSummary {
   openTickets: number;
@@ -27,39 +27,24 @@ export interface AlgaDeskDashboardSummary {
 
 export const getAlgaDeskDashboardSummary = withAuth(async (_user, { tenant }): Promise<AlgaDeskDashboardSummary> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
   const [openRow, awaitingCustomerRow, awaitingInternalRow, agingRows, recentRows, emailRows] = await Promise.all([
-    knex('tickets as t')
-      .join('statuses as s', function joinStatus() {
-        this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-      })
-      .where('t.tenant', tenant)
+    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .count<{ count: string }[]>('* as count')
       .first(),
-    knex('tickets as t')
-      .join('statuses as s', function joinStatus() {
-        this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-      })
-      .where('t.tenant', tenant)
+    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .where('t.response_state', 'awaiting_client')
       .count<{ count: string }[]>('* as count')
       .first(),
-    knex('tickets as t')
-      .join('statuses as s', function joinStatus() {
-        this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-      })
-      .where('t.tenant', tenant)
+    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .where('t.response_state', 'awaiting_internal')
       .count<{ count: string }[]>('* as count')
       .first(),
-    knex('tickets as t')
-      .join('statuses as s', function joinStatus() {
-        this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-      })
-      .where('t.tenant', tenant)
+    db.tenantJoin(db.table('tickets as t'), 'statuses as s', 't.status_id', 's.status_id')
       .where('s.is_closed', false)
       .select(
         knex.raw("SUM(CASE WHEN t.entered_at >= NOW() - INTERVAL '2 days' THEN 1 ELSE 0 END)::int as under_2_days"),
@@ -67,13 +52,11 @@ export const getAlgaDeskDashboardSummary = withAuth(async (_user, { tenant }): P
         knex.raw("SUM(CASE WHEN t.entered_at < NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END)::int as over_7_days"),
       )
       .first(),
-    knex('tickets')
-      .where({ tenant })
+    db.table('tickets')
       .select('ticket_id', 'ticket_number', 'title', 'updated_at')
       .orderBy('updated_at', 'desc')
       .limit(5),
-    knex('email_providers')
-      .where({ tenant })
+    db.table('email_providers')
       .select('is_active', 'status'),
   ]);
 

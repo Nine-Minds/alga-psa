@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 /**
@@ -36,9 +37,11 @@ export async function POST(req: NextRequest) {
     console.log('Checking tenant email existence', { email: normalizedEmail });
 
     const knex = await getAdminConnection();
+    const db = tenantDb(knex, '__internal_check_tenant_email_discovery__');
 
     // Check if any internal (MSP) user with this email exists
-    const user = await knex('users')
+    const user = await db
+      .unscoped('users', 'tenant discovery for internal tenant-email existence check')
       .where({
         email: normalizedEmail,
         user_type: 'internal'

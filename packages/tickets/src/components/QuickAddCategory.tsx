@@ -8,7 +8,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { createCategory, getAllBoards } from '@alga-psa/tickets/actions';
+import { getAllBoards } from '../actions/board-actions/boardActions';
+import { createCategory } from '../actions/ticketCategoryActions';
 import type { IBoard, ITicketCategory } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

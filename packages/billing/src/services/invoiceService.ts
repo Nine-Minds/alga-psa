@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
@@ -30,6 +30,10 @@ interface InvoiceContext {
   session: Session;
   knex: Knex;
   tenant: string;
+}
+
+function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
+  return tenantDb(knexOrTrx, tenant).table(table);
 }
 
 function normalizeRecurringDateForPersistence(value: unknown): string | null {
@@ -93,7 +97,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     return 0;
   }
 
-  const invoiceBuilder = tx('invoices') as any;
+  const invoiceBuilder = tenantScopedTable(tx, tenant, 'invoices') as any;
   if (!invoiceBuilder || typeof invoiceBuilder.where !== 'function') {
     return 0;
   }
@@ -102,7 +106,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
   // invoice window (when this cycle may be cut), not a service period. That's why we read
   // it into `invoiceWindow*` locals here. Column rename to `invoice_window_*` is pending.
   const invoiceWindow = await invoiceBuilder
-    .where({ invoice_id: invoiceId, tenant })
+    .where('invoice_id', invoiceId)
     .first(['billing_period_start', 'billing_period_end']);
 
   const invoiceWindowStart = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_start);
@@ -119,13 +123,13 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
 
   let resolvedContractLineId = contractLineId ?? null;
   if (!resolvedContractLineId && configId) {
-    const configBuilder = tx('contract_line_service_configuration') as any;
+    const configBuilder = tenantScopedTable(tx, tenant, 'contract_line_service_configuration') as any;
     if (!configBuilder || typeof configBuilder.where !== 'function') {
       return 0;
     }
 
     const configRow = await configBuilder
-      .where({ tenant, config_id: configId })
+      .where('config_id', configId)
       .first('contract_line_id') as { contract_line_id?: string } | undefined;
 
     resolvedContractLineId = configRow?.contract_line_id ?? null;
@@ -143,8 +147,8 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     obligation_id: candidate.obligationId,
   }));
 
-  return tx('recurring_service_periods')
-    .where({ tenant, charge_family: chargeFamily, due_position: billingTiming })
+  return tenantScopedTable(tx, tenant, 'recurring_service_periods')
+    .where({ charge_family: chargeFamily, due_position: billingTiming })
     .where(function recurringObligationMatch() {
       for (const [index, candidate] of obligationCandidates.entries()) {
         if (index === 0) {
@@ -199,15 +203,15 @@ async function linkAndMarkSourceBillingRecord(params: {
       return;
     }
 
-    const updatedCount = await tx('time_entries')
-      .where({ tenant, entry_id: entryId, invoiced: false })
+    const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
+      .where({ entry_id: entryId, invoiced: false })
       .update({ invoiced: true });
 
     if (updatedCount !== 1) {
       throw new Error(`Internal error: Time entry ${entryId} could not be marked invoiced for invoice ${invoiceId}.`);
     }
 
-    await tx('invoice_time_entries').insert({
+    await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
       invoice_time_entry_id: uuidv4(),
       invoice_id: invoiceId,
       entry_id: entryId,
@@ -223,15 +227,15 @@ async function linkAndMarkSourceBillingRecord(params: {
       return;
     }
 
-    const updatedCount = await tx('usage_tracking')
-      .where({ tenant, usage_id: usageId, invoiced: false })
+    const updatedCount = await tenantScopedTable(tx, tenant, 'usage_tracking')
+      .where({ usage_id: usageId, invoiced: false })
       .update({ invoiced: true });
 
     if (updatedCount !== 1) {
       throw new Error(`Internal error: Usage record ${usageId} could not be marked invoiced for invoice ${invoiceId}.`);
     }
 
-    await tx('invoice_usage_records').insert({
+    await tenantScopedTable(tx, tenant, 'invoice_usage_records').insert({
       invoice_usage_record_id: uuidv4(),
       invoice_id: invoiceId,
       usage_id: usageId,
@@ -271,21 +275,22 @@ export async function validateSessionAndTenant(): Promise<InvoiceContext> {
 }
 
 export async function getClientDetails(knex: Knex, tenant: string, clientId: string): Promise<IClientWithLocation> {
-  const client = await knex('clients as c')
-    .leftJoin('client_locations as cl', function() {
-      this.on('c.client_id', '=', 'cl.client_id')
-          .andOn('c.tenant', '=', 'cl.tenant')
-          .andOn('cl.is_default', '=', knex.raw('true'));
-    })
+  const db = tenantDb(knex, tenant);
+  const clientQuery = db.table('clients as c')
     .select(
       'c.*',
       'cl.address_line1 as location_address'
     )
     .where({
-      'c.client_id': clientId,
-      'c.tenant': tenant
-    })
-    .first();
+      'c.client_id': clientId
+    });
+  db.tenantJoin(clientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('cl.is_default', '=', knex.raw('true'));
+    },
+  });
+  const client = (await clientQuery.first()) as unknown as IClientWithLocation | undefined;
   if (!client) {
     throw new Error(`Client not found for tenant ${tenant}`);
   }
@@ -298,8 +303,7 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
  * Returns null if no email is found.
  */
 export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
-  const location = await knex('client_locations')
-    .where('tenant', tenant)
+  const location = await tenantScopedTable(knex, tenant, 'client_locations')
     .where('client_id', clientId)
     .where(function() {
       this.where('is_billing_address', true)
@@ -376,8 +380,8 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   existingInvoiceItems?: ManualInvoiceItem[],
 ): Promise<ManualInvoiceItem[]> {
   const invoiceItems: ManualInvoiceItem[] = existingInvoiceItems ??
-    await tx('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where('invoice_id', invoiceId)
       .select('*');
 
   const percentageDiscountItems = invoiceItems.filter(
@@ -413,8 +417,8 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       Number(discountItem.net_amount || 0) !== recalculatedNetAmount ||
       Number(discountItem.total_price || 0) !== recalculatedNetAmount
     ) {
-      await tx('invoice_charges')
-        .where({ item_id: discountItem.item_id, tenant })
+      await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', discountItem.item_id)
         .update({
           net_amount: recalculatedNetAmount,
           total_price: recalculatedNetAmount,
@@ -458,8 +462,8 @@ export async function persistManualInvoiceCharges(
   for (const requestItem of nonDiscountItems) {
     let service;
     if (requestItem.service_id) {
-      service = await tx('service_catalog')
-        .where({ service_id: requestItem.service_id, tenant })
+      service = await tenantScopedTable(tx, tenant, 'service_catalog')
+        .where('service_id', requestItem.service_id)
         .select('*', 'tax_rate_id') // Fetch tax_rate_id
         .first();
       if (!service) {
@@ -472,8 +476,8 @@ export async function persistManualInvoiceCharges(
     let serviceIsTaxable = true; // Default for purely manual items if no service
     if (service) {
       if (service.tax_rate_id) {
-        const taxRateInfo = await tx('tax_rates')
-          .where({ tax_rate_id: service.tax_rate_id, tenant })
+        const taxRateInfo = await tenantScopedTable(tx, tenant, 'tax_rates')
+          .where('tax_rate_id', service.tax_rate_id)
           // Add validity checks if needed (e.g., is_active, date range)
           // For now, just fetch the region code associated with the ID
           .select('region_code')
@@ -534,7 +538,7 @@ export async function persistManualInvoiceCharges(
       tenant
     };
 
-    await tx('invoice_charges').insert(invoiceItem);
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
     if (requestItem.service_id) {
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
@@ -560,8 +564,8 @@ export async function persistManualInvoiceCharges(
 
     // Get applicable item amount for percentage discounts
     if (applicableItemId) {
-      const applicableItem = await tx('invoice_charges')
-        .where({ item_id: applicableItemId, tenant })
+      const applicableItem = await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', applicableItemId)
         .first();
       applicableAmount = applicableItem?.net_amount;
     }
@@ -574,22 +578,22 @@ export async function persistManualInvoiceCharges(
 
     let service; // Discounts might optionally reference a service
     if (requestItem.service_id) {
-        service = await tx('service_catalog')
-            .where({ service_id: requestItem.service_id, tenant })
-            .select('*', 'tax_rate_id') // Fetch tax_rate_id
-            .first();
+      service = await tenantScopedTable(tx, tenant, 'service_catalog')
+        .where('service_id', requestItem.service_id)
+        .select('*', 'tax_rate_id') // Fetch tax_rate_id
+        .first();
     }
     // --- Determine Tax Region for Discount (less critical as not taxed, but for consistency) ---
     let discountTaxRegion: string | null = null;
     if (service) {
-        if (service.tax_rate_id) {
-            const taxRateInfo = await tx('tax_rates')
-                .where({ tax_rate_id: service.tax_rate_id, tenant })
-                .select('region_code')
-                .first();
-            discountTaxRegion = taxRateInfo?.region_code ?? null;
-        }
-        // If service exists but no tax_rate_id, region remains null
+      if (service.tax_rate_id) {
+        const taxRateInfo = await tenantScopedTable(tx, tenant, 'tax_rates')
+          .where('tax_rate_id', service.tax_rate_id)
+          .select('region_code')
+          .first();
+        discountTaxRegion = taxRateInfo?.region_code ?? null;
+      }
+      // If service exists but no tax_rate_id, region remains null
     } else {
         // No service linked, use fallback
         discountTaxRegion = client.region_code ?? null; // Fallback to client region if no service
@@ -622,7 +626,7 @@ export async function persistManualInvoiceCharges(
       tenant
     };
 
-    await tx('invoice_charges').insert(invoiceItem);
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
     subtotal += netAmount;
   }
 
@@ -775,7 +779,7 @@ async function persistFixedInvoiceCharges(
         created_at: now,
         tenant
       };
-      await tx('invoice_charges').insert(invoiceItem);
+      await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
       fixedSubtotal += netAmount;
     }
   }
@@ -808,9 +812,8 @@ async function persistFixedInvoiceCharges(
   if (validDbPlanIds.length > 0) {
     // Query contract_lines directly since client_contract_line_id is actually a contract_line_id
     // (see billingEngine.ts getClientContractLinesAndCycle which sets 'cl.contract_line_id as client_contract_line_id')
-    const planDetails = await tx('contract_lines as cl')
+    const planDetails = await tenantScopedTable(tx, tenant, 'contract_lines as cl')
       .whereIn('cl.contract_line_id', validDbPlanIds)
-      .andWhere('cl.tenant', tenant)
       .select(
         'cl.contract_line_id as client_contract_line_id',
         'cl.contract_line_name',
@@ -875,7 +878,7 @@ async function persistFixedInvoiceCharges(
     const aggregatedTaxRate = planNetTotal
       ? Number(((planTaxTotal / planNetTotal) * 100).toFixed(6))
       : 0;
-    await tx('invoice_charges').insert({
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert({
       item_id: parentItemId,
       invoice_id: invoiceId,
       service_id: null,
@@ -913,7 +916,7 @@ async function persistFixedInvoiceCharges(
         ? Math.round(allocatedAmountCents / detailQuantity)
         : allocatedAmountCents;
 
-      await tx('invoice_charge_details').insert({
+      await tenantScopedTable(tx, tenant, 'invoice_charge_details').insert({
         item_detail_id: detailId,
         item_id: parentItemId,
         service_id: detail.serviceId,
@@ -928,7 +931,7 @@ async function persistFixedInvoiceCharges(
         tenant
       });
 
-      await tx('invoice_charge_fixed_details').insert({
+      await tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details').insert({
         item_detail_id: detailId,
         base_rate: detail.base_rate,
         enable_proration: detail.enable_proration,
@@ -1045,7 +1048,7 @@ export async function persistInvoiceCharges(
       created_at: now,
       tenant
     };
-    await tx('invoice_charges').insert(invoiceItem);
+    await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
 
     const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
     const shouldPersistDetail =
@@ -1069,7 +1072,7 @@ export async function persistInvoiceCharges(
       const detailQuantity = Number(charge.quantity ?? 1) || 1;
       const detailRate = Number(charge.rate ?? 0) || 0;
 
-      await tx('invoice_charge_details').insert({
+      await tenantScopedTable(tx, tenant, 'invoice_charge_details').insert({
         item_detail_id: detailId,
         item_id: invoiceItem.item_id,
         service_id: charge.serviceId,
@@ -1116,8 +1119,8 @@ export async function calculateAndDistributeTax(
   tenant: string
 ): Promise<number> {
   // Check invoice tax source before calculating
-  const invoice = await tx('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  const invoice = await tenantScopedTable(tx, tenant, 'invoices')
+    .where('invoice_id', invoiceId)
     .select('tax_source')
     .first();
 
@@ -1131,15 +1134,19 @@ export async function calculateAndDistributeTax(
     console.log(`[calculateAndDistributeTax] Using external tax amounts for invoice ${invoiceId}`);
 
     // Copy external_tax_amount to tax_amount and update total_price
-    const items = await tx('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
-      .select('item_id', 'net_amount', 'external_tax_amount');
+    const items = await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where('invoice_id', invoiceId)
+      .select<{ item_id: string; net_amount?: unknown; external_tax_amount?: unknown }[]>(
+        'item_id',
+        'net_amount',
+        'external_tax_amount'
+      );
 
     for (const item of items) {
       const externalTax = Number(item.external_tax_amount || 0);
       const netAmount = Number(item.net_amount || 0);
-      await tx('invoice_charges')
-        .where({ item_id: item.item_id, tenant })
+      await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', item.item_id)
         .update({
           tax_amount: externalTax,
           total_price: netAmount + externalTax
@@ -1156,14 +1163,14 @@ export async function calculateAndDistributeTax(
     // Pending external tax is likewise import-state driven rather than service-period driven.
     console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has pending external tax - using zero tax`);
 
-    const items = await tx('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
-      .select('item_id', 'net_amount');
+    const items = await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where('invoice_id', invoiceId)
+      .select<{ item_id: string; net_amount?: unknown }[]>('item_id', 'net_amount');
 
     for (const item of items) {
       const netAmount = Number(item.net_amount || 0);
-      await tx('invoice_charges')
-        .where({ item_id: item.item_id, tenant })
+      await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where('item_id', item.item_id)
         .update({
           tax_amount: 0,
           total_price: netAmount
@@ -1178,14 +1185,15 @@ export async function calculateAndDistributeTax(
   console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
   
   // Fetch invoice to get currency_code
-  const invoiceForCurrency = await tx('invoices')
+  const invoiceForCurrency = await tenantScopedTable(tx, tenant, 'invoices')
     .select('currency_code')
-    .where({ invoice_id: invoiceId, tenant })
+    .where('invoice_id', invoiceId)
     .first();
   const currencyCode = invoiceForCurrency?.currency_code || 'USD';
 
-  let invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
-    .where({ invoice_id: invoiceId, tenant })
+  // Use ManualInvoiceItem type for base structure.
+  let invoiceItems: ManualInvoiceItem[] = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
     .select('*');
   // Percentage discounts remain financial-only rows even when the invoice also
   // contains canonical recurring detail-backed charges. Recalculate them from
@@ -1200,20 +1208,14 @@ export async function calculateAndDistributeTax(
   console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
   // Only fixed-plan parents should be treated as consolidated tax carriers.
-  const detailParentIdsResult = await tx('invoice_charge_details')
-    .join('invoice_charge_fixed_details as iifd', function() {
-      this.on('iifd.item_detail_id', '=', 'invoice_charge_details.item_detail_id')
-        .andOn('iifd.tenant', '=', 'invoice_charge_details.tenant');
-    })
-    .join('invoice_charges', function() {
-      this.on('invoice_charges.item_id', '=', 'invoice_charge_details.item_id')
-        .andOn('invoice_charges.tenant', '=', 'invoice_charge_details.tenant');
-    })
-    .where('invoice_charge_details.tenant', tenant)
+  const db = tenantDb(tx, tenant);
+  const detailParentIdsQuery = db.table('invoice_charge_details')
     .where('invoice_charges.invoice_id', invoiceId)
-    .andWhere('invoice_charges.tenant', tenant)
     .distinct('invoice_charge_details.item_id');
-  const detailParentIds = new Set(detailParentIdsResult.map((row: { item_id: string }) => row.item_id));
+  db.tenantJoin(detailParentIdsQuery, 'invoice_charge_fixed_details as iifd', 'iifd.item_detail_id', 'invoice_charge_details.item_detail_id');
+  db.tenantJoin(detailParentIdsQuery, 'invoice_charges', 'invoice_charges.item_id', 'invoice_charge_details.item_id');
+  const detailParentIdsResult = (await detailParentIdsQuery) as unknown as Array<{ item_id: string }>;
+  const detailParentIds = new Set(detailParentIdsResult.map((row) => row.item_id));
 
   const consolidatedItemIds = invoiceItems
     .filter(item => detailParentIds.has(item.item_id)) // Item is consolidated if it's a parent in details table
@@ -1225,20 +1227,16 @@ export async function calculateAndDistributeTax(
   if (consolidatedItemIds.length > 0) {
     // Fetch details. Tax info (is_taxable, tax_region) should now be on the parent invoice_item
     // derived during item creation based on service's tax_rate_id.
-    fixedDetails = await tx('invoice_charge_fixed_details as iifd')
-        .join('invoice_charge_details as iid', function() {
-            this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
-                .andOn('iifd.tenant', '=', 'iid.tenant'); // Ensure tenant match
-        })
+    const fixedDetailsQuery = tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')
         .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
-        .andWhere('iifd.tenant', tenant)
-        .andWhere('iid.tenant', tenant)
         .select(
             'iifd.item_detail_id',
             'iifd.allocated_amount',
             'iid.item_id as parent_item_id',
             'iid.service_id' // Keep service_id if needed for other logic, but not for tax region/taxability here
         );
+    tenantDb(tx, tenant).tenantJoin(fixedDetailsQuery, 'invoice_charge_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id');
+    fixedDetails = await fixedDetailsQuery;
     console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (tax info from parent item):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
   } else {
       console.log(`[calculateAndDistributeTax] No consolidated items found, skipping fixed detail fetch.`);
@@ -1414,8 +1412,8 @@ export async function calculateAndDistributeTax(
   if (detailUpdates.length > 0) {
     for (const update of detailUpdates) {
       updatePromises.push(
-        tx('invoice_charge_fixed_details')
-          .where({ item_detail_id: update.item_detail_id, tenant })
+        tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details')
+          .where('item_detail_id', update.item_detail_id)
           .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
       );
     }
@@ -1425,8 +1423,8 @@ export async function calculateAndDistributeTax(
   if (itemTaxUpdates.length > 0) {
     for (const update of itemTaxUpdates) {
       updatePromises.push(
-        tx('invoice_charges')
-          .where({ item_id: update.item_id, tenant })
+        tenantScopedTable(tx, tenant, 'invoice_charges')
+          .where('item_id', update.item_id)
           .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
       );
       // This log was misplaced inside the loop, moving it after the loop in step 7
@@ -1440,25 +1438,24 @@ export async function calculateAndDistributeTax(
   const consolidatedUpdatePromises: Array<Promise<any>> = [];
   if (consolidatedItemIds.length > 0) {
       // Fetch the *updated* tax amounts from details
-      const updatedDetailsTaxSum = await tx('invoice_charge_fixed_details as iifd')
-          .join('invoice_charge_details as iid', function() {
-              this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
-                  .andOn('iid.tenant', '=', 'iifd.tenant');
-          })
+      const updatedDetailsTaxSumQuery = tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')
           .whereIn('iid.item_id', consolidatedItemIds)
-          .andWhere('iid.tenant', tenant)
-          .andWhere('iifd.tenant', tenant)
           .groupBy('iid.item_id')
           .select(
               'iid.item_id',
               tx.raw('SUM(iifd.tax_amount) as total_detail_tax')
           );
+      tenantDb(tx, tenant).tenantJoin(updatedDetailsTaxSumQuery, 'invoice_charge_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id');
+      const updatedDetailsTaxSum = (await updatedDetailsTaxSumQuery) as unknown as Array<{
+          item_id: string;
+          total_detail_tax: string | number | null;
+      }>;
       console.log(`[calculateAndDistributeTax] Fetched updated tax sums for consolidated items:`, JSON.stringify(updatedDetailsTaxSum, null, 2)); // Log moved here
 
       for (const consolidated of updatedDetailsTaxSum) {
           consolidatedUpdatePromises.push(
-              tx('invoice_charges')
-                  .where({ item_id: consolidated.item_id, tenant })
+              tenantScopedTable(tx, tenant, 'invoice_charges')
+                  .where('item_id', consolidated.item_id)
                   .update({ tax_amount: Number(consolidated.total_detail_tax || 0) }) // Update parent with sum
           );
       }
@@ -1470,8 +1467,8 @@ export async function calculateAndDistributeTax(
   // 8 & 9. Final Pass: Update total_price and apply final tax zeroing if needed
   const finalItemUpdatePromises: Array<Promise<any>> = [];
   // Fetch all items again to get potentially updated tax amounts (especially the consolidated ones from step 7)
-  const allFinalItems = await tx('invoice_charges')
-    .where({ invoice_id: invoiceId, tenant })
+  const allFinalItems = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
     .select('*');
 
   for (const item of allFinalItems) {
@@ -1491,8 +1488,8 @@ export async function calculateAndDistributeTax(
 
       // Prepare final update for this item
       finalItemUpdatePromises.push(
-          tx('invoice_charges')
-              .where({ item_id: item.item_id, tenant })
+          tenantScopedTable(tx, tenant, 'invoice_charges')
+              .where('item_id', item.item_id)
               .update({
                   tax_amount: finalTax, // Persist the final tax amount (pre-discount, or 0 if non-taxable)
                   tax_rate: finalRate,   // Persist the final tax rate
@@ -1506,8 +1503,8 @@ export async function calculateAndDistributeTax(
 
   // 10. Return total calculated tax for the invoice
   // Recalculate from the final state of invoice_charges for definitive total
-  const finalTaxSumResult = await tx('invoice_charges')
-    .where({ invoice_id: invoiceId, tenant })
+  const finalTaxSumResult = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
     .sum('tax_amount as totalTax')
     .first();
 
@@ -1536,15 +1533,17 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   } = options;
 
   // Recalculate totals directly from the updated invoice items
-  const finalItems = await tx('invoice_charges').where({ invoice_id: invoiceId, tenant });
+  const finalItems = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
+    .select<{ net_amount?: unknown; tax_amount?: unknown }[]>('*');
   const finalSubtotal = finalItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
   const finalTotalTax = finalItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
   const finalTotalAmount = finalSubtotal + finalTotalTax;
 
 
   // Update invoice with final totals
-  await tx('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  await tenantScopedTable(tx, tenant, 'invoices')
+    .where('invoice_id', invoiceId)
     .update({
       subtotal: Math.round(finalSubtotal), // Use Math.round for final cents
       tax: Math.round(finalTotalTax),
@@ -1552,17 +1551,14 @@ export async function updateInvoiceTotalsAndRecordTransaction(
     });
 
   // Get current balance
-  const currentBalance = await tx('transactions')
-    .where({
-      client_id: client.client_id,
-      tenant
-    })
+  const lastTransaction = await tenantScopedTable(tx, tenant, 'transactions')
+    .where('client_id', client.client_id)
     .orderBy('created_at', 'desc')
-    .first()
-    .then(lastTx => lastTx?.balance_after || 0);
+    .first<{ balance_after?: unknown }>();
+  const currentBalance = Number(lastTransaction?.balance_after || 0);
 
   // Record transaction
-  await tx('transactions').insert({
+  await tenantScopedTable(tx, tenant, 'transactions').insert({
     transaction_id: uuidv4(),
     client_id: client.client_id,
     invoice_id: invoiceId,

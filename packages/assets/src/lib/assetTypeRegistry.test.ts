@@ -25,7 +25,10 @@ let knexMock: any;
 let idCounter: number;
 
 function matches(row: Row, where: Record<string, any>): boolean {
-  return Object.entries(where).every(([k, v]) => row[k] === v);
+  return Object.entries(where).every(([k, v]) => {
+    const key = k.includes('.') ? k.split('.').pop()! : k;
+    return row[key] === v;
+  });
 }
 
 function createFakeKnex(db: DbState) {
@@ -40,8 +43,12 @@ function createFakeKnex(db: DbState) {
       return db[this.table];
     }
 
-    where(where: Record<string, any>) {
-      this.whereClauses.push(where);
+    where(where: Record<string, any> | string, value?: any) {
+      if (typeof where === 'string') {
+        this.whereClauses.push({ [where]: value });
+      } else {
+        this.whereClauses.push(where);
+      }
       return this;
     }
 
@@ -158,6 +165,39 @@ function createFakeKnex(db: DbState) {
 
   const knex: any = (table: keyof DbState) => new QB(table);
   knex.fn = { now: () => new Date('2026-06-12T12:00:00.000Z') };
+  return knex;
+}
+
+function createMissingAssetTypeRegistryKnex() {
+  const base = createFakeKnex(state);
+  const missingTableError = () => {
+    const error: any = new Error('relation "asset_type_registry" does not exist');
+    error.code = '42P01';
+    error.table = 'asset_type_registry';
+    return error;
+  };
+
+  class MissingTableQB {
+    where() {
+      return this;
+    }
+
+    orderBy() {
+      return this;
+    }
+
+    first() {
+      return Promise.reject(missingTableError());
+    }
+
+    then(resolve: (value: any) => void, reject?: (reason: unknown) => void) {
+      return Promise.reject(missingTableError()).then(resolve, reject);
+    }
+  }
+
+  const knex: any = (table: keyof DbState) =>
+    table === 'asset_type_registry' ? new MissingTableQB() : base(table);
+  knex.fn = base.fn;
   return knex;
 }
 
@@ -412,6 +452,27 @@ describe('listAssetTypes ordering and lookup', () => {
     const found = await getAssetTypeBySlug(knexMock, 'tenant_a', 'door_access');
     expect(found?.name).toBe('Door Access');
     expect(await getAssetTypeBySlug(knexMock, 'tenant_b', 'door_access')).toBeNull();
+  });
+
+  it('falls back to built-ins when an older database lacks asset_type_registry', async () => {
+    const missingRegistryKnex = createMissingAssetTypeRegistryKnex();
+
+    const listed = await listAssetTypes(missingRegistryKnex, 'tenant_a');
+    expect(listed.map((entry) => [entry.slug, entry.name, entry.is_builtin])).toEqual([
+      ['workstation', 'Workstation', true],
+      ['network_device', 'Network Device', true],
+      ['server', 'Server', true],
+      ['mobile_device', 'Mobile Device', true],
+      ['printer', 'Printer', true],
+      ['unknown', 'Unknown', true],
+    ]);
+    expect(listed.every((entry) => entry.tenant === 'tenant_a')).toBe(true);
+
+    await expect(getAssetTypeBySlug(missingRegistryKnex, 'tenant_a', 'server')).resolves.toMatchObject({
+      slug: 'server',
+      is_builtin: true,
+    });
+    await expect(getAssetTypeBySlug(missingRegistryKnex, 'tenant_a', 'door_access')).resolves.toBeNull();
   });
 });
 

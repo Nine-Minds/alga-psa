@@ -6,7 +6,7 @@
  * hudu-company-mappings.integration.test.ts incl. the advisory-lock
  * serialization; the real row functions are reached via vi.importActual.
  * The action layer (T216/T217) is unit-mocked like huduMappingActions.test.ts:
- * auth, flag, tiers, knex, huduDataActions and the row functions are fakes;
+ * auth, tiers, knex, huduDataActions and the row functions are fakes;
  * the matcher (assetMatching) and the reference cache stay REAL.
  */
 
@@ -29,7 +29,6 @@ const HUDU_COMPANY_ID = '55';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
@@ -55,10 +54,6 @@ vi.mock('@alga-psa/auth', () => ({
     (...args: unknown[]) =>
       handler(internalUser, { tenant: TENANT }, ...args),
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -132,7 +127,6 @@ beforeEach(() => {
   assetsRows = [];
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
@@ -658,16 +652,5 @@ describe('F213 action wrappers: setHuduAssetMapping / clearHuduAssetMapping', ()
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'asset', 'update');
     expect(setHuduAssetMappingRowMock).not.toHaveBeenCalled();
     expect(clearHuduAssetMappingRowMock).not.toHaveBeenCalled();
-  });
-
-  it('T217: every action rejects when the hudu-integration flag is off (404 semantics)', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { getHuduAssetMappings, setHuduAssetMapping, clearHuduAssetMapping } = await importActions();
-
-    await expect(getHuduAssetMappings(CLIENT_1)).rejects.toThrow(/disabled for this tenant/);
-    await expect(setHuduAssetMapping({ clientId: CLIENT_1, assetId: ASSET_1, huduAssetId: 1 })).rejects.toThrow(
-      /disabled for this tenant/
-    );
-    await expect(clearHuduAssetMapping({ mappingId: 'am-1' })).rejects.toThrow(/disabled for this tenant/);
   });
 });

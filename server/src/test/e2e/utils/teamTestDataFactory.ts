@@ -6,6 +6,11 @@
 import { faker } from '@faker-js/faker';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
+
+function tenantTable(db: Knex, tenantId: string, table: string): Knex.QueryBuilder {
+  return tenantDb(db, tenantId).table(table);
+}
 
 /**
  * Create a single test team
@@ -27,7 +32,7 @@ export async function createTestTeam(
     updated_at: new Date()
   };
 
-  const [team] = await db('teams').insert(teamData).returning('*');
+  const [team] = await tenantTable(db, tenantId, 'teams').insert(teamData).returning('*');
   return team;
 }
 
@@ -70,7 +75,7 @@ export async function addTeamMember(
   teamId: string,
   userId: string
 ) {
-  await db('team_members').insert({
+  await tenantTable(db, tenantId, 'team_members').insert({
     tenant: tenantId,
     team_id: teamId,
     user_id: userId,
@@ -131,8 +136,8 @@ export async function createTeamHierarchy(
  */
 export async function cleanupTestTeams(db: Knex, tenantId: string) {
   // Delete team members first due to foreign key constraints
-  await db('team_members').where({ tenant: tenantId }).delete();
+  await tenantTable(db, tenantId, 'team_members').delete();
   
   // Then delete teams
-  await db('teams').where({ tenant: tenantId }).delete();
+  await tenantTable(db, tenantId, 'teams').delete();
 }

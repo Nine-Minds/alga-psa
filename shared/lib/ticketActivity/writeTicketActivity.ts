@@ -14,6 +14,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -33,14 +34,22 @@ function isEmptyChanges(changes: TicketActivityChanges | undefined): boolean {
   return Object.keys(changes).length === 0;
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 async function resolveUserDisplayName(
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   tenant: string,
   userId: string,
 ): Promise<string | null> {
   try {
-    const row = await knex('users')
-      .where({ tenant, user_id: userId })
+    const row = await tenantScopedTable(knex, 'users', tenant)
+      .where({ user_id: userId })
       .first(['first_name', 'last_name', 'email']);
     if (!row) return null;
     const first = (row.first_name ?? '').trim();
@@ -60,13 +69,13 @@ async function resolveUserDisplayName(
 }
 
 async function resolveContactDisplayName(
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   tenant: string,
   contactId: string,
 ): Promise<string | null> {
   try {
-    const row = await knex('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const row = await tenantScopedTable(knex, 'contacts', tenant)
+      .where({ contact_name_id: contactId })
       .first(['full_name', 'email']);
     if (!row) return null;
     const full = (row.full_name ?? '').toString().trim();
@@ -125,7 +134,7 @@ export async function writeTicketActivity(
       input.actor.userId
     ) {
       displayName = await resolveUserDisplayName(
-        knex as Knex,
+        knex,
         input.tenant,
         input.actor.userId,
       );
@@ -135,7 +144,7 @@ export async function writeTicketActivity(
       input.actor.contactId
     ) {
       displayName = await resolveContactDisplayName(
-        knex as Knex,
+        knex,
         input.tenant,
         input.actor.contactId,
       );
@@ -145,7 +154,7 @@ export async function writeTicketActivity(
   const changes = isEmptyChanges(input.changes) ? {} : input.changes ?? {};
   const details = input.details ?? {};
 
-  await knex('ticket_audit_logs').insert({
+  await tenantScopedTable(knex, 'ticket_audit_logs', input.tenant).insert({
     tenant: input.tenant,
     audit_id: auditId,
     ticket_id: input.ticketId,

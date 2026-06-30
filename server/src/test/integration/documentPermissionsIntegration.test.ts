@@ -12,6 +12,7 @@ import { IUser } from '@/interfaces/auth.interfaces';
 import { IDocument, DocumentInput } from '@/interfaces/document.interface';
 import { DocumentAssociationEntityType } from '@/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Document Permissions Integration Tests
@@ -38,6 +39,14 @@ describe('Document Permissions Integration Tests', () => {
   let documentWithTicket: IDocument;
   let documentWithContract: IDocument;
   let documentWithMultiple: IDocument;
+
+  function scopedDb(tenantId = context.tenantId) {
+    return tenantDb(context.db, tenantId);
+  }
+
+  function schemaDb() {
+    return tenantDb(context.db, '__test_schema_discovery__');
+  }
 
   beforeAll(async () => {
     context = await setupContext({
@@ -80,7 +89,7 @@ describe('Document Permissions Integration Tests', () => {
   async function seedTestData() {
     // Create test client
     testClientId = uuidv4();
-    await context.db('clients').insert({
+    await scopedDb().table('clients').insert({
       client_id: testClientId,
       tenant: context.tenantId,
       client_name: 'Test Client',
@@ -88,7 +97,11 @@ describe('Document Permissions Integration Tests', () => {
     });
 
     // Determine available columns for statuses table to keep compatibility across schema versions
-    const statusColumns: string[] = await context.db('information_schema.columns')
+    const statusColumns: string[] = await schemaDb()
+      .unscoped(
+        'information_schema.columns',
+        'test schema introspection for statuses compatibility in document permissions integration'
+      )
       .select('column_name')
       .where({ table_schema: 'public', table_name: 'statuses' })
       .pluck('column_name');
@@ -97,7 +110,7 @@ describe('Document Permissions Integration Tests', () => {
     const hasStatusType = statusColumns.includes('status_type');
 
     // Ensure we have a ticket status for FK constraint
-    let statusQuery = context.db('statuses').where('tenant', context.tenantId);
+    let statusQuery = scopedDb().table('statuses');
     if (hasItemType) {
       statusQuery = statusQuery.where('item_type', 'ticket');
     } else if (hasStatusType) {
@@ -141,7 +154,7 @@ describe('Document Permissions Integration Tests', () => {
         statusData.status_key = 'new';
       }
 
-      await context.db('statuses').insert(statusData);
+      await scopedDb().table('statuses').insert(statusData);
     }
 
     if (!statusId) {
@@ -150,7 +163,7 @@ describe('Document Permissions Integration Tests', () => {
 
     // Create test ticket
     testTicketId = uuidv4();
-    await context.db('tickets').insert({
+    await scopedDb().table('tickets').insert({
       ticket_id: testTicketId,
       tenant: context.tenantId,
       title: 'Test Ticket',
@@ -208,7 +221,11 @@ describe('Document Permissions Integration Tests', () => {
   }
 
   async function tableExists(tableName: string): Promise<boolean> {
-    const result = await context.db('information_schema.tables')
+    const result = await schemaDb()
+      .unscoped(
+        'information_schema.tables',
+        'test schema introspection for optional document permissions integration table'
+      )
       .where({ table_schema: 'public', table_name: tableName })
       .count('* as count')
       .first();
@@ -230,8 +247,8 @@ describe('Document Permissions Integration Tests', () => {
     };
 
     const { _id } = await addDocument(documentInput);
-    const record = await context.db('documents')
-      .where({ tenant: context.tenantId, document_id: _id })
+    const record = await scopedDb().table('documents')
+      .where({ document_id: _id })
       .first();
 
     if (!record) {
@@ -260,7 +277,9 @@ describe('Document Permissions Integration Tests', () => {
     const now = new Date();
     const sample = tenantId.slice(0, 8);
 
-    const tenantColumns = await context.db('tenants').columnInfo();
+    const tenantColumns = await scopedDb(tenantId)
+      .unscoped('tenants', 'test schema introspection for tenant fixture column compatibility')
+      .columnInfo();
     const tenantPayload: Record<string, any> = { tenant: tenantId };
 
     const tenantOverrides: Record<string, any> = {
@@ -278,14 +297,15 @@ describe('Document Permissions Integration Tests', () => {
 
     applyColumnDefaults(tenantColumns, tenantPayload, tenantOverrides, sample, now);
 
-    await context.db('tenants')
+    await scopedDb(tenantId).table('tenants')
       .insert(tenantPayload)
       .onConflict('tenant')
       .merge(tenantPayload);
 
-    const userColumns = await context.db('users').columnInfo();
-    const existingUser = await context.db('users')
-      .where({ tenant: tenantId })
+    const userColumns = await scopedDb(tenantId)
+      .unscoped('users', 'test schema introspection for user fixture column compatibility')
+      .columnInfo();
+    const existingUser = await scopedDb(tenantId).table('users')
       .first('user_id');
 
     let userId: string;
@@ -313,10 +333,12 @@ describe('Document Permissions Integration Tests', () => {
 
       applyColumnDefaults(userColumns, userPayload, userOverrides, sample, now);
 
-      await context.db('users').insert(userPayload);
+      await scopedDb(tenantId).table('users').insert(userPayload);
     }
 
-    const documentColumns = await context.db('documents').columnInfo();
+    const documentColumns = await scopedDb(tenantId)
+      .unscoped('documents', 'test schema introspection for document fixture column compatibility')
+      .columnInfo();
     const documentId = uuidv4();
     const documentPayload: Record<string, any> = {
       document_id: documentId,
@@ -342,7 +364,7 @@ describe('Document Permissions Integration Tests', () => {
 
     applyColumnDefaults(documentColumns, documentPayload, documentOverrides, sample, now);
 
-    await context.db('documents').insert(documentPayload);
+    await scopedDb(tenantId).table('documents').insert(documentPayload);
 
     return { userId, documentId };
   }
@@ -413,8 +435,7 @@ describe('Document Permissions Integration Tests', () => {
   describe('canAccessDocument with real database', () => {
     it('should allow access to document with no associations (tenant-level)', async () => {
       // This test verifies the database query returns no associations
-      const associations = await context.db('document_associations')
-        .where('tenant', context.tenantId)
+      const associations = await scopedDb().table('document_associations')
         .where('document_id', documentNoAssoc.document_id)
         .select('*');
 
@@ -422,8 +443,7 @@ describe('Document Permissions Integration Tests', () => {
     });
 
     it('should verify document with ticket association exists in database', async () => {
-      const associations = await context.db('document_associations')
-        .where('tenant', context.tenantId)
+      const associations = await scopedDb().table('document_associations')
         .where('document_id', documentWithTicket.document_id)
         .select('*');
 
@@ -433,8 +453,7 @@ describe('Document Permissions Integration Tests', () => {
     });
 
     it('should verify document with contract association exists in database', async () => {
-      const associations = await context.db('document_associations')
-        .where('tenant', context.tenantId)
+      const associations = await scopedDb().table('document_associations')
         .where('document_id', documentWithContract.document_id)
         .select('*');
 
@@ -446,8 +465,7 @@ describe('Document Permissions Integration Tests', () => {
     });
 
     it('should verify document with multiple associations exists in database', async () => {
-      const associations = await context.db('document_associations')
-        .where('tenant', context.tenantId)
+      const associations = await scopedDb().table('document_associations')
         .where('document_id', documentWithMultiple.document_id)
         .select('*');
 
@@ -469,9 +487,8 @@ describe('Document Permissions Integration Tests', () => {
 
       // Verify we can query all associations in one go
       const documentIds = allDocuments.map(d => d.document_id);
-      const associations = await context.db('document_associations')
+      const associations = await scopedDb().table('document_associations')
         .whereIn('document_id', documentIds)
-        .andWhere('tenant', context.tenantId)
         .select('document_id', 'entity_type');
 
       // Should have at least the standard associations (3-4 depending on contracts table)
@@ -481,9 +498,8 @@ describe('Document Permissions Integration Tests', () => {
     it('should correctly map document IDs to entity types', async () => {
       const documentIds = [documentWithTicket.document_id, documentWithMultiple.document_id];
 
-      const associations = await context.db('document_associations')
+      const associations = await scopedDb().table('document_associations')
         .whereIn('document_id', documentIds)
-        .andWhere('tenant', context.tenantId)
         .select('document_id', 'entity_type');
 
       // Build map
@@ -516,26 +532,24 @@ describe('Document Permissions Integration Tests', () => {
         entity_type: 'ticket'
       };
 
-      await context.db('document_associations').insert(wrongTenantAssoc);
+      await scopedDb(wrongTenantId).table('document_associations').insert(wrongTenantAssoc);
 
       // Query with correct tenant should not find it
-      const results = await context.db('document_associations')
-        .where('tenant', context.tenantId)
+      const results = await scopedDb().table('document_associations')
         .where('document_id', wrongTenantDocumentId)
         .select('*');
 
       expect(results.length).toBe(0);
 
       // Cleanup
-      await context.db('document_associations')
-        .where({ association_id: wrongTenantAssoc.association_id, tenant: wrongTenantId })
+      await scopedDb(wrongTenantId).table('document_associations')
+        .where({ association_id: wrongTenantAssoc.association_id })
         .delete();
     });
 
     it('should handle documents with same name but different tenants', async () => {
       // This verifies tenant isolation for documents table
-      const count = await context.db('documents')
-        .where('tenant', context.tenantId)
+      const count = await scopedDb().table('documents')
         .where('document_name', 'Document No Associations')
         .count('* as count')
         .first();
@@ -557,10 +571,10 @@ describe('Document Permissions Integration Tests', () => {
         };
 
         try {
-          await context.db('document_associations').insert(testAssoc);
+          await scopedDb().table('document_associations').insert(testAssoc);
 
           // Verify it was inserted
-          const result = await context.db('document_associations')
+          const result = await scopedDb().table('document_associations')
             .where('association_id', testAssoc.association_id)
             .first();
 
@@ -568,7 +582,7 @@ describe('Document Permissions Integration Tests', () => {
           expect(result?.entity_type).toBe(entityType);
 
           // Cleanup
-          await context.db('document_associations')
+          await scopedDb().table('document_associations')
             .where('association_id', testAssoc.association_id)
             .delete();
         } catch (error) {
@@ -589,8 +603,7 @@ describe('Document Permissions Integration Tests', () => {
 
       // Query all documents
       const startTime = Date.now();
-      const documents = await context.db('documents')
-        .where('tenant', context.tenantId)
+      const documents = await scopedDb().table('documents')
         .whereIn('document_id', testDocs.map(d => d.document_id))
         .select('*');
       const queryTime = Date.now() - startTime;
@@ -599,8 +612,7 @@ describe('Document Permissions Integration Tests', () => {
       expect(queryTime).toBeLessThan(1000); // Should complete in less than 1 second
 
       // Cleanup
-      await context.db('documents')
-        .where('tenant', context.tenantId)
+      await scopedDb().table('documents')
         .whereIn('document_id', testDocs.map(d => d.document_id))
         .delete();
     });
@@ -616,9 +628,8 @@ describe('Document Permissions Integration Tests', () => {
 
       // Bulk load associations (single query)
       const startTime = Date.now();
-      const associations = await context.db('document_associations')
+      const associations = await scopedDb().table('document_associations')
         .whereIn('document_id', testDocs.map(d => d.document_id))
-        .andWhere('tenant', context.tenantId)
         .select('document_id', 'entity_type');
       const queryTime = Date.now() - startTime;
 
@@ -626,12 +637,10 @@ describe('Document Permissions Integration Tests', () => {
       expect(queryTime).toBeLessThan(500); // Should be very fast with proper indexing
 
       // Cleanup
-      await context.db('document_associations')
-        .where('tenant', context.tenantId)
+      await scopedDb().table('document_associations')
         .whereIn('document_id', testDocs.map(d => d.document_id))
         .delete();
-      await context.db('documents')
-        .where('tenant', context.tenantId)
+      await scopedDb().table('documents')
         .whereIn('document_id', testDocs.map(d => d.document_id))
         .delete();
     });

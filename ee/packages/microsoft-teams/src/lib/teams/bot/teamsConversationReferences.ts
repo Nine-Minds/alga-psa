@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export type TeamsConversationReferenceType = 'personal' | 'groupChat' | 'channel';
 
@@ -81,7 +81,7 @@ export async function upsertTeamsConversationReference(
   try {
     const { knex, tenant } = await createTenantKnex(input.tenantId);
     const scopedTenant = tenant || input.tenantId;
-    await knex('teams_conversation_references')
+    await tenantDb(knex, scopedTenant).table('teams_conversation_references')
       .insert({
         tenant: scopedTenant,
         microsoft_user_id: microsoftUserId,
@@ -152,9 +152,8 @@ export async function getLatestTeamsConversationReferenceImpl(
     const { knex, tenant } = await createTenantKnex(tenantId);
     const scopedTenant = tenant || tenantId;
     const conversationType = input.conversationType ?? 'personal';
-    const row = await knex('teams_conversation_references')
+    const row = await tenantDb(knex, scopedTenant).table('teams_conversation_references')
       .where({
-        tenant: scopedTenant,
         microsoft_user_id: microsoftUserId,
         conversation_type: conversationType,
       })

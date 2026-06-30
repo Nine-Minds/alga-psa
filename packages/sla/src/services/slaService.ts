@@ -16,6 +16,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   ISlaPolicy,
   ISlaPolicyTarget,
@@ -32,6 +33,14 @@ import {
 } from './businessHoursCalculator';
 import { SlaBackendAction } from './slaBackendActions';
 import { acquireTicketSlaLock } from './slaLock';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 /**
  * Result of starting SLA tracking for a ticket
@@ -107,8 +116,8 @@ export async function startSlaForTicket(
 
     if (!target) {
       // No target for this priority - apply policy but no due dates
-      await trx('tickets')
-        .where({ tenant, ticket_id: ticketId })
+      await tenantScopedTable(trx, tenant, 'tickets')
+        .where('ticket_id', ticketId)
         .update({
           sla_policy_id: policy.sla_policy_id,
           sla_started_at: createdAt
@@ -140,8 +149,8 @@ export async function startSlaForTicket(
 
     // 5. Update ticket with SLA tracking fields
     // Check if due_date should be auto-filled from SLA resolution target
-    const currentTicket = await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    const currentTicket = await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .select('due_date')
       .first();
 
@@ -157,8 +166,8 @@ export async function startSlaForTicket(
       slaUpdateData.due_date = resolutionDueAt;
     }
 
-    await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .update(slaUpdateData);
 
     // 6. Log SLA started event
@@ -173,8 +182,8 @@ export async function startSlaForTicket(
     });
 
     // Query configured notification thresholds for this policy
-    const thresholdRows = await trx('sla_notification_thresholds')
-      .where({ tenant, sla_policy_id: policy.sla_policy_id })
+    const thresholdRows = await tenantScopedTable(trx, tenant, 'sla_notification_thresholds')
+      .where('sla_policy_id', policy.sla_policy_id)
       .select('threshold_percent')
       .orderBy('threshold_percent', 'asc');
 
@@ -233,8 +242,8 @@ export async function recordFirstResponse(
     await acquireTicketSlaLock(trx, tenant, ticketId);
 
     // Get current ticket SLA state
-    const ticket = await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    const ticket = await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .select(
         'sla_policy_id',
         'sla_response_at',
@@ -260,8 +269,8 @@ export async function recordFirstResponse(
     }
 
     // Update ticket
-    await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .update({
         sla_response_at: respondedAt,
         sla_response_met: met
@@ -318,8 +327,8 @@ export async function recordResolution(
     await acquireTicketSlaLock(trx, tenant, ticketId);
 
     // Get current ticket SLA state
-    const ticket = await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    const ticket = await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .select(
         'sla_policy_id',
         'sla_resolution_at',
@@ -345,8 +354,8 @@ export async function recordResolution(
     }
 
     // Update ticket
-    await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .update({
         sla_resolution_at: resolvedAt,
         sla_resolution_met: met
@@ -409,8 +418,8 @@ export async function getSlaStatus(
   ticketId: string
 ): Promise<ISlaStatus | null> {
   // Get ticket SLA data
-  const ticket = await trx('tickets')
-    .where({ tenant, ticket_id: ticketId })
+  const ticket = await tenantScopedTable(trx, tenant, 'tickets')
+    .where('ticket_id', ticketId)
     .select(
       'sla_policy_id',
       'sla_started_at',
@@ -529,8 +538,8 @@ export async function handlePriorityChange(
   await acquireTicketSlaLock(trx, tenant, ticketId);
 
   // Get current ticket state
-  const ticket = await trx('tickets')
-    .where({ tenant, ticket_id: ticketId })
+  const ticket = await tenantScopedTable(trx, tenant, 'tickets')
+    .where('ticket_id', ticketId)
     .select(
       'sla_policy_id',
       'sla_started_at',
@@ -601,8 +610,8 @@ export async function handlePriorityChange(
   }
 
   // Update ticket
-  await trx('tickets')
-    .where({ tenant, ticket_id: ticketId })
+  await tenantScopedTable(trx, tenant, 'tickets')
+    .where('ticket_id', ticketId)
     .update(priorityUpdateData);
 
   // Log event
@@ -644,8 +653,8 @@ export async function handlePolicyChange(
 ): Promise<{ backendActions: SlaBackendAction[] }> {
   await acquireTicketSlaLock(trx, tenant, ticketId);
 
-  const ticket = await trx('tickets')
-    .where({ tenant, ticket_id: ticketId })
+  const ticket = await tenantScopedTable(trx, tenant, 'tickets')
+    .where('ticket_id', ticketId)
     .select(
       'sla_started_at',
       'sla_resolution_due_at',
@@ -662,8 +671,8 @@ export async function handlePolicyChange(
   }
 
   if (!newPolicyId) {
-    await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .update({
         sla_policy_id: null,
         sla_response_due_at: null,
@@ -684,8 +693,8 @@ export async function handlePolicyChange(
 
   const target = policy.targets.find(t => t.priority_id === ticket.priority_id);
   if (!target) {
-    await trx('tickets')
-      .where({ tenant, ticket_id: ticketId })
+    await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
       .update({
         sla_policy_id: policy.sla_policy_id,
         sla_response_due_at: null,
@@ -729,8 +738,8 @@ export async function handlePolicyChange(
     }
   }
 
-  await trx('tickets')
-    .where({ tenant, ticket_id: ticketId })
+  await tenantScopedTable(trx, tenant, 'tickets')
+    .where('ticket_id', ticketId)
     .update(policyUpdateData);
 
   await logSlaEvent(trx, tenant, ticketId, 'sla_policy_changed', {
@@ -765,8 +774,8 @@ async function resolveSlaPolicy(
 ): Promise<ISlaPolicyWithTargets | null> {
   // 1. Check client-specific policy
   if (clientId) {
-    const client = await trx('clients')
-      .where({ tenant, client_id: clientId })
+    const client = await tenantScopedTable(trx, tenant, 'clients')
+      .where('client_id', clientId)
       .select('sla_policy_id')
       .first();
 
@@ -778,8 +787,8 @@ async function resolveSlaPolicy(
 
   // 2. Check board-specific policy
   if (boardId) {
-    const board = await trx('boards')
-      .where({ tenant, board_id: boardId })
+    const board = await tenantScopedTable(trx, tenant, 'boards')
+      .where('board_id', boardId)
       .select('sla_policy_id')
       .first();
 
@@ -790,8 +799,8 @@ async function resolveSlaPolicy(
   }
 
   // 3. Fall back to tenant default
-  const defaultPolicy = await trx('sla_policies')
-    .where({ tenant, is_default: true })
+  const defaultPolicy = await tenantScopedTable(trx, tenant, 'sla_policies')
+    .where('is_default', true)
     .first();
 
   if (defaultPolicy) {
@@ -809,14 +818,14 @@ async function getSlaPolicyWithTargets(
   tenant: string,
   policyId: string
 ): Promise<ISlaPolicyWithTargets | null> {
-  const policy = await trx('sla_policies')
-    .where({ tenant, sla_policy_id: policyId })
+  const policy = await tenantScopedTable(trx, tenant, 'sla_policies')
+    .where('sla_policy_id', policyId)
     .first();
 
   if (!policy) return null;
 
-  const targets = await trx('sla_policy_targets')
-    .where({ tenant, sla_policy_id: policyId });
+  const targets = await tenantScopedTable(trx, tenant, 'sla_policy_targets')
+    .where('sla_policy_id', policyId);
 
   return {
     ...policy,
@@ -849,16 +858,15 @@ async function getBusinessHoursSchedule(
 
   // Get schedule from policy
   if (policy.business_hours_schedule_id) {
-    const schedule = await trx('business_hours_schedules')
-      .where({ tenant, schedule_id: policy.business_hours_schedule_id })
+    const schedule = await tenantScopedTable(trx, tenant, 'business_hours_schedules')
+      .where('schedule_id', policy.business_hours_schedule_id)
       .first();
 
     if (schedule) {
-      const entries = await trx('business_hours_entries')
-        .where({ tenant, schedule_id: schedule.schedule_id });
+      const entries = await tenantScopedTable(trx, tenant, 'business_hours_entries')
+        .where('schedule_id', schedule.schedule_id);
 
-      const holidays = await trx('holidays')
-        .where({ tenant })
+      const holidays = await tenantScopedTable(trx, tenant, 'holidays')
         .where(function() {
           this.whereNull('schedule_id')
             .orWhere('schedule_id', schedule.schedule_id);
@@ -873,16 +881,15 @@ async function getBusinessHoursSchedule(
   }
 
   // Fall back to default schedule
-  const defaultSchedule = await trx('business_hours_schedules')
-    .where({ tenant, is_default: true })
+  const defaultSchedule = await tenantScopedTable(trx, tenant, 'business_hours_schedules')
+    .where('is_default', true)
     .first();
 
   if (defaultSchedule) {
-    const entries = await trx('business_hours_entries')
-      .where({ tenant, schedule_id: defaultSchedule.schedule_id });
+    const entries = await tenantScopedTable(trx, tenant, 'business_hours_entries')
+      .where('schedule_id', defaultSchedule.schedule_id);
 
-    const holidays = await trx('holidays')
-      .where({ tenant })
+    const holidays = await tenantScopedTable(trx, tenant, 'holidays')
       .where(function() {
         this.whereNull('schedule_id')
           .orWhere('schedule_id', defaultSchedule.schedule_id);
@@ -919,7 +926,7 @@ async function logSlaEvent(
   eventData: Record<string, unknown>,
   triggeredBy?: string
 ): Promise<void> {
-  await trx('sla_audit_log').insert({
+  await tenantScopedTable(trx, tenant, 'sla_audit_log').insert({
     tenant,
     ticket_id: ticketId,
     event_type: eventType,

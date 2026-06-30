@@ -1,7 +1,7 @@
 'use server';
 
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -153,6 +153,13 @@ export const getTicketWorkloadReport = withAuth(
     const rangeDays = normalizeRangeDays(rangeDaysInput);
     const { knex } = await createTenantKnex();
     await assertCanReadReports(user, knex);
+    const scopedDb = tenantDb(knex, tenant);
+    const withStatus = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
+    const withPriority = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+    const withAssignee = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
 
     const [
       createdRow,
@@ -164,76 +171,44 @@ export const getTicketWorkloadReport = withAuth(
       priorityRows,
       assigneeRows,
     ] = await Promise.all([
-      knex('tickets')
-        .where({ tenant })
+      scopedDb.table('tickets')
         .where('entered_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('tickets')
-        .where({ tenant })
+      scopedDb.table('tickets')
         .whereNotNull('closed_at')
         .where('closed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', tenant)
+      withStatus(scopedDb.table('tickets as t'))
         .where('s.is_closed', false)
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', tenant)
+      withStatus(scopedDb.table('tickets as t'))
         .where('s.is_closed', false)
         .where('t.response_state', 'awaiting_client')
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', tenant)
+      withStatus(scopedDb.table('tickets as t'))
         .where('s.is_closed', false)
         .where('t.response_state', 'awaiting_internal')
         .count<{ count: string }[]>('* as count')
         .first(),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', tenant)
+      withStatus(scopedDb.table('tickets as t'))
         .where('s.is_closed', false)
         .select('s.name as label')
         .count<{ label: string | null; count: string }[]>('* as count')
         .groupBy('s.name')
         .orderBy('count', 'desc')
         .limit(8),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('priorities as p', function joinPriority() {
-          this.on('t.priority_id', '=', 'p.priority_id').andOn('t.tenant', '=', 'p.tenant');
-        })
-        .where('t.tenant', tenant)
+      withPriority(withStatus(scopedDb.table('tickets as t')))
         .where('s.is_closed', false)
         .select(knex.raw("COALESCE(p.priority_name, 'No priority') as label"))
         .count<{ label: string | null; count: string }[]>('* as count')
         .groupBy('p.priority_name')
         .orderBy('count', 'desc')
         .limit(8),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('users as u', function joinAssignee() {
-          this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-        })
-        .where('t.tenant', tenant)
+      withAssignee(withStatus(scopedDb.table('tickets as t')))
         .where('s.is_closed', false)
         .select(knex.raw("COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unassigned') as label"))
         .count<{ label: string | null; count: string }[]>('* as count')
@@ -269,10 +244,14 @@ export const getTimeUtilizationReport = withAuth(
     const rangeDays = normalizeRangeDays(rangeDaysInput);
     const { knex } = await createTenantKnex();
     await assertCanReadReports(user, knex);
+    const scopedDb = tenantDb(knex, tenant);
+    const withUser = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
+    const withService = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'te.service_id', 'sc.service_id', { type: 'left' });
 
     const [summaryRow, userRows, serviceRows, workTypeRows] = await Promise.all([
-      knex('time_entries')
-        .where({ tenant })
+      scopedDb.table('time_entries')
         .where('start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(
           knex.raw('COUNT(*)::int as entries'),
@@ -280,11 +259,7 @@ export const getTimeUtilizationReport = withAuth(
           knex.raw('COALESCE(SUM(billable_duration), 0) as billable_minutes'),
         )
         .first(),
-      knex('time_entries as te')
-        .leftJoin('users as u', function joinUser() {
-          this.on('te.user_id', '=', 'u.user_id').andOn('te.tenant', '=', 'u.tenant');
-        })
-        .where('te.tenant', tenant)
+      withUser(scopedDb.table('time_entries as te'))
         .where('te.start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(
           'te.user_id',
@@ -296,19 +271,14 @@ export const getTimeUtilizationReport = withAuth(
         .groupBy('te.user_id', 'u.first_name', 'u.last_name')
         .orderBy('total_minutes', 'desc')
         .limit(10),
-      knex('time_entries as te')
-        .leftJoin('service_catalog as sc', function joinService() {
-          this.on('te.service_id', '=', 'sc.service_id').andOn('te.tenant', '=', 'sc.tenant');
-        })
-        .where('te.tenant', tenant)
+      withService(scopedDb.table('time_entries as te'))
         .where('te.start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(knex.raw("COALESCE(sc.service_name, 'No service') as label"))
         .sum<{ label: string | null; count: string }[]>({ count: 'te.billable_duration' })
         .groupBy('sc.service_name')
         .orderBy('count', 'desc')
         .limit(8),
-      knex('time_entries')
-        .where({ tenant })
+      scopedDb.table('time_entries')
         .where('start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(knex.raw("COALESCE(NULLIF(work_item_type, ''), 'No work type') as label"))
         .count<{ label: string | null; count: string }[]>('* as count')
@@ -354,14 +324,15 @@ export const getTeamPerformanceReport = withAuth(
     const rangeDays = normalizeRangeDays(rangeDaysInput);
     const { knex } = await createTenantKnex();
     await assertCanReadReports(user, knex);
+    const scopedDb = tenantDb(knex, tenant);
+    const withAssignee = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+    const withStatus = (query: Knex.QueryBuilder, type: 'inner' | 'left' = 'inner') =>
+      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', type === 'left' ? { type: 'left' } : undefined);
     const userNameExpression = knex.raw("COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unassigned') as name");
 
     const [createdRows, closedRows, openRows, summaryRow] = await Promise.all([
-      knex('tickets as t')
-        .leftJoin('users as u', function joinUser() {
-          this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-        })
-        .where('t.tenant', tenant)
+      withAssignee(scopedDb.table('tickets as t'))
         .where('t.entered_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(
           knex.raw("COALESCE(t.assigned_to::text, 'unassigned') as user_id"),
@@ -371,11 +342,7 @@ export const getTeamPerformanceReport = withAuth(
         .groupBy('t.assigned_to', 'u.first_name', 'u.last_name')
         .orderBy('count', 'desc')
         .limit(10),
-      knex('tickets as t')
-        .leftJoin('users as u', function joinUser() {
-          this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-        })
-        .where('t.tenant', tenant)
+      withAssignee(scopedDb.table('tickets as t'))
         .whereNotNull('t.closed_at')
         .where('t.closed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(
@@ -387,14 +354,7 @@ export const getTeamPerformanceReport = withAuth(
         .groupBy('t.assigned_to', 'u.first_name', 'u.last_name')
         .orderBy('count', 'desc')
         .limit(10),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('users as u', function joinUser() {
-          this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-        })
-        .where('t.tenant', tenant)
+      withAssignee(withStatus(scopedDb.table('tickets as t')))
         .where('s.is_closed', false)
         .select(
           knex.raw("COALESCE(t.assigned_to::text, 'unassigned') as user_id"),
@@ -404,11 +364,7 @@ export const getTeamPerformanceReport = withAuth(
         .groupBy('t.assigned_to', 'u.first_name', 'u.last_name')
         .orderBy('count', 'desc')
         .limit(10),
-      knex('tickets as t')
-        .leftJoin('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', tenant)
+      withStatus(scopedDb.table('tickets as t'), 'left')
         .select(
           knex.raw(`SUM(CASE WHEN t.entered_at >= NOW() - INTERVAL '${rangeDays} days' THEN 1 ELSE 0 END)::int as created_tickets`),
           knex.raw(`SUM(CASE WHEN t.closed_at IS NOT NULL AND t.closed_at >= NOW() - INTERVAL '${rangeDays} days' THEN 1 ELSE 0 END)::int as closed_tickets`),
@@ -478,16 +434,21 @@ export const getEmailChannelHealthReport = withAuth(
     const rangeDays = normalizeRangeDays(rangeDaysInput);
     const { knex } = await createTenantKnex();
     await assertCanReadReports(user, knex);
+    const scopedDb = tenantDb(knex, tenant);
+    const withTicketFromProcessedMessage = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'tickets as t', 'epm.ticket_id', 't.ticket_id', { type: 'left' });
+    const withRecentProcessedMessages = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'email_processed_messages as epm', 'ep.id', 'epm.provider_id', {
+        type: 'left',
+        on: (join) => {
+          join.andOn('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`));
+        },
+      });
 
     const [providerRows, summaryRow, statusRows, channelRows] = await Promise.all([
-      knex('email_providers')
-        .where({ tenant })
+      scopedDb.table('email_providers')
         .select('id', 'is_active', 'status'),
-      knex('email_processed_messages as epm')
-        .leftJoin('tickets as t', function joinTicket() {
-          this.on('epm.ticket_id', '=', 't.ticket_id').andOn('epm.tenant', '=', 't.tenant');
-        })
-        .where('epm.tenant', tenant)
+      withTicketFromProcessedMessage(scopedDb.table('email_processed_messages as epm'))
         .where('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(
           knex.raw('COUNT(*)::int as processed_emails'),
@@ -501,23 +462,13 @@ export const getEmailChannelHealthReport = withAuth(
           ),
         )
         .first(),
-      knex('email_processed_messages')
-        .where({ tenant })
+      scopedDb.table('email_processed_messages')
         .where('processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select('processing_status as label')
         .count<{ label: string | null; count: string }[]>('* as count')
         .groupBy('processing_status')
         .orderBy('count', 'desc'),
-      knex('email_providers as ep')
-        .leftJoin('email_processed_messages as epm', function joinProcessedMessages() {
-          this.on('ep.id', '=', 'epm.provider_id')
-            .andOn('ep.tenant', '=', 'epm.tenant')
-            .andOn('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`));
-        })
-        .leftJoin('tickets as t', function joinTicket() {
-          this.on('epm.ticket_id', '=', 't.ticket_id').andOn('epm.tenant', '=', 't.tenant');
-        })
-        .where('ep.tenant', tenant)
+      withTicketFromProcessedMessage(withRecentProcessedMessages(scopedDb.table('email_providers as ep')))
         .select(
           'ep.id',
           'ep.provider_name',
@@ -591,13 +542,14 @@ export const getTicketAgingReport = withAuth(
     const rangeDays = normalizeRangeDays(rangeDaysInput);
     const { knex } = await createTenantKnex();
     await assertCanReadReports(user, knex);
+    const scopedDb = tenantDb(knex, tenant);
+    const withStatus = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
+    const withClient = (query: Knex.QueryBuilder) =>
+      scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
 
     const [agingRows, responseRows, oldestRows] = await Promise.all([
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', tenant)
+      withStatus(scopedDb.table('tickets as t'))
         .where('s.is_closed', false)
         .select(
           knex.raw("SUM(CASE WHEN t.entered_at >= NOW() - INTERVAL '2 days' THEN 1 ELSE 0 END)::int as under_2_days"),
@@ -607,11 +559,7 @@ export const getTicketAgingReport = withAuth(
           knex.raw('COUNT(*)::int as open_count'),
         )
         .first(),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .where('t.tenant', tenant)
+      withStatus(scopedDb.table('tickets as t'))
         .where('s.is_closed', false)
         .select(
           knex.raw(
@@ -621,14 +569,7 @@ export const getTicketAgingReport = withAuth(
         .count<{ label: string; count: string }[]>('* as count')
         .groupBy('t.response_state')
         .orderBy('count', 'desc'),
-      knex('tickets as t')
-        .join('statuses as s', function joinStatus() {
-          this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('clients as c', function joinClient() {
-          this.on('t.client_id', '=', 'c.client_id').andOn('t.tenant', '=', 'c.tenant');
-        })
-        .where('t.tenant', tenant)
+      withClient(withStatus(scopedDb.table('tickets as t')))
         .where('s.is_closed', false)
         .where('t.entered_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
         .select(
@@ -657,6 +598,14 @@ export const getTicketAgingReport = withAuth(
       { label: '8 to 30 days', count: toCount(aging?.days_8_to_30) },
       { label: 'Over 30 days', count: toCount(aging?.over_30_days) },
     ];
+    const typedOldestRows = oldestRows as Array<{
+      ticket_id: string;
+      ticket_number: string | number | null;
+      title: string | null;
+      client_name: string | null;
+      entered_at: Date | string | null;
+      age_days: number | string | null;
+    }>;
 
     return {
       rangeDays,
@@ -672,11 +621,11 @@ export const getTicketAgingReport = withAuth(
         label: row.label,
         count: toCount(row.count),
       })),
-      oldestOpenTickets: oldestRows.map((row) => ({
+      oldestOpenTickets: typedOldestRows.map((row) => ({
         ticketId: row.ticket_id,
-        ticketNumber: row.ticket_number,
-        title: row.title,
-        clientName: row.client_name,
+        ticketNumber: String(row.ticket_number ?? ''),
+        title: row.title ?? '',
+        clientName: row.client_name ?? '',
         enteredAt: toIsoString(row.entered_at),
         ageDays: toCount(row.age_days),
       })),

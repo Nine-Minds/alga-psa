@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 class ClientContractLine {
     static async updateClientCredit(clientId: string, amount: number): Promise<void> {
@@ -7,8 +7,8 @@ class ClientContractLine {
             throw new Error('Tenant context is required for updating client credit');
         }
 
-        const updatedRows = await db('clients')
-            .where({ client_id: clientId, tenant })
+        const updatedRows = await tenantDb(db, tenant).table('clients')
+            .where({ client_id: clientId })
             .increment('credit_balance', amount);
 
         if (updatedRows === 0) {
@@ -22,8 +22,8 @@ class ClientContractLine {
             throw new Error('Tenant context is required for getting client credit');
         }
 
-        const result = await db('clients')
-            .where({ client_id: clientId, tenant })
+        const result = await tenantDb(db, tenant).table('clients')
+            .where({ client_id: clientId })
             .select('credit_balance')
             .first();
 

@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { IContractLineServiceBucketConfig } from '@alga-psa/types';
 
@@ -10,6 +10,10 @@ export default class ContractLineServiceBucketConfig {
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
     this.tenant = tenant as string;
+  }
+
+  private table(table: string): Knex.QueryBuilder {
+    return tenantDb(this.knex, this.tenant).table(table);
   }
 
   /**
@@ -36,10 +40,9 @@ export default class ContractLineServiceBucketConfig {
   async getByConfigId(configId: string): Promise<IContractLineServiceBucketConfig | null> {
     await this.initKnex();
     
-    const config = await this.knex('contract_line_service_bucket_config')
+    const config = await this.table('contract_line_service_bucket_config')
       .where({
-        config_id: configId,
-        tenant: this.tenant
+        config_id: configId
       })
       .first();
     
@@ -54,7 +57,7 @@ export default class ContractLineServiceBucketConfig {
     
     const now = new Date();
     
-    await this.knex('contract_line_service_bucket_config').insert({
+    await this.table('contract_line_service_bucket_config').insert({
       config_id: data.config_id,
       total_minutes: data.total_minutes,
       billing_period: data.billing_period,
@@ -89,10 +92,9 @@ export default class ContractLineServiceBucketConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('contract_line_service_bucket_config')
+    const result = await this.table('contract_line_service_bucket_config')
       .where({
-        config_id: configId,
-        tenant: this.tenant
+        config_id: configId
       })
       .update(updateData);
     
@@ -105,10 +107,9 @@ export default class ContractLineServiceBucketConfig {
   async delete(configId: string): Promise<boolean> {
     await this.initKnex();
     
-    const result = await this.knex('contract_line_service_bucket_config')
+    const result = await this.table('contract_line_service_bucket_config')
       .where({
-        config_id: configId,
-        tenant: this.tenant
+        config_id: configId
       })
       .delete();
     

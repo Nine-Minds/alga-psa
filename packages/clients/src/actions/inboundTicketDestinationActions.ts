@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { assertMspPermission, hasMspPermission } from '../lib/authHelpers';
 
@@ -27,9 +27,9 @@ async function validateDestinationInTenant(
   tenant: string,
   inboundTicketDefaultsId: string
 ): Promise<void> {
-  const destination = await trx('inbound_ticket_defaults')
+  const destination = await tenantDb(trx, tenant).table('inbound_ticket_defaults')
     .select('id')
-    .where({ tenant, id: inboundTicketDefaultsId })
+    .where({ id: inboundTicketDefaultsId })
     .first();
 
   if (!destination) {
@@ -52,9 +52,8 @@ export const listInboundTicketDestinationOptions = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const rows = await trx('inbound_ticket_defaults')
+    const rows = await tenantDb(trx, tenant).table('inbound_ticket_defaults')
       .select('id', 'short_name', 'display_name', 'is_active')
-      .where({ tenant })
       .orderBy([{ column: 'is_active', order: 'desc' }, { column: 'display_name', order: 'asc' }]);
 
     return rows as InboundTicketDestinationOption[];
@@ -73,9 +72,9 @@ export const updateClientInboundTicketDestination = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .select('client_id')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .first();
     if (!client) {
       throw new Error('Client not found');
@@ -85,8 +84,8 @@ export const updateClientInboundTicketDestination = withAuth(async (
       await validateDestinationInTenant(trx, tenant, normalizedDefaultsId);
     }
 
-    const [updated] = await trx('clients')
-      .where({ tenant, client_id: clientId })
+    const [updated] = await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .update({
         inbound_ticket_defaults_id: normalizedDefaultsId,
         updated_at: new Date().toISOString(),
@@ -111,9 +110,9 @@ export const updateContactInboundTicketDestination = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const contact = await trx('contacts')
+    const contact = await tenantDb(trx, tenant).table('contacts')
       .select('contact_name_id')
-      .where({ tenant, contact_name_id: contactId })
+      .where({ contact_name_id: contactId })
       .first();
     if (!contact) {
       throw new Error('Contact not found');
@@ -123,8 +122,8 @@ export const updateContactInboundTicketDestination = withAuth(async (
       await validateDestinationInTenant(trx, tenant, normalizedDefaultsId);
     }
 
-    const [updated] = await trx('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const [updated] = await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .update({
         inbound_ticket_defaults_id: normalizedDefaultsId,
         updated_at: new Date().toISOString(),

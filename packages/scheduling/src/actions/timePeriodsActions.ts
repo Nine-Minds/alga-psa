@@ -19,7 +19,7 @@ import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet
 import { formatUtcDateNoTime, toPlainDate } from '@alga-psa/core';
 import { parse } from 'path';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, withTransaction, getTenantContext } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, getTenantContext } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getSession, withAuth } from '@alga-psa/auth';
@@ -412,8 +412,8 @@ export const deleteTimePeriods = withAuth(async (
   const { knex } = await createTenantKnex();
 
   // Manager gate: mirrors how the Time Entry page derives isManager (manages any team).
-  const managedTeam = await knex('teams')
-    .where({ tenant, manager_id: user.user_id })
+  const managedTeam = await tenantDb(knex, tenant).table('teams')
+    .where({ manager_id: user.user_id })
     .first('team_id');
   const isManager = !!managedTeam;
 

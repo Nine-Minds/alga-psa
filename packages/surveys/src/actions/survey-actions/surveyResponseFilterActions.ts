@@ -1,11 +1,16 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
 type FilterOption = {
   value: string;
   label: string;
+};
+
+type TechnicianFilterRow = {
+  user_id: string;
+  full_name: string | null;
 };
 
 export type SurveyFilterClient = {
@@ -15,6 +20,8 @@ export type SurveyFilterClient = {
   is_inactive: boolean;
   logoUrl: string | null;
 };
+
+type ClientFilterRow = Omit<SurveyFilterClient, 'logoUrl'>;
 
 export type SurveyFilterOptions = {
   templates: FilterOption[];
@@ -30,29 +37,35 @@ const USERS_TABLE = 'users';
 
 export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promise<SurveyFilterOptions> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
-  const [templates, technicianRows, clientRows] = await Promise.all([
-    knex(TEMPLATES_TABLE)
-      .where({ tenant, enabled: true })
+  const technicianQuery = db.table(`${RESPONSES_TABLE} as sr`);
+  db.tenantJoin(technicianQuery, `${TICKETS_TABLE} as t`, 'sr.ticket_id', 't.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 'sr.tenant',
+  });
+  db.tenantJoin(technicianQuery, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+  });
+
+  const clientQuery = db.table(`${RESPONSES_TABLE} as sr`);
+  db.tenantJoin(clientQuery, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
+    type: 'left',
+    rootTenantColumn: 'sr.tenant',
+  });
+
+  const [templates, technicianRowsRaw, clientRowsRaw] = await Promise.all([
+    db.table(TEMPLATES_TABLE)
+      .where({ enabled: true })
       .select(['template_id', 'template_name'])
       .orderBy('template_name', 'asc'),
-    knex(`${RESPONSES_TABLE} as sr`)
-      .leftJoin(`${TICKETS_TABLE} as t`, function joinTickets() {
-        this.on('sr.ticket_id', '=', 't.ticket_id').andOn('sr.tenant', '=', 't.tenant');
-      })
-      .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
-        this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
-      })
-      .where('sr.tenant', tenant)
+    technicianQuery
       .whereNotNull('t.assigned_to')
       .distinct('t.assigned_to as user_id')
       .select(knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as full_name"))
       .orderBy('full_name', 'asc'),
-    knex(`${RESPONSES_TABLE} as sr`)
-      .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-        this.on('sr.client_id', '=', 'c.client_id').andOn('sr.tenant', '=', 'c.tenant');
-      })
-      .where('sr.tenant', tenant)
+    clientQuery
       .whereNotNull('sr.client_id')
       .distinct(
         'sr.client_id as client_id',
@@ -62,6 +75,8 @@ export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promis
       )
       .orderBy('c.client_name', 'asc'),
   ]);
+  const technicianRows = technicianRowsRaw as unknown as TechnicianFilterRow[];
+  const clientRows = clientRowsRaw as unknown as ClientFilterRow[];
 
   return {
     templates: templates.map((template) => ({

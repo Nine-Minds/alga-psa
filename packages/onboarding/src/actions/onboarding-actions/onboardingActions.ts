@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -107,8 +107,8 @@ export const saveClientInfo = withAuth(async (
           updateData.hashed_password = await hashPassword(data.newPassword);
         }
 
-        await trx('users')
-          .where({ user_id: currentUser.user_id, tenant })
+        await tenantDb(trx, tenant).table('users')
+          .where({ user_id: currentUser.user_id })
           .update(updateData);
 
         // If password was changed, mark it as reset
@@ -164,10 +164,12 @@ export const addSingleTeamMember = withAuth(async (
     let error: string | null = null;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       try {
         // Check if user already exists
-        const existingUser = await trx('users')
-          .where({ email: member.email.toLowerCase(), tenant })
+        const existingUser = await tenantScopedTable('users')
+          .where({ email: member.email.toLowerCase() })
           .first();
 
         if (existingUser) {
@@ -181,7 +183,7 @@ export const addSingleTeamMember = withAuth(async (
         // Use provided password or generate a default one
         const tempPassword = await hashPassword(member.password || 'TempPassword123!');
 
-        await trx('users').insert({
+        await tenantScopedTable('users').insert({
           user_id: userId,
           tenant,
           username: member.email.toLowerCase(),  // Use email as username
@@ -196,15 +198,14 @@ export const addSingleTeamMember = withAuth(async (
         });
 
         // Get role from roles table by role_name
-        const role = await trx('roles')
+        const role = await tenantScopedTable('roles')
           .where({ 
             role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
-            tenant 
           })
           .first();
 
         if (role) {
-          await trx('user_roles').insert({
+          await tenantScopedTable('user_roles').insert({
             user_id: userId,
             role_id: role.role_id,
             tenant
@@ -212,13 +213,13 @@ export const addSingleTeamMember = withAuth(async (
         } else {
           console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
           // Try to assign a default role
-          const defaultRole = await trx('roles')
-            .where({ tenant, msp: true })
+          const defaultRole = await tenantScopedTable('roles')
+            .where({ msp: true })
             .orderBy('role_name')
             .first();
           
           if (defaultRole) {
-            await trx('user_roles').insert({
+            await tenantScopedTable('user_roles').insert({
               user_id: userId,
               role_id: defaultRole.role_id,
               tenant
@@ -307,11 +308,13 @@ export const addTeamMembers = withAuth(async (
     const failed: Array<{ member: TeamMember; error: string }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       for (const member of membersToProcess) {
         try {
           // Check if user already exists
-          const existingUser = await trx('users')
-            .where({ email: member.email.toLowerCase(), tenant })
+          const existingUser = await tenantScopedTable('users')
+            .where({ email: member.email.toLowerCase() })
             .first();
 
           if (existingUser) {
@@ -324,7 +327,7 @@ export const addTeamMembers = withAuth(async (
           // Use provided password or generate a default one
           const tempPassword = await hashPassword(member.password || 'TempPassword123!');
 
-          await trx('users').insert({
+          await tenantScopedTable('users').insert({
             user_id: userId,
             tenant,
             username: member.email.toLowerCase(),  // Use email as username
@@ -339,15 +342,14 @@ export const addTeamMembers = withAuth(async (
           });
 
           // Get role from roles table by role_name
-          const role = await trx('roles')
+          const role = await tenantScopedTable('roles')
             .where({ 
               role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
-              tenant 
             })
             .first();
 
           if (role) {
-            await trx('user_roles').insert({
+            await tenantScopedTable('user_roles').insert({
               user_id: userId,
               role_id: role.role_id,
               tenant
@@ -355,13 +357,13 @@ export const addTeamMembers = withAuth(async (
           } else {
             console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
             // Try to assign a default role
-            const defaultRole = await trx('roles')
-              .where({ tenant, msp: true })
+            const defaultRole = await tenantScopedTable('roles')
+              .where({ msp: true })
               .orderBy('role_name')
               .first();
             
             if (defaultRole) {
-              await trx('user_roles').insert({
+              await tenantScopedTable('user_roles').insert({
                 user_id: userId,
                 role_id: defaultRole.role_id,
                 tenant
@@ -435,9 +437,11 @@ export const createClient = withAuth(async (
     // If we have an existing clientId, update instead of create
     if (clientId) {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
         // Update the client
-        await trx('clients')
-          .where({ client_id: clientId, tenant })
+        await tenantScopedTable('clients')
+          .where({ client_id: clientId })
           .update({
             client_name: data.clientName,
             url: data.clientUrl,
@@ -445,13 +449,13 @@ export const createClient = withAuth(async (
           });
 
         // Update the default location if email or phone changed
-        const defaultLocation = await trx('client_locations')
-          .where({ client_id: clientId, tenant, is_default: true })
+        const defaultLocation = await tenantScopedTable('client_locations')
+          .where({ client_id: clientId, is_default: true })
           .first();
 
         if (defaultLocation && (data.clientEmail || data.clientPhone)) {
-          await trx('client_locations')
-            .where({ location_id: defaultLocation.location_id, tenant })
+          await tenantScopedTable('client_locations')
+            .where({ location_id: defaultLocation.location_id })
             .update({
               email: data.clientEmail || defaultLocation.email || '',
               phone: data.clientPhone || defaultLocation.phone || '',
@@ -477,6 +481,8 @@ export const createClient = withAuth(async (
 
     // Create new client
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       // Create the client without email/phone (those go in locations)
       const clientData = {
         client_name: data.clientName,
@@ -500,7 +506,7 @@ export const createClient = withAuth(async (
 
       // Create default location with email and phone if provided
       if (data.clientEmail || data.clientPhone) {
-        await trx('client_locations').insert({
+        await tenantScopedTable('client_locations').insert({
           location_id: require('crypto').randomUUID(),
           client_id: clientId,
           tenant,
@@ -554,11 +560,10 @@ export const addClientContact = withAuth(async (
 
     // First, check if a contact with this email already exists for this client
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({ 
           email: data.contactEmail.toLowerCase(),
           client_id: data.clientId,
-          tenant 
         })
         .first();
     });
@@ -571,10 +576,9 @@ export const addClientContact = withAuth(async (
 
       if (needsUpdate) {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-          await trx('contacts')
+          await tenantDb(trx, tenant).table('contacts')
             .where({ 
               contact_name_id: existingContact.contact_name_id,
-              tenant 
             })
             .update({
               full_name: data.contactName,
@@ -637,16 +641,17 @@ export const setupBilling = withAuth(async (
     let serviceId: string | undefined;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       // Use the selected service type
       if (!data.serviceTypeId) {
         throw new Error('Service type is required');
       }
 
       // Verify the service type exists
-      const serviceType = await trx('service_types')
+      const serviceType = await tenantScopedTable('service_types')
         .where({ 
           id: data.serviceTypeId,
-          tenant: tenant,
           is_active: true
         })
         .first();
@@ -661,7 +666,7 @@ export const setupBilling = withAuth(async (
       const rateInCents = Math.round((parseFloat(data.servicePrice) || 0) * 100);
       // Billing behavior is contract/service configuration context, not service-type identity.
       serviceId = require('crypto').randomUUID();
-      await trx('service_catalog').insert({
+      await tenantScopedTable('service_catalog').insert({
         service_id: serviceId,
         tenant,
         service_name: data.serviceName,
@@ -674,7 +679,7 @@ export const setupBilling = withAuth(async (
       });
 
       // Create service_prices entry so the catalog UI shows the correct currency & rate
-      await trx('service_prices').insert({
+      await tenantScopedTable('service_prices').insert({
         price_id: require('crypto').randomUUID(),
         tenant,
         service_id: serviceId,
@@ -683,19 +688,17 @@ export const setupBilling = withAuth(async (
       });
 
       // Set default currency on all tenant clients created during onboarding
-      await trx('clients')
-        .where({ tenant })
+      await tenantScopedTable('clients')
         .whereNull('default_currency_code')
         .update({ default_currency_code: currencyCode });
 
       // Persist the selected currency as the tenant-level billing default
-      const existingSettings = await trx('default_billing_settings').where({ tenant }).first();
+      const existingSettings = await tenantScopedTable('default_billing_settings').first();
       if (existingSettings) {
-        await trx('default_billing_settings')
-          .where({ tenant })
+        await tenantScopedTable('default_billing_settings')
           .update({ default_currency_code: currencyCode, updated_at: trx.fn.now() });
       } else {
-        await trx('default_billing_settings').insert({
+        await tenantScopedTable('default_billing_settings').insert({
           tenant,
           zero_dollar_invoice_handling: 'normal',
           suppress_zero_dollar_invoices: false,
@@ -736,15 +739,17 @@ export const configureTicketing = withAuth(async (
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       // Configure ticket numbering - check if any numbering field is explicitly set
       if (data.ticketPrefix !== undefined || data.ticketStartNumber !== undefined || data.ticketPaddingLength !== undefined) {
-        const existingNumbering = await trx('next_number')
-          .where({ tenant, entity_type: 'TICKET' })
+        const existingNumbering = await tenantScopedTable('next_number')
+          .where({ entity_type: 'TICKET' })
           .first();
 
         if (existingNumbering) {
-          await trx('next_number')
-            .where({ tenant, entity_type: 'TICKET' })
+          await tenantScopedTable('next_number')
+            .where({ entity_type: 'TICKET' })
             .update({
               prefix: data.ticketPrefix ?? '',
               padding_length: data.ticketPaddingLength ?? 6,
@@ -754,7 +759,7 @@ export const configureTicketing = withAuth(async (
               })
             });
         } else {
-          await trx('next_number').insert({
+          await tenantScopedTable('next_number').insert({
             tenant,
             entity_type: 'TICKET',
             prefix: data.ticketPrefix ?? '',
@@ -775,17 +780,15 @@ export const configureTicketing = withAuth(async (
         
         // If this imported board should be default, clear existing defaults first
         if (shouldBeDefault) {
-          await trx('boards')
+          await tenantScopedTable('boards')
             .where({ 
-              tenant,
               is_default: true
             })
             .update({ is_default: false });
             
           // Set the imported board as default
-          await trx('boards')
+          await tenantScopedTable('boards')
             .where({
-              tenant,
               board_id: boardId
             })
             .update({ is_default: true });
@@ -796,19 +799,20 @@ export const configureTicketing = withAuth(async (
         // This is a manually created board
         boardId = require('crypto').randomUUID();
         const shouldBeDefault = data.isDefaultBoard || false;
-        const boardColumns = await trx('boards').columnInfo();
+        const boardColumns = await tenantDb(trx, tenant)
+          .unscoped('boards', 'columnInfo reads schema metadata, not tenant rows')
+          .columnInfo();
         
         // If setting as default, clear any existing defaults first
         if (shouldBeDefault) {
-          await trx('boards')
+          await tenantScopedTable('boards')
             .where({ 
-              tenant,
               is_default: true
             })
             .update({ is_default: false });
         }
         
-        await trx('boards').insert({
+        await tenantScopedTable('boards').insert({
           board_id: boardId,
           tenant,
           board_name: data.boardName,
@@ -833,9 +837,8 @@ export const configureTicketing = withAuth(async (
           const categoryId = require('crypto').randomUUID();
           
           // Check if category already exists
-          const existingCategory = await trx('categories')
+          const existingCategory = await tenantScopedTable('categories')
             .where({ 
-              tenant, 
               category_name: categoryName,
               board_id: boardId
             })
@@ -847,9 +850,8 @@ export const configureTicketing = withAuth(async (
           
           if (displayOrder !== null) {
             // Check if this display order already exists for this board
-            const existingWithOrder = await trx('categories')
+            const existingWithOrder = await tenantScopedTable('categories')
               .where({ 
-                tenant, 
                 board_id: boardId,
                 display_order: displayOrder
               })
@@ -857,15 +859,15 @@ export const configureTicketing = withAuth(async (
               
             if (existingWithOrder) {
               // Find the max display order and add 1
-              const maxOrder = await trx('categories')
-                .where({ tenant, board_id: boardId })
+              const maxOrder = await tenantScopedTable('categories')
+                .where({ board_id: boardId })
                 .max('display_order as max')
                 .first();
               displayOrder = (maxOrder?.max || 0) + 1;
             }
           }
           
-          await trx('categories').insert({
+          await tenantScopedTable('categories').insert({
             category_id: categoryId,
             tenant,
             category_name: categoryName,
@@ -891,9 +893,8 @@ export const configureTicketing = withAuth(async (
         
         // If we have a default status, clear existing defaults first
         if (defaultStatus) {
-          await trx('statuses')
+          await tenantScopedTable('statuses')
             .where({ 
-              tenant, 
               board_id: boardId,
               status_type: 'ticket',
               is_default: true
@@ -906,9 +907,8 @@ export const configureTicketing = withAuth(async (
           if (status.status_id && !status.status_id.startsWith('manual-')) {
             // For imported statuses, we might need to update their default flag
             if (status.is_default) {
-              await trx('statuses')
+              await tenantScopedTable('statuses')
                 .where({
-                  tenant,
                   status_id: status.status_id,
                   board_id: boardId
                 })
@@ -918,9 +918,8 @@ export const configureTicketing = withAuth(async (
           }
           
           // Check if status already exists
-          const existingStatus = await trx('statuses')
+          const existingStatus = await tenantScopedTable('statuses')
             .where({ 
-              tenant, 
               name: status.name,
               status_type: 'ticket',
               board_id: boardId
@@ -929,7 +928,7 @@ export const configureTicketing = withAuth(async (
 
           if (!existingStatus) {
             const statusId = require('crypto').randomUUID();
-            await trx('statuses').insert({
+            await tenantScopedTable('statuses').insert({
               status_id: statusId,
               tenant,
               board_id: boardId,
@@ -957,9 +956,8 @@ export const configureTicketing = withAuth(async (
         const priorityName = typeof priority === 'string' ? priority : priority.priority_name;
         
         // Check if priority already exists (might have been imported)
-        const existingPriority = await trx('priorities')
+        const existingPriority = await tenantScopedTable('priorities')
           .where({ 
-            tenant, 
             priority_name: priorityName,
             item_type: 'ticket'
           })
@@ -967,7 +965,7 @@ export const configureTicketing = withAuth(async (
 
         if (!existingPriority) {
           const priorityId = require('crypto').randomUUID();
-          await trx('priorities').insert({
+          await tenantScopedTable('priorities').insert({
             priority_id: priorityId,
             tenant,
             priority_name: priorityName,
@@ -1017,10 +1015,9 @@ export const validateOnboardingDefaults = withAuth(async (
     // Use withTransaction to check for defaults
     const validationResult = await withTransaction(db, async (trx) => {
       // Check for default board
-      const defaultBoard = await trx('boards')
+      const defaultBoard = await tenantDb(trx, tenant).table('boards')
         .where({ 
-          is_default: true,
-          tenant 
+          is_default: true
         })
         .first();
       
@@ -1029,11 +1026,10 @@ export const validateOnboardingDefaults = withAuth(async (
       }
       
       // Check for default status
-      const defaultStatus = await trx('statuses')
+      const defaultStatus = await tenantDb(trx, tenant).table('statuses')
         .where({ 
           is_default: true,
           status_type: 'ticket',
-          tenant,
           board_id: defaultBoard.board_id
         })
         .first();
@@ -1085,10 +1081,9 @@ export const getAvailableRoles = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const roles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('roles')
+    const roles = await withTransaction(knex, async (trx: Knex.Transaction): Promise<Array<{ role_id: string; role_name: string }>> => {
+      return await tenantDb(trx, tenant).table('roles')
         .where({
-          tenant,
           msp: true  // Only fetch MSP roles
         })
         .select('role_id', 'role_name')
@@ -1126,8 +1121,8 @@ export const getOnboardingInitialData = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Get the tenant's client information
-    const client = await knex('clients')
-      .where({ tenant, is_inactive: false })
+    const client = await tenantDb(knex, tenant).table('clients')
+      .where({ is_inactive: false })
       .orderBy('created_at', 'asc')
       .first();
 
@@ -1164,25 +1159,24 @@ export const getTenantTicketingData = withAuth(async (
 }> => {
   try {
     const { knex } = await createTenantKnex();
+    const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
 
-    const boards = await knex('boards')
-      .where({ tenant })
+    const boards = await tenantScopedTable('boards')
       .orderBy('display_order', 'asc')
       .orderBy('board_name', 'asc');
 
     const [categories, statuses, priorities] = await Promise.all([
-      knex('categories')
-        .where({ tenant })
+      tenantScopedTable('categories')
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
-      knex('statuses')
-        .where({ tenant, status_type: 'ticket' })
+      tenantScopedTable('statuses')
+        .where({ status_type: 'ticket' })
         .whereNotNull('board_id')
         .orderBy('board_id', 'asc')
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
-      knex('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      tenantScopedTable('priorities')
+        .where({ item_type: 'ticket' })
         .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc')
     ]);

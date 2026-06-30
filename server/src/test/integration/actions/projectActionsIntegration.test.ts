@@ -2,6 +2,7 @@
 import 'server/test-utils/testMocks';
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import { createProject } from '@alga-psa/projects/actions/projectActions';
 import type { IProject } from '@alga-psa/types';
 import { TestContext } from 'server/test-utils/testContext';
@@ -17,6 +18,10 @@ describe('Project Actions Integration - Project Numbers', () => {
 
   let context: TestContext;
   let testClientId: string;
+
+  function tenantTable(table: string) {
+    return tenantDb(context.db, context.tenantId).table(table);
+  }
 
   beforeAll(async () => {
     context = await setupContext({
@@ -42,14 +47,14 @@ describe('Project Actions Integration - Project Numbers', () => {
     });
 
     // Ensure project statuses exist for test tenant
-    const existingStatuses = await context.db('statuses')
-      .where({ tenant: context.tenantId, status_type: 'project' })
+    const existingStatuses = await tenantTable('statuses')
+      .where({ status_type: 'project' })
       .count('* as count')
       .first();
 
     if (!existingStatuses || existingStatuses.count === '0') {
       // Insert test project statuses
-      await context.db('statuses').insert([
+      await tenantTable('statuses').insert([
         {
           tenant: context.tenantId,
           name: 'Planning',
@@ -82,7 +87,7 @@ describe('Project Actions Integration - Project Numbers', () => {
     testClientId = context.clientId;
 
     // Configure project numbering with correct format
-    await context.db('next_number')
+    await tenantTable('next_number')
       .insert({
         tenant: context.tenantId,
         entity_type: 'PROJECT',
@@ -122,8 +127,8 @@ describe('Project Actions Integration - Project Numbers', () => {
       const project = await createProject(projectData as any);
 
       // Verify project was created with project_number
-      const dbProject = await context.db('projects')
-        .where({ project_id: project.project_id, tenant: context.tenantId })
+      const dbProject = await tenantTable('projects')
+        .where({ project_id: project.project_id })
         .first();
 
       expect(dbProject).toBeDefined();
@@ -148,9 +153,8 @@ describe('Project Actions Integration - Project Numbers', () => {
       const project2 = await createProject({ ...projectData, project_name: 'Project 2' } as any);
       const project3 = await createProject({ ...projectData, project_name: 'Project 3' } as any);
 
-      const projects = await context.db('projects')
+      const projects = await tenantTable('projects')
         .whereIn('project_id', [project1.project_id, project2.project_id, project3.project_id])
-        .where('tenant', context.tenantId)
         .orderBy('project_number');
 
       expect(projects).toHaveLength(3);
@@ -164,7 +168,7 @@ describe('Project Actions Integration - Project Numbers', () => {
     it('should enforce unique project_number per tenant', async () => {
       // Try to insert duplicate project_number
       await expect(
-        context.db('projects').insert({
+        tenantTable('projects').insert({
           project_id: '00000000-0000-0000-0000-000000000099',
           project_name: 'Duplicate Number Test',
           client_id: testClientId,

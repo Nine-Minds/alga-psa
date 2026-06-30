@@ -9,8 +9,10 @@ const invoiceQueriesSource = fs.readFileSync(
 
 describe('invoiceQueries recurring detail refresh wiring', () => {
   it('T208: list summaries flatten canonical detail periods, while rerender and preview-refresh stay on the full detail-aware invoice reader', () => {
-    expect(invoiceQueriesSource).toContain('SELECT MIN(iid.service_period_start)');
-    expect(invoiceQueriesSource).toContain('SELECT MAX(iid.service_period_end)');
+    expect(invoiceQueriesSource).toContain("buildInvoiceDetailServicePeriodSubquery(db, 'min', 'invoices')");
+    expect(invoiceQueriesSource).toContain("buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices')");
+    expect(invoiceQueriesSource).toContain("db.tenantJoin(subquery, 'invoice_charge_details as iid'");
+    expect(invoiceQueriesSource).toContain("db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`)");
     expect(invoiceQueriesSource).toContain('return Invoice.getFullInvoiceById(knex, tenant, invoiceId);');
     expect(invoiceQueriesSource).toContain('detail-aware reader');
   });

@@ -1,20 +1,25 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { IServiceCategory } from '@alga-psa/types';
 
-import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 export const getServiceCategories = withAuth(async (user, { tenant }) => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const categories = await trx<IServiceCategory>('service_categories')
-        .where('tenant', tenant || '')
+      const categories = await tenantScopedTable(trx, tenant, 'service_categories')
         .select('*');
       return categories;
     } catch (error) {
@@ -36,9 +41,8 @@ export const createServiceCategory = withAuth(async (user, { tenant }, categoryN
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if category with same name already exists
-    const existingCategory = await trx('service_categories')
+    const existingCategory = await tenantScopedTable(trx, tenant, 'service_categories')
       .where({
-        tenant,
         category_name: categoryName
       })
       .first();
@@ -51,7 +55,7 @@ export const createServiceCategory = withAuth(async (user, { tenant }, categoryN
       throw new Error("user is not logged in");
     }
 
-    const [newCategory] = await trx<IServiceCategory>('service_categories')
+    const [newCategory] = await tenantScopedTable(trx, tenant, 'service_categories')
       .insert({
         tenant,
         category_name: categoryName.trim(),
@@ -82,9 +86,8 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if category is in use
-    const inUseCount = await trx('tickets')
+    const inUseCount = await tenantScopedTable(trx, tenant, 'tickets')
       .where({
-        tenant,
         category_id: categoryId
       })
       .count('ticket_id as count')
@@ -95,13 +98,12 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
     }
 
     // Clear category_id from service_request_definitions (replaces ON DELETE SET NULL)
-    await trx('service_request_definitions')
-      .where({ tenant, category_id: categoryId })
+    await tenantScopedTable(trx, tenant, 'service_request_definitions')
+      .where({ category_id: categoryId })
       .update({ category_id: null, category_name_snapshot: null });
 
-    await trx('service_categories')
+    await tenantScopedTable(trx, tenant, 'service_categories')
       .where({
-        tenant,
         category_id: categoryId
       })
       .del();
@@ -133,9 +135,8 @@ export const updateServiceCategory = withAuth(async (user, { tenant }, categoryI
     try {
     // Check if new name conflicts with existing category
     if (categoryData.category_name) {
-      const existingCategory = await trx('service_categories')
+      const existingCategory = await tenantScopedTable(trx, tenant, 'service_categories')
         .where({
-          tenant,
           category_name: categoryData.category_name
         })
         .whereNot('category_id', categoryId)
@@ -150,9 +151,8 @@ export const updateServiceCategory = withAuth(async (user, { tenant }, categoryI
       throw new Error("user is not logged in");
     }
 
-    const [updatedCategory] = await trx<IServiceCategory>('service_categories')
+    const [updatedCategory] = await tenantScopedTable(trx, tenant, 'service_categories')
       .where({
-        tenant,
         category_id: categoryId
       })
       .update(categoryData)

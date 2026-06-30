@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Page } from 'puppeteer';
 import type { Knex } from 'knex';
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import type { TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
@@ -10,10 +10,8 @@ import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 
-import {
-  enrichInvoiceViewModelWithLocations,
-  mapDbInvoiceToWasmViewModel,
-} from '../lib/adapters/invoiceAdapters';
+import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
+import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
@@ -257,8 +255,8 @@ export class PDFGenerationService {
     let templateId: string | null = null;
 
     try {
-      const client = await knex('clients')
-        .where({ client_id: dbInvoiceData.client_id, tenant: this.tenant })
+      const client = await tenantDb(knex, this.tenant).table('clients')
+        .where({ client_id: dbInvoiceData.client_id })
         .first();
       if (client?.invoice_template_id) {
         templateId = client.invoice_template_id;
@@ -433,16 +431,17 @@ export class PDFGenerationService {
       }
 
       let htmlContent = '';
+      const db = tenantDb(knex, this.tenant);
 
-      const blockContent = await knex('document_block_content')
-        .where({ document_id: documentId, tenant: this.tenant })
+      const blockContent = await db.table('document_block_content')
+        .where({ document_id: documentId })
         .first();
 
       if (blockContent && blockContent.block_data) {
         htmlContent = convertBlockContentToHTML(blockContent.block_data);
       } else {
-        const textContent = await knex('document_content')
-          .where({ document_id: documentId, tenant: this.tenant })
+        const textContent = await db.table('document_content')
+          .where({ document_id: documentId })
           .first();
 
         if (textContent && textContent.content) {
@@ -499,10 +498,10 @@ export class PDFGenerationService {
 
   private async getDocumentRecord(documentId: string): Promise<{ document_id: string; document_name: string; mime_type?: string; tenant: string } | null> {
     const { knex } = await createTenantKnex();
-    return knex('documents')
-      .where({ document_id: documentId, tenant: this.tenant })
+    return (await tenantDb(knex, this.tenant).table('documents')
+      .where({ document_id: documentId })
       .select('document_id', 'document_name', 'mime_type', 'tenant')
-      .first() ?? null;
+      .first()) ?? null;
   }
 
   // ---- Puppeteer -----------------------------------------------------------

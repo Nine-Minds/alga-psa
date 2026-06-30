@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface ContractSearchRow {
@@ -38,9 +39,8 @@ export const contractIndexer: EntityIndexer = {
   sourceEvents: ['CONTRACT_CREATED', 'CONTRACT_UPDATED', 'CONTRACT_DELETED', 'CONTRACT_STATUS_CHANGED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<ContractSearchRow>('contracts')
+    const row = await createTenantScopedIndexerQuery<ContractSearchRow>(knex, 'contracts', 'contracts', tenant)
       .select('contract_id', 'contract_name', 'contract_description', 'status', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .andWhere('contract_id', id)
       .first();
 
@@ -53,9 +53,8 @@ export const contractIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<ContractSearchRow>('contracts')
+    const query = createTenantScopedIndexerQuery<ContractSearchRow>(knex, 'contracts', 'contracts', tenant)
       .select('contract_id', 'contract_name', 'contract_description', 'status', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .orderBy('contract_id', 'asc')
       .limit(limit);
 

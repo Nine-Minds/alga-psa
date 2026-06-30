@@ -12,8 +12,8 @@ describe('commentActions contract', () => {
   it('clears email reply token comment references before deleting a comment', () => {
     const source = getActionSource();
 
-    expect(source).toContain("await trx('email_reply_tokens')");
-    expect(source).toContain(".where({ tenant, comment_id: id })");
+    expect(source).toContain("await tenantScopedTable(trx, 'email_reply_tokens', tenant)");
+    expect(source).toContain(".where({ comment_id: id })");
     expect(source).toContain(".update({ comment_id: null });");
     expect(source).toContain('await Comment.delete(trx, tenant, id);');
   });
