@@ -35,6 +35,10 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   withTransaction: withTransactionMock,
   createTenantKnex: createTenantKnexMock,
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -64,9 +68,10 @@ vi.mock('@alga-psa/sla/services', () => ({
   },
 }));
 
-// deleteTicket now routes through deleteEntityWithValidation (@alga-psa/core)
-// instead of a bare withTransaction; stub just that export and keep the rest.
-vi.mock('@alga-psa/core', async (importOriginal) => {
+// deleteTicket now routes through deleteEntityWithValidation, imported from
+// @alga-psa/core/server (the facade migration moved it off the bare entry);
+// stub just that export and keep the rest.
+vi.mock('@alga-psa/core/server', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
