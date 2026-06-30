@@ -15,7 +15,7 @@ vi.mock('./rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args)
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core/server', () => ({
   getDeletionConfig: (...args: any[]) => getDeletionConfigMock(...args),
   validateDeletion: (...args: any[]) => validateDeletionMock(...args)
 }));
