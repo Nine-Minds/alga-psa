@@ -24,7 +24,9 @@ export default async function StockLocationsPage() {
   let initialLocations: IStockLocation[] = [];
   let loadError = false;
   try {
-    initialLocations = await listStockLocations({ includeInactive: false });
+    // Load inactive too; the client hides them behind a "Show inactive" toggle so a deactivated
+    // location stays reachable (and reactivatable) instead of vanishing.
+    initialLocations = await listStockLocations({ includeInactive: true });
   } catch (error) {
     console.error('Failed to load stock locations:', error);
     loadError = true;

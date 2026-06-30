@@ -10,6 +10,7 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
+import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, StockLocationType } from '@alga-psa/types';
 import {
@@ -53,11 +54,12 @@ export function StockLocationsManager({
   const [editing, setEditing] = useState<IStockLocation | null>(null);
   const [form, setForm] = useState<FormState>({ name: '', location_type: 'warehouse', is_default: false });
   const [saving, setSaving] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
   const [pendingDeactivate, setPendingDeactivate] = useState<IStockLocation | null>(null);
 
   const reload = useCallback(async () => {
     try {
-      setLocations(await listStockLocations({ includeInactive: false }));
+      setLocations(await listStockLocations({ includeInactive: true }));
       setLoadFailed(false);
     } catch (e) {
       console.error(e);
@@ -111,6 +113,16 @@ export function StockLocationsManager({
     }
   };
 
+  const reactivate = async (loc: IStockLocation) => {
+    try {
+      await updateStockLocation(loc.location_id, { is_active: true });
+      toast.success('Location reactivated');
+      await reload();
+    } catch (e: any) {
+      toast.error(e?.message || 'Reactivate failed');
+    }
+  };
+
   const columns: ColumnDefinition<IStockLocation>[] = [
     { title: 'Name', dataIndex: 'name' },
     {
@@ -136,22 +148,31 @@ export function StockLocationsManager({
           <Button id={`edit-location-${rec.location_id}`} variant="outline" size="sm" onClick={() => openEdit(rec)}>
             Edit
           </Button>
-          <Button id={`deactivate-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => setPendingDeactivate(rec)}>
-            Deactivate
-          </Button>
+          {rec.is_active ? (
+            <Button id={`deactivate-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => setPendingDeactivate(rec)}>
+              Deactivate
+            </Button>
+          ) : (
+            <Button id={`reactivate-location-${rec.location_id}`} variant="soft" size="sm" onClick={() => reactivate(rec)}>
+              Reactivate
+            </Button>
+          )}
         </div>
       ),
     },
   ];
+
+  const inactiveCount = locations.filter((l) => !l.is_active).length;
+  const visible = showInactive ? locations : locations.filter((l) => l.is_active);
 
   return (
     <div className="p-6 space-y-4" id="stock-locations-page">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Stock Locations</h1>
-          {!loadFailed && locations.length > 0 && (
+          {!loadFailed && visible.length > 0 && (
             <p className="text-sm text-gray-500 mt-0.5">
-              {locations.length} location{locations.length === 1 ? '' : 's'}
+              {visible.length} location{visible.length === 1 ? '' : 's'}
             </p>
           )}
         </div>
@@ -159,6 +180,14 @@ export function StockLocationsManager({
           Add Location
         </Button>
       </div>
+
+      {!loadFailed && inactiveCount > 0 && (
+        <SwitchWithLabel
+          label={`Show inactive (${inactiveCount})`}
+          checked={showInactive}
+          onCheckedChange={setShowInactive}
+        />
+      )}
 
       {loadFailed ? (
         <EmptyState
@@ -180,8 +209,18 @@ export function StockLocationsManager({
             </Button>
           }
         />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          title="No active locations"
+          description="Every location is deactivated."
+          action={
+            <Button id="stock-locations-show-inactive" variant="link" onClick={() => setShowInactive(true)}>
+              Show inactive
+            </Button>
+          }
+        />
       ) : (
-        <DataTable id="stock-locations-table" data={locations} columns={columns} onRowClick={openEdit} />
+        <DataTable id="stock-locations-table" data={visible} columns={columns} onRowClick={openEdit} />
       )}
 
       <Dialog
