@@ -1,8 +1,9 @@
 import { listStockLocations } from '@alga-psa/inventory/actions';
 import { StockLocationsManager } from '@alga-psa/inventory/components';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
-import type { IStockLocation } from '@alga-psa/types';
+import type { IStockLocation, IUser } from '@alga-psa/types';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -33,7 +34,18 @@ export default async function StockLocationsPage() {
     loadError = true;
   }
 
-  return <StockLocationsManager initialLocations={initialLocations} loadError={loadError} />;
+  // Active internal users (engineers) for the "Assigned to" picker — a location can belong to a
+  // person (whose vehicle/shelf it is). Best-effort: a failure here just leaves the picker empty.
+  let users: IUser[] = [];
+  try {
+    users = await getAllUsersBasic(false, 'internal');
+  } catch (error) {
+    console.error('Failed to load users for stock locations:', error);
+  }
+
+  return (
+    <StockLocationsManager initialLocations={initialLocations} loadError={loadError} users={users} />
+  );
 }
 
 export const dynamic = 'force-dynamic';

@@ -12,8 +12,9 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { toast } from 'react-hot-toast';
-import type { ColumnDefinition, IStockLocation, StockLocationType } from '@alga-psa/types';
+import type { ColumnDefinition, IStockLocation, IUser, StockLocationType } from '@alga-psa/types';
 import {
   listStockLocations,
   createStockLocation,
@@ -24,10 +25,20 @@ import { formatOnHand, isLocationOccupied } from '../lib/stockLocationDisplay';
 
 const LOCATION_TYPE_LABELS: Record<StockLocationType, string> = {
   warehouse: 'Warehouse',
-  van: 'Van',
+  // "Vehicle", not "Van" — an engineer's car/truck is a rolling stockroom too; the parts belong to
+  // a person (see the Assigned to field), not a specific kind of van.
+  van: 'Vehicle',
   office: 'Office',
   other: 'Other',
 };
+
+/** Display name for a user id, resolved from the loaded engineer list. */
+function userDisplayName(users: IUser[], userId: string | null | undefined): string | null {
+  if (!userId) return null;
+  const u = users.find((x) => x.user_id === userId);
+  if (!u) return null;
+  return `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.username || u.email;
+}
 
 const LOCATION_TYPES: StockLocationType[] = ['warehouse', 'van', 'office', 'other'];
 
@@ -40,21 +51,31 @@ interface FormState {
   name: string;
   location_type: StockLocationType;
   is_default: boolean;
+  assigned_user_id: string | null;
 }
+
+const emptyForm = (): FormState => ({
+  name: '',
+  location_type: 'warehouse',
+  is_default: false,
+  assigned_user_id: null,
+});
 
 export function StockLocationsManager({
   initialLocations,
   loadError = false,
+  users = [],
 }: {
   initialLocations: IStockLocation[];
   loadError?: boolean;
+  users?: IUser[];
 }) {
   const [locations, setLocations] = useState<IStockLocation[]>(initialLocations || []);
   // Seeded from the server: a failed SSR load must read as an error, not as "no locations".
   const [loadFailed, setLoadFailed] = useState(loadError);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<IStockLocation | null>(null);
-  const [form, setForm] = useState<FormState>({ name: '', location_type: 'warehouse', is_default: false });
+  const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
@@ -73,13 +94,18 @@ export function StockLocationsManager({
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', location_type: 'warehouse', is_default: false });
+    setForm(emptyForm());
     setDialogOpen(true);
   };
 
   const openEdit = (loc: IStockLocation) => {
     setEditing(loc);
-    setForm({ name: loc.name, location_type: loc.location_type, is_default: loc.is_default });
+    setForm({
+      name: loc.name,
+      location_type: loc.location_type,
+      is_default: loc.is_default,
+      assigned_user_id: loc.assigned_user_id ?? null,
+    });
     setDialogOpen(true);
   };
 
@@ -143,7 +169,17 @@ export function StockLocationsManager({
       title: 'Name',
       dataIndex: 'name',
       // The row's identity — give it weight so it out-ranks the data beside it (matches siblings).
-      render: (v: any) => <span className="font-medium text-gray-900">{v}</span>,
+      // The single default is marked here as a badge rather than burning a near-empty column on it.
+      render: (v: any, rec: IStockLocation) => (
+        <span className="flex items-center gap-2">
+          <span className="font-medium text-gray-900">{v}</span>
+          {rec.is_default && (
+            <Badge variant="primary" size="sm">
+              Default
+            </Badge>
+          )}
+        </span>
+      ),
     },
     {
       title: 'Type',
@@ -161,16 +197,12 @@ export function StockLocationsManager({
         ),
     },
     {
-      title: 'Default',
-      dataIndex: 'is_default',
-      render: (v: any) =>
-        v ? (
-          <Badge variant="primary" size="sm">
-            Default
-          </Badge>
-        ) : (
-          <span className="text-gray-400">—</span>
-        ),
+      title: 'Assigned to',
+      dataIndex: 'assigned_user_id',
+      render: (_: any, rec: IStockLocation) => {
+        const name = userDisplayName(users, rec.assigned_user_id);
+        return name ? <span>{name}</span> : <span className="text-gray-400">—</span>;
+      },
     },
     {
       title: 'Status',
@@ -332,6 +364,15 @@ export function StockLocationsManager({
             placeholder="Select a type…"
             options={LOCATION_TYPE_OPTIONS}
             onValueChange={(val: string) => setForm({ ...form, location_type: val as StockLocationType })}
+          />
+          <UserPicker
+            label="Assigned to"
+            value={form.assigned_user_id ?? ''}
+            users={users}
+            onValueChange={(val: string) => setForm({ ...form, assigned_user_id: val || null })}
+            placeholder="Whose location is this?"
+            unassignedLabel="Not assigned"
+            buttonWidth="full"
           />
           <Checkbox
             id="stock-location-default"
