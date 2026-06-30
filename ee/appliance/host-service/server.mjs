@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
-import { persistSetupInputs, validateSetupInputs, runNetworkChecks } from './setup-engine.mjs';
+import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
 import {
@@ -984,7 +984,8 @@ const server = http.createServer(async (req, res) => {
       releaseSelectionFile,
       installStateFile: stateFile,
       cpUpgradeStatusFile,
-      resolveControlPlaneRef
+      resolveControlPlaneRef,
+      resolveReleaseManifest
     });
     jsonResponse(res, 200, status);
     return;
