@@ -119,7 +119,19 @@ export function StockLocationsManager({
       toast.success('Location reactivated');
       await reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Reactivate failed');
+      toast.error(e?.message || "Couldn't reactivate the location.");
+    }
+  };
+
+  // One-click default. The server clears the prior default atomically (single default per tenant),
+  // so this replaces it without a separate Edit → check → Save detour.
+  const setDefault = async (loc: IStockLocation) => {
+    try {
+      await updateStockLocation(loc.location_id, { is_default: true });
+      toast.success(`"${loc.name}" is now the default location.`);
+      await reload();
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't set the default location.");
     }
   };
 
@@ -130,7 +142,18 @@ export function StockLocationsManager({
       dataIndex: 'location_type',
       render: (v: any) => LOCATION_TYPE_LABELS[v as StockLocationType] ?? v,
     },
-    { title: 'Default', dataIndex: 'is_default', render: (v: any) => (v ? 'Yes' : '') },
+    {
+      title: 'Default',
+      dataIndex: 'is_default',
+      render: (v: any) =>
+        v ? (
+          <Badge variant="primary" size="sm">
+            Default
+          </Badge>
+        ) : (
+          <span className="text-gray-400">—</span>
+        ),
+    },
     {
       title: 'Status',
       dataIndex: 'is_active',
@@ -143,11 +166,19 @@ export function StockLocationsManager({
     {
       title: 'Actions',
       dataIndex: 'location_id',
+      // Width matches the sibling managers (PO 230 / SO 260) so the action cluster aligns and labels
+      // never clip — here sized for the three-verb active row (Edit · Set default · Deactivate).
+      width: '260px',
       render: (_: any, rec: IStockLocation) => (
         <div className="flex gap-2">
           <Button id={`edit-location-${rec.location_id}`} variant="outline" size="sm" onClick={() => openEdit(rec)}>
             Edit
           </Button>
+          {rec.is_active && !rec.is_default && (
+            <Button id={`set-default-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => setDefault(rec)}>
+              Set default
+            </Button>
+          )}
           {rec.is_active ? (
             <Button id={`deactivate-location-${rec.location_id}`} variant="ghost" size="sm" onClick={() => setPendingDeactivate(rec)}>
               Deactivate
