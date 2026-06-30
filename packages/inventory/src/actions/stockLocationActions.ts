@@ -29,6 +29,15 @@ function pickAddress(input: Record<string, unknown>): Record<string, string | nu
   return out;
 }
 
+/**
+ * Address columns ship in a migration; tolerate the brief window where the code is deployed but the
+ * migration hasn't run yet (and this dev DB, where it can't be applied without the admin role). When
+ * the columns are absent, address writes are skipped rather than erroring the whole create/edit.
+ */
+async function addressColumnsAvailable(trx: Knex | Knex.Transaction): Promise<boolean> {
+  return trx.schema.hasColumn('stock_locations', 'address_line1');
+}
+
 async function requireLocationPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   // stock_location permissions are read/update/create/delete; reads also allowed for inventory readers.
   if (!(await hasPermission(user, 'stock_location', action))) {
@@ -143,7 +152,7 @@ export const createStockLocation = withAuth(
           manager_user_id: input.manager_user_id ?? null,
           is_default: input.is_default ?? false,
           is_active: true,
-          ...pickAddress(input),
+          ...((await addressColumnsAvailable(trx)) ? pickAddress(input) : {}),
         })
         .returning('*');
       return row as IStockLocation;
@@ -170,7 +179,10 @@ export const updateStockLocation = withAuth(
           .andWhereNot({ location_id: locationId })
           .update({ is_default: false, updated_at: trx.fn.now() });
       }
-      const update: Record<string, unknown> = { updated_at: trx.fn.now(), ...pickAddress(patch as Record<string, unknown>) };
+      const update: Record<string, unknown> = {
+        updated_at: trx.fn.now(),
+        ...((await addressColumnsAvailable(trx)) ? pickAddress(patch as Record<string, unknown>) : {}),
+      };
       for (const k of ['name', 'location_type', 'assigned_user_id', 'manager_user_id', 'is_default', 'is_active'] as const) {
         if (k in patch) update[k] = (patch as any)[k];
       }
