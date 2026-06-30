@@ -22,13 +22,15 @@ export default async function StockLocationsPage() {
   }
 
   let initialLocations: IStockLocation[] = [];
+  let loadError = false;
   try {
     initialLocations = await listStockLocations({ includeInactive: false });
   } catch (error) {
     console.error('Failed to load stock locations:', error);
+    loadError = true;
   }
 
-  return <StockLocationsManager initialLocations={initialLocations} />;
+  return <StockLocationsManager initialLocations={initialLocations} loadError={loadError} />;
 }
 
 export const dynamic = 'force-dynamic';
