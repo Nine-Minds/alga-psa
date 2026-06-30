@@ -158,7 +158,7 @@ export class StripePaymentProvider implements PaymentProvider {
       supportsHostedCheckout: true,
       supportsEmbeddedCheckout: true,
       supportsWebhooks: true,
-      supportedCurrencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'NZD'],
+      supportedCurrencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'NZD', 'ARS', 'BRL'],
       supportsPartialPayments: false, // Not implementing partial payments initially
       supportsRefunds: true,
       supportsSavedPaymentMethods: true,
