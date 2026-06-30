@@ -11,6 +11,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
+import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, StockLocationType } from '@alga-psa/types';
 import {
@@ -54,6 +55,7 @@ export function StockLocationsManager({
   const [editing, setEditing] = useState<IStockLocation | null>(null);
   const [form, setForm] = useState<FormState>({ name: '', location_type: 'warehouse', is_default: false });
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [pendingDeactivate, setPendingDeactivate] = useState<IStockLocation | null>(null);
 
@@ -199,7 +201,9 @@ export function StockLocationsManager({
   ];
 
   const inactiveCount = locations.filter((l) => !l.is_active).length;
-  const visible = showInactive ? locations : locations.filter((l) => l.is_active);
+  const q = search.trim().toLowerCase();
+  const byStatus = showInactive ? locations : locations.filter((l) => l.is_active);
+  const visible = q ? byStatus.filter((l) => l.name.toLowerCase().includes(q)) : byStatus;
 
   return (
     <div className="p-6 space-y-4" id="stock-locations-page">
@@ -217,12 +221,30 @@ export function StockLocationsManager({
         </Button>
       </div>
 
-      {!loadFailed && inactiveCount > 0 && (
-        <SwitchWithLabel
-          label={`Show inactive (${inactiveCount})`}
-          checked={showInactive}
-          onCheckedChange={setShowInactive}
-        />
+      {!loadFailed && locations.length > 0 && (
+        <div className="flex items-center gap-3">
+          <div className="w-72">
+            <SearchInput
+              id="stock-locations-search"
+              placeholder="Search locations"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch('')}
+            />
+          </div>
+          {inactiveCount > 0 && (
+            <SwitchWithLabel
+              label={`Show inactive (${inactiveCount})`}
+              checked={showInactive}
+              onCheckedChange={setShowInactive}
+            />
+          )}
+          {q && (
+            <span className="text-sm text-gray-500">
+              {visible.length} of {byStatus.length}
+            </span>
+          )}
+        </div>
       )}
 
       {loadFailed ? (
@@ -246,15 +268,26 @@ export function StockLocationsManager({
           }
         />
       ) : visible.length === 0 ? (
-        <EmptyState
-          title="No active locations"
-          description="Every location is deactivated."
-          action={
-            <Button id="stock-locations-show-inactive" variant="link" onClick={() => setShowInactive(true)}>
-              Show inactive
-            </Button>
-          }
-        />
+        q ? (
+          <EmptyState
+            title="No locations match"
+            action={
+              <Button id="stock-locations-clear-search" variant="link" onClick={() => setSearch('')}>
+                Clear search
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="No active locations"
+            description="Every location is deactivated."
+            action={
+              <Button id="stock-locations-show-inactive" variant="link" onClick={() => setShowInactive(true)}>
+                Show inactive
+              </Button>
+            }
+          />
+        )
       ) : (
         <DataTable id="stock-locations-table" data={visible} columns={columns} />
       )}
