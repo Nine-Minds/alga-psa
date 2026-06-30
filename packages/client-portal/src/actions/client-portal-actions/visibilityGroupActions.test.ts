@@ -21,6 +21,14 @@ const crossClientBoardId = '88888888-8888-4888-8888-888888888888';
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+      const join = options?.type === 'left' ? query.leftJoin : query.join;
+      return typeof join === 'function' ? join.call(query) : query;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

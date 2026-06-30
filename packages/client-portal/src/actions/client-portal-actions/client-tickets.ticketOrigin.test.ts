@@ -19,6 +19,14 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   createTenantKnex: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+      const join = options?.type === 'left' ? query.leftJoin : query.join;
+      return typeof join === 'function' ? join.call(query) : query;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/documents/lib/blocknoteUtils', () => ({
